@@ -6,6 +6,11 @@ export function parseConfig(raw: unknown): RulesConfig {
 }
 
 export function loadConfig(configPath: string): RulesConfig {
-  const text = readFileSync(configPath, 'utf-8');
-  return parseConfig(JSON.parse(text));
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+  } catch (err) {
+    throw new Error(`Failed to parse config at ${configPath}: ${(err as Error).message}`);
+  }
+  return parseConfig(raw);
 }
