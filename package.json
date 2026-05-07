@@ -1,0 +1,34 @@
+{
+  "name": "music-league-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private WhatsApp music league playlist bot scaffold",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "spotify-auth": "tsx scripts/spotify-oauth.ts",
+    "test:integration": "vitest run tests/spotify.integration.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "optionalDependenciesNote": {
+    "whatsapp": "Install one of: whatsapp-web.js or @whiskeysockets/baileys",
+    "spotify": "Install a Spotify API client or use fetch directly",
+    "youtube": "Install googleapis if using the YouTube Data API",
+    "sqlite": "Install better-sqlite3 or sqlite when storage implementation begins"
+  }
+}
