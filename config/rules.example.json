@@ -12,7 +12,7 @@
   },
   "rules": [
     {
-      "name": "Current weekly playlist",
+      "name": "Current weekly playlist (matches '!song' command)",
       "enabled": true,
       "when": {
         "command": "song"
