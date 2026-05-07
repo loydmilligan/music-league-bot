@@ -19,6 +19,13 @@ export const ruleSchema = z.object({
   playlist: rulePlaylistSchema,
 });
 
+export const notificationsSchema = z.object({
+  onFailure: z.boolean().default(true),
+  onLowConfidence: z.boolean().default(true),
+  confidenceThreshold: z.number().min(0).max(1).default(0.9),
+  recipients: z.enum(['me', 'submitter', 'me-and-submitter']).default('me'),
+});
+
 export const rulesConfigSchema = z.object({
   defaults: z.object({
     requireCommandPrefix: z.boolean().optional(),
@@ -26,9 +33,11 @@ export const rulesConfigSchema = z.object({
     dedupeScope: z.enum(['playlist', 'global', 'week']).optional(),
   }),
   rules: z.array(ruleSchema),
+  notifications: notificationsSchema.optional(),
 });
 
 export type RuleWhen = z.infer<typeof ruleWhenSchema>;
 export type RulePlaylist = z.infer<typeof rulePlaylistSchema>;
 export type Rule = z.infer<typeof ruleSchema>;
+export type Notifications = z.infer<typeof notificationsSchema>;
 export type RulesConfig = z.infer<typeof rulesConfigSchema>;
