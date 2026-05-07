@@ -54,7 +54,26 @@ npm test -- tests/rules.test.ts
 npm test -- tests/config.test.ts
 ```
 
-The test suite covers the message parser (all `!song` command variants) and the rules engine (command matching, tag matching, template resolution, wildcard submitter). No external API calls are made.
+The test suite covers the message parser (all `!song` command variants), the rules engine (command matching, tag matching, template resolution, wildcard submitter), and the Spotify token/adapter modules. No external API calls are made in unit tests.
+
+## Spotify setup
+
+1. Create an app at https://developer.spotify.com/dashboard
+2. Add `https://mlbot.mattmariani.com/oauth/spotify/callback` as a Redirect URI
+3. Copy Client ID and Client Secret into `.env`
+4. Run the one-time auth flow:
+
+```bash
+npm run spotify-auth
+```
+
+Open the printed URL in your browser, authorise the app, then copy the printed `SPOTIFY_REFRESH_TOKEN` into `.env`. You only need to do this once.
+
+5. Verify with:
+
+```bash
+npm run test:integration
+```
 
 ## Important note
 
