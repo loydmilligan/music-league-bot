@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "requireCommandPrefix": true,
+    "commandPrefix": "!song",
+    "dedupeScope": "playlist"
+  },
+  "rules": [
+    {
+      "name": "Weekly playlist",
+      "enabled": true,
+      "when": { "command": "song" },
+      "playlist": { "spotify": "Music League - Week {{weekNumber}}" }
+    }
+  ]
+}
