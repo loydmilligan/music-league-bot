@@ -43,7 +43,7 @@ describe.skipIf(skipIntegration)('Spotify integration (real API)', () => {
   });
 
   it('getTrackById returns null for a nonexistent ID', async () => {
-    const track = await adapter.getTrackById('00000000000000000000000000');
+    const track = await adapter.getTrackById('0000000000000000000000');
     expect(track).toBeNull();
   });
 
