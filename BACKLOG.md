@@ -34,6 +34,29 @@ A personal song queue the owner can build up over time and flush to a playlist i
 
 ---
 
+## Bracket Tournament Integration
+
+Integration between the March Madness bracket web app and Spotify. No WhatsApp needed — purely an API that the bracket app calls. Reuses the existing SpotifyAdapter.
+
+**Flow:**
+1. Bracket app seeds N songs (e.g. 32) and sets up round 1 matchups
+2. Bracket app POSTs a JSON payload to this service → bot creates a Spotify playlist with songs ordered for head-to-head listening (matchup 1: songs 1+2, matchup 2: songs 3+4, etc.)
+3. User listens, picks winners in the bracket app
+4. Bracket app advances to round 2, POSTs new payload → bot deletes round 1 playlist, creates round 2 playlist with 16 winners in matchup order
+5. Repeats until a champion is picked
+
+**API design (rough):**
+- `POST /bracket/round` — payload: `{ roundName: string, matchups: Array<{ song1: SpotifyUri, song2: SpotifyUri }> }` → creates playlist, returns playlist URL
+- `DELETE /bracket/playlist/:id` — deletes a round playlist (or fold into the POST so it auto-deletes the previous round)
+- State: store the active round playlist ID somewhere (env file, SQLite, or returned to the bracket app to hold)
+
+**Open questions before planning:**
+- Does the bracket app already have Spotify URIs for each song, or just titles/artists?
+- Should the API auto-delete the previous round playlist when a new round is POSTed, or does the bracket app call delete explicitly?
+- HTTP server alongside the bot process, or a separate standalone script the bracket app triggers?
+
+---
+
 ## Future / Larger Scope
 
 - Rounds/themes system (named rounds with date ranges)
