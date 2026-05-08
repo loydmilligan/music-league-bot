@@ -17,5 +17,7 @@ export function openDb(path: string): Database.Database {
       created_at    INTEGER NOT NULL
     )
   `);
+  try { db.exec(`ALTER TABLE submissions ADD COLUMN source_platform TEXT`); } catch { /* already exists */ }
+  try { db.exec(`ALTER TABLE submissions ADD COLUMN source_url TEXT`); } catch { /* already exists */ }
   return db;
 }

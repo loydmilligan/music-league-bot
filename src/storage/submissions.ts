@@ -11,16 +11,20 @@ export interface SubmissionRecord {
   playlistId?: string | null;
   playlistName?: string | null;
   status: SubmissionStatus;
+  sourcePlatform?: string | null;
+  sourceUrl?: string | null;
 }
 
 export function insertSubmission(db: Database.Database, record: SubmissionRecord): void {
   db.prepare(`
     INSERT INTO submissions
       (submitter_id, submitter_name, raw_text, track_title, track_artist,
-       spotify_uri, playlist_id, playlist_name, status, created_at)
+       spotify_uri, playlist_id, playlist_name, status, created_at,
+       source_platform, source_url)
     VALUES
       (@submitterId, @submitterName, @rawText, @trackTitle, @trackArtist,
-       @spotifyUri, @playlistId, @playlistName, @status, @createdAt)
+       @spotifyUri, @playlistId, @playlistName, @status, @createdAt,
+       @sourcePlatform, @sourceUrl)
   `).run({
     submitterId: record.submitterId,
     submitterName: record.submitterName,
@@ -32,5 +36,7 @@ export function insertSubmission(db: Database.Database, record: SubmissionRecord
     playlistName: record.playlistName ?? null,
     status: record.status,
     createdAt: Date.now(),
+    sourcePlatform: record.sourcePlatform ?? null,
+    sourceUrl: record.sourceUrl ?? null,
   });
 }

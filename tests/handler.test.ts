@@ -65,6 +65,7 @@ function makeBotConfig(overrides: Partial<BotConfig> = {}, dbInst?: Database.Dat
     db: dbInst ?? openDb(':memory:'),
     allowedGroupIds: ['BmCQHGE3k0a0ST5ZDPFmqW'],
     ownerPhone: '16617476822@c.us',
+    masterPlaylistName: 'Test Master Playlist',
     sendDm: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -329,5 +330,80 @@ describe('handleMessage', () => {
     await handleMessage(msg, botConfig);
 
     expect(msg.reply).toHaveBeenCalledWith('❌ Something went wrong — try again');
+  });
+
+  // Test 14: Auto-capture: Spotify URL in plain message
+  it('auto-capture: adds Spotify URL from plain message to master playlist, no group reply', async () => {
+    const db = openDb(':memory:');
+    const spotify = makeMockSpotify();
+    const msg = makeMockMsg('Check this out https://open.spotify.com/track/abc123');
+    const botConfig = makeBotConfig({ spotify }, db);
+
+    await handleMessage(msg, botConfig);
+
+    expect(spotify.getTrackById).toHaveBeenCalled();
+    expect(spotify.findOrCreatePlaylist).toHaveBeenCalledWith('Test Master Playlist');
+    expect(spotify.addTrackToPlaylist).toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+
+    const rows = db.prepare('SELECT * FROM submissions').all() as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('added');
+    expect(rows[0].source_platform).toBe('spotify');
+    expect(rows[0].source_url).toBe('https://open.spotify.com/track/abc123');
+  });
+
+  // Test 15: Auto-capture: YouTube URL in plain message
+  it('auto-capture: YouTube URL stored as not-found with platform, no Spotify add', async () => {
+    const db = openDb(':memory:');
+    const spotify = makeMockSpotify();
+    const msg = makeMockMsg('Watch this https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    const botConfig = makeBotConfig({ spotify }, db);
+
+    await handleMessage(msg, botConfig);
+
+    expect(spotify.addTrackToPlaylist).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+
+    const rows = db.prepare('SELECT * FROM submissions').all() as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('not-found');
+    expect(rows[0].source_platform).toBe('youtube');
+  });
+
+  // Test 16: Auto-capture: duplicate Spotify URL
+  it('auto-capture: duplicate Spotify URL stored as duplicate, addTrackToPlaylist not called', async () => {
+    const db = openDb(':memory:');
+    const spotify = makeMockSpotify({
+      isTrackInPlaylist: vi.fn().mockResolvedValue(true),
+    });
+    const msg = makeMockMsg('https://open.spotify.com/track/abc123');
+    const botConfig = makeBotConfig({ spotify }, db);
+
+    await handleMessage(msg, botConfig);
+
+    expect(spotify.addTrackToPlaylist).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+
+    const rows = db.prepare('SELECT * FROM submissions').all() as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('duplicate');
+  });
+
+  // Test 17: Auto-capture: plain message with no URLs
+  it('auto-capture: plain message with no URLs makes no DB inserts and no Spotify calls', async () => {
+    const db = openDb(':memory:');
+    const spotify = makeMockSpotify();
+    const msg = makeMockMsg('Hey everyone, how is it going?');
+    const botConfig = makeBotConfig({ spotify }, db);
+
+    await handleMessage(msg, botConfig);
+
+    expect(spotify.searchTrack).not.toHaveBeenCalled();
+    expect(spotify.getTrackById).not.toHaveBeenCalled();
+    expect(spotify.addTrackToPlaylist).not.toHaveBeenCalled();
+
+    const rows = db.prepare('SELECT * FROM submissions').all();
+    expect(rows).toHaveLength(0);
   });
 });

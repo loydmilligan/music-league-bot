@@ -96,6 +96,48 @@ describe('storage', () => {
     expect(row?.track_title).toBe('No Ordinary Love');
   });
 
+  it('insertSubmission with sourcePlatform and sourceUrl stores the values correctly', () => {
+    insertSubmission(db, {
+      submitterId: 'user5@c.us',
+      submitterName: 'Eve',
+      rawText: 'https://open.spotify.com/track/xyz789',
+      track: sampleTrack,
+      playlistId: 'playlist123',
+      playlistName: 'Music League — All Mentions',
+      status: 'added',
+      sourcePlatform: 'spotify',
+      sourceUrl: 'https://open.spotify.com/track/xyz789',
+    });
+
+    const row = db
+      .prepare('SELECT * FROM submissions WHERE submitter_id = ?')
+      .get('user5@c.us') as Record<string, unknown> | undefined;
+
+    expect(row).toBeDefined();
+    expect(row?.source_platform).toBe('spotify');
+    expect(row?.source_url).toBe('https://open.spotify.com/track/xyz789');
+  });
+
+  it('insertSubmission without sourcePlatform/sourceUrl stores null for both', () => {
+    insertSubmission(db, {
+      submitterId: 'user6@c.us',
+      submitterName: 'Frank',
+      rawText: '!song Sade - No Ordinary Love',
+      track: sampleTrack,
+      playlistId: 'playlist123',
+      playlistName: 'Music League',
+      status: 'added',
+    });
+
+    const row = db
+      .prepare('SELECT * FROM submissions WHERE submitter_id = ?')
+      .get('user6@c.us') as Record<string, unknown> | undefined;
+
+    expect(row).toBeDefined();
+    expect(row?.source_platform).toBeNull();
+    expect(row?.source_url).toBeNull();
+  });
+
   it('created_at field is a positive integer', () => {
     insertSubmission(db, {
       submitterId: 'user4@c.us',

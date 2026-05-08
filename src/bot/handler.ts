@@ -6,6 +6,7 @@ import { resolveTrack } from '../resolver/resolveTrack.js';
 import { applyRules } from '../rules/engine.js';
 import { getISOWeekNumber } from '../rules/templates.js';
 import { insertSubmission } from '../storage/submissions.js';
+import { detectMusicUrls } from './urlDetector.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -22,6 +23,7 @@ export interface BotConfig {
   db: Database.Database;
   allowedGroupIds: string[];
   ownerPhone: string;
+  masterPlaylistName: string;
   sendDm(phone: string, text: string): Promise<void>;
 }
 
@@ -32,8 +34,16 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
   console.log('[bot] captured from group:', msg.from, '|', msg.body.slice(0, 80));
 
+  // Path A: explicit !song command
   const parsed = parseMessage(msg.body);
-  if (!parsed) return;
+  if (!parsed) {
+    // Path B: auto-capture — detect music URLs in any message
+    const detected = detectMusicUrls(msg.body);
+    for (const { url, platform } of detected) {
+      await handleAutoCapture(url, platform, msg, botConfig);
+    }
+    return;
+  }
 
   let submitterName = msg.author;
   try {
@@ -148,6 +158,78 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
       console.error('[handler] Spotify error during add:', err);
       await msg.reply('❌ Something went wrong — try again');
     }
+  }
+}
+
+async function handleAutoCapture(
+  detectedUrl: string,
+  platform: string,
+  msg: WhatsAppMessage,
+  botConfig: BotConfig,
+): Promise<void> {
+  const { spotify, db, masterPlaylistName } = botConfig;
+
+  let submitterName = msg.author;
+  try {
+    const contact = await msg.getContact();
+    submitterName = contact.pushname || msg.author;
+  } catch { /* @lid fallback */ }
+
+  if (platform !== 'spotify') {
+    // YouTube and Apple Music can't be resolved yet — store as unresolved
+    insertSubmission(db, {
+      submitterId: msg.author,
+      submitterName,
+      rawText: msg.body,
+      track: null,
+      status: 'not-found',
+      sourcePlatform: platform,
+      sourceUrl: detectedUrl,
+    });
+    return;
+  }
+
+  try {
+    // For Spotify URLs, reuse the existing resolver
+    // Build a minimal ParsedSubmission from the URL
+    const parsed = { sourceUrl: detectedUrl, command: 'auto', tags: [], rawText: detectedUrl };
+    const resolution = await resolveTrack(parsed as any, spotify, 0.0); // threshold 0.0 — accept anything
+
+    if (!resolution.track) {
+      insertSubmission(db, {
+        submitterId: msg.author,
+        submitterName,
+        rawText: msg.body,
+        track: null,
+        status: 'not-found',
+        sourcePlatform: platform,
+        sourceUrl: detectedUrl,
+      });
+      return;
+    }
+
+    const track = resolution.track;
+    const playlistId = await spotify.findOrCreatePlaylist(masterPlaylistName);
+    const isDupe = await spotify.isTrackInPlaylist(playlistId, track.spotifyUri!);
+
+    if (!isDupe) {
+      await spotify.addTrackToPlaylist(playlistId, track.spotifyUri!);
+    }
+
+    insertSubmission(db, {
+      submitterId: msg.author,
+      submitterName,
+      rawText: msg.body,
+      track,
+      playlistId,
+      playlistName: masterPlaylistName,
+      status: isDupe ? 'duplicate' : 'added',
+      sourcePlatform: platform,
+      sourceUrl: detectedUrl,
+    });
+  } catch (err) {
+    console.error('[handler] Auto-capture error:', err);
+    // Silent — no group reply on auto-capture failure
   }
 }
 

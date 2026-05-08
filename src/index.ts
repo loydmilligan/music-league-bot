@@ -26,6 +26,8 @@ if (!rawOwnerPhone) {
 }
 const ownerPhone = rawOwnerPhone.includes('@') ? rawOwnerPhone : `${rawOwnerPhone}@c.us`;
 
+const masterPlaylistName = process.env.MASTER_PLAYLIST_NAME ?? 'Music League — All Mentions';
+
 const client = createClient(async (msg) => {
   await handleMessage(msg, {
     config,
@@ -33,6 +35,7 @@ const client = createClient(async (msg) => {
     db,
     allowedGroupIds,
     ownerPhone,
+    masterPlaylistName,
     sendDm: makeSendDm(client),
   });
 });
