@@ -55,6 +55,20 @@ describe('getAccessToken', () => {
     expect(token).toBe('new-token');
   });
 
+  it('refreshes a token within the 60-second buffer window', async () => {
+    _resetTokenCache({ accessToken: 'about-to-expire', expiresAt: Date.now() + 30_000 });
+    mockTokenOk('fresh-token');
+    const token = await getAccessToken();
+    expect(token).toBe('fresh-token');
+  });
+
+  it('uses cached token when more than 60 seconds remain', async () => {
+    _resetTokenCache({ accessToken: 'still-good', expiresAt: Date.now() + 90_000 });
+    const token = await getAccessToken();
+    expect(token).toBe('still-good');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it('throws a plain Error when SPOTIFY_REFRESH_TOKEN is not set', async () => {
     delete process.env.SPOTIFY_REFRESH_TOKEN;
     await expect(getAccessToken()).rejects.toThrow('SPOTIFY_REFRESH_TOKEN');

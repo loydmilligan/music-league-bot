@@ -1,0 +1,41 @@
+{
+  "defaults": {
+    "requireCommandPrefix": true,
+    "commandPrefix": "!song",
+    "dedupeScope": "playlist"
+  },
+  "rules": [
+    {
+      "name": "Current weekly playlist",
+      "enabled": true,
+      "when": {
+        "command": "song"
+      },
+      "playlist": {
+        "spotify": "Music League - Week {{weekNumber}}",
+        "youtube": "Music League - Week {{weekNumber}}"
+      }
+    },
+    {
+      "name": "Summer tag playlist",
+      "enabled": true,
+      "when": {
+        "tag": "summer"
+      },
+      "playlist": {
+        "spotify": "Music League - Summer",
+        "youtube": "Music League - Summer"
+      }
+    },
+    {
+      "name": "Per submitter playlist",
+      "enabled": false,
+      "when": {
+        "submittedBy": "*"
+      },
+      "playlist": {
+        "spotify": "Music League - {{submittedBy}}"
+      }
+    }
+  ]
+}

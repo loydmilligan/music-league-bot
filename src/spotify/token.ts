@@ -50,9 +50,9 @@ export async function spotifyFetch(path: string, options: RequestInit = {}): Pro
   const token = await getAccessToken();
   const url = path.startsWith('https://') ? path : `https://api.spotify.com/v1${path}`;
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
+    Authorization: `Bearer ${token}`,
   };
 
   const attempt = () => fetch(url, { ...options, headers });
