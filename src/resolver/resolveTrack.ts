@@ -34,11 +34,12 @@ export async function resolveTrack(
       };
     }
 
+    // TODO: distinguish 'unsupported' from 'not-found' when YouTube adapter is added
     if (YOUTUBE_RE.test(sourceUrl)) {
       return {
         track: null,
         status: 'not-found',
-        query: `YouTube links are not yet supported: ${sourceUrl}`,
+        query: sourceUrl,
       };
     }
 

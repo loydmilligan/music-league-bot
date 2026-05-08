@@ -90,7 +90,7 @@ describe('resolveTrack — YouTube URL', () => {
     );
     expect(result.status).toBe('not-found');
     expect(result.track).toBeNull();
-    expect(result.query).toContain('YouTube');
+    expect(result.query).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     expect(adapter.getTrackById).not.toHaveBeenCalled();
     expect(adapter.searchTrack).not.toHaveBeenCalled();
   });
@@ -103,7 +103,7 @@ describe('resolveTrack — YouTube URL', () => {
       0.9,
     );
     expect(result.status).toBe('not-found');
-    expect(result.query).toContain('YouTube');
+    expect(result.query).toBe('https://youtu.be/dQw4w9WgXcQ');
   });
 });
 
@@ -173,6 +173,21 @@ describe('resolveTrack — no input', () => {
     expect(result.query).toBe('');
     expect(adapter.searchTrack).not.toHaveBeenCalled();
     expect(adapter.getTrackById).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveTrack — partial hints', () => {
+  it('returns not-found when only artistHint is present (no titleHint)', async () => {
+    const adapter = makeMockAdapter();
+    const result = await resolveTrack(
+      makeSubmission({ artistHint: 'Sade', titleHint: null }),
+      adapter,
+      0.9,
+    );
+    expect(result.status).toBe('not-found');
+    expect(result.track).toBeNull();
+    expect(result.query).toBe('');
+    expect(adapter.searchTrack).not.toHaveBeenCalled();
   });
 });
 
