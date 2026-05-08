@@ -30,6 +30,8 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
   if (!allowedGroupIds.some((id) => msg.from.includes(id))) return;
 
+  console.log('[bot] captured from group:', msg.from, '|', msg.body.slice(0, 80));
+
   const parsed = parseMessage(msg.body);
   if (!parsed) return;
 
