@@ -28,15 +28,18 @@ export interface BotConfig {
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
   const { config, spotify, db, allowedGroupIds, ownerPhone, sendDm } = botConfig;
 
-  // Ignore messages not from allowed groups or sent by the bot itself
   if (!allowedGroupIds.some((id) => msg.from.includes(id))) return;
-  if (msg.fromMe) return;
 
   const parsed = parseMessage(msg.body);
   if (!parsed) return;
 
-  const contact = await msg.getContact();
-  const submitterName = contact.pushname || msg.author;
+  let submitterName = msg.author;
+  try {
+    const contact = await msg.getContact();
+    submitterName = contact.pushname || msg.author;
+  } catch {
+    // @lid (Multi-Device) contacts may not resolve — fall back to author ID
+  }
   const notifications: Notifications = config.notifications ?? {
     onFailure: true,
     onLowConfidence: true,

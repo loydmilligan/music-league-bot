@@ -26,7 +26,8 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     process.exit(1);
   });
 
-  client.on('message', async (raw: Message) => {
+  client.on('message_create', async (raw: Message) => {
+    console.log('[whatsapp] message from:', raw.from, '| body:', raw.body.slice(0, 60));
     const wrapped: WhatsAppMessage = {
       body: raw.body,
       from: raw.from,

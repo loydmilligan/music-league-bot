@@ -19,11 +19,12 @@ const allowedGroupIds = (process.env.WHATSAPP_ALLOWED_GROUP_IDS ?? '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-const ownerPhone = process.env.OWNER_PHONE_NUMBER;
-if (!ownerPhone) {
+const rawOwnerPhone = process.env.OWNER_PHONE_NUMBER;
+if (!rawOwnerPhone) {
   console.error('[bot] OWNER_PHONE_NUMBER is required — set it in .env');
   process.exit(1);
 }
+const ownerPhone = rawOwnerPhone.includes('@') ? rawOwnerPhone : `${rawOwnerPhone}@c.us`;
 
 const client = createClient(async (msg) => {
   await handleMessage(msg, {

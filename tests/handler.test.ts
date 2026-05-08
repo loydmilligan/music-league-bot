@@ -85,8 +85,8 @@ describe('handleMessage', () => {
     expect(spotify.getTrackById).not.toHaveBeenCalled();
   });
 
-  // Test 2: Ignores fromMe
-  it('ignores messages sent by the bot itself (fromMe)', async () => {
+  // Test 2: Processes fromMe messages (user IS the bot — same account scanned QR)
+  it('processes !song messages sent by the bot account (fromMe)', async () => {
     const msg = makeMockMsg('!song Sade - No Ordinary Love', {
       fromMe: true,
     });
@@ -95,8 +95,7 @@ describe('handleMessage', () => {
 
     await handleMessage(msg, botConfig);
 
-    expect(spotify.searchTrack).not.toHaveBeenCalled();
-    expect(spotify.getTrackById).not.toHaveBeenCalled();
+    expect(spotify.searchTrack).toHaveBeenCalled();
   });
 
   // Test 3: Ignores non-song messages
