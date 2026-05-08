@@ -189,6 +189,19 @@ describe('resolveTrack — partial hints', () => {
     expect(result.query).toBe('');
     expect(adapter.searchTrack).not.toHaveBeenCalled();
   });
+
+  it('returns not-found when only titleHint is present (no artistHint)', async () => {
+    const adapter = makeMockAdapter();
+    const result = await resolveTrack(
+      makeSubmission({ artistHint: null, titleHint: 'No Ordinary Love' }),
+      adapter,
+      0.9,
+    );
+    expect(result.status).toBe('not-found');
+    expect(result.track).toBeNull();
+    expect(result.query).toBe('');
+    expect(adapter.searchTrack).not.toHaveBeenCalled();
+  });
 });
 
 describe('resolveTrack — error propagation', () => {

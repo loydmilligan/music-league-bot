@@ -3,7 +3,7 @@ import type { ParsedSubmission } from '../parser/types.js';
 import type { ResolutionResult } from './types.js';
 
 const SPOTIFY_HTTPS_RE = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/;
-const SPOTIFY_URI_RE = /^spotify:track:([A-Za-z0-9]+)$/;
+const SPOTIFY_URI_RE = /^spotify:track:([A-Za-z0-9]+)/;
 const YOUTUBE_RE = /(?:youtube\.com\/watch|youtu\.be\/)/;
 
 export async function resolveTrack(
