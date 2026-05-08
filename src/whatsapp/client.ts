@@ -1,9 +1,10 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { Client, LocalAuth } = require('whatsapp-web.js') as typeof import('whatsapp-web.js');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const qrcode = require('qrcode-terminal') as { generate(qr: string, opts?: { small?: boolean }): void };
+import { createRequire } from 'node:module';
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
+
+const _require = createRequire(import.meta.url);
+const { Client, LocalAuth } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
+const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { small?: boolean }): void };
 
 export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>): ClientType {
   const client = new Client({
