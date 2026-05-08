@@ -68,7 +68,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
       return;
     }
 
-    track = resolution.track!;
+    track = resolution.track;
 
     if (resolution.status === 'low-confidence' && notifications.onLowConfidence) {
       const lowMsg = `⚠️ Added "${track.title}" by ${track.artist} — but I wasn't sure this was the right track. Check it looks right.`;
@@ -79,6 +79,8 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
     await msg.reply('❌ Something went wrong — try again');
     return;
   }
+
+  if (!track) return;
 
   const weekNumber = getISOWeekNumber(new Date());
   const year = new Date().getFullYear();
