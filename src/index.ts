@@ -19,10 +19,10 @@ const allowedGroupIds = (process.env.WHATSAPP_ALLOWED_GROUP_IDS ?? '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-const ownerPhone = process.env.OWNER_PHONE_NUMBER ?? '';
-
+const ownerPhone = process.env.OWNER_PHONE_NUMBER;
 if (!ownerPhone) {
-  console.warn('[bot] OWNER_PHONE_NUMBER not set — DM notifications will fail');
+  console.error('[bot] OWNER_PHONE_NUMBER is required — set it in .env');
+  process.exit(1);
 }
 
 const client = createClient(async (msg) => {
