@@ -30,6 +30,7 @@ export const notificationsSchema = z.object({
   onLowConfidence: z.boolean().default(true),
   confidenceThreshold: z.number().min(0).max(1).default(0.9),
   recipients: z.enum(['me', 'submitter', 'me-and-submitter']).default('me'),
+  successReply: z.enum(['simple', 'rich', 'none']).default('simple'),
 });
 
 export const defaultsSchema = z.object({
