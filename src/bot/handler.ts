@@ -7,6 +7,8 @@ import { applyRules } from '../rules/engine.js';
 import { getISOWeekNumber } from '../rules/templates.js';
 import { insertSubmission } from '../storage/submissions.js';
 import { detectMusicUrls } from './urlDetector.js';
+import { resolveSonglinkUrl } from '../resolver/songlinkResolver.js';
+import { songlinkLimiter } from '../resolver/songlinkRateLimiter.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -176,24 +178,70 @@ async function handleAutoCapture(
   } catch { /* @lid fallback */ }
 
   if (platform !== 'spotify') {
-    // YouTube and Apple Music can't be resolved yet — store as unresolved
-    insertSubmission(db, {
-      submitterId: msg.author,
-      submitterName,
-      rawText: msg.body,
-      track: null,
-      status: 'not-found',
-      sourcePlatform: platform,
-      sourceUrl: detectedUrl,
-    });
+    try {
+      await songlinkLimiter.acquire();
+      const songlinkResult = await resolveSonglinkUrl(detectedUrl);
+
+      if ('error' in songlinkResult || !songlinkResult.links.spotify) {
+        insertSubmission(db, {
+          submitterId: msg.author,
+          submitterName,
+          rawText: msg.body,
+          track: null,
+          status: 'not-found',
+          sourcePlatform: platform,
+          sourceUrl: detectedUrl,
+        });
+        return;
+      }
+
+      const spotifyUrl = songlinkResult.links.spotify;
+      const resolution = await resolveTrack(
+        { sourceUrl: spotifyUrl, command: 'auto', tags: [], rawText: detectedUrl, artistHint: null, titleHint: null },
+        spotify,
+        0.0,
+      );
+
+      if (!resolution.track) {
+        insertSubmission(db, {
+          submitterId: msg.author,
+          submitterName,
+          rawText: msg.body,
+          track: null,
+          status: 'not-found',
+          sourcePlatform: platform,
+          sourceUrl: detectedUrl,
+        });
+        return;
+      }
+
+      const track = resolution.track;
+      const playlistId = await spotify.findOrCreatePlaylist(masterPlaylistName);
+      const isDupe = await spotify.isTrackInPlaylist(playlistId, track.spotifyUri!);
+      if (!isDupe) await spotify.addTrackToPlaylist(playlistId, track.spotifyUri!);
+
+      insertSubmission(db, {
+        submitterId: msg.author,
+        submitterName,
+        rawText: msg.body,
+        track,
+        playlistId,
+        playlistName: masterPlaylistName,
+        status: isDupe ? 'duplicate' : 'added',
+        sourcePlatform: platform,
+        sourceUrl: detectedUrl,
+      });
+    } catch (err) {
+      console.error('[handler] Songlink resolution error:', err);
+    }
     return;
   }
 
   try {
     // For Spotify URLs, reuse the existing resolver
     // Build a minimal ParsedSubmission from the URL
-    const parsed = { sourceUrl: detectedUrl, command: 'auto', tags: [], rawText: detectedUrl };
-    const resolution = await resolveTrack(parsed as any, spotify, 0.0); // threshold 0.0 — accept anything
+    const parsed = { sourceUrl: detectedUrl, command: 'auto', tags: [], rawText: detectedUrl, artistHint: null, titleHint: null };
+    const resolution = await resolveTrack(parsed, spotify, 0.0); // threshold 0.0 — accept anything
 
     if (!resolution.track) {
       insertSubmission(db, {

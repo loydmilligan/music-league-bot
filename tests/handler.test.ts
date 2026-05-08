@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as rateLimiterModule from '../src/resolver/songlinkRateLimiter.js';
 import type Database from 'better-sqlite3';
 import { openDb } from '../src/storage/db.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../src/bot/handler.js';
@@ -72,6 +73,10 @@ function makeBotConfig(overrides: Partial<BotConfig> = {}, dbInst?: Database.Dat
 }
 
 describe('handleMessage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   // Test 1: Ignores non-allowed group
   it('ignores messages not from an allowed group', async () => {
     const msg = makeMockMsg('!song Sade - No Ordinary Love', {
@@ -353,19 +358,60 @@ describe('handleMessage', () => {
     expect(rows[0].source_url).toBe('https://open.spotify.com/track/abc123');
   });
 
-  // Test 15: Auto-capture: YouTube URL in plain message
-  it('auto-capture: YouTube URL stored as not-found with platform, no Spotify add', async () => {
+  // Test 15a: Auto-capture: YouTube URL resolved via Songlink successfully
+  it('auto-capture: resolves YouTube URL via Songlink and adds to master playlist', async () => {
     const db = openDb(':memory:');
+    vi.spyOn(rateLimiterModule.songlinkLimiter, 'acquire').mockResolvedValue(undefined);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        entityUniqueId: 'SPOTIFY_SONG::abc123',
+        userCountry: 'US',
+        pageUrl: 'https://song.link/s/abc123',
+        entitiesByUniqueId: {
+          'SPOTIFY_SONG::abc123': {
+            id: 'abc123', type: 'song', title: 'No Ordinary Love',
+            artistName: 'Sade', apiProvider: 'spotify', platforms: ['spotify'],
+          },
+        },
+        linksByPlatform: {
+          spotify: { country: 'US', url: 'https://open.spotify.com/track/abc123', entityUniqueId: 'SPOTIFY_SONG::abc123' },
+        },
+      }),
+    } as Response);
+
     const spotify = makeMockSpotify();
-    const msg = makeMockMsg('Watch this https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     const botConfig = makeBotConfig({ spotify }, db);
+    const msg = makeMockMsg('check this out https://www.youtube.com/watch?v=abc123');
+
+    await handleMessage(msg, botConfig);
+
+    expect(spotify.findOrCreatePlaylist).toHaveBeenCalledWith('Test Master Playlist');
+    expect(spotify.addTrackToPlaylist).toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+
+    const rows = db.prepare('SELECT * FROM submissions').all() as Array<{ status: string; source_platform: string }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('added');
+    expect(rows[0].source_platform).toBe('youtube');
+  });
+
+  // Test 15b: Auto-capture: YouTube URL — Songlink fails, stored as not-found
+  it('auto-capture: stores not-found when Songlink cannot resolve YouTube URL', async () => {
+    const db = openDb(':memory:');
+    vi.spyOn(rateLimiterModule.songlinkLimiter, 'acquire').mockResolvedValue(undefined);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404 } as Response);
+
+    const spotify = makeMockSpotify();
+    const botConfig = makeBotConfig({ spotify }, db);
+    const msg = makeMockMsg('https://www.youtube.com/watch?v=xyz999');
 
     await handleMessage(msg, botConfig);
 
     expect(spotify.addTrackToPlaylist).not.toHaveBeenCalled();
     expect(msg.reply).not.toHaveBeenCalled();
 
-    const rows = db.prepare('SELECT * FROM submissions').all() as Record<string, unknown>[];
+    const rows = db.prepare('SELECT * FROM submissions').all() as Array<{ status: string; source_platform: string }>;
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('not-found');
     expect(rows[0].source_platform).toBe('youtube');
