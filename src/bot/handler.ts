@@ -70,7 +70,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
     track = resolution.track;
 
-    if (resolution.status === 'low-confidence' && notifications.onLowConfidence) {
+    if (resolution.status === 'low-confidence' && notifications.onLowConfidence && track) {
       const lowMsg = `⚠️ Added "${track.title}" by ${track.artist} — but I wasn't sure this was the right track. Check it looks right.`;
       await notifyRecipients(lowMsg, msg, ownerPhone, notifications.recipients, sendDm);
     }
