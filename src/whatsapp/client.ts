@@ -7,9 +7,13 @@ const { Client, LocalAuth } = _require('whatsapp-web.js') as typeof import('what
 const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { small?: boolean }): void };
 
 export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>): ClientType {
+  const puppeteerArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
   const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: { args: ['--no-sandbox'] },
+    puppeteer: {
+      executablePath: process.env.CHROMIUM_PATH || undefined,
+      args: puppeteerArgs,
+    },
   });
 
   client.on('qr', (qr) => {

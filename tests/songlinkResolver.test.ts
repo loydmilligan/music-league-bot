@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  computeBatchDelay,
   normalizeSonglinkInput,
   resolveSonglinkBatch,
   resolveSonglinkUrl,
@@ -97,5 +98,32 @@ describe('songlinkResolver', () => {
     const results = await resolveSonglinkBatch(inputs, { delayMs: 0 });
     expect(results).toHaveLength(10);
     expect(fetchMock).toHaveBeenCalledTimes(10);
+  });
+});
+
+describe('computeBatchDelay', () => {
+  it('returns 0 for batches of 6 or fewer', () => {
+    expect(computeBatchDelay(1, 0)).toBe(0);
+    expect(computeBatchDelay(6, 0)).toBe(0);
+    expect(computeBatchDelay(6, 5)).toBe(0);
+  });
+
+  it('uses adaptive delays for batches over 6', () => {
+    expect(computeBatchDelay(7, 0)).toBe(2000);
+    expect(computeBatchDelay(7, 1)).toBe(2000);
+    expect(computeBatchDelay(10, 2)).toBe(4000);
+    expect(computeBatchDelay(10, 3)).toBe(4000);
+    expect(computeBatchDelay(10, 4)).toBe(6000);
+    expect(computeBatchDelay(10, 5)).toBe(6000);
+    expect(computeBatchDelay(10, 6)).toBe(8000);
+    expect(computeBatchDelay(10, 7)).toBe(8000);
+    expect(computeBatchDelay(10, 8)).toBe(10000);
+    expect(computeBatchDelay(10, 9)).toBe(10000);
+  });
+
+  it('total adaptive delay for 10 inputs stays under 60s', () => {
+    const total = Array.from({ length: 9 }, (_, i) => computeBatchDelay(10, i)).reduce((a, b) => a + b, 0);
+    expect(total).toBe(50000);
+    expect(total).toBeLessThan(60000);
   });
 });

@@ -89,6 +89,29 @@ export class SpotifyAdapter implements ISpotifyAdapter {
     return false;
   }
 
+  async createPlaylist(name: string): Promise<{ id: string; url: string }> {
+    const userId = await this.getUserId();
+    const response = await spotifyFetch(`/users/${userId}/playlists`, {
+      method: 'POST',
+      body: JSON.stringify({ name, public: false }),
+    });
+    const data = (await response.json()) as { id: string; external_urls: { spotify: string } };
+    return { id: data.id, url: data.external_urls.spotify };
+  }
+
+  async addTracksToPlaylist(playlistId: string, uris: string[]): Promise<void> {
+    for (let i = 0; i < uris.length; i += 100) {
+      await spotifyFetch(`/playlists/${playlistId}/tracks`, {
+        method: 'POST',
+        body: JSON.stringify({ uris: uris.slice(i, i + 100) }),
+      });
+    }
+  }
+
+  async deletePlaylist(playlistId: string): Promise<void> {
+    await spotifyFetch(`/playlists/${playlistId}/followers`, { method: 'DELETE' });
+  }
+
   private async getUserId(): Promise<string> {
     if (this.userId) return this.userId;
     const response = await spotifyFetch('/me');

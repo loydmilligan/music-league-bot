@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "spotify-auth": "tsx scripts/spotify-oauth.ts",
+    "set-group": "tsx scripts/set-group.ts",
+    "api": "tsx src/api/server.ts",
     "test:integration": "vitest run tests/spotify.integration.test.ts"
   },
   "dependencies": {

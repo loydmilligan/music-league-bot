@@ -1,8 +1,24 @@
 services:
-  music-league-bot:
+  bot:
     build: .
-    env_file:
-      - .env
+    env_file: .env
     volumes:
       - ./data:/app/data
+      - ./.wwebjs_auth:/app/.wwebjs_auth
+      - ./.wwebjs_cache:/app/.wwebjs_cache
+    restart: unless-stopped
+
+  api:
+    build: .
+    command: npm run api
+    env_file: .env
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  bracket:
+    build:
+      context: ../song-tournament-bracket
+    ports:
+      - "5173:5173"
     restart: unless-stopped

@@ -128,18 +128,25 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, ms); });
 }
 
-// Default delayMs is 6000 — stays safely under the 10 calls/minute public API limit.
+export function computeBatchDelay(batchSize: number, index: number): number {
+  if (batchSize <= 6) return 0;
+  return (Math.floor(index / 2) + 1) * 2000;
+}
+
 export async function resolveSonglinkBatch(
   inputs: string[],
   options: { limit?: number; delayMs?: number } = {},
 ): Promise<SonglinkResolveResult[]> {
   const limit = Math.min(options.limit ?? 10, 10);
-  const delayMs = options.delayMs ?? 6000;
   const inputsToProcess = inputs.slice(0, limit);
   const results: SonglinkResolveResult[] = [];
-  for (const input of inputsToProcess) {
-    results.push(await resolveSonglinkUrl(input));
-    if (delayMs > 0) await delay(delayMs);
+  const hasDelayOverride = 'delayMs' in options;
+
+  for (let i = 0; i < inputsToProcess.length; i++) {
+    results.push(await resolveSonglinkUrl(inputsToProcess[i]!));
+    const ms = hasDelayOverride ? (options.delayMs ?? 0) : computeBatchDelay(inputs.length, i);
+    if (ms > 0) await delay(ms);
   }
+
   return results;
 }
