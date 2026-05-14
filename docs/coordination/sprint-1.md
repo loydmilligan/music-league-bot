@@ -213,3 +213,18 @@ _No contract changes yet._
 - submissionsDb adapter + home loader + home svelte page
 - smoke test passed (HTTP 200, Active Now / All Songs Ever sections render)
 - commit: 5377664
+
+### 2026-05-14 — infra (as frontend, parallel) — season landed
+- season detail page (loader + svelte): league/season lookup, rounds list with song + research counts
+- svelte-check clean on new files
+- commit: 3baf3a5
+
+### 2026-05-14 — backend (as frontend, parallel) — settings-ui landed
+- settings page: weights, import, deadlines, queue sections
+- svelte-check clean for new files (1 pre-existing error in vite.config.ts)
+- commit: f0d65c1
+
+### 2026-05-14 — frontend — round landed
+- round detail page with ML/chat tabs + YTM toggle; research tab stubbed
+- 404 paths verified; populated render blocked on startupScan `.gitkeep` bug (separate)
+- commit: fe49efa
