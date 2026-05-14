@@ -31,7 +31,10 @@ updated: 2026-05-14T16:36:41.376Z
 <!-- One or two sentences per goal. The dashboard surfaces these at the
      top of the project view as the "what next, always" anchor. -->
 
-- _TBD._
+- Stand up a SvelteKit full-stack dashboard (adapter-node) that surfaces every Music League season, round, and playlist from the local `league.db`. Server routes own all DB access; the home/season/round pages are the primary "what's in my league" view.
+- Make ZIP exports a first-class ingest path: on startup the app scans `data/*/season-*/export.zip` and imports rounds, submissions, votes, and competitors, with an in-UI re-import action surfaced from the settings page.
+- Ship a per-round song research workflow — Spotify search, candidate list, 1–5 ratings (theme fit, discovery, nostalgia, personal), notes, and a configurable weighted score that the user tunes from settings.
+- Deploy as a Docker service on port 3002 sharing the host `data/` volume, with a background Songlink worker draining the YTM resolution queue at ≤10/min so round pages can deep-link to YouTube Music.
 
 ## Active Initiatives
 
@@ -76,7 +79,22 @@ updated: 2026-05-14T16:36:41.376Z
      auto-sends — the confirmation gate is sacred (CLAUDE.md §3.6).
      See: docs/design/2026-05-05-sprint-kickoff-flow.md -->
 
-- _No tasks yet._
+- [ ] {agent: infra, id: scaffold} Task 1 — SvelteKit scaffold: `ui/package.json`, `svelte.config.js`, `vite.config.ts`, `tsconfig.json`, `app.html`, `app.css`, and the `+layout.svelte` nav shell. Smoke-test `npm run dev` before handing off.
+- [ ] {agent: backend, id: db-schema, depends: scaffold} Task 2 — `ui/src/lib/db/schema.ts` (CREATE TABLE + DEFAULT_SETTINGS) and `client.ts` (`openLeagueDb()` / `getDb()` singleton against `data/league.db`).
+- [ ] {agent: backend, id: types, depends: scaffold} Task 3 — `ui/src/lib/types.ts` shared interfaces (League, Season, Round, Submission, Vote, ResearchSong, Settings, etc.) used by both server and svelte components.
+- [ ] {agent: backend, id: leagues-db, depends: db-schema, types} Task 4 — `ui/src/lib/db/leagues.ts` league + season queries and SEED_LEAGUES bootstrap.
+- [ ] {agent: backend, id: scoring, depends: types} Task 5 — `ui/src/lib/scoring.ts` weighted-score formula and `ui/src/lib/db/settings.ts` (`getSettings()`, `updateWeights()`).
+- [ ] {agent: backend, id: import, depends: leagues-db} Task 6 — ZIP ingest pipeline: `ui/src/lib/import/zipParser.ts`, `importer.ts`, `startupScan.ts`, plus `rounds.ts`, `submissions.ts`, `importLog.ts` db modules.
+- [ ] {agent: backend, id: hooks-research, depends: import, scoring} Task 7 — `ui/src/hooks.server.ts` (DB init + startup import) and `ui/src/lib/db/research.ts` CRUD for `research_songs`.
+- [ ] {agent: backend, id: ytm-api, depends: db-schema} Task 11 — `ui/src/lib/songlink.ts`, `ui/src/lib/db/ytmQueue.ts`, and `routes/api/ytm/[spotifyUri]/+server.ts` (resolve + cache).
+- [ ] {agent: backend, id: queue-worker, depends: ytm-api} Task 14 — `ui/src/lib/queueWorker.ts` background drain loop (≤10/min) wired from `hooks.server.ts`.
+- [ ] {agent: backend, id: research-api, depends: hooks-research} Task 12.1, 12.4 — `routes/api/research/[roundId]/+server.ts` (GET/POST/PATCH/DELETE) and `routes/api/spotify/search/+server.ts`; reuses `ui/src/lib/spotify.ts`.
+- [ ] {agent: frontend, id: home, depends: hooks-research} Task 8 — home `+page.server.ts` loader and `+page.svelte` showing active seasons, past seasons, and all-songs roll-up.
+- [ ] {agent: frontend, id: season, depends: hooks-research} Task 9 — `league/[league]/season/[n]/+page.server.ts` + `+page.svelte` season detail view.
+- [ ] {agent: frontend, id: round, depends: hooks-research, ytm-api} Task 10 — round `+page.server.ts` + `+page.svelte` with ML / chat tabs and YTM deep links.
+- [ ] {agent: frontend, id: research-ui, depends: round, research-api} Task 12.2–12.3 — `ResearchList` component (Spotify search, ratings, notes, weighted score) wired into the round page.
+- [ ] {agent: frontend, id: settings-ui, depends: research-api, queue-worker} Task 13 — `settings/+page.server.ts` + `+page.svelte` for weights, import/rescan, deadlines, and queue status.
+- [ ] {agent: infra, id: docker, depends: settings-ui, research-ui} Task 15 — `Dockerfile.ui`, `docker-compose.yml` `bot-ui` service on :3002 mounting `./data`, and `.env.example` additions.
 
 ## Agent Roster
 
@@ -86,7 +104,13 @@ updated: 2026-05-14T16:36:41.376Z
 
 | Agent | Owns | Does not touch |
 |---|---|---|
-| _agent-1_ | _paths/areas this agent owns_ | _paths/areas this agent must not touch_ |
+| infra | `ui/package.json`, `ui/svelte.config.js`, `ui/vite.config.ts`, `ui/tsconfig.json`, `ui/src/app.html`, `ui/src/app.css`, `Dockerfile.ui`, `docker-compose.yml`, `.env.example` | `ui/src/**` (after scaffold lands) |
+| backend | `ui/src/lib/**`, `ui/src/hooks.server.ts`, `ui/src/routes/**/+page.server.ts`, `ui/src/routes/api/**` | `ui/src/routes/**/+page.svelte`, `ui/src/lib/components/**`, infra files |
+| frontend | `ui/src/routes/**/+page.svelte`, `ui/src/routes/+layout.svelte`, `ui/src/lib/components/**` | `ui/src/lib/db/**`, `ui/src/lib/import/**`, `ui/src/routes/**/+page.server.ts`, `ui/src/routes/api/**`, infra files |
+
+- **infra** — Tasks 1 (scaffold + configs) and 15 (Dockerfile.ui + compose entry + env example).
+- **backend** — Tasks 2–7 (db schema/client, types, leagues/seasons, scoring, ZIP import, hooks + research db), 11 (songlink + YTM api + queue db), 14 (background queue worker), plus all `+page.server.ts` loaders and `routes/api/**` handlers feeding the frontend.
+- **frontend** — Task 1.6 layout shell, Tasks 8–10 (home / season / round `+page.svelte`), Task 12.2–12.3 (ResearchList component wired into round), Task 13 (settings page UI).
 
 ## Decision Log
 
@@ -136,4 +160,56 @@ _No contract changes yet._
      matching entry, orc emits a coord-doc-stale card proposing an
      entry for the agent that committed. -->
 
-_No log entries yet._
+### 2026-05-14 — infra — scaffold landed
+- SvelteKit project scaffolded under `ui/` (minimal template, TS, adapter-node, Tailwind v4, Vitest, better-sqlite3 + adm-zip)
+- dev server smoke test passed (nav bar renders, Tailwind generating styles)
+- commit: 25298f1
+
+### 2026-05-14 — backend — types landed
+- shared TypeScript interfaces
+- commit: 04082c3
+
+### 2026-05-14 — infra (as backend, parallel) — db-schema landed
+- schema.ts + client.ts with WAL/FK, settings seeded
+- vitest passing (2/2)
+- commit: 58e43ef
+
+### 2026-05-14 — backend — scoring landed
+- weighted-mean formula + settings db
+- vitest passing
+- commit: 80c399f
+
+### 2026-05-14 — infra (as backend, parallel) — ytm-api landed
+- songlink wrapper + queue helpers + /api/ytm route with cache
+- commit: eed97e1
+
+### 2026-05-14 — frontend (as backend, parallel) — leagues-db landed
+- league + season db layer with SEED bootstrap
+- vitest passing (3/3)
+- commit: 06e404d
+
+### 2026-05-14 — infra (as backend, parallel) — queue-worker partial landed
+- queueWorker.ts module + /api/ytm-queue route (hooks.server.ts wiring deferred)
+- commit: a92fafe
+
+### 2026-05-14 — frontend (as backend, parallel) — research-crud landed
+- research_songs CRUD db layer
+- commit: 14a1e63
+
+### 2026-05-14 — backend — import landed
+- zipParser, importer, startupScan + rounds/submissions/importLog db
+- vitest passing (3/3, real fixture ZIPs)
+- commit: d83f6e7
+
+### 2026-05-14 — infra (as backend, final) — hooks-wiring landed
+- hooks.server.ts: DB init + startup ZIP import + queue worker start
+- commit: fb313d9
+
+### 2026-05-14 — backend — research-api landed
+- /api/research/[roundId] CRUD + /api/spotify/search
+- commit: 920ad03
+
+### 2026-05-14 — frontend — home landed
+- submissionsDb adapter + home loader + home svelte page
+- smoke test passed (HTTP 200, Active Now / All Songs Ever sections render)
+- commit: 5377664
