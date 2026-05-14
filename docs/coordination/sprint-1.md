@@ -228,3 +228,9 @@ _No contract changes yet._
 - round detail page with ML/chat tabs + YTM toggle; research tab stubbed
 - 404 paths verified; populated render blocked on startupScan `.gitkeep` bug (separate)
 - commit: fe49efa
+
+### 2026-05-14 — backend — startupScan .gitkeep fix
+- startupScan now filters readdir entries to actual directories via statSync and requires the `season-*` prefix; stray files like `.gitkeep` or `.DS_Store` at the league or season level no longer crash the scan with ENOTDIR
+- new vitest covers a temp data dir containing a `.gitkeep` file plus a stray non-season subdir; full lib suite green (13/13)
+- unblocks populated round-page renders from fe49efa
+- commit: 32544a4
