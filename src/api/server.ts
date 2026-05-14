@@ -2,13 +2,15 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { SpotifyAdapter } from '../spotify/adapter.js';
+import { kvDelete, kvGet, kvSet } from './tournamentStore.js';
+import { computePopularityProxies, getLastfmTrackInfo } from './lastfm.js';
 
 const PORT = parseInt(process.env.BRACKET_API_PORT ?? '3001', 10);
 const spotify = new SpotifyAdapter();
 
 function setCors(res: ServerResponse): void {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
@@ -70,6 +72,93 @@ const server = createServer(async (req, res) => {
       empty(res, 204);
     } catch (err) {
       console.error('[bracket-api] DELETE /bracket/playlist error:', err);
+      json(res, 500, { error: err instanceof Error ? err.message : 'Internal error' });
+    }
+    return;
+  }
+
+  // Tournament storage endpoints
+  if (method === 'GET' && url === '/bracket/tournament') {
+    const raw = kvGet('tournament');
+    raw ? json(res, 200, JSON.parse(raw)) : empty(res, 204);
+    return;
+  }
+
+  if (method === 'PUT' && url === '/bracket/tournament') {
+    const raw = await readBody(req);
+    kvSet('tournament', raw);
+    empty(res, 204);
+    return;
+  }
+
+  if (method === 'DELETE' && url === '/bracket/tournament') {
+    kvDelete('tournament');
+    kvDelete('songs');
+    empty(res, 204);
+    return;
+  }
+
+  if (method === 'GET' && url === '/bracket/songs') {
+    const raw = kvGet('songs');
+    raw ? json(res, 200, JSON.parse(raw)) : json(res, 200, []);
+    return;
+  }
+
+  if (method === 'PUT' && url === '/bracket/songs') {
+    const raw = await readBody(req);
+    kvSet('songs', raw);
+    empty(res, 204);
+    return;
+  }
+
+  if (method === 'POST' && url === '/bracket/songs/enrich') {
+    try {
+      const apiKey = process.env.LASTFM_API_KEY ?? '';
+      if (!apiKey) { json(res, 503, { error: 'LASTFM_API_KEY not configured' }); return; }
+
+      const raw = await readBody(req);
+      const songs = JSON.parse(raw) as Array<{ id: string; title: string; artist?: string }>;
+      if (!Array.isArray(songs)) { json(res, 400, { error: 'Body must be an array of songs' }); return; }
+
+      // Deduplicate by "artist|title"
+      const cache = new Map<string, { listeners: number; playcount: number }>();
+      const results: Array<{ listeners: number; playcount: number }> = [];
+
+      for (const song of songs) {
+        const key = `${(song.artist ?? '').toLowerCase()}|${song.title.toLowerCase()}`;
+        if (!cache.has(key)) {
+          const info = await getLastfmTrackInfo(song.artist ?? '', song.title, apiKey);
+          cache.set(key, { listeners: info.listeners, playcount: info.playcount });
+        }
+        results.push(cache.get(key)!);
+      }
+
+      const proxies = computePopularityProxies(results);
+      const enriched = songs.map((s, i) => ({
+        ...s,
+        lastfm_listeners: results[i].listeners,
+        lastfm_playcount: results[i].playcount,
+        popularity_proxy: proxies[i],
+      }));
+
+      json(res, 200, enriched);
+    } catch (err) {
+      console.error('[bracket-api] POST /bracket/songs/enrich error:', err);
+      json(res, 500, { error: err instanceof Error ? err.message : 'Internal error' });
+    }
+    return;
+  }
+
+  if (method === 'GET' && url.startsWith('/bracket/spotify/search')) {
+    try {
+      const qs = new URL(url, 'http://localhost').searchParams;
+      const q = qs.get('q')?.trim();
+      if (!q) { json(res, 400, { error: 'q parameter required' }); return; }
+      const limit = Math.min(20, Math.max(1, parseInt(qs.get('limit') ?? '10', 10)));
+      const tracks = await spotify.searchTracks(q, limit);
+      json(res, 200, tracks);
+    } catch (err) {
+      console.error('[bracket-api] GET /bracket/spotify/search error:', err);
       json(res, 500, { error: err instanceof Error ? err.message : 'Internal error' });
     }
     return;

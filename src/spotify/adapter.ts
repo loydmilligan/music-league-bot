@@ -34,6 +34,12 @@ export class SpotifyAdapter implements ISpotifyAdapter {
     return mapTrack(data.tracks.items[0], 0.8);
   }
 
+  async searchTracks(query: string, limit = 10): Promise<ResolvedTrack[]> {
+    const response = await spotifyFetch(`/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`);
+    const data = (await response.json()) as { tracks: { items: SpotifyTrack[] } };
+    return data.tracks.items.map(t => mapTrack(t, 0.8));
+  }
+
   async getTrackById(spotifyTrackId: string): Promise<ResolvedTrack | null> {
     try {
       const response = await spotifyFetch(`/tracks/${spotifyTrackId}`);

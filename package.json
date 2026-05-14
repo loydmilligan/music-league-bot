@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "spotify-auth": "tsx scripts/spotify-oauth.ts",
     "set-group": "tsx scripts/set-group.ts",
+    "add-group": "tsx scripts/add-group.ts",
     "export-bracket": "tsx scripts/export-bracket-csv.ts",
     "playlist-to-csv": "tsx scripts/playlist-to-csv.ts",
     "api": "tsx src/api/server.ts",
