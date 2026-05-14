@@ -12,3 +12,14 @@ coverage/
 .wwebjs_cache/
 auth_info/
 sessions/
+
+# orc-tower channel directory (adoption flow, B3) — keep untracked.
+.orc-tower/
+
+# Tool state
+.playwright-mcp/
+.superpowers/
+
+# Local screenshots and ad-hoc data
+/bracket-*.png
+/late-90s-bracket.csv
