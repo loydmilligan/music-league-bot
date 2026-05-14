@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
+  import ResearchList from '$lib/components/ResearchList.svelte';
   let { data } = $props<{ data: PageData }>();
   let tab = $state<'ml' | 'chat' | 'research'>('ml');
   let ytmMode = $state(false);
@@ -84,5 +85,5 @@
 {/if}
 
 {#if tab === 'research'}
-  <p class="text-slate-500">Research coming in next task.</p>
+  <ResearchList roundId={data.round.id} initial={data.research} weights={data.settings} />
 {/if}
