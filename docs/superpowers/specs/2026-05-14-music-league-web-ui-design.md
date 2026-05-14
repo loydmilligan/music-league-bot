@@ -144,7 +144,44 @@ CREATE TABLE ytm_link_cache (
   ytm_url       TEXT,
   resolved_at   TEXT NOT NULL
 );
+
+CREATE TABLE ytm_resolution_queue (
+  id           INTEGER PRIMARY KEY,
+  spotify_uri  TEXT NOT NULL UNIQUE,
+  title        TEXT,
+  artist       TEXT,
+  status       TEXT NOT NULL DEFAULT 'pending'
+                 CHECK(status IN ('pending', 'processing', 'done', 'failed')),
+  error        TEXT,
+  queued_at    TEXT NOT NULL,
+  resolved_at  TEXT
+);
+
+CREATE TABLE import_log (
+  id              INTEGER PRIMARY KEY,
+  league_slug     TEXT NOT NULL,
+  season_number   INTEGER NOT NULL,
+  filename        TEXT NOT NULL,
+  imported_at     TEXT NOT NULL,
+  rounds_count    INTEGER NOT NULL DEFAULT 0,
+  submissions_count INTEGER NOT NULL DEFAULT 0,
+  votes_count     INTEGER NOT NULL DEFAULT 0,
+  status          TEXT NOT NULL CHECK(status IN ('success', 'partial', 'error')),
+  error           TEXT
+);
+
+CREATE TABLE settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+-- Seeded with defaults:
+-- weight_discovery = 35
+-- weight_theme_fit = 25
+-- weight_personal  = 25
+-- weight_nostalgia = 15
 ```
+
+The `rounds` table also gains a `submission_deadline TEXT` and `voting_deadline TEXT` column (nullable ISO timestamps, manually entered via Settings).
 
 ---
 
@@ -176,6 +213,7 @@ Four cards in a grid (or two rows of two), one per active season. Each card show
 - Current round name (theme)
 - Research count for current round ("4 songs in research" / "No research yet")
 - Nostalgia Pit card uses amber border instead of cyan, with "1 band per round" note
+- If deadlines are set for the current round: show countdown badges on the card ("Submit in 2d 4h" in yellow → red when under 24h, "Vote in 6h" similarly)
 
 **Middle section — Past seasons:**
 Collapsed into one compact row per league (not per season). Each row shows league name, total rounds, total songs, and a `→` to expand into that league's season list.
@@ -246,20 +284,49 @@ Triggered by `+ Add Song` in the Research tab.
 
 ---
 
-### 5. Admin / Import (`/admin/import`)
+### 5. Settings (`/settings`)
 
-Simple file upload form:
-- League selector (dropdown)
-- Season number input
-- ZIP file upload
-- "Import" button → server parses and upserts into `league.db`, returns count of rounds/submissions/votes imported
-- "Re-import all" button to reload all ZIPs from `data/` on disk
+Accessible from a cog icon (⚙) in the top-right nav on every page.
+
+Organized into four sections:
+
+#### Research Rating Weights
+Four sliders (one per dimension) that must sum to 100%. Displays the current split visually as a proportional bar. Changes persist to `league.db` in a `settings` key-value table and take effect immediately on all score calculations.
+
+Default weights:
+| Dimension | Default |
+|---|---|
+| Discovery Potential | 35% |
+| Theme Fit | 25% |
+| Personal Rating | 25% |
+| Nostalgia Potential | 15% |
+
+A "Reset to defaults" button restores the above values.
+
+#### ZIP Import
+- Per-league/season upload form: league selector + season number + file picker + "Import" button
+- "Re-scan disk" button to re-import all ZIPs from `data/*/season-*/export.zip` without uploading
+- **Import history table**: one row per import event — league, season, filename, imported at, rounds/submissions/votes counts, status (success / partial / error). Stored in a new `import_log` table.
+
+#### Round Deadlines
+A table of all active rounds across all leagues. For each round: league, season, round name, submission deadline, voting deadline. Both deadline fields are editable date/time pickers (manual entry). Stored in a `deadline` column added to the `rounds` table. Deadlines are shown as countdown badges on the home page active season cards ("Submission due in 2d 4h" / "Voting due in 6h").
+
+#### Songlink Resolution Queue
+Shows the state of the background Songlink resolution queue — used whenever a large set of Spotify URIs needs YouTube Music links resolved (e.g., importing a full season's worth of songs).
+
+Displays:
+- **Pending**: count of URIs waiting to be resolved, estimated time at 10/min rate limit
+- **In progress**: currently resolving URI + progress bar
+- **Completed today**: count resolved in last 24h
+- **Failures**: table of URIs that returned no YTM link or an error — columns: Spotify URI, track title, error, retry button
+
+Queue state is stored in a `ytm_resolution_queue` table. A server-side background worker drains the queue at ≤10 requests/minute using the existing `songlinkRateLimiter`. The UI polls this endpoint every 10 seconds while the Settings page is open.
 
 ---
 
 ## ZIP Import Logic
 
-On app startup, the server scans `data/*/season-*/export.zip` and imports any that haven't been imported yet (tracked by a `imports` table or by checking if `ml_round_id` already exists). Re-import is idempotent — all inserts use `INSERT OR REPLACE` / `ON CONFLICT DO UPDATE`.
+On app startup, the server scans `data/*/season-*/export.zip` and imports any that haven't been imported yet (tracked by the `import_log` table). Re-import is idempotent — all inserts use `INSERT OR REPLACE` / `ON CONFLICT DO UPDATE`. Each import run writes a row to `import_log` regardless of outcome.
 
 ---
 
