@@ -92,7 +92,7 @@ updated: 2026-05-14T16:36:41.376Z
 - [ ] {agent: frontend, id: home, depends: hooks-research} Task 8 — home `+page.server.ts` loader and `+page.svelte` showing active seasons, past seasons, and all-songs roll-up.
 - [ ] {agent: frontend, id: season, depends: hooks-research} Task 9 — `league/[league]/season/[n]/+page.server.ts` + `+page.svelte` season detail view.
 - [ ] {agent: frontend, id: round, depends: hooks-research, ytm-api} Task 10 — round `+page.server.ts` + `+page.svelte` with ML / chat tabs and YTM deep links.
-- [ ] {agent: frontend, id: research-ui, depends: round, research-api} Task 12.2–12.3 — `ResearchList` component (Spotify search, ratings, notes, weighted score) wired into the round page.
+- [x] {agent: frontend, id: research-ui, depends: round, research-api} Task 12.2–12.3 — `ResearchList` component (Spotify search, ratings, notes, weighted score) wired into the round page.
 - [ ] {agent: frontend, id: settings-ui, depends: research-api, queue-worker} Task 13 — `settings/+page.server.ts` + `+page.svelte` for weights, import/rescan, deadlines, and queue status.
 - [ ] {agent: infra, id: docker, depends: settings-ui, research-ui} Task 15 — `Dockerfile.ui`, `docker-compose.yml` `bot-ui` service on :3002 mounting `./data`, and `.env.example` additions.
 
@@ -159,6 +159,12 @@ _No contract changes yet._
      against git history; if commits land on owns paths without a
      matching entry, orc emits a coord-doc-stale card proposing an
      entry for the agent that committed. -->
+
+### 2026-05-14 — frontend — research-ui landed
+- `ui/src/lib/components/ResearchList.svelte`: Spotify search box + results, candidate list with 1–5 rating buttons across themeFit/discoveryPotential/nostalgiaPotential/personalRating, notes textarea, save-for-future toggle, computed weighted score (uses shared `scoring.computeScore` against loader `settings`), Spotify/YT Music deep links, remove
+- wired into the round page's research tab (replaces the stub in fe49efa); CRUD via `/api/research/[roundId]` with optimistic UI + rollback on failure
+- svelte-check clean on new files (only pre-existing `vite.config.ts` error remains)
+- commit: 53c8179
 
 ### 2026-05-14 — infra — scaffold landed
 - SvelteKit project scaffolded under `ui/` (minimal template, TS, adapter-node, Tailwind v4, Vitest, better-sqlite3 + adm-zip)
