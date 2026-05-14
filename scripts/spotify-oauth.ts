@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     });
 
     server.listen(3888, '0.0.0.0', () => {
-      console.log('Listening on 0.0.0.0:3888 (Cloudflare tunnel -> https://mlbot.mattmariani.com)\n');
+      console.log('Listening on 0.0.0.0:3888 (Cloudflare tunnel -> https://your-domain.example.com)\n');
     });
   });
 }

@@ -59,7 +59,7 @@ The test suite covers the message parser (all `!song` command variants), the rul
 ## Spotify setup
 
 1. Create an app at https://developer.spotify.com/dashboard
-2. Add `https://mlbot.mattmariani.com/oauth/spotify/callback` as a Redirect URI
+2. Add `https://your-domain.example.com/oauth/spotify/callback` as a Redirect URI
 3. Copy Client ID and Client Secret into `.env`
 4. Run the one-time auth flow:
 

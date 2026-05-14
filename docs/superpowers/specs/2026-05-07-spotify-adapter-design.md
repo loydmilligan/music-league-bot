@@ -32,7 +32,7 @@ Run once via `npm run spotify-auth`. Never committed to git; not imported by any
 2. Constructs Spotify authorization URL with scopes: `playlist-modify-public playlist-modify-private playlist-read-private`
 3. Prints the URL and instructs user to open it in a browser
 4. Starts HTTP server bound to `0.0.0.0:3888`
-5. Receives callback at `/oauth/spotify/callback?code=...` (forwarded from Cloudflare tunnel at `https://mlbot.mattmariani.com`)
+5. Receives callback at `/oauth/spotify/callback?code=...` (forwarded from Cloudflare tunnel at `https://your-domain.example.com`)
 6. Exchanges code for tokens via POST to `https://accounts.spotify.com/api/token`
 7. Prints `SPOTIFY_REFRESH_TOKEN=<value>` to terminal
 8. Shuts down the server
@@ -43,7 +43,7 @@ User copies the printed token into `.env`. This is the only time the OAuth flow 
 ```
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
-SPOTIFY_REDIRECT_URI=https://mlbot.mattmariani.com/oauth/spotify/callback
+SPOTIFY_REDIRECT_URI=https://your-domain.example.com/oauth/spotify/callback
 ```
 
 **Added to `.env` after running:**

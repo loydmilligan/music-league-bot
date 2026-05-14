@@ -728,7 +728,7 @@ async function main(): Promise<void> {
     });
 
     server.listen(3888, '0.0.0.0', () => {
-      console.log('Listening on 0.0.0.0:3888 (Cloudflare tunnel → https://mlbot.mattmariani.com)\n');
+      console.log('Listening on 0.0.0.0:3888 (Cloudflare tunnel → https://your-domain.example.com)\n');
     });
   });
 }
@@ -881,7 +881,7 @@ Replace the Spotify section with:
 # Spotify — run `npm run spotify-auth` to get SPOTIFY_REFRESH_TOKEN
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
-SPOTIFY_REDIRECT_URI=https://mlbot.mattmariani.com/oauth/spotify/callback
+SPOTIFY_REDIRECT_URI=https://your-domain.example.com/oauth/spotify/callback
 SPOTIFY_REFRESH_TOKEN=
 ```
 
@@ -893,7 +893,7 @@ After the "Running tests" section, add:
 ## Spotify setup
 
 1. Create an app at https://developer.spotify.com/dashboard
-2. Add `https://mlbot.mattmariani.com/oauth/spotify/callback` as a Redirect URI
+2. Add `https://your-domain.example.com/oauth/spotify/callback` as a Redirect URI
 3. Copy Client ID and Client Secret into `.env`
 4. Run the one-time auth flow:
 
