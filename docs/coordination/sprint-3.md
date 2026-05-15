@@ -126,7 +126,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   ```
 - **Tests** (`ui/src/lib/db/headToHead.state.test.ts`): 6 vitests covering cold start, champion holding, champion dethroned, isComplete, reset, and ineligible-status exclusion. State endpoint and POST endpoint exercise the same `buildH2HState` plumbing — the unit tests cover the actual logic. Full suite: 27/27 green.
 - **Live check:** `curl -s http://localhost:5174/api/h2h/state/97` returns `{"candidates":[],"matches":[],"champion":null,"challenger":null,"queue":[],"retired":[],"isComplete":true}` — round 97 has no `research_songs` yet (only `ml_submissions`), so the empty state is the contract's correct response per the task brief.
-- commit: <pending — landing now>
+- commit: `899fd72`
 
 ### 2026-05-15 — backend — h2h-candidates landed
 - `ui/src/lib/db/headToHead.ts` (new): exports `getH2HCandidates(db, roundId)` returning `H2HCandidate[]`. SELECTs from `research_songs` filtered to `status='reviewing'` (the default), LEFT JOINs `ytm_link_cache` for `ytm_url`, then maps each row through `computeScore` from `lib/scoring.ts` with the current `getSettings(db)` weights and sorts by `weightedScore` desc (nulls last).
