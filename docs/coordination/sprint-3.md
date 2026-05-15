@@ -115,7 +115,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   sub-only POST → 102 | '2026-08-01T00:00' | '21 May @ 2:14pm'  (vote survived)
   both POST →    102 | '2026-08-15T00:00' | '2026-08-22T00:00'  (normal save)
   ```
-- commit: <pending — landing now>
+- commit: `57f33aa`
 
 ### 2026-05-15 — frontend — h2h-page landed
 - `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`: added a fourth `Head-to-Head` tab as a sibling to ML / Chat / Research. Tab state widened from `'ml' | 'chat' | 'research'` to include `'h2h'`; tab strip auto-renders the new entry through the existing `{#each tabs}` loop, so the prototype-A mono-orange-underline styling carries over for free.
