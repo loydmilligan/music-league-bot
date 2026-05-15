@@ -43,12 +43,58 @@
   );
 
   type WeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightPersonal' | 'weightNostalgia';
-  const weightFields: Array<{ field: WeightField; label: string; dot: string }> = [
-    { field: 'weightDiscovery', label: 'Discovery potential', dot: 'bg-health' },
-    { field: 'weightThemeFit', label: 'Theme fit', dot: 'bg-accent' },
-    { field: 'weightPersonal', label: 'Personal rating', dot: 'bg-warn' },
-    { field: 'weightNostalgia', label: 'Nostalgia potential', dot: 'bg-accent-strong' }
+  const weightFields: Array<{ field: WeightField; label: string; dot: string; tooltip: string }> = [
+    {
+      field: 'weightDiscovery',
+      label: 'Discovery potential',
+      dot: 'bg-health',
+      tooltip: 'Likelihood this is new to the league — niche or underrated.'
+    },
+    {
+      field: 'weightThemeFit',
+      label: 'Theme fit',
+      dot: 'bg-accent',
+      tooltip: "How well the song matches the round's stated theme."
+    },
+    {
+      field: 'weightPersonal',
+      label: 'Personal rating',
+      dot: 'bg-warn',
+      tooltip: 'Your gut-level affection independent of theme.'
+    },
+    {
+      field: 'weightNostalgia',
+      label: 'Nostalgia potential',
+      dot: 'bg-accent-strong',
+      tooltip: 'Emotional / personal connection from the past.'
+    }
   ];
+  const weightFieldKeys: WeightField[] = weightFields.map((f) => f.field);
+
+  // Auto-balance: when on, moving one slider by Δ distributes −Δ/3 across the other
+  // three (clamped to [0,100]). Implemented via explicit oninput (not bind:value) so
+  // we control the mutation in one synchronous batch — no reactive cycle.
+  let autoBalance = $state(false);
+
+  function clampWeight(n: number): number {
+    return Math.max(0, Math.min(100, n));
+  }
+
+  function handleWeightInput(field: WeightField, raw: number) {
+    const newValue = clampWeight(Math.round(raw));
+    if (!autoBalance) {
+      w = { ...w, [field]: newValue };
+      return;
+    }
+    const delta = newValue - w[field];
+    const share = delta / 3;
+    const next = { ...w, [field]: newValue } as Record<WeightField, number>;
+    for (const other of weightFieldKeys) {
+      if (other === field) continue;
+      next[other] = Math.round(clampWeight(w[other] - share));
+    }
+    w = next;
+  }
 </script>
 
 <svelte:head><title>Settings · music-league-bot</title></svelte:head>
@@ -69,27 +115,49 @@
 <div class="grid md:grid-cols-2 gap-6 mb-6">
 <!-- Section 1: Rating Weights (left column) -->
 <section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="flex items-center justify-between gap-3 mb-1">
-    <div>
-      <SectionLabel>Research weights</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
-    </div>
-    <StatusChip
-      label={totalOk ? `${wTotal}% · OK` : `${wTotal}% · OFF`}
-      tone={totalOk ? 'health' : 'warn'}
-    />
+  <header class="mb-1">
+    <SectionLabel>Research weights</SectionLabel>
+    <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
   </header>
-  <p class="text-xs text-fg-dim mb-5">
+  <p class="text-xs text-fg-dim mb-4">
     Four dimensions, sums to 100. The weighted score is
     <code class="font-mono text-fg">Σ(rating × weight) / Σ(weight)</code>.
   </p>
 
+  <!-- Auto-balance toggle + live sum indicator -->
+  <div class="flex items-center justify-between gap-3 mb-5">
+    <label
+      class="inline-flex items-center gap-2 cursor-pointer select-none"
+      title="When on, moving any slider redistributes −Δ/3 across the other three."
+    >
+      <input
+        type="checkbox"
+        bind:checked={autoBalance}
+        class="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
+      />
+      <span class="font-mono text-[11px] tracking-widest uppercase text-fg-muted">
+        Auto-balance
+      </span>
+    </label>
+    {#if totalOk}
+      <StatusChip label="SUMS TO 100" tone="accent" />
+    {:else}
+      <StatusChip label="SUM: {wTotal}" tone="warn" />
+    {/if}
+  </div>
+
   <form method="POST" action="?/updateWeights" use:enhance class="space-y-4">
-    {#each weightFields as { field, label, dot } (field)}
+    {#each weightFields as { field, label, dot, tooltip } (field)}
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2 w-52">
           <span class="w-2 h-2 rounded-full {dot} shrink-0"></span>
-          <label class="text-sm text-fg-muted" for="w-{field}">{label}</label>
+          <label
+            class="text-sm text-fg-muted cursor-help underline decoration-dotted decoration-fg-faint underline-offset-4"
+            for="w-{field}"
+            title={tooltip}
+          >
+            {label}
+          </label>
         </div>
         <input
           id="w-{field}"
@@ -97,11 +165,12 @@
           name={field}
           min="0"
           max="100"
-          bind:value={(w as Record<string, number>)[field]}
+          value={w[field]}
+          oninput={(e) => handleWeightInput(field, Number(e.currentTarget.value))}
           class="flex-1 accent-[var(--color-accent)]"
         />
         <span class="w-12 text-right text-sm font-mono text-fg">
-          {(w as Record<string, number>)[field]}%
+          {w[field]}%
         </span>
       </div>
     {/each}

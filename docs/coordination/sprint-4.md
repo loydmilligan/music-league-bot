@@ -49,7 +49,7 @@ updated: 2026-05-15T01:00:00.000Z
   - Keep this purely visual for now — once submission/vote progress data is live (future email-ingestion sprint), the indicator can also encode "how many players have voted" via a small badge in the edge bar.
   - **Acceptance:** active league cards on `/` show the left-edge urgency bar with at least three distinct intensity levels visible across the actual leagues' deadline distances; the implementation reads `urgencyLevel` cleanly from a derived field; no flashing or jank on render.
 
-- [ ] {agent: frontend, id: rating-weights-autobalance} Add an **auto-balance toggle** to the Rating weights card on `/settings`. When enabled, moving any one of the four sliders (theme-fit, discovery, nostalgia, personal) proportionally adjusts the other three so the sum stays at 100%. Per feedback: "if you adjust any of the individual of the four sliders - it moves the other 3 sliders 1/3 of the distance in the opposite direction." Implementation:
+- [x] {agent: frontend, id: rating-weights-autobalance} Add an **auto-balance toggle** to the Rating weights card on `/settings`. When enabled, moving any one of the four sliders (theme-fit, discovery, nostalgia, personal) proportionally adjusts the other three so the sum stays at 100%. Per feedback: "if you adjust any of the individual of the four sliders - it moves the other 3 sliders 1/3 of the distance in the opposite direction." Implementation:
   - New `autoBalance: boolean` reactive state local to the page (no schema change needed — local UI state).
   - When the toggle is on and one slider moves by `Δ`, distribute `−Δ/3` across the other three sliders (clamp to `[0, 100]`).
   - Show a `<StatusChip tone='accent'>SUMS TO 100</StatusChip>` next to the toggle when sum is exactly 100, `tone='warn'` otherwise (so the user knows when manual adjustment has drifted).
@@ -105,6 +105,29 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Auto-fill defaults for unknown deadlines** — closely related to sprint-4's deadline-auto-fill but more ambitious: detect rounds with null deadlines on startup and prompt the user to bulk auto-fill them.
 
 ## Activity Log
+
+### 2026-05-15 — infra (as frontend, parallel) — rating-weights-autobalance landed
+- **Why infra in a frontend lane:** same `(as frontend, parallel)` rationale as the settings-two-column work — frontend pane saturated, infra picking up settings-page extensions.
+- **File touched (single):** `ui/src/routes/settings/+page.svelte`. No DB schema change, no loader change, no form-action change.
+- **State + algorithm:**
+  - New page-local `let autoBalance = $state(false);` plus a deterministic `handleWeightInput(field, raw)` that clamps the new value to `[0,100]` and rounds to an integer.
+  - **Avoiding reactive cycles:** switched the four sliders from `bind:value={w[field]}` to `value={w[field]}` + explicit `oninput={(e) => handleWeightInput(field, Number(e.currentTarget.value))}`. Because we no longer have a two-way bind, the runtime never re-emits an `input` from our own state mutation — `handleWeightInput` writes `w` once, the inputs re-render with the new value, no further events fire. This avoids the classic feedback loop where `w[other] = w[other] - share` would re-trigger the moved slider's input handler.
+  - When auto-balance is **off**: the touched slider value is written verbatim (single-key spread `{ ...w, [field]: newValue }`). Sum chip will surface drift in real-time.
+  - When auto-balance is **on**: compute `delta = newValue - w[field]`, `share = delta / 3`, then build a fresh `next` snapshot — touched slider gets `newValue`, each of the other three gets `Math.round(clamp(w[other] - share, 0, 100))`. Assign `w = next` once, atomically.
+  - **Integer-rounding drift:** when `delta` is not divisible by 3, integer rounding leaves the sum ±1 off (e.g. `+7` on Personal: 35/25/25/15 → 33/23/32/13, sum 101). This is intentional per the brief ("clamp each to [0,100]"); the warn chip surfaces it. Verified by running the algorithm in pure Node: divisible-by-3 deltas keep sum=100 exactly; non-divisible deltas drift by ≤1; pushing one slider to 100 clamps the others at 0 with the brief's documented partial-sum behavior.
+- **Sum indicator chip:** placed next to the toggle. `totalOk` (existing derived `Math.abs(wTotal - 100) <= 1`) drives `<StatusChip label="SUMS TO 100" tone="accent">` when within tolerance, else `<StatusChip label="SUM: {wTotal}" tone="warn">`. Removed the previous duplicate header chip (`{wTotal}% · OK/OFF`) to avoid double-chipping.
+- **Tooltips:** each rating dimension `<label>` got `title={tooltip}` plus a `cursor-help underline decoration-dotted decoration-fg-faint underline-offset-4` visual affordance so users know the label is hover-able. Text:
+  - `Theme fit` → "How well the song matches the round's stated theme."
+  - `Discovery potential` → "Likelihood this is new to the league — niche or underrated."
+  - `Nostalgia potential` → "Emotional / personal connection from the past."
+  - `Personal rating` → "Your gut-level affection independent of theme."
+- **Persistence unchanged:** the `<form method="POST" action="?/updateWeights">` wrapper, the `name={field}` on each `<input type="range">`, and the existing `?/updateWeights` form action all stay as-is — the form serializes the current slider values whether they got there via direct input or via auto-balance distribution.
+- **Verification:**
+  - `npx svelte-check` (run from `ui/`) — 1 error + 2 warnings, all pre-existing.
+  - `npm run dev` (port 5174) → `curl /settings` HTTP 200, 136447b. Grep confirms `Auto-balance`, `SUMS TO 100`, `cursor-help`, and the tooltip strings render in SSR.
+  - Pure-Node algorithm trace (six cases): documented in commit body.
+  - Screenshot at `docs/screenshots/2026-05-15-sprint4-rating-weights-autobalance.png` (1440×1100): toggle + accent SUMS TO 100 chip + four labels with dotted underlines visible above the sliders.
+- commit: <pending — landing now>
 
 ### 2026-05-15 — infra (as frontend, parallel) — settings-two-column-layout landed
 - **Why infra in a frontend lane:** sprint-4 has zero infra-owned tasks; frontend pane has 7 of 8 tasks. Sprint-1 review Q2 ratified `(as frontend, parallel)` load-balancing for exactly this case.
