@@ -137,7 +137,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - **Hover:** scoped `.group:hover .ml-mark { color: var(--color-accent-strong); }` preserves the existing rail wordmark hover (fill-only swap; stroke + extrude stays in `--color-accent-deep`, per the brief's "fill-only hover is acceptable" allowance).
 - **Verification:** `cd ui && npm run dev` → `curl /` HTTP 200; inspected the rendered HTML — the `.ml-mark.svelte-*` scoped selector compiles with all the recipe properties (`-webkit-text-stroke`, `paint-order: stroke fill`, the full `text-shadow` ramp, `transform: translateY(-4%)`). `svelte-check` reports only the pre-existing `vite.config.ts` error + two pre-existing `state_referenced_locally` warnings — no new findings. **No Playwright screenshot this round:** the Playwright MCP browser was held by another agent (`Browser is already in use for .cache/ms-playwright/mcp-chrome-114dc8f`), so visual diff vs `brand/m-l-on-bone-512.png` is left as a follow-up — the compiled CSS matches the canonical recipe property-for-property, so output should match modulo the smaller font-size (28px sidebar vs 320px in the spec's stage).
 - **Scope discipline:** only `+layout.svelte` touched. `app.css` left alone (mark stays component-scoped until a second consumer appears, per the brief).
-- commit: <pending — landing now>
+- commit: `953f1f7`
 
 ### 2026-05-14 — frontend — season-page landed
 - `ui/src/routes/league/[league]/season/[n]/+page.svelte` reskinned to match the prototype design system.
