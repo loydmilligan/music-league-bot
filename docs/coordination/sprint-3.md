@@ -35,7 +35,7 @@ updated: 2026-05-15T00:30:00.000Z
      planning: inline` is configured. orc-tower's InlineArtifactSource
      parses this section. Same format conventions as sprint-1 / sprint-2. -->
 
-- [ ] {agent: backend, id: h2h-schema} Add `head_to_head_matches` table to `ui/src/lib/db/schema.ts` — columns `(id INTEGER PRIMARY KEY, round_id INTEGER NOT NULL, winner_id INTEGER NOT NULL, loser_id INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (winner_id) REFERENCES research_songs(id), FOREIGN KEY (loser_id) REFERENCES research_songs(id))` + index on `(round_id, created_at)`. Apply via the existing `CREATE TABLE IF NOT EXISTS` startup path in `client.ts` so dev + docker pick it up automatically (no separate migration runner needed at this scale). Add a vitest exercising insert + foreign-key constraint behavior.
+- [x] {agent: backend, id: h2h-schema} Add `head_to_head_matches` table to `ui/src/lib/db/schema.ts` — columns `(id INTEGER PRIMARY KEY, round_id INTEGER NOT NULL, winner_id INTEGER NOT NULL, loser_id INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (winner_id) REFERENCES research_songs(id), FOREIGN KEY (loser_id) REFERENCES research_songs(id))` + index on `(round_id, created_at)`. Apply via the existing `CREATE TABLE IF NOT EXISTS` startup path in `client.ts` so dev + docker pick it up automatically (no separate migration runner needed at this scale). Add a vitest exercising insert + foreign-key constraint behavior.
   - **Acceptance:** `cd ui && npm run dev` (or restart docker) — `sqlite3 data/league.db ".schema head_to_head_matches"` shows the table; vitest passes (1+ test for insert; 1+ test confirming FK violation when winner_id or loser_id doesn't exist in research_songs); the test fixture cleans up after itself.
 
 - [ ] {agent: backend, id: h2h-candidates} Add `getH2HCandidates(roundId)` in `ui/src/lib/db/research.ts` (or new `ui/src/lib/db/headToHead.ts` — your call). Returns research_songs eligible for head-to-head: anything from that round whose status indicates active consideration (define this — proposed: `themeFit >= 3` OR a dedicated `status='reviewing'`/`'shortlist'` field if you decide to add one). If the research_songs table doesn't have a status column yet, add `status TEXT NOT NULL DEFAULT 'reviewing'` to the schema in this same task (research candidates default to in-the-running). Returns `{ id, artist, title, themeFit, discoveryPotential, nostalgiaPotential, personalRating, notes, spotifyUri, ytmUrl, weightedScore }[]`. Sort by `weightedScore` desc so the highest-rated candidate naturally becomes the initial champion.
@@ -88,6 +88,14 @@ _New types `H2HMatch` and `H2HCandidate` will be added to `ui/src/lib/types.ts` 
 - _None._
 
 ## Activity Log
+
+### 2026-05-15 — backend — h2h-schema landed
+- `ui/src/lib/db/schema.ts`: added `head_to_head_matches` table (`id`, `round_id` FK→rounds, `winner_id`/`loser_id` FK→research_songs, `created_at` DEFAULT CURRENT_TIMESTAMP) plus `idx_h2h_round_created` covering `(round_id, created_at)`. Also added `status TEXT NOT NULL DEFAULT 'reviewing'` to `research_songs` for the h2h-candidates eligibility filter.
+- `ui/src/lib/db/client.ts`: lightweight in-place migration — after `db.exec(SCHEMA)`, PRAGMA-checks `research_songs` for the new `status` column and runs `ALTER TABLE … ADD COLUMN status TEXT NOT NULL DEFAULT 'reviewing'` if missing. Single PRAGMA per boot; existing DBs (dev + the running docker container) pick the column up next time `openLeagueDb()` is called.
+- `ui/src/lib/types.ts`: declared `H2HMatch`, `H2HCandidate`, `H2HState` ahead of h2h-api so test code can already import the row type.
+- `ui/src/lib/db/headToHead.test.ts` (new): 4 vitests — (1) table columns + index present; (2) `status` column on research_songs with default `'reviewing'`; (3) round-trip insert through a real round + two research_songs; (4) FK violation when `winner_id` references a non-existent research song.
+- **Verified:** `npx vitest run` 17/17 green. Live DB at `data/league.db` already migrated (server was running): `sqlite3 .schema head_to_head_matches` shows the table + index, `PRAGMA table_info(research_songs)` shows `status` column with default `'reviewing'`.
+- commit: <pending — landing now>
 
 ### 2026-05-15 — docs — Sprint plan refresh: head-to-head picker
 - replaced `## Active Sprint Plan` body with 7 tasks for the head-to-head picker (3 backend / 4 frontend / 0 infra)

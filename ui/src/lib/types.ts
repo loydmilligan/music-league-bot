@@ -24,6 +24,37 @@ export interface ImportLogEntry {
   roundsCount: number; submissionsCount: number; votesCount: number;
   status: 'success' | 'partial' | 'error'; error: string | null;
 }
+export interface H2HMatch {
+  id: number;
+  roundId: number;
+  winnerId: number;
+  loserId: number;
+  createdAt: string;
+}
+export interface H2HCandidate {
+  id: number;
+  roundId: number;
+  artist: string;
+  title: string;
+  spotifyUri: string;
+  ytmUrl: string | null;
+  themeFit: number | null;
+  discoveryPotential: number | null;
+  nostalgiaPotential: number | null;
+  personalRating: number | null;
+  notes: string | null;
+  weightedScore: number | null;
+  status: string;
+}
+export interface H2HState {
+  candidates: H2HCandidate[];
+  matches: H2HMatch[];
+  champion: H2HCandidate | null;
+  challenger: H2HCandidate | null;
+  queue: H2HCandidate[];
+  retired: H2HCandidate[];
+  isComplete: boolean;
+}
 export interface YtmQueueEntry {
   id: number; spotifyUri: string; title: string | null; artist: string | null;
   status: 'pending' | 'processing' | 'done' | 'failed'; error: string | null;

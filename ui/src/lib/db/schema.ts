@@ -42,8 +42,18 @@ export const SCHEMA = `
     submitted_by_me INTEGER NOT NULL DEFAULT 0,
     submitted_by_other INTEGER NOT NULL DEFAULT 0,
     other_submission_votes INTEGER,
+    status TEXT NOT NULL DEFAULT 'reviewing',
     UNIQUE(round_id, spotify_uri)
   );
+  CREATE TABLE IF NOT EXISTS head_to_head_matches (
+    id INTEGER PRIMARY KEY,
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    winner_id INTEGER NOT NULL REFERENCES research_songs(id),
+    loser_id INTEGER NOT NULL REFERENCES research_songs(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_h2h_round_created
+    ON head_to_head_matches(round_id, created_at);
   CREATE TABLE IF NOT EXISTS ytm_link_cache (
     spotify_uri TEXT PRIMARY KEY, ytm_url TEXT, resolved_at TEXT NOT NULL
   );
