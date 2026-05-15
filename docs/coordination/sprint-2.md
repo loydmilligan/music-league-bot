@@ -85,7 +85,7 @@ updated: 2026-05-14T20:35:00.000Z
 - [x] {agent: backend, id: verify-sprint-1} Verify sprint-1's two unverified items end-to-end and fix anything that breaks: (a) populated round-detail render works with real ZIP data after the `.gitkeep` fix; (b) the docker container reads host `./data` and serves a populated round page. Document the smoke-test command + URL + verified output for each in the sprint-2 Activity Log.
   - **Acceptance:** `curl http://localhost:3002/league/hip-jammers/season/3/round/<real-roundId>` returns HTTP 200 with at least one real artist+title pair present in the response body (grep for a known submission string); `docker compose logs bot-ui` shows no errors during startup ZIP import (or shows clean "already imported" lines); both smoke-test commands + verification output appended under a `### 2026-05-XX — backend — sprint-1 verification` entry in this doc's Activity Log.
 
-- [ ] {agent: backend, id: layout-loader} Add `ui/src/routes/+layout.server.ts` with cross-route loaders that populate the left rail's `LEAGUES` + `CROSS-LEAGUE NEXT` sections + footer diagnostics on every page (not just `/`). Fixes the blocker filed in `92a29ce` (layout-shell landed with placeholder behavior on non-home routes). Loader shape from the frontend agent's proposal: `getAllAdoptedLeagues()` → `{ slug, name, status: 'active'|'voting'|'open'|'idle', currentRoundId, currentRoundLabel }[]`, `getCrossLeagueUpcoming()` → `{ leagueSlug, roundName, phase, deadline }[]`, and `getWatcherDiagnostics()` → `{ uptimeMs, dbSizeBytes, lastPollAt }` (fold into the layout loader return is fine). Frontend layout already reads `page.data.activeSeasons` opportunistically — rename or coexist; frontend will follow up to consume the new shape after this lands.
+- [x] {agent: backend, id: layout-loader} Add `ui/src/routes/+layout.server.ts` with cross-route loaders that populate the left rail's `LEAGUES` + `CROSS-LEAGUE NEXT` sections + footer diagnostics on every page (not just `/`). Fixes the blocker filed in `92a29ce` (layout-shell landed with placeholder behavior on non-home routes). Loader shape from the frontend agent's proposal: `getAllAdoptedLeagues()` → `{ slug, name, status: 'active'|'voting'|'open'|'idle', currentRoundId, currentRoundLabel }[]`, `getCrossLeagueUpcoming()` → `{ leagueSlug, roundName, phase, deadline }[]`, and `getWatcherDiagnostics()` → `{ uptimeMs, dbSizeBytes, lastPollAt }` (fold into the layout loader return is fine). Frontend layout already reads `page.data.activeSeasons` opportunistically — rename or coexist; frontend will follow up to consume the new shape after this lands.
   - **Acceptance:** every non-home route (`/_examples`, `/settings`, `/league/.../season/.../round/...`) renders the populated leagues list and a footer with real DB size + uptime (not the hardcoded `4D UPTIME` / `12.4 MB` / `6:32:14 PM` placeholders); `+layout.server.ts` runs on every request (verifiable by a single `console.log` on cold start across multiple route fetches); existing pages still HTTP 200; Blockers section in this doc gets the entry resolved-and-moved to Activity Log per template convention.
 
 ## Agent Roster
@@ -114,9 +114,47 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 
 ## Blockers
 
-- **[frontend → backend]** Layout left rail's `LEAGUES` and `CROSS-LEAGUE NEXT` sections need a dedicated `+layout.server.ts` loader so every route — not just `/` — can populate them. Layout currently opportunistically reads `page.data.activeSeasons` from the home loader, which means non-home routes render an empty leagues list. Cross-league-next is a static placeholder ("No upcoming actions.") for the same reason. Proposed loader shape: `getAllAdoptedLeagues()` returning `{ slug, name, status: 'active'|'voting'|'open'|'idle', currentRoundId, currentRoundLabel }[]` and `getCrossLeagueUpcoming()` returning `{ leagueSlug, roundName, phase, deadline }[]`. Frontend ownership stops at `+page.svelte`/`+layout.svelte`/`components/**` so this needs a backend agent — flagged for the next planning cycle, not blocking the rest of sprint-2 (home/season/round/settings reskins can land on top of the placeholder behavior).
+- _None — the layout-loader blocker was resolved by the `layout-loader` task; see Activity Log._
 
 ## Activity Log
+
+### 2026-05-14 — backend — layout-loader landed
+- **New files:**
+  - `ui/src/lib/db/layout.ts` — `getAllAdoptedLeagues(db, now?)`, `getCrossLeagueUpcoming(db, now?)`, `getWatcherDiagnostics(db, dbFilePath)` plus exported types `LeagueRailEntry`, `LeagueRailStatus`, `CrossLeagueUpcoming`, `WatcherDiagnostics`. Single-pass queries per call; the leagues query uses a correlated subquery to pick each league's most-recent active season in one round-trip and a tight follow-up prepared statement per league for its most-recent round.
+  - `ui/src/routes/+layout.server.ts` — `LayoutServerLoad` returning `{ leagues, crossLeagueUpcoming, watcher }` (typed export `LayoutData`). Resolves `dataDir` the same way `hooks.server.ts` does (`process.env.DATA_DIR ?? cwd/../data`) so the file-size stat lines up with the DB the loaders read.
+- **Return shape:**
+  ```ts
+  interface LayoutData {
+    leagues: {
+      slug: string;
+      name: string;
+      status: 'active' | 'voting' | 'open' | 'idle';
+      currentRoundId: number | null;
+      currentRoundLabel: string | null;
+    }[];
+    crossLeagueUpcoming: {
+      leagueSlug: string;
+      roundName: string;
+      phase: 'submissions' | 'voting';
+      deadline: string;
+    }[];
+    watcher: {
+      uptimeMs: number;
+      dbSizeBytes: number;
+      lastPollAt: string | null;
+    };
+  }
+  ```
+  Status derivation: `active` if the league has an active season and the current round's submission_deadline is in the future; `voting` if submissions closed but voting still open; `open` if an active season exists but no round has a future deadline (live league, between rounds or deadlines null); `idle` if no active season. `crossLeagueUpcoming` expands each round with at least one future deadline into one entry per phase, sorted ascending by deadline.
+- **Back-compat:** kept the home `+page.server.ts` loader's `activeSeasons` field untouched — frontend's existing opportunistic read continues to work on `/` while the new `page.data.leagues` is populated everywhere. Frontend will follow up to switch the layout-shell `+layout.svelte` over to the new shape (small patch in their territory — flagged here, not blocking other sprint-2 reskin tasks).
+- **Verification:** `cd ui && npm run dev` then curl four routes:
+  - `/_examples` HTTP 200 — body contains `Hip Jammers`, `Fam-Jam`, `Second Best` (previously empty leagues list on this non-home route)
+  - `/settings` HTTP 200 — same plus `Nostalgia Pit` (from the page's own data; new layout payload contributes the non-excluded three)
+  - `/` HTTP 200, `/league/second-best/season/1/round/97` HTTP 200 — both still render real submission data
+  - Temporary `console.log('[layout.server] load called for', event.url.pathname)` confirmed the loader fires on every route (logged for `/`, `/_examples`, `/settings`, `/league/.../round/97`), then removed before commit.
+- **Checks:** `npx svelte-check` reports only pre-existing issues (1 error in `vite.config.ts`, 7 warnings in `ResearchList.svelte` + `settings/+page.svelte`); the new `.ts` files compile clean. `npx vitest run` 13/13 green.
+- **Blocker moved:** the `layout-loader` Blockers entry filed at `92a29ce` is closed; entry removed from `## Blockers` per template convention. Frontend's `+layout.svelte` can now consume `page.data.leagues` / `page.data.crossLeagueUpcoming` / `page.data.watcher` to replace the hardcoded `4D UPTIME` / `12.4 MB` / `6:32:14 PM` / empty-leagues placeholders.
+- commit: <pending — landing now>
 
 ### 2026-05-14 — frontend — layout-shell landed
 - `ui/src/routes/+layout.svelte` rewritten as the prototype A left-rail shell + main column.
