@@ -129,7 +129,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
   - Desktop screenshot (1440×1600, headless chrome): `docs/screenshots/2026-05-15-sprint4-settings-two-column-desktop.png` — weights on the left half, ZIP import in the top of the right half, both columns flush at the top.
   - Mobile screenshot (480×2200): `docs/screenshots/2026-05-15-sprint4-settings-two-column-mobile.png` — single-column stacked (weights → import → queue → deadlines), no horizontal squish, same spacing as before.
 - **Acceptance:** at md+, weights left / import + queue stacked right ✓; below md, single column stacked ✓; svelte-check clean ✓.
-- commit: <pending — landing now>
+- commit: `628b0d0`
 
 ### 2026-05-15 — frontend — home-rename landed
 - `ui/src/routes/+page.svelte`: H1 `Pick a league` → **`Mash League`**; `<svelte:head><title>` updated to match. Breadcrumb `music-league-bot · picker` → `music-league-bot · overview`.
