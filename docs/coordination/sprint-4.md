@@ -134,7 +134,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
   Error paths: unknown league → `HTTP 404 {"message":"league not found: no-such-league"}`; missing fields → `HTTP 400 {"message":"… all required …"}`.
 - **Note on the task body's example sqlite query:** the `rounds` table doesn't carry `league_slug` / `season_number` directly (they live on `seasons` + `leagues`); verification uses a JOIN. Frontend's `deadline-auto-fill-ui` should hit the API and reload the per-round list rather than synthesizing this query.
 - **Checks:** `npx vitest run` 36/36 green; `npx svelte-check` reports only pre-existing issues.
-- commit: <pending — landing now>
+- commit: `5c14828`
 
 ### 2026-05-15 — docs — Sprint plan refresh: home + settings polish
 - replaced `## Active Sprint Plan` body with 8 tasks (7 frontend / 1 backend / 0 infra).
