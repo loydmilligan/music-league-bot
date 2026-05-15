@@ -132,7 +132,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - **Source data:** existing `+page.server.ts` loader return — `{ league, season, rounds: Round & { songCount, researchCount }[] }`. No loader changes. Member count is a `TODO` (loader doesn't expose competitors-per-round); displayed `songCount` as a proxy in the sub-line.
 - **Verification:** `npm run dev` → curl `/league/second-best/season/1` HTTP 200 (47kb) and `/league/hip-jammers/season/3` HTTP 200 (48kb). Playwright screenshot at `docs/screenshots/2026-05-14-sprint2-season-page.png` — Second Best S1 shows 6 archived round cards in a 3-column grid with ARCHIVED chips, descriptions, and r-X · N submission counters. Hip Jammers S3 renders 7 archived cards (same structure). svelte-check clean on the new file (only pre-existing `vite.config.ts` error remains).
 - **Tokens consumed:** `border-accent`, `border-accent-deep`, `bg-surface`, `border-border-muted`, `text-fg`, `text-fg-dim`, `text-fg-muted`, `text-fg-faint`, `text-accent`, `font-mono`. Atoms used: `DeadlineChip`, `StatusChip` (accent + muted tones). No new components.
-- commit: HASHPLACEHOLDER
+- commit: fb70677
 
 ### 2026-05-14 — infra — favicons landed
 - **Files copied** from `data/Mash Co. Design System-handoff/mash-co-design-system/project/music-league/brand/` into `ui/static/` (bytes copied, not symlinked, so the Docker image bakes them in): `m-l-favicon-32x32.png`, `m-l-favicon-64x64.png`, `m-l-favicon-180x180.png`, `m-l-favicon-256x256.png`, `m-l-favicon-512x512.png`, `m-l-apple-touch-180.png`, `m-l-maskable-512.png`.
