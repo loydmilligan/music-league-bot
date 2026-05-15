@@ -154,7 +154,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
   - Temporary `console.log('[layout.server] load called for', event.url.pathname)` confirmed the loader fires on every route (logged for `/`, `/_examples`, `/settings`, `/league/.../round/97`), then removed before commit.
 - **Checks:** `npx svelte-check` reports only pre-existing issues (1 error in `vite.config.ts`, 7 warnings in `ResearchList.svelte` + `settings/+page.svelte`); the new `.ts` files compile clean. `npx vitest run` 13/13 green.
 - **Blocker moved:** the `layout-loader` Blockers entry filed at `92a29ce` is closed; entry removed from `## Blockers` per template convention. Frontend's `+layout.svelte` can now consume `page.data.leagues` / `page.data.crossLeagueUpcoming` / `page.data.watcher` to replace the hardcoded `4D UPTIME` / `12.4 MB` / `6:32:14 PM` / empty-leagues placeholders.
-- commit: <pending — landing now>
+- commit: `d7fb43a`
 
 ### 2026-05-14 — frontend — layout-shell landed
 - `ui/src/routes/+layout.svelte` rewritten as the prototype A left-rail shell + main column.
