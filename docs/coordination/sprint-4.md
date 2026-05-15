@@ -33,7 +33,7 @@ updated: 2026-05-15T01:00:00.000Z
 - [x] {agent: frontend, id: home-rename} Rename the home page header from `Pick a league` to **`Mash League`** (or `Overview` — user direction was "Overview, Mash League, or something else; it's the landing page for the app"). Update the breadcrumb row from `MUSIC-LEAGUE-BOT · PICKER` to `MUSIC-LEAGUE-BOT · OVERVIEW`. Remove the `+ Adopt league` CTA + placeholder tile from the All-leagues card — feedback was "not sure what adopt a league means — all the leagues are mine and if they are in this app then they are already adopted." Replace it with nothing (just don't render the tile) until a real "import new league" flow exists.
   - **Acceptance:** Visit `/` — H1 reads `Mash League`, breadcrumb reads `MUSIC-LEAGUE-BOT · OVERVIEW`, no `+ Adopt league` button or placeholder tile is visible anywhere on the home page. svelte-check clean.
 
-- [ ] {agent: frontend, id: league-card-upgrade, depends: home-rename} Upgrade the league tile content on home page (both `Needs you this week` and `All leagues` sections) to surface more useful info per feedback:
+- [x] {agent: frontend, id: league-card-upgrade, depends: home-rename} Upgrade the league tile content on home page (both `Needs you this week` and `All leagues` sections) to surface more useful info per feedback:
   - **League card title:** full league name (e.g. `Hip Jammers`) — currently the loader returns `league.name` but the card may be showing the slug; make sure the human-readable name is bold + prominent.
   - **Season title:** below the league name in `font-mono text-sm text-fg-muted`, the season's friendly name (e.g. `Hip Jammers III: It's All Hippening`). If the season doesn't have a friendly name in the DB yet, fall back to `Season {n}` and add a TODO comment that the loader should be extended to surface the season name (file a Blocker if needed — the rounds table likely has a theme but not the full season title).
   - **Current theme line:** for active rounds, show the round theme in a small line under the deadline chip with `font-sans text-sm font-bold text-fg`. Per feedback: "Current theme should show up on cards more clearly."
@@ -127,7 +127,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
   - `npm run dev` (port 5174) → `curl /settings` HTTP 200, 136447b. Grep confirms `Auto-balance`, `SUMS TO 100`, `cursor-help`, and the tooltip strings render in SSR.
   - Pure-Node algorithm trace (six cases): documented in commit body.
   - Screenshot at `docs/screenshots/2026-05-15-sprint4-rating-weights-autobalance.png` (1440×1100): toggle + accent SUMS TO 100 chip + four labels with dotted underlines visible above the sliders.
-- commit: <pending — landing now>
+- commit: `3360e1f`
 
 ### 2026-05-15 — infra (as frontend, parallel) — settings-two-column-layout landed
 - **Why infra in a frontend lane:** sprint-4 has zero infra-owned tasks; frontend pane has 7 of 8 tasks. Sprint-1 review Q2 ratified `(as frontend, parallel)` load-balancing for exactly this case.
