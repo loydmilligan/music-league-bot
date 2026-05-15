@@ -89,6 +89,13 @@ _New types `H2HMatch` and `H2HCandidate` will be added to `ui/src/lib/types.ts` 
 
 ## Activity Log
 
+### 2026-05-15 — backend — h2h-candidates landed
+- `ui/src/lib/db/headToHead.ts` (new): exports `getH2HCandidates(db, roundId)` returning `H2HCandidate[]`. SELECTs from `research_songs` filtered to `status='reviewing'` (the default), LEFT JOINs `ytm_link_cache` for `ytm_url`, then maps each row through `computeScore` from `lib/scoring.ts` with the current `getSettings(db)` weights and sorts by `weightedScore` desc (nulls last).
+- Eligibility rule: chose the dedicated `status` column over `themeFit >= 3` — bare research songs (no ratings yet) still need to be eligible so the user can pick "compare them all" before they've finished rating, and `themeFit IS NULL` would otherwise silently exclude them. Explicit retire/bank actions can flip status later (out of scope here).
+- `ui/src/lib/db/headToHead.candidates.test.ts` (new): 4 vitests — (1) 5 songs sort by weighted score desc; (2) `status='retired'` rows excluded; (3) unrated songs end up last with `weightedScore === null`; (4) result is round-scoped (a song in round B doesn't leak into round A's candidates).
+- Verified: `npx vitest run` 21/21 green.
+- commit: <pending — landing now>
+
 ### 2026-05-15 — frontend — h2h-card landed
 - New component `ui/src/lib/components/HeadToHeadCard.svelte` with the prototype-C asymmetric pair shape.
 - **Prop surface:**
