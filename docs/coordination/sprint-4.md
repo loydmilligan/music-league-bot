@@ -111,7 +111,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - Removed the `+ Adopt league` CTA from the All-leagues card header, and removed the trailing dashed-border `Adopt league` placeholder tile from the grid. No replacement — the All-leagues grid now closes cleanly after the last real league card. Future "import new league" flow can land here when designed.
 - Everything else preserved: subtitle copy, both sections (Needs you this week + All leagues), DeadlineChip / DotIndicator / StatusChip atoms, sort order, hover affordances.
 - Verified `npm run dev` → `/` renders the new H1, breadcrumb, and a clean grid with no adopt tile. svelte-check clean.
-- commit: HASHPLACEHOLDER
+- commit: 94a4cf7
 
 ### 2026-05-15 — backend — deadline-auto-fill-api landed
 - **Endpoint:** `POST /api/deadlines/auto-fill` (chose the route over a `+page.server.ts` action so the frontend can call it from anywhere — not coupled to the settings form's submit lifecycle, and the eventual UI in `deadline-auto-fill-ui` can post via `fetch`).
