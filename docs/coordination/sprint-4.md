@@ -138,7 +138,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
     sqlite check on the same `hip-jammers / s3` rounds shows the persisted values match the response. UI SSR contains all five `af-*` form controls + the `Bulk-set deadlines` / `Auto-fill deadlines` strings.
   - Screenshot: `docs/screenshots/2026-05-15-sprint4-deadline-auto-fill-ui.png` (cropped to the deadlines section). Shows the sub-card with all controls in their default values, the accent button, and the per-round rails below reflecting the auto-filled `05/24/2026 12:00 AM` → `05/27/2026 12:00 AM` for round 1, etc.
 - **Acceptance check:** hip-jammers / season 3 with `4 / 3 / 2026-05-20` returns 200 and updates 7 rounds ✓; filter selects only show leagues from `data.allLeagues` and seasons that have active rounds ✓; toast chip surfaces success/error ✓; svelte-check clean ✓. **Sprint-4 is now 8/8.**
-- commit: <pending — landing now>
+- commit: `0d78060`
 
 ### 2026-05-15 — frontend — deadline-urgency-shadow landed
 - `ui/src/routes/+page.svelte`: added an `urgencyFor(s: ActiveSeason): 'low' | 'medium' | 'high' | 'critical'` derivation and a static `urgencyClass` lookup that wires the left edge of each active-round tile in `Needs you this week` to a progressively brighter accent treatment. Archive tiles in `All leagues` are untouched.
