@@ -47,7 +47,7 @@ updated: 2026-05-15T00:30:00.000Z
   - Reuse the existing `getDb()` pattern; export the H2HCandidate/H2HMatch types from `ui/src/lib/types.ts`.
   - **Acceptance:** `curl -X POST http://localhost:5174/api/h2h/match -H 'content-type: application/json' -d '{"roundId":97,"winnerId":X,"loserId":Y}'` returns the new row + state; `curl http://localhost:5174/api/h2h/state/97` returns the structured state; vitest covers both endpoints including the FK-violation error path; if both IDs match the same research_song, the API returns 400.
 
-- [ ] {agent: frontend, id: h2h-card} Build `ui/src/lib/components/HeadToHeadCard.svelte` matching prototype C's two-card layout asymmetry. Props: `song: H2HCandidate`, `role: 'holding-lane' | 'challenger'`, `onPick: () => void`. **Holding-lane variant:** dark card (`bg-bg-elevated` or even darker `bg-bg`), prominent `<SectionLabel>` reading `HOLDING LANE`, big bold artist+title, mono dim metadata line (`themeFit / discoveryPotential / nostalgia / personal`) using dot rows, a description/notes block. **Challenger variant:** lighter card (`bg-surface` or a warm-cream tint if you can derive one from existing tokens), `<SectionLabel>` reading `CHALLENGER`, same content treatment but visually less-anointed. Both cards have a `<button>Pick winner</button>` styled with the design system accent button. The asymmetry is doing real cognitive work — visually nudges the user to think "do you really want to dethrone the holding lane?"
+- [x] {agent: frontend, id: h2h-card} Build `ui/src/lib/components/HeadToHeadCard.svelte` matching prototype C's two-card layout asymmetry. Props: `song: H2HCandidate`, `role: 'holding-lane' | 'challenger'`, `onPick: () => void`. **Holding-lane variant:** dark card (`bg-bg-elevated` or even darker `bg-bg`), prominent `<SectionLabel>` reading `HOLDING LANE`, big bold artist+title, mono dim metadata line (`themeFit / discoveryPotential / nostalgia / personal`) using dot rows, a description/notes block. **Challenger variant:** lighter card (`bg-surface` or a warm-cream tint if you can derive one from existing tokens), `<SectionLabel>` reading `CHALLENGER`, same content treatment but visually less-anointed. Both cards have a `<button>Pick winner</button>` styled with the design system accent button. The asymmetry is doing real cognitive work — visually nudges the user to think "do you really want to dethrone the holding lane?"
   - **Acceptance:** Showcase the component on `/_examples` with two fixture songs (one as holding-lane, one as challenger) — visually consistent with prototype C's H2H block. Hover state on the Pick winner button works. `svelte-check` clean.
 
 - [ ] {agent: frontend, id: h2h-page, depends: h2h-card, h2h-api} Add a new `Head-to-Head` tab to the round page (`ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`) as a sibling to ML / Chat / Research. The tab content: fetches `GET /api/h2h/state/[roundId]` on mount, renders the two `<HeadToHeadCard>` instances side-by-side (HoldingLane on left, Challenger on right) with the `onPick` handlers wired to `POST /api/h2h/match` and then refetches state. Empty state if `candidates.length < 2`: show a friendly message ("Need at least two research candidates with themeFit ≥ 3 to start head-to-head. Visit the Research tab to add some.").
@@ -89,13 +89,43 @@ _New types `H2HMatch` and `H2HCandidate` will be added to `ui/src/lib/types.ts` 
 
 ## Activity Log
 
+### 2026-05-15 — frontend — h2h-card landed
+- New component `ui/src/lib/components/HeadToHeadCard.svelte` with the prototype-C asymmetric pair shape.
+- **Prop surface:**
+  ```ts
+  export type H2HCardSong = {
+    id: number; artist: string; title: string;
+    themeFit: number | null;
+    discoveryPotential: number | null;
+    nostalgiaPotential: number | null;
+    personalRating: number | null;
+    notes: string | null;
+    weightedScore: number | null;
+  };
+  let { song, role, onPick }: {
+    song: H2HCardSong;
+    role: 'holding-lane' | 'challenger';
+    onPick: () => void;
+  } = $props();
+  ```
+  The structural shape mirrors what `h2h-api` is expected to return per candidate — when `H2HCandidate` lands in `types.ts` (sprint-3 contract change), the page-level wrapper will adapt to the loader shape and pass into `song`. Component itself doesn't depend on any unlanded types.
+- **Holding-lane variant** (`role === 'holding-lane'`): `bg-bg` (darkest surface) + `border-accent-deep` outline + accent-orange `<SectionLabel>HOLDING LANE</SectionLabel>`. Artist heading `text-3xl font-bold`, title `text-xl text-fg-muted`. Reads as the heavier, anointed card.
+- **Challenger variant** (`role === 'challenger'`): `bg-surface` (page-elevated tone) + plain `border-border-muted` + neutral-tone `<SectionLabel>CHALLENGER</SectionLabel>`. Artist heading `text-2xl`, title `text-lg`. Reads as the contender — present but visibly less-anointed; the size + surface + label-tone deltas do the cognitive work of "do you really want to dethrone the holding lane?" per the brief.
+- **Shared content:** four-dimension rating grid (Theme / Discovery / Nostalgia / Personal) rendered as 5-dot rows (`w-2 h-2 rounded-full bg-accent` filled, `border-border` empty — matches the ResearchList dot pattern from sprint-2's round-page reskin). Notes block in `text-fg-muted` (falls back to `font-mono italic` "No notes recorded." when null). Weighted score footer line: mono uppercase `WEIGHTED SCORE` label + `font-display font-bold text-2xl` value with health/warn/dim tone bands at ≥4 / ≥3 / else (same scale as ResearchList score readout, for cross-component consistency).
+- **Pick winner button:** full-width `bg-accent hover:bg-accent-strong text-bg-elevated px-4 py-3 rounded-md font-bold font-mono tracking-widest uppercase` — matches the accent-CTA style used in the settings page's primary actions and the home page's `+ Adopt league` button. Wires `onPick()` on click.
+- **Showcase:** added a new section at the top of `/_examples` (`ui/src/routes/_examples/+page.svelte`) rendering Tom Waits "Hold On" as holding-lane and Big Thief "Sparrow" as challenger with plausible ratings (5/3/4/5 and 4/5/2/4) and notes. The `onPick` handlers `console.log` for now — they'll be wired to `POST /api/h2h/match` once `h2h-page` lands.
+- **Verification:** `npm run dev` (port 5176) → `curl /_examples` HTTP 200 (50kb). Playwright screenshot at `docs/screenshots/2026-05-15-sprint3-h2h-card.png` shows the side-by-side pair: orange-deep-bordered HOLDING LANE card on the left with the larger heading + green 4.35 score, and the lighter CHALLENGER card on the right with the smaller heading + amber 3.95 score. Asymmetry reads at a glance. svelte-check clean on both files (only the pre-existing `vite.config.ts` error and the pre-existing `state_referenced_locally` warning on `ResearchList.svelte:13` remain — both unrelated to this task).
+- **Tokens consumed:** `bg-bg`, `bg-surface`, `bg-bg-elevated`, `bg-accent`, `bg-accent-strong`, `border-accent-deep`, `border-border-muted`, `border-border`, `border-accent`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `text-accent`, `text-health`, `text-warn`, `font-mono`, `font-display`. Atoms consumed: `SectionLabel`. No new tokens.
+- **Next:** `h2h-page` depends on this + backend's `h2h-api`. `h2h-card` is ready to consume immediately — page wrapper just needs the loader shape from backend's API to map into `H2HCardSong`.
+- commit: HASHPLACEHOLDER
+
 ### 2026-05-15 — backend — h2h-schema landed
 - `ui/src/lib/db/schema.ts`: added `head_to_head_matches` table (`id`, `round_id` FK→rounds, `winner_id`/`loser_id` FK→research_songs, `created_at` DEFAULT CURRENT_TIMESTAMP) plus `idx_h2h_round_created` covering `(round_id, created_at)`. Also added `status TEXT NOT NULL DEFAULT 'reviewing'` to `research_songs` for the h2h-candidates eligibility filter.
 - `ui/src/lib/db/client.ts`: lightweight in-place migration — after `db.exec(SCHEMA)`, PRAGMA-checks `research_songs` for the new `status` column and runs `ALTER TABLE … ADD COLUMN status TEXT NOT NULL DEFAULT 'reviewing'` if missing. Single PRAGMA per boot; existing DBs (dev + the running docker container) pick the column up next time `openLeagueDb()` is called.
 - `ui/src/lib/types.ts`: declared `H2HMatch`, `H2HCandidate`, `H2HState` ahead of h2h-api so test code can already import the row type.
 - `ui/src/lib/db/headToHead.test.ts` (new): 4 vitests — (1) table columns + index present; (2) `status` column on research_songs with default `'reviewing'`; (3) round-trip insert through a real round + two research_songs; (4) FK violation when `winner_id` references a non-existent research song.
 - **Verified:** `npx vitest run` 17/17 green. Live DB at `data/league.db` already migrated (server was running): `sqlite3 .schema head_to_head_matches` shows the table + index, `PRAGMA table_info(research_songs)` shows `status` column with default `'reviewing'`.
-- commit: <pending — landing now>
+- commit: `e5e1045`
 
 ### 2026-05-15 — docs — Sprint plan refresh: head-to-head picker
 - replaced `## Active Sprint Plan` body with 7 tasks for the head-to-head picker (3 backend / 4 frontend / 0 infra)

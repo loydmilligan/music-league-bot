@@ -7,11 +7,47 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
+  import HeadToHeadCard, { type H2HCardSong } from '$lib/components/HeadToHeadCard.svelte';
+
+  const holdingLane: H2HCardSong = {
+    id: 1,
+    artist: 'Tom Waits',
+    title: 'Hold On',
+    themeFit: 5,
+    discoveryPotential: 3,
+    nostalgiaPotential: 4,
+    personalRating: 5,
+    notes: 'Cuts straight to the bone — sparse arrangement, lyric does the work. Built for a round about resilience or perseverance; lands hard without ever overplaying its hand.',
+    weightedScore: 4.35,
+  };
+
+  const challenger: H2HCardSong = {
+    id: 2,
+    artist: 'Big Thief',
+    title: 'Sparrow',
+    themeFit: 4,
+    discoveryPotential: 5,
+    nostalgiaPotential: 2,
+    personalRating: 4,
+    notes: 'Newer entry, leans on discovery. Adrianne Lenker doing what Adrianne Lenker does — feels like a contender on theme but I keep coming back to whether the production reads on a small speaker.',
+    weightedScore: 3.95,
+  };
+
+  function pick(which: string) {
+    return () => console.log('picked', which);
+  }
 </script>
 
 <svelte:head><title>Component examples</title></svelte:head>
 
-<div class="space-y-10 max-w-2xl">
+<div class="space-y-10 max-w-4xl">
+  <section class="space-y-3">
+    <SectionLabel>Head-to-head card</SectionLabel>
+    <div class="grid gap-4 md:grid-cols-2">
+      <HeadToHeadCard song={holdingLane} role="holding-lane" onPick={pick('holding-lane')} />
+      <HeadToHeadCard song={challenger}  role="challenger"   onPick={pick('challenger')} />
+    </div>
+  </section>
   <section class="space-y-3">
     <SectionLabel>Deadline chip</SectionLabel>
     <div class="flex flex-wrap gap-2 bg-surface p-4 rounded-md border border-border-muted">
