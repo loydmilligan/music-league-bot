@@ -97,14 +97,14 @@
   const totalLeagues = $derived(allLeagues.length);
 </script>
 
-<svelte:head><title>Pick a league · music-league-bot</title></svelte:head>
+<svelte:head><title>Mash League · music-league-bot</title></svelte:head>
 
 <!-- Page header / breadcrumb -->
 <div class="mb-8">
   <div class="text-fg-faint font-mono text-xs tracking-widest uppercase mb-3">
-    music-league-bot · picker
+    music-league-bot · overview
   </div>
-  <h1 class="text-4xl font-bold text-fg mb-3">Pick a league</h1>
+  <h1 class="text-4xl font-bold text-fg mb-3">Mash League</h1>
   <p class="text-fg-muted max-w-2xl">
     {#if totalLeagues > 0}
       {totalLeagues} league{totalLeagues === 1 ? '' : 's'} adopted. Active rounds need attention first; voting
@@ -166,12 +166,6 @@
         All {totalLeagues} league{totalLeagues === 1 ? '' : 's'} you've adopted, sorted by next action.
       </p>
     </div>
-    <!-- TODO: real adopt-league flow doesn't exist yet — placeholder CTA only. -->
-    <button
-      type="button"
-      disabled
-      class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-white font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-sm transition-colors"
-    >+ Adopt league</button>
   </header>
 
   <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -193,18 +187,6 @@
         <div class="font-mono text-[11px] text-fg-faint mt-3 truncate">{row.sublineMono}</div>
       </a>
     {/each}
-
-    <!-- Adopt-league placeholder tile — disabled until the real flow lands. -->
-    <button
-      type="button"
-      disabled
-      class="border-2 border-dashed border-border rounded-xl p-4 hover:border-accent disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex flex-col items-center justify-center text-center min-h-[7.5rem]"
-    >
-      <span class="text-accent text-2xl leading-none mb-1">+</span>
-      <span class="font-mono text-[11px] tracking-widest uppercase text-fg-dim">
-        Adopt league
-      </span>
-    </button>
   </div>
 </section>
 
