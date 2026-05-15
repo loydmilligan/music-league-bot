@@ -60,7 +60,7 @@
     <header class="px-5 pt-6 pb-5 border-b border-border-muted">
       <SectionLabel>Mash co.</SectionLabel>
       <a href="/" class="flex items-baseline gap-1.5 mt-2 group">
-        <span class="font-display italic text-accent text-2xl leading-none group-hover:text-accent-strong transition-colors">m/l</span>
+        <span class="ml-mark leading-none transition-colors">m/l</span>
         <span class="font-mono text-xs text-fg-muted truncate">music-league-bot</span>
       </a>
     </header>
@@ -148,3 +148,32 @@
     </div>
   </main>
 </div>
+
+<style>
+  /* Canonical pulp m/l mark — recipe from
+     data/Mash Co. Design System-handoff/.../brand/m-l-mark.html.
+     Scoped to the layout for now; promote to a shared component or
+     app.css utility when a second consumer appears. */
+  .ml-mark {
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.06em;
+    font-size: 28px;
+    color: var(--color-accent);
+    -webkit-text-stroke: 2.5px var(--color-accent-deep);
+    paint-order: stroke fill;
+    transform: translateY(-4%);
+    text-shadow:
+      0 0.25px 0 var(--color-accent-deep),
+      0 0.5px  0 var(--color-accent-deep),
+      0 0.75px 0 var(--color-accent-deep),
+      0 1px    0 var(--color-accent-deep),
+      0 1.25px 0 var(--color-accent-deep),
+      0 1.5px  0 var(--color-accent-deep),
+      0 2px    3px rgba(0, 0, 0, 0.45);
+  }
+  .group:hover .ml-mark {
+    color: var(--color-accent-strong);
+  }
+</style>

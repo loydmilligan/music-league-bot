@@ -124,6 +124,21 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 
 ## Activity Log
 
+### 2026-05-14 — backend (as frontend, parallel) — wordmark-fix landed
+- **File:** `ui/src/routes/+layout.svelte` only. Replaced the flat `<span class="font-display italic text-accent text-2xl">m/l</span>` with `<span class="ml-mark leading-none transition-colors">m/l</span>` and added a scoped `<style>` block at the bottom of the layout (Svelte component-scoped — does not leak to other routes).
+- **Recipe applied** (from `data/Mash Co. Design System-handoff/.../brand/m-l-mark.html`, tuned for sidebar size):
+  - `font-family: var(--font-display), system-ui, sans-serif`
+  - `font-weight: 800`, `font-style: italic`, `letter-spacing: -0.06em`
+  - `font-size: 28px` (sidebar size; spec's `extrudeFor(28) = max(2, round(28 * 0.07)) = 2px`)
+  - `color: var(--color-accent)` (#ff5b2e fill)
+  - `-webkit-text-stroke: 2.5px var(--color-accent-deep)` (#8a2d15) + `paint-order: stroke fill`
+  - 6-step extrusion at `0.125 × 2px = 0.25px` through `0.75 × 2px = 1.5px` in `--color-accent-deep`, plus the final `0 2px 3px rgba(0,0,0,0.45)` drop shadow (the spec's `extrude × 1` offset and `extrude × 1.5` blur). The spec lists 7 stops including the 1.0× extrude; rolled into the drop-shadow line — same visual stack, one less rule.
+  - `transform: translateY(-4%)` for optical centering against the adjacent `music-league-bot` mono lockup.
+- **Hover:** scoped `.group:hover .ml-mark { color: var(--color-accent-strong); }` preserves the existing rail wordmark hover (fill-only swap; stroke + extrude stays in `--color-accent-deep`, per the brief's "fill-only hover is acceptable" allowance).
+- **Verification:** `cd ui && npm run dev` → `curl /` HTTP 200; inspected the rendered HTML — the `.ml-mark.svelte-*` scoped selector compiles with all the recipe properties (`-webkit-text-stroke`, `paint-order: stroke fill`, the full `text-shadow` ramp, `transform: translateY(-4%)`). `svelte-check` reports only the pre-existing `vite.config.ts` error + two pre-existing `state_referenced_locally` warnings — no new findings. **No Playwright screenshot this round:** the Playwright MCP browser was held by another agent (`Browser is already in use for .cache/ms-playwright/mcp-chrome-114dc8f`), so visual diff vs `brand/m-l-on-bone-512.png` is left as a follow-up — the compiled CSS matches the canonical recipe property-for-property, so output should match modulo the smaller font-size (28px sidebar vs 320px in the spec's stage).
+- **Scope discipline:** only `+layout.svelte` touched. `app.css` left alone (mark stays component-scoped until a second consumer appears, per the brief).
+- commit: <pending — landing now>
+
 ### 2026-05-14 — frontend — season-page landed
 - `ui/src/routes/league/[league]/season/[n]/+page.svelte` reskinned to match the prototype design system.
 - **Page header:** breadcrumb `music-league-bot · {slug} · season {n}` in `text-fg-faint font-mono text-xs tracking-widest uppercase` (with `/` link on `music-league-bot`), H1 `{League Name} S{n}` (`text-4xl font-bold text-fg`) with the `S{n}` token in `text-fg-dim`, and a `text-fg-muted` subtitle reporting round count + whether active rounds exist.
