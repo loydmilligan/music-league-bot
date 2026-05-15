@@ -144,7 +144,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
   - `docs/screenshots/2026-05-14-sprint2-round-page-research.png` — same round on the Research tab, search input + accent submit button + empty `Candidates [0]` state.
 - **svelte-check:** clean on both files (only the pre-existing `vite.config.ts` error and the pre-existing `state_referenced_locally` warning on `ResearchList.svelte:13` for the intentional `initial` hydration pattern remain).
 - **Tokens consumed:** `bg-surface`, `bg-bg`, `bg-bg-elevated`, `border-border-muted`, `border-border`, `border-accent`, `border-accent-deep`, `bg-accent`, `bg-accent-strong`, `bg-accent-bg`, `bg-health`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `text-accent`, `text-accent-strong`, `text-health`, `text-warn`, `font-mono`, `font-display`, `font-sans`. Atoms used: `DeadlineChip`, `StatusChip` (muted tone). No new components.
-- commit: HASHPLACEHOLDER
+- commit: 22eeaff
 
 ### 2026-05-14 — backend (as frontend, parallel) — wordmark-fix landed
 - **File:** `ui/src/routes/+layout.svelte` only. Replaced the flat `<span class="font-display italic text-accent text-2xl">m/l</span>` with `<span class="ml-mark leading-none transition-colors">m/l</span>` and added a scoped `<style>` block at the bottom of the layout (Svelte component-scoped — does not leak to other routes).
