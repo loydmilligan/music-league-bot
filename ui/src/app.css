@@ -1,7 +1,67 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------------
+   Design tokens — sourced from docs/prototype/ (A: Picker · Orc-Tower-style
+   and B: Hero with pulp wordmark). Tailwind v4 reads --color-* / --font-*
+   tokens here to generate the matching utility classes (e.g. bg-bg,
+   text-accent, font-display, etc.).
+   ------------------------------------------------------------------------ */
+
+@theme {
+	/* Type ---------------------------------------------------------------- */
+	--font-sans: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-display: "Bricolage Grotesque", "Inter Tight", ui-serif, Georgia, serif;
+	--font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+	/* Surfaces — near-black bg, dark blue-grey panels (from prototype A) -- */
+	--color-bg: #07090c;            /* page background           rgb(7,9,12)     */
+	--color-bg-elevated: #0d1116;   /* secondary surface         rgb(13,17,22)   */
+	--color-surface: #141921;       /* card / panel              rgb(20,25,33)   */
+	--color-surface-hover: #1d2128; /* card hover                rgb(29,33,40)   */
+	--color-surface-strong: #283039;/* pressed / strong panel    rgb(40,48,57)   */
+	--color-border: #3a4451;        /* hairlines                 rgb(58,68,81)   */
+	--color-border-muted: #283039;  /* dimmer hairlines                          */
+
+	/* Text ---------------------------------------------------------------- */
+	--color-fg: #f1f4f7;            /* primary text              rgb(241,244,247)*/
+	--color-fg-warm: #faf7f2;        /* warm white (wordmark)     rgb(250,247,242)*/
+	--color-fg-muted: #c2cad3;       /* body secondary            rgb(194,202,211)*/
+	--color-fg-dim: #8b97a4;         /* caption / hint            rgb(139,151,164)*/
+	--color-fg-faint: #5a6773;       /* very dim                  rgb(90,103,115) */
+
+	/* Accent orange (primary brand) -------------------------------------- */
+	--color-accent: #ff5b2e;         /* primary accent            rgb(255,91,46)  */
+	--color-accent-strong: #d94c23;  /* hover / pressed           rgb(217,76,35)  */
+	--color-accent-deep: #8a2d15;    /* deep / borders            rgb(138,45,21)  */
+	--color-accent-bg: #221a14;      /* tinted accent surface     rgb(34,26,20)   */
+	--color-accent-bg-strong: #3a2e15;/*orange-tinted strong      rgb(58,46,21)   */
+
+	/* Health green (status / chips) -------------------------------------- */
+	--color-health: #3ec27a;         /* chip text / dot           rgb(62,194,122) */
+	--color-health-bg: #1d3a2a;      /* chip surface              rgb(29,58,42)   */
+	--color-health-bg-strong: #1e4d33;/*deep                      rgb(30,77,51)   */
+
+	/* Secondary accents (yellow + magenta) — used sparingly -------------- */
+	--color-warn: #e8a83a;           /* yellow                    rgb(232,168,58) */
+	--color-rose-bg: #3b1a22;        /* rose surface              rgb(59,26,34)   */
+}
+
+/* Global resets / base ---------------------------------------------------- */
+html {
+	color-scheme: dark;
+}
+
+html,
 body {
-	background: #0f172a;
-	color: #e2e8f0;
-	font-family: system-ui, sans-serif;
+	background-color: var(--color-bg);
+	color: var(--color-fg);
+	font-family: var(--font-sans);
+	font-feature-settings: "ss01", "cv11";
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+	background-color: var(--color-accent);
+	color: var(--color-bg);
 }

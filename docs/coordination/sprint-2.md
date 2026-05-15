@@ -61,7 +61,7 @@ updated: 2026-05-14T20:35:00.000Z
      auto-sends — the confirmation gate is sacred (CLAUDE.md §3.6).
      See: docs/design/2026-05-05-sprint-kickoff-flow.md -->
 
-- [ ] {agent: infra, id: design-tokens} Wire the prototype design system foundations into `ui/`: install Inter Tight (body), Bricolage Grotesque (display/wordmark), JetBrains Mono (mono badges) via Google Fonts; update Tailwind v4 theme tokens with the prototype palette (near-black bg, dark blue-grey panels, accent orange ~`#f04` family, mono green for health chip); update `app.html` font preconnect and `app.css` globals.
+- [x] {agent: infra, id: design-tokens} Wire the prototype design system foundations into `ui/`: install Inter Tight (body), Bricolage Grotesque (display/wordmark), JetBrains Mono (mono badges) via Google Fonts; update Tailwind v4 theme tokens with the prototype palette (near-black bg, dark blue-grey panels, accent orange ~`#f04` family, mono green for health chip); update `app.html` font preconnect and `app.css` globals.
   - **Acceptance:** Visiting `/` renders all three font families without FOUT (network panel shows preloaded woff2 files); Tailwind utilities resolve to the prototype's accent orange and near-black bg; a side-by-side screenshot of an unstyled page chrome vs prototype A's chrome shows the palette + type-scale match within a few px.
 
 - [ ] {agent: frontend, id: chip-badge-component, depends: design-tokens} Build the reusable chip/badge components from the prototypes: `DeadlineChip` (e.g. "SUBMISSIONS · 3D 14H"), `StatusChip` (e.g. "2 OPEN"), section header label (uppercase letterspaced), dot-prefix status indicator (colored dot + label). Export from `ui/src/lib/components/`.
@@ -114,6 +114,22 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - _None._
 
 ## Activity Log
+
+### 2026-05-14 — infra — design-tokens landed
+- `ui/src/app.html`: preconnect to `fonts.googleapis.com` + `fonts.gstatic.com`; preload + stylesheet `<link>` loading **Inter Tight** (300–700, italic), **Bricolage Grotesque** (12–96 opsz, 300–800), **JetBrains Mono** (400–700) from Google Fonts (`display=swap`). Body wears `class="bg-bg text-fg font-sans antialiased"` so the dark theme is the SSR default before any route mounts.
+- `ui/src/app.css`: Tailwind v4 `@theme { … }` block defines the prototype palette and font stack. Tokens (with rationale):
+  - **Type:** `--font-sans` = `"Inter Tight"`, `--font-display` = `"Bricolage Grotesque"`, `--font-mono` = `"JetBrains Mono"` — matches the three families found across every prototype HTML's `font-family:` declarations.
+  - **Surfaces:** `--color-bg` `#07090c`, `--color-bg-elevated` `#0d1116`, `--color-surface` `#141921`, `--color-surface-hover` `#1d2128`, `--color-surface-strong` `#283039`. Hex values come from prototype A's `background-color: rgb(...)` set — `rgb(7,9,12)` for page, `rgb(20,25,33)` for cards.
+  - **Borders:** `--color-border` `#3a4451` (= `rgb(58,68,81)`), `--color-border-muted` `#283039`.
+  - **Text:** `--color-fg` `#f1f4f7` (primary), `--color-fg-warm` `#faf7f2` (warm white reserved for the pulp wordmark — observed in prototype B), `--color-fg-muted` `#c2cad3`, `--color-fg-dim` `#8b97a4`, `--color-fg-faint` `#5a6773`.
+  - **Accent orange:** `--color-accent` `#ff5b2e` (= `rgb(255,91,46)` — the primary accent in every prototype), `--color-accent-strong` `#d94c23` (hover/pressed), `--color-accent-deep` `#8a2d15` (deep border tone, observed on chip outlines), `--color-accent-bg` `#221a14` (tinted card surface), `--color-accent-bg-strong` `#3a2e15`.
+  - **Health green (footer / status chips):** `--color-health` `#3ec27a` = `rgb(62,194,122)`, `--color-health-bg` `#1d3a2a`, `--color-health-bg-strong` `#1e4d33`.
+  - **Secondary accents (used sparingly):** `--color-warn` `#e8a83a` (yellow), `--color-rose-bg` `#3b1a22`.
+  - Globals: `color-scheme: dark`, `html/body { background-color: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); }`, font-feature-settings tuned, `::selection` uses the accent orange.
+- **Choice notes:** the accent orange family was unambiguous (`rgb(255,91,46)` for fill, `rgb(217,76,35)` for hover, `rgb(138,45,21)` for borders) — picked `#ff5b2e` as the base since it's the dominant fill in prototype A's section indicators. The brief mentioned `#f04` as a hint, but the prototypes consistently use `#ff5b2e` (a redder, brighter orange), so the prototypes win.
+- **Verified:** `DATA_DIR=…/data npm run dev` boots clean (port 5174), `/` returns HTTP 200, response body contains all three `fonts.googleapis.com` links (preconnect + preload + stylesheet) and `Inter+Tight`, `Bricolage+Grotesque`, `JetBrains+Mono` family params. Body element renders with `class="bg-bg text-fg font-sans antialiased"`. Tailwind-compiled CSS contains `--font-sans: "Inter Tight"` and `--color-bg: #07090c` (so the `bg-bg` / `font-sans` utilities resolve correctly).
+- **Contract change:** new Tailwind utilities exposed for downstream agents — `bg-bg`, `bg-bg-elevated`, `bg-surface`, `bg-surface-hover`, `bg-surface-strong`, `border-border`, `border-border-muted`, `text-fg`, `text-fg-warm`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `bg-accent`/`text-accent`/`border-accent` (+ `-strong`, `-deep`, `-bg`, `-bg-strong`), `bg-health`/`text-health` (+ `-bg`, `-bg-strong`), `bg-warn`/`text-warn`, `font-sans`, `font-display`, `font-mono`. Will mirror under Contract Changes in a follow-up doc commit if other agents start referencing them.
+- commit: (this commit)
 
 ### 2026-05-14 — backend — sprint-1 verification
 - **Round picked:** `second-best` / season 1 / round 97 ("New Shit") — 12 ml_submissions
