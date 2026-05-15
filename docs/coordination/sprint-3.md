@@ -111,7 +111,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   - `docs/screenshots/2026-05-15-sprint3-h2h-page-empty.png` — round 98 (no research_songs) shows the `NOT READY` empty state with the Research-tab jump link.
 - svelte-check clean on the new file (only pre-existing `vite.config.ts` error + pre-existing `ResearchList.svelte:13` `state_referenced_locally` warning remain).
 - **Next:** `h2h-queue` (queue + retired lists under the cards) and `h2h-champion` (winner banner with reset). Both unblocked now.
-- commit: HASHPLACEHOLDER
+- commit: 25c8709
 
 ### 2026-05-15 — backend — h2h-api landed
 - **New routes** (server files; no `+page.svelte` touched):
