@@ -106,6 +106,27 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 
 ## Activity Log
 
+### 2026-05-15 — frontend — league-card-upgrade landed
+- `ui/src/routes/+page.svelte`: enriched the league tile in both sections (`Needs you this week` and `All leagues`) per sprint-4 feedback. No loader changes — the existing payload (`data.activeSeasons` and `data.pastLeagues`) already carried everything I needed except a friendly season name.
+- **Tile shape** (both sections):
+  1. Bold prominent `league.name` (already present — confirmed it is the human-readable name, not the slug).
+  2. New `font-mono text-sm text-fg-muted` line: `Season {seasonNumber}` (active card → `s.seasonNumber`; idle card → `lastSeason.seasonNumber` from `data.pastLeagues`). TODO comment left for backend to surface a friendly `season.name` when one exists.
+  3. New `font-sans text-sm font-bold text-fg` theme line (active tiles only): `{currentRound.name}`. Uses `title=` for the full text on truncation. For idle tiles this line is omitted.
+  4. New `font-mono text-[11px] text-fg-dim` standings slot: `My place: —` for active tiles; `Finished: —/{totalRounds}` for idle tiles (falls back to bare `Finished: —` if no totalRounds). TODO comment that backend standings query is needed to replace `—`.
+- **LeagueRow type** widened to carry `seasonNumber: number | null` and `finishedRounds: number | null` so the All-leagues tile can render the new content without poking at `row.activeSeason?.…` directly.
+- **Loader fields used (no changes):**
+  - `data.activeSeasons[].league.name` (League.name)
+  - `data.activeSeasons[].seasonNumber` (Season.seasonNumber)
+  - `data.activeSeasons[].currentRound?.name` (Round.name — used as the theme)
+  - `data.pastLeagues[].league.name`, `data.pastLeagues[].seasons[]`, `data.pastLeagues[].totalRounds`
+- **TODOs left:**
+  - `<!-- TODO: backend loader should surface season.name when available; falling back to Season {n}. -->` (both sections)
+  - `<!-- TODO: backend standings query needed to fill My place — placeholder until then. -->` (active)
+  - `<!-- TODO: backend standings query needed for real placement — placeholder until then. -->` (all-leagues)
+- **Verification:** screenshot at `docs/screenshots/2026-05-15-sprint4-league-card-upgrade.png` taken inside the concurrently-landing `home-layout-side-by-side` wrapper — shows Hip Jammers / Season 3 / Your Permanent Rec... / My place: — and Nostalgia Pit / Season 1 / My place: — in the Needs-you card, plus Fam-Jam / Season 3 / Finished: —/63 and Second Best / Season 1 / Finished: —/6 in the All-leagues card. svelte-check clean.
+- **Note:** my edits were briefly clobbered mid-session when the concurrent `home-layout-side-by-side` agent rewrote the same file; re-applied my four edits on top of their layout wrapper and confirmed both changes coexist cleanly.
+- commit: HASHPLACEHOLDER
+
 ### 2026-05-15 — infra (as frontend, parallel) — rating-weights-autobalance landed
 - **Why infra in a frontend lane:** same `(as frontend, parallel)` rationale as the settings-two-column work — frontend pane saturated, infra picking up settings-page extensions.
 - **File touched (single):** `ui/src/routes/settings/+page.svelte`. No DB schema change, no loader change, no form-action change.

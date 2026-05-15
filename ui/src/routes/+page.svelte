@@ -50,6 +50,8 @@
     slug: string;
     name: string;
     status: 'active' | 'voting' | 'open' | 'idle';
+    seasonNumber: number | null;
+    finishedRounds: number | null; // total rounds in the most-recent archived season; null for active
     sublineMono: string;
     href: string;
     activeSeason?: ActiveSeason;
@@ -65,6 +67,8 @@
         slug: s.league.slug,
         name: s.league.name,
         status,
+        seasonNumber: s.seasonNumber,
+        finishedRounds: null,
         sublineMono: s.currentRound
           ? `r-${s.currentRound.id} · ${status}`
           : `s${s.seasonNumber} · active`,
@@ -79,6 +83,8 @@
         slug: item.league.slug,
         name: item.league.name,
         status: 'idle',
+        seasonNumber: lastSeason?.seasonNumber ?? null,
+        finishedRounds: item.totalRounds,
         sublineMono: `${item.totalRounds} rounds · idle`,
         href: lastSeason
           ? `/league/${item.league.slug}/season/${lastSeason.seasonNumber}`
@@ -115,9 +121,18 @@
   </p>
 </div>
 
+<!--
+  Sections side-by-side at md+ (active wider, archive narrower) per
+  sprint-4 home-layout-side-by-side. Below md the wrapper collapses to a
+  single column and the two <section> blocks stack vertically as before.
+  Internal card grids inside each section are tuned for the narrower
+  per-section width that the 5fr/3fr split produces.
+-->
+<div class="grid gap-6 md:grid-cols-[5fr_3fr] md:items-start">
+
 <!-- Needs you this week -->
 <section
-  class="mb-8 bg-surface border-l-4 border-accent rounded-r-xl p-6"
+  class="bg-surface border-l-4 border-accent rounded-r-xl p-6"
 >
   <header class="flex items-start gap-4 mb-5">
     <div class="flex-1 min-w-0">
@@ -132,7 +147,7 @@
   {#if activeLeagues.length === 0}
     <p class="text-fg-faint font-mono text-sm italic">No active rounds. Quiet week.</p>
   {:else}
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {#each activeLeagues as s (s.league.slug + s.seasonNumber)}
         {@const p = phaseFor(s)}
         <a
@@ -147,9 +162,18 @@
           <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
             {s.league.name}
           </div>
-          <div class="font-mono text-[11px] text-fg-dim mt-0.5 truncate">{s.league.slug}</div>
-          <div class="font-mono text-[11px] text-fg-faint mt-3 truncate">
-            {s.currentRound ? `r-${s.currentRound.id} · ${s.currentRound.name}` : `s${s.seasonNumber}`}
+          <!-- TODO: backend loader should surface season.name when available; falling back to Season {n}. -->
+          <div class="font-mono text-sm text-fg-muted mt-0.5 truncate">
+            Season {s.seasonNumber}
+          </div>
+          {#if s.currentRound}
+            <div class="font-sans text-sm font-bold text-fg mt-2 truncate" title={s.currentRound.name}>
+              {s.currentRound.name}
+            </div>
+          {/if}
+          <!-- TODO: backend standings query needed to fill My place — placeholder until then. -->
+          <div class="font-mono text-[11px] text-fg-dim mt-3 truncate">
+            My place: —
           </div>
         </a>
       {/each}
@@ -168,8 +192,9 @@
     </div>
   </header>
 
-  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
     {#each allLeagues as row (row.slug)}
+      {@const currentTheme = row.activeSeason?.currentRound?.name ?? null}
       <a
         href={row.href}
         class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group"
@@ -183,12 +208,29 @@
         <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
           {row.name}
         </div>
-        <div class="font-mono text-[11px] text-fg-dim mt-0.5 truncate">{row.slug}</div>
-        <div class="font-mono text-[11px] text-fg-faint mt-3 truncate">{row.sublineMono}</div>
+        <!-- TODO: backend loader should surface season.name when available; falling back to Season {n}. -->
+        <div class="font-mono text-sm text-fg-muted mt-0.5 truncate">
+          {row.seasonNumber != null ? `Season ${row.seasonNumber}` : row.slug}
+        </div>
+        {#if currentTheme}
+          <div class="font-sans text-sm font-bold text-fg mt-2 truncate" title={currentTheme}>
+            {currentTheme}
+          </div>
+        {/if}
+        <!-- TODO: backend standings query needed for real placement — placeholder until then. -->
+        <div class="font-mono text-[11px] text-fg-dim mt-3 truncate">
+          {#if row.status === 'idle'}
+            Finished: —{row.finishedRounds != null ? `/${row.finishedRounds}` : ''}
+          {:else}
+            My place: —
+          {/if}
+        </div>
       </a>
     {/each}
   </div>
 </section>
+
+</div><!-- /side-by-side grid -->
 
 <!--
   Sprint-1 carryover surfaces removed from the home view per prototype-A scope
