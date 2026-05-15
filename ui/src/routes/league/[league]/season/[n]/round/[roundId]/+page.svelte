@@ -32,6 +32,21 @@
     }
   }
 
+  async function resetH2H() {
+    if (!confirm('Reset head-to-head and start over? All matches for this round will be cleared.')) return;
+    h2hError = null;
+    const prev = h2hState;
+    try {
+      const res = await fetch(`/api/h2h/state/${data.round.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Reset failed (${res.status})`);
+      const body = await res.json() as { cleared: number; state: H2HState };
+      h2hState = body.state;
+    } catch (err) {
+      h2hError = err instanceof Error ? err.message : 'Reset failed';
+      h2hState = prev;
+    }
+  }
+
   async function pickWinner(winner: H2HCandidate, loser: H2HCandidate) {
     h2hError = null;
     const prev = h2hState;
@@ -377,12 +392,43 @@
         </section>
       {/if}
     {:else if h2hState.isComplete && h2hState.champion}
-      <!-- TODO: h2h-champion task — winner banner with reset button. -->
-      <div class="bg-surface border border-accent-deep rounded-xl p-6 text-center">
-        <StatusChip label="WINNER" tone="accent" />
-        <h2 class="text-3xl font-bold text-fg mt-3">{h2hState.champion.artist}</h2>
-        <p class="text-fg-muted">{h2hState.champion.title}</p>
-      </div>
+      {@const champion = h2hState.champion}
+      {#if h2hError}
+        <p class="font-mono text-xs text-warn mb-3">{h2hError}</p>
+      {/if}
+      <section class="bg-accent-bg border border-accent-deep rounded-xl p-8 text-center">
+        <div class="inline-block mb-4"><StatusChip label="WINNER" tone="accent" /></div>
+        <h2 class="font-display font-bold text-fg text-5xl mb-2 leading-tight">
+          {champion.artist}
+        </h2>
+        <p class="text-fg-muted text-2xl mb-4">{champion.title}</p>
+        <p class="font-mono text-xs tracking-widest uppercase text-fg-dim mb-6">
+          Survived {h2hState.matches.length} match{h2hState.matches.length === 1 ? '' : 'es'}
+        </p>
+        <button
+          type="button"
+          onclick={resetH2H}
+          class="bg-surface text-fg border border-border-muted hover:bg-surface-hover px-4 py-2 rounded-md font-bold font-mono text-xs tracking-widest uppercase transition-colors"
+        >
+          Reset and pick again
+        </button>
+      </section>
+
+      {#if h2hState.retired.length > 0}
+        <section class="mt-6">
+          <SectionLabel>Retired</SectionLabel>
+          <ul class="mt-3 flex flex-col gap-1">
+            {#each h2hState.retired as song (song.id)}
+              <li class="flex items-center gap-3 pl-3 pr-4 py-1.5 text-sm">
+                <span class="text-fg-faint truncate">
+                  <span class="font-mono">{song.artist}</span>
+                  <span class="text-fg-faint/80"> — {song.title}</span>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
     {/if}
   {/if}
 {/if}

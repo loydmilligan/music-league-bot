@@ -56,7 +56,7 @@ updated: 2026-05-15T00:30:00.000Z
 - [x] {agent: frontend, id: h2h-queue, depends: h2h-page} Under the two cards, render a "Up next · {N} songs to compare" list matching prototype C's bottom queue (numbered list, mono artist+title, optional rating dots, deadline-ish metadata). Show retired candidates in a separate "Retired" section below the queue (dimmer styling), in the order they lost. Both lists update reactively after each match.
   - **Acceptance:** After picking 1 winner, the queue list shows N-1 challengers remaining and the retired list shows 1 song; visually consistent with prototype C's queue treatment; mono fonts + dot scoring throughout.
 
-- [ ] {agent: frontend, id: h2h-champion, depends: h2h-page} When `state.isComplete` is true (queue empty), show a winner banner above the cards: orange accent panel with `<StatusChip tone='accent'>WINNER</StatusChip>`, big bold artist+title of the surviving champion, a one-line "Survived N matches" stat, and a `<button>Reset and pick again</button>` button. Reset clears the round's matches (call `DELETE /api/h2h/state/[roundId]` — coordinate the new endpoint shape with backend if needed; if simpler, just call `POST /api/h2h/match` with a `reset: true` flag — your call, but file a Blocker if you need backend to add the reset endpoint).
+- [x] {agent: frontend, id: h2h-champion, depends: h2h-page} When `state.isComplete` is true (queue empty), show a winner banner above the cards: orange accent panel with `<StatusChip tone='accent'>WINNER</StatusChip>`, big bold artist+title of the surviving champion, a one-line "Survived N matches" stat, and a `<button>Reset and pick again</button>` button. Reset clears the round's matches (call `DELETE /api/h2h/state/[roundId]` — coordinate the new endpoint shape with backend if needed; if simpler, just call `POST /api/h2h/match` with a `reset: true` flag — your call, but file a Blocker if you need backend to add the reset endpoint).
   - **Acceptance:** After all matches are recorded, the winner banner renders with the champion's metadata; clicking Reset and pick again clears the matches and returns the view to a fresh head-to-head; if reset requires a new backend endpoint, file a Blocker first and ship the rest of this task.
 
 - [x] {agent: backend, id: fix-deadline-save} **Hotfix** from sprint-2 manual test feedback (`~/.config/taw/wiki/Projects/music-league-bot/tests/sprint 2-3-results.md`): the **Round deadlines save buttons on `/settings` are not working**. Investigate `ui/src/routes/settings/+page.svelte` (look for the deadline save UI around the `Round deadlines` section, line ~260 onwards), trace the form action / fetch call to whichever `+page.server.ts` or `routes/api/**` handler is supposed to receive it, and fix the broken path. Likely candidates: (a) the form action name doesn't match between client and server, (b) the handler exists but doesn't write to the rounds table, (c) the client calls a route that doesn't exist. Add a quick vitest or smoke-test step that posts a deadline change and verifies it persists.
@@ -99,6 +99,25 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None._
 
 ## Activity Log
+
+### 2026-05-15 — frontend — h2h-champion landed
+- Replaced the placeholder champion stub in `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte` (h2h tab body) with the full prototype-C winner banner + reset flow. Sprint-3's 7 main frontend/backend tasks are now all `[x]`.
+- **Banner layout** — `<section class="bg-accent-bg border border-accent-deep rounded-xl p-8 text-center">`:
+  - `<StatusChip tone="accent">WINNER</StatusChip>` at top.
+  - Artist heading in `font-display font-bold text-fg text-5xl` (the pulp display face used elsewhere for the rail wordmark — feels celebratory).
+  - Title in `text-fg-muted text-2xl`.
+  - Stat line in `font-mono text-xs tracking-widest uppercase text-fg-dim`: `Survived {matches.length} match(es)`.
+  - Secondary reset button: `bg-surface text-fg border border-border-muted hover:bg-surface-hover px-4 py-2 rounded-md font-bold font-mono text-xs tracking-widest uppercase`. Intentionally lower-key than `PICK WINNER` since reset is a destructive operation — not the dominant action on the page.
+- **Reset flow** (`resetH2H()`):
+  1. `confirm()` guard so the user can back out of clearing matches.
+  2. `DELETE /api/h2h/state/{roundId}` — backend's existing endpoint, no contract change needed.
+  3. On 200, the response body is `{ cleared: number, state: H2HState }`; overwrite local `h2hState` from `body.state`. Rollback to previous snapshot on failure with a warn-tone error line above the banner.
+  4. After reset, the same `{#if h2hState.candidates.length < 2} ... {:else if champion && challenger} ...` branches re-evaluate against the fresh state — head-to-head returns to its active flow with all candidates available again. No extra GET round-trip.
+- **Retired section** is also rendered below the banner when `retired.length > 0`, mirroring the active-state's retired list — gives the user a chronological view of who didn't make it before they decide whether to reset.
+- **Verification:** added 4 rated research candidates (Tom Waits 4.42 / Big Thief 4.09 / Nick Drake 3.25 / The Velvet Underground ~2.85) to round 97, posted 3 sequential matches where Tom Waits won each. State went `isComplete: true, champion: Tom Waits, matches: 3`. Playwright screenshot `docs/screenshots/2026-05-15-sprint3-h2h-champion.png` shows the orange-bordered banner with WINNER chip, large Tom Waits / Hold On, `SURVIVED 3 MATCHES`, RESET button, and the three retired candidates in dim mono text below. Reset endpoint exercised live via the existing DELETE route — confirmed 200 + cleared state. svelte-check clean.
+- **Edge case observed:** if there are matches but the union of all match losers covers every candidate (e.g. each candidate has lost at least once due to circular wins), backend returns `isComplete: true` with `champion: null`. Our banner branch checks `isComplete && champion`, so in that case nothing renders — and the parent `champion && challenger` branch also doesn't render. UI falls back to no h2h body, which is acceptable for that edge case; a future refinement could show a "no clear winner" panel with a reset button if it comes up in real use.
+- **Tokens consumed:** `bg-accent-bg`, `border-accent-deep`, `bg-surface`, `bg-surface-hover`, `border-border-muted`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `text-warn`, `font-display`, `font-mono`. Atoms used: `StatusChip` (accent tone), `SectionLabel` (retired sub-section).
+- commit: HASHPLACEHOLDER
 
 ### 2026-05-15 — frontend — h2h-queue landed
 - Extended `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte` (the existing h2h tab body) with two ordered lists rendered under the `<HeadToHeadCard>` pair.
