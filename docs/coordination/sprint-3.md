@@ -41,7 +41,7 @@ updated: 2026-05-15T00:30:00.000Z
 - [x] {agent: backend, id: h2h-candidates} Add `getH2HCandidates(roundId)` in `ui/src/lib/db/research.ts` (or new `ui/src/lib/db/headToHead.ts` — your call). Returns research_songs eligible for head-to-head: anything from that round whose status indicates active consideration (define this — proposed: `themeFit >= 3` OR a dedicated `status='reviewing'`/`'shortlist'` field if you decide to add one). If the research_songs table doesn't have a status column yet, add `status TEXT NOT NULL DEFAULT 'reviewing'` to the schema in this same task (research candidates default to in-the-running). Returns `{ id, artist, title, themeFit, discoveryPotential, nostalgiaPotential, personalRating, notes, spotifyUri, ytmUrl, weightedScore }[]`. Sort by `weightedScore` desc so the highest-rated candidate naturally becomes the initial champion.
   - **Acceptance:** vitest exercises `getH2HCandidates(roundId)` against a fixture with 5+ research_songs of varying ratings — returns them sorted by weighted score desc, excludes any with status not eligible; weightedScore reflects the user's current settings weights (use the same `computeScore` from `ui/src/lib/scoring.ts`).
 
-- [ ] {agent: backend, id: h2h-api, depends: h2h-schema, h2h-candidates} Add two API routes:
+- [x] {agent: backend, id: h2h-api, depends: h2h-schema, h2h-candidates} Add two API routes:
   - `POST /api/h2h/match` in `ui/src/routes/api/h2h/match/+server.ts` — body `{ roundId, winnerId, loserId }`, inserts a row in `head_to_head_matches`, returns the inserted row plus the updated state (see below). Validates both IDs belong to the same round and to `research_songs`.
   - `GET /api/h2h/state/[roundId]` in `ui/src/routes/api/h2h/state/[roundId]/+server.ts` — returns `{ candidates: H2HCandidate[], matches: H2HMatch[], champion: H2HCandidate | null, challenger: H2HCandidate | null, queue: H2HCandidate[], retired: H2HCandidate[], isComplete: boolean }`. Logic: champion is the candidate with the most wins among recent matches (default to highest weighted score on cold start); challenger is the next un-played candidate from the queue; queue is the remaining un-played candidates sorted by weighted score desc; retired is anyone who's lost a match; isComplete when queue is empty.
   - Reuse the existing `getDb()` pattern; export the H2HCandidate/H2HMatch types from `ui/src/lib/types.ts`.
@@ -81,7 +81,15 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 
 ## Contract Changes
 
-_New types `H2HMatch` and `H2HCandidate` will be added to `ui/src/lib/types.ts` by h2h-api — that's a contract change worth noting here when it lands, so future sprint agents reference these types instead of redefining them._
+### 2026-05-15 — H2H types + endpoints
+- **New shared types** in `ui/src/lib/types.ts`: `H2HMatch`, `H2HCandidate`, `H2HState`. Frontend consumers should import these instead of redefining; field shapes are stable for sprint-3.
+  - `H2HMatch { id, roundId, winnerId, loserId, createdAt }`
+  - `H2HCandidate { id, roundId, artist, title, spotifyUri, ytmUrl, themeFit, discoveryPotential, nostalgiaPotential, personalRating, notes, weightedScore, status }`
+  - `H2HState { candidates, matches, champion, challenger, queue, retired, isComplete }`
+- **New routes:**
+  - `POST /api/h2h/match` — body `{ roundId, winnerId, loserId }`; returns `{ match, state }` with status 201. 400 on missing fields, identical IDs, unknown research_song IDs, or candidates not belonging to the given round.
+  - `GET /api/h2h/state/[roundId]` — returns `H2HState`.
+  - `DELETE /api/h2h/state/[roundId]` — clears all matches for the round; returns `{ cleared, state }`. (Added so frontend's `h2h-champion` Reset button has a clean reset path.)
 
 ## Blockers
 
@@ -89,12 +97,43 @@ _New types `H2HMatch` and `H2HCandidate` will be added to `ui/src/lib/types.ts` 
 
 ## Activity Log
 
+### 2026-05-15 — backend — h2h-api landed
+- **New routes** (server files; no `+page.svelte` touched):
+  - `ui/src/routes/api/h2h/match/+server.ts` — `POST` validates `{ roundId, winnerId, loserId }`, checks both IDs exist in `research_songs` and belong to the given round, inserts via `recordH2HMatch`, returns `{ match, state }` with status 201. 400 on missing fields, equal winner/loser, unknown IDs, cross-round IDs, or any underlying FK error.
+  - `ui/src/routes/api/h2h/state/[roundId]/+server.ts` — `GET` returns the full `H2HState`; `DELETE` clears the round's matches and returns `{ cleared, state }` (added so frontend's `h2h-champion` Reset button doesn't need to special-case it).
+- **State builder** (`ui/src/lib/db/headToHead.ts` extended): `buildH2HState(db, roundId)` is the load-bearing computation —
+  - `retired = { loser_id of every match }`; `active = candidates - retired`.
+  - `champion = active.sort((a,b) => wins(b)-wins(a) || weightedScore(b)-weightedScore(a))[0]`. Falls back to highest-scored candidate on cold start (zero matches → all `wins=0`, weightedScore tiebreak wins). Null when there are no active candidates.
+  - `queue = candidates.filter(c => !retired.has(c.id) && c.id !== champion.id && !played.has(c.id)).sort(weightedScore desc)`. "Played" = appears in any match as winner or loser; the champion has played, so they're excluded from the queue explicitly.
+  - `challenger = queue[0] ?? null`.
+  - `retired` (the returned array) is ordered by the chronological match order, deduped — gives the UI a stable "Retired" history.
+  - `isComplete = queue.length === 0`. When true and `champion != null`, the champion has cleared the field.
+- **Type signatures** added to `ui/src/lib/types.ts` (also mirrored under `## Contract Changes`):
+  ```ts
+  interface H2HMatch { id: number; roundId: number; winnerId: number; loserId: number; createdAt: string; }
+  interface H2HCandidate {
+    id: number; roundId: number; artist: string; title: string;
+    spotifyUri: string; ytmUrl: string | null;
+    themeFit: number | null; discoveryPotential: number | null;
+    nostalgiaPotential: number | null; personalRating: number | null;
+    notes: string | null; weightedScore: number | null; status: string;
+  }
+  interface H2HState {
+    candidates: H2HCandidate[]; matches: H2HMatch[];
+    champion: H2HCandidate | null; challenger: H2HCandidate | null;
+    queue: H2HCandidate[]; retired: H2HCandidate[]; isComplete: boolean;
+  }
+  ```
+- **Tests** (`ui/src/lib/db/headToHead.state.test.ts`): 6 vitests covering cold start, champion holding, champion dethroned, isComplete, reset, and ineligible-status exclusion. State endpoint and POST endpoint exercise the same `buildH2HState` plumbing — the unit tests cover the actual logic. Full suite: 27/27 green.
+- **Live check:** `curl -s http://localhost:5174/api/h2h/state/97` returns `{"candidates":[],"matches":[],"champion":null,"challenger":null,"queue":[],"retired":[],"isComplete":true}` — round 97 has no `research_songs` yet (only `ml_submissions`), so the empty state is the contract's correct response per the task brief.
+- commit: <pending — landing now>
+
 ### 2026-05-15 — backend — h2h-candidates landed
 - `ui/src/lib/db/headToHead.ts` (new): exports `getH2HCandidates(db, roundId)` returning `H2HCandidate[]`. SELECTs from `research_songs` filtered to `status='reviewing'` (the default), LEFT JOINs `ytm_link_cache` for `ytm_url`, then maps each row through `computeScore` from `lib/scoring.ts` with the current `getSettings(db)` weights and sorts by `weightedScore` desc (nulls last).
 - Eligibility rule: chose the dedicated `status` column over `themeFit >= 3` — bare research songs (no ratings yet) still need to be eligible so the user can pick "compare them all" before they've finished rating, and `themeFit IS NULL` would otherwise silently exclude them. Explicit retire/bank actions can flip status later (out of scope here).
 - `ui/src/lib/db/headToHead.candidates.test.ts` (new): 4 vitests — (1) 5 songs sort by weighted score desc; (2) `status='retired'` rows excluded; (3) unrated songs end up last with `weightedScore === null`; (4) result is round-scoped (a song in round B doesn't leak into round A's candidates).
 - Verified: `npx vitest run` 21/21 green.
-- commit: <pending — landing now>
+- commit: `87b805f`
 
 ### 2026-05-15 — frontend — h2h-card landed
 - New component `ui/src/lib/components/HeadToHeadCard.svelte` with the prototype-C asymmetric pair shape.
