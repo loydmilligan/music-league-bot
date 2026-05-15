@@ -133,7 +133,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
   - `DATA_DIR=…/data npm run dev` (port 5174) → `curl /settings` returns HTTP 200, 111954 bytes. Body grep confirms `music-league-bot · settings`, `Rating weights`, `ZIP import & rescan`, `Round deadlines`, `Songlink resolution`, `font-display`, `bg-surface`, `bg-accent`, `SUBMISSIONS`, `IDLE` all rendered.
   - Screenshot: `docs/screenshots/2026-05-14-sprint2-settings-page.png` (1440×2400, full page, headless chrome). Shows all four cards stacked with consistent surface treatment, breadcrumb + H1 header matching the home page, orange Save Weights + Import buttons, OK chip on the weight total (sums to 100), LAST · {date} chip on the import card, proportion bar rendering the four colors, deadline rails empty (no active rounds with deadlines in `data/league.db` right now — expected), queue stats showing 0/0/0 with IDLE chip.
 - **Acceptance check:** `/settings` is visually consistent with home + layout shell (cards, chips, mono micro-labels); rating-weight inputs styled to the design system; import button is the canonical accent button; queue section uses `StatusChip` for both queue depth and worker state (derived). All existing form actions and data bindings preserved verbatim.
-- commit: <pending — landing now>
+- commit: `69edc62`
 
 ### 2026-05-14 — frontend — home-page landed
 - `ui/src/routes/+page.svelte` rewritten as the prototype A "Pick a league" view. Sprint-1's Active Now / Past Seasons / All Songs Ever sections are intentionally removed from this surface (out of scope for the reskin and not in prototype A); the loader is untouched, so a future `/library` or `/songs` route can pick those up without backend work.
