@@ -16,6 +16,22 @@ services:
       - "3001:3001"
     restart: unless-stopped
 
+  bot-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
   bracket:
     build:
       context: ../song-tournament-bracket

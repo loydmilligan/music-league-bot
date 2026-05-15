@@ -94,7 +94,7 @@ updated: 2026-05-14T16:36:41.376Z
 - [ ] {agent: frontend, id: round, depends: hooks-research, ytm-api} Task 10 — round `+page.server.ts` + `+page.svelte` with ML / chat tabs and YTM deep links.
 - [x] {agent: frontend, id: research-ui, depends: round, research-api} Task 12.2–12.3 — `ResearchList` component (Spotify search, ratings, notes, weighted score) wired into the round page.
 - [ ] {agent: frontend, id: settings-ui, depends: research-api, queue-worker} Task 13 — `settings/+page.server.ts` + `+page.svelte` for weights, import/rescan, deadlines, and queue status.
-- [ ] {agent: infra, id: docker, depends: settings-ui, research-ui} Task 15 — `Dockerfile.ui`, `docker-compose.yml` `bot-ui` service on :3002 mounting `./data`, and `.env.example` additions.
+- [x] {agent: infra, id: docker, depends: settings-ui, research-ui} Task 15 — `Dockerfile.ui`, `docker-compose.yml` `bot-ui` service on :3002 mounting `./data`, and `.env.example` additions.
 
 ## Agent Roster
 

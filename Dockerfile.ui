@@ -1,0 +1,33 @@
+FROM node:22-bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/ui
+
+COPY ui/package.json ui/package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+COPY ui/ ./
+RUN npm run build
+
+RUN npm prune --omit=dev
+
+
+FROM node:22-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+ENV PORT=3002
+ENV HOST=0.0.0.0
+ENV DATA_DIR=/app/data
+
+WORKDIR /app/ui
+
+COPY --from=builder /app/ui/build ./build
+COPY --from=builder /app/ui/node_modules ./node_modules
+COPY --from=builder /app/ui/package.json ./package.json
+
+EXPOSE 3002
+
+CMD ["node", "build/index.js"]
