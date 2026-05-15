@@ -3,11 +3,60 @@
   import ResearchList from '$lib/components/ResearchList.svelte';
   import DeadlineChip from '$lib/components/DeadlineChip.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
+  import HeadToHeadCard from '$lib/components/HeadToHeadCard.svelte';
+  import type { H2HState, H2HCandidate } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
 
-  let tab = $state<'ml' | 'chat' | 'research'>('ml');
+  let tab = $state<'ml' | 'chat' | 'research' | 'h2h'>('ml');
   let ytmMode = $state(false);
+
+  // h2h state — fetched lazily when the tab is first activated, and
+  // refreshed from the POST /api/h2h/match response after each pick.
+  let h2hState = $state<H2HState | null>(null);
+  let h2hLoading = $state(false);
+  let h2hError = $state<string | null>(null);
+
+  async function fetchH2HState() {
+    h2hLoading = true;
+    h2hError = null;
+    try {
+      const res = await fetch(`/api/h2h/state/${data.round.id}`);
+      if (!res.ok) throw new Error(`Failed to load h2h state (${res.status})`);
+      h2hState = await res.json();
+    } catch (err) {
+      h2hError = err instanceof Error ? err.message : 'Failed to load';
+    } finally {
+      h2hLoading = false;
+    }
+  }
+
+  async function pickWinner(winner: H2HCandidate, loser: H2HCandidate) {
+    h2hError = null;
+    const prev = h2hState;
+    try {
+      const res = await fetch('/api/h2h/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roundId: data.round.id, winnerId: winner.id, loserId: loser.id }),
+      });
+      if (!res.ok) throw new Error(`Match failed (${res.status})`);
+      const body = await res.json() as { match: unknown; state: H2HState };
+      h2hState = body.state;
+    } catch (err) {
+      h2hError = err instanceof Error ? err.message : 'Match failed';
+      h2hState = prev;
+    }
+  }
+
+  // Lazy-load h2h state when the tab is first activated. Cache thereafter;
+  // pickWinner refreshes state from the POST response so the cache stays
+  // in sync without an extra GET round-trip.
+  $effect(() => {
+    if (tab === 'h2h' && h2hState === null && !h2hLoading && h2hError === null) {
+      fetchH2HState();
+    }
+  });
 
   function durationUntil(iso: string | null): string | null {
     if (!iso) return null;
@@ -42,10 +91,11 @@
     [...data.mlSubmissions].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))[0]
   );
 
-  const tabs: { key: 'ml' | 'chat' | 'research'; label: string; count: number }[] = $derived([
+  const tabs: { key: 'ml' | 'chat' | 'research' | 'h2h'; label: string; count: number }[] = $derived([
     { key: 'ml', label: 'ML Playlist', count: data.mlSubmissions.length },
     { key: 'chat', label: 'Chat Mentions', count: data.chatMentions.length },
     { key: 'research', label: 'Research', count: data.research.length },
+    { key: 'h2h', label: 'Head-to-Head', count: h2hState?.candidates.length ?? 0 },
   ]);
 </script>
 
@@ -225,4 +275,67 @@
 
 {#if tab === 'research'}
   <ResearchList roundId={data.round.id} initial={data.research} weights={data.settings} />
+{/if}
+
+{#if tab === 'h2h'}
+  {#if h2hLoading && h2hState === null}
+    <p class="text-fg-faint font-mono text-sm italic">Loading head-to-head state…</p>
+  {:else if h2hError && h2hState === null}
+    <div class="bg-surface border border-warn/40 rounded-xl p-6">
+      <StatusChip label="ERROR" tone="warn" />
+      <p class="text-fg-muted text-sm mt-3">{h2hError}</p>
+      <button
+        type="button"
+        onclick={fetchH2HState}
+        class="mt-3 bg-accent hover:bg-accent-strong text-bg-elevated font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-sm transition-colors"
+      >Retry</button>
+    </div>
+  {:else if h2hState}
+    {#if h2hState.candidates.length < 2}
+      <div class="bg-surface border border-border-muted rounded-xl p-8 text-center max-w-2xl mx-auto">
+        <div class="inline-block mb-4"><StatusChip label="NOT READY" tone="muted" /></div>
+        <h2 class="text-xl font-bold text-fg mb-2">
+          Need at least two research candidates to start head-to-head.
+        </h2>
+        <p class="text-fg-muted text-sm">
+          Add candidates from the
+          <button
+            type="button"
+            onclick={() => (tab = 'research')}
+            class="text-accent hover:text-accent-strong underline transition-colors"
+          >Research tab</button>
+          — eligibility defaults to <code class="font-mono text-fg">status='reviewing'</code>.
+        </p>
+      </div>
+    {:else if h2hState.champion && h2hState.challenger}
+      {@const champion = h2hState.champion}
+      {@const challenger = h2hState.challenger}
+      {#if h2hError}
+        <p class="font-mono text-xs text-warn mb-3">{h2hError}</p>
+      {/if}
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex-1 min-w-0">
+          <HeadToHeadCard
+            song={champion}
+            role="holding-lane"
+            onPick={() => pickWinner(champion, challenger)}
+          />
+        </div>
+        <div class="flex-1 min-w-0">
+          <HeadToHeadCard
+            song={challenger}
+            role="challenger"
+            onPick={() => pickWinner(challenger, champion)}
+          />
+        </div>
+      </div>
+    {:else if h2hState.isComplete && h2hState.champion}
+      <!-- TODO: h2h-champion task — winner banner with reset button. -->
+      <div class="bg-surface border border-accent-deep rounded-xl p-6 text-center">
+        <StatusChip label="WINNER" tone="accent" />
+        <h2 class="text-3xl font-bold text-fg mt-3">{h2hState.champion.artist}</h2>
+        <p class="text-fg-muted">{h2hState.champion.title}</p>
+      </div>
+    {/if}
+  {/if}
 {/if}
