@@ -127,7 +127,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - **Edge case fix:** `durationUntil()` now guards against unparseable ISO timestamps (`Number.isFinite(ts)` check) — Hip Jammers had a non-Date submission deadline string that produced a `SUBMISSIONS · NaNM` chip before the guard; now falls through to `REVIEW · —`.
 - **Verification:** `npm run dev` → `curl /` HTTP 200 (140kb). Playwright screenshot at `docs/screenshots/2026-05-14-sprint2-home-page.png` shows the two-section split matching prototype A — orange-bordered Needs-you card with 2 OPEN accent chip and Hip Jammers (`REVIEW · —`) + Nostalgia Pit tiles, All leagues card with the four tiles (Hip Jammers active, Nostalgia Pit active, Fam-Jam idle, Second Best idle) + dashed Adopt-league placeholder. svelte-check clean on the new file (no warnings).
 - **Tokens consumed:** `border-accent`, `bg-surface`, `bg-bg-elevated`, `border-border-muted`, `border-accent-deep`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `bg-accent`, `bg-accent-strong`, `font-mono`, `font-sans`, `border-border`. Atoms used: `DeadlineChip`, `StatusChip` (accent tone), `DotIndicator` (all four statuses).
-- commit: HASHPLACEHOLDER
+- commit: 54f841d
 
 ### 2026-05-14 — backend — layout-loader landed
 - **New files:**
