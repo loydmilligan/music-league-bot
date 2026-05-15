@@ -4,6 +4,7 @@
   import DeadlineChip from '$lib/components/DeadlineChip.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import HeadToHeadCard from '$lib/components/HeadToHeadCard.svelte';
+  import SectionLabel from '$lib/components/SectionLabel.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
@@ -329,6 +330,52 @@
           />
         </div>
       </div>
+
+      {#if h2hState.queue.length > 0}
+        <section class="mt-8">
+          <SectionLabel>Up next · {h2hState.queue.length} song{h2hState.queue.length === 1 ? '' : 's'}</SectionLabel>
+          <ol class="mt-3 flex flex-col gap-1.5">
+            {#each h2hState.queue as song, i (song.id)}
+              {@const dots = song.weightedScore != null ? Math.max(1, Math.round(song.weightedScore)) : 0}
+              <li class="flex items-center gap-3 pl-3 pr-4 py-2.5 bg-surface border-l-2 border-border-muted">
+                <span class="font-mono text-xs text-fg-faint w-6 text-right flex-shrink-0">{i + 1}</span>
+                <div class="flex-1 min-w-0">
+                  <span class="font-bold text-fg truncate">{song.artist}</span>
+                  <span class="text-fg-muted truncate"> — {song.title}</span>
+                </div>
+                <div class="flex gap-0.5 flex-shrink-0" aria-label={`weighted score ${song.weightedScore?.toFixed(2) ?? 'unrated'}`}>
+                  {#each [1, 2, 3, 4, 5] as n}
+                    <span
+                      class="w-1.5 h-1.5 rounded-full"
+                      class:bg-accent={n <= dots}
+                      class:bg-border-muted={n > dots}
+                    ></span>
+                  {/each}
+                </div>
+                <span class="font-mono text-[11px] text-fg-dim w-12 text-right flex-shrink-0">
+                  {song.weightedScore != null ? song.weightedScore.toFixed(2) : '—'}
+                </span>
+              </li>
+            {/each}
+          </ol>
+        </section>
+      {/if}
+
+      {#if h2hState.retired.length > 0}
+        <section class="mt-6">
+          <SectionLabel>Retired</SectionLabel>
+          <ul class="mt-3 flex flex-col gap-1">
+            {#each h2hState.retired as song (song.id)}
+              <li class="flex items-center gap-3 pl-3 pr-4 py-1.5 text-sm">
+                <span class="text-fg-faint truncate">
+                  <span class="font-mono">{song.artist}</span>
+                  <span class="text-fg-faint/80"> — {song.title}</span>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
     {:else if h2hState.isComplete && h2hState.champion}
       <!-- TODO: h2h-champion task — winner banner with reset button. -->
       <div class="bg-surface border border-accent-deep rounded-xl p-6 text-center">
