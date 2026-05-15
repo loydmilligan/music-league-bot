@@ -30,7 +30,7 @@ updated: 2026-05-15T01:00:00.000Z
 <!-- Source of truth: `## Active Sprint Plan` (inline planning). Same
      format and parser contract as previous sprints. -->
 
-- [ ] {agent: frontend, id: home-rename} Rename the home page header from `Pick a league` to **`Mash League`** (or `Overview` — user direction was "Overview, Mash League, or something else; it's the landing page for the app"). Update the breadcrumb row from `MUSIC-LEAGUE-BOT · PICKER` to `MUSIC-LEAGUE-BOT · OVERVIEW`. Remove the `+ Adopt league` CTA + placeholder tile from the All-leagues card — feedback was "not sure what adopt a league means — all the leagues are mine and if they are in this app then they are already adopted." Replace it with nothing (just don't render the tile) until a real "import new league" flow exists.
+- [x] {agent: frontend, id: home-rename} Rename the home page header from `Pick a league` to **`Mash League`** (or `Overview` — user direction was "Overview, Mash League, or something else; it's the landing page for the app"). Update the breadcrumb row from `MUSIC-LEAGUE-BOT · PICKER` to `MUSIC-LEAGUE-BOT · OVERVIEW`. Remove the `+ Adopt league` CTA + placeholder tile from the All-leagues card — feedback was "not sure what adopt a league means — all the leagues are mine and if they are in this app then they are already adopted." Replace it with nothing (just don't render the tile) until a real "import new league" flow exists.
   - **Acceptance:** Visit `/` — H1 reads `Mash League`, breadcrumb reads `MUSIC-LEAGUE-BOT · OVERVIEW`, no `+ Adopt league` button or placeholder tile is visible anywhere on the home page. svelte-check clean.
 
 - [ ] {agent: frontend, id: league-card-upgrade, depends: home-rename} Upgrade the league tile content on home page (both `Needs you this week` and `All leagues` sections) to surface more useful info per feedback:
@@ -59,7 +59,7 @@ updated: 2026-05-15T01:00:00.000Z
 - [ ] {agent: frontend, id: settings-two-column-layout} Reorganize `/settings` into a two-column layout at desktop widths per feedback: "the import section should have its own column on the right side so it doesn't require that you scroll like 50 miles to get to the next section." Specifically: **left column** holds the Rating weights card (tall, with sliders + tooltips); **right column** holds the Import / rescan card, Queue status card, and any future small cards. Round deadlines section stays full-width below both columns. Mobile falls back to single column stacked.
   - **Acceptance:** at `md:` breakpoint and above, `/settings` renders weights on the left and import + queue stacked on the right; below md, single column stacked; svelte-check clean.
 
-- [ ] {agent: backend, id: deadline-auto-fill-api} Add a new form action or API endpoint that derives all deadlines for a (league, season) pair from three inputs: `daysToSubmit: number`, `daysToVote: number`, `startDate: ISO date string`. Computes `submission_deadline = startDate + daysToSubmit days`, `voting_deadline = submission_deadline + daysToVote days` for each round in the (league, season) sequence (each round's start = previous round's voting end, or `startDate` for round 1). Writes the computed deadlines back to the `rounds` table for that (league, season). Per feedback: "should be able to enter 'days to submit', 'days to vote', and starting date - with these the app should be able to put in some decent stand-ins for deadlines - so i don't have to manual enter them all to get this thing working." Place at `ui/src/routes/api/deadlines/auto-fill/+server.ts` (POST) — or as a form action on `+page.server.ts` for the settings page — your call based on which fits the existing settings code better.
+- [x] {agent: backend, id: deadline-auto-fill-api} Add a new form action or API endpoint that derives all deadlines for a (league, season) pair from three inputs: `daysToSubmit: number`, `daysToVote: number`, `startDate: ISO date string`. Computes `submission_deadline = startDate + daysToSubmit days`, `voting_deadline = submission_deadline + daysToVote days` for each round in the (league, season) sequence (each round's start = previous round's voting end, or `startDate` for round 1). Writes the computed deadlines back to the `rounds` table for that (league, season). Per feedback: "should be able to enter 'days to submit', 'days to vote', and starting date - with these the app should be able to put in some decent stand-ins for deadlines - so i don't have to manual enter them all to get this thing working." Place at `ui/src/routes/api/deadlines/auto-fill/+server.ts` (POST) — or as a form action on `+page.server.ts` for the settings page — your call based on which fits the existing settings code better.
   - **Acceptance:** `curl -X POST http://localhost:5174/api/deadlines/auto-fill -H 'content-type: application/json' -d '{"league":"hip-jammers","season":3,"daysToSubmit":4,"daysToVote":3,"startDate":"2026-05-20"}'` returns 200 with the computed rounds; `sqlite3 data/league.db "select id, submission_deadline, voting_deadline from rounds where league_slug='hip-jammers' and season_number=3 order by id;"` shows the new deadlines; vitest exercises the endpoint with a fixture league/season.
 
 - [ ] {agent: frontend, id: deadline-auto-fill-ui, depends: deadline-auto-fill-api, settings-two-column-layout} Add UI to the Round deadlines card on `/settings` (or a new card adjacent to it) for the auto-fill flow. Inputs: `<select league>`, `<select season>` (filters per feedback: "needs filters for leagues and seasons"), three number/date inputs (days-to-submit, days-to-vote, start-date), and a `<button>Auto-fill deadlines</button>` that POSTs to the backend endpoint. After success, the existing per-round deadline list re-renders with the new values. Show a `<StatusChip tone='health'>AUTO-FILLED · N rounds</StatusChip>` confirmation toast on success.
@@ -105,6 +105,36 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Auto-fill defaults for unknown deadlines** — closely related to sprint-4's deadline-auto-fill but more ambitious: detect rounds with null deadlines on startup and prompt the user to bulk auto-fill them.
 
 ## Activity Log
+
+### 2026-05-15 — backend — deadline-auto-fill-api landed
+- **Endpoint:** `POST /api/deadlines/auto-fill` (chose the route over a `+page.server.ts` action so the frontend can call it from anywhere — not coupled to the settings form's submit lifecycle, and the eventual UI in `deadline-auto-fill-ui` can post via `fetch`).
+- **Body:** `{ league: string, season: number, daysToSubmit: number, daysToVote: number, startDate: string }`. `startDate` is parsed via `new Date()` so plain `"YYYY-MM-DD"` and full ISO with time both work. 400 on missing/non-positive numbers; 400 on unparsable startDate; 404 on unknown league or season.
+- **Return:** `{ updated: number, rounds: Array<{ id, submission_deadline, voting_deadline }> }`. Written values use `YYYY-MM-DDT00:00` format so `<input type="datetime-local">` renders them cleanly (this matches what sprint-3's deadline-save flow expects and avoids reintroducing the legacy non-ISO bug).
+- **Buffer-between-rounds decision:** **zero buffer** — each round's submission window opens the instant the previous round's voting closes. Matches how a Music League season runs back-to-back; a buffer would create dead time and the user's framing ("decent stand-ins") favors continuous coverage over slack. Documented in `deadlines.ts` comments.
+- **Files:**
+  - `ui/src/lib/deadlines.ts` (new) — pure `computeDeadlines(roundCount, { daysToSubmit, daysToVote, startDate })` helper. Day math via `Date + ms`; output formatted UTC to keep cross-tz output stable.
+  - `ui/src/routes/api/deadlines/auto-fill/+server.ts` (new) — validates body, looks up league + season, calls `getRoundsForSeason` (ordered by created_at — round 1 = earliest), computes, writes via `updateDeadlines` inside a single SQLite transaction.
+  - `ui/src/lib/deadlines.test.ts` (new) — 5 vitests: cold path, multi-round back-to-back math, invalid startDate, non-positive days, end-to-end DB round-trip.
+- **Smoke test (live dev server, hip-jammers s3, 7 rounds):**
+  ```
+  curl -X POST http://localhost:5174/api/deadlines/auto-fill \
+    -H 'content-type: application/json' \
+    -d '{"league":"hip-jammers","season":3,"daysToSubmit":4,"daysToVote":3,"startDate":"2026-05-20"}'
+  → 200 { updated: 7, rounds: [...] }
+
+  sqlite3 select … (joined; rounds doesn't carry league_slug directly)
+  102 | 2026-05-24T00:00 | 2026-05-27T00:00
+  103 | 2026-05-31T00:00 | 2026-06-03T00:00
+  104 | 2026-06-07T00:00 | 2026-06-10T00:00
+  105 | 2026-06-14T00:00 | 2026-06-17T00:00
+  106 | 2026-06-21T00:00 | 2026-06-24T00:00
+  107 | 2026-06-28T00:00 | 2026-07-01T00:00
+  108 | 2026-07-05T00:00 | 2026-07-08T00:00
+  ```
+  Error paths: unknown league → `HTTP 404 {"message":"league not found: no-such-league"}`; missing fields → `HTTP 400 {"message":"… all required …"}`.
+- **Note on the task body's example sqlite query:** the `rounds` table doesn't carry `league_slug` / `season_number` directly (they live on `seasons` + `leagues`); verification uses a JOIN. Frontend's `deadline-auto-fill-ui` should hit the API and reload the per-round list rather than synthesizing this query.
+- **Checks:** `npx vitest run` 36/36 green; `npx svelte-check` reports only pre-existing issues.
+- commit: <pending — landing now>
 
 ### 2026-05-15 — docs — Sprint plan refresh: home + settings polish
 - replaced `## Active Sprint Plan` body with 8 tasks (7 frontend / 1 backend / 0 infra).
