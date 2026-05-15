@@ -160,6 +160,14 @@ _No contract changes yet._
      matching entry, orc emits a coord-doc-stale card proposing an
      entry for the agent that committed. -->
 
+### 2026-05-14 — infra — docker landed
+- `Dockerfile.ui`: multi-stage Node 22 bookworm-slim build — builder installs python3/make/g++ for better-sqlite3 native compile, runs `npm ci && npm run build`, prunes to prod deps; runtime stage copies `build/`, `node_modules`, and `package.json` and runs `node build/index.js`
+- `docker-compose.yml`: new `bot-ui` service on :3002 with `env_file: .env`, `NODE_ENV=production`, `PORT=3002`, `HOST=0.0.0.0`, `DATA_DIR=/app/data`, mounts host `./data → /app/data`
+- `.env.example`: documents `DATA_DIR` and `MY_COMPETITOR_ID` for the UI runtime
+- verified: `docker compose build bot-ui` clean; `up -d` → HTTP 200 on `/` and `/settings`; no errors in container logs
+- sprint-1 task list now 16/16
+- commit: 43c5e7f
+
 ### 2026-05-14 — frontend — research-ui landed
 - `ui/src/lib/components/ResearchList.svelte`: Spotify search box + results, candidate list with 1–5 rating buttons across themeFit/discoveryPotential/nostalgiaPotential/personalRating, notes textarea, save-for-future toggle, computed weighted score (uses shared `scoring.computeScore` against loader `settings`), Spotify/YT Music deep links, remove
 - wired into the round page's research tab (replaces the stub in fe49efa); CRUD via `/api/research/[roundId]` with optimistic UI + rollback on failure
