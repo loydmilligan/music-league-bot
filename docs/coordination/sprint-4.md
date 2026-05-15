@@ -62,7 +62,7 @@ updated: 2026-05-15T01:00:00.000Z
 - [x] {agent: backend, id: deadline-auto-fill-api} Add a new form action or API endpoint that derives all deadlines for a (league, season) pair from three inputs: `daysToSubmit: number`, `daysToVote: number`, `startDate: ISO date string`. Computes `submission_deadline = startDate + daysToSubmit days`, `voting_deadline = submission_deadline + daysToVote days` for each round in the (league, season) sequence (each round's start = previous round's voting end, or `startDate` for round 1). Writes the computed deadlines back to the `rounds` table for that (league, season). Per feedback: "should be able to enter 'days to submit', 'days to vote', and starting date - with these the app should be able to put in some decent stand-ins for deadlines - so i don't have to manual enter them all to get this thing working." Place at `ui/src/routes/api/deadlines/auto-fill/+server.ts` (POST) — or as a form action on `+page.server.ts` for the settings page — your call based on which fits the existing settings code better.
   - **Acceptance:** `curl -X POST http://localhost:5174/api/deadlines/auto-fill -H 'content-type: application/json' -d '{"league":"hip-jammers","season":3,"daysToSubmit":4,"daysToVote":3,"startDate":"2026-05-20"}'` returns 200 with the computed rounds; `sqlite3 data/league.db "select id, submission_deadline, voting_deadline from rounds where league_slug='hip-jammers' and season_number=3 order by id;"` shows the new deadlines; vitest exercises the endpoint with a fixture league/season.
 
-- [ ] {agent: frontend, id: deadline-auto-fill-ui, depends: deadline-auto-fill-api, settings-two-column-layout} Add UI to the Round deadlines card on `/settings` (or a new card adjacent to it) for the auto-fill flow. Inputs: `<select league>`, `<select season>` (filters per feedback: "needs filters for leagues and seasons"), three number/date inputs (days-to-submit, days-to-vote, start-date), and a `<button>Auto-fill deadlines</button>` that POSTs to the backend endpoint. After success, the existing per-round deadline list re-renders with the new values. Show a `<StatusChip tone='health'>AUTO-FILLED · N rounds</StatusChip>` confirmation toast on success.
+- [x] {agent: frontend, id: deadline-auto-fill-ui, depends: deadline-auto-fill-api, settings-two-column-layout} Add UI to the Round deadlines card on `/settings` (or a new card adjacent to it) for the auto-fill flow. Inputs: `<select league>`, `<select season>` (filters per feedback: "needs filters for leagues and seasons"), three number/date inputs (days-to-submit, days-to-vote, start-date), and a `<button>Auto-fill deadlines</button>` that POSTs to the backend endpoint. After success, the existing per-round deadline list re-renders with the new values. Show a `<StatusChip tone='health'>AUTO-FILLED · N rounds</StatusChip>` confirmation toast on success.
   - **Acceptance:** select hip-jammers / season 3, enter `4 / 3 / 2026-05-20`, click Auto-fill → toast appears, deadline list shows N rounds with the computed dates, page reloads cleanly; filter selects only show leagues/seasons that exist in the DB; svelte-check clean.
 
 ## Agent Roster
@@ -105,6 +105,40 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Auto-fill defaults for unknown deadlines** — closely related to sprint-4's deadline-auto-fill but more ambitious: detect rounds with null deadlines on startup and prompt the user to bulk auto-fill them.
 
 ## Activity Log
+
+### 2026-05-15 — infra (as frontend, parallel) — deadline-auto-fill-ui landed
+- **Why infra in a frontend lane:** same `(as frontend, parallel)` rationale used for settings-two-column-layout (628b0d0) and rating-weights-autobalance (3360e1f) — sprint-4 has zero infra-owned tasks; frontend pane saturated. Sprint-1 review Q2 ratification covers this pattern.
+- **File touched (single):** `ui/src/routes/settings/+page.svelte`. No loader / API / lib / layout / other-route changes. Consumes the backend's `POST /api/deadlines/auto-fill` endpoint shipped at commit `5c14828`.
+- **UI shape** — a sub-card inside the existing Round deadlines section, rendered above the per-round deadline rails:
+  ```
+  ┌─ AUTO-FILL ───────────────────────────────────────────────[health chip]┐
+  │ Bulk-set deadlines for a season                                        │
+  │ Picks the first round's start = start date, then chains …              │
+  │                                                                        │
+  │ [League: Hip Jammers ▾] [Season: Season 3 ▾]                           │
+  │ [Days to submit: 4] [Days to vote: 3] [Start date: YYYY-MM-DD]         │
+  │ [AUTO-FILL DEADLINES] (accent button)                                  │
+  └────────────────────────────────────────────────────────────────────────┘
+  ```
+  The status chip slot (top-right of the sub-card header) is hidden until the user hits the button; shows `AUTO-FILLED · N ROUNDS` (health) on 200, or `{ERROR}` (warn) on non-OK.
+- **Data sources for the filter dropdowns:**
+  - **League select** ← `data.allLeagues` (already returned by the settings loader as `{ slug, name }[]`). All four adopted leagues appear.
+  - **Season select** ← derived `seasonsByLeagueSlug: Map<string, number[]>` built from `data.activeRounds` (the settings loader's flatmap of active-season rounds). I pair each active-round's `leagueName` to the matching slug via `allLeagues.find(l => l.name === r.leagueName)`. Season options re-filter whenever the chosen league changes (via a `$effect` that re-snaps `afSeason` to the first available option when the league changes or the previous selection isn't valid).
+  - **Past-seasons gap (not blocking):** the settings loader only surfaces seasons that currently have *active* rounds. A user couldn't backfill deadlines for an archived/inactive season through this UI today. Pragmatic match for the brief's flow ("decent stand-ins for in-flight seasons"); flag for a future loader extension if past-season backfill becomes a real ask. Not filing a Blocker since the acceptance case (`hip-jammers / season 3`) is exactly an active season.
+- **Defaults:** `daysToSubmit = 4`, `daysToVote = 3`, `startDate = today (UTC YYYY-MM-DD)`. League defaults to the first one with ≥1 active season; season to the first option for that league.
+- **Submit behavior:** `onclick={autoFillDeadlines}` (no `<form>` — we POST raw JSON, not form-encoded). On success calls `invalidateAll()` from `$app/navigation` so SvelteKit re-runs the layout + settings loaders and the per-round deadline rails below reflect the new values immediately. Button shows `Filling…` while in flight, and is disabled when there's no valid (league, season) pair.
+- **Reactivity hygiene:** `data.allLeagues` is read through `const allLeagues = $derived(data.allLeagues as LeagueRow[])` so it stays fresh after `invalidateAll()`; the `seasonsByLeagueSlug` is `$derived.by` and rebuilds when `data.activeRounds` mutates; the league/season auto-snap effects re-run when their inputs change.
+- **Verification:**
+  - `npx svelte-check` — 1 error + 2 warnings, all pre-existing. No new warnings.
+  - `npm run dev` (port 5174) → live API hit:
+    ```
+    POST /api/deadlines/auto-fill {league:'hip-jammers', season:3, daysToSubmit:4, daysToVote:3, startDate:'2026-05-20'}
+    → HTTP 200 {"updated":7,"rounds":[{id:102, sub:'2026-05-24T00:00', vote:'2026-05-27T00:00'}, …]}
+    ```
+    sqlite check on the same `hip-jammers / s3` rounds shows the persisted values match the response. UI SSR contains all five `af-*` form controls + the `Bulk-set deadlines` / `Auto-fill deadlines` strings.
+  - Screenshot: `docs/screenshots/2026-05-15-sprint4-deadline-auto-fill-ui.png` (cropped to the deadlines section). Shows the sub-card with all controls in their default values, the accent button, and the per-round rails below reflecting the auto-filled `05/24/2026 12:00 AM` → `05/27/2026 12:00 AM` for round 1, etc.
+- **Acceptance check:** hip-jammers / season 3 with `4 / 3 / 2026-05-20` returns 200 and updates 7 rounds ✓; filter selects only show leagues from `data.allLeagues` and seasons that have active rounds ✓; toast chip surfaces success/error ✓; svelte-check clean ✓. **Sprint-4 is now 8/8.**
+- commit: <pending — landing now>
 
 ### 2026-05-15 — frontend — deadline-urgency-shadow landed
 - `ui/src/routes/+page.svelte`: added an `urgencyFor(s: ActiveSeason): 'low' | 'medium' | 'high' | 'critical'` derivation and a static `urgencyClass` lookup that wires the left edge of each active-round tile in `Needs you this week` to a progressively brighter accent treatment. Archive tiles in `All leagues` are untouched.

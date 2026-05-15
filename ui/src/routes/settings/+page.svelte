@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
   import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
 
@@ -94,6 +95,101 @@
       next[other] = Math.round(clampWeight(w[other] - share));
     }
     w = next;
+  }
+
+  // ---------- Auto-fill deadlines ----------
+  // Filter dropdowns are populated from page.data: `allLeagues` provides the
+  // league list with slug+name; `activeRounds` (rounds inside currently-active
+  // seasons) gives us the (leagueName, seasonNumber) pairs that have rounds.
+  // We pair them via leagueName→slug. Past-season picking would need a loader
+  // extension, but the brief's flow ("backfill deadlines for an in-flight
+  // season") only needs active seasons — pragmatic match.
+  type LeagueRow = { slug: string; name: string };
+  type ActiveRoundRow = { leagueName: string; seasonNumber: number };
+  const allLeagues = $derived(data.allLeagues as LeagueRow[]);
+
+  const seasonsByLeagueSlug = $derived.by(() => {
+    const map = new Map<string, number[]>();
+    for (const r of (data.activeRounds as ActiveRoundRow[])) {
+      const league = allLeagues.find((l: LeagueRow) => l.name === r.leagueName);
+      if (!league) continue;
+      const list = map.get(league.slug) ?? [];
+      if (!list.includes(r.seasonNumber)) list.push(r.seasonNumber);
+      map.set(league.slug, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a - b);
+    return map;
+  });
+
+  // Default-pick the first league that has at least one active season.
+  const firstLeagueWithSeasons = $derived(
+    allLeagues.find((l) => (seasonsByLeagueSlug.get(l.slug)?.length ?? 0) > 0)?.slug ??
+      allLeagues[0]?.slug ??
+      ''
+  );
+
+  let afLeague = $state('');
+  let afSeason = $state<number | ''>('');
+  let afDaysToSubmit = $state(4);
+  let afDaysToVote = $state(3);
+  let afStartDate = $state(new Date().toISOString().slice(0, 10));
+  let afStatus = $state<{ tone: 'health' | 'warn'; label: string } | null>(null);
+  let afSubmitting = $state(false);
+
+  const afSeasonOptions = $derived(seasonsByLeagueSlug.get(afLeague) ?? []);
+
+  // Initialize afLeague once the derived default is known, and keep afSeason
+  // valid whenever the league changes (re-snap to first available season).
+  $effect(() => {
+    if (!afLeague && firstLeagueWithSeasons) afLeague = firstLeagueWithSeasons;
+  });
+  $effect(() => {
+    const opts = afSeasonOptions;
+    if (opts.length === 0) {
+      afSeason = '';
+    } else if (typeof afSeason !== 'number' || !opts.includes(afSeason)) {
+      afSeason = opts[0];
+    }
+  });
+
+  async function autoFillDeadlines() {
+    if (!afLeague || afSeason === '' || afSubmitting) return;
+    afSubmitting = true;
+    afStatus = null;
+    try {
+      const res = await fetch('/api/deadlines/auto-fill', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          league: afLeague,
+          season: afSeason,
+          daysToSubmit: afDaysToSubmit,
+          daysToVote: afDaysToVote,
+          startDate: afStartDate
+        })
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        afStatus = {
+          tone: 'warn',
+          label: (err?.error ?? `HTTP ${res.status}`).toString().toUpperCase()
+        };
+        return;
+      }
+      const body = (await res.json()) as { updated: number };
+      afStatus = {
+        tone: 'health',
+        label: `AUTO-FILLED · ${body.updated} ROUND${body.updated === 1 ? '' : 'S'}`
+      };
+      await invalidateAll();
+    } catch (e) {
+      afStatus = {
+        tone: 'warn',
+        label: (e instanceof Error ? e.message : 'NETWORK ERROR').toUpperCase()
+      };
+    } finally {
+      afSubmitting = false;
+    }
   }
 </script>
 
@@ -420,6 +516,98 @@
     Submission and voting deadlines for active rounds. Drives the
     <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
   </p>
+
+  <!-- Auto-fill sub-card: computes deadlines for every round in a (league, season)
+       pair from days-to-submit / days-to-vote / start-date. Calls the backend
+       POST /api/deadlines/auto-fill endpoint (sprint-4 commit 5c14828). -->
+  <div class="bg-bg-elevated border border-border-muted rounded-md p-4 mb-5">
+    <header class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+      <div>
+        <SectionLabel>Auto-fill</SectionLabel>
+        <h3 class="text-sm font-bold text-fg mt-1">Bulk-set deadlines for a season</h3>
+      </div>
+      {#if afStatus}
+        <StatusChip label={afStatus.label} tone={afStatus.tone} />
+      {/if}
+    </header>
+    <p class="text-xs text-fg-dim mb-4">
+      Picks the first round's start = <span class="font-mono">start date</span>, then chains
+      <span class="font-mono">+ days-to-submit</span> →
+      <span class="font-mono">+ days-to-vote</span> through every round in the season (zero buffer).
+    </p>
+
+    <div class="flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-league">League</label>
+        <select
+          id="af-league"
+          bind:value={afLeague}
+          disabled={allLeagues.length === 0}
+          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+        >
+          {#each allLeagues as l (l.slug)}
+            <option value={l.slug}>{l.name}</option>
+          {/each}
+        </select>
+      </div>
+      <div>
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-season">Season</label>
+        <select
+          id="af-season"
+          bind:value={afSeason}
+          disabled={afSeasonOptions.length === 0}
+          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+        >
+          {#if afSeasonOptions.length === 0}
+            <option value="">no active</option>
+          {:else}
+            {#each afSeasonOptions as n (n)}
+              <option value={n}>Season {n}</option>
+            {/each}
+          {/if}
+        </select>
+      </div>
+      <div>
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-submit">Days to submit</label>
+        <input
+          id="af-submit"
+          type="number"
+          min="1"
+          max="60"
+          bind:value={afDaysToSubmit}
+          class="w-20 bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-vote">Days to vote</label>
+        <input
+          id="af-vote"
+          type="number"
+          min="1"
+          max="60"
+          bind:value={afDaysToVote}
+          class="w-20 bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-start">Start date</label>
+        <input
+          id="af-start"
+          type="date"
+          bind:value={afStartDate}
+          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+        />
+      </div>
+      <button
+        type="button"
+        onclick={autoFillDeadlines}
+        disabled={!afLeague || afSeason === '' || afSubmitting}
+        class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+      >
+        {afSubmitting ? 'Filling…' : 'Auto-fill deadlines'}
+      </button>
+    </div>
+  </div>
 
   {#if data.activeRounds.length}
     <div class="flex flex-col gap-2">
