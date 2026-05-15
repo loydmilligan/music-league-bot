@@ -82,7 +82,7 @@ updated: 2026-05-14T20:35:00.000Z
 - [ ] {agent: frontend, id: settings-page, depends: layout-shell, chip-badge-component} Re-skin `/settings`: weights, import/rescan, deadlines, queue status — all wrapped in the design system's card surfaces and chip badges. Match the visual hierarchy of prototype A's content cards.
   - **Acceptance:** `/settings` visually consistent with home/season/round; rating-weight inputs styled in design system; import/rescan button uses the accent button style; queue status section uses `StatusChip` for queue depth and worker state.
 
-- [ ] {agent: backend, id: verify-sprint-1} Verify sprint-1's two unverified items end-to-end and fix anything that breaks: (a) populated round-detail render works with real ZIP data after the `.gitkeep` fix; (b) the docker container reads host `./data` and serves a populated round page. Document the smoke-test command + URL + verified output for each in the sprint-2 Activity Log.
+- [x] {agent: backend, id: verify-sprint-1} Verify sprint-1's two unverified items end-to-end and fix anything that breaks: (a) populated round-detail render works with real ZIP data after the `.gitkeep` fix; (b) the docker container reads host `./data` and serves a populated round page. Document the smoke-test command + URL + verified output for each in the sprint-2 Activity Log.
   - **Acceptance:** `curl http://localhost:3002/league/hip-jammers/season/3/round/<real-roundId>` returns HTTP 200 with at least one real artist+title pair present in the response body (grep for a known submission string); `docker compose logs bot-ui` shows no errors during startup ZIP import (or shows clean "already imported" lines); both smoke-test commands + verification output appended under a `### 2026-05-XX — backend — sprint-1 verification` entry in this doc's Activity Log.
 
 ## Agent Roster
@@ -114,6 +114,19 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - _None._
 
 ## Activity Log
+
+### 2026-05-14 — backend — sprint-1 verification
+- **Round picked:** `second-best` / season 1 / round 97 ("New Shit") — 12 ml_submissions
+- **(a) Local dev — populated round render:** PASS after a loader fix
+  - Command: `cd ui && npm run dev` then `curl -s http://localhost:5174/league/second-best/season/1/round/97`
+  - First run returned HTTP 500 — `getDb()` opened `data/league.db` relative to cwd (`ui/`) which doesn't exist. hooks.server.ts had a correct DATA_DIR default but never exported it. Fix: set `process.env.DATA_DIR` before `getDb()` so loaders see the same path the startup scan uses. Docker is unaffected because compose already sets `DATA_DIR=/app/data`. Commit: `1997f14`.
+  - After fix: HTTP 200, 33892 bytes; grep finds real artists/titles: `100 gecs`, `Hollywood Baby`, `Kevin Morby`, `LCD Soundsystem`, `New Shit` (round name). Server-rendered payload includes 12 ml_submissions with totalPoints/rank.
+- **(b) Docker container — populated round on :3002:** PASS
+  - Command: `curl -s http://localhost:3002/league/second-best/season/1/round/97`
+  - HTTP 200, 12119 bytes (smaller because prod build, no Vite client). Grep matches the same artist+title strings.
+  - `docker compose logs bot-ui` clean — no startup errors, no ENOTDIR from the previously-stuck `.gitkeep` path (sprint-1 commit `32544a4` is in the running image), just `Listening on http://0.0.0.0:3002` plus favicon 404s.
+- **Result:** both sprint-1 carryover items closed. No blockers surfaced.
+- commits: `1997f14` (loader DATA_DIR fix), this doc commit (flip `[x]` + log).
 
 ### 2026-05-14 — docs — Sprint plan refresh: prototype design system reskin
 - replaced `## Active Sprint Plan` body with 8 tasks for the prototype design system reskin (1 infra / 6 frontend / 1 backend)
