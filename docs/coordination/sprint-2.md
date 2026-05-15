@@ -129,7 +129,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - **Choice notes:** the accent orange family was unambiguous (`rgb(255,91,46)` for fill, `rgb(217,76,35)` for hover, `rgb(138,45,21)` for borders) — picked `#ff5b2e` as the base since it's the dominant fill in prototype A's section indicators. The brief mentioned `#f04` as a hint, but the prototypes consistently use `#ff5b2e` (a redder, brighter orange), so the prototypes win.
 - **Verified:** `DATA_DIR=…/data npm run dev` boots clean (port 5174), `/` returns HTTP 200, response body contains all three `fonts.googleapis.com` links (preconnect + preload + stylesheet) and `Inter+Tight`, `Bricolage+Grotesque`, `JetBrains+Mono` family params. Body element renders with `class="bg-bg text-fg font-sans antialiased"`. Tailwind-compiled CSS contains `--font-sans: "Inter Tight"` and `--color-bg: #07090c` (so the `bg-bg` / `font-sans` utilities resolve correctly).
 - **Contract change:** new Tailwind utilities exposed for downstream agents — `bg-bg`, `bg-bg-elevated`, `bg-surface`, `bg-surface-hover`, `bg-surface-strong`, `border-border`, `border-border-muted`, `text-fg`, `text-fg-warm`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `bg-accent`/`text-accent`/`border-accent` (+ `-strong`, `-deep`, `-bg`, `-bg-strong`), `bg-health`/`text-health` (+ `-bg`, `-bg-strong`), `bg-warn`/`text-warn`, `font-sans`, `font-display`, `font-mono`. Will mirror under Contract Changes in a follow-up doc commit if other agents start referencing them.
-- commit: (this commit)
+- commit: `cf5985d`
 
 ### 2026-05-14 — backend — sprint-1 verification
 - **Round picked:** `second-best` / season 1 / round 97 ("New Shit") — 12 ml_submissions
