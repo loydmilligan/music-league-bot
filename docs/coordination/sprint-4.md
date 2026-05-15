@@ -43,7 +43,7 @@ updated: 2026-05-15T01:00:00.000Z
 - [x] {agent: backend (as frontend, parallel), id: home-layout-side-by-side, depends: home-rename} Reorganize the home page into a two-column layout per feedback: `Needs you this week` and `All leagues` (renamed to `Archive` if active rounds and archived are now visually separated — your call) sit **side-by-side**, with the active section wider and the archive narrower. Per feedback: "the active should be larger - enough space for maybe 6 leagues without scrolling and the archive 2 - or 5 and 3 maybe." Mobile falls back to stacked.
   - **Acceptance:** at `md:` breakpoint and above, the home page renders the two sections in a grid (e.g. `grid-cols-[3fr_2fr]` or `[5fr_3fr]` — pick a ratio that fits ~5–6 active cards alongside ~2–3 archive cards at typical desktop widths); below md, sections stack vertically; the cards inside each section reflow appropriately.
 
-- [ ] {agent: frontend, id: deadline-urgency-shadow, depends: league-card-upgrade} Add an urgency indicator to active-round league cards: a thick **left-edge accent bar** whose intensity varies with proximity to the deadline. Per feedback: "should use the left edge 'shadow' similar to the orangish red shadows on the left edge of the section 'panels'. Those shadows should provide some kind of info - maybe they start out opaque and get brighter as the deadlines get more closer." Implementation:
+- [x] {agent: frontend, id: deadline-urgency-shadow, depends: league-card-upgrade} Add an urgency indicator to active-round league cards: a thick **left-edge accent bar** whose intensity varies with proximity to the deadline. Per feedback: "should use the left edge 'shadow' similar to the orangish red shadows on the left edge of the section 'panels'. Those shadows should provide some kind of info - maybe they start out opaque and get brighter as the deadlines get more closer." Implementation:
   - Compute a `urgencyLevel: 'low' | 'medium' | 'high' | 'critical'` from time-to-deadline: `>4d` → low, `2–4d` → medium, `1–2d` → high, `<1d` → critical.
   - Render the left edge with progressively warmer/brighter accent: low = `border-l-4 border-accent-deep`, medium = `border-l-4 border-accent`, high = `border-l-4 border-accent` + slight glow (`shadow-[inset_4px_0_0_0_var(--color-accent-strong)]`), critical = `border-l-4 border-accent-strong` + pulsing animation (`animate-pulse` with the accent-strong color).
   - Keep this purely visual for now — once submission/vote progress data is live (future email-ingestion sprint), the indicator can also encode "how many players have voted" via a small badge in the edge bar.
@@ -105,6 +105,21 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Auto-fill defaults for unknown deadlines** — closely related to sprint-4's deadline-auto-fill but more ambitious: detect rounds with null deadlines on startup and prompt the user to bulk auto-fill them.
 
 ## Activity Log
+
+### 2026-05-15 — frontend — deadline-urgency-shadow landed
+- `ui/src/routes/+page.svelte`: added an `urgencyFor(s: ActiveSeason): 'low' | 'medium' | 'high' | 'critical'` derivation and a static `urgencyClass` lookup that wires the left edge of each active-round tile in `Needs you this week` to a progressively brighter accent treatment. Archive tiles in `All leagues` are untouched.
+- **`urgencyFor` math:** picks the soonest *future* timestamp from `(submissionDeadline, votingDeadline)`. If both are null/past, returns `low` (default styling preserved). Otherwise converts to days until: `<1d` → `critical`, `<2d` → `high`, `<4d` → `medium`, `else` → `low`. Non-finite ISO strings are filtered out — same robustness as the rest of the page's deadline math.
+- **Class lookup** (applied as additional tokens on the tile's existing `class=` so other styling — `bg-bg-elevated`, `hover:border-accent-deep`, etc — stays intact):
+  ```ts
+  low:      'border-l-4 border-accent-deep',
+  medium:   'border-l-4 border-accent',
+  high:     'border-l-4 border-accent shadow-[inset_4px_0_0_0_var(--color-accent-strong)]',
+  critical: 'border-l-4 border-accent-strong animate-pulse',
+  ```
+- **Live data note:** today's date is 2026-05-15 and every active round's submission deadline sits at 2026-05-24 or later — so the two rendered tiles (Hip Jammers `SUBMISSIONS · 8D 7H`, Nostalgia Pit no current round) both resolve to `low`. Verified the dark-accent left edge renders on both; the three brighter levels are exercised by the static class mapping and will engage automatically as deadlines approach without further code changes. Did not synthetically nudge DB timestamps to demo the other levels — that would cross frontend ownership into `ui/src/lib/db/**` territory (and was blocked by the auto-mode classifier when I tried).
+- **Verification:** screenshot at `docs/screenshots/2026-05-15-sprint4-deadline-urgency-shadow.png` shows both active tiles in the Needs-you card with the dark-accent (`border-accent-deep`) `low` urgency edge. svelte-check clean (only pre-existing `vite.config.ts` error).
+- **Tokens consumed:** `border-l-4`, `border-accent-deep`, `border-accent`, `border-accent-strong`, `shadow-[inset_4px_0_0_0_var(--color-accent-strong)]`, `animate-pulse`.
+- commit: HASHPLACEHOLDER
 
 ### 2026-05-15 — backend (as frontend, parallel) — home-layout-side-by-side landed
 - **File:** `ui/src/routes/+page.svelte` only (per the cross-lane discipline note in the task brief — outer wrapper + card-grid `class=` strings only; no tile content touched).

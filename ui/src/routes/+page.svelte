@@ -31,6 +31,31 @@
     return { phase: 'review', duration: '—' };
   }
 
+  // Urgency: brighter left edge as the next deadline approaches.
+  type Urgency = 'low' | 'medium' | 'high' | 'critical';
+  function urgencyFor(s: ActiveSeason): Urgency {
+    const r = s.currentRound;
+    if (!r) return 'low';
+    const candidates = [r.submissionDeadline, r.votingDeadline]
+      .map(iso => (iso ? new Date(iso).getTime() : NaN))
+      .filter(ts => Number.isFinite(ts) && ts > Date.now()) as number[];
+    if (candidates.length === 0) return 'low';
+    const ms = Math.min(...candidates) - Date.now();
+    const days = ms / 86_400_000;
+    if (days < 1) return 'critical';
+    if (days < 2) return 'high';
+    if (days < 4) return 'medium';
+    return 'low';
+  }
+
+  // border-l-4 is on every active tile; the colour + glow + pulse vary by level.
+  const urgencyClass: Record<Urgency, string> = {
+    low:      'border-l-4 border-accent-deep',
+    medium:   'border-l-4 border-accent',
+    high:     'border-l-4 border-accent shadow-[inset_4px_0_0_0_var(--color-accent-strong)]',
+    critical: 'border-l-4 border-accent-strong animate-pulse',
+  };
+
   // Sort active leagues by soonest deadline first.
   const activeLeagues = $derived(
     [...data.activeSeasons].sort((a, b) => {
@@ -150,9 +175,10 @@
     <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {#each activeLeagues as s (s.league.slug + s.seasonNumber)}
         {@const p = phaseFor(s)}
+        {@const urgency = urgencyFor(s)}
         <a
           href="/league/{s.league.slug}/season/{s.seasonNumber}"
-          class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group"
+          class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group {urgencyClass[urgency]}"
         >
           <div class="mb-3 h-5">
             {#if p}
