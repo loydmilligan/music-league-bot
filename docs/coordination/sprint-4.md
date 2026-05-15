@@ -125,7 +125,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
   - `<!-- TODO: backend standings query needed for real placement — placeholder until then. -->` (all-leagues)
 - **Verification:** screenshot at `docs/screenshots/2026-05-15-sprint4-league-card-upgrade.png` taken inside the concurrently-landing `home-layout-side-by-side` wrapper — shows Hip Jammers / Season 3 / Your Permanent Rec... / My place: — and Nostalgia Pit / Season 1 / My place: — in the Needs-you card, plus Fam-Jam / Season 3 / Finished: —/63 and Second Best / Season 1 / Finished: —/6 in the All-leagues card. svelte-check clean.
 - **Note:** my edits were briefly clobbered mid-session when the concurrent `home-layout-side-by-side` agent rewrote the same file; re-applied my four edits on top of their layout wrapper and confirmed both changes coexist cleanly.
-- commit: HASHPLACEHOLDER
+- commit: f0966c7
 
 ### 2026-05-15 — infra (as frontend, parallel) — rating-weights-autobalance landed
 - **Why infra in a frontend lane:** same `(as frontend, parallel)` rationale as the settings-two-column work — frontend pane saturated, infra picking up settings-page extensions.
