@@ -64,7 +64,7 @@ updated: 2026-05-14T20:35:00.000Z
 - [x] {agent: infra, id: design-tokens} Wire the prototype design system foundations into `ui/`: install Inter Tight (body), Bricolage Grotesque (display/wordmark), JetBrains Mono (mono badges) via Google Fonts; update Tailwind v4 theme tokens with the prototype palette (near-black bg, dark blue-grey panels, accent orange ~`#f04` family, mono green for health chip); update `app.html` font preconnect and `app.css` globals.
   - **Acceptance:** Visiting `/` renders all three font families without FOUT (network panel shows preloaded woff2 files); Tailwind utilities resolve to the prototype's accent orange and near-black bg; a side-by-side screenshot of an unstyled page chrome vs prototype A's chrome shows the palette + type-scale match within a few px.
 
-- [ ] {agent: frontend, id: chip-badge-component, depends: design-tokens} Build the reusable chip/badge components from the prototypes: `DeadlineChip` (e.g. "SUBMISSIONS · 3D 14H"), `StatusChip` (e.g. "2 OPEN"), section header label (uppercase letterspaced), dot-prefix status indicator (colored dot + label). Export from `ui/src/lib/components/`.
+- [x] {agent: frontend, id: chip-badge-component, depends: design-tokens} Build the reusable chip/badge components from the prototypes: `DeadlineChip` (e.g. "SUBMISSIONS · 3D 14H"), `StatusChip` (e.g. "2 OPEN"), section header label (uppercase letterspaced), dot-prefix status indicator (colored dot + label). Export from `ui/src/lib/components/`.
   - **Acceptance:** `<DeadlineChip phase="submissions" duration="3D 14H" />` renders visually identical to the prototype's deadline chip (orange border + mono + ` · ` separator); `<StatusChip label="2 OPEN" tone="accent" />` matches; `<DotIndicator status="active" />` renders the orange dot. All three components live under `ui/src/lib/components/` and have at least one usage example committed alongside them.
 
 - [ ] {agent: frontend, id: layout-shell, depends: design-tokens} Re-skin `+layout.svelte` to match prototype A's left rail: pulp wordmark header at top (from variant B's hero treatment, scaled to fit the rail width — "music-league-bot" in Bricolage italic orange + the `m/l` mark), nav items (Active round, Shortlist, Chat watcher, Link converter, Digest preview, Round history, Setup), Leagues list with colored dot prefixes and member-count subtitles, "Cross-league next" section, footer health badge ("watcher live · Xd uptime") in mono green.
@@ -114,6 +114,17 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
 - _None._
 
 ## Activity Log
+
+### 2026-05-14 — frontend — chip-badge-component landed
+- Four reusable atoms under `ui/src/lib/components/`:
+  - `DeadlineChip.svelte` — props `phase: 'submissions' | 'voting' | 'review' | 'archived'`, `duration: string`. Uses `border-accent-deep` + `text-accent` + `font-mono` + `tracking-widest` + uppercase, with a `·` separator between phase label and duration.
+  - `StatusChip.svelte` — props `label: string`, `tone: 'accent' | 'health' | 'muted' | 'warn'`. Tone palette: `bg-accent-bg`/`text-accent`/`border-accent-deep` (accent); `bg-health-bg`/`text-health`/`border-health/40` (health); `bg-surface`/`text-fg-dim`/`border-border-muted` (muted); `bg-warn/15`/`text-warn`/`border-warn/40` (warn — derived via Tailwind v4 alpha modifier since no dedicated `warn-bg` token exists yet).
+  - `SectionLabel.svelte` — slot via `children` snippet. Uses `text-fg-faint` + `font-mono` + `text-xs` + `tracking-widest` + `font-bold` + uppercase.
+  - `DotIndicator.svelte` — props `status: 'active' | 'voting' | 'open' | 'idle'`, optional `size: 'sm' | 'md'`. Maps active→`bg-accent`, voting→`bg-warn`, open→`bg-health`, idle→`bg-fg-faint`.
+- Usage example: `ui/src/routes/_examples/+page.svelte` (not navigation-linked — visit `/_examples` to eyeball). Sections per atom plus a composed "leagues list row" using all four together.
+- Verified: `npm run dev` → `curl /_examples` returns HTTP 200; visual screenshot via Playwright matches prototype A — orange-bordered mono `SUBMISSIONS · 3D 14H` / `VOTING · 1D 22H` chips, green health chip for `WATCHER LIVE`, muted `IDLE` chip, yellow `STALE` warn chip, dot indicators in the correct hues. `svelte-check` clean on all four files + the showcase route (only the pre-existing `vite.config.ts` error remains).
+- Tokens consumed (all from design-tokens at `cf5985d`): `bg-accent-bg`, `text-accent`, `border-accent-deep`, `bg-health-bg`, `text-health`, `bg-surface`, `text-fg-dim`, `border-border-muted`, `text-warn`, `bg-warn`, `text-fg-faint`, `bg-accent`, `bg-health`, `bg-fg-faint`, `font-mono`.
+- commit: 29cd253
 
 ### 2026-05-14 — infra — design-tokens landed
 - `ui/src/app.html`: preconnect to `fonts.googleapis.com` + `fonts.gstatic.com`; preload + stylesheet `<link>` loading **Inter Tight** (300–700, italic), **Bricolage Grotesque** (12–96 opsz, 300–800), **JetBrains Mono** (400–700) from Google Fonts (`display=swap`). Body wears `class="bg-bg text-fg font-sans antialiased"` so the dark theme is the SSR default before any route mounts.
