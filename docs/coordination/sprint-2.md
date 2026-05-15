@@ -139,7 +139,7 @@ _No contract changes yet — design-tokens introduces new Tailwind utility names
   - `curl /` head contains all four `rel="icon"` links + `rel="apple-touch-icon"` + `rel="manifest"`.
   - `npx svelte-check` — 1 error + 2 warnings, all pre-existing (`vite.config.ts` test-config + the two `$state` reference warnings carried over from the previous task). No new issues from this change.
 - **Docker note:** the `bot-ui` service rebuild will pick up `ui/static/**` automatically (Dockerfile.ui copies `ui/` into the builder image before `npm run build`). Not rebuilding here since dev verification covers the routing/manifest contract; the bytes are committed to the repo so the next `docker compose build bot-ui` will include them.
-- commit: <pending — landing now>
+- commit: `676433b`
 
 ### 2026-05-14 — infra (as frontend, parallel) — settings-page landed
 - **Why infra in a frontend lane:** sprint-1 review Q2 ratified the `(as frontend, parallel)` load-balancing convention — frontend pane has 4 page reskins ahead of it, infra is idle after design-tokens shipped, so infra picks up one page. Same pattern infra used in sprint-1 for `(as backend, parallel)` commits.
