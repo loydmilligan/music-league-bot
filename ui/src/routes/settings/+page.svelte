@@ -64,8 +64,11 @@
   </p>
 </div>
 
-<!-- Section 1: Rating Weights -->
-<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
+<!-- Two-column layout at md+: weights (left) | import + queue (right).
+     Round deadlines is full-width below the grid. -->
+<div class="grid md:grid-cols-2 gap-6 mb-6">
+<!-- Section 1: Rating Weights (left column) -->
+<section class="bg-surface border border-border-muted rounded-xl p-6">
   <header class="flex items-center justify-between gap-3 mb-1">
     <div>
       <SectionLabel>Research weights</SectionLabel>
@@ -129,8 +132,10 @@
   </form>
 </section>
 
+<!-- Right column: Import + Queue stacked -->
+<div class="flex flex-col gap-6">
 <!-- Section 2: ZIP Import -->
-<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
+<section class="bg-surface border border-border-muted rounded-xl p-6">
   <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
     <div>
       <SectionLabel>Import</SectionLabel>
@@ -253,67 +258,7 @@
   {/if}
 </section>
 
-<!-- Section 3: Round Deadlines -->
-<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
-  <header class="mb-1">
-    <SectionLabel>Deadlines</SectionLabel>
-    <h2 class="text-lg font-bold text-fg mt-1">Round deadlines</h2>
-  </header>
-  <p class="text-xs text-fg-dim mb-5">
-    Submission and voting deadlines for active rounds. Drives the
-    <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
-  </p>
-
-  {#if data.activeRounds.length}
-    <div class="flex flex-col gap-2">
-      {#each data.activeRounds as r (r.id)}
-        <form
-          method="POST"
-          action="?/updateDeadline"
-          use:enhance
-          class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
-        >
-          <input type="hidden" name="roundId" value={r.id} />
-          <span class="text-fg w-56 truncate">
-            <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
-            <span class="text-fg-faint"> · </span>
-            {r.name}
-          </span>
-          <div class="flex items-center gap-2">
-            <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
-            <input
-              id="sub-{r.id}"
-              type="datetime-local"
-              name="submissionDeadline"
-              value={r.submissionDeadline?.slice(0, 16) ?? ''}
-              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
-            <input
-              id="vote-{r.id}"
-              type="datetime-local"
-              name="votingDeadline"
-              value={r.votingDeadline?.slice(0, 16) ?? ''}
-              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
-          >
-            Save
-          </button>
-        </form>
-      {/each}
-    </div>
-  {:else}
-    <p class="text-fg-dim text-sm">No active rounds found.</p>
-  {/if}
-</section>
-
-<!-- Section 4: Songlink Queue -->
+<!-- Section 3: Songlink Queue (right column, below Import) -->
 <section class="bg-surface border border-border-muted rounded-xl p-6">
   <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
     <div>
@@ -391,5 +336,67 @@
         </tbody>
       </table>
     </div>
+  {/if}
+</section>
+</div><!-- /right column -->
+</div><!-- /two-column grid -->
+
+<!-- Section 4: Round Deadlines (full-width, below the grid) -->
+<section class="bg-surface border border-border-muted rounded-xl p-6">
+  <header class="mb-1">
+    <SectionLabel>Deadlines</SectionLabel>
+    <h2 class="text-lg font-bold text-fg mt-1">Round deadlines</h2>
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Submission and voting deadlines for active rounds. Drives the
+    <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
+  </p>
+
+  {#if data.activeRounds.length}
+    <div class="flex flex-col gap-2">
+      {#each data.activeRounds as r (r.id)}
+        <form
+          method="POST"
+          action="?/updateDeadline"
+          use:enhance
+          class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
+        >
+          <input type="hidden" name="roundId" value={r.id} />
+          <span class="text-fg w-56 truncate">
+            <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
+            <span class="text-fg-faint"> · </span>
+            {r.name}
+          </span>
+          <div class="flex items-center gap-2">
+            <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
+            <input
+              id="sub-{r.id}"
+              type="datetime-local"
+              name="submissionDeadline"
+              value={r.submissionDeadline?.slice(0, 16) ?? ''}
+              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
+            <input
+              id="vote-{r.id}"
+              type="datetime-local"
+              name="votingDeadline"
+              value={r.votingDeadline?.slice(0, 16) ?? ''}
+              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+            />
+          </div>
+          <button
+            type="submit"
+            class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
+          >
+            Save
+          </button>
+        </form>
+      {/each}
+    </div>
+  {:else}
+    <p class="text-fg-dim text-sm">No active rounds found.</p>
   {/if}
 </section>

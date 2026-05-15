@@ -56,7 +56,7 @@ updated: 2026-05-15T01:00:00.000Z
   - **Tooltips:** add hover tooltips on each of the four rating dimension labels explaining what they mean. Use the native `title=` attribute or a small `<details>`-based tooltip — don't pull in a tooltip library for four hovers. Per feedback: "add tooltips to the individual rated items."
   - **Acceptance:** toggle on `/settings` — move any slider, the other three adjust proportionally; sum chip turns accent when sum=100; hovering any rating label shows the tooltip text; svelte-check clean.
 
-- [ ] {agent: frontend, id: settings-two-column-layout} Reorganize `/settings` into a two-column layout at desktop widths per feedback: "the import section should have its own column on the right side so it doesn't require that you scroll like 50 miles to get to the next section." Specifically: **left column** holds the Rating weights card (tall, with sliders + tooltips); **right column** holds the Import / rescan card, Queue status card, and any future small cards. Round deadlines section stays full-width below both columns. Mobile falls back to single column stacked.
+- [x] {agent: frontend, id: settings-two-column-layout} Reorganize `/settings` into a two-column layout at desktop widths per feedback: "the import section should have its own column on the right side so it doesn't require that you scroll like 50 miles to get to the next section." Specifically: **left column** holds the Rating weights card (tall, with sliders + tooltips); **right column** holds the Import / rescan card, Queue status card, and any future small cards. Round deadlines section stays full-width below both columns. Mobile falls back to single column stacked.
   - **Acceptance:** at `md:` breakpoint and above, `/settings` renders weights on the left and import + queue stacked on the right; below md, single column stacked; svelte-check clean.
 
 - [x] {agent: backend, id: deadline-auto-fill-api} Add a new form action or API endpoint that derives all deadlines for a (league, season) pair from three inputs: `daysToSubmit: number`, `daysToVote: number`, `startDate: ISO date string`. Computes `submission_deadline = startDate + daysToSubmit days`, `voting_deadline = submission_deadline + daysToVote days` for each round in the (league, season) sequence (each round's start = previous round's voting end, or `startDate` for round 1). Writes the computed deadlines back to the `rounds` table for that (league, season). Per feedback: "should be able to enter 'days to submit', 'days to vote', and starting date - with these the app should be able to put in some decent stand-ins for deadlines - so i don't have to manual enter them all to get this thing working." Place at `ui/src/routes/api/deadlines/auto-fill/+server.ts` (POST) — or as a form action on `+page.server.ts` for the settings page — your call based on which fits the existing settings code better.
@@ -105,6 +105,31 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Auto-fill defaults for unknown deadlines** — closely related to sprint-4's deadline-auto-fill but more ambitious: detect rounds with null deadlines on startup and prompt the user to bulk auto-fill them.
 
 ## Activity Log
+
+### 2026-05-15 — infra (as frontend, parallel) — settings-two-column-layout landed
+- **Why infra in a frontend lane:** sprint-4 has zero infra-owned tasks; frontend pane has 7 of 8 tasks. Sprint-1 review Q2 ratified `(as frontend, parallel)` load-balancing for exactly this case.
+- **File touched (single):** `ui/src/routes/settings/+page.svelte`. No loader, components, layout, or other route changes — pure layout reorganization.
+- **Grid shape** (matches the brief's recommendation verbatim):
+  ```html
+  <div class="grid md:grid-cols-2 gap-6 mb-6">
+    <section> Rating weights </section>              <!-- left column -->
+    <div class="flex flex-col gap-6">                 <!-- right column -->
+      <section> ZIP import & rescan </section>
+      <section> Songlink resolution queue </section>
+    </div>
+  </div>
+  <section> Round deadlines </section>                <!-- full-width below -->
+  ```
+- **Source-order change:** the Round Deadlines card was lifted out of its middle position (it used to sit between ZIP import and Queue) and moved to the bottom of the markup so the right-column DOM order is import → queue and the wide tabular deadlines card spans the full grid width below. The original `mb-6` on the three cards inside the grid was removed (the grid `gap-6` now owns the spacing); the trailing deadlines card kept its `bg-surface border ...` shell with no margin since it's the last block.
+- **Mobile fallback:** below `md:` (768px) the grid collapses to a single column; `gap-6` between rows preserves the original stacked spacing exactly, so the mobile experience matches the pre-change layout 1:1.
+- **Functionality preserved:** all existing forms (`?/updateWeights`, `?/importZip`, `?/rescan`, `?/updateDeadline`, `?/retryYtm`), atoms, chips, derived state, and reactive bindings are unchanged — this commit is structural only.
+- **Verification:**
+  - `npx svelte-check` — 1 error + 2 warnings, all pre-existing (`vite.config.ts` test-config error, and the same two `$state` reference warnings carried from earlier sprints). No new issues.
+  - `npm run dev` (port 5174) → `curl /settings` returns HTTP 200, 134446 bytes.
+  - Desktop screenshot (1440×1600, headless chrome): `docs/screenshots/2026-05-15-sprint4-settings-two-column-desktop.png` — weights on the left half, ZIP import in the top of the right half, both columns flush at the top.
+  - Mobile screenshot (480×2200): `docs/screenshots/2026-05-15-sprint4-settings-two-column-mobile.png` — single-column stacked (weights → import → queue → deadlines), no horizontal squish, same spacing as before.
+- **Acceptance:** at md+, weights left / import + queue stacked right ✓; below md, single column stacked ✓; svelte-check clean ✓.
+- commit: <pending — landing now>
 
 ### 2026-05-15 — frontend — home-rename landed
 - `ui/src/routes/+page.svelte`: H1 `Pick a league` → **`Mash League`**; `<svelte:head><title>` updated to match. Breadcrumb `music-league-bot · picker` → `music-league-bot · overview`.
