@@ -1,12 +1,150 @@
 <script lang="ts">
-	import '../app.css';
-	let { children } = $props();
+  import '../app.css';
+  import { page } from '$app/state';
+  import SectionLabel from '$lib/components/SectionLabel.svelte';
+  import StatusChip from '$lib/components/StatusChip.svelte';
+  import DotIndicator from '$lib/components/DotIndicator.svelte';
+
+  let { children } = $props();
+
+  type NavItem = { href: string; label: string; glyph: string; count?: string };
+  const navItems: NavItem[] = [
+    { href: '/',          label: 'Active round',   glyph: '▸', count: 'r-14' },
+    { href: '/shortlist', label: 'Shortlist',      glyph: '▸', count: '11' },
+    { href: '/chat',      label: 'Chat watcher',   glyph: '▸' },
+    { href: '/link',      label: 'Link converter', glyph: '▸' },
+    { href: '/digest',    label: 'Digest preview', glyph: '▸', count: '3 new' },
+    { href: '/history',   label: 'Round history',  glyph: '▸', count: '13' },
+    { href: '/settings',  label: 'Setup',          glyph: '▸' },
+  ];
+
+  // Opportunistically pull active-leagues data from the home page's loader when
+  // we're on /. Other routes get a placeholder. Backend can later supply a
+  // dedicated +layout.server.ts for full coverage — flagged in Blockers.
+  type ActiveSeason = {
+    league: { slug: string; name: string };
+    seasonNumber: number;
+    currentRound: { id: number; name: string; submissionDeadline: string | null; votingDeadline: string | null } | null;
+    researchCount: number;
+  };
+
+  const activeLeagues = $derived(((page.data as { activeSeasons?: ActiveSeason[] } | undefined)?.activeSeasons ?? []));
+
+  function leagueStatus(s: ActiveSeason): 'active' | 'voting' | 'open' | 'idle' {
+    if (!s.currentRound) return 'idle';
+    const now = Date.now();
+    const sub = s.currentRound.submissionDeadline ? Date.parse(s.currentRound.submissionDeadline) : null;
+    const vote = s.currentRound.votingDeadline ? Date.parse(s.currentRound.votingDeadline) : null;
+    if (sub && sub > now) return 'open';
+    if (vote && vote > now) return 'voting';
+    return 'active';
+  }
+
+  function leagueSubline(s: ActiveSeason): string {
+    if (!s.currentRound) return 'idle';
+    const status = leagueStatus(s);
+    const label = status === 'open' ? 'open' : status === 'voting' ? 'voting' : 'active';
+    return `r-${s.currentRound.id} · ${label}`;
+  }
+
+  function isCurrent(href: string): boolean {
+    if (href === '/') return page.url.pathname === '/';
+    return page.url.pathname.startsWith(href);
+  }
 </script>
 
-<nav class="flex items-center justify-between px-6 py-3 border-b border-slate-700 bg-slate-900">
-	<a href="/" class="text-purple-400 font-bold text-lg">🎵 Music League</a>
-	<a href="/settings" class="text-slate-400 hover:text-slate-200 text-xl" title="Settings">⚙</a>
-</nav>
-<main class="max-w-6xl mx-auto px-6 py-8">
-	{@render children?.()}
-</main>
+<div class="min-h-screen flex bg-bg text-fg">
+  <!-- Left rail -->
+  <aside class="hidden md:flex flex-col w-[232px] flex-shrink-0 border-r border-border-muted bg-bg-elevated sticky top-0 h-screen overflow-y-auto">
+    <!-- Header / wordmark -->
+    <header class="px-5 pt-6 pb-5 border-b border-border-muted">
+      <SectionLabel>Mash co.</SectionLabel>
+      <a href="/" class="flex items-baseline gap-1.5 mt-2 group">
+        <span class="font-display italic text-accent text-2xl leading-none group-hover:text-accent-strong transition-colors">m/l</span>
+        <span class="font-mono text-xs text-fg-muted truncate">music-league-bot</span>
+      </a>
+    </header>
+
+    <!-- Primary nav -->
+    <nav class="px-2 py-4">
+      <ul class="flex flex-col gap-0.5">
+        {#each navItems as item}
+          {@const current = isCurrent(item.href)}
+          <li>
+            <a
+              href={item.href}
+              class="flex items-center gap-2 pl-3 pr-2 py-1.5 text-sm rounded-sm border-l-2 transition-colors"
+              class:border-accent={current}
+              class:bg-accent-bg={current}
+              class:text-accent={current}
+              class:border-transparent={!current}
+              class:text-fg-muted={!current}
+              class:hover:text-fg={!current}
+              class:hover:bg-surface={!current}
+            >
+              <span class="text-fg-faint text-xs flex-shrink-0" aria-hidden="true">{item.glyph}</span>
+              <span class="flex-1 truncate">{item.label}</span>
+              {#if item.count}
+                <StatusChip label={item.count} tone="muted" />
+              {/if}
+            </a>
+          </li>
+        {/each}
+      </ul>
+    </nav>
+
+    <!-- Leagues -->
+    <section class="px-5 pt-2 pb-4">
+      <SectionLabel>Leagues</SectionLabel>
+      <ul class="flex flex-col gap-3 mt-3">
+        {#each activeLeagues as s (s.league.slug + s.seasonNumber)}
+          <li>
+            <a
+              href="/league/{s.league.slug}/season/{s.seasonNumber}"
+              class="flex items-start gap-2 group"
+            >
+              <span class="mt-1.5"><DotIndicator status={leagueStatus(s)} /></span>
+              <span class="flex-1 min-w-0">
+                <span class="block text-sm font-semibold text-fg group-hover:text-accent transition-colors truncate">
+                  {s.league.name}
+                </span>
+                <span class="block text-[11px] font-mono text-fg-dim truncate">
+                  {leagueSubline(s)}
+                </span>
+              </span>
+            </a>
+          </li>
+        {:else}
+          <li class="text-xs font-mono text-fg-faint italic">No active leagues.</li>
+        {/each}
+      </ul>
+    </section>
+
+    <!-- Cross-league next -->
+    <section class="px-5 pt-2 pb-4">
+      <SectionLabel>Cross-league next</SectionLabel>
+      <!-- TODO: backend loader for cross-league upcoming actions (round deadlines across
+           all active leagues, sorted by soonest). Layout has no dedicated +layout.server.ts
+           yet — see sprint-2 Blockers. -->
+      <p class="text-xs font-mono text-fg-faint italic mt-3">No upcoming actions.</p>
+    </section>
+
+    <!-- Spacer pushes footer to bottom -->
+    <div class="flex-1"></div>
+
+    <!-- Footer health -->
+    <footer class="px-5 pt-4 pb-5 border-t border-border-muted space-y-1.5">
+      <!-- TODO: real watcher uptime + db size + last-poll timestamp from a backend loader. -->
+      <StatusChip label="WATCHER LIVE · 4D UPTIME" tone="health" />
+      <div class="font-mono text-[11px] text-fg-dim">sqlite ml-bot.db · 12.4 MB</div>
+      <div class="font-mono text-[11px] text-fg-faint">last poll 6:32:14 PM</div>
+    </footer>
+  </aside>
+
+  <!-- Main column -->
+  <main class="flex-1 min-w-0 px-6 md:px-10 py-8">
+    <div class="max-w-5xl mx-auto">
+      {@render children?.()}
+    </div>
+  </main>
+</div>
