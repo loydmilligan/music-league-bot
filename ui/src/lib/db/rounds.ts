@@ -30,6 +30,18 @@ export function getCurrentRoundForSeason(db: Database.Database, seasonId: number
   return r ? row(r) : null;
 }
 
-export function updateDeadlines(db: Database.Database, roundId: number, sub: string | null, vote: string | null): void {
-  db.prepare('UPDATE rounds SET submission_deadline=?,voting_deadline=? WHERE id=?').run(sub, vote, roundId);
+export function updateDeadlines(
+  db: Database.Database,
+  roundId: number,
+  sub: string | null | undefined,
+  vote: string | null | undefined,
+): void {
+  // `undefined` means "leave column alone"; `null` or string means "write this".
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  if (sub  !== undefined) { fields.push('submission_deadline=?'); vals.push(sub); }
+  if (vote !== undefined) { fields.push('voting_deadline=?');     vals.push(vote); }
+  if (!fields.length) return;
+  vals.push(roundId);
+  db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
 }

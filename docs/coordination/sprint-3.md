@@ -59,7 +59,7 @@ updated: 2026-05-15T00:30:00.000Z
 - [ ] {agent: frontend, id: h2h-champion, depends: h2h-page} When `state.isComplete` is true (queue empty), show a winner banner above the cards: orange accent panel with `<StatusChip tone='accent'>WINNER</StatusChip>`, big bold artist+title of the surviving champion, a one-line "Survived N matches" stat, and a `<button>Reset and pick again</button>` button. Reset clears the round's matches (call `DELETE /api/h2h/state/[roundId]` — coordinate the new endpoint shape with backend if needed; if simpler, just call `POST /api/h2h/match` with a `reset: true` flag — your call, but file a Blocker if you need backend to add the reset endpoint).
   - **Acceptance:** After all matches are recorded, the winner banner renders with the champion's metadata; clicking Reset and pick again clears the matches and returns the view to a fresh head-to-head; if reset requires a new backend endpoint, file a Blocker first and ship the rest of this task.
 
-- [ ] {agent: backend, id: fix-deadline-save} **Hotfix** from sprint-2 manual test feedback (`~/.config/taw/wiki/Projects/music-league-bot/tests/sprint 2-3-results.md`): the **Round deadlines save buttons on `/settings` are not working**. Investigate `ui/src/routes/settings/+page.svelte` (look for the deadline save UI around the `Round deadlines` section, line ~260 onwards), trace the form action / fetch call to whichever `+page.server.ts` or `routes/api/**` handler is supposed to receive it, and fix the broken path. Likely candidates: (a) the form action name doesn't match between client and server, (b) the handler exists but doesn't write to the rounds table, (c) the client calls a route that doesn't exist. Add a quick vitest or smoke-test step that posts a deadline change and verifies it persists.
+- [x] {agent: backend, id: fix-deadline-save} **Hotfix** from sprint-2 manual test feedback (`~/.config/taw/wiki/Projects/music-league-bot/tests/sprint 2-3-results.md`): the **Round deadlines save buttons on `/settings` are not working**. Investigate `ui/src/routes/settings/+page.svelte` (look for the deadline save UI around the `Round deadlines` section, line ~260 onwards), trace the form action / fetch call to whichever `+page.server.ts` or `routes/api/**` handler is supposed to receive it, and fix the broken path. Likely candidates: (a) the form action name doesn't match between client and server, (b) the handler exists but doesn't write to the rounds table, (c) the client calls a route that doesn't exist. Add a quick vitest or smoke-test step that posts a deadline change and verifies it persists.
   - **Acceptance:** Open `/settings` → modify a round deadline → click save → reload the page → the new value is visible (persists). `sqlite3 data/league.db "select id, submission_deadline, voting_deadline from rounds where id = <test-id>";` reflects the change. No svelte-check regressions. Note in the Activity Log entry which root cause was the culprit.
 
 ## Agent Roster
@@ -99,6 +99,23 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None._
 
 ## Activity Log
+
+### 2026-05-15 — backend — fix-deadline-save hotfix
+- **Reporter:** user, from manual sprint-2 click-through (`~/.config/taw/wiki/Projects/music-league-bot/tests/sprint 2-3-results.md` → Setup › Round deadlines: "save buittons are not working ucrrently").
+- **Root cause:** the `updateDeadline` action in `ui/src/routes/settings/+page.server.ts` coerced empty form fields to `null` and called `updateDeadlines(db, id, null, null)`, which unconditionally `UPDATE rounds SET submission_deadline=?,voting_deadline=?` — i.e. **every save wiped both columns whenever an input was empty**. That collides with the legacy data path: ML-imported deadlines are non-ISO strings like `"14 May @ 2:14pm"`, which `<input type="datetime-local">` rejects and renders as empty. So the typical user flow (click Save on a round whose deadline came from the ZIP import) silently destroyed the existing values, the page reloaded showing empty inputs, and the user concluded "save isn't working."
+- **Fix:**
+  - `ui/src/lib/db/rounds.ts` — `updateDeadlines` now takes `string | null | undefined` per column. `undefined` means "leave this column alone"; `null`/string means "write it". The function builds the `SET` clause from only the supplied columns; no-op when both are undefined.
+  - `ui/src/routes/settings/+page.server.ts` — empty form inputs (after `.trim()`) map to `undefined` not `null`, so an empty Save is a no-op and a partial Save updates only the field the user touched. Explicit clears can still be issued via the DB layer with `null` if the UI ever needs them.
+- **Scope:** backend only. `+page.svelte` untouched — the form HTML, names, and `use:enhance` wiring were already correct.
+- **Tests:** new `ui/src/lib/db/rounds.test.ts` with 4 vitests — full write, partial update preserves the untouched column, explicit `null` clears, all-undefined is a no-op. Full suite 31/31 green.
+- **Smoke test against the live dev server (port 5174), round 102 reset to legacy strings first**:
+  ```
+  before:        102 | '14 May @ 2:14pm' | '21 May @ 2:14pm'
+  empty POST →   102 | '14 May @ 2:14pm' | '21 May @ 2:14pm'   (noop, legacy survived)
+  sub-only POST → 102 | '2026-08-01T00:00' | '21 May @ 2:14pm'  (vote survived)
+  both POST →    102 | '2026-08-15T00:00' | '2026-08-22T00:00'  (normal save)
+  ```
+- commit: <pending — landing now>
 
 ### 2026-05-15 — frontend — h2h-page landed
 - `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`: added a fourth `Head-to-Head` tab as a sibling to ML / Chat / Research. Tab state widened from `'ml' | 'chat' | 'research'` to include `'h2h'`; tab strip auto-renders the new entry through the existing `{#each tabs}` loop, so the prototype-A mono-orange-underline styling carries over for free.

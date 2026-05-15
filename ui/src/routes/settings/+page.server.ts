@@ -66,8 +66,15 @@ export const actions: Actions = {
     const db = getDb();
     const fd = await request.formData();
     const roundId = Number(fd.get('roundId'));
-    const sub = (fd.get('submissionDeadline') as string) || null;
-    const vote = (fd.get('votingDeadline') as string) || null;
+    // Empty inputs mean "don't change this column" — important because legacy
+    // ML-imported deadlines are non-ISO strings (e.g. "22 June @ 12:00am")
+    // which a datetime-local input renders empty. The previous code coerced
+    // empty → null and wiped the existing value on every save.
+    const subRaw  = ((fd.get('submissionDeadline') as string | null) ?? '').trim();
+    const voteRaw = ((fd.get('votingDeadline')    as string | null) ?? '').trim();
+    const sub  = subRaw  === '' ? undefined : subRaw;
+    const vote = voteRaw === '' ? undefined : voteRaw;
+    if (sub === undefined && vote === undefined) return { success: true, noop: true };
     updateDeadlines(db, roundId, sub, vote);
     return { success: true };
   },
