@@ -108,7 +108,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - **Note:** backend's `H2HState.queue` includes the current challenger as its first entry (`challenger = queue[0]`), so the queue list visually shows the challenger card's song as `#1` underneath. That's faithful to the API contract; if it becomes confusing in real use we can slice the challenger out on the frontend without a contract change.
 - **Verification:** added test fixtures (Tom Waits / Big Thief / Nick Drake / The Velvet Underground) to round 97 with varied 4-dim ratings; recorded one Tom-Waits-beats-Velvet-Underground match via `POST /api/h2h/match`. Playwright screenshot `docs/screenshots/2026-05-15-sprint3-h2h-queue.png` shows the H2H tab with: HOLDING LANE Tom Waits (4.42 green) + CHALLENGER Big Thief (4.09 green) cards, an `UP NEXT · 2 SONGS` list (Big Thief 4.09 / Nick Drake 3.25) with dot indicators matching the scores, and a `RETIRED` section with The Velvet Underground in dim text. svelte-check clean.
 - **Tokens consumed:** `bg-surface`, `border-border-muted`, `bg-accent`, `bg-border-muted`, `text-fg`, `text-fg-faint`, `text-fg-muted`, `text-fg-dim`, `font-mono`. Atoms used: `SectionLabel`. No new components.
-- commit: HASHPLACEHOLDER
+- commit: 9043ec5
 
 ### 2026-05-15 — backend — fix-deadline-save hotfix
 - **Reporter:** user, from manual sprint-2 click-through (`~/.config/taw/wiki/Projects/music-league-bot/tests/sprint 2-3-results.md` → Setup › Round deadlines: "save buittons are not working ucrrently").
