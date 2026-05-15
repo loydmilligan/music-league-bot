@@ -119,7 +119,7 @@ These items from sprint-2 manual test feedback are NOT in sprint-4; documented h
 - **Live data note:** today's date is 2026-05-15 and every active round's submission deadline sits at 2026-05-24 or later — so the two rendered tiles (Hip Jammers `SUBMISSIONS · 8D 7H`, Nostalgia Pit no current round) both resolve to `low`. Verified the dark-accent left edge renders on both; the three brighter levels are exercised by the static class mapping and will engage automatically as deadlines approach without further code changes. Did not synthetically nudge DB timestamps to demo the other levels — that would cross frontend ownership into `ui/src/lib/db/**` territory (and was blocked by the auto-mode classifier when I tried).
 - **Verification:** screenshot at `docs/screenshots/2026-05-15-sprint4-deadline-urgency-shadow.png` shows both active tiles in the Needs-you card with the dark-accent (`border-accent-deep`) `low` urgency edge. svelte-check clean (only pre-existing `vite.config.ts` error).
 - **Tokens consumed:** `border-l-4`, `border-accent-deep`, `border-accent`, `border-accent-strong`, `shadow-[inset_4px_0_0_0_var(--color-accent-strong)]`, `animate-pulse`.
-- commit: HASHPLACEHOLDER
+- commit: d8db144
 
 ### 2026-05-15 — backend (as frontend, parallel) — home-layout-side-by-side landed
 - **File:** `ui/src/routes/+page.svelte` only (per the cross-lane discipline note in the task brief — outer wrapper + card-grid `class=` strings only; no tile content touched).
