@@ -1,98 +1,247 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
   import { enhance } from '$app/forms';
+  import SectionLabel from '$lib/components/SectionLabel.svelte';
+  import StatusChip from '$lib/components/StatusChip.svelte';
+
   let { data } = $props<{ data: PageData }>();
 
   let w = $state({ ...data.settings });
-  let wTotal = $derived(w.weightDiscovery + w.weightThemeFit + w.weightPersonal + w.weightNostalgia);
+  let wTotal = $derived(
+    w.weightDiscovery + w.weightThemeFit + w.weightPersonal + w.weightNostalgia
+  );
+  const totalOk = $derived(Math.abs(wTotal - 100) <= 1);
 
   function resetWeights() {
     w = { weightDiscovery: 35, weightThemeFit: 25, weightPersonal: 25, weightNostalgia: 15 };
   }
+
+  // Last successful import for the import-card header chip.
+  const lastSuccess = $derived(
+    data.importLog.find((e: { status: string }) => e.status === 'success') ?? null
+  );
+  const hasFailedImport = $derived(
+    data.importLog.some((e: { status: string }) => e.status === 'error')
+  );
+
+  // Queue status derivation. The loader doesn't surface worker-running state,
+  // so we infer a visual from what we have: any failures → warn; pending in
+  // flight → accent ("DRAINING"); otherwise health ("IDLE").
+  const queueTone = $derived(
+    data.queueStatus.failures.length > 0
+      ? 'warn'
+      : data.queueStatus.pending > 0
+        ? 'accent'
+        : 'health'
+  );
+  const queueLabel = $derived(
+    data.queueStatus.failures.length > 0
+      ? `${data.queueStatus.failures.length} FAILURE${data.queueStatus.failures.length === 1 ? '' : 'S'}`
+      : data.queueStatus.pending > 0
+        ? `DRAINING · ${data.queueStatus.pending} PENDING`
+        : 'IDLE'
+  );
+
+  type WeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightPersonal' | 'weightNostalgia';
+  const weightFields: Array<{ field: WeightField; label: string; dot: string }> = [
+    { field: 'weightDiscovery', label: 'Discovery potential', dot: 'bg-health' },
+    { field: 'weightThemeFit', label: 'Theme fit', dot: 'bg-accent' },
+    { field: 'weightPersonal', label: 'Personal rating', dot: 'bg-warn' },
+    { field: 'weightNostalgia', label: 'Nostalgia potential', dot: 'bg-accent-strong' }
+  ];
 </script>
 
-<svelte:head><title>Settings</title></svelte:head>
-<h1 class="text-2xl font-bold mb-8">Settings</h1>
+<svelte:head><title>Settings · music-league-bot</title></svelte:head>
+
+<!-- Page header / breadcrumb -->
+<div class="mb-8">
+  <div class="text-fg-faint font-mono text-xs tracking-widest uppercase mb-3">
+    music-league-bot · settings
+  </div>
+  <h1 class="text-4xl font-bold text-fg mb-3">Settings</h1>
+  <p class="text-fg-muted max-w-2xl">
+    Rating weights, import controls, deadlines, and queue diagnostics.
+  </p>
+</div>
 
 <!-- Section 1: Rating Weights -->
-<section class="mb-10 bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-  <h2 class="font-bold text-slate-100 mb-1">Research Rating Weights</h2>
-  <p class="text-xs text-slate-400 mb-4">Must sum to 100. Discovery is weighted highest by default.</p>
+<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
+  <header class="flex items-center justify-between gap-3 mb-1">
+    <div>
+      <SectionLabel>Research weights</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
+    </div>
+    <StatusChip
+      label={totalOk ? `${wTotal}% · OK` : `${wTotal}% · OFF`}
+      tone={totalOk ? 'health' : 'warn'}
+    />
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Four dimensions, sums to 100. The weighted score is
+    <code class="font-mono text-fg">Σ(rating × weight) / Σ(weight)</code>.
+  </p>
+
   <form method="POST" action="?/updateWeights" use:enhance class="space-y-4">
-    {#each [
-      ['weightDiscovery', 'Discovery Potential ⭐', 'text-green-400'],
-      ['weightThemeFit',  'Theme Fit',              'text-blue-400'],
-      ['weightPersonal',  'Personal Rating',         'text-purple-400'],
-      ['weightNostalgia', 'Nostalgia Potential',     'text-orange-400'],
-    ] as [field, label, color]}
+    {#each weightFields as { field, label, dot } (field)}
       <div class="flex items-center gap-4">
-        <label class="w-44 text-sm {color}">{label}</label>
-        <input type="range" name={field} min="0" max="100"
-          bind:value={(w as any)[field]}
-          class="flex-1 accent-purple-500" />
-        <span class="w-10 text-right text-sm font-mono text-slate-300">{(w as any)[field]}%</span>
+        <div class="flex items-center gap-2 w-52">
+          <span class="w-2 h-2 rounded-full {dot} shrink-0"></span>
+          <label class="text-sm text-fg-muted" for="w-{field}">{label}</label>
+        </div>
+        <input
+          id="w-{field}"
+          type="range"
+          name={field}
+          min="0"
+          max="100"
+          bind:value={(w as Record<string, number>)[field]}
+          class="flex-1 accent-[var(--color-accent)]"
+        />
+        <span class="w-12 text-right text-sm font-mono text-fg">
+          {(w as Record<string, number>)[field]}%
+        </span>
       </div>
     {/each}
+
     <!-- Visual proportion bar -->
-    <div class="flex h-2 rounded overflow-hidden mt-2">
-      <div class="bg-green-500 transition-all" style="width:{w.weightDiscovery}%"></div>
-      <div class="bg-blue-500 transition-all" style="width:{w.weightThemeFit}%"></div>
-      <div class="bg-purple-500 transition-all" style="width:{w.weightPersonal}%"></div>
-      <div class="bg-orange-500 transition-all" style="width:{w.weightNostalgia}%"></div>
+    <div class="flex h-2 rounded-sm overflow-hidden border border-border-muted">
+      <div class="bg-health transition-all" style="width:{w.weightDiscovery}%"></div>
+      <div class="bg-accent transition-all" style="width:{w.weightThemeFit}%"></div>
+      <div class="bg-warn transition-all" style="width:{w.weightPersonal}%"></div>
+      <div class="bg-accent-strong transition-all" style="width:{w.weightNostalgia}%"></div>
     </div>
-    <div class="flex items-center gap-4 mt-2">
-      <span class="text-xs" class:text-red-400={Math.abs(wTotal-100)>1} class:text-green-400={Math.abs(wTotal-100)<=1}>
-        Total: {wTotal}%
-      </span>
-      <button type="button" onclick={resetWeights} class="text-xs text-slate-400 hover:text-slate-200">Reset to defaults</button>
-      <button type="submit" class="ml-auto bg-purple-700 hover:bg-purple-600 text-white px-4 py-1.5 rounded text-sm">Save</button>
+
+    <div class="flex items-center gap-4 pt-2">
+      <button
+        type="button"
+        onclick={resetWeights}
+        class="font-mono text-[11px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors"
+      >
+        Reset defaults
+      </button>
+      <button
+        type="submit"
+        class="ml-auto bg-accent hover:bg-accent-strong text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+      >
+        Save weights
+      </button>
     </div>
   </form>
 </section>
 
 <!-- Section 2: ZIP Import -->
-<section class="mb-10 bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-  <h2 class="font-bold text-slate-100 mb-4">ZIP Import</h2>
-  <div class="flex flex-wrap gap-3 items-end mb-4">
-    <form method="POST" action="?/importZip" use:enhance enctype="multipart/form-data" class="flex flex-wrap gap-3 items-end">
+<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Import</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">ZIP import &amp; rescan</h2>
+    </div>
+    {#if hasFailedImport}
+      <StatusChip label="LAST IMPORT FAILED" tone="warn" />
+    {:else if lastSuccess}
+      <StatusChip
+        label="LAST · {new Date(lastSuccess.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}"
+        tone="health"
+      />
+    {:else}
+      <StatusChip label="NO IMPORTS" tone="muted" />
+    {/if}
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Drop a Music League <code class="font-mono text-fg">export.zip</code> or rescan
+    <code class="font-mono text-fg">data/&lt;league&gt;/season-N/</code> on disk.
+  </p>
+
+  <div class="flex flex-wrap gap-3 items-end mb-5">
+    <form
+      method="POST"
+      action="?/importZip"
+      use:enhance
+      enctype="multipart/form-data"
+      class="flex flex-wrap gap-3 items-end"
+    >
       <div>
-        <label class="block text-xs text-slate-400 mb-1">League</label>
-        <select name="league" class="bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100">
-          {#each data.allLeagues as l}<option value={l.slug}>{l.name}</option>{/each}
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="imp-league">League</label>
+        <select
+          id="imp-league"
+          name="league"
+          class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors"
+        >
+          {#each data.allLeagues as l (l.slug)}<option value={l.slug}>{l.name}</option>{/each}
         </select>
       </div>
       <div>
-        <label class="block text-xs text-slate-400 mb-1">Season #</label>
-        <input type="number" name="season" min="1" value="1" class="w-20 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100" />
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="imp-season">Season</label>
+        <input
+          id="imp-season"
+          type="number"
+          name="season"
+          min="1"
+          value="1"
+          class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors"
+        />
       </div>
       <div>
-        <label class="block text-xs text-slate-400 mb-1">export.zip</label>
-        <input type="file" name="zip" accept=".zip" class="text-sm text-slate-300" />
+        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="imp-zip">export.zip</label>
+        <input
+          id="imp-zip"
+          type="file"
+          name="zip"
+          accept=".zip"
+          class="text-sm text-fg-muted file:bg-surface-strong file:text-fg file:border-0 file:rounded-md file:px-3 file:py-1.5 file:mr-3 file:font-mono file:text-[11px] file:tracking-widest file:uppercase file:cursor-pointer hover:file:bg-border"
+        />
       </div>
-      <button type="submit" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-1.5 rounded text-sm">Import</button>
+      <button
+        type="submit"
+        class="bg-accent hover:bg-accent-strong text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+      >
+        Import
+      </button>
     </form>
     <form method="POST" action="?/rescan" use:enhance>
-      <button type="submit" class="bg-slate-600 hover:bg-slate-500 text-white px-4 py-1.5 rounded text-sm">Re-scan disk</button>
+      <button
+        type="submit"
+        class="border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-xs tracking-widest uppercase px-4 py-2 rounded-md transition-colors"
+      >
+        Re-scan disk
+      </button>
     </form>
   </div>
+
   {#if data.importLog.length}
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs text-slate-400">
-        <thead><tr class="border-b border-slate-700">
-          <th class="text-left py-1 pr-4">League</th><th class="text-left py-1 pr-4">Season</th>
-          <th class="text-left py-1 pr-4">Imported</th><th class="text-left py-1 pr-4">Rounds</th>
-          <th class="text-left py-1 pr-4">Songs</th><th class="text-left py-1">Status</th>
-        </tr></thead>
-        <tbody>
-          {#each data.importLog as entry}
-            <tr class="border-b border-slate-800 hover:bg-slate-800/30">
-              <td class="py-1 pr-4">{entry.leagueSlug}</td>
-              <td class="py-1 pr-4">S{entry.seasonNumber}</td>
-              <td class="py-1 pr-4">{new Date(entry.importedAt).toLocaleString()}</td>
-              <td class="py-1 pr-4">{entry.roundsCount}</td>
-              <td class="py-1 pr-4">{entry.submissionsCount}</td>
-              <td class="py-1" class:text-green-400={entry.status==='success'} class:text-red-400={entry.status==='error'} class:text-yellow-400={entry.status==='partial'}>
-                {entry.status}{entry.error ? ` — ${entry.error}` : ''}
+    <div class="overflow-x-auto border-t border-border-muted -mx-6 px-6 pt-4">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">
+            <th class="text-left py-1.5 pr-4 font-bold">League</th>
+            <th class="text-left py-1.5 pr-4 font-bold">Season</th>
+            <th class="text-left py-1.5 pr-4 font-bold">Imported</th>
+            <th class="text-left py-1.5 pr-4 font-bold">Rounds</th>
+            <th class="text-left py-1.5 pr-4 font-bold">Songs</th>
+            <th class="text-left py-1.5 font-bold">Status</th>
+          </tr>
+        </thead>
+        <tbody class="text-fg-muted">
+          {#each data.importLog as entry (entry.id ?? `${entry.leagueSlug}-${entry.seasonNumber}-${entry.importedAt}`)}
+            <tr class="border-t border-border-muted hover:bg-surface-hover">
+              <td class="py-1.5 pr-4 text-fg">{entry.leagueSlug}</td>
+              <td class="py-1.5 pr-4 font-mono">S{entry.seasonNumber}</td>
+              <td class="py-1.5 pr-4 font-mono text-fg-dim">{new Date(entry.importedAt).toLocaleString()}</td>
+              <td class="py-1.5 pr-4 font-mono">{entry.roundsCount}</td>
+              <td class="py-1.5 pr-4 font-mono">{entry.submissionsCount}</td>
+              <td class="py-1.5">
+                {#if entry.status === 'success'}
+                  <StatusChip label="OK" tone="health" />
+                {:else if entry.status === 'error'}
+                  <StatusChip label="ERROR" tone="warn" />
+                {:else if entry.status === 'partial'}
+                  <StatusChip label="PARTIAL" tone="warn" />
+                {:else}
+                  <StatusChip label={entry.status} tone="muted" />
+                {/if}
+                {#if entry.error}
+                  <span class="ml-2 text-fg-dim">— {entry.error}</span>
+                {/if}
               </td>
             </tr>
           {/each}
@@ -100,72 +249,141 @@
       </table>
     </div>
   {:else}
-    <p class="text-slate-500 text-sm">No imports yet.</p>
+    <p class="text-fg-dim text-sm">No imports yet.</p>
   {/if}
 </section>
 
 <!-- Section 3: Round Deadlines -->
-<section class="mb-10 bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-  <h2 class="font-bold text-slate-100 mb-1">Round Deadlines</h2>
-  <p class="text-xs text-slate-400 mb-4">Set submission and voting deadlines for active rounds. Shown as countdowns on the home screen.</p>
+<section class="mb-6 bg-surface border border-border-muted rounded-xl p-6">
+  <header class="mb-1">
+    <SectionLabel>Deadlines</SectionLabel>
+    <h2 class="text-lg font-bold text-fg mt-1">Round deadlines</h2>
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Submission and voting deadlines for active rounds. Drives the
+    <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
+  </p>
+
   {#if data.activeRounds.length}
-    <div class="flex flex-col gap-3">
-      {#each data.activeRounds as r}
-        <form method="POST" action="?/updateDeadline" use:enhance class="flex flex-wrap items-center gap-3 text-sm">
+    <div class="flex flex-col gap-2">
+      {#each data.activeRounds as r (r.id)}
+        <form
+          method="POST"
+          action="?/updateDeadline"
+          use:enhance
+          class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
+        >
           <input type="hidden" name="roundId" value={r.id} />
-          <span class="text-slate-300 w-48 truncate">{r.leagueName} S{r.seasonNumber} — {r.name}</span>
+          <span class="text-fg w-56 truncate">
+            <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
+            <span class="text-fg-faint"> · </span>
+            {r.name}
+          </span>
           <div class="flex items-center gap-2">
-            <label class="text-xs text-yellow-400">Submit by</label>
-            <input type="datetime-local" name="submissionDeadline" value={r.submissionDeadline?.slice(0,16) ?? ''}
-              class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200" />
+            <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
+            <input
+              id="sub-{r.id}"
+              type="datetime-local"
+              name="submissionDeadline"
+              value={r.submissionDeadline?.slice(0, 16) ?? ''}
+              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+            />
           </div>
           <div class="flex items-center gap-2">
-            <label class="text-xs text-cyan-400">Vote by</label>
-            <input type="datetime-local" name="votingDeadline" value={r.votingDeadline?.slice(0,16) ?? ''}
-              class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200" />
+            <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
+            <input
+              id="vote-{r.id}"
+              type="datetime-local"
+              name="votingDeadline"
+              value={r.votingDeadline?.slice(0, 16) ?? ''}
+              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+            />
           </div>
-          <button type="submit" class="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs">Save</button>
+          <button
+            type="submit"
+            class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
+          >
+            Save
+          </button>
         </form>
       {/each}
     </div>
   {:else}
-    <p class="text-slate-500 text-sm">No active rounds found.</p>
+    <p class="text-fg-dim text-sm">No active rounds found.</p>
   {/if}
 </section>
 
 <!-- Section 4: Songlink Queue -->
-<section class="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-  <h2 class="font-bold text-slate-100 mb-4">Songlink Resolution Queue</h2>
-  <div class="grid grid-cols-3 gap-4 mb-4 text-center">
-    <div class="bg-slate-900 rounded-lg p-3">
-      <div class="text-2xl font-bold text-yellow-400">{data.queueStatus.pending}</div>
-      <div class="text-xs text-slate-400">Pending</div>
+<section class="bg-surface border border-border-muted rounded-xl p-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Queue</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Songlink resolution queue</h2>
+    </div>
+    <StatusChip label={queueLabel} tone={queueTone} />
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Background worker resolves Spotify URIs to YouTube Music links via Songlink, capped at 10/min.
+  </p>
+
+  <div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Pending</SectionLabel>
+      <div class="text-3xl font-display font-bold text-warn mt-1 leading-none">
+        {data.queueStatus.pending}
+      </div>
       {#if data.queueStatus.pending > 0}
-        <div class="text-xs text-slate-500 mt-1">~{data.queueStatus.estimatedMinutes}m at 10/min</div>
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
+          ~{data.queueStatus.estimatedMinutes}m @ 10/min
+        </div>
+      {:else}
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">drained</div>
       {/if}
     </div>
-    <div class="bg-slate-900 rounded-lg p-3">
-      <div class="text-2xl font-bold text-green-400">{data.queueStatus.done24h}</div>
-      <div class="text-xs text-slate-400">Resolved (24h)</div>
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Resolved 24h</SectionLabel>
+      <div class="text-3xl font-display font-bold text-health mt-1 leading-none">
+        {data.queueStatus.done24h}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">last 24h</div>
     </div>
-    <div class="bg-slate-900 rounded-lg p-3">
-      <div class="text-2xl font-bold text-red-400">{data.queueStatus.failures.length}</div>
-      <div class="text-xs text-slate-400">Failures</div>
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Failures</SectionLabel>
+      <div
+        class="text-3xl font-display font-bold mt-1 leading-none {data.queueStatus.failures.length > 0 ? 'text-accent' : 'text-fg-faint'}"
+      >
+        {data.queueStatus.failures.length}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
+        {data.queueStatus.failures.length > 0 ? 'needs retry' : 'clean'}
+      </div>
     </div>
   </div>
+
   {#if data.queueStatus.failures.length}
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs text-slate-400">
-        <thead><tr class="border-b border-slate-700"><th class="text-left py-1 pr-4">Track</th><th class="text-left py-1 pr-4">Error</th><th class="py-1"></th></tr></thead>
-        <tbody>
-          {#each data.queueStatus.failures as f}
-            <tr class="border-b border-slate-800">
-              <td class="py-1 pr-4">{f.title ?? f.spotify_uri}</td>
-              <td class="py-1 pr-4 text-red-400">{f.error ?? 'No YTM link found'}</td>
-              <td class="py-1">
+    <div class="overflow-x-auto border-t border-border-muted -mx-6 px-6 pt-4">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">
+            <th class="text-left py-1.5 pr-4 font-bold">Track</th>
+            <th class="text-left py-1.5 pr-4 font-bold">Error</th>
+            <th class="py-1.5"></th>
+          </tr>
+        </thead>
+        <tbody class="text-fg-muted">
+          {#each data.queueStatus.failures as f (f.id)}
+            <tr class="border-t border-border-muted">
+              <td class="py-1.5 pr-4 text-fg">{f.title ?? f.spotify_uri}</td>
+              <td class="py-1.5 pr-4 text-warn">{f.error ?? 'No YTM link found'}</td>
+              <td class="py-1.5 text-right">
                 <form method="POST" action="?/retryYtm" use:enhance>
                   <input type="hidden" name="id" value={f.id} />
-                  <button type="submit" class="text-blue-400 hover:text-blue-300">Retry</button>
+                  <button
+                    type="submit"
+                    class="font-mono text-[10px] tracking-widest uppercase text-accent hover:text-accent-strong transition-colors"
+                  >
+                    Retry
+                  </button>
                 </form>
               </td>
             </tr>
