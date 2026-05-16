@@ -165,7 +165,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
     - `docs/screenshots/2026-05-16-sprint5-settings-deadlines-desktop-expanded.png` (1440 fullPage) — after clicking summary, deadline rails visible at the bottom.
     - `docs/screenshots/2026-05-16-sprint5-settings-deadlines-mobile-collapsed.png` (480 fullPage) — single-column stacked, collapsible still present.
 - **Acceptance check:** weights column ends at its natural height ✓; right column ends at its natural content height (no padding to match) ✓; deadlines section is full-width below the grid, collapsed by default ✓; clicking summary expands and the per-round editing UX is unchanged ✓; mobile stacks vertically ✓; svelte-check clean ✓.
-- commit: <pending — landing now>
+- commit: `a6181e8`
 
 ### 2026-05-16 — backend — round-status-model landed
 - **New module** `ui/src/lib/lifecycle.ts` exports the canonical phase derivation. Helpers are pure (take `now` as a parameter) so they unit-test without mocking the clock and can be re-used from a client-side recompute later.
