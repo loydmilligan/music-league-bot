@@ -140,7 +140,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   - `docs/screenshots/2026-05-16-sprint5-h2h-rate-spotify-after.png` — clicked Bull's Theme=5 dot (Theme row went 3→5 filled) and toggled Play Preview on the holding lane card (Spotify embed iframe inline). Weighted score recomputed 3.00 → 3.50 immediately. DB check via `GET /api/research/97` confirmed persisted `themeFit:5, score:3.5`.
 - svelte-check clean (pre-existing warning on `$state(song)` initial-value-capture is intentional — same hydration pattern used in `ResearchList.svelte`; reactivity re-syncs through `$effect`). Fixtures cleaned up after the screenshots.
 - **Tokens consumed:** `text-accent`, `text-accent-strong`, `text-fg-faint`, `bg-accent`, `border-accent`, `border-accent-deep`, `border-border`, `font-mono`, `font-display`. No new tokens. Atoms used: `SectionLabel` (already present).
-- commit: HASHPLACEHOLDER
+- commit: c7a2f91
 
 ### 2026-05-16 — infra (as frontend, parallel) — settings-deadlines-collapsible landed
 - **Why infra in a frontend lane:** sprint-5 has zero infra-owned tasks; frontend pane is on the round-edit + h2h chain. Sprint-1 review Q2 ratification covers this `(as frontend, parallel)` pattern. Picking this up is also a continuity win — infra has owned `ui/src/routes/settings/+page.svelte` across sprint-2 reskin, sprint-4 two-column, sprint-4 rating-weights auto-balance, and sprint-4 auto-fill UI.
