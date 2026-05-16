@@ -150,7 +150,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   Only hip-jammers s3 currently has rounds with future deadlines (the live DB has past/null deadlines on fam-jam/second-best/nostalgia-pit active seasons). The user's expectation of "all 4 active" depends on **round-edit-api** (next task) letting them set deadlines on those rounds — the model itself is correct; the data needs filling in. Flagged for myself: nothing to surface as a Blocker since this is the next task in my queue.
 - **Checks:** `npx svelte-check` reports only pre-existing issues; `npx vitest run` 44/44.
 - **Scope discipline:** backend-only files touched (`ui/src/lib/lifecycle.ts`, `ui/src/lib/lifecycle.test.ts`, `ui/src/lib/types.ts`, `ui/src/lib/db/layout.ts`, `ui/src/lib/db/rounds.ts`). No `+page.svelte` / `lib/components/**` / infra files in this changeset.
-- commit: <pending — landing now>
+- commit: `7bfb396`
 
 ### 2026-05-16 — docs — Sprint plan refresh: round state model + voting workflow
 - created `docs/coordination/sprint-5.md` with 8 tasks (3 backend / 5 frontend / 0 infra own-lane).
