@@ -136,6 +136,11 @@
   let afStatus = $state<{ tone: 'health' | 'warn'; label: string } | null>(null);
   let afSubmitting = $state(false);
 
+  // Round-deadlines collapsible: default closed; the big tabular list of per-round
+  // deadlines lives below the two-column grid, full-width, behind a click-to-expand
+  // <details> so the weights column doesn't pad to match its height.
+  let deadlinesOpen = $state(false);
+
   const afSeasonOptions = $derived(seasonsByLeagueSlug.get(afLeague) ?? []);
 
   // Initialize afLeague once the derived default is known, and keep afSeason
@@ -208,7 +213,7 @@
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right).
      Round deadlines is full-width below the grid. -->
-<div class="grid md:grid-cols-2 gap-6 mb-6">
+<div class="grid md:grid-cols-2 gap-6 mb-6 items-start">
 <!-- Section 1: Rating Weights (left column) -->
 <section class="bg-surface border border-border-muted rounded-xl p-6">
   <header class="mb-1">
@@ -503,157 +508,178 @@
     </div>
   {/if}
 </section>
+
+<!-- Auto-fill sub-card (right column, after Queue): computes deadlines for every
+     round in a (league, season) pair from days-to-submit / days-to-vote / start-date.
+     Calls POST /api/deadlines/auto-fill (sprint-4 commit 5c14828). -->
+<section class="bg-surface border border-border-muted rounded-xl p-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Auto-fill</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Bulk-set deadlines for a season</h2>
+    </div>
+    {#if afStatus}
+      <StatusChip label={afStatus.label} tone={afStatus.tone} />
+    {/if}
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Picks the first round's start = <span class="font-mono text-fg">start date</span>, then chains
+    <span class="font-mono text-fg">+ days-to-submit</span> →
+    <span class="font-mono text-fg">+ days-to-vote</span> through every round in the season (zero buffer).
+  </p>
+
+  <div class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-league">League</label>
+      <select
+        id="af-league"
+        bind:value={afLeague}
+        disabled={allLeagues.length === 0}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+      >
+        {#each allLeagues as l (l.slug)}
+          <option value={l.slug}>{l.name}</option>
+        {/each}
+      </select>
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-season">Season</label>
+      <select
+        id="af-season"
+        bind:value={afSeason}
+        disabled={afSeasonOptions.length === 0}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+      >
+        {#if afSeasonOptions.length === 0}
+          <option value="">no active</option>
+        {:else}
+          {#each afSeasonOptions as n (n)}
+            <option value={n}>Season {n}</option>
+          {/each}
+        {/if}
+      </select>
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-submit">Days to submit</label>
+      <input
+        id="af-submit"
+        type="number"
+        min="1"
+        max="60"
+        bind:value={afDaysToSubmit}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-vote">Days to vote</label>
+      <input
+        id="af-vote"
+        type="number"
+        min="1"
+        max="60"
+        bind:value={afDaysToVote}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-start">Start date</label>
+      <input
+        id="af-start"
+        type="date"
+        bind:value={afStartDate}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <button
+      type="button"
+      onclick={autoFillDeadlines}
+      disabled={!afLeague || afSeason === '' || afSubmitting}
+      class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+    >
+      {afSubmitting ? 'Filling…' : 'Auto-fill deadlines'}
+    </button>
+  </div>
+</section>
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
 
-<!-- Section 4: Round Deadlines (full-width, below the grid) -->
-<section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="mb-1">
-    <SectionLabel>Deadlines</SectionLabel>
-    <h2 class="text-lg font-bold text-fg mt-1">Round deadlines</h2>
-  </header>
-  <p class="text-xs text-fg-dim mb-5">
-    Submission and voting deadlines for active rounds. Drives the
-    <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
-  </p>
-
-  <!-- Auto-fill sub-card: computes deadlines for every round in a (league, season)
-       pair from days-to-submit / days-to-vote / start-date. Calls the backend
-       POST /api/deadlines/auto-fill endpoint (sprint-4 commit 5c14828). -->
-  <div class="bg-bg-elevated border border-border-muted rounded-md p-4 mb-5">
-    <header class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-      <div>
-        <SectionLabel>Auto-fill</SectionLabel>
-        <h3 class="text-sm font-bold text-fg mt-1">Bulk-set deadlines for a season</h3>
-      </div>
-      {#if afStatus}
-        <StatusChip label={afStatus.label} tone={afStatus.tone} />
-      {/if}
-    </header>
-    <p class="text-xs text-fg-dim mb-4">
-      Picks the first round's start = <span class="font-mono">start date</span>, then chains
-      <span class="font-mono">+ days-to-submit</span> →
-      <span class="font-mono">+ days-to-vote</span> through every round in the season (zero buffer).
+<!-- Section 4: Round Deadlines — full-width, below the grid, collapsed by default
+     so the weights column doesn't pad to match its tabular height. -->
+<details
+  bind:open={deadlinesOpen}
+  class="group bg-surface border border-border-muted rounded-xl [&>summary::-webkit-details-marker]:hidden"
+>
+  <summary
+    class="cursor-pointer list-none flex items-center justify-between gap-3 p-6 hover:bg-surface-hover transition-colors rounded-xl"
+  >
+    <div class="flex items-center gap-3 min-w-0">
+      <span
+        class="inline-block text-accent text-sm font-mono transition-transform duration-150 shrink-0"
+        style:transform={deadlinesOpen ? 'rotate(90deg)' : 'rotate(0)'}
+        aria-hidden="true"
+      >
+        ▸
+      </span>
+      <SectionLabel>
+        Round deadlines · {deadlinesOpen ? 'click to collapse' : 'click to expand'}
+      </SectionLabel>
+    </div>
+    <span class="font-mono text-[11px] tracking-widest uppercase text-fg-dim shrink-0">
+      {data.activeRounds.length} active
+    </span>
+  </summary>
+  <div class="px-6 pb-6 pt-0">
+    <p class="text-xs text-fg-dim mb-5">
+      Submission and voting deadlines for active rounds. Drives the
+      <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
     </p>
 
-    <div class="flex flex-wrap gap-3 items-end">
-      <div>
-        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-league">League</label>
-        <select
-          id="af-league"
-          bind:value={afLeague}
-          disabled={allLeagues.length === 0}
-          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-        >
-          {#each allLeagues as l (l.slug)}
-            <option value={l.slug}>{l.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div>
-        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-season">Season</label>
-        <select
-          id="af-season"
-          bind:value={afSeason}
-          disabled={afSeasonOptions.length === 0}
-          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-        >
-          {#if afSeasonOptions.length === 0}
-            <option value="">no active</option>
-          {:else}
-            {#each afSeasonOptions as n (n)}
-              <option value={n}>Season {n}</option>
-            {/each}
-          {/if}
-        </select>
-      </div>
-      <div>
-        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-submit">Days to submit</label>
-        <input
-          id="af-submit"
-          type="number"
-          min="1"
-          max="60"
-          bind:value={afDaysToSubmit}
-          class="w-20 bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-        />
-      </div>
-      <div>
-        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-vote">Days to vote</label>
-        <input
-          id="af-vote"
-          type="number"
-          min="1"
-          max="60"
-          bind:value={afDaysToVote}
-          class="w-20 bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-        />
-      </div>
-      <div>
-        <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-start">Start date</label>
-        <input
-          id="af-start"
-          type="date"
-          bind:value={afStartDate}
-          class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-        />
-      </div>
-      <button
-        type="button"
-        onclick={autoFillDeadlines}
-        disabled={!afLeague || afSeason === '' || afSubmitting}
-        class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
-      >
-        {afSubmitting ? 'Filling…' : 'Auto-fill deadlines'}
-      </button>
-    </div>
-  </div>
-
-  {#if data.activeRounds.length}
-    <div class="flex flex-col gap-2">
-      {#each data.activeRounds as r (r.id)}
-        <form
-          method="POST"
-          action="?/updateDeadline"
-          use:enhance
-          class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
-        >
-          <input type="hidden" name="roundId" value={r.id} />
-          <span class="text-fg w-56 truncate">
-            <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
-            <span class="text-fg-faint"> · </span>
-            {r.name}
-          </span>
-          <div class="flex items-center gap-2">
-            <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
-            <input
-              id="sub-{r.id}"
-              type="datetime-local"
-              name="submissionDeadline"
-              value={r.submissionDeadline?.slice(0, 16) ?? ''}
-              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
-            <input
-              id="vote-{r.id}"
-              type="datetime-local"
-              name="votingDeadline"
-              value={r.votingDeadline?.slice(0, 16) ?? ''}
-              class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
+    {#if data.activeRounds.length}
+      <div class="flex flex-col gap-2">
+        {#each data.activeRounds as r (r.id)}
+          <form
+            method="POST"
+            action="?/updateDeadline"
+            use:enhance
+            class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
           >
-            Save
-          </button>
-        </form>
-      {/each}
-    </div>
-  {:else}
-    <p class="text-fg-dim text-sm">No active rounds found.</p>
-  {/if}
-</section>
+            <input type="hidden" name="roundId" value={r.id} />
+            <span class="text-fg w-56 truncate">
+              <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
+              <span class="text-fg-faint"> · </span>
+              {r.name}
+            </span>
+            <div class="flex items-center gap-2">
+              <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
+              <input
+                id="sub-{r.id}"
+                type="datetime-local"
+                name="submissionDeadline"
+                value={r.submissionDeadline?.slice(0, 16) ?? ''}
+                class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
+              <input
+                id="vote-{r.id}"
+                type="datetime-local"
+                name="votingDeadline"
+                value={r.votingDeadline?.slice(0, 16) ?? ''}
+                class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
+            >
+              Save
+            </button>
+          </form>
+        {/each}
+      </div>
+    {:else}
+      <p class="text-fg-dim text-sm">No active rounds found.</p>
+    {/if}
+  </div>
+</details>

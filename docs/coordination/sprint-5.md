@@ -80,13 +80,13 @@ updated: 2026-05-16T00:00:00.000Z
 - [ ] {agent: frontend, id: rate-anonymous-ml, depends: round-status-model} On the round page's ML tab, when the round is in `voting` phase, allow the user to rate each anonymous song using the same 4-dimension scoring as research. Click a song row → opens an inline rating editor (or expandable panel inside the row); save creates/updates a `research_songs` record keyed by `(round_id, spotify_uri)`. **Visual differentiator:** the rating dots on songs in the ML tab during voting show **blue** (`bg-info` if defined; otherwise add a new `--color-blue-rating` design token via a small inline style — file a Blocker if you need infra to add the token). After voting/archive, ML tab still shows ratings but with the standard orange dots (because submitter info is now revealed and the song is no longer "anonymous to the voter"). Re-uses the existing `/api/research/[roundId]` CRUD endpoints; the only new thing is the UI surface inside the ML tab.
   - **Acceptance:** Visit `/league/fam-jam/season/3/round/10` (voting phase) → ML tab → click any anonymous song → rate it 4/3/2/3 → save → `sqlite3 data/league.db "select * from research_songs where round_id = X order by created_at desc limit 1";` shows the new row. Dots render blue. Switch to round in archive phase → dots render orange. svelte-check clean.
 
-- [ ] {agent: frontend, id: h2h-rate-and-spotify} Two enhancements to the existing `HeadToHeadCard` component from sprint-3:
+- [x] {agent: frontend, id: h2h-rate-and-spotify} Two enhancements to the existing `HeadToHeadCard` component from sprint-3:
   - **Inline rating controls:** each card gets a compact rating editor (the 4 dimensions × 5 dots, no notes field) that upserts the underlying `research_songs` record via `PUT /api/research/[roundId]`. So the user can rate a song they forgot to rate before getting to h2h. The rating updates live and affects the weighted score shown on the card.
   - **Spotify embed:** add a Spotify play button on each card (use Spotify's embed iframe at `https://open.spotify.com/embed/track/{trackId}`, hidden behind a `<details>` or toggle so it doesn't auto-load — only loads when user clicks Play). If the song has a `spotify_uri`, the embed loads correctly; otherwise show a disabled Play button with a `<title>No Spotify URI on this song</title>`.
   Both changes live in `ui/src/lib/components/HeadToHeadCard.svelte` only. Doesn't touch the h2h page logic; the cards just expose more.
   - **Acceptance:** From the Head-to-Head tab of a populated round → both cards show the rating dots; clicking a dot updates the rating + recomputes the weighted score; both cards show a Play button that opens the Spotify embed iframe when clicked; svelte-check clean.
 
-- [ ] {agent: frontend, id: settings-deadlines-collapsible} Restructure `/settings` per the actual user intent (the sprint-4 two-column layout left the weights column padded out with empty space): move the **Round deadlines** card from inside the two-column grid down to **full-width below the columns**, and wrap it in a collapsible `<details>` element (default collapsed). Inside the two columns above, fit ONLY the cards that benefit from the layout: weights on left, import + queue + auto-fill on right. Both columns auto-size to content (no `align-items: stretch` forcing height match). Add a `<SectionLabel>` reading something like `ROUND DEADLINES · CLICK TO EXPAND` as the `<summary>` of the collapsible.
+- [x] {agent: frontend, id: settings-deadlines-collapsible} Restructure `/settings` per the actual user intent (the sprint-4 two-column layout left the weights column padded out with empty space): move the **Round deadlines** card from inside the two-column grid down to **full-width below the columns**, and wrap it in a collapsible `<details>` element (default collapsed). Inside the two columns above, fit ONLY the cards that benefit from the layout: weights on left, import + queue + auto-fill on right. Both columns auto-size to content (no `align-items: stretch` forcing height match). Add a `<SectionLabel>` reading something like `ROUND DEADLINES · CLICK TO EXPAND` as the `<summary>` of the collapsible.
   - **Acceptance:** Visit `/settings` → weights column ends at its natural height, no empty space below the sliders; import+queue+auto-fill column similarly ends at its natural height; Round deadlines section is at the bottom, full-width, collapsed by default; clicking the summary expands; user can configure deadlines once expanded, just like before. Mobile layout still stacks vertically. svelte-check clean.
 
 ## Agent Roster
@@ -123,6 +123,49 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None at sprint start._
 
 ## Activity Log
+
+### 2026-05-16 — infra (as frontend, parallel) — settings-deadlines-collapsible landed
+- **Why infra in a frontend lane:** sprint-5 has zero infra-owned tasks; frontend pane is on the round-edit + h2h chain. Sprint-1 review Q2 ratification covers this `(as frontend, parallel)` pattern. Picking this up is also a continuity win — infra has owned `ui/src/routes/settings/+page.svelte` across sprint-2 reskin, sprint-4 two-column, sprint-4 rating-weights auto-balance, and sprint-4 auto-fill UI.
+- **Single file touched:** `ui/src/routes/settings/+page.svelte`. Loader, form actions, components, layout, and other routes untouched.
+- **Layout structure (desktop, ≥ md):**
+  ```
+  ┌─────────────────────────────┬──────────────────────────────────┐
+  │ Rating weights              │ ZIP import & rescan              │
+  │  · auto-balance toggle      │  · last/no-imports chip          │
+  │  · 4 sliders + proportion   │  · league/season/file + Import   │
+  │  · Reset / Save             │  · Re-scan disk                  │
+  │  (ends at natural height)   │  · import log table              │
+  │                             ├──────────────────────────────────┤
+  │                             │ Songlink resolution queue        │
+  │                             │  · 3 stat tiles + failures table │
+  │                             ├──────────────────────────────────┤
+  │                             │ Bulk-set deadlines for a season  │
+  │                             │  · league/season/days/start      │
+  │                             │  · Auto-fill button + chip       │
+  └─────────────────────────────┴──────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────────────┐
+  │ ▸  ROUND DEADLINES · CLICK TO EXPAND          {N} ACTIVE          │ ← <summary>
+  └──────────────────────────────────────────────────────────────────┘
+  ```
+  Below `md:`, the grid collapses to a single column — same stacked order — and the `<details>` continues to work.
+- **Grid change**: the two-column wrapper went from `grid md:grid-cols-2 gap-6 mb-6` → `grid md:grid-cols-2 gap-6 mb-6 items-start`. The `items-start` is the load-bearing fix — CSS Grid items default to `stretch`, which is exactly what was padding the weights column to match the import-log table's height. With `items-start`, the left column ends at the bottom of `Save weights` and the right column ends at the bottom of the auto-fill card; whichever is shorter sits in its own natural box.
+- **Auto-fill card promoted to a peer:** the auto-fill block that I introduced as an inline sub-card inside the deadlines section in sprint-4 (commit 0d78060) was lifted out and is now a full peer `<section>` in the right column, third behind ZIP import and Queue. Same controls, same state (`afLeague`, `afSeason`, `afDaysToSubmit`, `afDaysToVote`, `afStartDate`, `afStatus`), same POST to `/api/deadlines/auto-fill`, same `invalidateAll()` on success — no behavior change, only relocation + the chrome upgrade from sub-card (`bg-bg-elevated`) to peer card (`bg-surface`). Form inputs accordingly switched their backgrounds from `bg-bg` to `bg-bg-elevated` so the inset still reads as inset against the new outer surface.
+- **Collapsible deadlines:**
+  - `<details bind:open={deadlinesOpen}>` with `let deadlinesOpen = $state(false)` — closed by default (no `open` attribute on initial SSR; verified `<details class="…">` has no `open` token).
+  - `<summary class="cursor-pointer list-none flex items-center justify-between gap-3 p-6 hover:bg-surface-hover transition-colors rounded-xl">` — `list-none` + `[&>summary::-webkit-details-marker]:hidden` on the parent kills the native disclosure triangle so the custom caret is the only marker.
+  - **Chevron treatment:** a single `▸` glyph in `text-accent`, wrapped in a span that gets `transform: rotate(90deg)` when `deadlinesOpen` is `true` via inline `style:transform` (no Tailwind arbitrary selector needed). Rotation animates with `transition-transform duration-150`.
+  - **Summary label:** `<SectionLabel>Round deadlines · {deadlinesOpen ? 'click to collapse' : 'click to expand'}</SectionLabel>` — text swaps live with the open state.
+  - **Right-side meta:** `{data.activeRounds.length} active` in mono dim — surfaces the count without expanding.
+  - Inside the details (`<div class="px-6 pb-6 pt-0">`): the unchanged per-round `<form action="?/updateDeadline" use:enhance>` rails. All behavior preserved — sprint-3's deadline-save hotfix isn't touched.
+- **Verification:**
+  - `npx svelte-check` (from `ui/`) — 1 error + 3 warnings, all pre-existing (the `vite.config.ts` test-config error and three `$state` reference warnings from earlier sprints). No new warnings.
+  - `npm run dev` (port 5174) → `curl /settings` returns HTTP 200, 143243 bytes. SSR contains exactly one `<details class="...">` (no `open` token) and exactly one `click to expand` string; the auto-fill markup byte-index is before the `<details>` byte-index, confirming the right-column position.
+  - Screenshots (Playwright, headless chromium):
+    - `docs/screenshots/2026-05-16-sprint5-settings-deadlines-desktop-collapsed.png` (1440×1200) — weights left ends at `SAVE WEIGHTS`; deadlines collapsed.
+    - `docs/screenshots/2026-05-16-sprint5-settings-deadlines-desktop-expanded.png` (1440 fullPage) — after clicking summary, deadline rails visible at the bottom.
+    - `docs/screenshots/2026-05-16-sprint5-settings-deadlines-mobile-collapsed.png` (480 fullPage) — single-column stacked, collapsible still present.
+- **Acceptance check:** weights column ends at its natural height ✓; right column ends at its natural content height (no padding to match) ✓; deadlines section is full-width below the grid, collapsed by default ✓; clicking summary expands and the per-round editing UX is unchanged ✓; mobile stacks vertically ✓; svelte-check clean ✓.
+- commit: <pending — landing now>
 
 ### 2026-05-16 — backend — round-status-model landed
 - **New module** `ui/src/lib/lifecycle.ts` exports the canonical phase derivation. Helpers are pure (take `now` as a parameter) so they unit-test without mocking the clock and can be re-used from a client-side recompute later.
