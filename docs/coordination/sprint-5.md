@@ -57,7 +57,7 @@ updated: 2026-05-16T00:00:00.000Z
        - Standings data ("My place: —" stays a placeholder this sprint)
 -->
 
-- [ ] {agent: backend, id: round-status-model} Add canonical round phase derivation. New helper `getRoundPhase(round)` returns one of `'upcoming' | 'submission' | 'voting' | 'archive'` based on `now()` against `submission_deadline` and `voting_deadline`. Logic: if `submission_deadline` is null OR in the future relative to start (no submissions opened yet) → `upcoming`; if `now < submission_deadline` → `submission`; if `submission_deadline <= now < voting_deadline` → `voting`; if `now >= voting_deadline` → `archive`. Expose `phase` as a derived field on every round returned by the layout loader (`+layout.server.ts`) and the season/round page loaders. Add a `seasonIsActive(season)` derivation: true if any round in the season has `phase in ('submission', 'voting')`. Update `getAllAdoptedLeagues()` in the layout loader so each league's `status` reflects the canonical season-active state instead of ad-hoc logic. Place the helpers in `ui/src/lib/lifecycle.ts` (new file) so frontend can import them too if it needs to recompute client-side.
+- [x] {agent: backend, id: round-status-model} Add canonical round phase derivation. New helper `getRoundPhase(round)` returns one of `'upcoming' | 'submission' | 'voting' | 'archive'` based on `now()` against `submission_deadline` and `voting_deadline`. Logic: if `submission_deadline` is null OR in the future relative to start (no submissions opened yet) → `upcoming`; if `now < submission_deadline` → `submission`; if `submission_deadline <= now < voting_deadline` → `voting`; if `now >= voting_deadline` → `archive`. Expose `phase` as a derived field on every round returned by the layout loader (`+layout.server.ts`) and the season/round page loaders. Add a `seasonIsActive(season)` derivation: true if any round in the season has `phase in ('submission', 'voting')`. Update `getAllAdoptedLeagues()` in the layout loader so each league's `status` reflects the canonical season-active state instead of ad-hoc logic. Place the helpers in `ui/src/lib/lifecycle.ts` (new file) so frontend can import them too if it needs to recompute client-side.
   - **Acceptance:** vitest covers `getRoundPhase` across all four states with fixture deadlines; `seasonIsActive` returns true for fam-jam s3 / hip-jammers s3 / second-best s1 / nostalgia-pit s1 given real fixture rows (verified by `sqlite3 data/league.db` query against current deadlines); `+layout.server.ts` returns `phase` on every round; home page's league cards correctly identify the user's 4 active leagues as `status='active'`.
 
 - [ ] {agent: backend, id: round-edit-api, depends: round-status-model} Add `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body accepts any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Validates: deadlines are ISO date strings, `voting_deadline > submission_deadline` if both present, `playlist_url` matches a Spotify playlist URL pattern if provided. Writes to `rounds` table; returns the updated row + the new derived phase. If `playlist_url` is set/changed AND the round's current phase is `voting`, **fire-and-forget** trigger the playlist-ingest task (defined in playlist-ingest task — the API endpoint just enqueues; the heavy lifting lives in `playlist-ingest`). Also add a `playlist_url TEXT` column to the `rounds` table schema in this same task.
@@ -123,6 +123,34 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None at sprint start._
 
 ## Activity Log
+
+### 2026-05-16 — backend — round-status-model landed
+- **New module** `ui/src/lib/lifecycle.ts` exports the canonical phase derivation. Helpers are pure (take `now` as a parameter) so they unit-test without mocking the clock and can be re-used from a client-side recompute later.
+  - `getRoundPhase(round, now?) → 'upcoming' | 'submission' | 'voting' | 'archive'`
+  - `seasonIsActive(season) → boolean` (true when any round's phase is `submission` or `voting`)
+  - `RoundPhase` type, also re-exported from `ui/src/lib/types.ts` and added as an optional `phase` field on `Round`.
+- **Phase boundaries implemented:**
+  - `submission_deadline === null` (or unparsable) → `upcoming` (no submissions ever opened)
+  - `now < submission_deadline` → `submission`
+  - `submission_deadline ≤ now < voting_deadline` → `voting` (left-closed boundary: exactly at sub_deadline → voting)
+  - `now ≥ voting_deadline` → `archive` (left-closed: exactly at vote_deadline → archive)
+  - Edge case I chose explicitly: `submission_deadline` past AND `voting_deadline === null` → `archive`. Without a vote-by date there's nowhere for the round to live; treating it as `voting` indefinitely would be a foot-gun for the round-state-display chips.
+- **Loader updates** (all server-side, no `+page.svelte` touched):
+  - `ui/src/lib/db/rounds.ts` — the shared `row()` helper now attaches `phase: getRoundPhase(base)` to every Round it returns. That means `getRoundsForSeason`, `getRoundById`, and `getCurrentRoundForSeason` all surface `phase` for free — the season detail loader and round detail loader pick it up without any further wiring.
+  - `ui/src/lib/db/layout.ts` — `getAllAdoptedLeagues()` rewritten on top of the canonical helpers. Now loads *all* rounds in the active season (not just the most recent), runs each through `getRoundPhase`, asks `seasonIsActive` whether anything is live, then picks the rail-facing "current" round by priority `submission > voting > upcoming > archive` (latest `created_at` within tie). Maps the current round's phase onto the existing `LeagueRailStatus` (`submission→active`, `voting→voting`, `upcoming→open`, otherwise `idle`). Added `currentRoundPhase: RoundPhase | null` to `LeagueRailEntry` so the rail UI can pick the right chip later.
+- **Vitest** (`ui/src/lib/lifecycle.test.ts`): 8 cases — upcoming when sub_deadline null; submission when now < sub; voting at and inside `[sub, vote)`; archive at and after vote_deadline; archive when sub past and vote null; snake_case row pass-through; `seasonIsActive` true with one open round; false with all archive/upcoming or empty. Full suite **44/44 green** (8 new + 36 prior).
+- **Live verification** at `curl http://localhost:5174/` — SSR layout payload contains the new field:
+  ```
+  leagues: [
+    { slug: "hip-jammers",  status: "active", currentRoundId: 102, currentRoundLabel: "Your Permanent Record", currentRoundPhase: "submission" },
+    { slug: "fam-jam",      status: "idle",   currentRoundId: null, currentRoundLabel: null, currentRoundPhase: null },
+    { slug: "second-best",  status: "idle",   currentRoundId: null, currentRoundLabel: null, currentRoundPhase: null }, …
+  ]
+  ```
+  Only hip-jammers s3 currently has rounds with future deadlines (the live DB has past/null deadlines on fam-jam/second-best/nostalgia-pit active seasons). The user's expectation of "all 4 active" depends on **round-edit-api** (next task) letting them set deadlines on those rounds — the model itself is correct; the data needs filling in. Flagged for myself: nothing to surface as a Blocker since this is the next task in my queue.
+- **Checks:** `npx svelte-check` reports only pre-existing issues; `npx vitest run` 44/44.
+- **Scope discipline:** backend-only files touched (`ui/src/lib/lifecycle.ts`, `ui/src/lib/lifecycle.test.ts`, `ui/src/lib/types.ts`, `ui/src/lib/db/layout.ts`, `ui/src/lib/db/rounds.ts`). No `+page.svelte` / `lib/components/**` / infra files in this changeset.
+- commit: <pending — landing now>
 
 ### 2026-05-16 — docs — Sprint plan refresh: round state model + voting workflow
 - created `docs/coordination/sprint-5.md` with 8 tasks (3 backend / 5 frontend / 0 infra own-lane).

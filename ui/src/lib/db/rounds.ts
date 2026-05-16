@@ -1,10 +1,12 @@
 import type Database from 'better-sqlite3';
 import type { Round } from '../types.js';
+import { getRoundPhase } from '../lifecycle.js';
 
 function row(r: any): Round {
-  return { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
+  const base = { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
     description: r.description, spotifyPlaylistUrl: r.spotify_playlist_url,
     submissionDeadline: r.submission_deadline, votingDeadline: r.voting_deadline, createdAt: r.created_at };
+  return { ...base, phase: getRoundPhase(base) };
 }
 
 export function upsertRound(db: Database.Database, seasonId: number, r: {
