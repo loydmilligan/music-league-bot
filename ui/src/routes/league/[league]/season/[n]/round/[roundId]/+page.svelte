@@ -335,6 +335,8 @@
             song={champion}
             role="holding-lane"
             onPick={() => pickWinner(champion, challenger)}
+            roundId={data.round.id}
+            weights={data.settings}
           />
         </div>
         <div class="flex-1 min-w-0">
@@ -342,6 +344,8 @@
             song={challenger}
             role="challenger"
             onPick={() => pickWinner(challenger, champion)}
+            roundId={data.round.id}
+            weights={data.settings}
           />
         </div>
       </div>
