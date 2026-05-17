@@ -62,3 +62,26 @@ export interface YtmQueueEntry {
   status: 'pending' | 'processing' | 'done' | 'failed'; error: string | null;
   queuedAt: string; resolvedAt: string | null;
 }
+export interface ShortlistSong {
+  id: string;
+  spotifyUri: string;
+  artist: string;
+  title: string;
+  album: string | null;
+  year: number | null;
+  durationSec: number | null;
+  albumArtUrl: string | null;
+  addedAt: string;
+  ratingDiscovery: number;
+  ratingThemeFit: number;
+  ratingNostalgia: number;
+  ratingPersonal: number;
+  submittedElsewhere: boolean;
+  notes: string;
+  assignments?: ShortlistAssignment[];
+}
+export interface ShortlistAssignment {
+  shortlistSongId: string;
+  roundId: number;
+  assignedAt: string;
+}
