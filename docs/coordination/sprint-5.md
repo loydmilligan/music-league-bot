@@ -60,7 +60,7 @@ updated: 2026-05-16T00:00:00.000Z
 - [x] {agent: backend, id: round-status-model} Add canonical round phase derivation. New helper `getRoundPhase(round)` returns one of `'upcoming' | 'submission' | 'voting' | 'archive'` based on `now()` against `submission_deadline` and `voting_deadline`. Logic: if `submission_deadline` is null OR in the future relative to start (no submissions opened yet) → `upcoming`; if `now < submission_deadline` → `submission`; if `submission_deadline <= now < voting_deadline` → `voting`; if `now >= voting_deadline` → `archive`. Expose `phase` as a derived field on every round returned by the layout loader (`+layout.server.ts`) and the season/round page loaders. Add a `seasonIsActive(season)` derivation: true if any round in the season has `phase in ('submission', 'voting')`. Update `getAllAdoptedLeagues()` in the layout loader so each league's `status` reflects the canonical season-active state instead of ad-hoc logic. Place the helpers in `ui/src/lib/lifecycle.ts` (new file) so frontend can import them too if it needs to recompute client-side.
   - **Acceptance:** vitest covers `getRoundPhase` across all four states with fixture deadlines; `seasonIsActive` returns true for fam-jam s3 / hip-jammers s3 / second-best s1 / nostalgia-pit s1 given real fixture rows (verified by `sqlite3 data/league.db` query against current deadlines); `+layout.server.ts` returns `phase` on every round; home page's league cards correctly identify the user's 4 active leagues as `status='active'`.
 
-- [ ] {agent: backend, id: round-edit-api, depends: round-status-model} Add `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body accepts any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Validates: deadlines are ISO date strings, `voting_deadline > submission_deadline` if both present, `playlist_url` matches a Spotify playlist URL pattern if provided. Writes to `rounds` table; returns the updated row + the new derived phase. If `playlist_url` is set/changed AND the round's current phase is `voting`, **fire-and-forget** trigger the playlist-ingest task (defined in playlist-ingest task — the API endpoint just enqueues; the heavy lifting lives in `playlist-ingest`). Also add a `playlist_url TEXT` column to the `rounds` table schema in this same task.
+- [x] {agent: backend, id: round-edit-api, depends: round-status-model} Add `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body accepts any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Validates: deadlines are ISO date strings, `voting_deadline > submission_deadline` if both present, `playlist_url` matches a Spotify playlist URL pattern if provided. Writes to `rounds` table; returns the updated row + the new derived phase. If `playlist_url` is set/changed AND the round's current phase is `voting`, **fire-and-forget** trigger the playlist-ingest task (defined in playlist-ingest task — the API endpoint just enqueues; the heavy lifting lives in `playlist-ingest`). Also add a `playlist_url TEXT` column to the `rounds` table schema in this same task.
   - **Acceptance:** `curl -X PATCH http://localhost:5174/api/rounds/97 -H 'content-type: application/json' -d '{"theme":"New Theme"}'` returns 200 with the updated row + `phase` field; PATCHing an invalid deadline order returns 400; PATCHing a non-existent round returns 404; vitest covers each path. `sqlite3 data/league.db ".schema rounds"` shows `playlist_url` column.
 
 - [ ] {agent: backend, id: playlist-ingest, depends: round-edit-api} When a round's `playlist_url` is set during the `voting` phase, fetch the Spotify playlist's tracks (via existing `ui/src/lib/spotify.ts` helpers from sprint-1) and insert each as an anonymous `ml_submission` row (`competitor_id IS NULL`, plus the track's artist/title/spotify_uri). Idempotent — if a row with the same `(round_id, spotify_uri)` already exists, skip it. Place ingest logic in `ui/src/lib/import/playlistIngest.ts`. Wire it as a fire-and-forget call from the PATCH endpoint when both conditions are met (phase=voting + playlist_url is new). If Spotify API auth isn't configured (`SPOTIFY_CLIENT_ID` empty), the ingest no-ops with a logged warning — don't fail the PATCH.
@@ -115,7 +115,8 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 ## Contract Changes
 
 - New REST surface: `PATCH /api/rounds/[roundId]` — body shape documented in round-edit-api task.
-- Schema: `rounds.playlist_url TEXT` column (nullable) added by round-edit-api task; `CREATE TABLE IF NOT EXISTS` startup path picks it up on next boot (or use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` if SQLite supports cleanly).
+- Schema: **no new column.** `rounds.spotify_playlist_url` already exists from sprint-1 ZIP imports; body field `playlist_url` maps to it at the API boundary. Avoiding a duplicate `playlist_url` column keeps the schema honest — there's only one Spotify playlist URL per round, regardless of whether it arrived via ZIP import or via PATCH.
+- API field → column mapping for PATCH body: `theme` → `description`, `playlist_url` → `spotify_playlist_url`, deadline fields use their existing column names. Mapping lives in the route handler; the underlying `patchRound(db, id, RoundPatch)` helper uses the canonical column-mapped TS field names.
 - New helper module: `ui/src/lib/lifecycle.ts` exporting `getRoundPhase(round)` and `seasonIsActive(season)`. Frontend can import for client-side recompute if needed.
 
 ## Blockers
@@ -123,6 +124,46 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None at sprint start._
 
 ## Activity Log
+
+### 2026-05-16 — backend — round-edit-api landed
+- **Endpoint:** `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body: any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Empty body returns the unchanged row + current phase (200; no-op).
+- **Schema deviation from the task body:** the task said "add a `playlist_url TEXT` column." Skipped — `rounds.spotify_playlist_url` already exists from sprint-1 ZIP imports and holds exactly this data. Adding a duplicate column would mean two source-of-truth fields for "the round's Spotify playlist URL" that drift apart. Body field `playlist_url` is mapped to `spotify_playlist_url` at the route handler boundary; same goes for `theme` → `description`. Documented under Contract Changes so future agents don't reintroduce the duplicate.
+- **Validation rules (all → 400 on failure):**
+  - `name`: non-empty string
+  - `theme`: string or null (clears)
+  - `submission_deadline` / `voting_deadline`: ISO date string parseable by `Date.parse`, or null
+  - cross-field: if both effective post-patch deadlines are non-null, `voting > submission` must hold (uses existing row values for any field not in the patch)
+  - `playlist_url`: matches `^https:\/\/open\.spotify\.com\/playlist\/[A-Za-z0-9]+(\?.*)?$`, or null
+  - non-existent round → 404
+- **Response shape:**
+  ```ts
+  { round: Round; phase: RoundPhase }
+  // where Round already carries phase from lib/db/rounds.ts row() helper,
+  // and the top-level phase mirrors round.phase for callers that only need
+  // the lifecycle state.
+  ```
+- **Playlist-ingest hook:** stubbed `console.log('[round-edit-api] would ingest playlist …')` fires when `playlist_url` is set/changed AND the new phase is `voting` AND the URL is non-null. One-line swap to `await ingestPlaylist(roundId, url)` when the next task (playlist-ingest) lands — kept the stub so this endpoint ships standalone.
+- **Files touched:**
+  - `ui/src/lib/db/rounds.ts` — new `patchRound(db, id, RoundPatch)` partial-update helper + `RoundPatch` interface.
+  - `ui/src/routes/api/rounds/[roundId]/+server.ts` — new route, validates body, maps to RoundPatch, fires stub ingest, returns updated row + phase.
+  - `ui/src/lib/db/rounds.patch.test.ts` — 5 vitests on `patchRound` (single field, multi-field, null clears, no-op, phase recompute after patch).
+- **Live smoke against `localhost:5174` (round 97):**
+  ```
+  PATCH /api/rounds/97 {"theme":"New Theme"}
+    → 200, round.description="New Theme", phase="upcoming"
+  PATCH /api/rounds/97 {"submission_deadline":"2026-08-01...","voting_deadline":"2026-07-01..."}
+    → 400 {"message":"voting_deadline must be after submission_deadline"}
+  PATCH /api/rounds/97 {"playlist_url":"https://example.com/notspotify"}
+    → 400 {"message":"playlist_url must match …"}
+  PATCH /api/rounds/999999 {"theme":"x"}
+    → 404 {"message":"round not found: 999999"}
+  PATCH /api/rounds/97 {}
+    → 200 (no-op, unchanged row)
+  ```
+  Theme reverted after the smoke; DB state unchanged from pre-smoke.
+- **Checks:** `npx vitest run` 49/49 green; `npx svelte-check` only pre-existing issues.
+- **Scope discipline:** server-side files only (`lib/db/rounds.ts`, `routes/api/rounds/[roundId]/+server.ts`, plus the test). No `+page.svelte` / `lib/components/**` / infra touched.
+- commit: <pending — landing now>
 
 ### 2026-05-16 — frontend — h2h-rate-and-spotify landed
 - `ui/src/lib/components/HeadToHeadCard.svelte` gains two enhancements (sprint-5 task 7 / Initiative C2).

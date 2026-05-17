@@ -32,6 +32,37 @@ export function getCurrentRoundForSeason(db: Database.Database, seasonId: number
   return r ? row(r) : null;
 }
 
+export interface RoundPatch {
+  name?: string;
+  description?: string | null;     // body field is "theme" — mapped at the API boundary
+  submissionDeadline?: string | null;
+  votingDeadline?: string | null;
+  spotifyPlaylistUrl?: string | null; // body field is "playlist_url" — mapped at the API boundary
+}
+
+/**
+ * Apply a partial patch to a round. Returns true if a row was updated.
+ * `undefined` fields are left alone; `null` clears the column.
+ */
+export function patchRound(db: Database.Database, id: number, p: RoundPatch): boolean {
+  const map: Array<[keyof RoundPatch, string]> = [
+    ['name', 'name'],
+    ['description', 'description'],
+    ['submissionDeadline', 'submission_deadline'],
+    ['votingDeadline', 'voting_deadline'],
+    ['spotifyPlaylistUrl', 'spotify_playlist_url'],
+  ];
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  for (const [k, col] of map) {
+    if (p[k] !== undefined) { fields.push(`${col}=?`); vals.push(p[k]); }
+  }
+  if (!fields.length) return false;
+  vals.push(id);
+  const info = db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
+  return info.changes > 0;
+}
+
 export function updateDeadlines(
   db: Database.Database,
   roundId: number,
