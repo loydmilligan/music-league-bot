@@ -86,12 +86,13 @@
     return `${Math.max(1, Math.floor(ms / 60_000))}M`;
   }
 
-  type Phase = 'submissions' | 'voting' | 'review' | 'archived';
-  const phaseInfo = $derived.by<{ phase: Phase; duration: string } | null>(() => {
-    const sub = durationUntil(data.round.submissionDeadline);
-    if (sub) return { phase: 'submissions', duration: sub };
-    const vote = durationUntil(data.round.votingDeadline);
-    if (vote) return { phase: 'voting', duration: vote };
+  // Header chip pair sourced from the canonical phase derivation (lib/lifecycle.ts).
+  // The duration string still reads the relevant deadline locally so the chip can
+  // refresh during a long-open session.
+  const phase = $derived(data.round.phase);
+  const remaining = $derived.by(() => {
+    if (phase === 'submission') return durationUntil(data.round.submissionDeadline);
+    if (phase === 'voting') return durationUntil(data.round.votingDeadline);
     return null;
   });
 
@@ -145,14 +146,20 @@
         {#if data.research.length}
           <span aria-hidden="true"> · </span>{data.research.length} in research
         {/if}
-        {#if !phaseInfo && topSong}
+        {#if phase === 'archive' && topSong}
           <span aria-hidden="true"> · </span>winner: <span class="text-fg">{topSong.title}</span>
         {/if}
       </p>
     </div>
-    <div class="flex-shrink-0 pt-1">
-      {#if phaseInfo}
-        <DeadlineChip phase={phaseInfo.phase} duration={phaseInfo.duration} />
+    <div class="flex-shrink-0 pt-1 flex flex-col items-end gap-2">
+      {#if phase === 'submission'}
+        <StatusChip label="SUBMITTING" tone="accent" />
+        {#if remaining}<DeadlineChip phase="submissions" duration={remaining} />{/if}
+      {:else if phase === 'voting'}
+        <StatusChip label="VOTING" tone="warn" />
+        {#if remaining}<DeadlineChip phase="voting" duration={remaining} />{/if}
+      {:else if phase === 'upcoming'}
+        <StatusChip label="UPCOMING" tone="muted" />
       {:else}
         <StatusChip label="ARCHIVED" tone="muted" />
       {/if}

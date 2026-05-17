@@ -69,7 +69,7 @@ updated: 2026-05-16T00:00:00.000Z
 - [ ] {agent: frontend, id: round-edit-modal, depends: round-edit-api} Add an edit button (small wrench/pencil icon) to the round page header. Clicking opens a modal with form inputs for `name`, `theme`, `submission_deadline` (datetime-local), `voting_deadline` (datetime-local), and `playlist_url` (text). Save calls `PATCH /api/rounds/[roundId]`; on success closes the modal and triggers a route invalidation so the page re-renders with the new values. Cancel discards. Use design system primitives (StatusChip, accent button) for visual consistency. The modal is a standard Svelte 5 `{#if open}<div>…</div>{/if}` overlay — no library, just an absolutely-positioned panel with a backdrop.
   - **Acceptance:** From any round page, click the edit icon → modal opens with current values pre-filled; change the theme to `Test Theme`, click Save → modal closes, page header shows `Test Theme`; check `sqlite3 data/league.db "select theme from rounds where id = X";` reflects the change. Setting a playlist_url during voting phase triggers the ingest pipeline (verified by ml_submissions row count growing). svelte-check clean.
 
-- [ ] {agent: frontend, id: round-state-display, depends: round-status-model} Surface the canonical `phase` on every round-displaying surface. Replace ad-hoc state logic with the loader-supplied `phase` field. Visual treatment per phase (use the existing chip atoms from sprint-2):
+- [x] {agent: frontend, id: round-state-display, depends: round-status-model} Surface the canonical `phase` on every round-displaying surface. Replace ad-hoc state logic with the loader-supplied `phase` field. Visual treatment per phase (use the existing chip atoms from sprint-2):
   - `upcoming`: `<StatusChip tone='muted'>UPCOMING</StatusChip>`
   - `submission`: `<StatusChip tone='accent'>SUBMITTING</StatusChip>` + `<DeadlineChip phase='submissions' duration={remaining}>`
   - `voting`: `<StatusChip tone='warn'>VOTING</StatusChip>` + `<DeadlineChip phase='voting' duration={remaining}>`
@@ -124,6 +124,27 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - _None at sprint start._
 
 ## Activity Log
+
+### 2026-05-16 — frontend — round-state-display landed
+- Consumed the canonical `phase: RoundPhase` field that `round-status-model` (7bfb396) attaches to every Round returned by the loaders. Replaced the three pages' ad-hoc deadline-string derivations with the loader-supplied field.
+- **Chip mapping (applied uniformly across all three surfaces):**
+  - `submission` → `<StatusChip tone="accent">SUBMITTING</StatusChip>` + `<DeadlineChip phase="submissions" duration={remaining}>`
+  - `voting` → `<StatusChip tone="warn">VOTING</StatusChip>` + `<DeadlineChip phase="voting" duration={remaining}>`
+  - `upcoming` → `<StatusChip tone="muted">UPCOMING</StatusChip>`
+  - `archive` (or null) → `<StatusChip tone="muted">ARCHIVED</StatusChip>`
+  Duration strings are still derived client-side from the deadline ISO so the chip can refresh in a long-open session; `phase` itself is canonical from the server.
+- **Surfaces updated:**
+  1. **`ui/src/routes/+page.svelte`** — `phaseFor(s)` now just returns `s.currentRound?.phase`. `activeLeagues` (the `Needs you this week` source) is filtered to seasons whose current round is in a *live* phase (`submission` or `voting`); seasons whose current round is `upcoming` / `archive` / null are moved to the `All leagues` grid. Each tile's chip block uses the mapping above. `LeagueRow.status` derived from phase: voting → `voting`, submission → `open`, upcoming → `active`, archive/null → `idle`. Hip Jammers shows `SUBMITTING` + `SUBMISSIONS · 7D 6H` and remains the only league in `Needs you this week`; the other three DB-active seasons (Fam-Jam, Nostalgia Pit, Second Best) show as `IDLE` in `All leagues` because their current rounds have null deadlines → phase=upcoming/archive. **This is the model working correctly**: per backend's `round-status-model` entry, the "all 4 active leagues finally show up" expectation is gated on `round-edit-api` letting the user set deadlines — the chip plumbing is in place and will surface those leagues in `Needs you this week` automatically once their rounds have future submission/voting deadlines.
+  2. **`ui/src/routes/league/[league]/season/[n]/+page.svelte`** — round card snippet uses the phase chip mapping; the `isActive(r) = phaseFor(r) !== null` predicate becomes `isActivePhase(r.phase)` (matches `submission` | `voting` | `upcoming`). Active-rounds card holds anything not in `archive`; archived card holds the rest.
+  3. **`ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`** — **page header only** (right-aligned chip stack next to the H1, per coordination with infra on `rate-anonymous-ml`). The old `phaseInfo` derivation is replaced with `phase = data.round.phase` and a small `remaining` derivation for the deadline string. Tab strip, ML tab content, Chat, Research, and H2H tab bodies are all untouched.
+- **Coordination:** stayed strictly out of the ML tab content body since `rate-anonymous-ml` (infra-as-frontend, in flight) owns inline rating wiring there.
+- **Verification:** Playwright screenshots —
+  - `docs/screenshots/2026-05-16-sprint5-round-state-display-home.png` — `/` showing Hip Jammers `SUBMITTING` + `SUBMISSIONS · 7D 6H` in Needs-you, three IDLE tiles in All leagues.
+  - `docs/screenshots/2026-05-16-sprint5-round-state-display-season.png` — `/league/second-best/season/1` showing every round with an `UPCOMING` chip in the Active rounds card (correct: those rounds have null `submission_deadline`).
+  - `docs/screenshots/2026-05-16-sprint5-round-state-display-round.png` — `/league/second-best/season/1/round/97` showing the `UPCOMING` chip in the page header next to "New Shit".
+- svelte-check clean (only pre-existing `vite.config.ts` error). Layout fix during verification: switched chip container from `h-5` fixed → `min-h-5` so the stacked phase + deadline chips wrap cleanly without overlapping the league name on narrow tiles.
+- **Tokens consumed:** existing — no new tokens. Atoms used: `StatusChip` (accent / warn / muted tones), `DeadlineChip` (submissions / voting), `DotIndicator` (fallback in All-leagues when phase=null).
+- commit: HASHPLACEHOLDER
 
 ### 2026-05-16 — backend — round-edit-api landed
 - **Endpoint:** `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body: any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Empty body returns the unchanged row + current phase (200; no-op).

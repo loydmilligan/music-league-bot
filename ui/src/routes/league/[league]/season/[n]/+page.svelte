@@ -2,6 +2,7 @@
   import type { PageData } from './$types.js';
   import DeadlineChip from '$lib/components/DeadlineChip.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
+  import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -19,26 +20,23 @@
     return `${Math.max(1, Math.floor(ms / 60_000))}M`;
   }
 
-  type Phase = 'submissions' | 'voting' | 'review' | 'archived';
-  function phaseFor(r: Round): { phase: Phase; duration: string } | null {
-    const sub = durationUntil(r.submissionDeadline);
-    if (sub) return { phase: 'submissions', duration: sub };
-    const vote = durationUntil(r.votingDeadline);
-    if (vote) return { phase: 'voting', duration: vote };
+  function durationForPhase(r: Round): string | null {
+    if (r.phase === 'submission') return durationUntil(r.submissionDeadline);
+    if (r.phase === 'voting') return durationUntil(r.votingDeadline);
     return null;
   }
 
-  function isActive(r: Round): boolean {
-    return phaseFor(r) !== null;
+  function isActivePhase(p: RoundPhase | undefined): boolean {
+    return p === 'submission' || p === 'voting' || p === 'upcoming';
   }
 
   const sortedRounds = $derived.by(() => {
-    const active = data.rounds.filter(isActive).sort((a, b) => {
+    const active = data.rounds.filter(r => isActivePhase(r.phase)).sort((a, b) => {
       const ad = a.submissionDeadline ?? a.votingDeadline ?? '';
       const bd = b.submissionDeadline ?? b.votingDeadline ?? '';
       return ad.localeCompare(bd);
     });
-    const archived = data.rounds.filter((r) => !isActive(r)).sort((a, b) => b.id - a.id);
+    const archived = data.rounds.filter((r) => !isActivePhase(r.phase)).sort((a, b) => b.id - a.id);
     return { active, archived };
   });
 </script>
@@ -71,15 +69,21 @@
   </p>
 </div>
 
-{#snippet roundCard(r: Round, archived: boolean)}
-  {@const p = phaseFor(r)}
+{#snippet roundCard(r: Round, _archived: boolean)}
+  {@const dur = durationForPhase(r)}
   <a
     href="/league/{data.league.slug}/season/{data.season.seasonNumber}/round/{r.id}"
     class="block bg-surface border border-border-muted hover:border-accent-deep rounded-xl p-5 transition-colors group"
   >
-    <div class="mb-3 h-5">
-      {#if p}
-        <DeadlineChip phase={p.phase} duration={p.duration} />
+    <div class="mb-3 min-h-5 flex items-center gap-2 flex-wrap">
+      {#if r.phase === 'submission'}
+        <StatusChip label="SUBMITTING" tone="accent" />
+        {#if dur}<DeadlineChip phase="submissions" duration={dur} />{/if}
+      {:else if r.phase === 'voting'}
+        <StatusChip label="VOTING" tone="warn" />
+        {#if dur}<DeadlineChip phase="voting" duration={dur} />{/if}
+      {:else if r.phase === 'upcoming'}
+        <StatusChip label="UPCOMING" tone="muted" />
       {:else}
         <StatusChip label="ARCHIVED" tone="muted" />
       {/if}

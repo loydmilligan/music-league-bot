@@ -3,6 +3,7 @@
   import DeadlineChip from '$lib/components/DeadlineChip.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
+  import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -20,15 +21,20 @@
     return `${Math.max(1, Math.floor(ms / 60_000))}M`;
   }
 
-  type Phase = 'submissions' | 'voting' | 'review' | 'archived';
-  function phaseFor(s: ActiveSeason): { phase: Phase; duration: string } | null {
-    const r = s.currentRound;
-    if (!r) return null;
-    const subD = durationUntil(r.submissionDeadline);
-    if (subD && subD !== 'OVERDUE') return { phase: 'submissions', duration: subD };
-    const voteD = durationUntil(r.votingDeadline);
-    if (voteD && voteD !== 'OVERDUE') return { phase: 'voting', duration: voteD };
-    return { phase: 'review', duration: '—' };
+  // Phase comes from the loader (see ui/src/lib/lifecycle.ts). We just map it
+  // to chip pairs; the duration string for active phases reads the relevant
+  // deadline on the current round.
+  function phaseFor(s: ActiveSeason): RoundPhase | null {
+    return s.currentRound?.phase ?? null;
+  }
+  function durationForPhase(s: ActiveSeason, phase: RoundPhase | null): string | null {
+    if (!s.currentRound) return null;
+    if (phase === 'submission') return durationUntil(s.currentRound.submissionDeadline);
+    if (phase === 'voting') return durationUntil(s.currentRound.votingDeadline);
+    return null;
+  }
+  function isLivePhase(phase: RoundPhase | null): boolean {
+    return phase === 'submission' || phase === 'voting';
   }
 
   // Urgency: brighter left edge as the next deadline approaches.
@@ -56,16 +62,20 @@
     critical: 'border-l-4 border-accent-strong animate-pulse',
   };
 
-  // Sort active leagues by soonest deadline first.
+  // Needs-you contents: active seasons whose current round is in a live phase
+  // (submission or voting). Seasons whose current round is upcoming/archive
+  // (or null) belong in All leagues, not here. Sorted by soonest deadline.
   const activeLeagues = $derived(
-    [...data.activeSeasons].sort((a, b) => {
-      const da = a.currentRound?.submissionDeadline ?? a.currentRound?.votingDeadline ?? null;
-      const db = b.currentRound?.submissionDeadline ?? b.currentRound?.votingDeadline ?? null;
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return Date.parse(da) - Date.parse(db);
-    })
+    [...data.activeSeasons]
+      .filter(s => isLivePhase(s.currentRound?.phase ?? null))
+      .sort((a, b) => {
+        const da = a.currentRound?.submissionDeadline ?? a.currentRound?.votingDeadline ?? null;
+        const db = b.currentRound?.submissionDeadline ?? b.currentRound?.votingDeadline ?? null;
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return Date.parse(da) - Date.parse(db);
+      })
   );
 
   // Union of every adopted league we can see: active + past. Dedup by slug.
@@ -84,10 +94,15 @@
 
   const allLeagues = $derived.by<LeagueRow[]>(() => {
     const rows = new Map<string, LeagueRow>();
-    for (const s of activeLeagues) {
-      const p = phaseFor(s);
+    // Every season the loader returned as DB-active belongs in the All-leagues
+    // grid, regardless of phase — phase only gates Needs-you-this-week.
+    for (const s of data.activeSeasons) {
+      const phase = s.currentRound?.phase ?? null;
       const status: LeagueRow['status'] =
-        p?.phase === 'voting' ? 'voting' : p?.phase === 'submissions' ? 'open' : 'active';
+        phase === 'voting' ? 'voting'
+        : phase === 'submission' ? 'open'
+        : phase === 'upcoming' ? 'active'
+        : 'idle'; // archive or null
       rows.set(s.league.slug, {
         slug: s.league.slug,
         name: s.league.name,
@@ -95,7 +110,7 @@
         seasonNumber: s.seasonNumber,
         finishedRounds: null,
         sublineMono: s.currentRound
-          ? `r-${s.currentRound.id} · ${status}`
+          ? `r-${s.currentRound.id} · ${phase ?? 'active'}`
           : `s${s.seasonNumber} · active`,
         href: `/league/${s.league.slug}/season/${s.seasonNumber}`,
         activeSeason: s,
@@ -174,15 +189,20 @@
   {:else}
     <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {#each activeLeagues as s (s.league.slug + s.seasonNumber)}
-        {@const p = phaseFor(s)}
+        {@const phase = phaseFor(s)}
+        {@const dur = durationForPhase(s, phase)}
         {@const urgency = urgencyFor(s)}
         <a
           href="/league/{s.league.slug}/season/{s.seasonNumber}"
           class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group {urgencyClass[urgency]}"
         >
-          <div class="mb-3 h-5">
-            {#if p}
-              <DeadlineChip phase={p.phase} duration={p.duration} />
+          <div class="mb-3 min-h-5 flex items-center gap-2 flex-wrap">
+            {#if phase === 'submission'}
+              <StatusChip label="SUBMITTING" tone="accent" />
+              {#if dur}<DeadlineChip phase="submissions" duration={dur} />{/if}
+            {:else if phase === 'voting'}
+              <StatusChip label="VOTING" tone="warn" />
+              {#if dur}<DeadlineChip phase="voting" duration={dur} />{/if}
             {/if}
           </div>
           <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
@@ -221,15 +241,26 @@
   <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
     {#each allLeagues as row (row.slug)}
       {@const currentTheme = row.activeSeason?.currentRound?.name ?? null}
+      {@const phase = row.activeSeason?.currentRound?.phase ?? null}
       <a
         href={row.href}
         class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group"
       >
-        <div class="flex items-center gap-2 mb-3 h-5">
-          <DotIndicator status={row.status} />
-          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">
-            {row.status}
-          </span>
+        <div class="flex items-center gap-2 mb-3 h-5 flex-wrap">
+          {#if phase === 'submission'}
+            <StatusChip label="SUBMITTING" tone="accent" />
+          {:else if phase === 'voting'}
+            <StatusChip label="VOTING" tone="warn" />
+          {:else if phase === 'upcoming'}
+            <StatusChip label="UPCOMING" tone="muted" />
+          {:else if phase === 'archive'}
+            <StatusChip label="ARCHIVED" tone="muted" />
+          {:else}
+            <DotIndicator status={row.status} />
+            <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">
+              {row.status}
+            </span>
+          {/if}
         </div>
         <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
           {row.name}
