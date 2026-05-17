@@ -163,7 +163,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   Theme reverted after the smoke; DB state unchanged from pre-smoke.
 - **Checks:** `npx vitest run` 49/49 green; `npx svelte-check` only pre-existing issues.
 - **Scope discipline:** server-side files only (`lib/db/rounds.ts`, `routes/api/rounds/[roundId]/+server.ts`, plus the test). No `+page.svelte` / `lib/components/**` / infra touched.
-- commit: <pending — landing now>
+- commit: `04db9b5`
 
 ### 2026-05-16 — frontend — h2h-rate-and-spotify landed
 - `ui/src/lib/components/HeadToHeadCard.svelte` gains two enhancements (sprint-5 task 7 / Initiative C2).
