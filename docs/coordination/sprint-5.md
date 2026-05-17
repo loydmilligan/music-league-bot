@@ -144,7 +144,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   - Restored round 97 (cleared both deadlines, deleted the test research_song) so fixture data is unchanged.
 - svelte-check clean (only pre-existing `vite.config.ts` error). Two small Svelte syntax notes: `class:bg-blue-500/10` is not a valid `class:` directive (parser chokes on the `/`), so kept the indicator's background neutral and used border+text-tone instead.
 - **Tokens consumed:** existing — `bg-surface`, `border-border-muted`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `text-warn`, `bg-accent`, `bg-accent-strong`, `bg-accent-bg`, `text-accent`, `border-accent`, `border-accent-deep`, `bg-bg-elevated`, `font-mono`. New (Tailwind built-in, not design-system): `bg-blue-500`, `bg-blue-400` (hover), `border-blue-500`, `text-blue-400`, `text-white`. No new design-system tokens; follow-up to swap to `bg-info` if/when infra adds one.
-- commit: HASHPLACEHOLDER
+- commit: 65c8757
 
 ### 2026-05-16 — frontend — round-edit-modal landed
 - `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`: added an `Edit round` pencil-icon button next to the H1 plus a Svelte 5 `{#if showEdit}…{/if}` modal overlay for editing the round.
