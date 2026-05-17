@@ -27,7 +27,7 @@
   }
 
   function isActivePhase(p: RoundPhase | undefined): boolean {
-    return p === 'submission' || p === 'voting' || p === 'upcoming';
+    return p === 'submission' || p === 'voting';
   }
 
   const sortedRounds = $derived.by(() => {
