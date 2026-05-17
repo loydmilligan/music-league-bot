@@ -19,11 +19,17 @@ export const SCHEMA = `
   );
   CREATE TABLE IF NOT EXISTS ml_submissions (
     id INTEGER PRIMARY KEY, round_id INTEGER NOT NULL REFERENCES rounds(id),
-    competitor_id INTEGER NOT NULL REFERENCES competitors(id),
+    competitor_id INTEGER REFERENCES competitors(id),
     spotify_uri TEXT NOT NULL, title TEXT NOT NULL, album TEXT, artists TEXT NOT NULL,
     comment TEXT, created_at TEXT NOT NULL, visible_to_voters INTEGER NOT NULL DEFAULT 0,
     UNIQUE(round_id, spotify_uri, competitor_id)
   );
+  -- Anonymous playlist-ingest rows (competitor_id NULL) need a separate
+  -- uniqueness guarantee since SQLite treats NULL as distinct in the
+  -- composite UNIQUE above. Partial index → INSERT OR IGNORE works.
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_ml_submissions_anon
+    ON ml_submissions(round_id, spotify_uri)
+    WHERE competitor_id IS NULL;
   CREATE TABLE IF NOT EXISTS votes (
     id INTEGER PRIMARY KEY, round_id INTEGER NOT NULL REFERENCES rounds(id),
     voter_id INTEGER NOT NULL REFERENCES competitors(id),

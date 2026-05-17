@@ -3,6 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getRoundById, patchRound, type RoundPatch } from '$lib/db/rounds.js';
 import { getRoundPhase } from '$lib/lifecycle.js';
+import { ingestPlaylist } from '$lib/import/playlistIngest.js';
 
 interface PatchBody {
   name?: string;
@@ -90,10 +91,12 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   const playlistChanged = patch.spotifyPlaylistUrl !== undefined
     && patch.spotifyPlaylistUrl !== existing.spotifyPlaylistUrl;
   if (playlistChanged && newPhase === 'voting' && updated.spotifyPlaylistUrl) {
-    // TODO(playlist-ingest task): replace with the real ingestPlaylist import.
-    // Kept as a stub so this endpoint ships standalone; once playlist-ingest
-    // lands the stub is a one-line swap.
-    console.log('[round-edit-api] would ingest playlist', updated.spotifyPlaylistUrl, 'for round', roundId);
+    // Fire-and-forget: don't await before responding. Errors are swallowed
+    // inside ingestPlaylist (logs a warning and no-ops); we still log here
+    // so an unexpected rejection surfaces in the dev console.
+    void ingestPlaylist(roundId, updated.spotifyPlaylistUrl).catch(e =>
+      console.error('[round-edit-api] ingestPlaylist threw:', e),
+    );
   }
 
   return json({ round: updated, phase: newPhase });
