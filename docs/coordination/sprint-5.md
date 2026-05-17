@@ -144,7 +144,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - **Screenshot:** `docs/screenshots/2026-05-16-sprint5-round-edit-modal.png` shows the modal open with all five fields populated (datetime-local fields empty per the round's null deadlines).
 - svelte-check clean (only pre-existing `vite.config.ts` error).
 - **Tokens consumed:** existing — `bg-surface`, `bg-bg`, `bg-bg/70`, `border-border-muted`, `border-accent`, `text-fg`, `text-fg-muted`, `text-fg-dim`, `text-fg-faint`, `text-warn`, `bg-accent`, `bg-accent-strong`, `font-mono`. No new tokens.
-- commit: HASHPLACEHOLDER
+- commit: c557711
 
 ### 2026-05-16 — backend — playlist-ingest landed
 - **New modules:**
