@@ -122,6 +122,90 @@
   let h2hLoading = $state(false);
   let h2hError = $state<string | null>(null);
 
+  // --- ML-tab inline rating editor (sprint-5 rate-anonymous-ml) -------------
+  // During voting phase the user can rate anonymous songs (blue dots);
+  // during archive phase ratings are still editable but render in the
+  // standard accent orange (submitters are revealed).
+  let expandedMlSpotifyUri = $state<string | null>(null);
+  let mlRatingDraft = $state<{
+    themeFit: number | null;
+    discoveryPotential: number | null;
+    nostalgiaPotential: number | null;
+    personalRating: number | null;
+  }>({ themeFit: null, discoveryPotential: null, nostalgiaPotential: null, personalRating: null });
+  let mlSaving = $state(false);
+  let mlError = $state<string | null>(null);
+
+  // Index existing research_songs by spotifyUri so the row reflects saved
+  // ratings without an extra fetch — the page loader already returns them.
+  const researchBySpotifyUri = $derived.by<Record<string, typeof data.research[number]>>(() => {
+    const out: Record<string, typeof data.research[number]> = {};
+    for (const r of data.research) out[r.spotifyUri] = r;
+    return out;
+  });
+
+  const mlRatingsEnabled = $derived(
+    data.round.phase === 'voting' || data.round.phase === 'archive'
+  );
+  const mlRatingDotColor = $derived(data.round.phase === 'voting' ? 'voting' : 'accent');
+
+  function toggleMlRating(s: { spotifyUri: string; title: string; artists: string }) {
+    if (expandedMlSpotifyUri === s.spotifyUri) {
+      expandedMlSpotifyUri = null;
+      mlError = null;
+      return;
+    }
+    expandedMlSpotifyUri = s.spotifyUri;
+    mlError = null;
+    const existing = researchBySpotifyUri[s.spotifyUri];
+    mlRatingDraft = {
+      themeFit: existing?.themeFit ?? null,
+      discoveryPotential: existing?.discoveryPotential ?? null,
+      nostalgiaPotential: existing?.nostalgiaPotential ?? null,
+      personalRating: existing?.personalRating ?? null,
+    };
+  }
+
+  function setMlDot(key: keyof typeof mlRatingDraft, n: number) {
+    const current = mlRatingDraft[key];
+    mlRatingDraft = { ...mlRatingDraft, [key]: current === n ? null : n };
+  }
+
+  async function saveMlRating(s: { spotifyUri: string; title: string; artists: string }) {
+    if (mlSaving) return;
+    mlSaving = true;
+    mlError = null;
+    try {
+      // (a) POST upserts via INSERT OR IGNORE keyed by (round_id, spotify_uri);
+      // always returns the row id whether it was inserted or already existed.
+      const postRes = await fetch(`/api/research/${data.round.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spotifyUri: s.spotifyUri,
+          title: s.title,
+          artist: s.artists,
+        }),
+      });
+      if (!postRes.ok) throw new Error(`Create failed (${postRes.status})`);
+      const created = await postRes.json();
+      // (b) PATCH the ratings onto the now-existing row by id.
+      const patchRes = await fetch(`/api/research/${data.round.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: created.id, ...mlRatingDraft }),
+      });
+      if (!patchRes.ok) throw new Error(`Save failed (${patchRes.status})`);
+      await invalidateAll();
+      expandedMlSpotifyUri = null;
+    } catch (err) {
+      mlError = err instanceof Error ? err.message : 'Save failed';
+    } finally {
+      mlSaving = false;
+    }
+  }
+  // --------------------------------------------------------------------------
+
   async function fetchH2HState() {
     h2hLoading = true;
     h2hError = null;
@@ -342,7 +426,10 @@
     <div class="flex flex-col gap-1.5">
       {#each data.mlSubmissions as s (s.id)}
         {@const dots = dotsFor(s.totalPoints)}
-        <div class="flex items-center gap-3 pl-4 pr-4 py-3 bg-surface border-l-2 border-border-muted hover:border-accent transition-colors">
+        {@const research = researchBySpotifyUri[s.spotifyUri]}
+        {@const expanded = expandedMlSpotifyUri === s.spotifyUri}
+        <div class="flex flex-col bg-surface border-l-2 border-border-muted hover:border-accent transition-colors">
+        <div class="flex items-center gap-3 pl-4 pr-4 py-3">
           <span class="font-mono text-xs text-fg-faint w-6 text-right flex-shrink-0">#{s.rank}</span>
           <div class="flex-1 min-w-0">
             <div class="font-bold text-fg truncate">{s.title}</div>
@@ -350,6 +437,24 @@
               {s.artists}{s.submitterName ? ` · ${s.submitterName}` : ''}
             </div>
           </div>
+          {#if mlRatingsEnabled}
+            {@const hasRating = !!research && (research.themeFit != null || research.discoveryPotential != null || research.nostalgiaPotential != null || research.personalRating != null)}
+            <button
+              type="button"
+              onclick={() => toggleMlRating(s)}
+              aria-expanded={expanded}
+              aria-label={expanded ? 'Hide rating editor' : (hasRating ? 'Edit rating' : 'Rate this song')}
+              class="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded-sm border transition-colors flex-shrink-0"
+              class:bg-accent-bg={hasRating && mlRatingDotColor === 'accent'}
+              class:text-accent={hasRating && mlRatingDotColor === 'accent'}
+              class:border-accent-deep={hasRating && mlRatingDotColor === 'accent'}
+              class:text-blue-400={hasRating && mlRatingDotColor === 'voting'}
+              class:border-blue-500={hasRating && mlRatingDotColor === 'voting'}
+              class:text-fg-dim={!hasRating}
+              class:border-border-muted={!hasRating}
+              class:hover:text-fg={!hasRating}
+            >{expanded ? '▾' : '▸'} {hasRating ? 'Rated' : 'Rate'}</button>
+          {/if}
           <!-- Vote dots: 5-dot scale, filled proportional to (points / maxPoints). -->
           <div class="flex gap-0.5 flex-shrink-0" aria-label={`${s.totalPoints ?? 0} points`}>
             {#each [1,2,3,4,5] as n}
@@ -378,6 +483,79 @@
               class="text-xs text-health hover:text-health/80 font-mono flex-shrink-0 transition-colors"
             >Spotify ↗</a>
           {/if}
+        </div>
+        {#if mlRatingsEnabled && expanded}
+          <!-- Inline rating editor — blue dots during voting, accent orange during archive. -->
+          <div class="px-4 pb-3 pt-1 border-t border-border-muted/40">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mb-3">
+              {#each [
+                { key: 'themeFit',           label: 'Theme'     },
+                { key: 'discoveryPotential', label: 'Discovery' },
+                { key: 'nostalgiaPotential', label: 'Nostalgia' },
+                { key: 'personalRating',     label: 'Personal'  },
+              ] as d}
+                {@const v = mlRatingDraft[d.key as keyof typeof mlRatingDraft]}
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim w-20 flex-shrink-0">
+                    {d.label}
+                  </span>
+                  <div class="flex gap-1 items-center" aria-label={`${d.label} ${v ?? 'unrated'}`}>
+                    {#each [1, 2, 3, 4, 5] as n}
+                      {@const active = v != null && v >= n}
+                      <button
+                        type="button"
+                        onclick={() => setMlDot(d.key as keyof typeof mlRatingDraft, n)}
+                        disabled={mlSaving}
+                        aria-label={`Set ${d.label} to ${n}`}
+                        class="w-2.5 h-2.5 rounded-full border transition-colors disabled:cursor-not-allowed"
+                        class:bg-accent={active && mlRatingDotColor === 'accent'}
+                        class:border-accent={active && mlRatingDotColor === 'accent'}
+                        class:bg-blue-500={active && mlRatingDotColor === 'voting'}
+                        class:border-blue-500={active && mlRatingDotColor === 'voting'}
+                        class:bg-transparent={!active}
+                        class:border-border={!active}
+                        class:hover:border-accent-deep={!active && mlRatingDotColor === 'accent'}
+                        class:hover:border-blue-500={!active && mlRatingDotColor === 'voting'}
+                      ></button>
+                    {/each}
+                    {#if v != null}
+                      <button
+                        type="button"
+                        onclick={() => setMlDot(d.key as keyof typeof mlRatingDraft, v)}
+                        disabled={mlSaving}
+                        class="font-mono text-[10px] text-fg-faint hover:text-fg-dim ml-1 transition-colors"
+                        aria-label={`Clear ${d.label}`}
+                      >clear</button>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+            {#if mlError}
+              <p class="font-mono text-xs text-warn mb-2">{mlError}</p>
+            {/if}
+            <div class="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onclick={() => { expandedMlSpotifyUri = null; mlError = null; }}
+                disabled={mlSaving}
+                class="font-mono text-[10px] tracking-widest uppercase text-fg-faint hover:text-fg-dim transition-colors"
+              >Cancel</button>
+              <button
+                type="button"
+                onclick={() => saveMlRating(s)}
+                disabled={mlSaving}
+                class="font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                class:bg-accent={mlRatingDotColor === 'accent'}
+                class:hover:bg-accent-strong={mlRatingDotColor === 'accent'}
+                class:text-bg-elevated={mlRatingDotColor === 'accent'}
+                class:bg-blue-500={mlRatingDotColor === 'voting'}
+                class:hover:bg-blue-400={mlRatingDotColor === 'voting'}
+                class:text-white={mlRatingDotColor === 'voting'}
+              >{mlSaving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        {/if}
         </div>
       {/each}
     </div>
