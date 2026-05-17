@@ -97,10 +97,12 @@ export const SCHEMA = `
   );
   CREATE TABLE IF NOT EXISTS shortlist_assignments (
     shortlist_song_id TEXT NOT NULL REFERENCES shortlist_songs(id) ON DELETE CASCADE,
-    round_id          INTEGER NOT NULL REFERENCES rounds(id),
+    round_id          INTEGER NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
     assigned_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
     PRIMARY KEY (shortlist_song_id, round_id)
   );
+  CREATE INDEX IF NOT EXISTS idx_shortlist_assignments_round
+    ON shortlist_assignments(round_id);
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
