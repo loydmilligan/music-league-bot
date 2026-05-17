@@ -161,7 +161,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   The "OPEN" badge still reads "6 OPEN" on the season page — that's a frontend `isActivePhase` helper that counts `'upcoming'` as active. Backend data is correct; the badge needs a one-line `+page.svelte` fix, filed under Blockers.
 - **Checks:** `npx vitest run` 61/61; `npx svelte-check` only pre-existing issues.
 - **Scope:** backend-only (`lib/lifecycle.ts`, `lib/lifecycle.test.ts`, `lib/db/rounds.ts`, `lib/db/layout.ts`). No `+page.svelte` / `lib/components/**` / infra touched.
-- commit: <pending — landing now>
+- commit: `22d5594`
 
 ### 2026-05-16 — frontend — rate-anonymous-ml landed
 - `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`: added an inline rating editor inside the ML tab content area, gated on `data.round.phase ∈ {voting, archive}`. **Sprint-5 is now 8/8.**
