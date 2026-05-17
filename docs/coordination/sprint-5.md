@@ -149,7 +149,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 - **Checks:** `npx vitest run` 55/55; `npx svelte-check` only pre-existing issues.
 - **Scope discipline:** all changes inside backend lane — `lib/spotify.ts`, `lib/import/playlistIngest.ts`, `lib/db/schema.ts`, `lib/db/client.ts`, `routes/api/rounds/[roundId]/+server.ts`, plus the test. No `+page.svelte` / `lib/components/**` / infra touched.
 - **Closes backend's sprint-5 chain.** Sprint-5 task ledger after this: 6/8 done (round-status-model, round-edit-api, playlist-ingest, h2h-rate-and-spotify, settings-deadlines-collapsible, round-state-display). Remaining: rate-anonymous-ml + round-edit-modal (frontend).
-- commit: <pending — landing now>
+- commit: `dbb1a12`
 
 ### 2026-05-16 — frontend — round-state-display landed
 - Consumed the canonical `phase: RoundPhase` field that `round-status-model` (7bfb396) attaches to every Round returned by the loaders. Replaced the three pages' ad-hoc deadline-string derivations with the loader-supplied field.
