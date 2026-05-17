@@ -144,7 +144,7 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
   - `docs/screenshots/2026-05-16-sprint5-round-state-display-round.png` — `/league/second-best/season/1/round/97` showing the `UPCOMING` chip in the page header next to "New Shit".
 - svelte-check clean (only pre-existing `vite.config.ts` error). Layout fix during verification: switched chip container from `h-5` fixed → `min-h-5` so the stacked phase + deadline chips wrap cleanly without overlapping the league name on narrow tiles.
 - **Tokens consumed:** existing — no new tokens. Atoms used: `StatusChip` (accent / warn / muted tones), `DeadlineChip` (submissions / voting), `DotIndicator` (fallback in All-leagues when phase=null).
-- commit: HASHPLACEHOLDER
+- commit: 02b4d3c
 
 ### 2026-05-16 — backend — round-edit-api landed
 - **Endpoint:** `PATCH /api/rounds/[roundId]` at `ui/src/routes/api/rounds/[roundId]/+server.ts`. Body: any subset of `{ name, theme, submission_deadline, voting_deadline, playlist_url }`. Empty body returns the unchanged row + current phase (200; no-op).
