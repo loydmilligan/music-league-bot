@@ -23,3 +23,10 @@ sessions/
 # Local screenshots and ad-hoc data
 /bracket-*.png
 /late-90s-bracket.csv
+/rating-tool.png
+/badge-zoom.png
+/mlb-auth-badge.png
+/mlb-prod.png
+
+# playwright-cli session artifacts
+.playwright-cli/
