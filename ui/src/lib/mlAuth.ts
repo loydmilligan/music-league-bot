@@ -1,10 +1,18 @@
 /**
- * ML auth heartbeat for the UI server.
+ * ML auth heartbeat — file-backed.
  *
- * Periodically probes the live Music League server via `cli-web-musicleague`
- * to detect whether our saved session is still valid. Surfaces a cached result
- * to the layout badge.
+ * Architecture: a host-side worker (scripts/ml-auth-probe.mjs) runs the CLI
+ * probe every 5 min and writes the result to `${DATA_DIR}/ml-auth.json`.
+ * The UI container just reads that file. This keeps the container slim and
+ * keeps the auth.json / playwright profile / browser launch on the host
+ * where they actually belong.
+ *
+ * Dev fallback: if the file is missing or stale AND `cli-web-musicleague`
+ * happens to be on PATH (e.g. when running `npm run dev` outside docker),
+ * we spawn it directly so local development still works.
  */
+import { readFile, stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
 export type MlAuthStatus = 'ok' | 'expired' | 'unknown' | 'cli-missing';
@@ -14,16 +22,21 @@ export interface MlAuthState {
 	lastCheckedAt: string | null;
 	lastOkAt: string | null;
 	message: string | null;
+	source?: 'file' | 'spawn' | 'cache';
 }
 
-const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
+const STATE_FILE = resolve(DATA_DIR, 'ml-auth.json');
+const STALE_AFTER_MS = 15 * 60 * 1000; // file older than this → "unknown"
+const POLL_INTERVAL_MS = 60 * 1000; // re-read file every minute
 const PROBE_TIMEOUT_MS = 30_000;
 
 let cached: MlAuthState = {
 	status: 'unknown',
 	lastCheckedAt: null,
 	lastOkAt: null,
-	message: null
+	message: null,
+	source: 'cache'
 };
 
 let inFlight: Promise<MlAuthState> | null = null;
@@ -33,29 +46,72 @@ export function getMlAuthState(): MlAuthState {
 	return { ...cached };
 }
 
+/**
+ * Force a recheck. In dev (CLI on PATH) this spawns the CLI directly.
+ * In prod, this reads the file (the host worker writes it on its own cadence).
+ */
 export async function probeMlAuth(): Promise<MlAuthState> {
 	if (inFlight) return inFlight;
-	inFlight = runProbe().finally(() => {
+	inFlight = doRecheck().finally(() => {
 		inFlight = null;
 	});
 	return inFlight;
 }
 
-async function runProbe(): Promise<MlAuthState> {
-	const startedAt = new Date().toISOString();
-	const result = await execCli(['--json', 'users', 'me']);
-	cached.lastCheckedAt = startedAt;
-
-	if (result.kind === 'spawn-error') {
-		cached.status = 'cli-missing';
-		cached.message = `cli-web-musicleague not on PATH: ${result.message}`;
+async function doRecheck(): Promise<MlAuthState> {
+	// 1. Always refresh from the file first (cheap)
+	const fileState = await readStateFile();
+	if (fileState) {
+		cached = { ...fileState, source: 'file' };
 		return { ...cached };
 	}
 
-	if (result.kind === 'timeout') {
-		cached.status = 'unknown';
-		cached.message = 'Auth probe timed out';
+	// 2. Dev fallback: spawn the CLI ourselves
+	const spawned = await spawnProbe();
+	if (spawned) {
+		cached = { ...spawned, source: 'spawn' };
 		return { ...cached };
+	}
+
+	// 3. Neither worked — keep prior cache but mark stale
+	cached.source = 'cache';
+	return { ...cached };
+}
+
+async function readStateFile(): Promise<MlAuthState | null> {
+	try {
+		const stats = await stat(STATE_FILE);
+		const ageMs = Date.now() - stats.mtimeMs;
+		const raw = await readFile(STATE_FILE, 'utf8');
+		const parsed = JSON.parse(raw) as MlAuthState;
+		if (ageMs > STALE_AFTER_MS) {
+			return {
+				...parsed,
+				status: 'unknown',
+				message: `Heartbeat file is stale (${Math.round(ageMs / 60000)}min old). Is the host worker running?`
+			};
+		}
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+async function spawnProbe(): Promise<MlAuthState | null> {
+	const startedAt = new Date().toISOString();
+	const result = await execCli(['--json', 'users', 'me']);
+
+	if (result.kind === 'spawn-error') {
+		// CLI not on PATH — we're probably inside docker; that's expected
+		return null;
+	}
+	if (result.kind === 'timeout') {
+		return {
+			status: 'unknown',
+			lastCheckedAt: startedAt,
+			lastOkAt: cached.lastOkAt,
+			message: 'Auth probe timed out'
+		};
 	}
 
 	let payload: unknown = null;
@@ -68,14 +124,20 @@ async function runProbe(): Promise<MlAuthState> {
 	if (payload && typeof payload === 'object' && (payload as { error?: boolean }).error === true) {
 		const code = (payload as { code?: string }).code ?? '';
 		if (code === 'AUTH_EXPIRED') {
-			cached.status = 'expired';
-			cached.message = 'Session expired. Run: cli-web-musicleague auth login';
-			return { ...cached };
+			return {
+				status: 'expired',
+				lastCheckedAt: startedAt,
+				lastOkAt: cached.lastOkAt,
+				message: 'Session expired. Run: cli-web-musicleague auth login'
+			};
 		}
-		cached.status = 'unknown';
-		cached.message =
-			(payload as { message?: string }).message ?? `Probe failed: ${code || result.exitCode}`;
-		return { ...cached };
+		return {
+			status: 'unknown',
+			lastCheckedAt: startedAt,
+			lastOkAt: cached.lastOkAt,
+			message:
+				(payload as { message?: string }).message ?? `Probe failed: ${code || result.exitCode}`
+		};
 	}
 
 	if (
@@ -84,15 +146,20 @@ async function runProbe(): Promise<MlAuthState> {
 		typeof payload === 'object' &&
 		'id' in (payload as object)
 	) {
-		cached.status = 'ok';
-		cached.lastOkAt = startedAt;
-		cached.message = null;
-		return { ...cached };
+		return {
+			status: 'ok',
+			lastCheckedAt: startedAt,
+			lastOkAt: startedAt,
+			message: null
+		};
 	}
 
-	cached.status = 'unknown';
-	cached.message = result.stderr.trim().slice(0, 200) || `Unexpected exit ${result.exitCode}`;
-	return { ...cached };
+	return {
+		status: 'unknown',
+		lastCheckedAt: startedAt,
+		lastOkAt: cached.lastOkAt,
+		message: result.stderr.trim().slice(0, 200) || `Unexpected exit ${result.exitCode}`
+	};
 }
 
 type ExecResult =
@@ -134,11 +201,12 @@ function execCli(args: string[]): Promise<ExecResult> {
 	});
 }
 
+/** Start the periodic file poll. Idempotent. */
 export function startMlAuthHeartbeat(): void {
 	if (timer) return;
-	void probeMlAuth().catch(() => {});
+	void doRecheck().catch(() => {});
 	timer = setInterval(() => {
-		void probeMlAuth().catch(() => {});
-	}, HEARTBEAT_INTERVAL_MS);
+		void doRecheck().catch(() => {});
+	}, POLL_INTERVAL_MS);
 	timer.unref?.();
 }
