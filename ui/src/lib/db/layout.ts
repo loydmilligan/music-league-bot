@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs';
 import type Database from 'better-sqlite3';
-import { getRoundPhase, seasonIsActive, type RoundPhase } from '../lifecycle.js';
+import { getRoundPhasesForSeason, seasonIsActive, type RoundPhase } from '../lifecycle.js';
 
 export type LeagueRailStatus = 'active' | 'voting' | 'open' | 'idle';
 
@@ -35,10 +35,10 @@ interface RoundDbRow {
  */
 function pickCurrentRound(
   rounds: RoundDbRow[],
-  now: number,
+  phaseById: Map<number, RoundPhase>,
 ): { round: RoundDbRow; phase: RoundPhase } | null {
   if (rounds.length === 0) return null;
-  const withPhase = rounds.map(r => ({ round: r, phase: getRoundPhase(r, now) }));
+  const withPhase = rounds.map(r => ({ round: r, phase: phaseById.get(r.id) ?? 'upcoming' as RoundPhase }));
   const priority: Record<RoundPhase, number> = { submission: 0, voting: 1, upcoming: 2, archive: 3 };
   withPhase.sort((a, b) => {
     if (priority[a.phase] !== priority[b.phase]) return priority[a.phase] - priority[b.phase];
@@ -75,16 +75,27 @@ export function getAllAdoptedLeagues(db: Database.Database, now = Date.now()): L
   const roundsStmt = db.prepare(`
     SELECT id, name, submission_deadline, voting_deadline, created_at
     FROM rounds WHERE season_id = ?
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `);
 
   return rows.map(r => {
     const rounds = r.active_season_id ? (roundsStmt.all(r.active_season_id) as RoundDbRow[]) : [];
-    const phased = rounds.map(round => ({ ...round, phase: getRoundPhase(round, now) }));
+    // Season-aware phase derivation — round N can only be `submission` once
+    // round N-1 has archived. Per-round logic would mis-classify every round
+    // with a future submission_deadline as `submission` simultaneously.
+    const phaseById = getRoundPhasesForSeason(
+      rounds.map(round => ({
+        id: round.id,
+        submissionDeadline: round.submission_deadline,
+        votingDeadline: round.voting_deadline,
+      })),
+      now,
+    );
+    const phased = rounds.map(round => ({ ...round, phase: phaseById.get(round.id) ?? 'upcoming' as RoundPhase }));
     // The season is "active" in DB terms because status='active'; the rail
     // status reflects whether any round is actually open right now.
     const seasonOpen = seasonIsActive({ rounds: phased });
-    const current = pickCurrentRound(rounds, now);
+    const current = pickCurrentRound(rounds, phaseById);
     const phase = current?.phase ?? null;
     const status: LeagueRailStatus = seasonOpen
       ? deriveRailStatus(phase)

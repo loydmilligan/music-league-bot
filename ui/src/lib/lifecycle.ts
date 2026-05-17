@@ -30,14 +30,16 @@ function readDeadlines(r: RoundLike): { sub: number | null; vote: number | null 
 }
 
 /**
- * Phase boundaries:
- *   submission_deadline null or unparsable → `upcoming` (no submissions opened yet)
- *   now < submission_deadline               → `submission`
- *   submission_deadline ≤ now < voting_deadline → `voting`
- *   now ≥ voting_deadline                   → `archive`
- *   (voting_deadline null with sub_deadline past → `archive` once we're past
- *    submissions; without a vote-by date there's nowhere else for the round
- *    to live, and treating it as `voting` indefinitely would be wrong.)
+ * Per-round phase. **Use sparingly** — only when you genuinely don't have
+ * season context (e.g. a one-off `PATCH /api/rounds/:id` response where the
+ * caller already knows which round it's looking at). Any UI surface that
+ * lists rounds should use `getRoundPhasesForSeason` instead, because a round
+ * can only legitimately be in `submission` once all earlier rounds have
+ * archived. Calling this per-round on a 7-round season makes every round
+ * with a future deadline read as `submission` simultaneously — the bug
+ * sprint-5's phase-season-context-fix hotfix was filed against.
+ *
+ * @deprecated Prefer `getRoundPhasesForSeason` whenever sibling rounds are loadable.
  */
 export function getRoundPhase(round: RoundLike, now: number = Date.now()): RoundPhase {
   const { sub, vote } = readDeadlines(round);
@@ -47,10 +49,58 @@ export function getRoundPhase(round: RoundLike, now: number = Date.now()): Round
   return 'archive';
 }
 
+interface IdentifiedRound extends RoundLike { id: number; }
+
+/**
+ * Season-aware phase derivation. Walks rounds in ascending `id` order applying:
+ *   (1) now ≥ voting_deadline                         → archive
+ *   (2) else now ≥ submission_deadline                → voting
+ *   (3) else previous round archive (or first round)  → submission
+ *   (4) else                                          → upcoming
+ *
+ * Rule (3) is the load-bearing one: it enforces that rounds run sequentially
+ * within a season, so only the round whose predecessor has finished voting
+ * can be in submission. Without this, every round whose submission_deadline
+ * is in the future reads as "submitting", which is what the bug was.
+ *
+ * Returns a Map keyed by round id so callers can lookup without re-walking.
+ */
+export function getRoundPhasesForSeason(
+  rounds: IdentifiedRound[],
+  now: number = Date.now(),
+): Map<number, RoundPhase> {
+  const ordered = [...rounds].sort((a, b) => a.id - b.id);
+  const out = new Map<number, RoundPhase>();
+  let prevPhase: RoundPhase | null = null;
+  for (const r of ordered) {
+    const { sub, vote } = readDeadlines(r);
+    let phase: RoundPhase;
+    if (vote !== null && now >= vote) {
+      phase = 'archive';
+    } else if (sub !== null && now >= sub) {
+      // Past sub_deadline but vote still open (or null + sub past → archive in
+      // single-round case; here vote is not yet past per the branch above).
+      // If voting_deadline is null AND sub is past, fall through to the
+      // pre-archive case below — explicitly: treat as archive too so we don't
+      // wedge in 'voting' indefinitely.
+      phase = vote === null ? 'archive' : 'voting';
+    } else if (prevPhase === null || prevPhase === 'archive') {
+      // This round inherits "active turn" from the season — either it's the
+      // first round or every predecessor has fully archived.
+      phase = 'submission';
+    } else {
+      phase = 'upcoming';
+    }
+    out.set(r.id, phase);
+    prevPhase = phase;
+  }
+  return out;
+}
+
 /**
  * A season is active iff at least one of its rounds is currently accepting
- * submissions or votes. Pure derivation — no DB hit; pass in the rounds you
- * already loaded.
+ * submissions or votes. Pure derivation — no DB hit; pass in rounds with
+ * `phase` already attached (e.g. via `getRoundPhasesForSeason`).
  */
 export function seasonIsActive(season: SeasonLike): boolean {
   if (!season.rounds) return false;

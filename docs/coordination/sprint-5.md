@@ -89,7 +89,7 @@ updated: 2026-05-16T00:00:00.000Z
 - [x] {agent: frontend, id: settings-deadlines-collapsible} Restructure `/settings` per the actual user intent (the sprint-4 two-column layout left the weights column padded out with empty space): move the **Round deadlines** card from inside the two-column grid down to **full-width below the columns**, and wrap it in a collapsible `<details>` element (default collapsed). Inside the two columns above, fit ONLY the cards that benefit from the layout: weights on left, import + queue + auto-fill on right. Both columns auto-size to content (no `align-items: stretch` forcing height match). Add a `<SectionLabel>` reading something like `ROUND DEADLINES · CLICK TO EXPAND` as the `<summary>` of the collapsible.
   - **Acceptance:** Visit `/settings` → weights column ends at its natural height, no empty space below the sliders; import+queue+auto-fill column similarly ends at its natural height; Round deadlines section is at the bottom, full-width, collapsed by default; clicking the summary expands; user can configure deadlines once expanded, just like before. Mobile layout still stacks vertically. svelte-check clean.
 
-- [ ] {agent: backend, id: phase-season-context-fix} **Hotfix** from user testing 2026-05-16: the round-status-model shipped in this sprint evaluates phases per-round, which means every round with a future submission_deadline reads as `submission` simultaneously. In hip-jammers s3 today (2026-05-16): round 2 is correctly submission, but rounds 3-7 ALSO read submission because their deadlines are also in the future — the model has no notion that rounds run sequentially. User reports: hip-jammers shows "6 OPEN" badge on the season detail page, and 6 rounds all say "submitting" with a days-to-deadline indicator; only round 1 correctly shows archived. The model needs season-context: a round can only be in `submission` if all earlier rounds in the same season are `archive`; otherwise it's `upcoming`. **Fix:**
+- [x] {agent: backend, id: phase-season-context-fix} **Hotfix** from user testing 2026-05-16: the round-status-model shipped in this sprint evaluates phases per-round, which means every round with a future submission_deadline reads as `submission` simultaneously. In hip-jammers s3 today (2026-05-16): round 2 is correctly submission, but rounds 3-7 ALSO read submission because their deadlines are also in the future — the model has no notion that rounds run sequentially. User reports: hip-jammers shows "6 OPEN" badge on the season detail page, and 6 rounds all say "submitting" with a days-to-deadline indicator; only round 1 correctly shows archived. The model needs season-context: a round can only be in `submission` if all earlier rounds in the same season are `archive`; otherwise it's `upcoming`. **Fix:**
   - In `ui/src/lib/lifecycle.ts`, add a `getRoundPhasesForSeason(rounds: Round[]): Map<number, RoundPhase>` (or similar) that walks rounds in ascending `id`/`round_number` order applying rules: (1) if `now >= voting_deadline` → archive; (2) else if `now >= submission_deadline` → voting; (3) else if previous round is `archive` (or this is the first round) → submission; (4) else → upcoming.
   - Keep the per-round `getRoundPhase(round)` helper for backward compat where season context isn't available, but mark it deprecated / "use sparingly" in a doc comment — every meaningful caller should use the season-aware version.
   - Update all loaders that surface `phase` to use the season-aware version: `+layout.server.ts` (`getAllAdoptedLeagues()` — needs to load each league's current season's rounds), the season-detail page loader, the round-detail page loader (loads the round + sibling rounds for context).
@@ -129,9 +129,39 @@ _Sprint-1 review ratification `rn-760a2713` (checkbox-in-the-landing-commit) is 
 
 ## Blockers
 
-- _None at sprint start._
+- **[backend → frontend, low]** Cosmetic follow-up surfaced by the phase-season-context-fix hotfix: `ui/src/routes/league/[league]/season/[n]/+page.svelte:29` defines `isActivePhase(p) = p === 'submission' || p === 'voting' || p === 'upcoming'`. With the season-aware phase derivation now correctly returning `upcoming` for all-but-one rounds in an active season, that helper counts every pending round as "active" and the `<StatusChip>{N} OPEN</StatusChip>` badge reads "6 OPEN" on hip-jammers s3. Backend phase data is correct (verified by SSR grep: 1 archive, 1 submission, 5 upcoming). One-line frontend fix: drop `'upcoming'` from `isActivePhase` so the badge reflects truly-open rounds. Not blocking — the round chips themselves render correctly per phase.
 
 ## Activity Log
+
+### 2026-05-16 — backend — phase-season-context-fix hotfix
+- **Reporter:** user, manual test of the deployed sprint-5 features. Hip-jammers s3 on 2026-05-16: only round 2 should be in submission (round 1 archived, rounds 3-7 are pending), but all 6 future-deadline rounds were classifying as `submission` because the per-round helper had no season context.
+- **Root cause:** `getRoundPhase(round)` checks each round in isolation — every round whose `submission_deadline > now` reads `submission`, regardless of whether earlier rounds have actually finished. A round can only legitimately be in `submission` once its predecessor has archived; otherwise it's pending (`upcoming`).
+- **Fix in `ui/src/lib/lifecycle.ts`:** new `getRoundPhasesForSeason(rounds, now?) → Map<id, RoundPhase>`. Sorts rounds by `id` ascending, walks once applying:
+  1. `now ≥ voting_deadline` → `archive`
+  2. else `now ≥ submission_deadline` (vote still open or null) → `voting` (or `archive` if vote_deadline is null — avoids "voting indefinitely")
+  3. else prevPhase ∈ {null, archive} → `submission` (round is up because the prior turn finished, or this is round 1)
+  4. else → `upcoming` (pending; prior round hasn't archived yet)
+  Old `getRoundPhase` kept for one-off callers (e.g. PATCH /api/rounds response) but flagged `@deprecated` pointing to the season-aware helper.
+- **Loaders rewired** (all backend-only):
+  - `ui/src/lib/db/rounds.ts` — `getRoundsForSeason` and `getRoundById` now load all sibling rounds, run them through `getRoundPhasesForSeason`, and attach the season-aware `phase` to each row. New internal `rowWithPhase(r, phase)` and `baseRow(r)` helpers; the per-round `row()` fallback stays for code paths that genuinely lack context. `getCurrentRoundForSeason` switched to priority-sort by phase (submission > voting > upcoming > archive, newest within tie) rather than blindly grabbing the latest `created_at`.
+  - `ui/src/lib/db/layout.ts` — `getAllAdoptedLeagues` builds the phase map once per league via `getRoundPhasesForSeason`, then reuses it for both `seasonIsActive` and `pickCurrentRound`. Switched the rounds query from `ORDER BY created_at` to `ORDER BY id` so the import order matches what the algorithm expects.
+  - Season detail loader + round detail loader inherit the fix for free — both go through the updated `getRoundsForSeason` / `getRoundById`.
+- **Vitests added** (`ui/src/lib/lifecycle.test.ts`): 6 new — (1) the hip-jammers-s3-2026-05-16 fixture with the user's actual CSV deadlines, expecting `r1=archive, r2=submission, r3-7=upcoming`; (2) season-aware `seasonIsActive` true when one round is mid-submission; (3) all rounds archived → seasonIsActive false; (4) null deadlines → first round submission, rest upcoming; (5) unsorted input gets sorted by id internally; (6) round with sub past + vote null → archive (not voting forever). Full suite **61/61 green**.
+- **Live SSR verification** against dev server:
+  ```
+  GET /league/hip-jammers/season/3
+    → phase:"archive" × 1, phase:"submission" × 1, phase:"upcoming" × 5  ✅
+  GET /
+    → leagues[0]: hip-jammers, status:"active", currentRoundId:103,
+       currentRoundLabel:"Must be love on the brain",
+       currentRoundPhase:"submission"                                     ✅
+  GET /league/hip-jammers/season/3/round/103 → round.phase:"submission"   ✅
+  GET /league/hip-jammers/season/3/round/104 → round.phase:"upcoming"     ✅
+  ```
+  The "OPEN" badge still reads "6 OPEN" on the season page — that's a frontend `isActivePhase` helper that counts `'upcoming'` as active. Backend data is correct; the badge needs a one-line `+page.svelte` fix, filed under Blockers.
+- **Checks:** `npx vitest run` 61/61; `npx svelte-check` only pre-existing issues.
+- **Scope:** backend-only (`lib/lifecycle.ts`, `lib/lifecycle.test.ts`, `lib/db/rounds.ts`, `lib/db/layout.ts`). No `+page.svelte` / `lib/components/**` / infra touched.
+- commit: <pending — landing now>
 
 ### 2026-05-16 — frontend — rate-anonymous-ml landed
 - `ui/src/routes/league/[league]/season/[n]/round/[roundId]/+page.svelte`: added an inline rating editor inside the ML tab content area, gated on `data.round.phase ∈ {voting, archive}`. **Sprint-5 is now 8/8.**

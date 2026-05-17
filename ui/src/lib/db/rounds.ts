@@ -1,12 +1,22 @@
 import type Database from 'better-sqlite3';
-import type { Round } from '../types.js';
-import { getRoundPhase } from '../lifecycle.js';
+import type { Round, RoundPhase } from '../types.js';
+import { getRoundPhase, getRoundPhasesForSeason } from '../lifecycle.js';
 
-function row(r: any): Round {
-  const base = { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
+function baseRow(r: any): Omit<Round, 'phase'> {
+  return { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
     description: r.description, spotifyPlaylistUrl: r.spotify_playlist_url,
     submissionDeadline: r.submission_deadline, votingDeadline: r.voting_deadline, createdAt: r.created_at };
+}
+
+function row(r: any): Round {
+  // Per-round fallback for callers without season context (one-off API).
+  // Use sparingly — see lifecycle.ts deprecation note on getRoundPhase.
+  const base = baseRow(r);
   return { ...base, phase: getRoundPhase(base) };
+}
+
+function rowWithPhase(r: any, phase: RoundPhase): Round {
+  return { ...baseRow(r), phase };
 }
 
 export function upsertRound(db: Database.Database, seasonId: number, r: {
@@ -19,18 +29,41 @@ export function upsertRound(db: Database.Database, seasonId: number, r: {
 }
 
 export function getRoundsForSeason(db: Database.Database, seasonId: number): Round[] {
-  return (db.prepare('SELECT * FROM rounds WHERE season_id=? ORDER BY created_at').all(seasonId) as any[]).map(row);
+  const raw = db.prepare('SELECT * FROM rounds WHERE season_id=? ORDER BY id').all(seasonId) as any[];
+  const bases = raw.map(baseRow);
+  const phases = getRoundPhasesForSeason(
+    bases.map(b => ({ id: b.id, submissionDeadline: b.submissionDeadline, votingDeadline: b.votingDeadline })),
+  );
+  return bases.map(b => ({ ...b, phase: phases.get(b.id) ?? 'upcoming' }));
 }
 
 export function getRoundById(db: Database.Database, id: number): Round | null {
   const r = db.prepare('SELECT * FROM rounds WHERE id=?').get(id) as any;
-  return r ? row(r) : null;
+  if (!r) return null;
+  // Load season siblings so we can phase-derive in context.
+  const siblings = getRoundsForSeason(db, r.season_id);
+  const phased = siblings.find(s => s.id === id);
+  if (phased) return phased;
+  // Defensive fallback (should never hit — id is in its own season).
+  return row(r);
 }
 
 export function getCurrentRoundForSeason(db: Database.Database, seasonId: number): Round | null {
-  const r = db.prepare('SELECT * FROM rounds WHERE season_id=? ORDER BY created_at DESC LIMIT 1').get(seasonId) as any;
-  return r ? row(r) : null;
+  const rounds = getRoundsForSeason(db, seasonId);
+  if (rounds.length === 0) return null;
+  // Priority: submission > voting > upcoming > archive, newest within tie.
+  const priority: Record<RoundPhase, number> = { submission: 0, voting: 1, upcoming: 2, archive: 3 };
+  const sorted = [...rounds].sort((a, b) => {
+    const dp = priority[a.phase!] - priority[b.phase!];
+    if (dp !== 0) return dp;
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  });
+  return sorted[0];
 }
+
+// rowWithPhase is exported for callers that already computed phases
+// (e.g. the layout loader walks all of a season's rounds at once).
+export { rowWithPhase };
 
 export interface RoundPatch {
   name?: string;
