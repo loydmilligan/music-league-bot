@@ -6,8 +6,112 @@
   import HeadToHeadCard from '$lib/components/HeadToHeadCard.svelte';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
+  import { invalidateAll } from '$app/navigation';
 
   let { data }: { data: PageData } = $props();
+
+  // --- Edit round modal -----------------------------------------------------
+  let showEdit = $state(false);
+  let editError = $state<string | null>(null);
+  let editSaving = $state(false);
+
+  type EditForm = {
+    name: string;
+    theme: string;
+    submission_deadline: string;
+    voting_deadline: string;
+    playlist_url: string;
+  };
+
+  function isoToLocalInput(iso: string | null | undefined): string {
+    if (!iso) return '';
+    // datetime-local wants yyyy-MM-ddTHH:mm (no seconds, no timezone).
+    // The DB stores either 'YYYY-MM-DDTHH:MM' or full ISO; either way, slice
+    // to the first 16 chars after normalizing through Date.
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return '';
+    const d = new Date(t);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function localInputToIso(local: string): string | null {
+    if (!local) return null;
+    const d = new Date(local);
+    if (!Number.isFinite(d.getTime())) return null;
+    return d.toISOString();
+  }
+
+  let editForm = $state<EditForm>({
+    name: '', theme: '', submission_deadline: '', voting_deadline: '', playlist_url: ''
+  });
+
+  function openEdit() {
+    editError = null;
+    editForm = {
+      name: data.round.name ?? '',
+      theme: data.round.description ?? '',
+      submission_deadline: isoToLocalInput(data.round.submissionDeadline),
+      voting_deadline: isoToLocalInput(data.round.votingDeadline),
+      playlist_url: data.round.spotifyPlaylistUrl ?? '',
+    };
+    showEdit = true;
+  }
+
+  function closeEdit() {
+    showEdit = false;
+    editError = null;
+  }
+
+  async function saveEdit(e?: SubmitEvent) {
+    e?.preventDefault();
+    if (editSaving) return;
+    const diff: Record<string, unknown> = {};
+    if (editForm.name !== (data.round.name ?? '')) diff.name = editForm.name;
+    if (editForm.theme !== (data.round.description ?? '')) diff.theme = editForm.theme || null;
+    const subOrig = isoToLocalInput(data.round.submissionDeadline);
+    const voteOrig = isoToLocalInput(data.round.votingDeadline);
+    if (editForm.submission_deadline !== subOrig) {
+      diff.submission_deadline = localInputToIso(editForm.submission_deadline);
+    }
+    if (editForm.voting_deadline !== voteOrig) {
+      diff.voting_deadline = localInputToIso(editForm.voting_deadline);
+    }
+    if (editForm.playlist_url !== (data.round.spotifyPlaylistUrl ?? '')) {
+      diff.playlist_url = editForm.playlist_url || null;
+    }
+    if (Object.keys(diff).length === 0) {
+      closeEdit();
+      return;
+    }
+    editSaving = true;
+    editError = null;
+    try {
+      const res = await fetch(`/api/rounds/${data.round.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(diff),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Save failed (${res.status})`);
+      }
+      await invalidateAll();
+      closeEdit();
+    } catch (err) {
+      editError = err instanceof Error ? err.message : 'Save failed';
+    } finally {
+      editSaving = false;
+    }
+  }
+
+  function onKeydown(ev: KeyboardEvent) {
+    if (showEdit && ev.key === 'Escape') {
+      ev.preventDefault();
+      closeEdit();
+    }
+  }
+  // --------------------------------------------------------------------------
 
   let tab = $state<'ml' | 'chat' | 'research' | 'h2h'>('ml');
   let ytmMode = $state(false);
@@ -134,7 +238,16 @@
 
   <div class="flex items-start gap-4">
     <div class="flex-1 min-w-0">
-      <h1 class="text-4xl font-bold text-fg mb-3">{data.round.name}</h1>
+      <div class="flex items-center gap-3 mb-3">
+        <h1 class="text-4xl font-bold text-fg">{data.round.name}</h1>
+        <button
+          type="button"
+          onclick={openEdit}
+          aria-label="Edit round"
+          title="Edit round"
+          class="text-fg-faint hover:text-accent transition-colors text-2xl leading-none flex-shrink-0"
+        >✎</button>
+      </div>
       {#if data.round.description}
         <p class="text-fg-muted max-w-2xl">{data.round.description}</p>
       {/if}
@@ -442,4 +555,102 @@
       {/if}
     {/if}
   {/if}
+{/if}
+
+<svelte:window onkeydown={onKeydown} />
+
+{#if showEdit}
+  <!-- Backdrop -->
+  <button
+    type="button"
+    aria-label="Close edit dialog"
+    onclick={closeEdit}
+    class="fixed inset-0 bg-bg/70 backdrop-blur-sm z-40"
+  ></button>
+
+  <!-- Panel -->
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="edit-round-title"
+    class="fixed inset-0 z-50 flex items-start justify-center p-6 overflow-y-auto pointer-events-none"
+  >
+    <form
+      onsubmit={saveEdit}
+      class="pointer-events-auto mt-16 w-full max-w-lg bg-surface border border-border-muted rounded-xl p-6 shadow-2xl"
+    >
+      <h2 id="edit-round-title" class="text-xl font-bold text-fg mb-1">Edit round</h2>
+      <p class="font-mono text-xs text-fg-dim mb-5">r-{data.round.id} · {data.league.slug} season {data.season.seasonNumber}</p>
+
+      <div class="space-y-4">
+        <label class="block">
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Name</span>
+          <input
+            type="text"
+            bind:value={editForm.name}
+            required
+            class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg outline-none transition-colors"
+          />
+        </label>
+
+        <label class="block">
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Theme</span>
+          <input
+            type="text"
+            bind:value={editForm.theme}
+            placeholder="A one-line description / theme prompt"
+            class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg placeholder-fg-faint outline-none transition-colors"
+          />
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="block">
+            <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Submit by</span>
+            <input
+              type="datetime-local"
+              bind:value={editForm.submission_deadline}
+              class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg outline-none transition-colors"
+            />
+          </label>
+          <label class="block">
+            <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Vote by</span>
+            <input
+              type="datetime-local"
+              bind:value={editForm.voting_deadline}
+              class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg outline-none transition-colors"
+            />
+          </label>
+        </div>
+
+        <label class="block">
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Playlist URL</span>
+          <input
+            type="url"
+            bind:value={editForm.playlist_url}
+            placeholder="https://open.spotify.com/playlist/..."
+            pattern="https://open\.spotify\.com/playlist/.+"
+            class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg placeholder-fg-faint outline-none transition-colors"
+          />
+        </label>
+      </div>
+
+      {#if editError}
+        <p class="font-mono text-xs text-warn mt-4">{editError}</p>
+      {/if}
+
+      <div class="flex items-center justify-end gap-2 mt-6">
+        <button
+          type="button"
+          onclick={closeEdit}
+          disabled={editSaving}
+          class="bg-bg text-fg-muted border border-border-muted hover:text-fg hover:border-border px-4 py-1.5 rounded-md font-mono text-xs tracking-widest uppercase transition-colors"
+        >Cancel</button>
+        <button
+          type="submit"
+          disabled={editSaving}
+          class="bg-accent hover:bg-accent-strong disabled:opacity-60 disabled:cursor-not-allowed text-bg-elevated px-4 py-1.5 rounded-md font-bold font-mono text-xs tracking-widest uppercase transition-colors"
+        >{editSaving ? 'Saving…' : 'Save'}</button>
+      </div>
+    </form>
+  </div>
 {/if}
