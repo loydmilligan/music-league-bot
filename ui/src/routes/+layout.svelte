@@ -4,6 +4,7 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
+  import MlAuthBadge from '$lib/components/MlAuthBadge.svelte';
 
   let { children } = $props();
 
@@ -63,6 +64,9 @@
         <span class="ml-mark leading-none transition-colors">m/l</span>
         <span class="font-mono text-xs text-fg-muted truncate">music-league-bot</span>
       </a>
+      <div class="mt-2">
+        <MlAuthBadge />
+      </div>
     </header>
 
     <!-- Primary nav -->

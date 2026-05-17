@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { SpotifyAdapter } from '../spotify/adapter.js';
 import { kvDelete, kvGet, kvSet } from './tournamentStore.js';
 import { computePopularityProxies, getLastfmTrackInfo } from './lastfm.js';
+import { getMlAuthState, probeMlAuth, startMlAuthHeartbeat } from './mlAuthHeartbeat.js';
 
 const PORT = parseInt(process.env.BRACKET_API_PORT ?? '3001', 10);
 const spotify = new SpotifyAdapter();
@@ -164,8 +165,25 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (method === 'GET' && url === '/ml-auth/status') {
+    json(res, 200, getMlAuthState());
+    return;
+  }
+
+  if (method === 'POST' && url === '/ml-auth/recheck') {
+    try {
+      const state = await probeMlAuth();
+      json(res, 200, state);
+    } catch (err) {
+      json(res, 500, { error: err instanceof Error ? err.message : 'probe failed' });
+    }
+    return;
+  }
+
   json(res, 404, { error: 'Not found' });
 });
+
+startMlAuthHeartbeat();
 
 server.listen(PORT, () => {
   console.log(`[bracket-api] Listening on http://localhost:${PORT}`);
