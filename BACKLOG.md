@@ -97,3 +97,30 @@ See `song-tournament-bracket/docs/spotify-integration-plan.md` for the full fron
 - YouTube Music → Spotify resolution (search-based)
 - Duplicate detection across the master playlist (flag but don't block)
 - `!history <artist>` — search the capture history for a given artist
+
+---
+
+# SvelteKit Dashboard (ui/) — Backlog
+
+These items are for the dashboard surface, captured during sprint orchestration as items deferred from the active sprint. Distinct from the WhatsApp-bot backlog above — but both ship in the same repo.
+
+## Schema + data layer
+
+- **Add-round endpoint (`POST /api/rounds`)** — sprint-5 added PATCH for editing existing rounds but no create path. Surfaced 2026-05-16 when a real Music League season needed rounds 8 & 9 added by hand. Endpoint should accept `{ season_id, ml_round_id, name, theme?, submission_deadline?, voting_deadline?, theme_chooser_id?, spotify_playlist_url? }` and return the new row + derived phase. Update `round-edit-modal` to optionally include a "+ Add round" mode in the same component.
+- **League ↔ competitor linkage** — `competitors` table is currently flat (`id, ml_competitor_id, name`) with no per-league membership. ML export ingest populates competitors globally. Need either a `league_competitors(league_id, competitor_id)` join table OR a `league_id` column on competitors if a competitor is always scoped to one league. Decide which based on whether the same person appears across leagues with the same `ml_competitor_id` (likely yes — Music League IDs are global). Surfaced 2026-05-16 alongside the theme-chooser work.
+- **Theme-chooser surfacing** — `rounds.theme_chooser_id` column added 2026-05-16 (nullable FK to competitors). Currently no UI to set or display it. Next: extend `round-edit-modal` with a "Theme chosen by" dropdown sourced from competitors in the round's league; show the chooser on the round detail page header alongside the theme.
+- **Round-edit modal: add competitor field for theme-chooser** — depends on the above schema + the league↔competitor linkage so the dropdown can be scoped correctly.
+- **My-standing query** — sprint-4 shipped `My place: —` and `Finished: —/N` placeholder slots on home cards. Need a `getMyStanding(leagueSlug, seasonNumber)` loader that uses `MY_COMPETITOR_ID` env var + votes/submissions tables to compute current rank in active season, final rank in archived seasons.
+
+## Carryover from sprint-4 / sprint-5 deferred sections
+
+- **BIG LIST overview** — unified Spotify playlist of every song across all participated leagues. Landing-page-as-Music-League-career-overview concept. Big feature; needs Spotify playlist creation API.
+- **Email ingestion via n8n** — live submission/vote counts from Music League notification emails (user had this working before).
+- **Manual submit/vote entry** — UI path since Music League doesn't notify users about their own actions; depends on tracking schema decisions.
+- **Historical card fun facts** — total songs, players, genre breakdown, "biggest procrastinator," rotating fun facts on archive cards. Needs new aggregation queries.
+- **CRUD UI for league + season metadata** — sprint-5 shipped round-edit only. League and season editing modals.
+
+## Process / dev experience
+
+- **POST `/api/research/[roundId]` upsert by spotify_uri** — sprint-5 `rate-anonymous-ml` and `h2h-rate-and-spotify` both consume `research_songs` from new UI surfaces; the current API may key by id only. If agents handled it via two-step POST-or-PUT, consolidate into a true upsert endpoint.
+- **`--color-rating-voting` design token** — sprint-5 `rate-anonymous-ml` used inline blue for voting-phase rating dots; promote to a proper Tailwind token in `app.css` alongside `--color-accent`, `--color-health`, etc.

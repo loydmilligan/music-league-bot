@@ -12,6 +12,7 @@ export const SCHEMA = `
     id INTEGER PRIMARY KEY, season_id INTEGER NOT NULL REFERENCES seasons(id),
     ml_round_id TEXT UNIQUE NOT NULL, name TEXT NOT NULL, description TEXT,
     spotify_playlist_url TEXT, submission_deadline TEXT, voting_deadline TEXT,
+    theme_chooser_id INTEGER REFERENCES competitors(id),
     created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS competitors (
