@@ -78,6 +78,29 @@ export const SCHEMA = `
     status TEXT NOT NULL CHECK(status IN ('success','partial','error')), error TEXT
   );
   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS shortlist_songs (
+    id              TEXT PRIMARY KEY,
+    spotify_uri     TEXT NOT NULL UNIQUE,
+    artist          TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    album           TEXT,
+    year            INTEGER,
+    duration_sec    INTEGER,
+    album_art_url   TEXT,
+    added_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    rating_discovery INTEGER NOT NULL DEFAULT 0,
+    rating_theme_fit INTEGER NOT NULL DEFAULT 0,
+    rating_nostalgia INTEGER NOT NULL DEFAULT 0,
+    rating_personal  INTEGER NOT NULL DEFAULT 0,
+    submitted_elsewhere INTEGER NOT NULL DEFAULT 0,
+    notes           TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS shortlist_assignments (
+    shortlist_song_id TEXT NOT NULL REFERENCES shortlist_songs(id) ON DELETE CASCADE,
+    round_id          INTEGER NOT NULL REFERENCES rounds(id),
+    assigned_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    PRIMARY KEY (shortlist_song_id, round_id)
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
