@@ -103,6 +103,36 @@ export const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_shortlist_assignments_round
     ON shortlist_assignments(round_id);
+  CREATE TABLE IF NOT EXISTS chat_songs (
+    id              TEXT PRIMARY KEY,
+    spotify_uri     TEXT NOT NULL UNIQUE,
+    artist          TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    album           TEXT,
+    year            INTEGER,
+    duration_sec    INTEGER,
+    album_art_url   TEXT,
+    dismissed       INTEGER NOT NULL DEFAULT 0,
+    first_seen_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
+  CREATE TABLE IF NOT EXISTS chat_mentions (
+    id              TEXT PRIMARY KEY,
+    song_id         TEXT NOT NULL REFERENCES chat_songs(id) ON DELETE CASCADE,
+    chat_name       TEXT NOT NULL,
+    sender_name     TEXT NOT NULL,
+    captured_at     TEXT NOT NULL,
+    raw_message     TEXT NOT NULL,
+    prior_messages  TEXT NOT NULL DEFAULT '[]',
+    intent          TEXT NOT NULL DEFAULT 'unclassified'
+  );
+  CREATE TABLE IF NOT EXISTS chat_assignments (
+    chat_song_id    TEXT NOT NULL REFERENCES chat_songs(id) ON DELETE CASCADE,
+    round_id        INTEGER NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+    assigned_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    PRIMARY KEY (chat_song_id, round_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_mentions_song ON chat_mentions(song_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_assignments_round ON chat_assignments(round_id);
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
