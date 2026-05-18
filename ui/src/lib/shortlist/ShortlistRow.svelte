@@ -103,7 +103,23 @@
             {#if hasAssignments}<span class="badge">{assignedRoundIds.length}</span>{/if}
           </button>
           {#if showAssignPopover}
-            <AssignPopover songId={localSong.id} songTitle={localSong.title} {assignedRoundIds} onclose={() => showAssignPopover = false} />
+            <AssignPopover
+              songTitle={localSong.title}
+              {assignedRoundIds}
+              onAssign={async (roundId) => {
+                await fetch(`/api/shortlist/${localSong.id}/assign`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ round_id: roundId }),
+                });
+                localSong = { ...localSong, assignments: [...(localSong.assignments ?? []), { shortlistSongId: localSong.id, roundId, assignedAt: new Date().toISOString() }] };
+              }}
+              onUnassign={async (roundId) => {
+                await fetch(`/api/shortlist/${localSong.id}/assign/${roundId}`, { method: 'DELETE' });
+                localSong = { ...localSong, assignments: (localSong.assignments ?? []).filter(a => a.roundId !== roundId) };
+              }}
+              onclose={() => showAssignPopover = false}
+            />
           {/if}
         </div>
         <button type="button" class="sl-btn sl-btn-ghost" class:sl-btn-active={localSong.submittedElsewhere} onclick={markSubmittedElsewhere}>
