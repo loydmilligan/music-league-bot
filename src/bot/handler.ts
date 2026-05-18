@@ -9,6 +9,7 @@ import { insertSubmission } from '../storage/submissions.js';
 import { detectMusicUrls } from './urlDetector.js';
 import { resolveSonglinkUrl } from '../resolver/songlinkResolver.js';
 import { songlinkLimiter } from '../resolver/songlinkRateLimiter.js';
+import { insertChatCapture } from '../storage/chatDb.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -234,6 +235,20 @@ async function handleAutoCapture(
         sourcePlatform: platform,
         sourceUrl: detectedUrl,
       });
+      insertChatCapture({
+        spotifyUri: track.spotifyUri!,
+        title: track.title,
+        artist: track.artist,
+        album: track.album ?? null,
+        albumArtUrl: null,
+        year: null,
+        durationSec: track.durationMs ? Math.round(track.durationMs / 1000) : null,
+        chatName: msg.chatName,
+        senderName: submitterName,
+        capturedAt: msg.capturedAt,
+        rawMessage: msg.body,
+        priorMessages: msg.priorMessages,
+      });
     } catch (err) {
       console.error('[handler] Songlink resolution error:', err);
     }
@@ -277,6 +292,20 @@ async function handleAutoCapture(
       status: isDupe ? 'duplicate' : 'added',
       sourcePlatform: platform,
       sourceUrl: detectedUrl,
+    });
+    insertChatCapture({
+      spotifyUri: track.spotifyUri!,
+      title: track.title,
+      artist: track.artist,
+      album: track.album ?? null,
+      albumArtUrl: null,
+      year: null,
+      durationSec: track.durationMs ? Math.round(track.durationMs / 1000) : null,
+      chatName: msg.chatName,
+      senderName: submitterName,
+      capturedAt: msg.capturedAt,
+      rawMessage: msg.body,
+      priorMessages: msg.priorMessages,
     });
   } catch (err) {
     console.error('[handler] Auto-capture error:', err);
