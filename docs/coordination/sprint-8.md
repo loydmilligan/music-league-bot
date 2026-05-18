@@ -1,9 +1,10 @@
 ---
 project: music-league-bot
 sprint: sprint-8
-status: active
+status: complete
 created: 2026-05-18T00:00:00.000Z
 updated: 2026-05-18T00:00:00.000Z
+closed: 2026-05-18T00:00:00.000Z
 ---
 
 # music-league-bot — coordination doc (sprint-8)
