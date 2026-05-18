@@ -1,0 +1,503 @@
+/* music-league-bot — /chat (chat watcher) styles
+   Loaded after colors_and_type.css + orc-tower-styles.css + ml-styles.css
+   + ml-shortlist-styles.css. All classes prefixed .cw-. */
+
+/* ============================================================== layout */
+.cw-main { max-width: 1180px; }
+
+/* ============================================================== page sub-bar (filter + sort) */
+.cw-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 4px;
+  flex-wrap: wrap;
+}
+.cw-bar-left, .cw-bar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cw-filter-group, .cw-sort-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.cw-filter-divider {
+  width: 1px; height: 18px;
+  background: var(--line);
+  margin: 0 2px;
+}
+
+/* ============================================================== chat chips */
+.cw-chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  cursor: help;
+}
+.cw-chat-chip::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: var(--dot, var(--ink-5));
+  flex-shrink: 0;
+}
+.cw-chat-chip--sky   { background: var(--sky-soft);   color: var(--sky);   border-color: #1f3656;            --dot: var(--sky); }
+.cw-chat-chip--amber { background: var(--amber-soft); color: var(--amber); border-color: #4d3f1c;            --dot: var(--amber); }
+.cw-chat-chip--moss  { background: var(--moss-soft);  color: var(--moss);  border-color: #1e4d33;            --dot: var(--moss); }
+.cw-chat-chip--pulp  { background: var(--mash-pulp-soft); color: var(--mash-pulp); border-color: var(--mash-pulp-edge); --dot: var(--mash-pulp); }
+
+/* count badge for "3×" */
+.cw-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--mash-pulp-edge);
+  background: var(--mash-pulp-soft);
+  color: var(--mash-pulp);
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.cw-count--muted {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+}
+
+/* intent chip — small scannable label on each row, color-coded */
+.cw-intent {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: help;
+  white-space: nowrap;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+}
+.cw-intent--pulp  { background: var(--mash-pulp-soft); color: var(--mash-pulp); border-color: var(--mash-pulp-edge); }
+.cw-intent--amber { background: var(--amber-soft);     color: var(--amber);     border-color: #4d3f1c; }
+.cw-intent--sky   { background: var(--sky-soft);       color: var(--sky);       border-color: #1f3656; }
+.cw-intent--moss  { background: var(--moss-soft);      color: var(--moss);      border-color: #1e4d33; }
+.cw-intent--muted { background: var(--surface-2);      color: var(--fg-muted);  border-color: var(--line-strong); }
+
+/* assigned chip (→ R-14) */
+.cw-assigned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: var(--r-2);
+  border: 1px solid #1e4d33;
+  background: var(--moss-soft);
+  color: var(--moss);
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  cursor: help;
+}
+
+/* ============================================================== rows */
+.cw-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cw-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto auto auto auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.cw-row:hover { border-color: var(--line-strong); }
+.cw-row.is-dismissed { opacity: 0.45; }
+.cw-row.is-open {
+  cursor: default;
+  grid-template-columns: 1fr;
+  padding: 0;
+  border-color: var(--mash-pulp);
+  box-shadow: var(--shadow-2), 0 0 0 3px var(--mash-pulp-soft);
+}
+.cw-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cw-row-title { font: 600 14px/1.2 var(--font-body); color: var(--fg); }
+.cw-row-artist { font: 500 12px/1.2 var(--font-mono); color: var(--fg-muted); }
+.cw-row-time {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--fg-quiet);
+  white-space: nowrap;
+}
+.cw-row-actions { display: flex; gap: 6px; align-items: center; }
+
+/* ============================================================== sender avatar (used in expanded) */
+.cw-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  user-select: none;
+}
+.cw-avatar--sm { width: 22px; height: 22px; font-size: 10px; }
+.cw-avatar--lg { width: 36px; height: 36px; font-size: 14px; }
+.cw-avatar--sky    { background: var(--sky-soft);        color: var(--sky);       border-color: #1f3656; }
+.cw-avatar--amber  { background: var(--amber-soft);      color: var(--amber);     border-color: #4d3f1c; }
+.cw-avatar--moss   { background: var(--moss-soft);       color: var(--moss);      border-color: #1e4d33; }
+.cw-avatar--pulp   { background: var(--mash-pulp-soft);  color: var(--mash-pulp); border-color: var(--mash-pulp-edge); }
+.cw-avatar--ember  { background: var(--ember-soft);      color: var(--ember);     border-color: #4a212c; }
+
+/* sender-colored text */
+.cw-sender-name { font-weight: 700; }
+.cw-sender-name--sky    { color: var(--sky); }
+.cw-sender-name--amber  { color: var(--amber); }
+.cw-sender-name--moss   { color: var(--moss); }
+.cw-sender-name--pulp   { color: var(--mash-pulp); }
+.cw-sender-name--ember  { color: var(--ember); }
+.cw-sender-name--muted  { color: var(--fg-muted); }
+
+/* ============================================================== expanded panel */
+.cw-expanded {
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  gap: 24px;
+  padding: 18px 20px;
+}
+.cw-expanded-art {
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.cw-expanded-art .ml-art { width: 180px; font-size: 180px; aspect-ratio: 1/1; }
+.cw-expanded-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cw-expanded-title {
+  font: 700 22px/1.1 var(--font-display);
+  color: var(--fg);
+  letter-spacing: -0.015em;
+}
+.cw-expanded-sub {
+  font: 500 13px/1.4 var(--font-mono);
+  color: var(--fg-muted);
+}
+.cw-expanded-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.cw-expanded-actions {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* head bar — same shape as shortlist expanded */
+.cw-row-open-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px dashed var(--line);
+  background: var(--surface-2);
+}
+.cw-row-open-head-left {
+  display: flex; align-items: center; gap: 10px;
+}
+.cw-row-open-eyebrow {
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.cw-row-open-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* ============================================================== context block — shared */
+.cw-context {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cw-context-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 0 6px;
+}
+.cw-context-head-title {
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.cw-context-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============================================================== variation A — bubbles (WhatsApp-y) */
+.cw-bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #0b1014;
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  padding: 14px 12px;
+  position: relative;
+}
+.cw-bubbles::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg,
+      rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+      transparent 1px, transparent 6px);
+  pointer-events: none;
+  border-radius: var(--r-4);
+}
+.cw-bubble-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  position: relative;
+  z-index: 1;
+}
+.cw-bubble {
+  max-width: 78%;
+  padding: 7px 10px 5px;
+  border-radius: 10px 10px 10px 2px;
+  background: #1c252c;
+  color: var(--fg-2);
+  font: 400 13px/1.45 var(--font-body);
+  position: relative;
+  word-wrap: break-word;
+}
+.cw-bubble.is-prior { opacity: 0.6; }
+.cw-bubble.is-mention {
+  background: linear-gradient(135deg, #2c1f1a, #1c252c 80%);
+  border: 1px solid var(--mash-pulp-edge);
+  box-shadow: 0 0 0 3px var(--mash-pulp-soft);
+}
+.cw-bubble-sender {
+  display: block;
+  font: 700 11px/1 var(--font-mono);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+.cw-bubble-time {
+  font: 500 10px/1 var(--font-mono);
+  color: var(--fg-quiet);
+  margin-left: 4px;
+}
+.cw-bubble-spot {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 11px/1 var(--font-mono);
+  color: var(--fg-muted);
+}
+.cw-bubble-spot-pip {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: #1ed760;
+}
+
+/* ============================================================== variation B — transcript */
+.cw-transcript {
+  background: var(--ink-0);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  font-family: var(--font-mono);
+  padding: 8px 0;
+  overflow: hidden;
+}
+.cw-tx-row {
+  display: grid;
+  grid-template-columns: 72px 24px 90px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 14px;
+  font: 500 12px/1.5 var(--font-mono);
+}
+.cw-tx-row.is-prior { color: var(--fg-quiet); }
+.cw-tx-row.is-mention {
+  background: linear-gradient(90deg, rgba(255,91,46,0.06), transparent 60%);
+  border-left: 2px solid var(--mash-pulp);
+  padding-left: 12px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.cw-tx-time { color: var(--fg-quiet); white-space: nowrap; }
+.cw-tx-glyph {
+  width: 24px; text-align: center;
+  color: var(--fg-quiet);
+}
+.cw-tx-row.is-mention .cw-tx-glyph {
+  color: var(--mash-pulp);
+}
+.cw-tx-sender { font-weight: 700; }
+.cw-tx-message {
+  color: var(--fg-2);
+  font-weight: 400;
+}
+.cw-tx-row.is-mention .cw-tx-message {
+  color: var(--fg);
+  font-weight: 500;
+}
+.cw-tx-spot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px;
+  margin: 0 2px;
+  border-radius: 4px;
+  background: rgba(30,215,96,0.12);
+  color: #1ed760;
+  font: 600 10px/1.4 var(--font-mono);
+}
+
+/* ============================================================== variation C — pull-quote */
+.cw-pull {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--mash-pulp);
+  border-radius: var(--r-3);
+  padding: 18px 22px;
+}
+.cw-pull-priors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--fg-quiet);
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 14px;
+}
+.cw-pull-priors-eyebrow {
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
+}
+.cw-pull-prior {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 8px;
+}
+.cw-pull-prior .who { color: var(--fg-2); font-weight: 700; }
+.cw-pull-quote {
+  font: 500 18px/1.4 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  font-style: italic;
+  margin: 0;
+  position: relative;
+  padding-left: 26px;
+}
+.cw-pull-quote::before {
+  content: "\201C";
+  position: absolute;
+  left: -6px;
+  top: -16px;
+  font: 800 60px/1 var(--font-display);
+  color: var(--mash-pulp);
+  opacity: 0.4;
+}
+.cw-pull-attrib {
+  margin: 14px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 12px/1.2 var(--font-mono);
+  color: var(--fg-muted);
+}
+.cw-pull-attrib .dash {
+  width: 24px; height: 1px;
+  background: var(--line-strong);
+}
+
+/* ============================================================== mention timeline strip
+   (used at the top of expanded view for songs mentioned more than once) */
+.cw-timeline {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+.cw-timeline-eyebrow {
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-quiet);
+  margin-right: 8px;
+}
+.cw-timeline-pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 999px;
+  font: 600 11px/1 var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.cw-timeline-pip.is-active {
+  background: var(--mash-pulp-soft);
+  border-color: var(--mash-pulp-edge);
+  color: var(--mash-pulp);
+}
+.cw-timeline-pip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  font: 700 9px/1 var(--font-mono);
+}
+.cw-timeline-pip.is-active .cw-timeline-pip-num {
+  background: var(--mash-pulp);
+  color: var(--bone);
+}

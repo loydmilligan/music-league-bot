@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import '$lib/shortlist/colors_and_type.css';
+@import '$lib/chat/chat.css';
 
 /* ------------------------------------------------------------------------
    Design tokens — sourced from docs/prototype/ (A: Picker · Orc-Tower-style
