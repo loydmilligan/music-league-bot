@@ -26,10 +26,11 @@ Each captured mention has:
 - **Who mentioned it** — WhatsApp display name (e.g. "Matt", "Kieran")
 - **Which group chat** — display name of the WhatsApp group (e.g. "Hip Jammers", "The Lads")
 - **When** — timestamp of the message
-- **The message** — the raw text of the message that contained the link/command
+- **The message** — the raw text of the message that contained the link
 - **Context** — the 3 messages immediately before the mention in that chat thread
-- **Capture type** — `url-drop` (someone just pasted a link) vs `!song` command (explicit nomination)
-- **Round assignments** — which rounds (if any) this mention has been assigned to via the UI
+- **Round assignment** — which round (if any) this song has been auto-assigned or manually assigned to (see below)
+
+Note: every capture is a URL drop (Spotify/YouTube/Apple Music link). The `!song` command is not used by group members.
 
 ---
 
@@ -76,6 +77,32 @@ Opens below the collapsed row, showing:
 
 ---
 
+## Round assignment logic
+
+Songs are assigned to rounds automatically on ingestion and can also be assigned manually from the UI. The rules:
+
+### Auto-assignment (on ingestion)
+
+The bot checks `captured_at` against open rounds to determine assignment:
+
+| When the song was mentioned | Assignment |
+|---|---|
+| During **submission phase** (`round.created_at` → `submission_deadline`) | **Unassigned** — ambiguous; could relate to current or previous round |
+| During **voting phase** (`submission_deadline` → `voting_deadline`) | **Auto-assign to that round** — voting is live, context is clear |
+| During **gap between rounds** (`voting_deadline` passed, next round not yet created) | **Auto-assign to the round that just ended** — gap is typically under an hour |
+
+If multiple leagues have rounds in voting simultaneously (v1 simplification): assign to the first matching round. A future release will add a `chat_group → season` mapping so each WhatsApp group resolves directly to its own league (three of the four leagues use WhatsApp; one does not and will never produce chat captures).
+
+### Manual assignment (from the UI)
+
+The ⊕ Assign button opens the AssignPopover (same component as the shortlist screen). Selecting a round writes to `chat_assignments` and mirrors the song into that round's `research_songs` table — the same outcome as assigning from the shortlist.
+
+### What the UI shows
+
+The collapsed row displays a "→ R-14" chip when a `chat_assignments` row exists. Unassigned songs show nothing in that slot. Songs that were auto-assigned show the chip immediately on load.
+
+---
+
 ## Key behaviors
 
 - Rows stay in the list after being assigned to a round — assignment is not removal
@@ -88,8 +115,8 @@ Opens below the collapsed row, showing:
 
 ## Relationship to other screens
 
-- **Shortlist** — the "⊕ Assign" and "+ Shortlist" buttons here are the same components used there. Songs flow: Chat Watcher → Shortlist → assigned to round.
-- **Active round / research tab** — assigning from here adds to the round's research list, same as assigning from the Shortlist.
+- **Shortlist** — the "⊕ Assign" and "+ Shortlist" buttons here are the same components used there. Songs flow: Chat Watcher → Shortlist → assigned to round (or Chat Watcher → assigned to round directly).
+- **Round detail / research tab** — assigning from here adds to the round's `research_songs`, same as assigning from the shortlist. The round detail chat mentions tab also shows songs by timestamp window — this is separate and continues to work as-is.
 
 ---
 
