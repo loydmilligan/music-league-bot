@@ -61,19 +61,19 @@ updated: 2026-05-18T00:00:00.000Z
 - [x] {agent: frontend, id: chat-css} Task 4: Copy chat CSS from handoff, update shortlist.css + app.css
   - **Acceptance:** Per plan Task 4.
 
-- [ ] {agent: frontend, id: chat-filter-bar} Task 5: Create CwFilterBar.svelte
+- [x] {agent: frontend, id: chat-filter-bar} Task 5: Create CwFilterBar.svelte
   - **Acceptance:** Per plan Task 5.
 
-- [ ] {agent: frontend, id: chat-row} Task 6: Create CwRow.svelte
+- [x] {agent: frontend, id: chat-row} Task 6: Create CwRow.svelte
   - **Acceptance:** Per plan Task 6.
 
-- [ ] {agent: frontend, id: chat-page} Task 7: Create `/chat` page shell + loader
+- [x] {agent: frontend, id: chat-page} Task 7: Create `/chat` page shell + loader
   - **Acceptance:** Per plan Task 7.
 
-- [ ] {agent: frontend, id: chat-api-routes} Task 8: Add API routes (GET /api/chat/songs, dismiss, shortlist, assign)
+- [x] {agent: frontend, id: chat-api-routes} Task 8: Add API routes (GET /api/chat/songs, dismiss, shortlist, assign)
   - **Acceptance:** Per plan Task 8.
 
-- [ ] {agent: frontend, id: chat-assign-popover} Task 9: Update AssignPopover + layout nav
+- [x] {agent: frontend, id: chat-assign-popover} Task 9: Update AssignPopover + layout nav
   - **Acceptance:** Per plan Task 9.
 
 - [x] {agent: backend, id: chat-bot-storage} Task 10: Create `src/storage/chatDb.ts`
