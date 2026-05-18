@@ -212,11 +212,13 @@
 
 {:else}
   <!-- COLLAPSED -->
-  <button
-    type="button"
+  <div
+    role="button"
+    tabindex="0"
     class="cw-row"
     class:is-dismissed={localSong.dismissed}
     onclick={ontoggle}
+    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ontoggle(); } }}
   >
     {#if localSong.albumArtUrl}
       <img src={localSong.albumArtUrl} alt="" class="sl-row-art" width="44" height="44" />
@@ -250,7 +252,7 @@
       <span class="cw-assigned-chip">→ R-{assignedRoundIds[0]}</span>
     {/if}
 
-    <span onclick={(e) => e.stopPropagation()}>
+    <span onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="presentation">
       <Bookmark
         spotifyUri={localSong.spotifyUri}
         title={localSong.title}
@@ -263,7 +265,7 @@
       />
     </span>
 
-    <span onclick={(e) => e.stopPropagation()} style="position:relative">
+    <span onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="presentation" style="position:relative">
       <button
         type="button"
         class="sl-iconbtn"
@@ -289,5 +291,5 @@
         />
       {/if}
     </span>
-  </button>
+  </div>
 {/if}

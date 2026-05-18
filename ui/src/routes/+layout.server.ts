@@ -8,12 +8,14 @@ import {
   type CrossLeagueUpcoming,
   type WatcherDiagnostics,
 } from '$lib/db/layout.js';
+import { getUnassignedNotDismissedCount } from '$lib/chat/chat.js';
 import type { LayoutServerLoad } from './$types.js';
 
 export interface LayoutData {
   leagues: LeagueRailEntry[];
   crossLeagueUpcoming: CrossLeagueUpcoming[];
   watcher: WatcherDiagnostics;
+  chatUnassignedCount: number;
 }
 
 export const load: LayoutServerLoad = async (): Promise<LayoutData> => {
@@ -23,5 +25,6 @@ export const load: LayoutServerLoad = async (): Promise<LayoutData> => {
     leagues: getAllAdoptedLeagues(db),
     crossLeagueUpcoming: getCrossLeagueUpcoming(db),
     watcher: getWatcherDiagnostics(db, join(dataDir, 'league.db')),
+    chatUnassignedCount: getUnassignedNotDismissedCount(db),
   };
 };

@@ -69,7 +69,7 @@
     localSong = { ...localSong, submittedElsewhere: newVal };
   }
 
-  const assignedRoundIds = $derived((localSong.assignments ?? []).map(a => a.roundId));
+  const assignedRoundIds = $derived((localSong.assignments ?? []).map((a: { roundId: number }) => a.roundId));
   const hasAssignments = $derived(assignedRoundIds.length > 0);
 </script>
 
@@ -116,7 +116,7 @@
               }}
               onUnassign={async (roundId) => {
                 await fetch(`/api/shortlist/${localSong.id}/assign/${roundId}`, { method: 'DELETE' });
-                localSong = { ...localSong, assignments: (localSong.assignments ?? []).filter(a => a.roundId !== roundId) };
+                localSong = { ...localSong, assignments: (localSong.assignments ?? []).filter((a: { roundId: number }) => a.roundId !== roundId) };
               }}
               onclose={() => showAssignPopover = false}
             />
