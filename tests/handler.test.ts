@@ -40,8 +40,11 @@ function makeMockMsg(body: string, opts: Partial<WhatsAppMessage> = {}): WhatsAp
   return {
     body,
     from: 'BmCQHGE3k0a0ST5ZDPFmqW@g.us',
+    chatName: 'Test Group',
     author: '16171234567@c.us',
     fromMe: false,
+    capturedAt: '2026-01-01T00:00:00.000Z',
+    priorMessages: [],
     reply: vi.fn().mockResolvedValue(undefined),
     getContact: vi.fn().mockResolvedValue({ pushname: 'Alice' }),
     ...opts,

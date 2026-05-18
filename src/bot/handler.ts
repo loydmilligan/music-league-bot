@@ -13,8 +13,11 @@ import { songlinkLimiter } from '../resolver/songlinkRateLimiter.js';
 export interface WhatsAppMessage {
   body: string;
   from: string;           // group chat id, e.g. "XXXX@g.us"
+  chatName: string;       // human-readable group name, e.g. "Hip Jammers"
   author: string;         // sender id, e.g. "16171234567@c.us"
   fromMe: boolean;
+  capturedAt: string;     // ISO timestamp of the message
+  priorMessages: Array<{ sender: string; timeMs: number; text: string }>;
   reply(text: string): Promise<void>;
   getContact(): Promise<{ pushname: string }>;
 }
