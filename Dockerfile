@@ -14,4 +14,4 @@ RUN npm install
 
 COPY . .
 
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "rm -f .wwebjs_auth/session/Singleton* && npm run dev"]
