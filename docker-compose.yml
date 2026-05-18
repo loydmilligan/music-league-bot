@@ -26,6 +26,11 @@ services:
       - PORT=3002
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
+      - ML_AUTH_TRIGGER_URL=http://host.docker.internal:7679
+    extra_hosts:
+      # Lets the container reach host-side daemons (e.g. the ML auth trigger
+      # on localhost:7679) via host.docker.internal.
+      - "host.docker.internal:host-gateway"
     ports:
       - "3002:3002"
     volumes:

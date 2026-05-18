@@ -1,12 +1,12 @@
 <!--
   MlAuthBadge — small status dot for the Music League session state.
 
-  - green: session valid (cli probe succeeded within the last 5min)
-  - red:   session expired (user needs to re-run `cli-web-musicleague auth login`)
-  - amber: probe failed for a reason that isn't auth (network, timeout)
-  - gray:  unknown (no probe yet)
-
-  Click → triggers an immediate POST /api/ml-auth recheck and shows the result.
+  Click behaviour:
+    - green/unknown: recheck status (fast probe)
+    - red (expired): POST to host login trigger → terminal pops up on host,
+      then we auto-poll status every 8s for up to 5min until it flips green.
+    - amber (cli-missing): recheck only — login trigger lives outside the
+      container too, so it'd still be unreachable.
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
@@ -25,7 +25,10 @@
 		message: null
 	});
 	let busy = $state(false);
+	let waitingForLogin = $state(false);
+	let loginNote = $state<string | null>(null);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let loginPollTimer: ReturnType<typeof setInterval> | null = null;
 
 	async function fetchStatus() {
 		try {
@@ -47,14 +50,76 @@
 		}
 	}
 
+	async function triggerLogin() {
+		if (busy) return;
+		busy = true;
+		loginNote = null;
+		try {
+			const res = await fetch('/api/ml-auth/login', { method: 'POST' });
+			const body = (await res.json().catch(() => ({}))) as {
+				ok?: boolean;
+				terminal?: string;
+				message?: string;
+				error?: string;
+			};
+			if (res.ok && body.ok) {
+				loginNote = `Spawned ${body.terminal ?? 'terminal'} on the host. Complete Spotify OAuth and press Enter in that window.`;
+				waitingForLogin = true;
+				startLoginWatch();
+			} else {
+				loginNote = body.error ?? 'Could not reach the host login trigger.';
+			}
+		} catch (err) {
+			loginNote = err instanceof Error ? err.message : 'Network error';
+		} finally {
+			busy = false;
+		}
+	}
+
+	function startLoginWatch() {
+		// Poll the status endpoint every 8s for up to 5min after firing the trigger.
+		// Stops on first ok or after timeout.
+		if (loginPollTimer) clearInterval(loginPollTimer);
+		const startedAt = Date.now();
+		const TIMEOUT_MS = 5 * 60 * 1000;
+		loginPollTimer = setInterval(async () => {
+			if (Date.now() - startedAt > TIMEOUT_MS) {
+				clearInterval(loginPollTimer!);
+				loginPollTimer = null;
+				waitingForLogin = false;
+				loginNote = 'Still expired after 5min. Click again to retry.';
+				return;
+			}
+			try {
+				const res = await fetch('/api/ml-auth', { method: 'POST' });
+				if (res.ok) {
+					auth = (await res.json()) as State;
+					if (auth.status === 'ok') {
+						clearInterval(loginPollTimer!);
+						loginPollTimer = null;
+						waitingForLogin = false;
+						loginNote = null;
+					}
+				}
+			} catch {
+				// keep trying
+			}
+		}, 8_000);
+	}
+
+	function onClick() {
+		if (auth.status === 'expired') return triggerLogin();
+		return recheck();
+	}
+
 	onMount(() => {
 		void fetchStatus();
-		// Lightweight client poll — backend heartbeat is the real driver
 		pollTimer = setInterval(fetchStatus, 60_000);
 	});
 
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer);
+		if (loginPollTimer) clearInterval(loginPollTimer);
 	});
 
 	const dotClass = $derived(
@@ -71,7 +136,9 @@
 		auth.status === 'ok'
 			? `Music League session OK (checked ${formatTime(auth.lastCheckedAt)})`
 			: auth.status === 'expired'
-				? 'Music League session expired — run: cli-web-musicleague auth login'
+				? waitingForLogin
+					? 'Waiting for you to complete Spotify OAuth on the host…'
+					: 'Click to launch Spotify login on the host'
 				: auth.status === 'cli-missing'
 					? `cli-web-musicleague not on PATH: ${auth.message ?? ''}`
 					: auth.message
@@ -92,19 +159,19 @@
 <button
 	type="button"
 	class="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-default transition-colors disabled:opacity-50"
-	on:click={recheck}
+	onclick={onClick}
 	disabled={busy}
 	{title}
 	aria-label={title}
 >
 	<span
-		class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 {dotClass} {busy ? 'animate-pulse' : ''}"
+		class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 {dotClass} {busy || waitingForLogin ? 'animate-pulse' : ''}"
 	></span>
 	<span class="font-mono uppercase tracking-wide">
 		{#if auth.status === 'ok'}
 			ml ok
 		{:else if auth.status === 'expired'}
-			ml login
+			{waitingForLogin ? 'ml waiting…' : 'ml login'}
 		{:else if auth.status === 'cli-missing'}
 			ml ?
 		{:else}
@@ -112,3 +179,7 @@
 		{/if}
 	</span>
 </button>
+
+{#if loginNote}
+	<div class="mt-1 text-[10px] text-fg-muted leading-tight max-w-[200px]">{loginNote}</div>
+{/if}
