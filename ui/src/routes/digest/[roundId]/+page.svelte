@@ -160,11 +160,12 @@
         const body = (await res.json().catch(() => ({}))) as {
           downloadUrl?: string | null;
           url?: string | null;
+          filename?: string | null;
           stub?: boolean;
         };
         const url = body.downloadUrl ?? body.url ?? null;
         if (url) {
-          triggerDownload(url, filename, false);
+          triggerDownload(url, body.filename ?? filename, false);
         } else if (body.stub) {
           showError('Finalize endpoint is still stubbed — PNG not yet generated. Pipeline state will not advance until backend T11 ships.');
         } else {
@@ -463,7 +464,7 @@
 
   <div class="dg-export dgC-bg">
     <header class="dgC-mast">
-      <div class="dgC-mast-row1">
+      <div class="dgC-mast-row1" data-export-hide="1">
         <span>m/l</span>
         <span class="sep">/</span>
         <span>r-{data.roundId}</span>
@@ -471,7 +472,7 @@
         <span class="pulp">generated {data.draft.generated_at}</span>
       </div>
       <h1 class="dgC-mast-title">Round digest</h1>
-      <p class="dgC-mast-deck">
+      <p class="dgC-mast-deck" data-export-hide="1">
         {data.sections.length} sections · whole-regen count {data.draft.whole_regen_count}
       </p>
     </header>

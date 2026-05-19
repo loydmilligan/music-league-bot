@@ -329,6 +329,30 @@ Variants A and B are parked stash — keep but don't wire.
   - Rel-context "view diff" modal — depends on backend T12.
   - Finalize button persistence/idempotency for an already-finalized round — currently the button hides once stage flips to `finalize`. If backend later allows "re-finalize," surface a new control then.
 
+### 2026-05-19 — frontend — T13 re-smoke against live T11 + export-hide tags
+- **Trigger:** backend shipped T11 (commit `8aa6fc1`), so the `/finalize` endpoint is now real. Re-smoking the T13 download flow + eyeballing the captured PNG.
+- **End-to-end smoke (against running `bot-ui` on `localhost:3002`):**
+  - `GET /digest/14` → 200. Round 14 was finalized by backend's T11 smoke at `2026-05-19T22:52:59Z`, so the page renders in `stage:'finalize'` and the pipeline strip emits **4× `dg-pipe-step is-done`**, **0× is-active, 0× is-pending**. ✓ step-4-done state confirmed live.
+  - Page-actions row shows `✓ finalized 2026-05-19T22:52:59Z` chip in moss color instead of the button — correct for a finalized round.
+  - `POST /api/digest/14/finalize` (re-finalize, backend confirmed idempotency) → 200 `{"ok":true,"roundId":14,"draftId":"draft-14-6e636560","finalizedAt":"2026-05-19T22:52:59Z","firstFinalize":false,"filename":"r-14-digest-1779232646.png","bytes":1250512,"downloadUrl":"/api/digest/exports/r-14-digest-1779232646.png"}`. Matches the contract backend documented; `finalizedAt` preserved (not bumped) on re-finalize, fresh filename for the new render. ✓
+  - `GET /api/digest/exports/r-14-digest-1779232646.png` → 200 `image/png` 1 250 512 bytes, `PNG 1600 × 3890 8-bit RGB non-interlaced`. ✓ direct download endpoint reachable; client click handler will hit it via `triggerDownload(downloadUrl, body.filename)`.
+- **PNG eyeball (first capture, pre-export-hide tags):** all five sections render cleanly (podium, villain, flow, consensus, quotes); no pipeline strip, no `.dg-section-actions` overlays, no banners, no regen-whole button. Backend's `addStyleTag` chrome-suppression in `export.ts` is working. Variant-C visual treatment intact (mast headline, ember/moss palette, italic consensus heads, liner-quote em-dash, footer liner-notes framing).
+- **Two strips bleeding into the export (the one backend flagged in `export.ts` activity entry):**
+  1. `dgC-mast-row1` at the top of `.dg-export` — faint mono `m/l · /r · r-14 · generated 2026-05-19T18:45:25Z`. Developer debug, not editorial.
+  2. `dgC-mast-deck` below the "Round digest" title — `5 sections · whole-regen count 0`. Developer debug.
+- **Judgment call — kept vs. hidden:**
+  - **Hidden** (added `data-export-hide="1"` in `ui/src/routes/digest/[roundId]/+page.svelte:339, :345`): `dgC-mast-row1`, `dgC-mast-deck`. Both are developer telemetry that shouldn't drop into the league chat.
+  - **Kept** (intentional editorial chrome of variant C): `dgC-mast-title` ("Round digest" h1) and `dgC-foot` ("m/l · liner notes · r-14 · generated… · finalized…"). The footer reads as deliberate liner-notes framing — variant C's whole conceit. If backend or design later flags it, easy to add the attribute then.
+- **Bonus tightening (same commit):** `finalizeAndDownload()` now prefers `body.filename` over the client-generated ISO-timestamp fallback when present — matches the unix-seconds filename backend writes to disk, so the user-visible download name aligns with the server-side artifact name in `data/exports/`.
+- **Deploy:** `docker compose build --no-cache bot-ui && docker compose up -d bot-ui`. Container Up on `0.0.0.0:3002`.
+- **Post-fix re-smoke:**
+  - `POST /api/digest/14/finalize` again → 200 with new filename `r-14-digest-1779232896.png`, `bytes:1234793`.
+  - `GET …/exports/r-14-digest-1779232896.png` → 200 `PNG 1600 × 3820`. Height dropped 70 px (3890 → 3820) which is consistent with hiding the two thin strips.
+  - PNG eyeball: top metadata band gone, deck gone, "Round digest" title still present, footer still present, everything else identical. ✓ both targeted strips suppressed; nothing editorial collateral-damaged.
+- **`npm run check`:** 1 ERROR (pre-existing `vite.config.ts`), 31 WARNINGS, 14 FILES — unchanged baseline. Zero new diagnostics.
+- **/digest/97 and /digest/106 — deferred:** both rounds have drafts (consensus DB scan in earlier entry confirmed sections for r-14, r-98, r-102; r-97 and r-106 have older drafts without consensus rows but other sections exist). Not draft-generated nor finalized here because (a) doing so would burn LLM credits unnecessarily and (b) backend's T11 smoke + this re-finalize against r-14 already exercises the full /finalize → exports/ → PNG path, and (c) chrome-suppression is global (style-tag + element-bounded screenshot), not r-14-specific. Will exercise additional rounds when there's a real reason to finalize them.
+- **Status:** T13 in-scope (button + download + step-4-done) **done and shipped to prod**. Rel-context "view diff" modal still deferred until T12 lands per orc directive.
+
 ### 2026-05-19 — backend — Task 11 done (Puppeteer export endpoint)
 - **Premise correction:** the task brief said "Puppeteer is already in the project — locate it before adding a dep." It is, but only as a transitive dep of `whatsapp-web.js` in the **root `package.json` → `bot` container**, not the `bot-ui` container. Confirmed in the running bot-ui: no `puppeteer*` in `node_modules`, no `chromium` binary on the bare `node:22-bookworm-slim` runtime, `ui/package.json` had no puppeteer entry. Surfaced to user; user approved **option B** (puppeteer-core + distro chromium in `Dockerfile.ui`).
 - **Image change** (`Dockerfile.ui`): runtime stage now `apt-get install -y --no-install-recommends chromium fonts-liberation` and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` + `PUPPETEER_SKIP_DOWNLOAD=true` (also in builder stage so `npm ci` doesn't try to fetch bundled Chromium). Verified in container: `chromium --version` → `Chromium 148.0.7778.167 built on Debian GNU/Linux 12 (bookworm)`. Image rebuild +~45 s, runtime image +~200 MB.
