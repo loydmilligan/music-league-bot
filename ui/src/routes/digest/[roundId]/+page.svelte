@@ -75,13 +75,15 @@
     chat: 'Back cover · chat notes',
   };
 
+  // When stage === 'finalize' (finalized_at is set), activeIdx advances past
+  // the last step so all 4 pipeline pills render as 'done'.
   const activeIdx = $derived(
     data.stage === 'prepare'
       ? 0
       : data.stage === 'refine'
         ? 2
         : data.stage === 'finalize'
-          ? 3
+          ? 4
           : 0,
   );
   function stepState(i: number): 'done' | 'active' | 'pending' {
@@ -123,6 +125,71 @@
       showError(err);
     } finally {
       drafting = false;
+    }
+  }
+
+  // -------- Finalize stage ----------
+  // POST /api/digest/:roundId/finalize. Backend T11 was instructed to document
+  // the response shape (download URL vs PNG bytes). Until that lands the
+  // endpoint returns { stub: true, downloadUrl: null }; this handler accepts:
+  //   - response.body is image/* → blob download
+  //   - response is JSON with `downloadUrl` (or `url`) string → anchor download
+  //   - neither → invalidateAll() still runs so finalized_at-driven pipeline
+  //     state advances; user sees a non-fatal note that PNG wasn't returned.
+  let finalizing = $state(false);
+  async function finalizeAndDownload() {
+    finalizing = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/finalize`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`finalize failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      const ct = res.headers.get('content-type') ?? '';
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const filename = `r-${data.roundId}-digest-${ts}.png`;
+
+      if (ct.startsWith('image/')) {
+        const blob = await res.blob();
+        triggerDownload(URL.createObjectURL(blob), filename, true);
+      } else {
+        const body = (await res.json().catch(() => ({}))) as {
+          downloadUrl?: string | null;
+          url?: string | null;
+          stub?: boolean;
+        };
+        const url = body.downloadUrl ?? body.url ?? null;
+        if (url) {
+          triggerDownload(url, filename, false);
+        } else if (body.stub) {
+          showError('Finalize endpoint is still stubbed — PNG not yet generated. Pipeline state will not advance until backend T11 ships.');
+        } else {
+          showError('Finalize returned no downloadable PNG.');
+        }
+      }
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    } finally {
+      finalizing = false;
+    }
+  }
+
+  function triggerDownload(href: string, filename: string, isObjectUrl: boolean) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (isObjectUrl) {
+      // Revoke after the click; small delay so the download starts.
+      setTimeout(() => URL.revokeObjectURL(href), 5000);
     }
   }
 
@@ -376,9 +443,18 @@
   </section>
 {:else if data.stage === 'refine' || data.stage === 'finalize'}
   <div class="dg-page-actions">
-    <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen}>
+    <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen} disabled={finalizing}>
       ↻ Regenerate whole draft
     </button>
+    {#if data.stage === 'refine'}
+      <button type="button" class="mash-btn mash-btn--primary" onclick={finalizeAndDownload} disabled={finalizing}>
+        {finalizing ? '…' : '↓'} Finalize &amp; download png
+      </button>
+    {:else if data.stage === 'finalize'}
+      <span style="font: 600 11px/1 var(--font-mono); color: var(--moss);">
+        ✓ finalized {data.draft.finalized_at}
+      </span>
+    {/if}
     <span class="dg-page-actions-spacer"></span>
     <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">
       draft cached · {excludedCount} excluded · {lockedCount} locked

@@ -302,3 +302,29 @@ Variants A and B are parked stash — keep but don't wire.
   - `GET /digest/98`  → 200; first row renders `French Disko — Stereolab` + note (shape B confirmed; `song` field already contained the em-dash join, so no double-join).
   - `GET /digest/102` → 200; first row renders `Total Eclipse of the Heart — Bonnie Tyler` + note (shape B confirmed).
   - No `[object Object]`, no `JSON.stringify` output, no `"items":[{` raw-JSON leak in any rendered HTML.
+
+### 2026-05-19 — frontend — T13 done (finalize button + download + step-4-done) — minus rel-context diff
+- **Scope adjustment:** sprint plan's T13 acceptance includes a rel-context "view diff" modal that depends on T12 (still open). Per orc direction, **rel-context diff UI is deferred** until T12 lands. T13 today = finalize button + browser PNG download + pipeline step-4-done state, no diff modal.
+- **Files changed:**
+  - `ui/src/routes/digest/[roundId]/+page.svelte` only. No backend territory touched.
+- **Implementation:**
+  - **Step-4-done state:** changed `activeIdx` for `stage === 'finalize'` from `3` to `4` (one past the last pipeline step). All four `stepState(i)` calls now return `'done'` when finalized, so the pipeline strip flips fully green on a finalized draft. No active step in finalize stage — that's the intended visual.
+  - **Button placement:** added to the existing `.dg-page-actions` row, only when `data.stage === 'refine'`. Hidden in `prepare`. In `finalize` stage the slot is replaced by a moss-colored `✓ finalized {timestamp}` chip so the row still reads as informative.
+  - **Disabled state:** `finalizing` `$state` toggles to `true` during the POST → click label becomes `…` and both the regen-whole and finalize buttons disable to prevent overlapping ops. Resets in `finally`.
+  - **Filename:** `r-{roundId}-digest-{ISO-timestamp-with-colons-and-dots-replaced-by-dashes}.png` — meets the sprint-plan filename pattern.
+  - **Download mechanism — flexible by design** (backend T11 hasn't shipped yet, response shape not yet pinned in the Activity Log):
+    - If response `Content-Type` starts with `image/`: `await res.blob()` → `URL.createObjectURL` → temp `<a download>` → click → remove → `revokeObjectURL` after 5s.
+    - Else if JSON body has `downloadUrl` or `url` string field: same temp `<a download>` against that URL (no object-url revoke).
+    - Else if JSON body has `{ stub: true }`: non-fatal toast `"Finalize endpoint is still stubbed — PNG not yet generated. Pipeline state will not advance until backend T11 ships."`. `invalidateAll()` still runs, but the stub doesn't set `finalized_at`, so the pipeline stays at refine. **Expected behavior against current stub.**
+    - Else: non-fatal toast `"Finalize returned no downloadable PNG."`
+  - `invalidateAll()` runs on every success path so the pipeline strip flips to step-4-done immediately when `finalized_at` is set server-side. No hard reload needed.
+- **`npm run check`:** unchanged baseline — 1 ERROR (pre-existing `vite.config.ts`), 31 WARNINGS, 14 FILES. Zero new diagnostics.
+- **Deploy:** `docker compose build --no-cache bot-ui && docker compose up -d bot-ui`. Container Up on `0.0.0.0:3002`.
+- **Smoke (localhost:3002):**
+  - `GET /digest/14` (stage=refine, `finalized_at IS NULL`) → 200; HTML contains `"Finalize &amp; download png"` button + `dg-pipe-step is-done` (steps 0,1) + `dg-pipe-step is-active` (step 2). ✓ button placement + visibility correct.
+  - `curl -X POST /api/digest/14/finalize` → 200 `{"stub":true,"roundId":14,"downloadUrl":null,"relContextDiff":null}`, content-type `application/json`. Click handler will toast the "still stubbed" message and skip the download — as designed.
+  - **Cannot end-to-end test step-4-done state live yet:** no `digest_drafts` row currently has `finalized_at` set (backend T11 must ship first to populate it). Verified by inspection: with `stage === 'finalize'`, `activeIdx === 4`, so all four `stepState(i)` calls return `'done'`. Will re-smoke against `/digest/14` once backend T11 ships and a finalize POST actually sets `finalized_at`.
+- **Once backend T11 ships:** no UI code change should be needed. The handler will auto-detect blob vs URL response and trigger the download; `invalidateAll()` will surface the step-4-done state from the persisted `finalized_at`. Will re-smoke and post a confirmation entry then.
+- **Out of scope (intentionally deferred):**
+  - Rel-context "view diff" modal — depends on backend T12.
+  - Finalize button persistence/idempotency for an already-finalized round — currently the button hides once stage flips to `finalize`. If backend later allows "re-finalize," surface a new control then.
