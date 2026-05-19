@@ -4,9 +4,59 @@
   import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types.js';
+  import type { RoundIndexEntry } from './+page.server.js';
 
   let { data }: { data: PageData } = $props();
+
+  type LeagueGroup = {
+    leagueId: number;
+    leagueName: string;
+    seasons: { seasonId: number; seasonNumber: number; rounds: RoundIndexEntry[] }[];
+  };
+
+  const roundGroups = $derived.by<LeagueGroup[]>(() => {
+    const byLeague = new Map<number, LeagueGroup>();
+    for (const r of data.roundsIndex) {
+      let lg = byLeague.get(r.league_id);
+      if (!lg) {
+        lg = { leagueId: r.league_id, leagueName: r.league_name, seasons: [] };
+        byLeague.set(r.league_id, lg);
+      }
+      let sg = lg.seasons.find((s) => s.seasonId === r.season_id);
+      if (!sg) {
+        sg = { seasonId: r.season_id, seasonNumber: r.season_number, rounds: [] };
+        lg.seasons.push(sg);
+      }
+      sg.rounds.push(r);
+    }
+    return [...byLeague.values()];
+  });
+
+  const votingStillOpen = $derived.by(() => {
+    const cr = data.currentRound;
+    if (cr.voting_deadline) {
+      const t = Date.parse(cr.voting_deadline);
+      if (Number.isFinite(t) && t > Date.now()) return true;
+    } else if (cr.season_status === 'active') {
+      return true;
+    }
+    return false;
+  });
+
+  function onRoundChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const next = Number(target.value);
+    if (Number.isFinite(next) && next !== data.roundId) {
+      goto(`/digest/${next}`);
+    }
+  }
+
+  function roundOptionLabel(r: RoundIndexEntry): string {
+    const name = r.name && r.name.trim() ? r.name : `Round ${r.id}`;
+    return `r-${r.id} · ${name}`;
+  }
 
   type PipelineStage = 'prepare' | 'draft' | 'refine' | 'finalize';
   const PIPELINE: { id: PipelineStage; label: string }[] = [
@@ -235,7 +285,35 @@
   <p class="dg-page-sub">
     Generated when voting closed. LLM analysis cached. Export captures the framed area below as one tall PNG, ready to drop into the league chat.
   </p>
+
+  <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <label for="dg-round-select" style="font: 600 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted);">
+      Round
+    </label>
+    <select
+      id="dg-round-select"
+      onchange={onRoundChange}
+      value={String(data.roundId)}
+      style="font: 500 13px/1.2 var(--font-body); padding: 6px 10px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r-2); min-width: 280px;"
+    >
+      {#each roundGroups as lg (lg.leagueId)}
+        {#each lg.seasons as sg (sg.seasonId)}
+          <optgroup label="{lg.leagueName} · season {sg.seasonNumber}">
+            {#each sg.rounds as r (r.id)}
+              <option value={String(r.id)}>{roundOptionLabel(r)}</option>
+            {/each}
+          </optgroup>
+        {/each}
+      {/each}
+    </select>
+  </div>
 </div>
+
+{#if votingStillOpen}
+  <div role="status" style="margin: 12px 0; padding: 10px 14px; background: var(--amber-soft, rgba(255, 184, 0, 0.12)); border: 1px solid var(--amber, #d29400); color: var(--amber, #d29400); border-radius: var(--r-2); font: 600 12px/1.4 var(--font-mono);">
+    ! voting still open for r-{data.currentRound.id}{data.currentRound.voting_deadline ? ` · deadline ${data.currentRound.voting_deadline}` : ' · no deadline set'} — digest may change.
+  </div>
+{/if}
 
 <div class="dg-pipeline" style="margin: 16px 0;">
   {#each PIPELINE as step, i (step.id)}
