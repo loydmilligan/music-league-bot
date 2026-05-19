@@ -328,3 +328,38 @@ Variants A and B are parked stash — keep but don't wire.
 - **Out of scope (intentionally deferred):**
   - Rel-context "view diff" modal — depends on backend T12.
   - Finalize button persistence/idempotency for an already-finalized round — currently the button hides once stage flips to `finalize`. If backend later allows "re-finalize," surface a new control then.
+
+### 2026-05-19 — backend — Task 11 done (Puppeteer export endpoint)
+- **Premise correction:** the task brief said "Puppeteer is already in the project — locate it before adding a dep." It is, but only as a transitive dep of `whatsapp-web.js` in the **root `package.json` → `bot` container**, not the `bot-ui` container. Confirmed in the running bot-ui: no `puppeteer*` in `node_modules`, no `chromium` binary on the bare `node:22-bookworm-slim` runtime, `ui/package.json` had no puppeteer entry. Surfaced to user; user approved **option B** (puppeteer-core + distro chromium in `Dockerfile.ui`).
+- **Image change** (`Dockerfile.ui`): runtime stage now `apt-get install -y --no-install-recommends chromium fonts-liberation` and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` + `PUPPETEER_SKIP_DOWNLOAD=true` (also in builder stage so `npm ci` doesn't try to fetch bundled Chromium). Verified in container: `chromium --version` → `Chromium 148.0.7778.167 built on Debian GNU/Linux 12 (bookworm)`. Image rebuild +~45 s, runtime image +~200 MB.
+- **Dep change** (`ui/package.json`): added `puppeteer-core` via `PUPPETEER_SKIP_DOWNLOAD=true npm install puppeteer-core`. 43 new packages, lockfile updated. Chose `puppeteer-core` over full `puppeteer` so the npm install does not download a ~170 MB Chromium tarball we wouldn't use.
+- **New module** `ui/src/lib/digest/export.ts`: `renderDigestPng(roundId)` launches headless chromium (`--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage`), navigates to `http://localhost:${PORT}/digest/${roundId}?export=1` (override-able via `DIGEST_EXPORT_INTERNAL_URL`), `waitForSelector('.dg-export')`, takes an **element-bounded PNG** of `.dg-export` at viewport width 800 × `deviceScaleFactor: 2` (so the artifact is 1600 px wide — looks crisp on retina). Belt-and-suspenders: `addStyleTag` hides `.dg-pipe, .dg-pipeline, .dg-pipe-strip, .dg-section-actions, .dg-section-banner, .dg-whole-regen, [data-export-hide="1"]` so chrome can't bleed in even if T9 wiring drifts. Also exports `exportPathFor(filename)` with a strict regex (`/^r-\d+-digest-\d+\.png$/`) to guard the download endpoint against path traversal.
+- **Storage:** PNGs land in `${DATA_DIR}/exports/r-${roundId}-digest-${unixSeconds}.png` (i.e. `/app/data/exports/...` in-container, `data/exports/...` on host via the existing `./data:/app/data` volume mount). Survives container rebuilds. Filename pattern matches frontend T13's `r-{N}-digest-{timestamp}.png` brief; timestamp is unix seconds rather than the ISO-ish form the brief used in prose — frontend should treat the value as opaque.
+- **Download endpoint:** new `GET /api/digest/exports/[filename]` (`ui/src/routes/api/digest/exports/[filename]/+server.ts`) — streams the file with `Content-Type: image/png` and `Content-Disposition: attachment; filename="..."`. Frontend T13 should `<a href={downloadUrl} download={filename}>` to trigger the browser download; no extra POST or blob handling needed. `Cache-Control: private, max-age=300` so back-to-back downloads of the same export don't re-hit disk.
+- **`POST /api/digest/:roundId/finalize` response shape (this is the contract for frontend T13):**
+  ```json
+  {
+    "ok": true,
+    "roundId": 14,
+    "draftId": "draft-14-6e636560",
+    "finalizedAt": "2026-05-19T22:52:59Z",
+    "firstFinalize": true,
+    "filename": "r-14-digest-1779231176.png",
+    "bytes": 1250512,
+    "downloadUrl": "/api/digest/exports/r-14-digest-1779231176.png"
+  }
+  ```
+  Error codes: `400 invalid roundId` · `404 round not found` · `409 no draft for this round — call /draft first` · `502 digest export failed: <reason>`.
+- **Idempotency (matches user's recommendation):** each `/finalize` call **always re-renders a new PNG** with a fresh timestamp filename. `digest_drafts.finalized_at` is set **once on the first call** and preserved on subsequent calls; `firstFinalize: boolean` in the response lets the UI distinguish. Operators can re-export after edits without losing the original finalization timestamp.
+- **Smoke (against `https://mlb.mattmariani.com`):**
+  - `POST /api/digest/14/finalize` #1 → **200** in 3.1 s, `firstFinalize:true`, `finalizedAt:"2026-05-19T22:52:59Z"`, `bytes:1250512`, file `r-14-digest-1779231176.png` written.
+  - `POST /api/digest/14/finalize` #2 → **200** in 3.8 s, `firstFinalize:false`, same `finalizedAt`, new filename `r-14-digest-1779231179.png`. Idempotency verified.
+  - DB: `SELECT id, round_id, finalized_at, whole_regen_count FROM digest_drafts WHERE round_id=14` → `draft-14-6e636560|14|2026-05-19T22:52:59Z|0`. ✓
+  - Disk: both PNGs present in `data/exports/`, 1.3 MB each.
+  - `GET /api/digest/exports/r-14-digest-1779231176.png` → **200** `image/png` 1 250 512 bytes; `file(1)` reports `PNG image data, 1600 x 3890, 8-bit/color RGB, non-interlaced`. Width 1600 = 800 viewport × DSR 2 as intended.
+  - **Visual check:** the 4 explicitly forbidden chrome items are absent — no pipeline strip, no section action buttons, no banners, no "Regenerate whole draft" button. ✓
+- **Borderline observation (flag for frontend, NOT touched here):** the rendered `.dg-export` includes a thin metadata header at the top of the PNG (draft id, round id, generated timestamp, "5 sections · whole-regen count:0"). It's inside `.dg-export` so the element-bounded screenshot captures it. If this strip is intentional editorial chrome of the dgC variant, no action. If it's developer debug info that leaked into the export frame, frontend can suppress it for export by adding `data-export-hide="1"` to that element — my `addStyleTag` in `export.ts` already hides anything carrying that attribute. No code change needed on backend either way.
+- **Could not smoke other rounds:** only round 14 has a draft (`SELECT round_id FROM digest_drafts` → `14`). Rounds 97/106 mentioned in the brief don't have drafts yet — would need a `POST /draft` first.
+- **Frontend T13 integration cheat-sheet:** call `POST /api/digest/:roundId/finalize`, then trigger download via `<a href={response.downloadUrl} download={response.filename}>` (programmatically clicked is fine). `firstFinalize` flips the pipeline strip to step-4-done; subsequent re-finalizes show step-4-done remaining true with `finalizedAt` unchanged.
+- `npm run check`: 505 files (was 491), 1 error / 31 warnings — baseline unchanged, zero new from this change.
+- **Status:** Task 11 acceptance met. **Stopping per instructions — not proceeding to T12 (rel-context) without explicit go-ahead.**

@@ -1,5 +1,7 @@
 FROM node:22-bookworm-slim AS builder
 
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -17,10 +19,16 @@ RUN npm prune --omit=dev
 
 FROM node:22-bookworm-slim AS runtime
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 ENV PORT=3002
 ENV HOST=0.0.0.0
 ENV DATA_DIR=/app/data
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app/ui
 
