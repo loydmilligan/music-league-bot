@@ -14,7 +14,6 @@
     { href: '/',          label: 'Active round',   glyph: '▸', count: 'r-14' },
     { href: '/shortlist', label: 'Shortlist',      glyph: '▸', count: '11' },
     { href: '/chat',      label: 'Chat watcher',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
-    { href: '/link',      label: 'Link converter', glyph: '▸' },
     { href: '/digest',    label: 'Digest preview', glyph: '▸', count: '3 new' },
     { href: '/history',   label: 'Round history',  glyph: '▸', count: '13' },
     { href: '/settings',  label: 'Setup',          glyph: '▸' },
