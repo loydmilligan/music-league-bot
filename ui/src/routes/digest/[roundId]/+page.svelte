@@ -1,18 +1,9 @@
 <script lang="ts">
   import '$lib/digest/digest.css';
+  import { invalidateAll } from '$app/navigation';
   import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
-  import {
-    DIGEST_ROUND,
-    DIGEST_SUBMISSIONS,
-    DIGEST_VILLAIN,
-    DIGEST_FLOW_NOTABLE,
-    DIGEST_CONSENSUS,
-    DIGEST_COMMENTS,
-    DIGEST_CHAT,
-    DIGEST_SECTION_ORDER,
-    type SectionKind,
-  } from '$lib/digest/fixtures.js';
+  import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
   import type { PageData } from './$types.js';
 
   let { data }: { data: PageData } = $props();
@@ -24,13 +15,6 @@
     { id: 'refine',   label: 'Refine sections' },
     { id: 'finalize', label: 'Finalize & export' },
   ];
-  const activeIdx = 0;
-
-  function stepState(i: number): 'done' | 'active' | 'pending' {
-    if (i < activeIdx) return 'done';
-    if (i === activeIdx) return 'active';
-    return 'pending';
-  }
 
   const SECTION_LABELS: Record<SectionKind, string> = {
     podium: 'A-side · final ranking',
@@ -41,153 +25,209 @@
     chat: 'Back cover · chat notes',
   };
 
-  // Section preview snippets — used for the regen-modal "current copy" panel.
-  // Replaced by real `content_json` once T7 lands.
-  const SECTION_PREVIEWS: Record<SectionKind, string> = {
-    podium: `Six tracks, ranked. ${DIGEST_SUBMISSIONS[0].title} (${DIGEST_SUBMISSIONS[0].artist}) wins outright at ${DIGEST_SUBMISSIONS[0].points} pts.`,
-    villain: `${DIGEST_VILLAIN.songTitle} drew the round's lone downvote — ${DIGEST_VILLAIN.points} pts from ${DIGEST_VILLAIN.downvoter} (theme chooser). "${DIGEST_VILLAIN.comment}"`,
-    flow: 'Four notable edges: first cross-faction vote, crossed enemy lines, mutual top-billing, theme-chooser downvote.',
-    consensus: `Most agreed: ${DIGEST_CONSENSUS.agreed.title}. Most contested: ${DIGEST_CONSENSUS.contested.title}.`,
-    quotes: DIGEST_COMMENTS.map((c) => `"${c.quote}" — ${c.who}`).join(' · '),
-    chat: DIGEST_CHAT.map((c) => `[${c.headline}] ${c.text ?? c.quote ?? ''}`).join(' · '),
-  };
+  const activeIdx = $derived(
+    data.stage === 'prepare'
+      ? 0
+      : data.stage === 'refine'
+        ? 2
+        : data.stage === 'finalize'
+          ? 3
+          : 0,
+  );
+  function stepState(i: number): 'done' | 'active' | 'pending' {
+    if (i < activeIdx) return 'done';
+    if (i === activeIdx) return 'active';
+    return 'pending';
+  }
 
-  // Per-section state. Wave 2 keeps this local; T7 will persist to digest_sections.
-  let sectionStates = $state<Record<SectionKind, SectionState>>({
-    podium: 'default',
-    villain: 'default',
-    flow: 'default',
-    consensus: 'default',
-    quotes: 'default',
-    chat: 'default',
+  // -------- Prepare stage ----------
+  let preparing = $state(false);
+  async function rerunPrepare() {
+    preparing = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/prepare`, { method: 'POST' });
+      if (!res.ok) throw new Error(`prepare failed (${res.status})`);
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    } finally {
+      preparing = false;
+    }
+  }
+
+  let drafting = $state(false);
+  async function generateDraft() {
+    drafting = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/draft`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`draft failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    } finally {
+      drafting = false;
+    }
+  }
+
+  // -------- Refine stage state ----------
+  // Each section's UI state. Initialized from DB row state when sections load,
+  // and reset on data refresh. Excluded/locked transitions stay local until a
+  // backend PATCH endpoint exists for section.state.
+  let sectionStates = $state<Record<string, SectionState>>({});
+  $effect(() => {
+    if (data.stage === 'refine' || data.stage === 'finalize') {
+      const next: Record<string, SectionState> = {};
+      for (const s of data.sections) next[s.id] = (s.state as SectionState) ?? 'default';
+      sectionStates = next;
+    } else {
+      sectionStates = {};
+    }
   });
 
-  // Last instructions per section, for prefilling the modal next time.
-  let lastInstructions = $state<Record<SectionKind, string>>({
-    podium: '',
-    villain: '',
-    flow: '',
-    consensus: '',
-    quotes: '',
-    chat: '',
-  });
-  let lastChips = $state<Record<SectionKind, string[]>>({
-    podium: [],
-    villain: [],
-    flow: [],
-    consensus: [],
-    quotes: [],
-    chat: [],
-  });
+  let lastInstructions = $state<Record<string, string>>({});
+  let lastChips = $state<Record<string, string[]>>({});
 
-  // Modal state. `target` is the section kind, or 'whole' for whole-draft regen.
-  let modalTarget = $state<SectionKind | 'whole' | null>(null);
-  let errorToast = $state<string | null>(null);
+  // modalTarget: 'whole' or a specific section id
+  let modalTarget = $state<string | 'whole' | null>(null);
 
-  function openRegen(kind: SectionKind) {
-    modalTarget = kind;
-  }
-  function openWholeRegen() {
-    modalTarget = 'whole';
-  }
-  function closeModal() {
-    modalTarget = null;
-  }
+  function openRegen(sectionId: string) { modalTarget = sectionId; }
+  function openWholeRegen() { modalTarget = 'whole'; }
+  function closeModal() { modalTarget = null; }
 
-  function toggleExcluded(kind: SectionKind) {
-    sectionStates[kind] = sectionStates[kind] === 'excluded' ? 'default' : 'excluded';
+  function toggleExcluded(id: string) {
+    sectionStates[id] = sectionStates[id] === 'excluded' ? 'default' : 'excluded';
   }
-  function toggleLocked(kind: SectionKind) {
-    sectionStates[kind] = sectionStates[kind] === 'locked' ? 'default' : 'locked';
+  function toggleLocked(id: string) {
+    sectionStates[id] = sectionStates[id] === 'locked' ? 'default' : 'locked';
   }
-  function kebabAction(_kind: SectionKind, action: 'edit' | 'up' | 'down' | 'delete') {
-    // Wired stub. Wave 3 implements edit-inline, reordering, delete persistence.
+  function kebabAction(_id: string, action: 'edit' | 'up' | 'down' | 'delete') {
     console.warn('[digest] kebab action not yet wired:', action);
   }
 
   async function submitRegen(payload: { chips: string[]; instructions: string }) {
     const target = modalTarget;
     modalTarget = null;
-    if (!target) return;
+    if (!target || (data.stage !== 'refine' && data.stage !== 'finalize')) return;
 
-    const kinds: SectionKind[] = target === 'whole'
-      ? DIGEST_SECTION_ORDER.filter((k) => sectionStates[k] !== 'locked' && sectionStates[k] !== 'excluded')
+    const ids: string[] = target === 'whole'
+      ? data.sections
+          .filter((s) => sectionStates[s.id] !== 'locked' && sectionStates[s.id] !== 'excluded')
+          .map((s) => s.id)
       : [target];
 
-    for (const k of kinds) {
-      lastChips[k] = payload.chips;
-      lastInstructions[k] = payload.instructions;
-      sectionStates[k] = 'regenerating';
+    for (const id of ids) {
+      lastChips[id] = payload.chips;
+      lastInstructions[id] = payload.instructions;
+      sectionStates[id] = 'regenerating';
     }
 
     try {
-      if (target === 'whole') {
-        await callApi(`/api/digest/${data.roundId}/regenerate`, payload);
-      } else {
-        await callApi(`/api/digest/${data.roundId}/sections/${target}/regenerate`, payload);
+      const url = target === 'whole'
+        ? `/api/digest/${data.roundId}/regenerate`
+        : `/api/digest/${data.roundId}/sections/${target}/regenerate`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`regen failed (${res.status}) ${text.slice(0, 200)}`);
       }
+      await invalidateAll();
     } catch (err) {
-      errorToast = err instanceof Error ? err.message : 'Regenerate failed';
-      setTimeout(() => (errorToast = null), 4000);
-    } finally {
-      for (const k of kinds) {
-        // Wave 2 stub: no draft persisted yet, so flip back to default
-        // (or stay locked if user locked it during regen).
-        if (sectionStates[k] === 'regenerating') sectionStates[k] = 'default';
+      showError(err);
+      for (const id of ids) {
+        if (sectionStates[id] === 'regenerating') sectionStates[id] = 'default';
       }
     }
   }
 
-  async function callApi(url: string, payload: { chips: string[]; instructions: string }) {
-    // Backend scaffold (T2) returns 404 for missing draft/section rows. Wave 2 LLM
-    // service (T7) writes them. Treat 404 here as "scaffold mode — no draft yet"
-    // and don't surface as a user-facing error.
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok && res.status !== 404) {
-      throw new Error(`Regenerate failed (${res.status})`);
-    }
+  // -------- Shared ----------
+  let errorToast = $state<string | null>(null);
+  let errorTimer: ReturnType<typeof setTimeout> | null = null;
+  function showError(err: unknown) {
+    errorToast = err instanceof Error ? err.message : String(err);
+    if (errorTimer) clearTimeout(errorTimer);
+    errorTimer = setTimeout(() => (errorToast = null), 5000);
   }
 
+  // -------- Refine derived ----------
+  const sectionsList = $derived(
+    data.stage === 'refine' || data.stage === 'finalize' ? data.sections : [],
+  );
   const excludedCount = $derived(
-    DIGEST_SECTION_ORDER.filter((k) => sectionStates[k] === 'excluded').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'excluded').length,
   );
   const lockedCount = $derived(
-    DIGEST_SECTION_ORDER.filter((k) => sectionStates[k] === 'locked').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'locked').length,
+  );
+
+  const allChecksOk = $derived(
+    data.stage === 'prepare' ? data.checks.every((c) => c.ok) : false,
   );
 
   const modalLabel = $derived(
     modalTarget === 'whole'
       ? 'whole draft · all unlocked sections'
       : modalTarget
-        ? SECTION_LABELS[modalTarget]
+        ? labelForSection(modalTarget)
         : '',
   );
   const modalPreview = $derived(
     modalTarget === 'whole'
       ? 'All non-locked, non-excluded sections will regenerate in parallel.'
       : modalTarget
-        ? SECTION_PREVIEWS[modalTarget]
+        ? previewForSection(modalTarget)
         : '',
   );
   const modalInitialChips = $derived(
-    modalTarget && modalTarget !== 'whole' ? lastChips[modalTarget] : [],
+    modalTarget && modalTarget !== 'whole' ? lastChips[modalTarget] ?? [] : [],
   );
   const modalInitialInstructions = $derived(
-    modalTarget && modalTarget !== 'whole' ? lastInstructions[modalTarget] : '',
+    modalTarget && modalTarget !== 'whole' ? lastInstructions[modalTarget] ?? '' : '',
   );
+
+  function labelForSection(id: string): string {
+    const s = sectionsList.find((x) => x.id === id);
+    return s ? SECTION_LABELS[s.kind as SectionKind] : '';
+  }
+  function previewForSection(id: string): string {
+    const s = sectionsList.find((x) => x.id === id);
+    if (!s) return '';
+    const c = s.content as { title?: string; body?: string; items?: unknown[] };
+    if (c?.body) return c.body;
+    if (Array.isArray(c?.items) && c.items.length) {
+      return c.items.slice(0, 3).map((it) => typeof it === 'string' ? it : JSON.stringify(it)).join(' · ');
+    }
+    return '(empty)';
+  }
+
+  // Section order for rendering — preserve DB position order.
+  const renderSections = $derived(
+    [...sectionsList].sort((a, b) => a.position - b.position),
+  );
+
+  // Make sure unknown section kinds don't crash.
+  function kindOrFallback(k: string): SectionKind {
+    return (SECTION_KINDS as readonly string[]).includes(k) ? (k as SectionKind) : 'flow';
+  }
 </script>
 
 <svelte:head>
-  <title>Digest preview · {data.roundId}</title>
+  <title>Digest preview · r-{data.roundId}</title>
 </svelte:head>
 
 <div class="dg-page-head">
   <p style="font: 700 10px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-muted); margin: 0 0 4px;">
-    music-league-bot · /digest · {data.roundId}
+    music-league-bot · /digest · r-{data.roundId}
   </p>
   <h1 style="margin: 0; font: 700 28px/1.15 var(--font-display); letter-spacing: -0.015em; color: var(--fg);">
     Round digest preview
@@ -210,64 +250,97 @@
   {/each}
 </div>
 
-<div class="dg-page-actions">
-  <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen}>
-    ↻ Regenerate whole draft
-  </button>
-  <span class="dg-page-actions-spacer"></span>
-  <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">
-    draft cached · {excludedCount} excluded · {lockedCount} locked
-  </span>
-</div>
-
 {#if errorToast}
   <div role="alert" style="margin: 12px 0; padding: 10px 14px; background: var(--ember-soft); border: 1px solid var(--ember); color: var(--ember); border-radius: var(--r-2); font: 600 12px/1.4 var(--font-mono);">
     {errorToast}
   </div>
 {/if}
 
-<div class="dg-export dgC-bg">
-  <header class="dgC-mast">
-    <div class="dgC-mast-row1">
-      <span>m/l</span>
-      <span class="sep">/</span>
-      <span>{DIGEST_ROUND.league.toLowerCase()}</span>
-      <span class="sep">/</span>
-      <span>S{DIGEST_ROUND.season}</span>
-      <span class="sep">/</span>
-      <span>R-{DIGEST_ROUND.number}</span>
-      <span class="sep">/</span>
-      <span class="pulp">closed {DIGEST_ROUND.voteClosed}</span>
+{#if data.stage === 'prepare'}
+  <section class="dg-prepare" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-3); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;">
+    <header style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+      <h2 style="margin: 0; font: 700 16px/1.2 var(--font-body); color: var(--fg);">
+        Prepare data · r-{data.roundId}
+      </h2>
+      <span style="font: 600 11px/1 var(--font-mono); color: {allChecksOk ? 'var(--moss)' : 'var(--amber)'};">
+        {allChecksOk ? '✓ all checks passed · ready to draft' : '! checks pending'}
+      </span>
+    </header>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      {#each data.checks as check (check.name)}
+        <div style="display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: baseline; padding: 8px 10px; background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-2);">
+          <span style="text-align: center; font: 700 14px/1 var(--font-mono); color: {check.ok ? 'var(--moss)' : 'var(--amber)'};">
+            {check.ok ? '✓' : '!'}
+          </span>
+          <span style="font: 500 13px/1.4 var(--font-body); color: var(--fg);">
+            {check.name}{check.count !== undefined ? ` · ${check.count}` : ''}
+          </span>
+          <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">{check.src}</span>
+        </div>
+      {/each}
     </div>
-    <h1 class="dgC-mast-title">"{DIGEST_ROUND.name}"</h1>
-    <p class="dgC-mast-deck">
-      a round of <b>{DIGEST_ROUND.submissions}</b> songs by <b>{DIGEST_ROUND.voters}</b> voters · theme chosen by <b>{DIGEST_ROUND.themeChooser}</b> · <b>{DIGEST_ROUND.totalPointsAwarded}</b> points awarded
-    </p>
-  </header>
 
-  {#each DIGEST_SECTION_ORDER as kind (kind)}
-    <DigestSection
-      {kind}
-      label={SECTION_LABELS[kind]}
-      sectionState={sectionStates[kind]}
-      submissions={DIGEST_SUBMISSIONS}
-      villain={DIGEST_VILLAIN}
-      flowNotable={DIGEST_FLOW_NOTABLE}
-      consensus={DIGEST_CONSENSUS}
-      comments={DIGEST_COMMENTS}
-      chat={DIGEST_CHAT}
-      onToggleExcluded={() => toggleExcluded(kind)}
-      onToggleLocked={() => toggleLocked(kind)}
-      onRegen={() => openRegen(kind)}
-      onKebabAction={(action) => kebabAction(kind, action)}
-    />
-  {/each}
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={rerunPrepare} disabled={preparing}>
+        {preparing ? '…' : '↻'} Re-run checks
+      </button>
+      <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" disabled style="opacity: 0.5;">
+        ↑ Upload export.zip manually
+      </button>
+      <span style="flex: 1;"></span>
+      {#if allChecksOk}
+        <button type="button" class="mash-btn mash-btn--primary" onclick={generateDraft} disabled={drafting}>
+          {drafting ? '…' : '✎'} Generate draft
+        </button>
+      {/if}
+    </div>
+  </section>
+{:else if data.stage === 'refine' || data.stage === 'finalize'}
+  <div class="dg-page-actions">
+    <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen}>
+      ↻ Regenerate whole draft
+    </button>
+    <span class="dg-page-actions-spacer"></span>
+    <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">
+      draft cached · {excludedCount} excluded · {lockedCount} locked
+    </span>
+  </div>
 
-  <footer class="dgC-foot">
-    <div>m/l · liner notes · <span class="pulp">"{DIGEST_ROUND.name}"</span></div>
-    <div>{DIGEST_ROUND.league.toLowerCase()} · s{DIGEST_ROUND.season} · r-{DIGEST_ROUND.number} · pressed {DIGEST_ROUND.voteClosed}</div>
-  </footer>
-</div>
+  <div class="dg-export dgC-bg">
+    <header class="dgC-mast">
+      <div class="dgC-mast-row1">
+        <span>m/l</span>
+        <span class="sep">/</span>
+        <span>r-{data.roundId}</span>
+        <span class="sep">/</span>
+        <span class="pulp">generated {data.draft.generated_at}</span>
+      </div>
+      <h1 class="dgC-mast-title">Round digest</h1>
+      <p class="dgC-mast-deck">
+        {data.sections.length} sections · whole-regen count {data.draft.whole_regen_count}
+      </p>
+    </header>
+
+    {#each renderSections as section (section.id)}
+      <DigestSection
+        kind={kindOrFallback(section.kind)}
+        label={SECTION_LABELS[kindOrFallback(section.kind)]}
+        sectionState={sectionStates[section.id] ?? 'default'}
+        content={section.content}
+        onToggleExcluded={() => toggleExcluded(section.id)}
+        onToggleLocked={() => toggleLocked(section.id)}
+        onRegen={() => openRegen(section.id)}
+        onKebabAction={(action) => kebabAction(section.id, action)}
+      />
+    {/each}
+
+    <footer class="dgC-foot">
+      <div>m/l · liner notes · r-{data.roundId}</div>
+      <div>generated {data.draft.generated_at}{data.draft.finalized_at ? ` · finalized ${data.draft.finalized_at}` : ''}</div>
+    </footer>
+  </div>
+{/if}
 
 {#if modalTarget !== null}
   <RegenModal
