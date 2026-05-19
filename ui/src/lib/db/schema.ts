@@ -133,6 +133,43 @@ export const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_chat_mentions_song ON chat_mentions(song_id);
   CREATE INDEX IF NOT EXISTS idx_chat_assignments_round ON chat_assignments(round_id);
+  CREATE TABLE IF NOT EXISTS digest_drafts (
+    id                TEXT PRIMARY KEY,
+    round_id          INTEGER NOT NULL REFERENCES rounds(id),
+    generated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    finalized_at      TEXT,
+    rel_context       TEXT NOT NULL,
+    prep_checks       TEXT NOT NULL,
+    whole_regen_count INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);
+  CREATE TABLE IF NOT EXISTS digest_sections (
+    id           TEXT PRIMARY KEY,
+    draft_id     TEXT NOT NULL REFERENCES digest_drafts(id) ON DELETE CASCADE,
+    kind         TEXT NOT NULL CHECK(kind IN ('podium','villain','flow','consensus','quotes','chat')),
+    position     INTEGER NOT NULL,
+    state        TEXT NOT NULL DEFAULT 'default' CHECK(state IN ('default','excluded','locked')),
+    content_json TEXT NOT NULL,
+    edited_at    TEXT,
+    regen_count  INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_digest_sections_draft ON digest_sections(draft_id, position);
+  CREATE TABLE IF NOT EXISTS digest_regenerations (
+    id                 TEXT PRIMARY KEY,
+    section_id         TEXT NOT NULL REFERENCES digest_sections(id) ON DELETE CASCADE,
+    ran_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    chips              TEXT NOT NULL,
+    instructions       TEXT NOT NULL,
+    prior_content_json TEXT NOT NULL,
+    new_content_json   TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
+  CREATE TABLE IF NOT EXISTS relationship_contexts (
+    league_id     INTEGER PRIMARY KEY REFERENCES leagues(id),
+    text          TEXT NOT NULL DEFAULT '',
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    last_round_id INTEGER REFERENCES rounds(id)
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
