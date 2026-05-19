@@ -86,6 +86,36 @@
   function isPodium(x: unknown): x is PodiumItem {
     return typeof x === 'object' && x !== null && ('title' in x || 'artist' in x || 'rank' in x);
   }
+
+  // Consensus items have varied across drafts:
+  //  - {title, artist, note}     (round 14)
+  //  - {song, note}              (rounds 98, 102 — `song` is "Title — Artist")
+  //  - {point | statement, ...}  (defensive fallback if a future draft uses that)
+  type ConsensusItem = {
+    title?: string;
+    artist?: string;
+    song?: string;
+    point?: string;
+    statement?: string;
+    note?: string;
+    detail?: string;
+    body?: string;
+    supporters?: unknown;
+  };
+  function consensusHeadline(x: ConsensusItem): string {
+    if (x.title && x.artist) return `${x.title} — ${x.artist}`;
+    if (x.title) return x.title;
+    if (x.song) return x.song;
+    if (x.point) return x.point;
+    if (x.statement) return x.statement;
+    return '';
+  }
+  function consensusNote(x: ConsensusItem): string {
+    return x.note ?? x.detail ?? x.body ?? '';
+  }
+  function isConsensus(x: unknown): x is ConsensusItem {
+    return typeof x === 'object' && x !== null;
+  }
 </script>
 
 <svelte:document onclick={handleDocClick} />
@@ -205,6 +235,30 @@
           {/if}
         {/each}
       </div>
+    {:else if kind === 'consensus' && items.length}
+      <div class="dgC-consensus">
+        {#each items as item, i (i)}
+          {#if isConsensus(item)}
+            {@const head = consensusHeadline(item)}
+            {@const note = consensusNote(item)}
+            <div class="dgC-consensus-row">
+              {#if head}
+                <p class="dgC-consensus-head">{head}</p>
+              {/if}
+              {#if note}
+                <p class="dgC-consensus-note">{note}</p>
+              {/if}
+              {#if !head && !note}
+                <p class="dgC-consensus-note">{itemText(item)}</p>
+              {/if}
+            </div>
+          {:else}
+            <div class="dgC-consensus-row">
+              <p class="dgC-consensus-note">{itemText(item)}</p>
+            </div>
+          {/if}
+        {/each}
+      </div>
     {:else if items.length}
       <ul class="dg-section-items">
         {#each items as item, i (i)}
@@ -248,5 +302,27 @@
   .dg-section-empty {
     color: var(--fg-quiet);
     font-style: italic;
+  }
+  .dgC-consensus {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .dgC-consensus-row {
+    padding: 10px 12px;
+    border-left: 2px solid var(--moss, var(--ink-3));
+    background: var(--ink-0);
+    border-radius: 0 var(--r-2) var(--r-2) 0;
+  }
+  .dgC-consensus-head {
+    margin: 0 0 4px;
+    font: 700 14px/1.3 var(--font-body);
+    color: var(--fg);
+    font-style: italic;
+  }
+  .dgC-consensus-note {
+    margin: 0;
+    font: 400 12.5px/1.5 var(--font-body);
+    color: var(--fg-2);
   }
 </style>

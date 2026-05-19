@@ -280,3 +280,25 @@ Variants A and B are parked stash — keep but don't wire.
 - **Out of scope, not done:**
   - Sidebar `Digest` count chip still hardcoded `"3 new"` — sprint plan doesn't mention it; left untouched.
   - Pre-existing svelte-check warnings (`state_referenced_locally`, a11y) in other files — out of Task 14 scope.
+
+### 2026-05-19 — frontend — bugfix: consensus section rendering raw JSON
+- **Symptom:** "Points of Agreement" / consensus section on `/digest/[roundId]` rendered each item as raw `JSON.stringify(item)` output (effectively `[object Object]`-shaped strings) instead of formatted content.
+- **Root cause — two layers:**
+  1. **Renderer gap (`DigestSection.svelte:208-213`):** kind-specific shaping existed only for `podium` (track list) and `quotes` (quote cards). Every other kind with object-shaped items fell into the generic `<li>{itemText(item)}</li>` branch, and `itemText` defaults to `JSON.stringify(item)` for non-primitives. That's what the user saw.
+  2. **Prompt looseness (`ui/src/lib/digest/llm.ts:166-180`):** the system prompt declares consensus as `{ "title": string, "items": [...] }` and then says "Each section's `items` shape is up to you per kind, but stay consistent within a section." No schema is pinned for consensus items. The LLM has produced **two different shapes across drafts in the live DB**:
+     - r-14 → `[{ title, artist, note }, …]`
+     - r-98, r-102 → `[{ song, note }, …]` where `song` already contains `"Title — Artist"`
+- **Fix applied (renderer-side only, single file `ui/src/lib/digest/DigestSection.svelte`):**
+  - Added `ConsensusItem` type + `consensusHeadline()` / `consensusNote()` helpers that defensively extract a headline from `title+artist`, `title`, `song`, `point`, or `statement` (in that order), and a note from `note`, `detail`, or `body`.
+  - Added a new `{:else if kind === 'consensus' && items.length}` branch above the generic `items` fallback, rendering each item as a `.dgC-consensus-row` card with a `.dgC-consensus-head` (italic headline) + `.dgC-consensus-note` (body).
+  - Added matching scoped styles (`.dgC-consensus`, `.dgC-consensus-row`, `.dgC-consensus-head`, `.dgC-consensus-note`) using existing CSS tokens (`--moss`, `--ink-0`, `--r-2`, etc.). Did **not** retrofit `digest.css`'s `.dgC-cc-*` (Consensus C) classes — those assume a two-block agree/contest pair shape, which doesn't match the linear `items` array the LLM is actually producing.
+  - **Did not touch `llm.ts` per scope discipline.** Both observed shapes render correctly. The renderer also handles a hypothetical `{point, statement}` shape defensively.
+- **Backend hand-off (suggested, not applied):** the "items shape is up to you per kind" clause in `buildSystemPrompt()` is the structural reason for shape drift across drafts. Pinning consensus items to a single schema (e.g. `[{title, artist, note}]`) would let the renderer drop the dual-shape extraction and would also stabilize whole-regen output. Leaving the decision to backend; renderer is robust either way.
+- **`npm run check`:** unchanged baseline — 1 ERROR (pre-existing `vite.config.ts`), 31 WARNINGS, 14 FILES. Zero new diagnostics from `DigestSection.svelte`.
+- **Deploy:** `docker compose build --no-cache bot-ui && docker compose up -d bot-ui` — image rebuilt, container up on `0.0.0.0:3002`.
+- **Smoke (localhost:3002):**
+  - DB scan: only r-14, r-98, r-102 currently have consensus sections persisted. r-97 and r-106 have drafts without consensus rows (so /digest/97 and /digest/106 return 200 but have no consensus to render — not a regression).
+  - `GET /digest/14`  → 200; first row renders `Mariella — Khruangbin & Leon Bridges` + note `"7 out of 9 voters included it — the widest agreement of the round."` (shape A confirmed).
+  - `GET /digest/98`  → 200; first row renders `French Disko — Stereolab` + note (shape B confirmed; `song` field already contained the em-dash join, so no double-join).
+  - `GET /digest/102` → 200; first row renders `Total Eclipse of the Heart — Bonnie Tyler` + note (shape B confirmed).
+  - No `[object Object]`, no `JSON.stringify` output, no `"items":[{` raw-JSON leak in any rendered HTML.
