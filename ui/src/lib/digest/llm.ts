@@ -133,7 +133,7 @@ async function callOpenRouter(messages: OpenRouterMessage[], opts: { model?: str
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://mlb.mattmariani.com',
-      'X-Title': 'Music League Bot — Digest',
+      'X-Title': 'Music League Bot - Digest',
     },
     body: JSON.stringify(body),
   });
@@ -145,7 +145,8 @@ async function callOpenRouter(messages: OpenRouterMessage[], opts: { model?: str
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = json.choices?.[0]?.message?.content;
   if (!content) throw new Error('OpenRouter returned no content');
-  return content;
+  const fenced = content.match(/^\s*```(?:json)?\s*\n([\s\S]*?)\n```\s*$/);
+  return fenced ? fenced[1] : content;
 }
 
 const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
