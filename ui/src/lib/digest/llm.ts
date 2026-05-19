@@ -221,8 +221,9 @@ function buildUserPrompt(data: RoundData, steer?: { chips: string[]; instruction
     }
     parts.push(`\nReturn JSON: { "section": { ...content for "${steer.kind}"... } }`);
   } else {
-    parts.push(`\n# Write all 6 sections`);
-    for (const k of SECTION_KINDS) {
+    const activeKinds = SECTION_KINDS.filter((k) => k !== 'chat' || data.chatMentions.length > 0);
+    parts.push(`\n# Write ${activeKinds.length} sections`);
+    for (const k of activeKinds) {
       parts.push(`- ${k}: ${SECTION_DESCRIPTIONS[k]}`);
     }
   }
@@ -301,7 +302,8 @@ export function writeDraft(
        VALUES (?, ?, ?, ?, ?, 0)`,
     ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}));
 
-    SECTION_KINDS.forEach((kind, idx) => {
+    const activeKinds = SECTION_KINDS.filter((k) => k !== 'chat' || data.chatMentions.length > 0);
+    activeKinds.forEach((kind, idx) => {
       const id = `${draftId}-${kind}`;
       db.prepare(
         `INSERT INTO digest_sections (id, draft_id, kind, position, state, content_json, regen_count)

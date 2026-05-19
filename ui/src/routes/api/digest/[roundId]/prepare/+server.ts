@@ -8,6 +8,7 @@ interface CheckResult {
   ok: boolean;
   src: string;
   count?: number;
+  optional?: boolean;
 }
 
 interface RoundRow {
@@ -93,7 +94,7 @@ function runChecks(db: Database.Database, roundId: number): CheckResult[] {
     { name: 'Submissions', ok: subs_count > 0, src: roundSrc, count: subs_count },
     { name: 'Votes', ok: votes_count > 0, src: roundSrc, count: votes_count },
     { name: 'Vote comments', ok: comments_count > 0, src: roundSrc, count: comments_count },
-    { name: 'Chat-window mentions', ok: mentions_count > 0, src: `watcher · ${dateRange}`, count: mentions_count },
+    { name: 'Chat-window mentions', ok: mentions_count > 0, src: `watcher · ${dateRange}`, count: mentions_count, optional: true },
     { name: 'Album art', ok: artOk, src: 'spotify api', count: subs_count },
   ];
 }

@@ -13,6 +13,7 @@ export type PrepareCheck = {
   ok: boolean;
   src: string;
   count?: number;
+  optional?: boolean;
 };
 
 export type SectionWithContent = DigestSectionRow & { content: unknown };

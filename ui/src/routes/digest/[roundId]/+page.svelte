@@ -171,7 +171,7 @@
   );
 
   const allChecksOk = $derived(
-    data.stage === 'prepare' ? data.checks.every((c) => c.ok) : false,
+    data.stage === 'prepare' ? data.checks.every((c) => c.optional || c.ok) : false,
   );
 
   const modalLabel = $derived(
@@ -270,11 +270,11 @@
     <div style="display: flex; flex-direction: column; gap: 6px;">
       {#each data.checks as check (check.name)}
         <div style="display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: baseline; padding: 8px 10px; background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-2);">
-          <span style="text-align: center; font: 700 14px/1 var(--font-mono); color: {check.ok ? 'var(--moss)' : 'var(--amber)'};">
-            {check.ok ? '✓' : '!'}
+          <span style="text-align: center; font: 700 14px/1 var(--font-mono); color: {check.ok ? 'var(--moss)' : check.optional ? 'var(--fg-quiet)' : 'var(--amber)'};">
+            {check.ok ? '✓' : check.optional ? '–' : '!'}
           </span>
-          <span style="font: 500 13px/1.4 var(--font-body); color: var(--fg);">
-            {check.name}{check.count !== undefined ? ` · ${check.count}` : ''}
+          <span style="font: 500 13px/1.4 var(--font-body); color: {check.optional && !check.ok ? 'var(--fg-quiet)' : 'var(--fg)'};">
+            {check.name}{check.count !== undefined ? ` · ${check.count}` : ''}{check.optional && !check.ok ? ' (optional)' : ''}
           </span>
           <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">{check.src}</span>
         </div>
