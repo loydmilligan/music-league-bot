@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>MLB Song Ingest — Options</title>
+    <style>
+      :root {
+        --bg: #121212;
+        --panel: #1c1c1c;
+        --fg: #f5f5f5;
+        --muted: #a7a7a7;
+        --border: #2a2a2a;
+        --accent: #1db954;
+        --accent-fg: #000;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 14px/1.45 system-ui, -apple-system, "Inter", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        padding: 40px 24px;
+      }
+      .wrap { max-width: 520px; margin: 0 auto; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .lede { color: var(--muted); margin: 0 0 24px; }
+      .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+      label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+      input[type="text"], input[type="password"] {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 10px 12px;
+        border-radius: 6px;
+        font: inherit;
+        outline: none;
+      }
+      input:focus { border-color: var(--accent); }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+      button {
+        background: var(--accent);
+        color: var(--accent-fg);
+        border: 0;
+        border-radius: 999px;
+        padding: 9px 18px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--fg);
+        border: 1px solid var(--border);
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .status {
+        margin-top: 14px;
+        min-height: 1.2em;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .status.ok { color: var(--accent); }
+      .status.err { color: var(--danger); }
+      .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>MLB Song Ingest — Options</h1>
+      <p class="lede">Connect this extension to your Music League Bot instance.</p>
+
+      <div class="field">
+        <label for="base">API base URL</label>
+        <input id="base" type="text" placeholder="https://mlb.mattmariani.com" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label for="token">Bearer token</label>
+        <input id="token" type="password" placeholder="64-char hex token" autocomplete="off" />
+        <div class="hint">
+          Generate at <a id="tokenLink" href="#" target="_blank" rel="noopener">/settings/api-tokens</a>.
+          The token is shown only once on creation — paste it here.
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="save">Save</button>
+        <button id="test" class="secondary">Test connection</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>

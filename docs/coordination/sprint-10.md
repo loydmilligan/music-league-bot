@@ -189,3 +189,78 @@ All three Wave 1 backend tasks shipped in one commit since they're tightly coupl
 - CORS for extension: any chrome-extension origin works out of the box; preflight is handled.
 
 **Stopping per standing instruction.** Wave 1 backend (T1+T2+T3) complete.
+
+### 2026-05-20 — extension — Wave 2 done (T5 + T6 + T7 + T8 bundled)
+All four Wave 2 tasks shipped in one commit — extension is a small, self-contained delivery; splitting would inflate review surface without isolating risk.
+
+**File layout (`extension/`, brand new directory):**
+
+| File | Bytes | Role |
+|---|---:|---|
+| `manifest.json` | 726 | MV3, `action` popup + `options_ui` open-in-tab + content script on `https://open.spotify.com/*` + service worker. Permissions: `activeTab`, `storage`. Host permissions: Spotify + `mlb.mattmariani.com`. |
+| `background.js` | 1.7K | Service worker. Single `onMessage` listener for `{type:'ingest', urls}`; reads `apiBaseUrl` + `token` from `chrome.storage.local`, POSTs `/api/ingest/songs`, returns `{status, body}` or `{status:401, message}` or `{error}` to popup. |
+| `content-spotify.js` | 3.4K | Runs at `document_idle` on Spotify pages. Replies to `{type:'detect'}` with `{ok, kind, url, title, artist?, count?}`. URL match is the backend's regex without the `spotify:` URI variant (browsers never expose that). |
+| `popup.html` / `popup.js` | 4.5K / 5.5K | Toolbar popup. States: loading → unconfigured / not-Spotify / detected → adding → result. Result bucketed into `Added N · Skipped M (already in shortlist)` (dedup is benign, not an error) plus a list of real failures if any. Preview first 3 added titles + `+N more` affordance. |
+| `options.html` / `options.js` | 3.2K / 2.1K | API base URL + Bearer token form. Test-connection button POSTs `{urls:[]}` so 200 is a clean success signal (no DB writes, no Spotify calls — confirmed by backend's smoke #11 that empty bodies succeed). |
+| `README.md` | 3.7K | Install (load-unpacked), configure (link to `<base>/settings/api-tokens`), supported URL patterns, troubleshooting, file layout. |
+
+**No build step, no dependencies, no toolchain.** Vanilla JS + HTML + CSS. Edit a file → click ⟳ on the extension card in `chrome://extensions` → change is live. Keeps the repo footprint tiny and avoids any version-skew between extension and the API surface it consumes.
+
+**Decisions made within the agent's scope:**
+- **Vanilla / no bundler.** v0.1.0 is < 600 lines of JS total. A bundler would add chrome-typings, vite/wxt, a manifest plugin, source maps — for a one-page popup it's not earned. Revisit if v0.2 grows multi-file modules or shared utilities.
+- **No icons in v1.** Chrome falls back to a default puzzle-piece icon. The brief allowed placeholders; rather than ship blurry stretched stand-ins, I left them out. The toolbar shows the literal text fallback ("M" letter in the badge slot). Trivial to add later — `icons/16.png 32.png 48.png 128.png` + `"icons": {...}` in manifest.
+- **CSS inline in `<style>`** for both popup and options. Two pages, ~80 lines of CSS each, no reuse benefit from a shared file. Kept colors as CSS custom properties so a future shared sheet is straightforward.
+- **Result bucketing in the popup.** Backend lumps "already in shortlist" into `failed` (decision in T3) — but from a user's perspective that's dedup, not failure. Popup separates them: `Added N · Skipped M` for the dedup case, with a separate `Failed:` list for real errors. Matches the brief's "Added 12 tracks · Skipped 3" example exactly.
+- **401 special-case in background.** Per the brief, the SW returns `{status:401, message:'Token rejected — check options'}` for that one status; popup renders an inline "Open options" link in the error card. Other non-2xx come back as `{status, error}`.
+- **Content-script `not present` is treated as "not a Spotify resource page".** If the user opened the Spotify tab before installing the extension, no content script is injected; `chrome.tabs.sendMessage` rejects. Popup distinguishes this from a non-Spotify URL with a more useful "Reload the tab" hint instead of a generic message.
+- **No SPA-navigation auto-redetect.** Per "out of scope" in the brief — the popup re-detects each time it opens; that's the v1 contract. User closes/reopens the popup after navigating within Spotify.
+
+**URL parser parity with backend** (matters for ingest correctness):
+- Backend regex: `^https?://open\.spotify\.com/(?:intl-xx/)?(track|album|playlist)/([A-Za-z0-9]{15,40})(?:\?|$|#|/)`.
+- Extension matcher: `^/(?:intl-[a-z-]+/)?(track|album|playlist)/([A-Za-z0-9]{15,40})(?:[/?#]|$)` against `window.location.pathname` only (host is fixed by manifest match pattern). Semantically equivalent — `intl-xx/` widened to any locale slug, same id charset/length, same tail anchors. `?si=…` share-suffix passes through to the backend untouched and the backend strips it via its own regex tail.
+
+**OG-description parsing** (cosmetic only — backend canonicalizes via Spotify API):
+- Track: `Song · <Artist> · <Album> · YEAR` → `artist = parts[1]`.
+- Album: `<Artist> · Album · YEAR · N songs` → `artist = parts[0]`, `count` from the `… songs` segment.
+- Playlist: `Playlist · <Owner> · N songs · …` → `owner = parts[1]`, `count` from `… songs`.
+- All three are wrapped in a single `splitDots(s).find(...)` pattern that degrades silently: if Spotify shifts its template again the kind badge + title still render and ingest still works; just the secondary line goes blank. Documented as a known cosmetic risk in the README.
+
+**Smoke — what I could verify here vs. what only the user can:**
+
+**Verified locally:**
+- `node --check` on all four JS files — clean.
+- `JSON.parse(manifest.json)` — valid.
+- Manifest schema sanity: MV3 fields all present, content-script `matches`/`js`/`run_at` shape correct, `permissions` vs. `host_permissions` split correct for MV3 (no `webRequest`, no broad host scopes).
+- Regex parity with backend's `parseSpotifyUrl` confirmed by hand on representative URLs:
+  - `https://open.spotify.com/track/0DiWol3AO6WpXZgp0goxAV?si=abc` → match track / id ok.
+  - `https://open.spotify.com/intl-de/album/2noRn2Aes5aoNVsU6iWThc` → match album ok.
+  - `https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M` → match playlist ok (backend will return 404 from Spotify per the editorial-playlist caveat in T3 — extension passes the URL through; backend's `failed[]` reason surfaces cleanly in the popup).
+  - `https://open.spotify.com/search` → no match → popup shows "Navigate to a Spotify track / album / playlist page."
+
+**Requires the user (cannot run Chrome from this session):**
+- Load unpacked in Chrome at `chrome://extensions`.
+- Options → paste token from `https://mlb.mattmariani.com/settings/api-tokens` → Save → Test connection (expect `OK`).
+- Open a Spotify track page → toolbar icon → see detected info → Add → expect `Added 1 track` + the title.
+- Same flow on an album page (expect e.g. `Added 13 tracks · Skipped 1 (already in shortlist)` if the track from step above is on the album).
+- Same on a user-owned public playlist.
+- Flip the token to garbage in options → retry Add → expect `Token rejected — check options` + an "Open options" link inline.
+- Confirm SPA-nav quirk: navigate within Spotify in one tab, reopen popup, confirm popup re-detects the new resource. (If it doesn't, that's the known "popup re-opens each time" contract — not a bug.)
+
+**Known quirks to surface to the user:**
+- Tabs opened **before** the extension was installed have no content script — popup will say `Spotify page loaded before the extension was ready. Reload the tab and try again.` Reload fixes it. Documented in README.
+- Editorial playlists (`/playlist/37i9dQZF…`) will return per-URL failure with `reason: "spotify fetch failed: Spotify 404 ..."` in the popup, exactly as in backend smoke #7. Documented in README troubleshooting.
+- Spotify's `og:description` template is the source of truth for the artist / count line in the popup. If it changes server-side, the kind badge + title still work; just the sub-line goes blank.
+- No icons in v1 — Chrome shows its default puzzle piece. Pin the extension for visibility.
+
+**Out of scope (NOT done, per brief):**
+- Chrome Web Store packaging / submission.
+- Firefox port (manifest.json `browser_specific_settings` etc.).
+- YTM detection (T10, Wave 3 stretch).
+- Album / playlist track multi-select (D7 — add-all only).
+- SPA auto-redetect on URL change inside Spotify (contract is re-open popup).
+
+**Agent-roster boundaries:** did not touch `ui/**`, `src/**`, `scripts/**`, `docker-compose.yml`, or any backend code. Extension is fully decoupled — it consumes the API as a foreign client. Coord doc `docs/coordination/sprint-10.md` is the only non-`extension/**` file modified by this delivery.
+
+**Commit:** `feat(extension): sprint-10 Wave 2 — Chrome extension for Spotify ingest` (single commit covering T5–T8 + README). Not pushed — per CLAUDE.md push policy, will batch with other local commits until ≥10 ahead of origin.
+
+**Stopping per standing instruction.** Wave 2 extension (T5+T6+T7+T8) complete; awaiting user manual-smoke from their browser before declaring T12 (package / install docs) closed.

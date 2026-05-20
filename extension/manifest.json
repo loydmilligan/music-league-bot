@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "MLB Song Ingest",
+  "version": "0.1.0",
+  "description": "Add Spotify tracks, albums, and playlists to your Music League Bot shortlist with one click.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MLB: add to shortlist"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://open.spotify.com/*"],
+      "js": ["content-spotify.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://open.spotify.com/*",
+    "https://mlb.mattmariani.com/*"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
