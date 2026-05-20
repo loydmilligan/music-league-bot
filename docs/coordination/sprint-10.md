@@ -336,3 +336,11 @@ Bumped extension to **v0.2.0**. Backend T9 (Songlink resolution) has not yet lan
 **Commit:** `feat(extension): sprint-10 Wave 3 T10 — YTM detection (v0.2.0)`. Local-only. Ahead-of-origin count post-commit reported below; not pushed (backend may be pushing T9 around the same time — staying under the 10-commit push threshold until either reaching it or being explicitly told to push).
 
 **Stopping per standing instruction.** T10 extension work complete; awaiting (a) user manual-smoke and (b) backend T9 deploy before declaring the YTM end-to-end path green.
+
+### 2026-05-20 — extension — Icons added
+- New dir `extension/icons/` with `16.png 32.png 48.png 128.png`. Source: `ui/static/m-l-favicon-256x256.png` downscaled via Pillow `Image.LANCZOS` (ImageMagick not present on host; Pillow was available and produces equivalent quality for sub-256 outputs). All four output as RGBA.
+- `manifest.json` gains top-level `"icons"` (16/32/48/128) for chrome://extensions + omnibox surfaces, and `action.default_icon` (16/32/48) for the toolbar button. No version bump — purely additive UX polish, no behavior change.
+- `README.md`: added icons row to file-layout table noting downscale source.
+- No changes to JS, content scripts, or any other manifest field. Backend / API contracts untouched.
+- **User reload required:** `chrome://extensions` → ⟳ on the MLB extension card to pick up the new manifest fields. The toolbar button should switch from Chrome's default puzzle-piece to the M/L wordmark.
+- Local-only commit. Ahead-of-origin count tracked against the 10-commit threshold.

@@ -97,6 +97,7 @@ popup surfaces it under **Failed:**.
 | `content-ytm.js` | Detects the active YouTube Music resource |
 | `popup.html` / `popup.js` | Toolbar popup UI |
 | `options.html` / `options.js` | API base URL + token configuration |
+| `icons/16.png` `32.png` `48.png` `128.png` | M/L wordmark — downscaled from `ui/static/m-l-favicon-256x256.png` |
 
 No external dependencies, no build step. Edit a file → reload the
 extension at `chrome://extensions` (click the ⟳ icon on the extension
