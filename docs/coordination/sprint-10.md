@@ -378,3 +378,8 @@ Bumped extension to **v0.2.0**. Backend T9 (Songlink resolution) has not yet lan
 **Cleanup:** revoked the T9 smoke token (id=5).
 
 **Status:** Task 9 acceptance met. Stopping per standing instruction.
+
+### 2026-05-20 — extension — Icons resized (bigger wordmark)
+- Re-rendered `extension/icons/{16,32,48,128}.png` cropping tight to the wordmark's alpha bounding box before resize. Source canvas had ~26% horizontal + 47% vertical empty padding; previous pass inherited it.
+- Pipeline: open `ui/static/m-l-favicon-512x512.png` → `getbbox()` → crop (378×270 wordmark) → fit each square canvas with 1px breathing room (0px on 16) → LANCZOS resize → centered paste on transparent canvas.
+- Wordmark coverage now: **16 → 100%×69%, 32 → 94%×66%, 48 → 96%×69%, 128 → 98%×70%**. Vertical ceiling is the wordmark's natural 1.4:1 aspect; further width would require non-uniform scaling. No version bump (purely visual asset swap).
