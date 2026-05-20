@@ -130,20 +130,40 @@
   }
 
   // -------- Rel-context diff (T13 deferred portion) ----------
-  // Captured from the finalize response when backend T12 ships and starts
-  // populating `relContext` in the /finalize body. Until then this stays
-  // null, and the footer link / modal stay hidden — matches the
-  // "pre-T12 finalize → no link" rule from the orc spec.
-  type RelContextPayload = {
-    previous?: string;
-    proposed?: string;
-    diff?: DiffSegment[] | null;
+  // Two sources, in priority order:
+  //   1. data.relContext from +page.server.ts (GET /api/leagues/:leagueId/rel-context),
+  //      which gives us refresh-persisted previousContext / context.
+  //   2. relContextFromFinalize: $state populated by the latest finalize POST
+  //      response when /api/digest/:roundId/finalize returns a fresh
+  //      { previous, proposed, updatedAt, leagueId } payload. This takes
+  //      precedence so the just-finalized diff surfaces immediately without
+  //      waiting for invalidateAll() to roundtrip.
+  type FinalizeRelContext = {
+    leagueId: number;
+    previous: string;
+    proposed: string;
+    updatedAt?: string | null;
   };
-  let relContextDiff = $state<RelContextPayload | null>(null);
-  let relDiffOpen = $state(false);
+  let relContextFromFinalize = $state<FinalizeRelContext | null>(null);
 
+  const relDiff = $derived.by<{ leagueId: number; previous: string; proposed: string } | null>(() => {
+    if (relContextFromFinalize) {
+      return {
+        leagueId: relContextFromFinalize.leagueId,
+        previous: relContextFromFinalize.previous,
+        proposed: relContextFromFinalize.proposed,
+      };
+    }
+    const rc = data.relContext;
+    if (rc && rc.previousContext != null && rc.context !== rc.previousContext) {
+      return { leagueId: rc.leagueId, previous: rc.previousContext, proposed: rc.context };
+    }
+    return null;
+  });
+
+  let relDiffOpen = $state(false);
   function openRelDiff() {
-    if (relContextDiff) relDiffOpen = true;
+    if (relDiff) relDiffOpen = true;
   }
   function closeRelDiff() {
     relDiffOpen = false;
@@ -183,10 +203,14 @@
           url?: string | null;
           filename?: string | null;
           stub?: boolean;
-          relContext?: RelContextPayload | null;
+          relContext?: FinalizeRelContext | null;
+          warnings?: string[];
         };
-        if (body.relContext && (body.relContext.previous != null || body.relContext.proposed != null)) {
-          relContextDiff = body.relContext;
+        if (body.relContext && typeof body.relContext.previous === 'string' && typeof body.relContext.proposed === 'string') {
+          relContextFromFinalize = body.relContext;
+        }
+        if (body.warnings?.length) {
+          showError(`finalize warnings: ${body.warnings.join(' · ')}`);
         }
         const url = body.downloadUrl ?? body.url ?? null;
         if (url) {
@@ -521,7 +545,7 @@
     </footer>
   </div>
 
-  {#if relContextDiff}
+  {#if relDiff}
     <div class="dg-relctx-footer">
       <span class="dg-relctx-tag">rel context updated</span>
       <button type="button" class="dg-relctx-link" onclick={openRelDiff}>view diff →</button>
@@ -540,12 +564,19 @@
   />
 {/if}
 
-{#if relDiffOpen && relContextDiff}
+{#if relDiffOpen && relDiff}
   <RelContextDiffModal
-    previous={relContextDiff.previous ?? ''}
-    proposed={relContextDiff.proposed ?? ''}
-    diff={relContextDiff.diff ?? null}
+    previous={relDiff.previous}
+    proposed={relDiff.proposed}
+    leagueId={relDiff.leagueId}
     onClose={closeRelDiff}
+    onSaved={async (newContext) => {
+      relContextFromFinalize = null;
+      relDiffOpen = false;
+      await invalidateAll();
+      showError(`rel context saved (${newContext.length} chars)`);
+    }}
+    onPatchError={(msg) => showError(msg)}
   />
 {/if}
 

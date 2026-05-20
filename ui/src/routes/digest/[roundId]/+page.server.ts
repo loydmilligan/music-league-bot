@@ -34,12 +34,23 @@ export type CurrentRoundMeta = {
   name: string;
   voting_deadline: string | null;
   season_status: string;
+  league_id: number;
+};
+
+export type RelContextSnapshot = {
+  leagueId: number;
+  context: string;
+  previousContext: string | null;
+  updatedAt: string | null;
+  previousUpdatedAt: string | null;
+  lastRoundId: number | null;
 };
 
 type DigestPageBase = {
   roundId: number;
   roundsIndex: RoundIndexEntry[];
   currentRound: CurrentRoundMeta;
+  relContext: RelContextSnapshot | null;
 };
 
 export type DigestPageData =
@@ -53,7 +64,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
   const db = getDb();
   const round = db
     .prepare(
-      `SELECT r.id, r.name, r.voting_deadline, s.status AS season_status
+      `SELECT r.id, r.name, r.voting_deadline, s.status AS season_status, s.league_id AS league_id
        FROM rounds r JOIN seasons s ON s.id = r.season_id
        WHERE r.id = ?`,
     )
@@ -77,7 +88,10 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
     name: round.name ?? '',
     voting_deadline: round.voting_deadline,
     season_status: round.season_status,
+    league_id: round.league_id,
   };
+
+  const relContext = await fetchRelContext(fetch, round.league_id);
 
   const draft = getActiveDraftForRound(db, roundId);
   if (draft) {
@@ -86,14 +100,36 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
       content: parseContent(s.content_json),
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    return { roundId, roundsIndex, currentRound, stage, draft, sections } satisfies DigestPageData;
+    return { roundId, roundsIndex, currentRound, relContext, stage, draft, sections } satisfies DigestPageData;
   }
 
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
-  return { roundId, roundsIndex, currentRound, stage: 'prepare', checks } satisfies DigestPageData;
+  return { roundId, roundsIndex, currentRound, relContext, stage: 'prepare', checks } satisfies DigestPageData;
 };
+
+async function fetchRelContext(
+  fetcher: typeof fetch,
+  leagueId: number,
+): Promise<RelContextSnapshot | null> {
+  try {
+    const res = await fetcher(`/api/leagues/${leagueId}/rel-context`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as Partial<RelContextSnapshot> & { context?: string };
+    if (typeof body.context !== 'string') return null;
+    return {
+      leagueId: body.leagueId ?? leagueId,
+      context: body.context ?? '',
+      previousContext: body.previousContext ?? null,
+      updatedAt: body.updatedAt ?? null,
+      previousUpdatedAt: body.previousUpdatedAt ?? null,
+      lastRoundId: body.lastRoundId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function parseContent(json: string): unknown {
   try {

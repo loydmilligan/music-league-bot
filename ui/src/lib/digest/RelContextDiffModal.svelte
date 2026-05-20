@@ -10,19 +10,56 @@
   type Props = {
     previous: string;
     proposed: string;
+    leagueId: number;
     diff?: DiffSegment[] | null;
     onClose: () => void;
+    onSaved?: (newContext: string) => void;
+    onPatchError?: (message: string) => void;
   };
-  let { previous, proposed, diff = null, onClose }: Props = $props();
+  let {
+    previous,
+    proposed,
+    leagueId,
+    diff = null,
+    onClose,
+    onSaved,
+    onPatchError,
+  }: Props = $props();
+
+  let patching = $state(false);
 
   function handleScrim(e: MouseEvent) {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget && !patching) onClose();
   }
   function handleScrimKey(e: KeyboardEvent) {
-    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) onClose();
+    if (e.target === e.currentTarget && !patching && (e.key === 'Enter' || e.key === ' ')) onClose();
   }
   function handleKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') onClose();
+    if (e.key === 'Escape' && !patching) onClose();
+  }
+
+  async function patchContext(target: 'proposed' | 'previous') {
+    const body = target === 'proposed' ? proposed : previous;
+    const label = target === 'proposed' ? 'Accept proposed' : 'Revert to previous';
+    if (!confirm(`${label}? This writes the chosen text to the league's rel context.`)) return;
+
+    patching = true;
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/rel-context`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ context: body }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`PATCH failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      onSaved?.(body);
+    } catch (err) {
+      onPatchError?.(err instanceof Error ? err.message : String(err));
+    } finally {
+      patching = false;
+    }
   }
 </script>
 
@@ -69,8 +106,12 @@
     </div>
 
     <footer class="dg-modal-foot">
-      <span class="cost">read-only · accept/revert lands with backend T12 follow-on</span>
-      <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={onClose}>Close</button>
+      <span class="cost">{patching ? 'saving…' : `${proposed.length} chars proposed · ${previous.length} chars previous`}</span>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={onClose} disabled={patching}>Close</button>
+        <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={() => patchContext('previous')} disabled={patching}>↺ Revert to previous</button>
+        <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" onclick={() => patchContext('proposed')} disabled={patching}>✓ Accept proposed</button>
+      </div>
     </footer>
   </div>
 </div>
