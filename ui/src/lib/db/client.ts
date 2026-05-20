@@ -48,6 +48,13 @@ export function openLeagueDb(path?: string): Database.Database {
 			PRAGMA foreign_keys = ON;
 		`);
 	}
+	const relCtxCols = db.prepare("PRAGMA table_info(relationship_contexts)").all() as { name: string }[];
+	if (relCtxCols.length && !relCtxCols.some(c => c.name === 'previous_text')) {
+		db.exec("ALTER TABLE relationship_contexts ADD COLUMN previous_text TEXT");
+	}
+	if (relCtxCols.length && !relCtxCols.some(c => c.name === 'previous_updated_at')) {
+		db.exec("ALTER TABLE relationship_contexts ADD COLUMN previous_updated_at TEXT");
+	}
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	return db;

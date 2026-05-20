@@ -457,3 +457,61 @@ Variants A and B are parked stash — keep but don't wire.
   - Optional "Accept proposed" / "Revert to previous" PATCH buttons (need T12's PATCH body shape).
 - **Out of scope (intentional):**
   - Accept/revert PATCH buttons — orc said "nice-to-have, only if quick"; without T12's body shape pinned, wiring would be guesswork. Will revisit when T12 lands.
+
+### 2026-05-20 — backend — Task 12 done (rel-context auto-update on finalize)
+- **Schema change** (`ui/src/lib/db/schema.ts`): added two nullable columns to `relationship_contexts` — `previous_text TEXT` and `previous_updated_at TEXT`. Chose **two columns over a separate history table** because (a) only the most-recent prior is needed for the diff (per T13 brief), (b) it keeps the read path one row instead of a join, (c) PATCH and `/finalize` both write through the same `upsertRelContext` so the snapshot invariant is single-source. If anyone later wants full history, the existing `digest_drafts` + `digest_regenerations` pattern is the model to follow — would be additive, not a migration.
+- **Migration** (`ui/src/lib/db/client.ts`): added PRAGMA-guarded `ALTER TABLE ... ADD COLUMN` for both new columns, matching the existing migration style. Verified live: `PRAGMA table_info(relationship_contexts)` shows 6 columns including `previous_text` + `previous_updated_at`.
+- **New module** `ui/src/lib/digest/relContext.ts`:
+  - `getLeagueIdForRound(db, roundId)` — joins `rounds → seasons → leagues.id`.
+  - `readRelContext(db, leagueId)` — returns the new `RelContextView` shape (camelCase, matches API contract).
+  - `upsertRelContext(db, leagueId, newContext, lastRoundId)` — the **only writer**. Snapshots current `(text, updated_at)` into `(previous_text, previous_updated_at)` before writing new values. Used by both `/finalize` and PATCH, so the prior-value snapshot invariant is uniform across code paths. INSERT path (no existing row) leaves `previous_*` as NULL — there's nothing prior to snapshot.
+  - `proposeRelContextUpdate(prev, sections, roundName)` — calls `callOpenRouter` (which I exported from `llm.ts` — single-word diff, the only change to that file) with a tight system prompt: keep voice, add don't restate, drop only contradictions, cap at ~600 words, return JSON `{updated_context: string}`. Reuses the same `response_format: json_object` + code-fence-strip plumbing that T7 + earlier bug fix hardened.
+- **Wired into `/finalize`** (`ui/src/routes/api/digest/[roundId]/finalize/+server.ts`): after the PNG render and `finalized_at` write, runs the rel-context update **inside a try/catch**. On success, response includes `relContext: { leagueId, previous, proposed, updatedAt }`. On failure (no API key, LLM error, JSON parse fail, league-resolution miss), response includes `relContext: null` + a non-fatal entry in `warnings: string[]`. The PNG export is the primary product; rel-context never blocks finalize.
+- **New API contract for `/finalize` (this is what frontend T13 should wire to):**
+  ```json
+  {
+    "ok": true,
+    "roundId": 14,
+    "draftId": "draft-14-6e636560",
+    "finalizedAt": "2026-05-19T22:52:59Z",
+    "firstFinalize": false,
+    "filename": "r-14-digest-1779239846.png",
+    "bytes": 1244213,
+    "downloadUrl": "/api/digest/exports/r-14-digest-1779239846.png",
+    "relContext": {
+      "leagueId": 2,
+      "previous": "<full prior context as a single string, possibly empty>",
+      "proposed": "<full updated context as a single string>",
+      "updatedAt": "2026-05-20T01:17:54Z"
+    },
+    "warnings": []
+  }
+  ```
+  Failure mode: `relContext: null`, `warnings: ["rel-context update failed: <reason>"]`, everything else unchanged.
+- **Diff shape decision:** `{ previous: string, proposed: string }` — two flat strings, **no server-side diffing**. Diff presentation (side-by-side vs inline, word vs line granularity) is a UI concern; the data the UI needs is just the two strings. The frontend scaffold already supports this exact shape (its `DiffSegment[]` path is the optional structured form; no segments → side-by-side fallback). No structured-diff path planned from backend for now.
+- **GET / PATCH (`ui/src/routes/api/leagues/[leagueId]/rel-context/+server.ts`)** — rewritten to use the same `readRelContext` / `upsertRelContext` so all writers go through one path:
+  - `GET /api/leagues/:leagueId/rel-context` →
+    ```json
+    {
+      "leagueId": 2,
+      "context": "<current>",
+      "updatedAt": "2026-05-20T01:18:42Z",
+      "previousContext": "<prior or null>",
+      "previousUpdatedAt": "2026-05-20T01:17:54Z",
+      "lastRoundId": 14
+    }
+    ```
+  - `PATCH /api/leagues/:leagueId/rel-context` → body `{ context: string }`, response same shape as GET. **Breaking change vs the prior stub** which accepted `{ text }` — but the prior endpoint had zero callers (frontend had not wired anything to it; verified via grep).
+- **Smoke (against `https://mlb.mattmariani.com`):**
+  1. **First finalize (empty → LLM proposed):** `POST /api/digest/14/finalize` → 200 in 27.5 s. `relContext.previous=""` (empty — first ever rel-context for league 2 Fam-Jam), `relContext.proposed=3294 chars`. DB row created: `text` 3294 chars, `previous_text=NULL` (correct — INSERT path), `last_round_id=14`. `warnings=[]`.
+  2. **Re-finalize (rel-context iterates):** `POST /api/digest/14/finalize` → 200 in 32.4 s. `relContext.previous` (3294 chars) starts with `## League Overview` — confirms it's the prior LLM output. `relContext.proposed=4035 chars` (model grew it). DB: `text=4035`, `previous_text=3294`, `updated_at=2026-05-20T01:18:42Z`, `previous_updated_at=2026-05-20T01:17:54Z`. ✓
+  3. **GET:** `GET /api/leagues/2/rel-context` → 200, keys = `['context','lastRoundId','leagueId','previousContext','previousUpdatedAt','updatedAt']` — matches contract. `context` 4035 chars, `previousContext` 3294 chars.
+  4. **PATCH override:** `PATCH /api/leagues/2/rel-context` with `{"context":"OPERATOR OVERRIDE — keep editorial tone dry; do not invent new league lore."}` → 200. Response: `context=<override>`, `previousContext=<the 4035-char LLM doc>`, `previousUpdatedAt=2026-05-20T01:18:42Z`. ✓
+  5. **Re-finalize after PATCH (verifies PATCH and finalize share the same snapshot path):** `POST /api/digest/14/finalize` → 200 in 24.4 s. `relContext.previous='OPERATOR OVERRIDE — keep editorial tone dry; do not invent new league lore.'` (verbatim PATCH'd value, not the prior LLM doc). ✓ Snapshot invariant holds across code paths.
+  6. **Validation:** `PATCH` with `{}` (missing `context`) → 400. `GET /api/leagues/999/rel-context` → 404. `POST /api/digest/999/finalize` → 404.
+  7. **Failure isolation not exercised live** (no clean way to fail just the LLM without breaking other paths) — but the try/catch is straightforward and the design intent is recorded in `relContext: null` + `warnings: [...]`. If the production deploy ever loses `OPENROUTER_API_KEY` after finalize starts working, the export will still succeed and the warning will surface.
+- **No regression to T11:** all T11 invariants still hold — `firstFinalize` toggles correctly (was `false` in all smokes above because yesterday's T11 first-finalize already set `finalized_at=2026-05-19T22:52:59Z`, preserved across today's three calls), PNG always re-rendered with fresh filename, `downloadUrl` still returns `image/png` 200.
+- **No frontend changes** — explicitly stayed clear of `ui/src/routes/digest/**` per task brief; the frontend T13 scaffold (RelContextDiffModal + footer link, already shipped) will auto-light when the page receives a non-null `relContext` from finalize.
+- `npm run check`: 507 files (was 505), 1 error / 31 warnings — baseline unchanged, zero new diagnostics.
+- **Frontend T13 wiring cheat-sheet:** new payload at `response.relContext` is `{previous, proposed, updatedAt, leagueId}` or `null`. The existing scaffold's side-by-side text path handles this directly; no further frontend work required for the diff display. Persistence-across-refresh (deferred per frontend's prior log): backend persists the proposed value to `relationship_contexts.text` immediately on finalize and the prior to `relationship_contexts.previous_text` — `+page.server.ts` can fetch both via `GET /api/leagues/:leagueId/rel-context` (where `previousContext` is the diff baseline and `context` is the current/proposed) to project into `data.relContext` for refresh persistence. For accept/revert: `PATCH /api/leagues/:leagueId/rel-context` with `{context: <revert target>}` writes through the same snapshot path; the LLM proposal is *already persisted* on finalize so no "accept" PATCH is needed — the proposed value IS the current value after a successful finalize.
+- **Status:** Task 12 acceptance met. Wave 3 backend complete (T11 + T12). **Stopping per standing instruction — not starting any further work without explicit go-ahead.**

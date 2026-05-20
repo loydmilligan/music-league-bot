@@ -1,15 +1,9 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
+import { readRelContext, upsertRelContext } from '$lib/digest/relContext.js';
 
-interface RelContextRow {
-  league_id: number;
-  text: string;
-  updated_at: string;
-  last_round_id: number | null;
-}
-
-// GET /api/leagues/:leagueId/rel-context — current relationship context.
+// GET /api/leagues/:leagueId/rel-context — current + previous snapshot.
 export const GET: RequestHandler = async ({ params }) => {
   const leagueId = Number(params.leagueId);
   if (!leagueId) throw error(400, 'invalid leagueId');
@@ -18,14 +12,10 @@ export const GET: RequestHandler = async ({ params }) => {
   const league = db.prepare('SELECT id FROM leagues WHERE id = ?').get(leagueId);
   if (!league) throw error(404, `league not found: ${leagueId}`);
 
-  const row = db
-    .prepare('SELECT league_id, text, updated_at, last_round_id FROM relationship_contexts WHERE league_id = ?')
-    .get(leagueId) as RelContextRow | undefined;
-
-  return json(row ?? { league_id: leagueId, text: '', updated_at: null, last_round_id: null });
+  return json(readRelContext(db, leagueId));
 };
 
-// PATCH /api/leagues/:leagueId/rel-context — manual edit. Stubbed (upsert without LLM).
+// PATCH /api/leagues/:leagueId/rel-context — manual operator override. Snapshots prior into previous_*.
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const leagueId = Number(params.leagueId);
   if (!leagueId) throw error(400, 'invalid leagueId');
@@ -34,20 +24,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   const league = db.prepare('SELECT id FROM leagues WHERE id = ?').get(leagueId);
   if (!league) throw error(404, `league not found: ${leagueId}`);
 
-  const body = (await request.json().catch(() => ({}))) as { text?: string };
-  const text = typeof body.text === 'string' ? body.text : '';
+  const body = (await request.json().catch(() => ({}))) as { context?: unknown };
+  if (typeof body.context !== 'string') throw error(400, 'body.context (string) required');
 
-  db.prepare(
-    `INSERT INTO relationship_contexts (league_id, text)
-     VALUES (?, ?)
-     ON CONFLICT(league_id) DO UPDATE SET
-       text = excluded.text,
-       updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')`,
-  ).run(leagueId, text);
-
-  const row = db
-    .prepare('SELECT league_id, text, updated_at, last_round_id FROM relationship_contexts WHERE league_id = ?')
-    .get(leagueId) as RelContextRow;
-
-  return json(row);
+  return json(upsertRelContext(db, leagueId, body.context, null));
 };

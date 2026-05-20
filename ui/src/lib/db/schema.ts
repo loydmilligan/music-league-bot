@@ -165,10 +165,12 @@ export const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
   CREATE TABLE IF NOT EXISTS relationship_contexts (
-    league_id     INTEGER PRIMARY KEY REFERENCES leagues(id),
-    text          TEXT NOT NULL DEFAULT '',
-    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-    last_round_id INTEGER REFERENCES rounds(id)
+    league_id            INTEGER PRIMARY KEY REFERENCES leagues(id),
+    text                 TEXT NOT NULL DEFAULT '',
+    updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    last_round_id        INTEGER REFERENCES rounds(id),
+    previous_text        TEXT,
+    previous_updated_at  TEXT
   );
 `;
 
