@@ -28,7 +28,7 @@ async function init() {
   }
 
   const tab = await getActiveTab();
-  if (!tab || !tab.url || !/^https:\/\/open\.spotify\.com\//.test(tab.url)) {
+  if (!tab || !tab.url || !/^https:\/\/(open\.spotify\.com|music\.youtube\.com)\//.test(tab.url)) {
     show(notSpotifyEl);
     return;
   }
@@ -41,7 +41,7 @@ async function init() {
     // install, or detection ran before document_idle).
     show(notSpotifyEl);
     notSpotifyEl.innerHTML =
-      'Spotify page loaded before the extension was ready.<br />Reload the tab and try again.';
+      'Page loaded before the extension was ready.<br />Reload the tab and try again.';
     return;
   }
 

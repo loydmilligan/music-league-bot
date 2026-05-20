@@ -264,3 +264,75 @@ All four Wave 2 tasks shipped in one commit — extension is a small, self-conta
 **Commit:** `feat(extension): sprint-10 Wave 2 — Chrome extension for Spotify ingest` (single commit covering T5–T8 + README). Not pushed — per CLAUDE.md push policy, will batch with other local commits until ≥10 ahead of origin.
 
 **Stopping per standing instruction.** Wave 2 extension (T5+T6+T7+T8) complete; awaiting user manual-smoke from their browser before declaring T12 (package / install docs) closed.
+
+### 2026-05-20 — extension — Wave 3 T10 done (YTM content script)
+Bumped extension to **v0.2.0**. Backend T9 (Songlink resolution) has not yet landed on `origin/master` as of this commit — wiring confirmed via the expected failure path (see smoke notes below). Extension will start succeeding for YTM URLs the moment T9 ships; no further extension change needed.
+
+**Changes (extension/ only):**
+
+| File | Change |
+|---|---|
+| `content-ytm.js` | **NEW.** Mirror of `content-spotify.js`. Detects `/watch?v=<id>`, `/playlist?list=<id>`, and `/browse/MPRE…` (album-release) pages. Returns the canonical URL + cosmetic metadata in the same `{ok, kind, url, title, artist?, count?}` shape. |
+| `manifest.json` | `version` 0.1.0 → 0.2.0. Added second `content_scripts` entry for `https://music.youtube.com/*` running `content-ytm.js` at `document_idle`. Added `https://music.youtube.com/*` to `host_permissions`. Updated `description` to mention YTM. |
+| `popup.js` | Widened the tab-URL gate from Spotify-only (`/^https:\/\/open\.spotify\.com\//`) to `/^https:\/\/(open\.spotify\.com\|music\.youtube\.com)\//`. Also de-branded the "page loaded before extension was ready" message (was "Spotify page loaded…", now "Page loaded…"). |
+| `popup.html` | Empty-state copy updated: "Navigate to a Spotify or YouTube Music track, album, or playlist page." |
+| `README.md` | YTM URL patterns + Songlink note added to `## Use`, `## Supported URL patterns`, and `## File layout`. Versioning section now lists v0.1.0 + v0.2.0. |
+
+**No build step, no dependencies, no toolchain changes.** Same vanilla-JS surface as Wave 2.
+
+**URL canonicalization (matters for Songlink):**
+
+| YTM URL form | Canonical extracted | Notes |
+|---|---|---|
+| `/watch?v=<id>` (with or without `list=`, `t=`, `…`) | `https://music.youtube.com/watch?v=<id>` | Extra params stripped — Songlink gets a clean canonical so its dedup / caching keys are consistent. |
+| `/playlist?list=<id>` | `https://music.youtube.com/playlist?list=<id>` | Drop everything but `list=`. |
+| `/browse/MPRE…` | `https://music.youtube.com/browse/<id>` | Album-release pages only; `MPLA` (artist) explicitly rejected → "not a YTM track / album / playlist page". |
+| `/browse/MPLA…` (artist) | — | Returns `ok:false`. Backend can't ingest an artist as a discrete entity; user picks an album / track / playlist instead. |
+| `/explore`, `/library`, `/home`, `/search`, `/channel/…` | — | Returns `ok:false` — same handling as a Spotify `/search` page. |
+
+**Title / artist parsing (cosmetic only — backend canonicalizes via Songlink → Spotify):**
+- **Watch:** YTM's `og:title` is usually just the song title (no artist). The actual `<title>` is `"<Song> - <Artist> - YouTube Music"`. The parser tries `og:title` first; when it lacks the `" - "` separator (which is YTM's common pattern), it falls back to parsing `document.title` with the two-segment regex. The `" - YouTube Music"` suffix is stripped in both paths.
+- **Playlist:** `og:title` (or `document.title` fallback) with the YTM suffix stripped. Track count is not surfaced — YTM's DOM exposes it only inside Polymer-rendered components which aren't reliable from a content script that runs at `document_idle`. Per the brief: "if you can't get it cleanly, omit `count` from the response (popup degrades gracefully)" — confirmed: popup's sub-line just shows the owner / title when `count` is absent.
+- **Album (MPRE):** `og:description` typically leads with the artist name, sometimes with `·`/`•` separators. Best-effort split on those delimiters; degrades to blank artist if YTM shifts the template.
+
+**Popup integration verification (read-only, since I can't load Chrome here):**
+- `popup.js:31` was the only Spotify-only branch — now widened to also accept `music.youtube.com`. The rest of the flow is brand-agnostic: it sends `{type:'detect'}` to whatever content script is on the active tab and renders whatever `{ok, kind, url, title, artist?, count?}` comes back.
+- Result rendering (`renderResult`) is keyed on backend's `added` / `failed` arrays only — no host check anywhere downstream. A YTM URL that the backend successfully Songlink-resolves will appear in `added[]` with the **Spotify** title/artist (since the backend stores Spotify metadata), and the popup renders that without modification.
+- The "not present" branch (content script not injected because tab was opened pre-install) also de-branded; copy now reads "Page loaded before the extension was ready. Reload the tab and try again." — applies to both hosts.
+
+**Smoke — what I could verify here vs. what only the user can:**
+
+**Verified locally:**
+- `node --check` on all 5 JS files (incl. new `content-ytm.js`) — clean.
+- `manifest.json` reparse: `version=0.2.0`, `content_scripts.length=2`, `host_permissions.length=3`. All MV3 fields valid.
+- Hand-traced regex against representative URLs:
+  - `https://music.youtube.com/watch?v=dQw4w9WgXcQ` → `path === '/watch'`, `v=dQw4w9WgXcQ` → canonical `https://music.youtube.com/watch?v=dQw4w9WgXcQ` ✓
+  - `https://music.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&t=42s` → same canonical, extras dropped ✓
+  - `https://music.youtube.com/playlist?list=PLxxxx` → `path === '/playlist'`, canonical playlist URL ✓
+  - `https://music.youtube.com/browse/MPREb_xxx` → album branch, canonical browse URL ✓
+  - `https://music.youtube.com/browse/MPLAUC_xxx` → artist branch, `ok:false` ✓
+  - `https://music.youtube.com/explore` → `ok:false` ✓
+- `document.title` regex hand-tested against the canonical YTM pattern `"<Song> - <Artist> - YouTube Music"` — splits correctly into `{title, artist}`.
+
+**Requires the user (cannot run Chrome from this session):**
+1. `chrome://extensions` → reload button on the **MLB Song Ingest** card so the new `host_permissions` + content-script entry take effect.
+2. Open a YTM track watch page (e.g. https://music.youtube.com/watch?v=… for any real track).
+3. Click toolbar icon → popup should show **Track** badge, song title, and (if YTM exposes it via og: meta or `document.title`) the artist.
+4. Click **Add to shortlist**:
+   - **If backend T9 has landed:** expect `Added 1 track` with the Spotify title/artist (backend resolves via Songlink, stores Spotify metadata).
+   - **If backend T9 has NOT landed yet:** expect `Failed:` with reason `"only Spotify URLs supported in v1 (track / album / playlist)"` — this is the existing T3 rejection path and confirms the extension is correctly POSTing the YTM URL to the backend. Once T9 deploys, the same URL succeeds without any extension change.
+5. Repeat with a YTM playlist URL → expect either success (post-T9) or the same `"only Spotify URLs supported"` failure path (pre-T9).
+6. Confirm Spotify URLs still work post-update (regression check on the popup gate widening).
+7. Confirm a YTM artist page (`/browse/MPLA…`) or `/explore` shows the "Navigate to a Spotify or YouTube Music…" empty state.
+
+**Known quirks / limitations (documented in README):**
+- No track-count display for YTM playlists — Polymer-rendered DOM not reliable at `document_idle`. Cosmetic only; ingest still adds every track once Songlink resolves.
+- YTM artist pages (`/browse/MPLA…`) are deliberately rejected — backend doesn't ingest artists as a discrete entity (D7 spirit: no implicit "add the artist's entire catalog"). User picks an album / track / playlist.
+- The SPA-navigation contract from Wave 2 still applies: popup re-detects each time it opens; in-tab nav inside YTM does not auto-update an open popup.
+- Same pre-install tab quirk applies (tab open before extension install → no content script → popup says "Page loaded before the extension was ready").
+
+**Agent-roster boundaries:** did not touch `ui/**`, `src/**`, `scripts/**`, or `docker-compose.yml`. All changes inside `extension/**`. Coord doc updated.
+
+**Commit:** `feat(extension): sprint-10 Wave 3 T10 — YTM detection (v0.2.0)`. Local-only. Ahead-of-origin count post-commit reported below; not pushed (backend may be pushing T9 around the same time — staying under the 10-commit push threshold until either reaching it or being explicitly told to push).
+
+**Stopping per standing instruction.** T10 extension work complete; awaiting (a) user manual-smoke and (b) backend T9 deploy before declaring the YTM end-to-end path green.

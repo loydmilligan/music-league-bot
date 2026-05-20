@@ -1,7 +1,8 @@
 # MLB Song Ingest — Chrome Extension
 
-One-click ingest of Spotify tracks, albums, and playlists into your Music
-League Bot shortlist. Chrome Manifest V3, no build step.
+One-click ingest of Spotify and YouTube Music tracks, albums, and
+playlists into your Music League Bot shortlist. Chrome Manifest V3,
+no build step.
 
 ## Install (unpacked)
 
@@ -29,10 +30,15 @@ League Bot shortlist. Chrome Manifest V3, no build step.
 
 ## Use
 
-1. Open any Spotify page in `https://open.spotify.com/`:
-   - `track/<id>` — adds one track.
-   - `album/<id>` — adds all tracks on the album.
-   - `playlist/<id>` — adds every track in the playlist.
+1. Open any supported page:
+   - Spotify (`https://open.spotify.com/`):
+     - `track/<id>` — adds one track.
+     - `album/<id>` — adds all tracks on the album.
+     - `playlist/<id>` — adds every track in the playlist.
+   - YouTube Music (`https://music.youtube.com/`):
+     - `watch?v=<videoId>` — adds the track. Backend resolves to Spotify via Songlink.
+     - `playlist?list=<playlistId>` — adds every track. Songlink-resolved per item.
+     - `browse/MPRE…` — album page. Songlink-resolved.
 2. Click the toolbar icon. The popup shows the detected kind, title, and
    artist / owner / count.
 3. Click **Add to shortlist**. Result appears in the popup:
@@ -49,9 +55,20 @@ https://open.spotify.com/track/<id>
 https://open.spotify.com/album/<id>
 https://open.spotify.com/playlist/<id>
 https://open.spotify.com/intl-<locale>/track/<id>     (and album / playlist)
+
+https://music.youtube.com/watch?v=<videoId>
+https://music.youtube.com/playlist?list=<playlistId>
+https://music.youtube.com/browse/<MPRE…>              (album release)
 ```
 
-Spotify's `?si=…` share-link suffix is stripped automatically.
+Spotify's `?si=…` share-link suffix is stripped automatically. YTM
+watch URLs are canonicalized to `?v=<id>` only (extra `list=` / `t=`
+params are dropped) so Songlink sees a clean canonical URL.
+
+YouTube Music URLs are resolved to Spotify by the backend via Songlink
+(Wave 3 / T9). If Songlink has no Spotify equivalent for a given track,
+that URL fails with reason `"no Spotify match via Songlink"` and the
+popup surfaces it under **Failed:**.
 
 ## Troubleshooting
 
@@ -77,6 +94,7 @@ Spotify's `?si=…` share-link suffix is stripped automatically.
 | `manifest.json` | MV3 manifest |
 | `background.js` | Service worker — `POST /api/ingest/songs` |
 | `content-spotify.js` | Detects the active Spotify resource |
+| `content-ytm.js` | Detects the active YouTube Music resource |
 | `popup.html` / `popup.js` | Toolbar popup UI |
 | `options.html` / `options.js` | API base URL + token configuration |
 
@@ -87,5 +105,10 @@ card) and the change is live.
 ## Versioning
 
 The extension follows the MLB repo. `manifest.json` `version` is bumped
-when shipping incompatible changes. v0.1.0 = sprint-10 Wave 2 baseline:
-Spotify only, single global shortlist, static Bearer token.
+when shipping incompatible changes.
+
+- **v0.1.0** — sprint-10 Wave 2 baseline: Spotify only, single global
+  shortlist, static Bearer token.
+- **v0.2.0** — sprint-10 Wave 3: adds YouTube Music detection. Backend
+  resolves YTM URLs to Spotify via Songlink (T9). No extension-side
+  resolution.
