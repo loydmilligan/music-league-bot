@@ -387,3 +387,73 @@ Variants A and B are parked stash — keep but don't wire.
 - **Frontend T13 integration cheat-sheet:** call `POST /api/digest/:roundId/finalize`, then trigger download via `<a href={response.downloadUrl} download={response.filename}>` (programmatically clicked is fine). `firstFinalize` flips the pipeline strip to step-4-done; subsequent re-finalizes show step-4-done remaining true with `finalizedAt` unchanged.
 - `npm run check`: 505 files (was 491), 1 error / 31 warnings — baseline unchanged, zero new from this change.
 - **Status:** Task 11 acceptance met. **Stopping per instructions — not proceeding to T12 (rel-context) without explicit go-ahead.**
+
+### 2026-05-19 — ops — WhatsApp add-group debug ("auth timeout")
+- **Symptom:** `npm run add-group` and `npm run set-group` from the host (pane mash-ubie) fail with `UnhandledPromiseRejection: ... "auth timeout"`. Bot container deliberately stopped to release the chromium profile lock; user removed stale `Singleton*` symlinks before retrying. WhatsApp messages going uncaptured during the window.
+- **Tracing the auth-timeout literal:** `node_modules/whatsapp-web.js/src/Client.js:117-135` — if `authTimeoutMs` is undefined or 0 it's clamped to 30000ms. The selector being waited for is the page state showing either the QR code **or** the main WA app. If neither appears within 30s → `throw 'auth timeout'`. With `LocalAuth` and no `process.exit` in the client's reject path the throw becomes an unhandled rejection.
+- **Scripts vs. bot — config drift:**
+  - `scripts/add-group.ts:39-42` and `scripts/set-group.ts:33-36` both use `new Client({ authStrategy: new LocalAuth(), puppeteer: { args: ['--no-sandbox'] } })`. **No `executablePath`** — falls through to whatsapp-web.js's bundled `puppeteer` (24.38.0), whose downloaded chromium is at `/home/loydmilligan/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome` (verified via `puppeteer.executablePath()`).
+  - `src/whatsapp/client.ts:21-25` (the bot) uses `puppeteer: { executablePath: process.env.CHROMIUM_PATH || undefined, args: [...] }`. Dockerfile sets `ENV CHROMIUM_PATH=/usr/bin/chromium` (apt-installed). **Different chromium binary**.
+  - Both end up using the same `LocalAuth()` default profile path `.wwebjs_auth/session/`. Both run **headless** by default (whatsapp-web.js doesn't override puppeteer's modern `headless: 'new'` default).
+- **Profile state on disk (the real smoking gun):** `ls -la .wwebjs_auth/session/` and `.../Default/` show split ownership. Files written by the bot container (which has no `USER` directive — `FROM node:22-slim` → runs as **root**) are root:root, mode 0600:
+  - `Local State` — root, 15:46 today, mode `rw-------` → host UID 1000 (`loydmilligan`) **cannot read**.
+  - `Preferences` — root, 16:25 today, mode `rw-------` → unreadable to host user.
+  - `Secure Preferences` — root, mode `rw-------` → unreadable.
+  - Many other root-owned dirs/files (`GrShaderCache`, `ShaderCache`, `TrustTokenKeyCommitments`, `WidevineCdm`, `hyphen-data`, etc.).
+  - Conversely files written by the failed host runs (post 16:30) are `loydmilligan`-owned (`Cookies`, `DevToolsActivePort`, `first_party_sets.db`, `History`, `Reporting and NEL`, `BookmarkMergedSurfaceOrdering` …). The profile is now **interleaved between two UIDs**.
+- **Why this causes auth timeout (mechanism):** Chromium's `Local State` JSON holds the OS-level encryption key (or its wrapped form) used to decrypt the cookie store and session storage. When chromium launches as `loydmilligan` against a profile whose `Local State` is owned by root mode 0600, chromium can't open it for read — it falls back to writing a fresh `Local State` with a new key. The existing `Cookies` blob (encrypted with the previous key) becomes undecryptable. WhatsApp Web therefore sees no valid session, but also can't complete a clean fresh-login because intermediate persisted state (IndexedDB / Local Storage / Preferences) is partially root-owned and unreadable. The puppeteer-driven page hangs on WA's loading splash — never reaches the QR selector **or** the main-app selector — and the 30s timer fires. `qrcode-terminal` never gets a `qr` event to render, which is exactly what the user is seeing (timeout, not "scan this QR").
+- **SingletonLock confirmation (ruled out as primary cause):** `readlink .wwebjs_auth/session/SingletonLock` → `mash-ubie-309781`. `ps -ef | grep -E '\b309781\b'` → not present. The lock points to a dead PID on the same host; chromium auto-reclaims this kind of stale lock on startup. The fresh `SingletonSocket -> /tmp/org.chromium.Chromium.NDzh3h/SingletonSocket` was written by the most recent failed host attempt — confirming chromium **did** launch successfully and reclaim the lock. The failure is downstream of chromium start, inside WA Web load.
+- **Cross-check the bot's working setup:** the bot container ran for 26h authenticated against this same profile because everything in there matched: UID=root (writes `Local State` it can later read), chromium=`/usr/bin/chromium` (consistent version across restarts), no foreign UID ever touched the profile. The host scripts break the invariant because they run as UID 1000 with a different chromium binary.
+- **Root cause (one sentence):** the WhatsApp profile in `.wwebjs_auth/session/` is owned by the bot container's root UID with mode 0600, so the host scripts (running as `loydmilligan`, UID 1000) cannot read `Local State` / `Preferences` / `Secure Preferences`; chromium falls back to a fresh encryption key, the existing cookie store can't be decrypted, and WhatsApp Web hangs on its loading splash long enough to trip whatsapp-web.js's 30 s `auth timeout`.
+
+#### Proposed fix — recommend Option A (in-container one-shot)
+- **Option A — Run the script *inside* a one-shot bot container (recommended, no profile mutation).**
+  Bot service is already stopped, so the profile is free. Launch a transient container using the same image, mounts, env, and UID, plus an explicit `.env` mount so the script's `writeFileSync(envPath, …)` lands back on the host:
+  ```
+  docker compose run --rm \
+    -v "$(pwd)/.env:/app/.env" \
+    bot npx tsx scripts/add-group.ts
+  ```
+  (Same form with `set-group.ts` for the set variant.)
+  Why it works: matches the proven-good env exactly (root UID, `/usr/bin/chromium`, same profile path). `qrcode-terminal` output streams to the user's terminal in real time; if the saved session is in fact still valid (likely — the bot was authenticated 26h ago), no QR is needed and the script reaches `ready` directly. The `-v .env:/app/.env` bind makes the resulting `.env` edit visible to the host immediately, so `docker compose start bot` afterwards picks up the new `WHATSAPP_ALLOWED_GROUP_IDS` cleanly.
+  Caveat: the SingletonLock symlink → `mash-ubie-309781` is currently stale-but-present. Chromium on the same host reclaims this automatically on startup; no manual cleanup needed. If for any reason the container's chromium *doesn't* reclaim, `rm .wwebjs_auth/session/Singleton{Lock,Cookie,Socket}` clears it (host user owns these symlinks per `ls`).
+- **Option B — Chown the profile and run on host (fallback, modifies profile).**
+  ```
+  sudo chown -R loydmilligan:loydmilligan .wwebjs_auth/
+  npm run add-group
+  ```
+  Risk: once the bot container restarts it writes new files as root again → ownership skew returns. Acceptable as a one-off if Option A is somehow blocked, but it's a treadmill, and there's a non-zero chance chromium has *already* re-keyed `Local State` during the prior failed host runs (Cookies file mtime 16:30 today, loydmilligan-owned) — in which case the saved WA session is already lost and a QR scan will be needed regardless.
+- **Option C — Long-term hardening (out of scope for this fix, file for later).**
+  Add `USER node` (or a created UID-1000 user) to the bot `Dockerfile` so the container writes the profile as UID 1000, matching the host. Eliminates the entire class of UID-skew bugs. Requires rechowning the existing profile once during cutover and may need a fresh WA login.
+
+- **Recommended next step:** run the Option A command. Stop here — awaiting confirmation before executing.
+- **Out of scope for this fix:** the script's other rough edges (no `await client.destroy()` on shutdown, `process.exit(1)` on disconnect instead of graceful close, no surfacing of the underlying error message). Worth a small cleanup pass later, not blocking on it now.
+
+### 2026-05-19 — frontend — T13 deferred portion: rel-context diff modal scaffolded
+- **Scope:** sprint plan's T13 acceptance line — "Rel context footer shows 'view diff' link; clicking opens modal with before/after." Backend T12 (rel-context auto-update at finalize time) is in flight and has not landed yet — `POST /api/digest/:roundId/finalize` currently returns no `relContext` field. Per orc direction, scaffold the modal shell + footer link + gating now; the page will auto-light up when backend's response shape lands.
+- **Files added/changed:**
+  - **new** `ui/src/lib/digest/RelContextDiffModal.svelte` — modal component matching the `RegenModal` scrim/key/close pattern (`<svelte:window onkeydown>` for Esc; `handleScrim` for outside-click; explicit Close button). Props: `previous: string`, `proposed: string`, `diff?: DiffSegment[] | null`, `onClose: () => void`. Exports a `DiffSegment` type (`{ op: 'equal'|'add'|'remove'|'replace', text: string }`) speculatively — when backend pins the actual structured-diff shape, the type can be aligned in one place. Renderer:
+    - If a structured `diff[]` is supplied → renders inline with op-coloured spans (moss=add, ember strike-through=remove, amber=replace, neutral=equal).
+    - Else → falls back to **side-by-side plain-text columns** (left=Previous, right=Proposed) inside scrollable `<pre>` blocks. Always-safe degradation if backend ships only the two strings.
+    - Footer note: "read-only · accept/revert lands with backend T12 follow-on" — accept/revert PATCH path **intentionally not wired** until T12 documents the exact `PATCH /api/leagues/:leagueId/rel-context` body shape it expects (would be guessing otherwise).
+  - **edited** `ui/src/routes/digest/[roundId]/+page.svelte`:
+    - Imports `RelContextDiffModal` + `DiffSegment` type.
+    - New `RelContextPayload` type (`{ previous?, proposed?, diff? }`) + two `$state`s: `relContextDiff: RelContextPayload | null` and `relDiffOpen: boolean`. Helpers: `openRelDiff()` (no-op if no payload), `closeRelDiff()`.
+    - `finalizeAndDownload()` now reads an optional `relContext` field off the JSON response and stashes it into `relContextDiff` when at least one of `previous`/`proposed` is non-null. Pre-T12 finalize responses leave `relContextDiff` null → footer stays hidden, matches the "pre-T12 finalized → no link" rule.
+    - New `.dg-relctx-footer` block placed **after** the `.dg-export` wrapper (outside the screenshotted region, so it cannot bleed into future PNG exports) inside the refine/finalize stage `{#if}`. Renders `rel context updated · view diff →` only when `relContextDiff` is truthy. Scoped CSS uses existing tokens (`--surface`, `--line`, `--r-2`, `--moss`, `--mash-pulp`).
+    - Modal render `{#if relDiffOpen && relContextDiff}` at the bottom of the file, after `RegenModal`.
+- **Persistence-across-refresh note (deferred):** the user spec says "Also accessible by clicking on the rel-context footer at any time after finalize (not just immediately after)." Right now the diff payload lives only in the client `$state` from the most recent finalize call — refreshing the page drops it. The proper fix requires T12 to land first, so we know (a) where the proposed diff is persisted (probably `digest_drafts.rel_context` or `relationship_contexts.proposed_text`), and (b) whether `+page.server.ts` should fetch and project it. Will wire `+page.server.ts` → modal payload in a follow-on once T12 documents the persistence shape. Until then, the footer link correctly behaves for the "just-finalized this session" case.
+- **a11y:** scrim has `onclick={handleScrim}` + `onkeydown={handleScrimKey}` (Enter/Space on scrim = close) so svelte-check's `a11y_click_events_have_key_events` does not fire. `role="dialog" aria-modal="true" aria-label="…" tabindex="-1"`. Esc closes via `<svelte:window onkeydown>` — same as `RegenModal`.
+- **`npm run check`:** 1 ERROR (pre-existing `vite.config.ts`), 31 WARNINGS, 14 FILES — unchanged baseline. Zero net new diagnostics.
+- **Deploy:** `docker compose build --no-cache bot-ui && docker compose up -d bot-ui`. Container Up on `0.0.0.0:3002`.
+- **Smoke (localhost:3002):**
+  - `GET /digest/14` → 200. Rendered HTML contains the `✓ finalized` chip (round 14 is finalized) but **no** `dg-relctx-footer` div and no `view diff` text. Gate works: backend has not yet populated `relContext` in the finalize response, so the link is correctly hidden. ✓
+  - `POST /api/digest/14/finalize` → response JSON has no `relContext` field. Handler's `if (body.relContext && (…))` short-circuits; `relContextDiff` stays null. ✓ no false positives.
+  - **Cannot end-to-end test the open-modal path live yet** — would require T12 to ship and start emitting `relContext` on finalize. Verified by code inspection: when `relContextDiff` is non-null, footer renders; `openRelDiff()` sets `relDiffOpen=true`; modal `{#if relDiffOpen && relContextDiff}` block mounts; Esc and scrim Enter/Space + Close button all invoke `closeRelDiff()` which resets `relDiffOpen=false`.
+- **What lands automatically when backend T12 ships** (no further frontend code change required, assuming the documented shape is `{ previous: string, proposed: string, diff?: DiffSegment[] }` nested under a `relContext` key in the finalize response):
+  - Finalize click → `relContextDiff` populated → footer link appears → click opens modal → side-by-side text columns (or coloured inline diff if backend supplies structured segments).
+- **What still requires a follow-on after T12 documents the shape:**
+  - Persistence across page refresh (probably a `+page.server.ts` projection of the persisted proposed diff into `data.relContext`).
+  - Optional "Accept proposed" / "Revert to previous" PATCH buttons (need T12's PATCH body shape).
+- **Out of scope (intentional):**
+  - Accept/revert PATCH buttons — orc said "nice-to-have, only if quick"; without T12's body shape pinned, wiring would be guesswork. Will revisit when T12 lands.

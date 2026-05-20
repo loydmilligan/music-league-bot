@@ -3,6 +3,7 @@
   import { invalidateAll } from '$app/navigation';
   import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
+  import RelContextDiffModal, { type DiffSegment } from '$lib/digest/RelContextDiffModal.svelte';
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
   import { goto } from '$app/navigation';
   import type { PageData } from './$types.js';
@@ -128,6 +129,26 @@
     }
   }
 
+  // -------- Rel-context diff (T13 deferred portion) ----------
+  // Captured from the finalize response when backend T12 ships and starts
+  // populating `relContext` in the /finalize body. Until then this stays
+  // null, and the footer link / modal stay hidden — matches the
+  // "pre-T12 finalize → no link" rule from the orc spec.
+  type RelContextPayload = {
+    previous?: string;
+    proposed?: string;
+    diff?: DiffSegment[] | null;
+  };
+  let relContextDiff = $state<RelContextPayload | null>(null);
+  let relDiffOpen = $state(false);
+
+  function openRelDiff() {
+    if (relContextDiff) relDiffOpen = true;
+  }
+  function closeRelDiff() {
+    relDiffOpen = false;
+  }
+
   // -------- Finalize stage ----------
   // POST /api/digest/:roundId/finalize. Backend T11 was instructed to document
   // the response shape (download URL vs PNG bytes). Until that lands the
@@ -162,7 +183,11 @@
           url?: string | null;
           filename?: string | null;
           stub?: boolean;
+          relContext?: RelContextPayload | null;
         };
+        if (body.relContext && (body.relContext.previous != null || body.relContext.proposed != null)) {
+          relContextDiff = body.relContext;
+        }
         const url = body.downloadUrl ?? body.url ?? null;
         if (url) {
           triggerDownload(url, body.filename ?? filename, false);
@@ -495,6 +520,13 @@
       <div>generated {data.draft.generated_at}{data.draft.finalized_at ? ` · finalized ${data.draft.finalized_at}` : ''}</div>
     </footer>
   </div>
+
+  {#if relContextDiff}
+    <div class="dg-relctx-footer">
+      <span class="dg-relctx-tag">rel context updated</span>
+      <button type="button" class="dg-relctx-link" onclick={openRelDiff}>view diff →</button>
+    </div>
+  {/if}
 {/if}
 
 {#if modalTarget !== null}
@@ -507,3 +539,42 @@
     onSubmit={submitRegen}
   />
 {/if}
+
+{#if relDiffOpen && relContextDiff}
+  <RelContextDiffModal
+    previous={relContextDiff.previous ?? ''}
+    proposed={relContextDiff.proposed ?? ''}
+    diff={relContextDiff.diff ?? null}
+    onClose={closeRelDiff}
+  />
+{/if}
+
+<style>
+  .dg-relctx-footer {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: 600 11px/1 var(--font-mono);
+  }
+  .dg-relctx-tag {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--moss, #7ea864);
+  }
+  .dg-relctx-link {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--mash-pulp, var(--fg));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .dg-relctx-link:hover { color: var(--fg); }
+</style>
