@@ -209,6 +209,14 @@
   <p class="text-fg-muted max-w-2xl">
     Rating weights, import controls, deadlines, and queue diagnostics.
   </p>
+  <nav class="mt-4 flex flex-wrap gap-3 text-xs font-mono tracking-widest uppercase">
+    <a
+      href="/settings/api-tokens"
+      class="text-accent hover:text-accent-strong underline decoration-dotted underline-offset-4 transition-colors"
+    >
+      → API tokens (extension auth)
+    </a>
+  </nav>
 </div>
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right).
