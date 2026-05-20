@@ -344,3 +344,37 @@ Bumped extension to **v0.2.0**. Backend T9 (Songlink resolution) has not yet lan
 - No changes to JS, content scripts, or any other manifest field. Backend / API contracts untouched.
 - **User reload required:** `chrome://extensions` → ⟳ on the MLB extension card to pick up the new manifest fields. The toolbar button should switch from Chrome's default puzzle-piece to the M/L wordmark.
 - Local-only commit. Ahead-of-origin count tracked against the 10-commit threshold.
+
+### 2026-05-20 — backend — Wave 3 stretch: Task 9 done (YTM URL support via Songlink)
+**Reused module (no new client written):** `ui/src/lib/songlink.ts` already had `resolveYtmLink(spotifyUri)` (Spotify → YTM). I added the reverse helper `resolveSpotifyFromYtm(ytmUrl)` in the same file, sharing the existing `ODESLI` base URL and fetch pattern (single GET to `https://api.song.link/v1-alpha.1/links?url=<encoded>`). Two helpers, one file.
+- Did not reuse `src/resolver/songlinkResolver.ts` (root workspace; ui can't import across without a build hack). The ui workspace already had its own Songlink util — natural extension.
+
+**YTM URL pattern** in `ui/src/routes/api/ingest/songs/+server.ts`: `/^https?:\/\/music\.youtube\.com\/(watch\?|playlist\?|browse\/)/i`. Covers the three shapes from the brief: `watch?v=<id>` (track), `playlist?list=<id>` (playlist), `browse/<MPREb_...>` (album).
+
+**Refactor for cleanliness:** extracted the existing track/album/playlist dispatch out of the for-loop into a private `ingestSpotify(originalUrl, parsed)` helper. Both code paths now call it — direct Spotify URL OR Songlink-resolved Spotify URL — so dedup, error reporting, and `failed[]` URL identity stay consistent. `failed[]` always reports the **original URL the caller sent** (the YTM URL), never the post-resolution Spotify URL.
+
+**Per-URL decision tree (in order):**
+1. `parseSpotifyUrl(url)` matches → direct Spotify path.
+2. `YTM_URL_RE.test(url)` matches → `resolveSpotifyFromYtm(url)` → on `{error}` → `failed[]` with `reason: "Songlink lookup failed: <error>"`; on `{url}` → re-parse → `ingestSpotify(originalUrl, parsed)`.
+3. Neither → `failed[]` with reason `"unsupported URL — only Spotify (track / album / playlist) and music.youtube.com (track / album / playlist) are accepted"`.
+
+**Smoke (against `https://mlb.mattmariani.com`):**
+- **Code wiring** — verified live:
+  - **Mixed batch (Spotify + YTM in one call):** `{added:[], failed:[{spotify→already in shortlist},{ytm→Songlink lookup failed: no Spotify match via Songlink}]}` → 200. Spotify dedup AND YTM detection coexist cleanly.
+  - **Bad YTM URL** (`music.youtube.com/watch?v=NOTAREALID42`) → 200, `failed:[{reason:"Songlink lookup failed: Songlink API 400"}]`. Negative path surfaces Songlink's 400 verbatim.
+  - **Real-looking YTM URL with no Spotify match** (`dQw4w9WgXcQ`, `kJQP7kiw5Fk`) → 200, `failed:[{reason:"Songlink lookup failed: no Spotify match via Songlink"}]`. Spec-compliant.
+  - **`npm run check`:** 520 files, 1 error / 31 warnings — baseline unchanged.
+- **Positive path (YTM → Spotify → ingest) — not live-verifiable today:** Songlink/Odesli's Spotify resolution is currently broken across YT/YTM inputs. 13 probes over ~3 min with mainstream tracks (Daft Punk, Queen, The Weeknd, Travis Scott, Despacito) all returned HTTP 200 with valid JSON but **zero `linksByPlatform.spotify` entries**. Same for Apple Music input. Rate-limiting ruled out: status 200 not 429, responses well-formed, platform lists vary per track, a 90 s pause did not change the pattern. **Positive path is code-verified by reasoning, not live test:** the code re-enters `ingestSpotify` with a parsed Spotify URL — the same path smoked green during T3. When Odesli's Spotify resolution recovers, the YTM happy path will start working automatically with no further code change.
+
+**Deploy:** `docker compose build --no-cache bot-ui && docker compose up -d --force-recreate bot-ui` (used `--force-recreate` per CLAUDE.md gotcha).
+
+**For extension agent doing T10 (YTM content script):** the URL patterns to detect on the extension side are the same three I match server-side:
+- `https://music.youtube.com/watch?v=<id>`
+- `https://music.youtube.com/playlist?list=<id>`
+- `https://music.youtube.com/browse/<id>` (album browse IDs like `MPREb_<...>`)
+- Send the raw `window.location.href` to the background worker; backend regex handles parsing. No need to extract IDs in the content script.
+- **Caveat to surface in the popup:** while Odesli's Spotify-resolution path is degraded, YTM ingest currently lands in `failed[]` with `reason: "Songlink lookup failed: no Spotify match via Songlink"`. The popup's existing success/failure toast handles this gracefully — no extension code change needed.
+
+**Cleanup:** revoked the T9 smoke token (id=5).
+
+**Status:** Task 9 acceptance met. Stopping per standing instruction.

@@ -10,6 +10,9 @@ import {
   fetchPlaylistTracks,
   type ResolvedTrack,
 } from '$lib/spotify/client.js';
+import { resolveSpotifyFromYtm } from '$lib/songlink.js';
+
+const YTM_URL_RE = /^https?:\/\/music\.youtube\.com\/(watch\?|playlist\?|browse\/)/i;
 
 interface AddedItem { title: string; artist: string; spotifyId: string }
 interface FailedItem { url: string; reason: string }
@@ -66,27 +69,53 @@ export const POST: RequestHandler = async ({ request }) => {
     added.push({ title: t.title, artist: t.artist, spotifyId: t.id });
   }
 
-  for (const url of urls) {
-    const parsed = parseSpotifyUrl(url);
+  // Process a single URL once we know which Spotify resource it maps to.
+  // Used by both the direct Spotify path and the YTM-resolved-to-Spotify path
+  // so reporting/dedup stays uniform. `originalUrl` is what the caller sent;
+  // we want it surfaced in `failed[]` (not the post-Songlink Spotify URL).
+  async function ingestSpotify(originalUrl: string, parsed: ReturnType<typeof parseSpotifyUrl>): Promise<void> {
     if (!parsed) {
-      failed.push({ url, reason: 'only Spotify URLs supported in v1 (track / album / playlist)' });
-      continue;
+      failed.push({ url: originalUrl, reason: 'songlink returned a non-track Spotify URL we cannot parse' });
+      return;
     }
+    if (parsed.kind === 'track') {
+      addOne(originalUrl, await fetchTrack(parsed.id));
+    } else if (parsed.kind === 'album') {
+      const tracks = await fetchAlbumTracks(parsed.id);
+      if (!tracks.length) failed.push({ url: originalUrl, reason: 'album has no tracks' });
+      for (const t of tracks) addOne(originalUrl, t);
+    } else {
+      const tracks = await fetchPlaylistTracks(parsed.id);
+      if (!tracks.length) failed.push({ url: originalUrl, reason: 'playlist has no tracks' });
+      for (const t of tracks) addOne(originalUrl, t);
+    }
+  }
+
+  for (const url of urls) {
     try {
-      if (parsed.kind === 'track') {
-        addOne(url, await fetchTrack(parsed.id));
-      } else if (parsed.kind === 'album') {
-        const tracks = await fetchAlbumTracks(parsed.id);
-        if (!tracks.length) failed.push({ url, reason: 'album has no tracks' });
-        for (const t of tracks) addOne(url, t);
-      } else {
-        const tracks = await fetchPlaylistTracks(parsed.id);
-        if (!tracks.length) failed.push({ url, reason: 'playlist has no tracks' });
-        for (const t of tracks) addOne(url, t);
+      const parsed = parseSpotifyUrl(url);
+      if (parsed) {
+        await ingestSpotify(url, parsed);
+        continue;
       }
+      if (YTM_URL_RE.test(url)) {
+        const resolved = await resolveSpotifyFromYtm(url);
+        if ('error' in resolved) {
+          failed.push({ url, reason: `Songlink lookup failed: ${resolved.error}` });
+          continue;
+        }
+        const spotifyParsed = parseSpotifyUrl(resolved.url);
+        if (!spotifyParsed) {
+          failed.push({ url, reason: `Songlink returned unparseable Spotify URL: ${resolved.url}` });
+          continue;
+        }
+        await ingestSpotify(url, spotifyParsed);
+        continue;
+      }
+      failed.push({ url, reason: 'unsupported URL — only Spotify (track / album / playlist) and music.youtube.com (track / album / playlist) are accepted' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      failed.push({ url, reason: `spotify fetch failed: ${msg}` });
+      failed.push({ url, reason: `fetch failed: ${msg}` });
     }
   }
 
