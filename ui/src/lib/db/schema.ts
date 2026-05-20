@@ -164,6 +164,15 @@ export const SCHEMA = `
     new_content_json   TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
+  CREATE TABLE IF NOT EXISTS api_tokens (
+    id            INTEGER PRIMARY KEY,
+    hash          TEXT NOT NULL UNIQUE,
+    label         TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    last_used_at  TEXT,
+    revoked_at    TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_api_tokens_active ON api_tokens(hash) WHERE revoked_at IS NULL;
   CREATE TABLE IF NOT EXISTS relationship_contexts (
     league_id            INTEGER PRIMARY KEY REFERENCES leagues(id),
     text                 TEXT NOT NULL DEFAULT '',

@@ -124,3 +124,68 @@ Add songs to the music-league-bot's global shortlist (`shortlist_songs`) without
   5. Refresh `/settings/api-tokens` → state persists; Revoke button hides on revoked rows. ✓
 - **Modal click flow** verified by code inspection (no headless DOM available): scrim/Esc/Close all route through the right callback per phase; Copy falls back to `! Failed` chip if the clipboard API is unavailable (e.g. non-secure HTTP origin).
 - **Status:** sprint-10 frontend Wave 1 (T4) done and shipped to local prod on port 3002.
+
+### 2026-05-20 — backend — Wave 1 done (T1 + T2 + T3 bundled)
+All three Wave 1 backend tasks shipped in one commit since they're tightly coupled (token CRUD → bearer middleware → ingest endpoint consumes both).
+
+**T1 — api_tokens table + CRUD endpoints**
+- **Schema** (`ui/src/lib/db/schema.ts`): added `api_tokens(id PK, hash TEXT UNIQUE NOT NULL, label TEXT NOT NULL, created_at, last_used_at, revoked_at)` + partial index `idx_api_tokens_active ON api_tokens(hash) WHERE revoked_at IS NULL` to keep lookups O(log n) at scale. **No `client.ts` migration needed** — this is a brand-new table, so the `db.exec(SCHEMA)` on boot creates it via `CREATE TABLE IF NOT EXISTS`; the PRAGMA+ALTER dance is only for *column* additions to existing tables (which is what T12 needed). Verified live: `PRAGMA table_info(api_tokens)` returns the 6 expected columns.
+- **`POST /api/tokens`** (`ui/src/routes/api/tokens/+server.ts`): body `{ label: string }` (validated non-empty). Generates 32 random bytes via `crypto.randomBytes` → 64-char hex plaintext; SHA-256 of plaintext is what's stored. Response **201** `{ id, label, createdAt, lastUsedAt, revokedAt, token }` — `token` is the only place plaintext ever appears. Errors: `400 body.label (non-empty string) required`.
+- **`GET /api/tokens`**: returns `[{ id, label, createdAt, lastUsedAt, revokedAt }]` ordered DESC by id. **Never includes a `token` field** — verified in smoke (`has plaintext token field? False`).
+- **`DELETE /api/tokens/:id`** (`ui/src/routes/api/tokens/[id]/+server.ts`): sets `revoked_at = now()` (soft-delete; row stays so the audit trail and `last_used_at` history survives). Returns **204** No Content. Idempotent — calling on an already-revoked row is a no-op success. `404 token not found` for unknown id.
+
+**T2 — Bearer-token auth middleware**
+- **New module** `ui/src/lib/auth/bearer.ts`:
+  - `hashToken(plain)` and `generateToken()` — shared between routes so the hashing algorithm has one definition.
+  - `requireBearerToken(request, db)` — reads `Authorization: Bearer <token>` (case-insensitive header lookup), regex-validates the value (`^Bearer\s+([A-Za-z0-9._\-+/=]+)$` — accepts hex, base64url, base64 padded), SHA-256 hashes, looks up `api_tokens` where `revoked_at IS NULL`, updates `last_used_at = now()`, returns the row. Throws SvelteKit `error(401, ...)` on any failure — distinct messages per case so debugging is easy: `missing Authorization header` / `malformed Authorization header (expected: Bearer <token>)` / `invalid or revoked token`.
+- **Reusable:** any future API surface can `requireBearerToken(request, getDb())` and inherit the same auth semantics. Existing webapp routes are deliberately not retrofitted — they remain open for browser sessions, only `/api/ingest/songs` is locked down here.
+
+**T3 — `POST /api/ingest/songs` (the meat)**
+- **File** `ui/src/routes/api/ingest/songs/+server.ts`. Calls `requireBearerToken` first (throws 401 before any work). Body: `{ urls: string[] }` (filters empty / non-string entries silently). Iterates URLs in order:
+  - `parseSpotifyUrl()` matches against `^https?://open\.spotify\.com/(?:intl-xx/)?(track|album|playlist)/([A-Za-z0-9]{15,40})(?:\?|$|#|/)` *or* the raw `spotify:kind:id` URI form. Returns `{ kind, id, uri }` or null. The `intl-xx/` allowance handles country-localized Spotify share URLs (`/intl-de/track/...`); regex tail allows `?si=...` query suffix that copy-from-Spotify always appends.
+  - **Track:** `fetchTrack(id)` → resolved metadata → addOne.
+  - **Album:** `fetchAlbumTracks(id)` — single `/albums/{id}` fetch (returns up to 50 tracks plus a `tracks.next` cursor if more); pages via `tracks.next`. Grafts the album-level metadata (name / release_date / images) onto each track since `/albums/{id}/tracks` pagination doesn't echo it back.
+  - **Playlist:** `fetchPlaylistTracks(id)` — paginates `/playlists/{id}/tracks?limit=100&fields=...` via `next` URL. Uses Spotify's `fields=` projection so only the columns we need come back (lighter payloads on big playlists).
+- **Dedup:** one pre-fetch `SELECT spotify_uri FROM shortlist_songs` builds an in-memory `Set` per call; each candidate URI is checked against both the existing set AND an in-call `seenUrisThisCall` set (catches the case where the same album appears twice in one POST). Skipped tracks land in `failed` with `reason: "already in shortlist"`.
+- **Insert:** reuses the existing `addShortlistSong(db, ...)` helper at `ui/src/lib/shortlist/shortlist.ts:39` — that helper already does `INSERT OR IGNORE` on `spotify_uri UNIQUE`, generates the `id` via `randomUUID()`, and is the path the webapp uses for manual adds. **Important schema note:** the column is `spotify_uri` (e.g. `spotify:track:0DiWol3AO6WpXZgp0goxAV`), **not** `spotify_track_id` — the task brief used the latter name but the actual schema (line 83 of `schema.ts`) is `spotify_uri`. Dedup is by URI for that reason.
+- **Response shape:** `{ added: [{ title, artist, spotifyId }], failed: [{ url, reason }] }`. `spotifyId` is the raw track id (not the URI) so the extension can hand it to other Spotify integrations directly. `added` order matches the order of successful inserts; `failed` order matches the order of failures.
+- **CORS:** `OPTIONS` handler returns 204 with `Access-Control-Allow-Origin: <reflected origin or *>`, `Allow-Methods: POST, OPTIONS`, `Allow-Headers: Authorization, Content-Type`, `Max-Age: 86400`, `Vary: Origin`. POST handler echoes the same headers on the JSON response. Per D8 the token is the auth boundary, so we reflect any origin that asks (incl. `chrome-extension://*`) — there is no allowlist to maintain.
+
+**Spotify client — where it lives (for Task 5+ extension agent and future backend work)**
+- **New** `ui/src/lib/spotify/client.ts`. Exports: `parseSpotifyUrl(input)`, `fetchTrack(id)`, `fetchAlbumTracks(id)`, `fetchPlaylistTracks(id)`, `ResolvedTrack` type. Uses **client_credentials** OAuth (needs only `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET`; no `SPOTIFY_REFRESH_TOKEN` needed for public-data reads). Token is cached in a module-level singleton with a 60 s safety margin before expiry.
+- **Why a new module vs. reusing existing code:**
+  - `src/spotify/token.ts` + `src/spotify/adapter.ts` (root workspace) — these use a **refresh_token** flow scoped to a user, needed for *write* operations like creating/modifying playlists. Overkill for ingest, and pulling them into the ui workspace would have meant either copying or a cross-workspace import (ui is its own npm package).
+  - `ui/src/routes/api/spotify/search/+server.ts` already has an **inline** client-credentials client. I extracted that pattern into the new `lib/spotify/client.ts` so both can share it; the existing inline `search` route is left untouched (no in-flight risk to working code).
+- **Editorial-playlist caveat (discovered during smoke):** Spotify restricted `client_credentials` access to algorithmic / editorial playlists (the `37i9dQZF...` ID range) in late 2024 — those now return 404 to apps using client_credentials. **User-owned public playlists work fine** (verified: 5/5 tracks ingested from a user playlist). If we ever need to ingest editorial playlists, the workaround is to switch that one code path to the root `src/spotify/token.ts` user-OAuth client. Not blocking — extension users will be sharing user playlists, not editorial ones.
+- **Why this matters for future agents:** if you need to do anything *Spotify-write* (modify playlists, add tracks to a user's library, etc.), use `src/spotify/token.ts`. If you need to do anything *Spotify-read public* (search, fetch metadata, list playlist tracks), use the new `ui/src/lib/spotify/client.ts`.
+
+**Smoke (against `https://mlb.mattmariani.com`)**
+1. **POST /api/tokens** `{label:"smoke"}` → **201** id=1, token 64 hex chars, all fields present.
+2. **GET /api/tokens** → 200, 1 row, no `token` field in response (plaintext never leaked).
+3. **POST /api/ingest/songs** (track URL: Daft Punk — "One More Time") → 200 `{added:[{title:"One More Time", artist:"Daft Punk", spotifyId:"0DiWol3AO6WpXZgp0goxAV"}], failed:[]}`.
+4. **Same URL again** → 200 `{added:[], failed:[{reason:"already in shortlist"}]}`. ✓ dedup.
+5. **Album URL** (Daft Punk — *Discovery*, 14 tracks) → 200 in 0.4 s, `added=13, failed=1`. The 1 failure is "One More Time" (deduped from step 3) ✓.
+6. **User-owned public playlist** → 200, 5 tracks ingested, 0 failures.
+7. **Editorial playlist 37i9dQZF1DXcBWIGoYBM5M** → 200 `failed:[{reason:"spotify fetch failed: Spotify 404 ..."}]`. Documented as a Spotify-side restriction, not a bug; the error is surfaced through the normal `failed[]` channel rather than 5xx-ing.
+8. **Bad token** → 401 `{message:"invalid or revoked token"}`.
+9. **Missing Authorization header** → 401 `{message:"missing Authorization header"}`.
+10. **Non-Spotify URL** (`music.youtube.com/...`) → 200 `failed:[{reason:"only Spotify URLs supported in v1 (track / album / playlist)"}]` — Wave 3 Task 9 will widen this via Songlink.
+11. **OPTIONS preflight** with `Origin: chrome-extension://abcdefghijklmnop` → 204 with all expected `Access-Control-*` headers + `Vary: Origin`. Origin reflected verbatim.
+12. **GET /api/tokens after ingest** → `lastUsedAt` populated on the row that was used (UTC iso, second granularity). Confirms middleware writeback works.
+13. **DELETE /api/tokens/3** → 204. Subsequent ingest with the revoked token → 401 `{message:"invalid or revoked token"}`. GET shows `revokedAt` populated, row preserved.
+14. **DB sanity:** `SELECT count(*) FROM shortlist_songs WHERE added_at >= '2026-05-20T03:33:00Z'` → 19. Matches expected (1 track + 13 album + 5 playlist).
+
+**Collision note (process, not code):** parallel frontend agent ran their own smoke against `/api/tokens` between my smoke 4 and 5. They reused the same `/tmp/tok.json` path I was using, which clobbered my captured token. No functional impact — I re-issued with a unique `/tmp/be-tok*.json` path. **Recommendation for future cross-track smokes:** isolate scratch files in `/tmp/<agent-prefix>-*.json`. Frontend's tokens (ids 1, 2) are revoked, mine (ids 3, 4) are revoked, DB is clean.
+
+**Status of agent-roster boundaries**: did not touch `ui/src/routes/settings/**` (frontend's T4); did not create `extension/**` (Wave 2 territory).
+
+**`npm run check`:** 520 files (was 507), 1 error / 31 warnings — baseline unchanged, zero new diagnostics.
+
+**Frontend / extension consumer cheat-sheet:**
+- Token mint: `POST /api/tokens` with `{label}` → capture `.token` (64-char hex), never returned again.
+- Token usage: `Authorization: Bearer <token>` on `/api/ingest/songs`.
+- Ingest call: `POST /api/ingest/songs` with `{urls: string[]}` → `{added: [...], failed: [...]}`. Always 200 if the token is valid — per-URL outcomes live inside the body, not in HTTP status.
+- Revoke: `DELETE /api/tokens/:id` → 204. Soft delete; row stays visible in `GET /api/tokens` with `revokedAt` populated so the UI can grey it out instead of removing it.
+- CORS for extension: any chrome-extension origin works out of the box; preflight is handled.
+
+**Stopping per standing instruction.** Wave 1 backend (T1+T2+T3) complete.
