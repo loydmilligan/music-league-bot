@@ -1,7 +1,7 @@
 <script lang="ts">
   import MiniDna from './MiniDna.svelte';
   import ScoreChip from './ScoreChip.svelte';
-  import DnaStrip from './DnaStrip.svelte';
+  import SongRatingBars from '$lib/components/SongRatingBars.svelte';
   import AssignPopover from './AssignPopover.svelte';
   import type { ShortlistSong } from '$lib/types.js';
 
@@ -85,7 +85,7 @@
       <div class="sl-row-open-body">
         <div class="sl-row-open-title">{localSong.title}</div>
         <div class="sl-row-open-sub">{localSong.artist}{localSong.album ? ` · ${localSong.album}` : ''}</div>
-        <DnaStrip discovery={localSong.ratingDiscovery} themeFit={localSong.ratingThemeFit} nostalgia={localSong.ratingNostalgia} personal={localSong.ratingPersonal} onchange={patchRating} />
+        <SongRatingBars discovery={localSong.ratingDiscovery} themeFit={localSong.ratingThemeFit} nostalgia={localSong.ratingNostalgia} personal={localSong.ratingPersonal} onchange={patchRating} />
         <textarea class="sl-notes" bind:value={notesVal} placeholder="Notes…" onblur={saveNotes} rows="3"></textarea>
         {#if hasAssignments}
           <div class="sl-row-open-assignments">

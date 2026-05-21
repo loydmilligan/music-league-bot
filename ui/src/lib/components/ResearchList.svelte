@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ResearchSong, Settings } from '$lib/types.js';
   import { computeScore } from '$lib/scoring.js';
+  import SongRatingBars, { type RatingDimension } from '$lib/components/SongRatingBars.svelte';
 
   let { roundId, initial, weights }: {
     roundId: number;
@@ -17,12 +18,17 @@
   let searchError = $state<string | null>(null);
   let busyAddUris = $state<Set<string>>(new Set());
 
-  const dims = [
-    { key: 'themeFit',           label: 'Theme'     },
-    { key: 'discoveryPotential', label: 'Discovery' },
-    { key: 'nostalgiaPotential', label: 'Nostalgia' },
-    { key: 'personalRating',     label: 'Personal'  },
-  ] as const;
+  // Research uses (discoveryPotential, themeFit, nostalgiaPotential,
+  // personalRating). The canonical SongRatingBars component talks in
+  // (discovery, theme_fit, nostalgia, personal). Map at the boundary so the
+  // research column shape stays untouched on disk.
+  type ResearchKey = 'themeFit' | 'discoveryPotential' | 'nostalgiaPotential' | 'personalRating';
+  const DIM_TO_FIELD: Record<RatingDimension, ResearchKey> = {
+    discovery: 'discoveryPotential',
+    theme_fit: 'themeFit',
+    nostalgia: 'nostalgiaPotential',
+    personal: 'personalRating',
+  };
 
   // Sort order is user-controlled. The list does NOT re-sort on every rating
   // click — clicking jumps the active song mid-flow otherwise. Instead we hold
@@ -57,6 +63,19 @@
       && s.discoveryPotential != null
       && s.nostalgiaPotential != null
       && s.personalRating != null;
+  }
+
+  // Called from the canonical SongRatingBars onchange. Value 0 clears the
+  // rating (matches "click far-left to clear" UX). Otherwise persist 1-5.
+  function onBarChange(song: ResearchSong, dim: RatingDimension, value: number) {
+    const field = DIM_TO_FIELD[dim];
+    const next = value <= 0 ? null : value;
+    const wasComplete = hasAllFourRatings(song);
+    const willBeComplete = hasAllFourRatings({ ...song, [field]: next } as ResearchSong);
+    patchSong(song.id, { [field]: next });
+    if (autoSortAfterAll4 && willBeComplete && !wasComplete) {
+      resort();
+    }
   }
 
   async function runSearch(e: SubmitEvent) {
@@ -130,17 +149,6 @@
       body: JSON.stringify({ id }),
     });
     if (!res.ok) { songs = prev; orderedIds = prevOrder; }
-  }
-
-  function setRating(song: ResearchSong, key: typeof dims[number]['key'], value: number) {
-    const current = song[key];
-    const next = current === value ? null : value;
-    const wasComplete = hasAllFourRatings(song);
-    const willBeComplete = hasAllFourRatings({ ...song, [key]: next } as ResearchSong);
-    patchSong(song.id, { [key]: next });
-    if (autoSortAfterAll4 && willBeComplete && !wasComplete) {
-      resort();
-    }
   }
 
   function scoreToneClass(score: number | null | undefined): string {
@@ -283,37 +291,17 @@
               </div>
             </header>
 
-            <!-- Ratings: 5-dot rows. Filled dots show current rating; clicking sets a new value, clicking same value clears. -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-              {#each dims as d}
-                <div class="flex items-center gap-3">
-                  <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim w-20 flex-shrink-0">{d.label}</span>
-                  <div class="flex gap-1.5 items-center">
-                    {#each [1,2,3,4,5] as n}
-                      {@const active = song[d.key] != null && (song[d.key] as number) >= n}
-                      <button
-                        type="button"
-                        onclick={() => setRating(song, d.key, n)}
-                        aria-label={`${d.label} ${n}`}
-                        class="w-3 h-3 rounded-full border transition-colors"
-                        class:bg-accent={active}
-                        class:border-accent={active}
-                        class:bg-transparent={!active}
-                        class:border-border={!active}
-                        class:hover:border-accent-deep={!active}
-                      ></button>
-                    {/each}
-                    {#if song[d.key] != null}
-                      <button
-                        type="button"
-                        onclick={() => patchSong(song.id, { [d.key]: null })}
-                        class="font-mono text-[10px] text-fg-faint hover:text-fg-dim ml-1 transition-colors"
-                        aria-label={`Clear ${d.label}`}
-                      >clear</button>
-                    {/if}
-                  </div>
-                </div>
-              {/each}
+            <!-- Ratings: canonical multi-color bars (shortlist + research share
+                 the same component now). Click bar position to set 0-5;
+                 clicking far-left (0) clears the field to null. -->
+            <div class="mb-3">
+              <SongRatingBars
+                discovery={song.discoveryPotential ?? 0}
+                themeFit={song.themeFit ?? 0}
+                nostalgia={song.nostalgiaPotential ?? 0}
+                personal={song.personalRating ?? 0}
+                onchange={(dim, value) => onBarChange(song, dim, value)}
+              />
             </div>
 
             <textarea
