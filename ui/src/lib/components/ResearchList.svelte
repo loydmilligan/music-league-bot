@@ -24,6 +24,41 @@
     { key: 'personalRating',     label: 'Personal'  },
   ] as const;
 
+  // Sort order is user-controlled. The list does NOT re-sort on every rating
+  // click — clicking jumps the active song mid-flow otherwise. Instead we hold
+  // a snapshot of song ids in display order and only refresh it on:
+  //   - explicit "Re-sort" button click
+  //   - auto trigger (opt-in via toggle) when a song reaches all 4 ratings set
+  function orderByScore(list: ResearchSong[]): number[] {
+    return [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)).map((s) => s.id);
+  }
+  let orderedIds = $state<number[]>(orderByScore(songs));
+
+  // Auto-sort preference is a client-side UX preference, persisted in
+  // localStorage rather than on the server (server settings = rating weights).
+  const AUTO_SORT_KEY = 'mlb.research.autoSortAfterAll4';
+  let autoSortAfterAll4 = $state<boolean>(false);
+  if (typeof localStorage !== 'undefined') {
+    autoSortAfterAll4 = localStorage.getItem(AUTO_SORT_KEY) === '1';
+  }
+  function setAutoSort(on: boolean) {
+    autoSortAfterAll4 = on;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(AUTO_SORT_KEY, on ? '1' : '0');
+    }
+  }
+
+  function resort() {
+    orderedIds = orderByScore(songs);
+  }
+
+  function hasAllFourRatings(s: ResearchSong): boolean {
+    return s.themeFit != null
+      && s.discoveryPotential != null
+      && s.nostalgiaPotential != null
+      && s.personalRating != null;
+  }
+
   async function runSearch(e: SubmitEvent) {
     e.preventDefault();
     if (!query.trim()) return;
@@ -53,6 +88,7 @@
       const created = await res.json() as ResearchSong;
       if (!songs.some(s => s.id === created.id)) {
         songs = [...songs, { ...created, score: computeScore(created, weights) }];
+        if (!orderedIds.includes(created.id)) orderedIds = [...orderedIds, created.id];
       }
     } catch (err) {
       searchError = err instanceof Error ? err.message : 'Add failed';
@@ -85,19 +121,26 @@
   async function removeSong(id: number) {
     if (!confirm('Remove this song from research?')) return;
     const prev = songs;
+    const prevOrder = orderedIds;
     songs = songs.filter(s => s.id !== id);
+    orderedIds = orderedIds.filter(x => x !== id);
     const res = await fetch(`/api/research/${roundId}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (!res.ok) songs = prev;
+    if (!res.ok) { songs = prev; orderedIds = prevOrder; }
   }
 
   function setRating(song: ResearchSong, key: typeof dims[number]['key'], value: number) {
     const current = song[key];
     const next = current === value ? null : value;
+    const wasComplete = hasAllFourRatings(song);
+    const willBeComplete = hasAllFourRatings({ ...song, [key]: next } as ResearchSong);
     patchSong(song.id, { [key]: next });
+    if (autoSortAfterAll4 && willBeComplete && !wasComplete) {
+      resort();
+    }
   }
 
   function scoreToneClass(score: number | null | undefined): string {
@@ -107,7 +150,18 @@
     return 'text-fg-dim';
   }
 
-  let sorted = $derived([...songs].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)));
+  // Display order = the user-controlled snapshot in `orderedIds`, with any
+  // songs not yet in the snapshot (just-added) appended at the end.
+  const sorted = $derived.by<ResearchSong[]>(() => {
+    const byId = new Map(songs.map((s) => [s.id, s]));
+    const out: ResearchSong[] = [];
+    for (const id of orderedIds) {
+      const s = byId.get(id);
+      if (s) { out.push(s); byId.delete(id); }
+    }
+    for (const s of byId.values()) out.push(s);
+    return out;
+  });
 </script>
 
 <div class="space-y-6">
@@ -171,9 +225,29 @@
 
   <!-- Candidates -->
   <section>
-    <h3 class="font-mono text-xs tracking-widest uppercase text-fg-faint mb-3">
-      Candidates [{songs.length}]
-    </h3>
+    <div class="flex items-center flex-wrap gap-3 mb-3">
+      <h3 class="font-mono text-xs tracking-widest uppercase text-fg-faint">
+        Candidates [{songs.length}]
+      </h3>
+      {#if songs.length > 1}
+        <button
+          type="button"
+          onclick={resort}
+          class="bg-accent hover:bg-accent-strong text-white px-3 py-1 rounded-sm text-[11px] font-mono tracking-widest uppercase transition-colors"
+        >
+          Re-sort
+        </button>
+        <label class="flex items-center gap-1.5 text-fg-muted cursor-pointer font-mono text-[11px] ml-auto">
+          <input
+            type="checkbox"
+            checked={autoSortAfterAll4}
+            onchange={(e) => setAutoSort((e.currentTarget as HTMLInputElement).checked)}
+            class="accent-accent"
+          />
+          Auto-sort after all 4 ratings entered
+        </label>
+      {/if}
+    </div>
     {#if !sorted.length}
       <p class="text-fg-faint text-sm font-mono italic">No research candidates yet. Search above to add some.</p>
     {:else}
