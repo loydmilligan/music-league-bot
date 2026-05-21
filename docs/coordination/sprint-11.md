@@ -160,3 +160,126 @@ Each agent deploys to prod when their task lands per the always-deploy-to-prod c
   - `/league/hip-jammers/season/3/round/106` → 200, page rendered. The research tab is client-state (`let tab = 'ml'`), so SSR HTML defaults to the ML tab and the canonical bars only mount on tab switch — cannot smoke via curl alone, but the component compiles cleanly and the shape matches.
 - **Realtime-update bug live verification (deferred to user UAT):** end-to-end click-and-see-immediate-fill requires a live browser. The fix is a one-line change (`const rows = [...]` → `const rows = $derived([...])`) inside the canonical component; the prop-update path was already correct upstream (`ShortlistRow.patchRating` assigns to `$state localSong` after the fetch). With `rows` reactive, the bar width recomputes on the same render tick as the prop change. Pre-fix, both shortlist and research surfaces had this exact issue; post-fix, both share the canonical and both benefit.
 - **Status:** Tasks B + C done, deployed. Two commits planned, one per task.
+
+### 2026-05-20 — backend — Task A (cli-import) done
+
+**Endpoint:** `POST /api/digest/:roundId/import-export-zip` — same-origin, no
+bearer (D4). Validates round → ml-auth heartbeat gate → bridges to host daemon
+→ reads zip from shared volume → runs `parseZip` + `importZipData` → re-runs
+prep checks → returns composite payload.
+
+**Files (Task A scope only):**
+
+- `scripts/ml-auth-trigger.mjs` — extended the existing host daemon with a new
+  `POST /export-zip` route (D5: reuse the bridge). Same port 7679; `/login`
+  and `/health` untouched. Restart via
+  `systemctl --user restart mlb-auth-trigger.service` after edits.
+- `ui/src/lib/digest/prepChecks.ts` — exported `runPrepChecks(db, roundId)`
+  helper that returns the same 6-check array as the prepare endpoint's
+  inline `runChecks`. New endpoint imports this so it can return a fresh
+  `checks` payload without touching `routes/api/digest/[roundId]/prepare/+server.ts`
+  (coord-doc said stay clear). The prepare endpoint still has its inline
+  copy; reconcile if scope drifts.
+- `ui/src/routes/api/digest/[roundId]/import-export-zip/+server.ts` — the new endpoint.
+
+**CLI invocation (host daemon `/export-zip`):**
+
+1. Container POSTs `{ leagueName, slug, seasonNumber }` (resolved from the
+   roundId via `rounds → seasons → leagues`).
+2. Daemon runs `cli-web-musicleague --json leagues list` (30s timeout) to map
+   our DB league name → ML league UUID. **Matching is fuzzy** — ML names
+   drift from our slugged names (e.g. ours `"Hip Jammers"` → ML
+   `"Hip Jammers 3: its all hippening"`; ours `"Nostalgia Pit"` → ML
+   `"The Nostalgia Pit"`). Logic: normalize both sides (lowercase, strip
+   non-alnum, collapse whitespace), try exact match first, fall back to
+   substring-either-direction; if multiple fuzzy matches → 409 `ambiguous`.
+3. Daemon runs `cli-web-musicleague leagues export <id> -o <path>` (90s
+   timeout, configurable via `ML_EXPORT_CLI_TIMEOUT_MS`). Writes to
+   `<data-dir>/<slug>/season-<N>/export.zip` — same path `runStartupImport`
+   scans, same path the container sees via `./data:/app/data`.
+4. Daemon detects `AUTH_EXPIRED` in either CLI step and returns
+   `{ ok: false, stage: 'auth' }`. The endpoint also pre-gates on
+   `probeMlAuth()` so most auth failures short-circuit before spawning.
+
+**Import pipeline reused:** `parseZip` + `importZipData` — the exact same
+code path as the Settings page's manual upload action (sprint-9 D4). Import
+is logged into `import_log` with filename `"export.zip (cli-trigger)"` so
+it shows up alongside manual uploads in the Settings history. Scope =
+whatever `importZipData` writes: competitors, rounds, ml_submissions, votes
+(with comments). Album art + chat mentions untouched (D1).
+
+**Mode (sync vs SSE):** Synchronous. Container fetch has a 120s
+AbortController (`ML_EXPORT_HTTP_TIMEOUT_MS`), host daemon CLI has a 90s
+timeout. In practice the CLI returns in ~1s (cached), so 120s is plenty.
+
+**Response shapes:**
+
+```
+// success → HTTP 200
+{ ok: true,
+  imported: { submissions: N, votes: N, voteComments: N },   // deltas vs pre-import
+  checks: [ ...6-element prep-checks array... ],
+  durationMs: N,
+  mlLeagueId: "..." }
+
+// failure → HTTP 200 (auth | cli | download | import | other)
+// EXCEPT: HTTP 400 invalid roundId, HTTP 404 round not in DB
+{ ok: false, stage: 'auth' | 'cli' | 'download' | 'import' | 'other', reason: '...' }
+```
+
+**Smoke (prod, mlb.mattmariani.com → 192.168.4.217:3002):**
+
+1. **Auth-expired** — with `ml-auth.json` status=expired:
+   `POST /api/digest/117/import-export-zip` → `{ok:false, stage:'auth',
+   reason:'Session expired. Run: cli-web-musicleague auth login'}`. ✓
+2. **404** — `POST /api/digest/99999/import-export-zip` → HTTP 404,
+   `{ok:false, stage:'other', reason:'round not found: 99999'}`. ✓
+3. **Success (no delta)** — re-auth'd, then `POST .../102/import-export-zip`
+   (round 102 = "Your Permanent Record", currently-active hip-jammers round,
+   had complete data) → `{ok:true, imported:{0,0,0}, checks:[all green for
+   ml-zip checks], durationMs:1169, mlLeagueId:'b514fe...'}`. ✓
+4. **Prove-it (failing check turns green)** — deleted 5 random votes for
+   round 102 (66 → 61), called endpoint → `{ok:true, imported:{votes:5,...},
+   votes_check:{ok:true, count:66}}`. ✓ End-to-end contract verified.
+
+**Caveat for Task B:** the underlying `cli-web-musicleague leagues export`
+only includes the *currently in-progress* round in the zip. Completed
+rounds (e.g. round 117 "Listen To This...") will see `ok:true` but zero
+deltas — `checks` won't flip to green for them. Button is still safe to
+wire unconditionally; if the user clicks for a non-current round it just
+no-ops. Worth surfacing in UI later, out of scope for Task A.
+
+**Frontend wiring cheat-sheet (Task B):**
+
+```ts
+const res = await fetch(`/api/digest/${roundId}/import-export-zip`, { method: 'POST' });
+const body = await res.json();
+if (!body.ok) {
+  if (body.stage === 'auth') {
+    // route to the existing /api/ml-auth/login flow (POST it; user completes OAuth
+    // in the spawned kitty window; then re-call this endpoint).
+  } else {
+    // toast: body.reason, body.stage
+  }
+} else {
+  // body.imported = { submissions, votes, voteComments } — counts of *new* rows
+  // body.checks = full 6-element prep-checks array (same shape as /prepare)
+  // refresh prep-checks UI directly from body.checks — no need to re-fetch /prepare
+}
+```
+
+Visibility rule: export.zip-resolvable checks are array indices 1, 2, 3
+(`Submissions`, `Votes`, `Vote comments`). Show the button when any of those
+three is `ok:false`. (Frontend's existing `exportZipChecksFailing` derived
+already does this — verified by reading the Task B Activity Log above.)
+
+**Env (already in `docker-compose.yml`):**
+`ML_AUTH_TRIGGER_URL=http://host.docker.internal:7679`. Override on container
+with `ML_EXPORT_HTTP_TIMEOUT_MS` (default 120000). Override on host with
+`ML_EXPORT_CLI_TIMEOUT_MS` (default 90000).
+
+**Status:** Task A landed. Deployed via
+`docker compose build --no-cache bot-ui && docker compose up -d --force-recreate bot-ui`.
+`npm run check` shows 1 pre-existing error (vite.config.ts `test` overload) +
+28 warnings, **0 new diagnostics from Task A files**. Commit local-only per
+CLAUDE.md push-threshold policy.
