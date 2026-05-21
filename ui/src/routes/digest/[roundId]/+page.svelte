@@ -108,6 +108,67 @@
     }
   }
 
+  // -------- Import from CLI (sprint-11 Task B) ----------
+  // Backend ships POST /api/digest/:roundId/import-export-zip that triggers
+  // the host-side music-league CLI, downloads export.zip, runs it through the
+  // existing import pipeline, then returns the refreshed prep checks payload.
+  // Backend response shape (per sprint-11.md):
+  //   success: { ok: true, imported: { submissions, votes, voteComments },
+  //              checks: <prepare-checks payload> }
+  //   failure: { ok: false, reason: string, stage: 'auth'|'cli'|'download'|'import'|'other' }
+  // Visibility: button shows when any of the export.zip-resolvable checks
+  // (Submissions / Votes / Vote comments) is failing.
+  let importing = $state(false);
+  const exportZipCheckNames = ['Submissions', 'Votes', 'Vote comments'];
+  const exportZipChecksFailing = $derived(
+    data.stage === 'prepare'
+      ? data.checks.some((c) => exportZipCheckNames.includes(c.name) && !c.ok)
+      : false,
+  );
+
+  async function importFromCli() {
+    if (importing) return;
+    importing = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/import-export-zip`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`import failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        reason?: string;
+        stage?: 'auth' | 'cli' | 'download' | 'import' | 'other';
+        imported?: { submissions?: number; votes?: number; voteComments?: number };
+      };
+      if (body.ok === false) {
+        if (body.stage === 'auth') {
+          showError('Music League auth has expired — click the ml-auth badge to re-login, then retry.');
+        } else {
+          showError(`Import failed (${body.stage ?? 'unknown'}): ${body.reason ?? 'no detail'}`);
+        }
+        await invalidateAll();
+        return;
+      }
+      const imp = body.imported ?? {};
+      const parts = [
+        imp.submissions != null ? `${imp.submissions} submissions` : null,
+        imp.votes != null ? `${imp.votes} votes` : null,
+        imp.voteComments != null ? `${imp.voteComments} comments` : null,
+      ].filter(Boolean);
+      showError(parts.length ? `Imported: ${parts.join(', ')}` : 'Import complete.');
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    } finally {
+      importing = false;
+    }
+  }
+
   let drafting = $state(false);
   async function generateDraft() {
     drafting = true;
@@ -477,9 +538,14 @@
     </div>
 
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-      <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={rerunPrepare} disabled={preparing}>
+      <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={rerunPrepare} disabled={preparing || importing}>
         {preparing ? '…' : '↻'} Re-run checks
       </button>
+      {#if exportZipChecksFailing}
+        <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={importFromCli} disabled={importing || preparing}>
+          {importing ? '… running CLI' : '↓'} Import from CLI
+        </button>
+      {/if}
       <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" disabled style="opacity: 0.5;">
         ↑ Upload export.zip manually
       </button>
