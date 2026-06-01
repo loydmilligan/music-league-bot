@@ -68,7 +68,95 @@ Each backend/frontend change deploys to prod per the always-deploy-to-prod conve
 
 ## Blockers
 
+### B1 — Fam-Jam has no in-progress round to refresh (D3 unsatisfiable for this league)
+`leagues list --all` for the logged-in account (Mashew) shows **every** Fam Jam
+season as `status=complete` ("Fam Jam III: Playing for Keeps", "Fam Jam II",
+"Fam Jam"), and none appear as a *current* league — so `leagues export` cannot
+return an in-progress round for Fam-Jam, and the host daemon's name-match
+(`leagues list`, current-only) wouldn't even find it. There is no fresh round
+data to pull. **No digest target for Fam-Jam this sprint.** If the user wants a
+Fam-Jam digest, it must target an already-completed round via a manual
+export.zip upload (data is already in the DB up to round "Did I Make Myself
+Clear?"), or via an account where a Fam Jam season is active. **Needs user
+decision.**
+
+### B2 — D3's premise is inverted by ML's actual export behavior (digest target redefined)
+D3 assumed "`leagues export` only ships the open round." The live exports prove
+the **opposite**: the zip contains the **completed** rounds and *excludes* the
+currently in-progress round (ML withholds submissions/votes until a round
+closes, for anonymity). So the in-progress rounds — Hip Jammers **rid=105**
+"Pump Up The Sasha" and Second Best **rid=112** "Sultry Bluesy Voices" — have
+**zero** exportable data and cannot be digested. The digestable "most recent
+round" is therefore the **most-recent-completed** round per league:
+**Hip Jammers → rid=104 "Department of Education"**, **Second Best → rid=110
+"Guilty Pleasures"** — both now fully green (see Activity Log). Proceeding on
+this interpretation for the frontend handoff; **flagged for user confirmation.**
+
+### B3 — pre-existing duplicate submissions in a Blocked league (Fam-Jam rid=100)
+The de-anon import bug (fixed this wave — see Activity Log) had already
+duplicated Fam-Jam round 100 "Bangers by Trash" (11→22 submissions) in a prior
+sprint. Because Fam-Jam can't be re-imported (B1), the self-healing re-import
+can't clean it. Left as-is rather than running a raw `DELETE` against the live
+shared DB without consent (auto-mode guardrail also blocked that). Low impact
+(not a digest target). **Cleanup needs user go-ahead** (one-line dedup, or a
+manual Fam-Jam export.zip re-upload once accessible).
+
 ## Activity Log
+
+### 2026-06-01 — backend — data-refresh: refreshed the 3 leagues; D3 premise corrected; import dup bug fixed
+
+**TL;DR for frontend digest-verify — use these roundIds (most-recent-COMPLETED, the only digestable ones):**
+
+| League | Digest-target round | roundId | Submissions [1] | Votes [2] | Vote comments [3] |
+|---|---|---|---|---|---|
+| Hip Jammers | "Department of Education" | **104** | 9 ✅ | 56 ✅ | 14 ✅ |
+| Second Best | "Guilty Pleasures" | **110** | 9 ✅ | 54 ✅ | 15 ✅ |
+| Fam-Jam | — | — | — (Blocker B1) | — | — |
+
+All three prep-checks `[1,2,3]` read **green** for rid=104 and rid=110 via the live
+`POST /api/digest/<id>/import-export-zip` at https://mlb.mattmariani.com (verified
+against the endpoint's `checks` payload, not just raw counts). Fresh
+`export.zip (cli-trigger)` import_log entries (status=success) exist for
+`hip-jammers s3` and `second-best s1` dated 2026-06-01T21:45Z.
+
+**Key finding — the in-progress round is NOT what gets exported (D3 was backwards).**
+ML's `leagues export` zip contains the **completed** rounds and omits the
+in-progress one (submissions/votes hidden until a round closes). So the
+"currently open" rounds the sprint pointed at have no data:
+
+| League | ML current (in-progress) round | our roundId | exportable data? |
+|---|---|---|---|
+| Hip Jammers | `3e21ddb63f` "Pump Up The Sasha" | 105 | **none** (pre 0/0/0 → post 0/0/0) |
+| Second Best | `4599e79ee4` "Sultry Bluesy Voices" | 112 | **none** (pre 0/0/0 → post 0/0/0) |
+
+→ digest target redefined to most-recent-completed (rid=104 / rid=110). See **Blocker B2**.
+**Fam-Jam**: every Fam Jam season is `complete` and not a current league for this
+account → no in-progress round exists to refresh. See **Blocker B1**.
+
+**Pre → post check states for the digest targets (this wave's deltas):**
+- Hip Jammers rid=104 "Department of Education": pre **0/0/0 (RED/RED/RED)** → post **9/56/14 (GREEN×3)**. Round had never been imported with data; this export brought it.
+- Second Best rid=110 "Guilty Pleasures": pre **0/0/0 (RED/RED/RED)** → post **9/54/15 (GREEN×3)**.
+- (Side effect, also refreshed: HJ rid=103 votes 0→47; SB rid=109 de-anonymized, votes 0→65.)
+
+**Import duplication bug found + fixed (committed separately).** First Hip Jammers
+import doubled round 103 submissions (9→18, only 9 distinct tracks). Root cause:
+rounds imported while in-progress store submissions with `competitor_id IS NULL`
+(submitter hidden); the table's `UNIQUE(round_id,spotify_uri,competitor_id)`
+treats NULL≠id, so the post-completion refresh inserted a duplicate instead of
+de-anonymizing. Pre-existing damage existed on Fam-Jam rid=100 (11→22) too,
+proving it predates this session. Fix: `upsertSubmission` now deletes the stale
+anonymous placeholder before upserting the identified row (+ widened DO UPDATE);
+re-imports are idempotent and **self-heal** prior duplication. Verified: re-import
+collapsed rid=103 back to 9 (distinct 9) and de-anonymized SB rid=109 (anon→0).
+rid=100 remains dup'd (Blocker B3 — Fam-Jam not re-importable). Added
+`ui/src/lib/db/submissions.test.ts` (2 tests, pass). Deployed:
+`docker compose build --no-cache bot-ui && up -d --force-recreate bot-ui`.
+
+**Mechanics used:** `POST /api/digest/<roundId>/import-export-zip` (host daemon
+`/export-zip` → `cli-web-musicleague leagues export <mlLeagueId> -o …` →
+`parseZip` → `importZipData` → `logImport` → `runPrepChecks`). ML league ids:
+Hip Jammers `b514fe6352994d6fadd602dee3cbaeb7`, Second Best
+`948e0131250c4ce1b449ab6b453261f6`.
 
 ### 2026-06-01 — backend — login-fix: restore `cli-web-musicleague` auth (root cause + headless self-heal)
 
