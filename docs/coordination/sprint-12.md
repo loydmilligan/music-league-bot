@@ -134,6 +134,33 @@ non-expired. Daemon restarted (`systemctl --user restart mlb-auth-trigger.servic
 `/health` → `effectiveDisplay=:0`. CLI mocked suite: **61 passed**. No bot-ui rebuild
 needed (host-side CLI/daemon only; container reads `data/ml-auth.json` via volume).
 
+### 2026-06-01 — backend — core-tests: vitest suite to a clean, deterministic baseline
+
+**Two real problems, both fixed (root cause, not masked):**
+1. **Collection crash.** `npx vitest run` died before any test with
+   `EACCES scandir .wwebjs_auth/session/ActorSafetyLists` — vitest, with no root
+   config, scanned the whole project root and hit the **root-owned WhatsApp
+   container Chromium profile** (and would also pull the separate SvelteKit app
+   under `ui/`). Fixed by adding a root **`vitest.config.ts`** that scopes
+   `include: ['tests/**/*.test.ts']` and excludes `.wwebjs_auth/**`, `ui/**`,
+   `musicleague/**`, `data/**`, node_modules, dist. (This is the *core* suite
+   config only — distinct from the frontend-owned `ui/vite.config.ts`, untouched.)
+2. **`npm test` never exited.** `scripts.test` was bare `vitest`, which drops into
+   **watch mode** ("Waiting for file changes…", exit 124) — so it can never
+   "exit 0" per acceptance. Changed `test` → `vitest run`; added `test:watch`
+   (`vitest`) to preserve the watch workflow. `test:integration` unchanged.
+
+**Result — `npm test` exits 0:** **11 files / 124 tests passed, 0 skipped.** No
+tests needed gating: `spotify.integration.test.ts` (7 tests, real Spotify API)
+is **green** — Spotify client-credentials are valid in this env, independent of
+the ML login. (If that env ever lacks Spotify creds, those 7 would need
+`describe.skipIf` gating; today they pass, so nothing is artificially skipped.)
+`npm run build` (tsc) still exits 0. No unexplained failures remain.
+
+Also (login-fix side-suite, separate from `npm test`): the Python CLI pytest
+`musicleague/tests/test_core.py` runs **61 passed** including the 3 new
+`_has_session_cookie` regression tests.
+
 ### 2026-06-01 — frontend — Wave 1 done: recent-changes + check-clean
 
 **check-clean (id: check-clean) — DONE**
