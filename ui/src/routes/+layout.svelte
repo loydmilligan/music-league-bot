@@ -5,6 +5,11 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
   import MlAuthBadge from '$lib/components/MlAuthBadge.svelte';
+  // Single source of truth for the displayed app version — stays in lockstep
+  // with ui/package.json so the footer never drifts from the published version.
+  import pkg from '../../package.json';
+
+  const appVersion = pkg.version;
 
   let { children } = $props();
 
@@ -142,6 +147,7 @@
       <StatusChip label="WATCHER LIVE · 4D UPTIME" tone="health" />
       <div class="font-mono text-[11px] text-fg-dim">sqlite ml-bot.db · 12.4 MB</div>
       <div class="font-mono text-[11px] text-fg-faint">last poll 6:32:14 PM</div>
+      <div class="font-mono text-[11px] text-fg-faint">mash co. · v{appVersion}</div>
     </footer>
   </aside>
 
