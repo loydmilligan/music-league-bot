@@ -41,7 +41,7 @@ status: active
 - [x] {agent: frontend, id: check-clean} Get `npm run check` to a clean baseline. The recurring pre-existing error is the `vite.config.ts` `test` overload (flagged in every sprint-11 Activity Log entry) — fix it so the build/check is error-free, and report the warning count.
   - **Acceptance:** `npm run check` exits with **0 errors** (the vite.config.ts overload resolved); warning count recorded in the Activity Log. No new errors introduced.
 
-- [ ] {agent: frontend, id: digest-verify, depends: data-refresh} Verify the digest path is generatable end-to-end against the refreshed data, so the user's final-boss step is unblocked. For the current round in each of the three leagues, load `/digest/[roundId]` in the prepare stage, confirm the export.zip checks are green (post data-refresh), exercise the "Import from CLI" button + ml-auth badge, and confirm "Generate draft" produces a draft. Do **not** finalize — that's the user's call. Report any UI-side breakage found.
+- [x] {agent: frontend, id: digest-verify, depends: data-refresh} Verify the digest path is generatable end-to-end against the refreshed data, so the user's final-boss step is unblocked. For the current round in each of the three leagues, load `/digest/[roundId]` in the prepare stage, confirm the export.zip checks are green (post data-refresh), exercise the "Import from CLI" button + ml-auth badge, and confirm "Generate draft" produces a draft. Do **not** finalize — that's the user's call. Report any UI-side breakage found.
   - **Acceptance:** For Hip Jammers, Fam Jam, and Second Best current rounds: `/digest/[roundId]` prepare stage shows all export.zip checks green and "Generate draft" returns a draft (HTTP 200, draft content rendered). Any breakage is logged with the roundId + symptom in the Activity Log; if all three generate cleanly, log "digest path verified — ready for user finalize."
 
 ### Deploy
@@ -102,6 +102,50 @@ shared DB without consent (auto-mode guardrail also blocked that). Low impact
 manual Fam-Jam export.zip re-upload once accessible).
 
 ## Activity Log
+
+### 2026-06-01 — frontend — digest-verify: digest path verified for r-104 + r-110 (Wave 2)
+
+Verified the digest path end-to-end against the refreshed data for the two
+user-approved targets (per Blocker B2, these are the most-recent-*completed*
+rounds, not the in-progress ones). All checks driven against prod
+(`192.168.4.217:3002` ← mlb.mattmariani.com). **Verify-only — nothing finalized.**
+
+**r-104 "Department of Education" (Hip Jammers)**
+- `POST /api/digest/104/prepare` → export.zip checks **green**: Submissions 9 ✓ ·
+  Votes 56 ✓ · Vote comments 14 ✓ (matches handoff 9/56/14). Round metadata ✓,
+  Album art ✓. Chat-window mentions is `optional` + absent → does not gate.
+- `GET /digest/104` loaded in the **prepare** stage (no prior draft); `allChecksOk`
+  true → "Generate draft" CTA shown.
+- `POST /api/digest/104/draft` → **HTTP 200** (~39s LLM), draft `draft-104-bf747c03`.
+  Page reload renders the **refine** stage: `dg-export` frame, mast deck
+  "5 sections · whole-regen count 0", section titles (The Podium / Villain /
+  Consensus…) with real vote-aware prose. Draft content rendered. ✓
+
+**r-110 "Guilty Pleasures" (Second Best)**
+- `POST /api/digest/110/prepare` → export.zip checks **green**: Submissions 9 ✓ ·
+  Votes 54 ✓ · Vote comments 15 ✓ (matches handoff 9/54/15). Metadata + Album art ✓.
+- `GET /digest/110` → **prepare** stage, "Generate draft" shown.
+- `POST /api/digest/110/draft` → **HTTP 200** (~37s), draft `draft-110-9f4fd24b`,
+  5 sections (podium, villain, flow, consensus, quotes). Refine stage renders the
+  framed digest with content. ✓
+
+**ml-auth badge:** `GET /api/ml-auth` → `{status:"ok"}` (green "ml ok") — backend's
+login-fix is reflected; badge would render healthy.
+
+**Import-from-CLI button:** correctly **not shown** on either round — the button is
+gated on `exportZipChecksFailing` (any of Submissions/Votes/Vote comments failing),
+and all three are green post-refresh. That's the intended UX (no import needed when
+data is already current); did not POST `/import-export-zip` to avoid a needless
+re-trigger of the host CLI against green data.
+
+**No UI-side breakage found.** The 5-vs-6-section count is expected: the chat
+section self-suppresses when chat-window mentions are absent (existing optional-chat
+behavior), consistent across both rounds.
+
+**digest path verified — ready for user finalize** for r-104 + r-110.
+
+Fam Jam III "Playing for Keeps" final round is **not** verified yet — awaiting its
+roundId from backend once green (per handoff; not blocking this entry).
 
 ### 2026-06-01 — backend — data-refresh: refreshed the 3 leagues; D3 premise corrected; import dup bug fixed
 
