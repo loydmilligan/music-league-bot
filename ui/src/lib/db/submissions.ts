@@ -10,10 +10,21 @@ export function upsertSubmission(db: Database.Database, s: {
   roundId: number; competitorId: number; spotifyUri: string; title: string;
   album: string; artists: string; comment: string; createdAt: string; visibleToVoters: boolean;
 }): void {
+  // De-anonymize on refresh. While a round is in progress, Music League hides
+  // submitter identities, so an earlier import may have stored this pick with
+  // competitor_id IS NULL. The table's UNIQUE(round_id,spotify_uri,competitor_id)
+  // treats NULL as distinct from a real id, so a naive insert of the now-revealed
+  // row would accumulate a duplicate instead of updating. Drop the stale
+  // anonymous placeholder first, then upsert the identified row.
+  db.prepare(`DELETE FROM ml_submissions
+    WHERE round_id=@roundId AND spotify_uri=@spotifyUri AND competitor_id IS NULL`)
+    .run({ roundId: s.roundId, spotifyUri: s.spotifyUri });
   db.prepare(`INSERT INTO ml_submissions
     (round_id,competitor_id,spotify_uri,title,album,artists,comment,created_at,visible_to_voters)
     VALUES (@roundId,@competitorId,@spotifyUri,@title,@album,@artists,@comment,@createdAt,@visibleToVoters)
-    ON CONFLICT(round_id,spotify_uri,competitor_id) DO UPDATE SET title=excluded.title`)
+    ON CONFLICT(round_id,spotify_uri,competitor_id) DO UPDATE SET
+      title=excluded.title, album=excluded.album, artists=excluded.artists,
+      comment=excluded.comment, visible_to_voters=excluded.visible_to_voters`)
     .run({ ...s, visibleToVoters: s.visibleToVoters ? 1 : 0 });
 }
 
