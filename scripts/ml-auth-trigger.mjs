@@ -52,6 +52,21 @@ function pickTerminal() {
 	return null;
 }
 
+// The interactive login spawns a HEADED browser, which needs a display. When
+// this daemon's systemd user unit starts before the graphical session, the
+// service env has no DISPLAY/WAYLAND_DISPLAY — the exact "Missing X server /
+// $DISPLAY" failure this sprint fixed. Fall back to the standard XWayland
+// display (:0) so the headed terminal+browser can still render. The
+// non-interactive path (`auth refresh`) needs no display at all.
+const FALLBACK_DISPLAY = process.env.ML_AUTH_TRIGGER_DISPLAY ?? ':0';
+function loginEnv() {
+	const env = { ...process.env };
+	if (!env.DISPLAY && !env.WAYLAND_DISPLAY) {
+		env.DISPLAY = FALLBACK_DISPLAY;
+	}
+	return env;
+}
+
 let lastTriggerAt = null;
 
 const server = createServer((req, res) => {
@@ -72,6 +87,7 @@ const server = createServer((req, res) => {
 				terminal: term?.bin ?? null,
 				cli: CLI,
 				display: process.env.DISPLAY ?? null,
+				effectiveDisplay: loginEnv().DISPLAY ?? null,
 				wayland: process.env.WAYLAND_DISPLAY ?? null,
 				lastTriggerAt
 			})
@@ -93,7 +109,7 @@ const server = createServer((req, res) => {
 			const child = spawn(term.path, args, {
 				detached: true,
 				stdio: 'ignore',
-				env: process.env
+				env: loginEnv()
 			});
 			child.unref();
 			lastTriggerAt = new Date().toISOString();

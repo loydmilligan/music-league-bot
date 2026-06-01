@@ -70,6 +70,70 @@ Each backend/frontend change deploys to prod per the always-deploy-to-prod conve
 
 ## Activity Log
 
+### 2026-06-01 — backend — login-fix: restore `cli-web-musicleague` auth (root cause + headless self-heal)
+
+**Root cause (deeper than the captured symptom).** Two distinct problems were
+conflated under "Missing X server / $DISPLAY":
+
+1. **The real blocker — expired ML session, silently un-refreshable.** Music
+   League keeps **no durable session cookie of its own**; the logged-in session
+   is re-minted every time by replaying the Spotify OAuth handshake. The httpOnly
+   cookie that actually carries the API session is named, literally,
+   `app.musicleague.com`. The old `refresh_auth()` navigated straight to `/home/`,
+   which *renders* logged-in via live Spotify SSO but never re-mints that cookie —
+   so it extracted **only tracking cookies** (`_ga`, `cto_bundle`, panorama…),
+   saved them as "authenticated", and every curl_cffi API call then 401→AUTH_EXPIRED.
+   Evidence: replaying the browser's own `/home/` cookies via curl_cffi → bounced to
+   `/login/`. The "Login with Spotify" button builds a Spotify authorize URL with
+   `show_dialog=true`, so the consent screen always appears — the step the
+   straight-to-/home/ refresh skipped.
+2. **The X-server symptom — interactive headed-login fallback.** When the daemon's
+   systemd user unit starts *before* the graphical session, its env has no
+   `DISPLAY` (`DISPLAY=undefined` in the May 19 journal). The headed Chromium the
+   interactive `auth login` opens then dies with "Missing X server". The current
+   daemon happened to have `DISPLAY=:0`, but it's load-order-fragile.
+
+**Approach chosen (D4 — my call): persisted-profile reuse for a non-interactive,
+headless self-heal; DISPLAY-hardening for the interactive fallback.** The profile's
+Spotify session (`sp_dc`) is still alive, so the *only* interactive step (the
+Spotify consent click) can be scripted. Proven end-to-end headlessly (no X, no
+human): `/login/` → click "Login with Spotify" → Spotify consent
+`button[data-testid="auth-accept"]` → redirect `/home/` → capture the
+`app.musicleague.com` session cookie (1248 B) → curl_cffi replay = **AUTH OK**.
+
+**Changes:**
+- `musicleague/.../core/auth.py` — rewrote `refresh_auth()` to drive the full
+  `/login/`→Spotify-consent→`/home/` flow via a new shared
+  `_drive_spotify_login(page, auto_consent=…)`; added `_has_session_cookie()` so a
+  tracker-only cookie set is rejected (never saved as authenticated). Falls back to
+  `None` (→ "run auth login") only when the Spotify session itself is dead
+  (password prompt detected).
+- `musicleague/.../commands/auth.py` — new `auth refresh` command: deterministic
+  non-interactive re-mint, headless, **no display required**.
+- `scripts/ml-auth-trigger.mjs` — `loginEnv()` falls back to `DISPLAY=:0`
+  (override `ML_AUTH_TRIGGER_DISPLAY`) when both `DISPLAY`/`WAYLAND_DISPLAY` are
+  unset, so the headed interactive login survives boot-before-session. `/health`
+  now reports `effectiveDisplay`.
+- `musicleague/.../tests/test_core.py` — added 3 `_has_session_cookie` regression
+  tests (incl. the tracker-only-is-not-a-session case).
+- Cleanup: killed a stale parked kitty login terminal (PID 894677) and cleared a
+  stale Chromium `SingletonLock`/`SingletonCookie`/`SingletonSocket` in the profile.
+
+**Exact re-login commands:**
+- **Routine / non-interactive (use this first — no display needed):**
+  `cli-web-musicleague auth refresh`
+  (also runs automatically on any 401 via the client's auto-refresh, and via the probe.)
+- **Full interactive (only if `auth refresh` reports the Spotify session expired):**
+  via UI `POST /login` (host daemon spawns kitty with `DISPLAY` ensured), or directly
+  on a real display: `cli-web-musicleague auth login`.
+
+**Acceptance — verified:** `auth refresh` → 63 cookies saved, **no X-server error**;
+`cli-web-musicleague --json users me` → `Mashew` (2 current / 6 completed leagues);
+`node scripts/ml-auth-probe.mjs` → `status=ok`; `data/ml-auth.json` → `"status":"ok"`,
+non-expired. Daemon restarted (`systemctl --user restart mlb-auth-trigger.service`),
+`/health` → `effectiveDisplay=:0`. CLI mocked suite: **61 passed**. No bot-ui rebuild
+needed (host-side CLI/daemon only; container reads `data/ml-auth.json` via volume).
+
 ### 2026-06-01 — frontend — Wave 1 done: recent-changes + check-clean
 
 **check-clean (id: check-clean) — DONE**
