@@ -12,8 +12,8 @@ function setup() {
   const roundId = upsertRound(db, seasonId, {
     mlRoundId: 'r-deanon',
     name: 'De-anon round',
-    description: null,
-    spotifyPlaylistUrl: null,
+    description: '',
+    spotifyPlaylistUrl: '',
     createdAt: '2026-01-01T00:00:00Z',
   });
   return { db, roundId };

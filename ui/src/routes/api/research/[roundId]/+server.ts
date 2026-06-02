@@ -4,11 +4,12 @@ import { getDb } from '$lib/db/client.js';
 import { getResearchSongs, addResearchSong, updateResearchSong, deleteResearchSong } from '$lib/db/research.js';
 import { getSettings } from '$lib/db/settings.js';
 import { computeScore } from '$lib/scoring.js';
+import { attachYtmLinks } from '$lib/db/ytmLinks.js';
 
 export const GET: RequestHandler = async ({ params }) => {
   const db = getDb(); const settings = getSettings(db);
   const songs = getResearchSongs(db, Number(params.roundId)).map(s => ({ ...s, score: computeScore(s, settings) }));
-  return json(songs);
+  return json(attachYtmLinks(db, songs));
 };
 
 export const POST: RequestHandler = async ({ params, request }) => {

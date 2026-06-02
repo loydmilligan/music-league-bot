@@ -5,10 +5,11 @@ import {
   getShortlistSongs, addShortlistSong,
   deleteShortlistSongByUri,
 } from '$lib/shortlist/shortlist.js';
+import { attachYtmLinks } from '$lib/db/ytmLinks.js';
 
 export const GET: RequestHandler = async () => {
   const db = getDb();
-  return json(getShortlistSongs(db));
+  return json(attachYtmLinks(db, getShortlistSongs(db)));
 };
 
 export const POST: RequestHandler = async ({ request }) => {
