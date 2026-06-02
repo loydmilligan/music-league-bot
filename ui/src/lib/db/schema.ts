@@ -151,7 +151,11 @@ export const SCHEMA = `
     state        TEXT NOT NULL DEFAULT 'default' CHECK(state IN ('default','excluded','locked')),
     content_json TEXT NOT NULL,
     edited_at    TEXT,
-    regen_count  INTEGER NOT NULL DEFAULT 0
+    regen_count  INTEGER NOT NULL DEFAULT 0,
+    -- sprint-14 variant-system: per-section layout variant the renderer slots
+    -- (frontend variant mechanism; backend generation-wiring writes it from the
+    -- generate modal's Generation-params per-section choice).
+    variant      TEXT NOT NULL DEFAULT 'textual' CHECK(variant IN ('textual','visual','both'))
   );
   CREATE INDEX IF NOT EXISTS idx_digest_sections_draft ON digest_sections(draft_id, position);
   CREATE TABLE IF NOT EXISTS digest_regenerations (
@@ -164,6 +168,27 @@ export const SCHEMA = `
     new_content_json   TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
+  -- Canonical, human-verifiable season standings (sprint-14 D2). One row per
+  -- (round, competitor): the competitor's running totals AS OF that round.
+  -- prior_total = points received in earlier rounds; round_points = points this
+  -- round; current_total = prior_total + round_points. rank/prev_rank are the
+  -- standing positions by current_total / prior_total. This table is the gospel
+  -- the digest renders from; gen-time reconciliation diffs computed-from-votes
+  -- against it and the human can adopt-computed or hand-edit (always overwrites).
+  CREATE TABLE IF NOT EXISTS season_standings (
+    season_id     INTEGER NOT NULL REFERENCES seasons(id),
+    round_id      INTEGER NOT NULL REFERENCES rounds(id),
+    competitor_id INTEGER NOT NULL REFERENCES competitors(id),
+    name          TEXT NOT NULL,
+    prior_total   INTEGER NOT NULL DEFAULT 0,
+    round_points  INTEGER NOT NULL DEFAULT 0,
+    current_total INTEGER NOT NULL DEFAULT 0,
+    rank          INTEGER NOT NULL,
+    prev_rank     INTEGER,
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    PRIMARY KEY (round_id, competitor_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_season_standings_round ON season_standings(round_id, rank);
   CREATE TABLE IF NOT EXISTS api_tokens (
     id            INTEGER PRIMARY KEY,
     hash          TEXT NOT NULL UNIQUE,
