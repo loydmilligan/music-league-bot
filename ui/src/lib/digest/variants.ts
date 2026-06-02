@@ -1,0 +1,133 @@
+import type { Component } from 'svelte';
+import type { SectionKind } from './llm.js';
+
+// =============================================================================
+// VARIANT SLOT INTERFACE  (sprint-14 · frontend owns this; viz implements to it)
+// =============================================================================
+//
+// Every digest section can render in one of three layout variants:
+//
+//   'textual'  →  prose / list rendering only (the existing DigestSection body)
+//   'visual'   →  a viz-authored visual component only (album podium, chart, …)
+//   'both'     →  visual ON TOP, with the textual form trimmed to captions below
+//
+// The renderer (DigestSection.svelte) reads a section's effective variant and
+// slots the matching component. Sections whose kind has no visual form stay
+// textual no matter what variant is requested (graceful fallback).
+//
+// -----------------------------------------------------------------------------
+// HOW VIZ PLUGS IN
+// -----------------------------------------------------------------------------
+// 1. Author a NEW `.svelte` file (your lane — e.g. `AlbumPodium.svelte`,
+//    `StandingsChart.svelte`) whose `Props` match `VisualComponentProps` below.
+// 2. Tell frontend the filename + which `SectionKind` it serves.
+// 3. Frontend registers it in `VISUAL_COMPONENTS` (in the digest page) — a
+//    one-line import + map entry. You never edit the registry or the page.
+//
+// Until a real component is registered for a kind, that kind's visual slot
+// falls back to `VariantPlaceholder.svelte` (a frontend stub) so the mechanism
+// is always demonstrable and `both`/`visual` never render blank.
+// =============================================================================
+
+export const SECTION_VARIANTS = ['textual', 'visual', 'both'] as const;
+export type SectionVariant = (typeof SECTION_VARIANTS)[number];
+
+export const DEFAULT_VARIANT: SectionVariant = 'textual';
+
+/**
+ * Props every visual component receives. Keep this the single source of truth —
+ * viz components MUST accept exactly this shape (extra props are fine but these
+ * are always passed).
+ */
+export interface VisualComponentProps {
+  /** The section's kind, e.g. 'podium'. Lets one component serve multiple kinds. */
+  kind: SectionKind;
+  /**
+   * The parsed section content_json — the SAME object the textual form reads
+   * (e.g. `{ title, body, items }`). For the podium this carries the ranked
+   * `items`. Read what you need; treat shapes defensively (they vary by draft).
+   */
+  content: unknown;
+  /**
+   * Optional visual-only payload attached to the section at generation time —
+   * used by components whose data does NOT live in content_json. The standings
+   * chart reads the backend **Standings payload** here. Undefined for sections
+   * that have no side payload.
+   */
+  data?: unknown;
+  /**
+   * Render hint. 'both' means a textual caption renders below you, so trim your
+   * own prose; 'visual' means you're the whole section.
+   */
+  variant: Extract<SectionVariant, 'visual' | 'both'>;
+}
+
+/** A registered visual component is any Svelte component matching the props. */
+export type VisualComponent = Component<VisualComponentProps>;
+
+/** Map of section kind → its visual component. Partial: kinds absent here have
+ *  no visual form and always render textual. Frontend populates this in the
+ *  digest page as viz components land. */
+export type VisualRegistry = Partial<Record<SectionKind, VisualComponent>>;
+
+/**
+ * Which section kinds CAN take a visual form this sprint. Drives whether the
+ * per-section variant switcher is offered. Extend as viz ships more visuals.
+ *   - podium   → album-art podium (viz: album-podium)
+ *   - (standings chart attaches once its host section + Standings payload land)
+ */
+export const VISUAL_CAPABLE: Record<SectionKind, boolean> = {
+  podium: true,
+  villain: false,
+  flow: false,
+  consensus: false,
+  quotes: false,
+  chat: false,
+};
+
+/** Glyphs for the three variants — used by the per-section variant switcher and
+ *  any "available variants" affordance. Mono glyphs to match the digest chrome. */
+export const VARIANT_ICON: Record<SectionVariant, string> = {
+  textual: '≡',
+  visual: '▦',
+  both: '⊟',
+};
+
+export const VARIANT_LABEL: Record<SectionVariant, string> = {
+  textual: 'Textual',
+  visual: 'Visual',
+  both: 'Both',
+};
+
+/**
+ * Resolve the variant a section should actually render in, given:
+ *   - the variant requested (from DB row / modal choice / client override)
+ *   - whether this kind has a visual form available
+ * A visual-incapable kind collapses any visual request back to 'textual'.
+ */
+export function effectiveVariant(
+  requested: SectionVariant | null | undefined,
+  kind: SectionKind,
+): SectionVariant {
+  const want = requested ?? DEFAULT_VARIANT;
+  if (want === 'textual') return 'textual';
+  if (VISUAL_CAPABLE[kind]) return want;
+  return 'textual';
+}
+
+/** Normalize an arbitrary string into a SectionVariant (defensive: DB/contract). */
+export function coerceVariant(v: unknown): SectionVariant {
+  return (SECTION_VARIANTS as readonly string[]).includes(v as string)
+    ? (v as SectionVariant)
+    : DEFAULT_VARIANT;
+}
+
+/** True when the textual body should render for this effective variant. */
+export function showsTextual(v: SectionVariant): boolean {
+  return v === 'textual' || v === 'both';
+}
+
+/** True when the visual slot should render for this effective variant. */
+export function showsVisual(v: SectionVariant): boolean {
+  return v === 'visual' || v === 'both';
+}

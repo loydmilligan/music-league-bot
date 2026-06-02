@@ -1,5 +1,18 @@
 <script lang="ts">
   import type { SectionKind } from './llm.js';
+  import VariantPlaceholder from './VariantPlaceholder.svelte';
+  import SectionInlineEditor from './SectionInlineEditor.svelte';
+  import {
+    VISUAL_CAPABLE,
+    VARIANT_ICON,
+    VARIANT_LABEL,
+    SECTION_VARIANTS,
+    effectiveVariant,
+    showsTextual,
+    showsVisual,
+    type SectionVariant,
+    type VisualComponent,
+  } from './variants.js';
 
   export type SectionState = 'default' | 'excluded' | 'locked' | 'regenerating';
 
@@ -16,9 +29,18 @@
     label: string;
     sectionState: SectionState;
     content: unknown;
+    /** Requested layout variant for this section (DB/modal choice or client override). */
+    variant?: SectionVariant;
+    /** Visual-only side payload (e.g. Standings payload) forwarded to the visual slot. */
+    visualData?: unknown;
+    /** Registered visual component for this kind, if any (frontend wires from the page). */
+    visualComponent?: VisualComponent;
     onToggleExcluded: () => void;
     onToggleLocked: () => void;
     onRegen: () => void;
+    onVariantChange?: (v: SectionVariant) => void;
+    /** Persist a non-LLM inline content edit. The page PATCHes + invalidates. */
+    onEditSave?: (content: unknown) => void;
     onKebabAction: (action: 'edit' | 'up' | 'down' | 'delete') => void;
   };
   let {
@@ -26,11 +48,27 @@
     label,
     sectionState,
     content,
+    variant = 'textual',
+    visualData,
+    visualComponent,
     onToggleExcluded,
     onToggleLocked,
     onRegen,
+    onVariantChange,
+    onEditSave,
     onKebabAction,
   }: Props = $props();
+
+  // Inline (non-LLM) edit mode, toggled by the kebab "Edit inline" action.
+  let editing = $state(false);
+
+  // Effective variant: a visual-incapable kind collapses any visual request to
+  // textual. The visual slot uses the registered component, else the placeholder.
+  const effVariant = $derived(effectiveVariant(variant, kind));
+  const canVisual = $derived(VISUAL_CAPABLE[kind]);
+  const VisualSlot = $derived(visualComponent ?? VariantPlaceholder);
+  const renderTextual = $derived(showsTextual(effVariant));
+  const renderVisual = $derived(showsVisual(effVariant));
 
   let kebabOpen = $state(false);
   let kebabRef: HTMLDivElement | undefined;
@@ -48,6 +86,10 @@
   }
   function runKebab(action: 'edit' | 'up' | 'down' | 'delete') {
     kebabOpen = false;
+    if (action === 'edit') {
+      editing = true;
+      return;
+    }
     onKebabAction(action);
   }
 
@@ -154,6 +196,22 @@
       aria-pressed={sectionState === 'locked'}
       disabled={sectionState === 'regenerating'}
     >{sectionState === 'locked' ? '🔒' : '🔓'}</button>
+    {#if canVisual}
+      <span class="dg-sa-divider"></span>
+      <div class="dg-variant-switch" role="group" aria-label="Layout variant" data-export-hide="1">
+        {#each SECTION_VARIANTS as v (v)}
+          <button
+            type="button"
+            class="dg-vsw-btn"
+            class:is-on={effVariant === v}
+            onclick={() => onVariantChange?.(v)}
+            title={`${VARIANT_LABEL[v]} layout`}
+            aria-pressed={effVariant === v}
+            disabled={sectionState === 'regenerating' || !onVariantChange}
+          >{VARIANT_ICON[v]}</button>
+        {/each}
+      </div>
+    {/if}
     <span class="dg-sa-divider"></span>
     <div bind:this={kebabRef} style="position: relative;">
       <button
@@ -196,6 +254,19 @@
   <section class="dg-section">
     <p class="dg-section-eyebrow">{eyebrow}</p>
 
+    {#if editing}
+      <SectionInlineEditor
+        {kind}
+        {content}
+        onSave={(c) => { editing = false; onEditSave?.(c); }}
+        onCancel={() => (editing = false)}
+      />
+    {:else}
+    {#if renderVisual}
+      <VisualSlot {kind} {content} data={visualData} variant={effVariant === 'both' ? 'both' : 'visual'} />
+    {/if}
+
+    {#if renderTextual}
     {#if kind === 'quotes' && items.length}
       <div class="dgC-quotes">
         {#each items as item, i (i)}
@@ -274,6 +345,8 @@
     {#if !items.length && !c.body}
       <p class="dg-section-body dg-section-empty">(no content)</p>
     {/if}
+    {/if}
+    {/if}
   </section>
 </div>
 
@@ -283,6 +356,35 @@
     border: 0;
     text-align: left;
     width: 100%;
+  }
+  .dg-variant-switch {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    overflow: hidden;
+  }
+  .dg-vsw-btn {
+    background: var(--surface);
+    border: 0;
+    padding: 3px 7px;
+    font: 600 12px/1 var(--font-mono);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .dg-vsw-btn + .dg-vsw-btn {
+    border-left: 1px solid var(--line);
+  }
+  .dg-vsw-btn:hover:not(:disabled) {
+    color: var(--fg);
+  }
+  .dg-vsw-btn.is-on {
+    background: var(--mash-pulp-soft);
+    color: var(--mash-pulp);
+  }
+  .dg-vsw-btn:disabled {
+    cursor: default;
+    opacity: 0.5;
   }
   .dg-section-items {
     margin: 0;

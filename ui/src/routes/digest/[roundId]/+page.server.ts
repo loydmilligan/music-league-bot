@@ -16,7 +16,12 @@ export type PrepareCheck = {
   optional?: boolean;
 };
 
-export type SectionWithContent = DigestSectionRow & { content: unknown };
+// `variant` is a sprint-14 column on digest_sections (SELECT * picks it up at
+// runtime; DigestSectionRow predates it, so we widen the type here).
+export type SectionWithContent = DigestSectionRow & {
+  content: unknown;
+  variant?: 'textual' | 'visual' | 'both';
+};
 
 export type RoundIndexEntry = {
   id: number;
@@ -98,6 +103,10 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
     const sections = getSectionsForDraft(db, draft.id).map((s) => ({
       ...s,
       content: parseContent(s.content_json),
+      variant: ((s as DigestSectionRow & { variant?: string }).variant ?? 'textual') as
+        | 'textual'
+        | 'visual'
+        | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
     return { roundId, roundsIndex, currentRound, relContext, stage, draft, sections } satisfies DigestPageData;

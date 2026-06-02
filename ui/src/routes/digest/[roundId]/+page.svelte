@@ -5,6 +5,8 @@
   import RegenModal from '$lib/digest/RegenModal.svelte';
   import RelContextDiffModal, { type DiffSegment } from '$lib/digest/RelContextDiffModal.svelte';
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
+  import { coerceVariant, type SectionVariant, type VisualRegistry } from '$lib/digest/variants.js';
+  import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import type { PageData } from './$types.js';
@@ -330,6 +332,56 @@
   let lastInstructions = $state<Record<string, string>>({});
   let lastChips = $state<Record<string, string[]>>({});
 
+  // -------- Variant system (sprint-14) ----------
+  // Visual component registry — frontend wires viz's visual components here as
+  // they land. Until a kind is registered, its visual slot falls back to
+  // VariantPlaceholder (see DigestSection). To register, one line each:
+  //   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
+  //   const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium };
+  // StandingsChart (viz) plugs in here too once its host section + visualData
+  // (Standings payload) are wired.
+  const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium };
+
+  // Per-section variant override set by the in-page variant switcher. Keyed by
+  // section id; falls back to the persisted section.variant (set by the modal /
+  // backend generation-wiring). Client switch re-renders without a reload.
+  let variantOverrides = $state<Record<string, SectionVariant>>({});
+  function sectionVariant(id: string, persisted: string | undefined): SectionVariant {
+    return variantOverrides[id] ?? coerceVariant(persisted);
+  }
+  function changeVariant(id: string, v: SectionVariant) {
+    variantOverrides[id] = v; // optimistic — re-renders immediately, no reload
+    // Persist so the choice survives reload. Fire-and-forget; on failure the
+    // optimistic override still holds for this session.
+    void fetch(`/api/digest/${data.roundId}/sections/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ variant: v }),
+    }).then((res) => {
+      if (!res.ok) showError(`variant save failed (${res.status})`);
+    }).catch((err) => showError(err));
+  }
+
+  // -------- Inline (non-LLM) section edit ----------
+  // PATCH the section's content_json directly (no LLM). On success invalidateAll
+  // re-pulls the persisted content so the edit survives reload.
+  async function saveInlineEdit(sectionId: string, content: unknown) {
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/sections/${sectionId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`save failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    }
+  }
+
   // modalTarget: 'whole' or a specific section id
   let modalTarget = $state<string | 'whole' | null>(null);
 
@@ -622,9 +674,13 @@
         label={SECTION_LABELS[kindOrFallback(section.kind)]}
         sectionState={sectionStates[section.id] ?? 'default'}
         content={section.content}
+        variant={sectionVariant(section.id, section.variant)}
+        visualComponent={VISUAL_COMPONENTS[kindOrFallback(section.kind)]}
         onToggleExcluded={() => toggleExcluded(section.id)}
         onToggleLocked={() => toggleLocked(section.id)}
         onRegen={() => openRegen(section.id)}
+        onVariantChange={(v) => changeVariant(section.id, v)}
+        onEditSave={(content) => saveInlineEdit(section.id, content)}
         onKebabAction={(action) => kebabAction(section.id, action)}
       />
     {/each}

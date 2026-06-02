@@ -55,6 +55,11 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (relCtxCols.length && !relCtxCols.some(c => c.name === 'previous_updated_at')) {
 		db.exec("ALTER TABLE relationship_contexts ADD COLUMN previous_updated_at TEXT");
 	}
+	// sprint-14 variant-system: per-section layout variant on existing DBs.
+	const digestSectionCols = db.prepare("PRAGMA table_info(digest_sections)").all() as { name: string }[];
+	if (digestSectionCols.length && !digestSectionCols.some(c => c.name === 'variant')) {
+		db.exec("ALTER TABLE digest_sections ADD COLUMN variant TEXT NOT NULL DEFAULT 'textual'");
+	}
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	return db;

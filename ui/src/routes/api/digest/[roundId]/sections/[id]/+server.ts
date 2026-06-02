@@ -12,7 +12,9 @@ function loadSection(db: ReturnType<typeof getDb>, roundId: number, sectionId: s
     .get(sectionId, roundId) as Record<string, unknown> | undefined;
 }
 
-// PATCH /api/digest/:roundId/sections/:id — manual ops (state/position/content). Stubbed.
+// PATCH /api/digest/:roundId/sections/:id — manual (non-LLM) edit of a section:
+// content (inline edit), variant (layout switch), state, or position. Persists
+// directly to digest_sections; content edits stamp edited_at.
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const roundId = Number(params.roundId);
   const sectionId = params.id;
@@ -22,8 +24,49 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   const section = loadSection(db, roundId, sectionId);
   if (!section) throw error(404, `section not found: ${sectionId}`);
 
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  return json({ stub: true, sectionId, patch: body, section });
+  const body = (await request.json().catch(() => ({}))) as {
+    content?: unknown;
+    variant?: unknown;
+    state?: unknown;
+    position?: unknown;
+  };
+
+  const sets: string[] = [];
+  const args: unknown[] = [];
+
+  if ('content' in body && body.content !== undefined) {
+    // Accept the rebuilt content object; store as JSON and stamp edited_at.
+    sets.push('content_json = ?', "edited_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')");
+    args.push(JSON.stringify(body.content));
+  }
+  if ('variant' in body) {
+    if (!['textual', 'visual', 'both'].includes(String(body.variant))) {
+      throw error(400, `invalid variant: ${String(body.variant)}`);
+    }
+    sets.push('variant = ?');
+    args.push(String(body.variant));
+  }
+  if ('state' in body) {
+    if (!['default', 'excluded', 'locked'].includes(String(body.state))) {
+      throw error(400, `invalid state: ${String(body.state)}`);
+    }
+    sets.push('state = ?');
+    args.push(String(body.state));
+  }
+  if ('position' in body) {
+    const pos = Number(body.position);
+    if (!Number.isInteger(pos) || pos < 0) throw error(400, 'invalid position');
+    sets.push('position = ?');
+    args.push(pos);
+  }
+
+  if (!sets.length) throw error(400, 'no editable fields in patch');
+
+  args.push(sectionId);
+  db.prepare(`UPDATE digest_sections SET ${sets.join(', ')} WHERE id = ?`).run(...args);
+
+  const updated = loadSection(db, roundId, sectionId);
+  return json({ ok: true, sectionId, section: updated });
 };
 
 // DELETE /api/digest/:roundId/sections/:id — hard delete. Stubbed.

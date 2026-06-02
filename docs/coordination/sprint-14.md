@@ -142,3 +142,21 @@ Each change deploys to prod per the always-deploy-to-prod convention in `CLAUDE.
   - **Prod smoke (r14):** 1st call `wasFinalized:true`→null; 2nd `wasFinalized:false`; restored r14's original `finalized_at` after.
 - **Verification:** `npm run check` 0 errors; full vitest suite **110 passing** (+18 new: 7 standings, 11 prompt/gen). Deployed via `docker compose build --no-cache bot-ui && up -d --force-recreate`; all 4 endpoints smoked live on `192.168.4.217:3002`.
 - **Lane note:** the `digest_sections.variant` column + its `client.ts` migration are frontend's variant-system work (already in the tree); generation-wiring writes that column but I left those files to frontend to commit. Did not touch the digest `.svelte` page/modal/export UI or visual components.
+
+### 2026-06-02 — frontend — Wave 1: variant-system + inline-edit-fix done; AlbumPodium wired; hermetic-build fix
+
+**variant-system (id: variant-system) — DONE, deployed, smoked on prod r-104.**
+- New `ui/src/lib/digest/variants.ts` — the **variant slot interface** (frontend-owned, documented for viz). Exports `SectionVariant`, `VisualComponentProps` `{ kind, content, data?, variant }`, `VisualRegistry`, `VISUAL_CAPABLE` (only `podium` this sprint), icon set (`≡` textual · `▦` visual · `⊟` both), and `effectiveVariant`/`showsTextual`/`showsVisual`/`coerceVariant`.
+- `DigestSection.svelte` reads the effective variant → renders textual / visual slot / both; visual slot mounts the registered component or falls back to `VariantPlaceholder.svelte`. In-actions variant switcher (`data-export-hide`); client switch re-renders without reload **and** persists via PATCH (survives reload).
+- **viz's `AlbumPodium` is now registered** for kind `podium` in the page's `VISUAL_COMPONENTS` (per viz handoff). Verified on prod: podium in `both` renders `album-podium`, not the placeholder. `StandingsChart` registration awaits its host section + `visualData` (Standings payload) — Wave 2.
+- Interface landed with zero churn: viz built both components against `VisualComponentProps` as published. Acceptance met; `npm run check` 0 errors.
+
+**inline-edit-fix (id: inline-edit-fix) — DONE, deployed, smoked on prod r-104.**
+- **Root cause (two bugs):** (1) kebab "Edit inline · no llm" was never wired — the page's `kebabAction()` only `console.warn`'d it; (2) `PATCH /api/digest/:roundId/sections/:id` was a **stub** returning `{stub:true}`, writing nothing.
+- Fix: new `SectionInlineEditor.svelte` (generic over content — title/body + per-item string/number inputs, non-text fields preserved); kebab `edit` opens it; page PATCHes `{content}`. Implemented the real PATCH: persists `content_json` + stamps `edited_at`; also accepts `variant`/`state`/`position`; enum-validated (invalid→400, empty→400).
+- Acceptance met: PATCH content → `ok:true`, updated, `edited_at` stamped, survives reload. (Smoke clobbered villain text → restored via section-regenerate; equivalent.)
+
+**Infra — hermetic Docker build (unblocks the always-deploy workflow). ⚠ all agents.**
+- bot-ui rebuilds were silently shipping **stale server-side `.ts`** (a `--no-cache` rebuild + `--force-recreate` still served the old PATCH stub) while `.svelte` changes landed. Cause: `.dockerignore` had bare `node_modules` (root-only match), so `COPY ui/ ./` dragged the host's stale `ui/node_modules` (+ `.vite` cache) over the fresh `npm ci`. Added `**/node_modules`, `**/.svelte-kit`, `**/.vite`. **After any deploy touching server code, verify it actually landed (curl the endpoint).**
+
+- Remaining frontend Wave 1: generate-modal (POSTs Generation-params incl. per-section `variant` — backend generation-wiring already persists it), export-formats.
