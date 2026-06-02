@@ -109,6 +109,34 @@ dup-collision rounds**. No raw `DELETE` needed.
 
 ## Activity Log
 
+### 2026-06-02 — frontend — digest-verify: r-101 verified → all three targets done
+
+Third/final target verified against prod (`192.168.4.217:3002`). **Verify-only —
+not finalized.**
+
+**r-101 "Did I Make Myself Clear?" (Fam Jam III finale)**
+- `POST /api/digest/101/prepare` → export.zip checks **green**: Submissions 11 ✓ ·
+  Votes 57 ✓ · Vote comments 13 ✓ (matches handoff 11/57/13). Round metadata ✓,
+  Album art 11 ✓. Chat-window mentions ✓ (count 1, optional) — present for this round.
+- `GET /digest/101` → already in the **refine** stage (an active draft
+  `draft-101-69ce819f` exists from the import/prep flow; `dg-export` frame +
+  "Regenerate whole draft" render, no prepare header). `finalized_at` null.
+- `POST /api/digest/101/draft` → **HTTP 200**, `cached:true` (idempotent — returned
+  the existing draft, no needless LLM re-gen), **6 sections** (podium, villain, flow,
+  consensus, quotes, chat — chat section present since chat-mentions is green here).
+  Page renders the framed digest, mast deck "6 sections · whole-regen count 0". ✓
+- **ml-auth badge:** `GET /api/ml-auth` → `{status:"ok"}` (green).
+- **Import-from-CLI button:** correctly **hidden** (0 occurrences in rendered HTML) —
+  gated on a failing export.zip check; all green. Per the manual-upload caveat, did
+  **not** POST `/import-export-zip` (CLI can't pull Fam Jam — not a current league).
+
+**No UI-side breakage.** 6 sections here vs 5 on r-104/r-110 is the expected
+optional-chat behavior (chat section renders when chat mentions exist; suppressed
+when absent).
+
+**all three digest targets verified — ready for user finalize**
+(r-104 Hip Jammers · r-110 Second Best · r-101 Fam Jam III). digest-verify complete.
+
 ### 2026-06-02 — backend — Fam-Jam finale (rid=101) imported from manual FJ III export.zip → GREEN
 
 Corrects the earlier wrong Fam-Jam pick (rid=100). The user wants the **real
