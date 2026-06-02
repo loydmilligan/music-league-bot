@@ -78,10 +78,13 @@ data to pull. **No digest target for Fam-Jam this sprint.** If the user wants a
 Fam-Jam digest, it must target an already-completed round via a manual
 export.zip upload (data is already in the DB up to round "Did I Make Myself
 Clear?"), or via an account where a Fam Jam season is active.
-**Resolution:** user chose to target a completed round from existing DB data →
-**rid=100 "Bangers by Trash"** (most-recent Fam-Jam round with data; rid=101
-"Did I Make Myself Clear?" has none). Verified green (11/64/9). Frontend must
-skip "Import from CLI" for this round (see caveat in Activity Log).
+**Resolution (final):** the user wants the FJ III **finale**, **rid=101 "Did I
+Make Myself Clear?"** (vote deadline 2026-05-26). It had no data, so the user
+exported the whole FJ III league from the musicleague.com UI and dropped it at
+`data/fam-jam/season-3/export.zip`; imported via container restart → startup-scan
+(see 2026-06-02 log). **rid=101 now verified green (11/57/13).** (The earlier
+rid=100 "Bangers by Trash" pick was wrong — that's the second-to-last round.)
+Frontend must skip "Import from CLI" for Fam-Jam (FJ III not CLI-accessible).
 
 ### B2 — D3's premise is inverted by ML's actual export behavior (digest target redefined)
 D3 assumed "`leagues export` only ships the open round." The live exports prove
@@ -105,6 +108,29 @@ through the now-fixed importer and **de-duplicated rid=100 back to 11
 dup-collision rounds**. No raw `DELETE` needed.
 
 ## Activity Log
+
+### 2026-06-02 — backend — Fam-Jam finale (rid=101) imported from manual FJ III export.zip → GREEN
+
+Corrects the earlier wrong Fam-Jam pick (rid=100). The user wants the **real
+finale** of Fam Jam III "Playing for Keeps" = **rid=101 "Did I Make Myself
+Clear?"** (vote deadline 2026-05-26), which had no data (CLI can't pull FJ III —
+it's a completed league). User exported the whole FJ III league from
+musicleague.com UI and dropped it at `data/fam-jam/season-3/export.zip`
+(24 KB, 4 CSVs, includes finale `8ab07685ce`).
+
+Imported via `docker compose up -d --force-recreate bot-ui` → `runStartupImport`
+(`hooks.server.ts`) → import_log `fam-jam s3 export.zip` rounds=23 subs=115
+votes=655 status=success.
+
+**Finale rid=101 verified GREEN via live `POST /api/digest/101/prepare`:**
+**[1] Submissions=11 · [2] Votes=57 · [3] Vote comments=13** — all green.
+Idempotent re-import confirmed: rid=100 "Bangers" (11/64/9) and rid=60
+"OST-erity" (11/56/13) unchanged, no duplication; **0 dup-collision rounds
+DB-wide**.
+
+**→ Frontend: Fam-Jam digest target is now rid=101 (NOT rid=100).** Same caveat
+applies — data is already landed, so verify checks + "Generate draft"; don't use
+"Import from CLI" (FJ III not accessible via CLI).
 
 ### 2026-06-01 — frontend — digest-verify: digest path verified for r-104 + r-110 (Wave 2)
 
@@ -158,7 +184,7 @@ roundId from backend once green (per handoff; not blocking this entry).
 |---|---|---|---|---|---|
 | Hip Jammers | "Department of Education" | **104** | 9 ✅ | 56 ✅ | 14 ✅ |
 | Second Best | "Guilty Pleasures" | **110** | 9 ✅ | 54 ✅ | 15 ✅ |
-| Fam-Jam | "Bangers by Trash" | **100** | 11 ✅ | 64 ✅ | 9 ✅ |
+| Fam-Jam | "Did I Make Myself Clear?" (FJ III finale) | **101** | 11 ✅ | 57 ✅ | 13 ✅ |
 
 All three verified **green** on prep-checks `[1,2,3]` via the live read-only
 `POST /api/digest/<id>/prepare` at https://mlb.mattmariani.com. Fresh
@@ -172,7 +198,9 @@ All three verified **green** on prep-checks `[1,2,3]` via the live read-only
 
 **User decisions (2026-06-01, via AskUserQuestion):** (1) digest targets =
 most-recent-completed rounds 104 / 110 (overriding D3's in-progress assumption);
-(2) Fam-Jam = target a completed round from existing DB data → **rid=100**;
+(2) Fam-Jam = the FJ III finale **rid=101 "Did I Make Myself Clear?"**, landed
+via a user-supplied manual export.zip (see 2026-06-02 log; supersedes the earlier
+rid=100 pick);
 (3) pushed all commits to origin/master.
 
 **Key finding — the in-progress round is NOT what gets exported (D3 was backwards).**
