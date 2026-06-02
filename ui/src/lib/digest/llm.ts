@@ -31,25 +31,55 @@ export interface DigestSectionRow {
 export interface RoundData {
   round: { id: number; name: string; description: string | null };
   league: { id: number; name: string };
+  // Round-order awareness (sprint-14 prompt-rules): the current round's
+  // sequence position in its season, plus the prior rounds in chronological
+  // order so the LLM anchors "last round" correctly and never cites a later
+  // round as already-happened.
+  roundSequence: { number: number; total: number };
+  priorRounds: { number: number; name: string }[];
   submissions: { artist: string; title: string; album: string | null; submitter: string | null; comment: string | null; vote_total: number }[];
   votes: { voter: string; song: string; points: number; comment: string | null }[];
   chatMentions: { sender: string; raw_message: string; captured_at: string }[];
   relContext: string;
 }
 
+// Per-section Generation params (sprint-14 generation-wiring). `id` is the
+// section kind. Shared contract with the generate modal (frontend).
+export interface GenSectionParam {
+  id: SectionKind;
+  enabled?: boolean;
+  style?: string[];
+  variant?: 'textual' | 'visual' | 'both';
+  context?: string;
+}
+export interface GenParams {
+  sections?: GenSectionParam[];
+  pastedChat?: string;
+}
+
 export function gatherRoundData(db: Database.Database, roundId: number): RoundData {
   const round = db
     .prepare(
-      `SELECT r.id, r.name, r.description, s.league_id, l.name AS league_name
+      `SELECT r.id, r.name, r.description, r.season_id, s.league_id, l.name AS league_name
        FROM rounds r
        JOIN seasons s ON s.id = r.season_id
        JOIN leagues l ON l.id = s.league_id
        WHERE r.id = ?`,
     )
     .get(roundId) as
-    | { id: number; name: string; description: string | null; league_id: number; league_name: string }
+    | { id: number; name: string; description: string | null; season_id: number; league_id: number; league_name: string }
     | undefined;
   if (!round) throw new Error(`round not found: ${roundId}`);
+
+  // Round chronology within the season (ordered by id == submission order).
+  const seasonRounds = db
+    .prepare('SELECT id, name FROM rounds WHERE season_id = ? ORDER BY id')
+    .all(round.season_id) as { id: number; name: string }[];
+  const seqIdx = seasonRounds.findIndex((r) => r.id === roundId); // 0-based
+  const roundSequence = { number: seqIdx + 1, total: seasonRounds.length };
+  const priorRounds = seasonRounds
+    .slice(0, seqIdx)
+    .map((r, i) => ({ number: i + 1, name: r.name }));
 
   const subRows = db
     .prepare(
@@ -100,6 +130,8 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
   return {
     round: { id: round.id, name: round.name, description: round.description },
     league: { id: round.league_id, name: round.league_name },
+    roundSequence,
+    priorRounds,
     submissions: subRows.map(s => ({
       artist: s.artists,
       title: s.title,
@@ -158,10 +190,18 @@ const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
   chat: 'Highlights from the WhatsApp chat mentions tied to this round. If no chat mentions, return an empty items array with a short note.',
 };
 
-function buildSystemPrompt(): string {
+export function buildSystemPrompt(): string {
   return `You are the editorial voice of "Music League Bot" — a private music-league digest writer.
 Write in a sharp, dry, slightly literary tone. Be specific: use real song titles, real voter names, real numbers.
 Never hedge. Never disclaim. Never apologize.
+
+# Music League rules — these constrain what is TRUE. Never write a claim that violates them:
+1. A player CANNOT vote on their own submission. Never imply someone "didn't even vote for their own song", that they "snubbed their own track", or that a comment on their own song counts as a self-vote. Self-votes do not exist.
+2. Each voter may cast at most ONE downvote (negative-point vote) per round. "Only one downvote" is the maximum, not a noteworthy scarcity — never frame a single downvote as surprising, restrained, or meaningful. A song receiving one downvote means exactly one voter spent their single downvote on it.
+3. When a song lists MULTIPLE artists, always refer to it by the FIRST listed artist only. Do not invent collaborations or name secondary artists unless the editorial point genuinely requires it.
+
+# Chronology — respect round order:
+You are told the current round's sequence number in the season and the rounds that came before it. Only rounds BEFORE the current one have happened. "Last round" means the immediately preceding round by sequence — never a later one. Never reference events from rounds that come after the current round.
 
 You output ONE JSON object with this exact shape:
 
@@ -179,10 +219,42 @@ You output ONE JSON object with this exact shape:
 Each section's "items" shape is up to you per kind, but stay consistent within a section.`;
 }
 
-function buildUserPrompt(data: RoundData, steer?: { chips: string[]; instructions: string; kind?: SectionKind; currentContent?: unknown }): string {
+// Which section kinds a full draft should produce, honoring per-section
+// `enabled` from the generate modal and whether chat content is available.
+export function activeKindsForDraft(data: RoundData, genParams?: GenParams): SectionKind[] {
+  const disabled = new Set(
+    (genParams?.sections ?? []).filter((s) => s.enabled === false).map((s) => s.id),
+  );
+  const hasChat = data.chatMentions.length > 0 || !!genParams?.pastedChat?.trim();
+  return SECTION_KINDS.filter((k) => {
+    if (disabled.has(k)) return false;
+    if (k === 'chat') return hasChat;
+    return true;
+  });
+}
+
+export function buildUserPrompt(
+  data: RoundData,
+  steer?: { chips: string[]; instructions: string; kind?: SectionKind; currentContent?: unknown },
+  genParams?: GenParams,
+): string {
   const parts: string[] = [];
   parts.push(`# Round\n${data.round.name}${data.round.description ? ` — ${data.round.description}` : ''}`);
   parts.push(`League: ${data.league.name}`);
+
+  // Chronology block — anchor "last round" and forbid forward references.
+  const seq = data.roundSequence;
+  parts.push(
+    `\n# Round chronology\nThis is round ${seq.number} of ${seq.total} in the season.`,
+  );
+  if (data.priorRounds.length) {
+    parts.push('Rounds that have already happened (in order):');
+    for (const pr of data.priorRounds) parts.push(`- Round ${pr.number}: ${pr.name}`);
+    const last = data.priorRounds[data.priorRounds.length - 1];
+    parts.push(`"Last round" = Round ${last.number}: ${last.name}. Do not reference any round after round ${seq.number}.`);
+  } else {
+    parts.push('This is the FIRST round of the season — there is no "last round" to reference.');
+  }
 
   if (data.relContext.trim()) {
     parts.push(`\n# Relationship context (people, history, recurring jokes)\n${data.relContext.trim()}`);
@@ -208,6 +280,14 @@ function buildUserPrompt(data: RoundData, steer?: { chips: string[]; instruction
     }
   }
 
+  // Pasted WhatsApp chat (sprint-14 D5) — manual override feeding the chat
+  // section, bypassing the flaky auto-capture.
+  if (genParams?.pastedChat?.trim()) {
+    parts.push(
+      `\n# Pasted WhatsApp chat — use THIS as the source for the "chat" section (ignore auto-captured mentions for that section):\n${genParams.pastedChat.trim()}`,
+    );
+  }
+
   if (steer?.kind) {
     parts.push(`\n# Regenerate the ONE section "${steer.kind}"`);
     parts.push(SECTION_DESCRIPTIONS[steer.kind]);
@@ -222,10 +302,15 @@ function buildUserPrompt(data: RoundData, steer?: { chips: string[]; instruction
     }
     parts.push(`\nReturn JSON: { "section": { ...content for "${steer.kind}"... } }`);
   } else {
-    const activeKinds = SECTION_KINDS.filter((k) => k !== 'chat' || data.chatMentions.length > 0);
+    const activeKinds = activeKindsForDraft(data, genParams);
+    const paramByKind = new Map((genParams?.sections ?? []).map((s) => [s.id, s]));
     parts.push(`\n# Write ${activeKinds.length} sections`);
     for (const k of activeKinds) {
-      parts.push(`- ${k}: ${SECTION_DESCRIPTIONS[k]}`);
+      let line = `- ${k}: ${SECTION_DESCRIPTIONS[k]}`;
+      const p = paramByKind.get(k);
+      if (p?.style?.length) line += ` [style/focus — lean into: ${p.style.join(', ')}]`;
+      if (p?.context?.trim()) line += ` [extra context: ${p.context.trim()}]`;
+      parts.push(line);
     }
   }
 
@@ -236,11 +321,11 @@ interface DraftLLMOutput {
   sections: Record<SectionKind, unknown>;
 }
 
-export async function generateDraft(data: RoundData): Promise<DraftLLMOutput> {
+export async function generateDraft(data: RoundData, genParams?: GenParams): Promise<DraftLLMOutput> {
   const raw = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(data) },
+      { role: 'user', content: buildUserPrompt(data, undefined, genParams) },
     ],
     { jsonMode: true },
   );
@@ -293,9 +378,11 @@ export function writeDraft(
   data: RoundData,
   output: DraftLLMOutput,
   prepChecks: unknown,
+  genParams?: GenParams,
 ): { draft: DigestDraftRow; sections: DigestSectionRow[] } {
   const draftId = `draft-${roundId}-${randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const variantByKind = new Map((genParams?.sections ?? []).map((s) => [s.id, s.variant]));
 
   const tx = db.transaction(() => {
     db.prepare(
@@ -303,13 +390,15 @@ export function writeDraft(
        VALUES (?, ?, ?, ?, ?, 0)`,
     ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}));
 
-    const activeKinds = SECTION_KINDS.filter((k) => k !== 'chat' || data.chatMentions.length > 0);
+    // Only persist enabled + content-available sections; position is dense.
+    const activeKinds = activeKindsForDraft(data, genParams);
     activeKinds.forEach((kind, idx) => {
       const id = `${draftId}-${kind}`;
+      const variant = variantByKind.get(kind) ?? 'textual';
       db.prepare(
-        `INSERT INTO digest_sections (id, draft_id, kind, position, state, content_json, regen_count)
-         VALUES (?, ?, ?, ?, 'default', ?, 0)`,
-      ).run(id, draftId, kind, idx, JSON.stringify(output.sections[kind] ?? {}));
+        `INSERT INTO digest_sections (id, draft_id, kind, position, state, content_json, regen_count, variant)
+         VALUES (?, ?, ?, ?, 'default', ?, 0, ?)`,
+      ).run(id, draftId, kind, idx, JSON.stringify(output.sections[kind] ?? {}), variant);
     });
   });
   tx();
