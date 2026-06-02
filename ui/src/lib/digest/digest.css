@@ -658,6 +658,55 @@
   position: relative;
 }
 
+/* =====================================================================
+   MOBILE EXPORT — WhatsApp-tuned single-column reflow
+   (sprint-13 digest-mobile-png). Applied to .dg-export when the page is
+   rendered with ?format=mobile. Narrows the broadsheet to a phone-portrait
+   card (~430px) so it stays legible when WhatsApp shrinks it on a phone —
+   the type reads proportionally larger because the card is 430px, not 800px.
+   ===================================================================== */
+.dg-export--mobile {
+  width: 430px;
+}
+/* Tighter horizontal padding so the narrower card keeps its content budget. */
+.dg-export--mobile .dgC-mast { padding: 22px 18px 14px; }
+.dg-export--mobile .dg-section { padding: 20px 18px; }
+.dg-export--mobile .dgC-foot { padding: 16px 18px 20px; }
+/* Masthead a touch smaller so a long round title doesn't overflow the card. */
+.dg-export--mobile .dgC-mast-title { font-size: 24px; }
+.dg-export--mobile .dgC-mast-row1 { font-size: 10px; gap: 6px; }
+/* Podium tracklist: drop the rigid 5-column desktop grid. Reflow to
+   rank · title · points on row 1, with the "submitted by" line wrapping to
+   its own full-width row 2. */
+.dg-export--mobile .dgC-track {
+  grid-template-columns: 32px 1fr auto;
+  row-gap: 2px;
+  column-gap: 10px;
+  padding: 10px 12px;
+}
+.dg-export--mobile .dgC-track-num { grid-row: 1; font-size: 18px; }
+.dg-export--mobile .dgC-track--gold .dgC-track-num { font-size: 22px; }
+.dg-export--mobile .dgC-track-meta { grid-column: 2; grid-row: 1; }
+.dg-export--mobile .dgC-track-pts { grid-column: 3; grid-row: 1; }
+.dg-export--mobile .dgC-track-sub { grid-column: 2 / -1; grid-row: 2; }
+/* Slightly larger body copy for phone legibility. */
+.dg-export--mobile .dgC-consensus-note,
+.dg-export--mobile .dg-section-items,
+.dg-export--mobile .dg-section-body { font-size: 13.5px; }
+/* Defensive: collapse any two-column infographic grids to a single column in
+   case a future draft variant renders them inside the mobile export. */
+.dg-export--mobile .dgC-cc,
+.dg-export--mobile .dgA-cc,
+.dg-export--mobile .dgB-cc,
+.dg-export--mobile .dgA-podium,
+.dg-export--mobile .dgB-feature,
+.dg-export--mobile .dgB-runners,
+.dg-export--mobile .dgB-villain-body,
+.dg-export--mobile .dgB-chat,
+.dg-export--mobile .dgC-chat-row {
+  grid-template-columns: 1fr;
+}
+
 .dg-section { padding: 24px 28px; border-bottom: 1px solid var(--line); }
 .dg-section:last-child { border-bottom: 0; }
 .dg-section-eyebrow {

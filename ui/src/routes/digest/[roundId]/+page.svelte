@@ -6,10 +6,18 @@
   import RelContextDiffModal, { type DiffSegment } from '$lib/digest/RelContextDiffModal.svelte';
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types.js';
   import type { RoundIndexEntry } from './+page.server.js';
 
   let { data }: { data: PageData } = $props();
+
+  // Export shape. The PNG renderer loads this page with ?format=mobile|wide; when
+  // mobile, the .dg-export frame gets the dg-export--mobile reflow class. The
+  // on-screen toggle (`exportShape`) drives which format the Finalize action
+  // requests — defaulting to mobile, since WhatsApp is the primary share target.
+  const isMobileExport = $derived(page.url.searchParams.get('format') === 'mobile');
+  let exportShape = $state<'mobile' | 'wide'>('mobile');
 
   type LeagueGroup = {
     leagueId: number;
@@ -245,7 +253,7 @@
       const res = await fetch(`/api/digest/${data.roundId}/finalize`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: '{}',
+        body: JSON.stringify({ format: exportShape }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
@@ -253,7 +261,7 @@
       }
       const ct = res.headers.get('content-type') ?? '';
       const ts = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
-      const filename = `r-${data.roundId}-digest-${ts}.png`;
+      const filename = `r-${data.roundId}-digest-${exportShape}-${ts}.png`;
 
       if (ct.startsWith('image/')) {
         const blob = await res.blob();
@@ -563,8 +571,24 @@
       ↻ Regenerate whole draft
     </button>
     {#if data.stage === 'refine'}
+      <div class="dg-fmt-toggle" role="group" aria-label="Export format">
+        <button
+          type="button"
+          class:is-on={exportShape === 'mobile'}
+          onclick={() => (exportShape = 'mobile')}
+          disabled={finalizing}
+          title="Phone-portrait card, tuned for WhatsApp"
+        >📱 Mobile</button>
+        <button
+          type="button"
+          class:is-on={exportShape === 'wide'}
+          onclick={() => (exportShape = 'wide')}
+          disabled={finalizing}
+          title="Wide desktop broadsheet (800px)"
+        >🖥 Wide</button>
+      </div>
       <button type="button" class="mash-btn mash-btn--primary" onclick={finalizeAndDownload} disabled={finalizing}>
-        {finalizing ? '…' : '↓'} Finalize &amp; download png
+        {finalizing ? '…' : '↓'} Finalize &amp; download {exportShape} png
       </button>
     {:else if data.stage === 'finalize'}
       <span style="font: 600 11px/1 var(--font-mono); color: var(--moss);">
@@ -577,7 +601,7 @@
     </span>
   </div>
 
-  <div class="dg-export dgC-bg">
+  <div class="dg-export dgC-bg" class:dg-export--mobile={isMobileExport}>
     <header class="dgC-mast">
       <div class="dgC-mast-row1" data-export-hide="1">
         <span>m/l</span>
@@ -647,6 +671,36 @@
 {/if}
 
 <style>
+  .dg-fmt-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    overflow: hidden;
+  }
+  .dg-fmt-toggle button {
+    background: var(--surface);
+    border: 0;
+    padding: 7px 11px;
+    font: 600 11px/1 var(--font-mono);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .dg-fmt-toggle button + button {
+    border-left: 1px solid var(--line);
+  }
+  .dg-fmt-toggle button:hover:not(:disabled) {
+    color: var(--fg);
+  }
+  .dg-fmt-toggle button.is-on {
+    background: var(--mash-pulp-soft);
+    color: var(--mash-pulp);
+  }
+  .dg-fmt-toggle button:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
   .dg-relctx-footer {
     margin-top: 16px;
     padding: 12px 14px;

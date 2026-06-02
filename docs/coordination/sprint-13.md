@@ -2,7 +2,7 @@
 project: music-league-bot
 sprint: sprint-13-ytm-play-button
 created: 2026-06-02T01:10:22Z
-updated: 2026-06-02T01:10:22Z
+updated: 2026-06-02T20:45:55Z
 status: active
 ---
 
@@ -28,7 +28,7 @@ status: active
 - [x] {agent: backend, id: resolve-endpoint} On-demand bidirectional Spotify↔YTM resolution. Today `ui/src/routes/api/ytm/[spotifyUri]/+server.ts` only reads `ytm_link_cache` and relies on the async queue worker for misses. Extend it so a cache-miss synchronously resolves via the existing `resolveSonglinkUrl` in `src/resolver/songlinkResolver.ts` (rate-limited through `songlinkLimiter`), persists the result to `ytm_link_cache`, and returns it. Add the reverse path (YTM URL → Spotify) for songs ingested via the extension that only have a `ytm_url`. Reuse the existing resolver + cache; do not introduce a parallel resolution mechanism.
   - **Acceptance:** `curl 'http://192.168.4.217:3002/api/ytm/<uncached-spotify-uri>'` returns HTTP 200 with a populated `ytmUrl`, and a new row exists in `ytm_link_cache` for that uri; the reverse endpoint resolves a `music.youtube.com` URL → a Spotify URL. Deployed to prod via `docker compose build --no-cache bot-ui && docker compose up -d --force-recreate bot-ui`; behaviour + endpoint shapes recorded in the Activity Log.
 
-- [ ] {agent: backend, id: no-match-cache, depends: resolve-endpoint} Persist a "no-match" marker so a track with no equivalent on the other platform isn't re-sent to Songlink on every click. Store the marker in `ytm_link_cache` (e.g. a sentinel `ytm_url IS NULL` with a populated `resolved_at`, or a dedicated `no_match` flag — match whatever the cache row shape already supports) so the resolve endpoint short-circuits to a "no match" response on repeat calls.
+- [!] {agent: backend, id: no-match-cache, depends: resolve-endpoint} Persist a "no-match" marker so a track with no equivalent on the other platform isn't re-sent to Songlink on every click. Store the marker in `ytm_link_cache` (e.g. a sentinel `ytm_url IS NULL` with a populated `resolved_at`, or a dedicated `no_match` flag — match whatever the cache row shape already supports) so the resolve endpoint short-circuits to a "no match" response on repeat calls.
   - **Acceptance:** resolving a track Songlink can't match returns a `noMatch:true` (or equivalent) JSON response; a second `curl` for the same uri returns the same marker **without** a fresh Songlink call (verify via the `songlinkLimiter` counter not advancing, or the cache row's `resolved_at` being unchanged). Logged in the Activity Log.
 
 - [x] {agent: backend, id: song-payload-urls} Expose both `spotifyUrl` and `ytmUrl` on song-list API payloads so the UI can render the correct initial button state without a per-row call. LEFT JOIN `ytm_link_cache` into the song-list queries (mirroring the existing join in `ui/src/lib/db/headToHead.ts`) for the shortlist, research, and chat-songs list endpoints.
@@ -37,11 +37,14 @@ status: active
 - [x] {agent: frontend, id: ytm-button} Build a reusable YTM play-button Svelte component with three states: **resolved** — a direct `<a>` to the YTM URL (mirrors the existing `▶ Play on Spotify` `<a>` in `ShortlistRow.svelte`); **unresolved** — clicking calls the resolve endpoint, shows an inline spinner, then re-renders as the resolved link; **no-match** — a disabled control reading "No YTM match". Component takes the song's `spotifyUri`/`ytmUrl` as props and self-manages the resolve call.
   - **Acceptance:** the component file exists under `ui/src/lib/`; rendered in isolation it shows the resolved link when given a `ytmUrl`, a clickable resolve control when not, and the disabled no-match state for a no-match prop; clicking the unresolved state hits the resolve endpoint and swaps to a live `<a href="…music.youtube.com…">`. `npm run check` passes.
 
-- [ ] {agent: frontend, id: wire-song-rows, depends: ytm-button,song-payload-urls} Render the YTM button beside the existing Spotify button on every song surface: `ui/src/lib/shortlist/ShortlistRow.svelte`, `ui/src/lib/components/ResearchList.svelte`, `ui/src/lib/chat/CwRow.svelte`, and `ui/src/lib/components/HeadToHeadCard.svelte`. Drive the initial button state from the `ytmUrl` now present in each payload (from `song-payload-urls`).
+- [!] {agent: frontend, id: wire-song-rows, depends: ytm-button,song-payload-urls} Render the YTM button beside the existing Spotify button on every song surface: `ui/src/lib/shortlist/ShortlistRow.svelte`, `ui/src/lib/components/ResearchList.svelte`, `ui/src/lib/chat/CwRow.svelte`, and `ui/src/lib/components/HeadToHeadCard.svelte`. Drive the initial button state from the `ytmUrl` now present in each payload (from `song-payload-urls`).
   - **Acceptance:** on prod (`192.168.4.217:3002`), each of the four surfaces renders both a Spotify and a YTM button per song; a song with a cached YTM link shows a direct YTM link (no click-to-resolve); a song without one shows the resolve control. Visual check noted in the Activity Log; deployed to prod.
 
-- [ ] {agent: frontend, id: reverse-spotify-button, depends: ytm-button} For songs that only have a YTM URL (ingested via the extension path, no `spotifyUri`), render the reverse control — a "resolve to Spotify" button using the same component pattern, targeting the reverse resolve endpoint.
+- [!] {agent: frontend, id: reverse-spotify-button, depends: ytm-button} For songs that only have a YTM URL (ingested via the extension path, no `spotifyUri`), render the reverse control — a "resolve to Spotify" button using the same component pattern, targeting the reverse resolve endpoint.
   - **Acceptance:** a YTM-only song row renders a Spotify resolve button that, on click, resolves via the reverse endpoint and swaps to a live `open.spotify.com` link; no-match handled the same way. Visual check on prod recorded in the Activity Log.
+
+- [x] {agent: frontend, id: digest-mobile-png} **[Injected hotfix — YTM Wave 2 paused for this]** Add a WhatsApp-tuned mobile PNG export for the digest. Today `ui/src/lib/digest/export.ts` (`renderDigestPng`, called from `ui/src/routes/api/digest/[roundId]/finalize/+server.ts`) renders `/digest/{roundId}?export=1` at a fixed **800px** viewport and screenshots `.dg-export` → a wide desktop card that reads poorly when WhatsApp shrinks it on a phone. Add a `format` option (`'mobile' | 'wide'`) to `renderDigestPng`: **mobile** renders at a portrait phone width (~390–430px; keep `deviceScaleFactor` 2–3 for crispness) so the digest reflows into a single tall column with proportionally larger text; **wide** preserves today's 800px output. Plumb `format` through the finalize export trigger, expose a mobile/wide toggle on the digest export action, and default the shared export to **mobile** (WhatsApp is the primary target). Adjust `ui/src/lib/digest/digest.css` so `.dg-export` reflows cleanly at mobile width.
+  - **Acceptance:** `renderDigestPng(roundId, 'mobile')` produces a portrait PNG (tall, single-column, ~430px content width, readable type); `'wide'` reproduces today's output; the digest export UI exposes a mobile/wide choice defaulting to mobile; visual check on prod (`192.168.4.217:3002`) — generate both for a real round (e.g. r-104) and confirm the mobile PNG is legible shrunk to phone size. All changes stay in `ui/` (no `src/` touch). Deployed to prod; logged in the Activity Log.
 
 ### Deploy
 
@@ -64,6 +67,7 @@ Each change deploys to prod per the always-deploy-to-prod convention in `CLAUDE.
 - **D2** — Roster split inside the SvelteKit app: backend owns the `+server.ts` API routes + resolver + cache/queue + `ui/src/lib/db`; frontend owns the `.svelte` components + play-button UI. The `+server.ts`/`.svelte` boundary is the lane line.
 - **D3** — On-click synchronous resolution for v1. The optional background backfill worker (pre-resolving rows ahead of clicks) is deferred to the backlog per its own "probably not v1" note.
 - **D4** — Persist no-match markers so unresolvable tracks don't re-hit Songlink on every click.
+- **D5** — Mid-sprint pivot (2026-06-02): YTM Wave 2 (`no-match-cache`, `wire-song-rows`, `reverse-spotify-button`) PAUSED — YTM resolution *value* is blocked on the B2 data-source decision (Odesli key / alternative source), still pending the user. Injected an urgent `digest-mobile-png` hotfix (the WhatsApp-shared digest PNG is desktop-shaped + unreadable on phones); frontend takes it now, backend idle. YTM resumes once B2 is decided.
 
 ## Blockers
 
@@ -94,6 +98,48 @@ Each change deploys to prod per the always-deploy-to-prod convention in `CLAUDE.
     resolver's data source changes.
 
 ## Activity Log
+
+### 2026-06-02 — frontend — digest-mobile-png: WhatsApp-tuned mobile PNG export
+
+Added a `format: 'mobile' | 'wide'` option to the digest PNG export, defaulting to
+**mobile** (WhatsApp is the primary share target). All changes in `ui/` (no `src/`).
+
+- **`ui/src/lib/digest/export.ts`** — `renderDigestPng(roundId, format = 'mobile')`.
+  Mobile renders the page with `?export=1&format=mobile` at a **520px viewport /
+  deviceScaleFactor 3**; wide keeps **800px / dsf 2** (unchanged). The page narrows
+  the `.dg-export` frame to 430px via a class (below), so the screenshot is a tall
+  single-column portrait. Filename scheme untouched (export-download route regex
+  still matches).
+- **`ui/src/lib/digest/digest.css`** — new `.dg-export--mobile` block: frame
+  `width: 430px`, tighter mast/section/footer padding, masthead title 28→24px, and a
+  reflow of the rigid 5-col `.dgC-track` podium grid to `32px 1fr auto` (rank · title ·
+  pts on row 1; "submitted by" wraps to a full-width row 2). Body copy bumped to
+  13.5px; defensive single-column collapse for any 2-col infographic grids.
+- **`ui/src/routes/api/digest/[roundId]/finalize/+server.ts`** — reads `format` from
+  the POST body (validates `'mobile'|'wide'`, defaults mobile), passes it to
+  `renderDigestPng`, and echoes `format` in the response.
+- **`ui/src/routes/digest/[roundId]/+page.svelte`** — applies `dg-export--mobile`
+  when loaded with `?format=mobile` (the export path); adds a **Mobile / Wide**
+  segmented toggle on the refine-stage export action (defaults to Mobile) that drives
+  the `format` sent to finalize; finalize POST now sends `{ format }`.
+
+**Verification (prod `192.168.4.217:3002`, real round r-104):**
+- `POST /finalize {format:'mobile'}` → 200, PNG **1290×8142** = 430 CSS px wide ×
+  dsf 3, tall portrait (H/W 6.3). Visually inspected: single-column, large readable
+  type, podium reflowed cleanly, quotes full-width, **no horizontal overflow** —
+  legible shrunk to phone size. ✓
+- `POST /finalize {format:'wide'}` → 200, PNG **1600×4420** = 800 CSS px wide × dsf 2
+  — reproduces today's desktop output. ✓
+- `npm run check`: **0 errors / 28 (pre-existing) warnings** — 0 introduced.
+- Deployed via `docker compose build --no-cache bot-ui && up -d --force-recreate bot-ui`; prod `/` 200.
+
+**Lane:** all four touched files are under `ui/`; no `src/` touch, per the hotfix brief.
+
+### 2026-06-02 — docs — Mid-sprint pivot: YTM paused, digest mobile-PNG hotfix injected
+- user paused YTM Wave 2 to fix the digest PNG share UX (the desktop-shaped 800px PNG reads poorly when shared to WhatsApp on a phone)
+- added `digest-mobile-png` task (frontend, in-lane — all `ui/`): `mobile|wide` `format` option on `renderDigestPng`, default the shared export to a mobile portrait width, reflow `.dg-export`
+- marked `no-match-cache` / `wire-song-rows` / `reverse-spotify-button` as held `[!]` — YTM resumption gated on the B2 Odesli data-source decision (still pending the user)
+- `no-match-cache` deliberately NOT run (would poison the cache with all-null no-match markers under the broken Odesli source — see B2)
 
 ### 2026-06-02 — backend — Wave 1: resolve-endpoint + song-payload-urls (code done & deployed; resolution blocked externally — B2)
 
