@@ -9,6 +9,7 @@
   import { coerceVariant, type SectionVariant, type VisualRegistry } from '$lib/digest/variants.js';
   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
+  import ChatMoments from '$lib/digest/ChatMoments.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import type { PageData } from './$types.js';
@@ -393,8 +394,13 @@
   // Visual component registry — frontend wires viz's visual components here.
   // Until a kind is registered, its visual slot falls back to VariantPlaceholder.
   //   podium    → AlbumPodium      (LLM section, visual variant)
+  //   chat      → ChatMoments      (restructured { summary, moments[] }; web = expandable, PDF = anchor-linked)
   //   standings → StandingsChart   (synthetic data-driven section, see below)
-  const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium, standings: StandingsChart };
+  const VISUAL_COMPONENTS: VisualRegistry = {
+    podium: AlbumPodium,
+    chat: ChatMoments,
+    standings: StandingsChart,
+  };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
   // null when the round has no vote data / fetch failed → section self-hides.
@@ -410,6 +416,14 @@
   let variantOverrides = $state<Record<string, SectionVariant>>({});
   function sectionVariant(id: string, persisted: string | undefined): SectionVariant {
     return variantOverrides[id] ?? coerceVariant(persisted);
+  }
+  // The restructured chat section ({ summary, moments[] }) has no meaningful
+  // textual form — it only renders via ChatMoments (the visual slot). So default
+  // chat to 'visual' unless the user explicitly picked a visual mode already.
+  function effectiveSectionVariant(kind: string, id: string, persisted: string | undefined): SectionVariant {
+    const v = sectionVariant(id, persisted);
+    if (kind === 'chat' && v === 'textual') return 'visual';
+    return v;
   }
   function changeVariant(id: string, v: SectionVariant) {
     variantOverrides[id] = v; // optimistic — re-renders immediately, no reload
@@ -719,6 +733,18 @@
     </span>
   </div>
 
+  {#if data.stage === 'finalize'}
+    <!-- LLM cost — in-app only (sprint-15 cost-display). Lives OUTSIDE .dg-export
+         (the PNG screenshots that element, so this is auto-excluded) AND carries
+         data-export-hide="1" so the full-page PDF render hides it too. The
+         recipient of the shared artifact never sees the cost. -->
+    <div class="dg-cost-banner" data-export-hide="1">
+      <span class="dg-cost-tag">llm cost</span>
+      <span class="dg-cost-amt">${(data.draft.llm_cost_usd ?? 0).toFixed(4)}</span>
+      <span class="dg-cost-note">in-app only · excluded from the shared export</span>
+    </div>
+  {/if}
+
   <div class="dg-export dgC-bg" class:dg-export--mobile={isMobileExport}>
     <header class="dgC-mast">
       <div class="dgC-mast-row1" data-export-hide="1">
@@ -740,7 +766,7 @@
         label={SECTION_LABELS[kindOrFallback(section.kind)]}
         sectionState={sectionStates[section.id] ?? 'default'}
         content={section.content}
-        variant={sectionVariant(section.id, section.variant)}
+        variant={effectiveSectionVariant(section.kind, section.id, section.variant)}
         visualComponent={VISUAL_COMPONENTS[kindOrFallback(section.kind)]}
         onToggleExcluded={() => toggleExcluded(section.id)}
         onToggleLocked={() => toggleLocked(section.id)}
@@ -844,6 +870,31 @@
   .dg-fmt-toggle button:disabled {
     cursor: default;
     opacity: 0.6;
+  }
+
+  .dg-cost-banner {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+  }
+  .dg-cost-tag {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .dg-cost-amt {
+    font: 700 14px/1 var(--font-mono);
+    color: var(--mash-pulp);
+  }
+  .dg-cost-note {
+    font: 500 10px/1 var(--font-mono);
+    color: var(--fg-quiet);
   }
 
   .dg-relctx-footer {

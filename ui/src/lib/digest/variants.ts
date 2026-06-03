@@ -88,7 +88,7 @@ export const VISUAL_CAPABLE: Record<DigestKind, boolean> = {
   flow: false,
   consensus: false,
   quotes: false,
-  chat: false,
+  chat: true, // restructured { summary, moments[] } → rendered by ChatMoments (sprint-15)
   standings: true, // synthetic data-driven section — always visual
 };
 

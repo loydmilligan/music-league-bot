@@ -48,7 +48,10 @@
   // Defensive sort by rank, then split into the medal podium (top 3) + the rest.
   const sorted = $derived(
     rawItems
-      .map((s, i) => ({ ...s, _rank: rankOf(s, i), _cover: coverOf(s) }))
+      // _i = stable unique id for {#each} keys. Ranks can TIE (duplicate _rank),
+      // so keying eaches by _rank throws each_key_duplicate (fatal hydration
+      // error). Keep _i unique per item. (sprint-15 chat-wire hotfix — see log.)
+      .map((s, i) => ({ ...s, _rank: rankOf(s, i), _cover: coverOf(s), _i: i }))
       .sort((a, b) => a._rank - b._rank),
   );
   const podium = $derived(sorted.slice(0, 3));
@@ -67,7 +70,7 @@
 <div class="apod" data-component="album-podium">
   {#if shelf.length}
     <div class="apod-shelf" class:is-two={shelf.length === 2} class:is-one={shelf.length === 1}>
-      {#each shelf as s (s._rank)}
+      {#each shelf as s (s._i)}
         {@const rank = s._rank}
         {@const pts = ptsOf(s)}
         <article class="apod-card {medalClass(rank)}">
@@ -103,7 +106,7 @@
 
   {#if rest.length}
     <ol class="apod-rest">
-      {#each rest as s (s._rank)}
+      {#each rest as s (s._i)}
         {@const pts = ptsOf(s)}
         <li class="apod-row">
           <span class="apod-row-rank">{String(s._rank).padStart(2, '0')}</span>
