@@ -24,7 +24,14 @@
     variant: SectionVariant;
     context: string;
   };
-  export type GenerateParams = { sections: GenSection[]; pastedChat: string };
+  // Standings is a DATA section (computed from votes, not LLM prose), so it
+  // carries no style/variant — just include + a recompute (adopt computed) opt.
+  export type StandingsGenOpt = { include: boolean; recompute: boolean };
+  export type GenerateParams = {
+    sections: GenSection[];
+    pastedChat: string;
+    standings: StandingsGenOpt;
+  };
 
   type Props = {
     sectionLabels: Record<SectionKind, string>;
@@ -50,6 +57,13 @@
   let pastedChat = $state('');
   let expanded = $state<Record<string, boolean>>({});
 
+  // Standings data-section controls (sprint-15 polish). include = render the
+  // season-standings chart in the digest; recompute = adopt the freshly-computed
+  // values as the new gospel on generate (else the stored table is kept and a
+  // mismatch surfaces the reconciliation modal).
+  let standingsInclude = $state(true);
+  let standingsRecompute = $state(false);
+
   function toggleExpand(id: string) {
     expanded[id] = !expanded[id];
   }
@@ -60,7 +74,11 @@
   const enabledCount = $derived(sections.filter((s) => s.enabled).length);
 
   function submit() {
-    onSubmit({ sections: $state.snapshot(sections), pastedChat });
+    onSubmit({
+      sections: $state.snapshot(sections),
+      pastedChat,
+      standings: { include: standingsInclude, recompute: standingsRecompute },
+    });
   }
 
   function handleScrim(e: MouseEvent) {
@@ -158,6 +176,26 @@
             {/if}
           </div>
         {/each}
+
+        <!-- Standings: a DATA section (computed from votes, not LLM prose). -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!standingsInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={standingsInclude} />
+              <span class="dg-gen-name">Season standings</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+            <label class="dg-gen-recompute" title="Recompute standings from votes and adopt as the new gospel">
+              <input type="checkbox" bind:checked={standingsRecompute} disabled={!standingsInclude} />
+              <span>recompute from votes</span>
+            </label>
+          </div>
+          <p class="dg-gen-note">
+            Computed from votes, not written by the LLM — auto-reconciled against the stored table on
+            generate (a mismatch pops the reconcile modal). “Recompute” overwrites the gospel with the
+            fresh computed values.
+          </p>
+        </div>
       </div>
 
       <span class="dg-modal-eyebrow">Paste WhatsApp chat · feeds the back-cover chat section</span>
@@ -204,6 +242,35 @@
   }
   .dg-gen-row.is-off {
     opacity: 0.55;
+  }
+  .dg-gen-row--data {
+    border-style: dashed;
+    border-color: var(--line-strong);
+  }
+  .dg-gen-row--data .dg-gen-note {
+    padding: 0 12px 10px;
+    margin: 0;
+  }
+  .dg-gen-databadge {
+    font: 700 9px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mash-pulp);
+    border: 1px solid var(--mash-pulp-edge, var(--line-strong));
+    border-radius: 999px;
+    padding: 2px 6px;
+  }
+  .dg-gen-recompute {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font: 600 11px/1 var(--font-mono);
+    color: var(--fg-muted);
+  }
+  .dg-gen-recompute input {
+    accent-color: var(--mash-pulp);
+    cursor: pointer;
   }
   .dg-gen-rowhead {
     display: flex;

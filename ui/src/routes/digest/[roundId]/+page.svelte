@@ -10,6 +10,9 @@
   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import ChatMoments from '$lib/digest/ChatMoments.svelte';
+  import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
+  import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
+  import type { Reconcile, StandingsResult } from '$lib/db/standings.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import type { PageData } from './$types.js';
@@ -210,12 +213,42 @@
         const text = await res.text().catch(() => '');
         throw new Error(`draft failed (${res.status}) ${text.slice(0, 200)}`);
       }
+      const body = (await res.json().catch(() => ({}))) as {
+        standings?: StandingsResult['standings'];
+        reconcile?: Reconcile;
+      };
       genModalOpen = false;
+
+      // Standings handling (the draft endpoint recomputes + reconciles standings).
+      standingsExcluded = !params.standings.include;
+      standingsOverride = null; // fall back to the freshly-loaded gospel
+      if (params.standings.recompute) {
+        // "Recompute from votes" → adopt the computed values as the new gospel.
+        await adoptStandings();
+      } else if (body.reconcile?.status === 'mismatch') {
+        // Surface the guardrail: stored table vs the AI's computed values.
+        reconcileData = body.reconcile;
+      }
       await invalidateAll();
     } catch (err) {
       showError(err);
     } finally {
       drafting = false;
+    }
+  }
+
+  // Adopt computed standings as gospel (used by the "recompute" gen option).
+  async function adoptStandings() {
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/standings`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'adopt' }),
+      });
+      if (!res.ok) throw new Error(`adopt failed (${res.status})`);
+      applyStandings((await res.json()) as StandingsResult);
+    } catch (err) {
+      showError(err);
     }
   }
 
@@ -404,11 +437,27 @@
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
   // null when the round has no vote data / fetch failed → section self-hides.
+  // `standingsOverride` lets an adopt/edit update the chart live (no reload);
+  // `standingsExcluded` is the modal's include toggle (session-scoped — web view).
+  let standingsOverride = $state<StandingsResult | null>(null);
+  let standingsExcluded = $state(false);
   const standingsData = $derived(
-    data.stage === 'refine' || data.stage === 'finalize' ? data.standings : null,
+    standingsOverride ??
+      (data.stage === 'refine' || data.stage === 'finalize' ? data.standings : null),
   );
   const StandingsSlot = $derived(VISUAL_COMPONENTS.standings);
-  const showStandings = $derived(!!standingsData && (standingsData.standings?.length ?? 0) > 0);
+  const showStandings = $derived(
+    !standingsExcluded && !!standingsData && (standingsData.standings?.length ?? 0) > 0,
+  );
+
+  // --- Reconciliation modal (fires on a gen/regen mismatch) + edit table ---
+  let reconcileData = $state<Reconcile | null>(null);
+  const showReconcile = $derived(reconcileData?.status === 'mismatch');
+  let editTableOpen = $state(false);
+
+  function applyStandings(result: StandingsResult) {
+    standingsOverride = result; // instant chart re-render from the fresh gospel
+  }
 
   // Per-section variant override set by the in-page variant switcher. Keyed by
   // section id; falls back to the persisted section.variant (set by the modal /
@@ -785,7 +834,16 @@
     {#if showStandings && StandingsSlot}
       <div class="dg-section-wrap" data-section-kind="standings">
         <section class="dg-section">
-          <p class="dg-section-eyebrow">Season standings</p>
+          <div class="dg-standings-head">
+            <p class="dg-section-eyebrow" style="margin: 0;">Season standings</p>
+            <button
+              type="button"
+              class="dg-standings-edit"
+              data-export-hide="1"
+              onclick={() => (editTableOpen = true)}
+              title="Edit the gospel standings figures"
+            >✎ edit figures</button>
+          </div>
           <StandingsSlot kind="standings" content={{}} data={standingsData} variant="visual" />
         </section>
       </div>
@@ -813,6 +871,24 @@
     onSubmit={submitGenerate}
   />
 {/if}
+
+{#if showReconcile && reconcileData}
+  <ReconciliationModal
+    roundId={data.roundId}
+    reconcile={reconcileData}
+    onClose={() => (reconcileData = null)}
+    onAdopted={(result) => { applyStandings(result); reconcileData = null; }}
+    onError={(msg) => showError(msg)}
+  />
+{/if}
+
+<EditableStandingsTable
+  roundId={data.roundId}
+  open={editTableOpen}
+  initial={standingsData as StandingsResult | null}
+  onClose={() => (editTableOpen = false)}
+  onSaved={(result) => applyStandings(result)}
+/>
 
 {#if modalTarget !== null}
   <RegenModal
@@ -871,6 +947,25 @@
     cursor: default;
     opacity: 0.6;
   }
+
+  .dg-standings-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .dg-standings-edit {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--fg-muted);
+    cursor: pointer;
+    padding: 4px 9px;
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+  }
+  .dg-standings-edit:hover { color: var(--fg); border-color: var(--mash-pulp); }
 
   .dg-cost-banner {
     display: flex;
