@@ -23,16 +23,16 @@ function seed(db: Database.Database) {
   const sub = db.prepare('INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at) VALUES (?,?,?,?,?,?)');
   const vote = db.prepare('INSERT INTO votes (round_id, voter_id, spotify_uri, points, created_at) VALUES (?,?,?,?,?)');
   const now = '2026-01-01T00:00:00Z';
-  sub.run(r1, ids.A, 'uri:s1', 's1', 'Artist One', now);
-  sub.run(r1, ids.B, 'uri:s2', 's2', 'Artist Two, Feat Guy', now); // multi-artist → first only
-  sub.run(r1, ids.C, 'uri:s3', 's3', 'Artist One', now);           // same first artist as s1
-  vote.run(r1, ids.B, 'uri:s1', 3, now);
-  vote.run(r1, ids.C, 'uri:s1', 2, now);
-  vote.run(r1, ids.A, 'uri:s2', 2, now);
-  vote.run(r1, ids.C, 'uri:s2', 1, now);
-  vote.run(r1, ids.A, 'uri:s3', 1, now);
+  sub.run(r1, ids.A, 'spotify:track:s1', 's1', 'Artist One', now);
+  sub.run(r1, ids.B, 'spotify:track:s2', 's2', 'Artist Two, Feat Guy', now); // multi-artist → first only
+  sub.run(r1, ids.C, 'spotify:track:s3', 's3', 'Artist One', now);           // same first artist as s1
+  vote.run(r1, ids.B, 'spotify:track:s1', 3, now);
+  vote.run(r1, ids.C, 'spotify:track:s1', 2, now);
+  vote.run(r1, ids.A, 'spotify:track:s2', 2, now);
+  vote.run(r1, ids.C, 'spotify:track:s2', 1, now);
+  vote.run(r1, ids.A, 'spotify:track:s3', 1, now);
   // r2: one submission so far
-  sub.run(r2, ids.A, 'uri:s4', 's4', 'Artist Three', now);
+  sub.run(r2, ids.A, 'spotify:track:s4', 's4', 'Artist Three', now);
   return { seasonId, r1, r2, ids };
 }
 
@@ -73,19 +73,26 @@ describe('getNextRound', () => {
 describe('getDiscoverability', () => {
   it('ranks players by mean obscurity (100 − proxy), most-obscure first', () => {
     const { r1 } = seed(db);
-    // A→s1 (proxy 90 → obsc 10), B→s2 (proxy 30 → obsc 70), C→s3 (proxy 10 → obsc 90)
-    pop(db, 'uri:s1', 100, 100, 90);
-    pop(db, 'uri:s2', 100, 100, 30);
-    pop(db, 'uri:s3', 100, 100, 10);
+    // Full coverage: all 4 season submissions scored. A→s1(90)+s4(90), B→s2(30), C→s3(10).
+    pop(db, 'spotify:track:s1', 100, 100, 90);
+    pop(db, 'spotify:track:s2', 100, 100, 30);
+    pop(db, 'spotify:track:s3', 100, 100, 10);
+    pop(db, 'spotify:track:s4', 100, 100, 90);
     const d = getDiscoverability(db, r1)!;
     expect(d.map((r) => [r.name, r.obscurityScore, r.submissionCount, r.avgPopularity])).toEqual([
       ['C', 90, 1, 10], // most obscure
       ['B', 70, 1, 30],
-      ['A', 10, 1, 90], // crowd-pleaser
+      ['A', 10, 2, 90], // crowd-pleaser, 2 submissions
     ]);
   });
   it('self-suppresses (null) when no popularity data exists', () => {
     const { r1 } = seed(db);
+    expect(getDiscoverability(db, r1)).toBeNull();
+  });
+  it('self-suppresses (null) when coverage is PARTIAL (< 80% of submissions scored)', () => {
+    const { r1 } = seed(db);
+    // Season has 4 submissions; score only 1 (25%) — a misleading lonely board.
+    pop(db, 'spotify:track:s2', 100, 100, 30);
     expect(getDiscoverability(db, r1)).toBeNull();
   });
 });
