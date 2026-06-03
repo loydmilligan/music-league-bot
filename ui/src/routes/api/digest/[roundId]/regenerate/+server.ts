@@ -8,6 +8,8 @@ import {
   incrementWholeRegenCount,
   regenerateOneSection,
   replaceSectionContent,
+  enrichPodiumArt,
+  addDraftCost,
   type SectionKind,
 } from '$lib/digest/llm.js';
 
@@ -48,7 +50,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const failures: string[] = [];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
-      replaceSectionContent(db, regenerable[i], r.value, chips, instructions);
+      const content = r.value.section;
+      if (regenerable[i].kind === 'podium') enrichPodiumArt(content, data.submissions);
+      replaceSectionContent(db, regenerable[i], content, chips, instructions);
+      addDraftCost(db, draft.id, r.value.costUsd);
     } else {
       failures.push(`${regenerable[i].kind}: ${(r.reason as Error).message}`);
     }

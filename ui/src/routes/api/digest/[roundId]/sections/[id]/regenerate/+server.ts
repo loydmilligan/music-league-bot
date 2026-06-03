@@ -5,6 +5,8 @@ import {
   gatherRoundData,
   regenerateOneSection,
   replaceSectionContent,
+  enrichPodiumArt,
+  addDraftCost,
   type DigestSectionRow,
   type SectionKind,
 } from '$lib/digest/llm.js';
@@ -33,19 +35,26 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const data = gatherRoundData(db, roundId);
   const priorContent = JSON.parse(section.content_json);
 
-  let newContent;
+  let newContent: unknown;
+  let costUsd = 0;
   try {
-    newContent = await regenerateOneSection(
+    const res = await regenerateOneSection(
       data,
       section.kind as SectionKind,
       priorContent,
       chips,
       instructions,
     );
+    newContent = res.section;
+    costUsd = res.costUsd;
   } catch (e) {
     throw error(502, `LLM regen failed: ${(e as Error).message}`);
   }
 
+  // Re-attach album art if the podium was regenerated (LLM output lacks it).
+  if (section.kind === 'podium') enrichPodiumArt(newContent, data.submissions);
+
   const updated = replaceSectionContent(db, section, newContent, chips, instructions);
+  addDraftCost(db, section.draft_id, costUsd);
   return json({ section: updated });
 };

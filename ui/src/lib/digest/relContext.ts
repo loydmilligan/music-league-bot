@@ -130,7 +130,7 @@ export async function proposeRelContextUpdate(
     sectionsToMarkdown(sections),
   ].join('\n');
 
-  const raw = await callOpenRouter(
+  const { content: raw } = await callOpenRouter(
     [
       { role: 'system', content: buildRelContextSystemPrompt() },
       { role: 'user', content: userPrompt },

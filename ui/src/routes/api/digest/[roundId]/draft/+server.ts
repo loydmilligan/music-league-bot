@@ -7,12 +7,14 @@ import {
   getActiveDraftForRound,
   getSectionsForDraft,
   writeDraft,
+  enrichPodiumArt,
   SECTION_KINDS,
   type GenParams,
   type GenSectionParam,
   type SectionKind,
 } from '$lib/digest/llm.js';
 import { getStandings } from '$lib/db/standings.js';
+import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -31,6 +33,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   const genParams = parseGenParams(await readBody(request));
 
+  // Resolve + cache per-song album art (sprint-15 podium-thumbnails). Best-effort:
+  // a Spotify failure must not block generation — the podium falls back to glyphs.
+  try {
+    await ensureAlbumArt(db, roundId);
+  } catch (e) {
+    console.error('[draft] ensureAlbumArt failed:', (e as Error).message);
+  }
+
   // Standings payload + gen-time reconcile (computed-from-votes vs stored gospel).
   // Surfaced on every draft response so the digest renders from the table and
   // viz can pop the reconciliation modal on a mismatch.
@@ -40,10 +50,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
   // Cached path only when the caller did NOT supply generation params — a
   // params request always (re)generates so the modal's choices take effect.
   if (cached && !genParams) {
+    // Backfill album art into an already-generated podium (older drafts predate
+    // podium-thumbnails) without regenerating prose — additive coverUrl only.
+    const sections = backfillPodiumArt(db, roundId, getSectionsForDraft(db, cached.id));
     return json({
       cached: true,
       draft: cached,
-      sections: getSectionsForDraft(db, cached.id),
+      sections,
       standings: standings.standings,
       reconcile: standings.reconcile,
     });
@@ -82,6 +95,28 @@ async function readBody(request: Request): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+type SectionRow = ReturnType<typeof getSectionsForDraft>[number];
+
+// Enrich an existing cached draft's podium section with album art (additive)
+// and persist if it changed. Returns the (possibly updated) section list.
+function backfillPodiumArt(db: ReturnType<typeof getDb>, roundId: number, sections: SectionRow[]): SectionRow[] {
+  const podium = sections.find((s) => s.kind === 'podium');
+  if (!podium) return sections;
+  let content: unknown;
+  try {
+    content = JSON.parse(podium.content_json);
+  } catch {
+    return sections;
+  }
+  const before = JSON.stringify(content);
+  const subs = gatherRoundData(db, roundId).submissions;
+  enrichPodiumArt(content, subs);
+  const after = JSON.stringify(content);
+  if (after === before) return sections;
+  db.prepare('UPDATE digest_sections SET content_json = ? WHERE id = ?').run(after, podium.id);
+  return sections.map((s) => (s.id === podium.id ? { ...s, content_json: after } : s));
 }
 
 // Returns a GenParams object only when the body carries meaningful generation

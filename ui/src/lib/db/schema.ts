@@ -23,6 +23,7 @@ export const SCHEMA = `
     competitor_id INTEGER REFERENCES competitors(id),
     spotify_uri TEXT NOT NULL, title TEXT NOT NULL, album TEXT, artists TEXT NOT NULL,
     comment TEXT, created_at TEXT NOT NULL, visible_to_voters INTEGER NOT NULL DEFAULT 0,
+    album_art_url TEXT,
     UNIQUE(round_id, spotify_uri, competitor_id)
   );
   -- Anonymous playlist-ingest rows (competitor_id NULL) need a separate
@@ -140,7 +141,10 @@ export const SCHEMA = `
     finalized_at      TEXT,
     rel_context       TEXT NOT NULL,
     prep_checks       TEXT NOT NULL,
-    whole_regen_count INTEGER NOT NULL DEFAULT 0
+    whole_regen_count INTEGER NOT NULL DEFAULT 0,
+    -- sprint-15 cost-capture: accumulated OpenRouter USD cost for this digest
+    -- (draft generation + every regen / section gen).
+    llm_cost_usd      REAL NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);
   CREATE TABLE IF NOT EXISTS digest_sections (

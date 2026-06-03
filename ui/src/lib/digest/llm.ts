@@ -15,6 +15,7 @@ export interface DigestDraftRow {
   rel_context: string;
   prep_checks: string;
   whole_regen_count: number;
+  llm_cost_usd: number;
 }
 
 export interface DigestSectionRow {
@@ -37,7 +38,7 @@ export interface RoundData {
   // round as already-happened.
   roundSequence: { number: number; total: number };
   priorRounds: { number: number; name: string }[];
-  submissions: { artist: string; title: string; album: string | null; submitter: string | null; comment: string | null; vote_total: number }[];
+  submissions: { artist: string; title: string; album: string | null; submitter: string | null; comment: string | null; vote_total: number; spotifyUri: string; albumArtUrl: string | null }[];
   votes: { voter: string; song: string; points: number; comment: string | null }[];
   chatMentions: { sender: string; raw_message: string; captured_at: string }[];
   relContext: string;
@@ -83,7 +84,7 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
 
   const subRows = db
     .prepare(
-      `SELECT m.artists AS artists, m.title, m.album, m.spotify_uri, m.comment,
+      `SELECT m.artists AS artists, m.title, m.album, m.spotify_uri, m.comment, m.album_art_url,
               c.name AS submitter,
               COALESCE(SUM(v.points), 0) AS vote_total
        FROM ml_submissions m
@@ -101,6 +102,7 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     comment: string | null;
     submitter: string | null;
     vote_total: number;
+    album_art_url: string | null;
   }[];
 
   const voteRows = db
@@ -139,6 +141,8 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
       submitter: s.submitter,
       comment: s.comment,
       vote_total: Number(s.vote_total),
+      spotifyUri: s.spotify_uri,
+      albumArtUrl: s.album_art_url,
     })),
     votes: voteRows.map(v => ({ voter: v.voter, song: v.song, points: v.points, comment: v.comment })),
     chatMentions: chatRows,
@@ -151,13 +155,23 @@ interface OpenRouterMessage {
   content: string;
 }
 
-export async function callOpenRouter(messages: OpenRouterMessage[], opts: { model?: string; jsonMode?: boolean } = {}): Promise<string> {
+export interface LLMResult {
+  content: string;
+  /** USD cost of this call, from OpenRouter's usage accounting (0 if unavailable). */
+  costUsd: number;
+}
+
+export async function callOpenRouter(messages: OpenRouterMessage[], opts: { model?: string; jsonMode?: boolean } = {}): Promise<LLMResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
   const model = opts.model ?? process.env.OPENROUTER_DIGEST_MODEL ?? DEFAULT_MODEL;
   const body: Record<string, unknown> = { model, messages };
   if (opts.jsonMode) body.response_format = { type: 'json_object' };
+  // Ask OpenRouter to include cost/usage accounting in the response (sprint-15
+  // cost-capture). With this flag the chat-completion `usage` block carries the
+  // call's USD `cost`.
+  body.usage = { include: true };
 
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -174,11 +188,15 @@ export async function callOpenRouter(messages: OpenRouterMessage[], opts: { mode
     const text = await res.text().catch(() => '');
     throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 500)}`);
   }
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    usage?: { cost?: number };
+  };
   const content = json.choices?.[0]?.message?.content;
   if (!content) throw new Error('OpenRouter returned no content');
+  const costUsd = typeof json.usage?.cost === 'number' ? json.usage.cost : 0;
   const fenced = content.match(/^\s*```(?:json)?\s*\n([\s\S]*?)\n```\s*$/);
-  return fenced ? fenced[1] : content;
+  return { content: fenced ? fenced[1] : content, costUsd };
 }
 
 const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
@@ -187,7 +205,7 @@ const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
   flow: 'A 1-2 paragraph narrative arc of how the round played out — what the theme produced, surprises, the shape of voting.',
   consensus: 'Songs/artists where multiple voters agreed (high vote spread / repeat voters). Bulleted list with the agreement noted.',
   quotes: '3-6 punchy direct quotes from vote comments — voter name + quote. Pick the ones with the most personality.',
-  chat: 'Highlights from the WhatsApp chat mentions tied to this round. If no chat mentions, return an empty items array with a short note.',
+  chat: 'Highlights from the WhatsApp chat tied to this round. Find the genuinely funny / notable exchanges and keep the dry, slightly-funny editorial voice. Output { "summary": <1-2 sentence overall read of the chat>, "moments": [{ "label": <short punchy title for one discrete chat moment>, "detail": <a fuller 1-2 sentence description of that moment, preserving the funny content> }] } with 3-6 moments.',
 };
 
 export function buildSystemPrompt(): string {
@@ -212,7 +230,7 @@ You output ONE JSON object with this exact shape:
     "flow":      { "title": string, "body": string },
     "consensus": { "title": string, "items": [...] },
     "quotes":    { "title": string, "items": [{"voter": string, "quote": string}] },
-    "chat":      { "title": string, "items": [...], "body": string }
+    "chat":      { "title": string, "summary": string, "moments": [{"label": string, "detail": string}] }
   }
 }
 
@@ -319,10 +337,12 @@ export function buildUserPrompt(
 
 interface DraftLLMOutput {
   sections: Record<SectionKind, unknown>;
+  /** Accumulated USD cost of the generation call (sprint-15 cost-capture). */
+  costUsd: number;
 }
 
 export async function generateDraft(data: RoundData, genParams?: GenParams): Promise<DraftLLMOutput> {
-  const raw = await callOpenRouter(
+  const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, undefined, genParams) },
@@ -336,6 +356,7 @@ export async function generateDraft(data: RoundData, genParams?: GenParams): Pro
       parsed.sections[k] = { title: k, body: '', items: [] };
     }
   }
+  parsed.costUsd = costUsd;
   return parsed;
 }
 
@@ -345,8 +366,8 @@ export async function regenerateOneSection(
   currentContent: unknown,
   chips: string[],
   instructions: string,
-): Promise<unknown> {
-  const raw = await callOpenRouter(
+): Promise<{ section: unknown; costUsd: number }> {
+  const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }) },
@@ -355,7 +376,7 @@ export async function regenerateOneSection(
   );
   const parsed = JSON.parse(raw) as { section?: unknown };
   if (parsed.section === undefined) throw new Error('LLM response missing "section"');
-  return parsed.section;
+  return { section: parsed.section, costUsd };
 }
 
 // ---- DB helpers ----
@@ -372,6 +393,40 @@ export function getSectionsForDraft(db: Database.Database, draftId: string): Dig
     .all(draftId) as DigestSectionRow[];
 }
 
+const normTitle = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+/**
+ * Inject album-art URLs into a podium section's items so AlbumPodium renders
+ * covers. Matches each item to a round submission by title (then falls back to
+ * vote-rank position, since both lists are top-down). Mutates `content` in place.
+ */
+export function enrichPodiumArt(content: unknown, submissions: RoundData['submissions']): void {
+  if (!content || typeof content !== 'object') return;
+  const items = (content as { items?: unknown }).items;
+  if (!Array.isArray(items)) return;
+
+  const byTitle = new Map<string, string>();
+  for (const s of submissions) {
+    if (s.albumArtUrl && !byTitle.has(normTitle(s.title))) byTitle.set(normTitle(s.title), s.albumArtUrl);
+  }
+  const ranked = submissions.map((s) => s.albumArtUrl).filter((u): u is string => !!u);
+
+  items.forEach((it, idx) => {
+    if (!it || typeof it !== 'object') return;
+    const item = it as Record<string, unknown>;
+    if (item.coverUrl || item.albumArtUrl || item.album_art_url) return; // already set
+    const t = typeof item.title === 'string' ? item.title : '';
+    const art = byTitle.get(normTitle(t)) ?? ranked[idx] ?? null;
+    if (art) item.coverUrl = art;
+  });
+}
+
+/** Add an LLM call's USD cost to a digest's accumulated total (sprint-15). */
+export function addDraftCost(db: Database.Database, draftId: string, costUsd: number): void {
+  if (!costUsd) return;
+  db.prepare('UPDATE digest_drafts SET llm_cost_usd = llm_cost_usd + ? WHERE id = ?').run(costUsd, draftId);
+}
+
 export function writeDraft(
   db: Database.Database,
   roundId: number,
@@ -384,11 +439,15 @@ export function writeDraft(
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const variantByKind = new Map((genParams?.sections ?? []).map((s) => [s.id, s.variant]));
 
+  // Inject existing per-song album art into the podium items so AlbumPodium
+  // renders covers (sprint-15 podium-thumbnails).
+  enrichPodiumArt(output.sections.podium, data.submissions);
+
   const tx = db.transaction(() => {
     db.prepare(
-      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count)
-       VALUES (?, ?, ?, ?, ?, 0)`,
-    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}));
+      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0);
 
     // Only persist enabled + content-available sections; position is dense.
     const activeKinds = activeKindsForDraft(data, genParams);

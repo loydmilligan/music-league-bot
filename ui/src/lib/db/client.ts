@@ -60,6 +60,16 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (digestSectionCols.length && !digestSectionCols.some(c => c.name === 'variant')) {
 		db.exec("ALTER TABLE digest_sections ADD COLUMN variant TEXT NOT NULL DEFAULT 'textual'");
 	}
+	// sprint-15 cost-capture: per-digest accumulated OpenRouter cost on existing DBs.
+	const digestDraftCols = db.prepare("PRAGMA table_info(digest_drafts)").all() as { name: string }[];
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'llm_cost_usd')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN llm_cost_usd REAL NOT NULL DEFAULT 0");
+	}
+	// sprint-15 podium-thumbnails: per-song album art cached on ml_submissions.
+	const msArtCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string }[];
+	if (msArtCols.length && !msArtCols.some(c => c.name === 'album_art_url')) {
+		db.exec("ALTER TABLE ml_submissions ADD COLUMN album_art_url TEXT");
+	}
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	return db;

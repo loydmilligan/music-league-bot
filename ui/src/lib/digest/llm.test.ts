@@ -3,9 +3,14 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   activeKindsForDraft,
+  enrichPodiumArt,
   type RoundData,
   type GenParams,
 } from './llm.js';
+
+function sub(title: string, art: string | null, vote: number): RoundData['submissions'][number] {
+  return { artist: 'X', title, album: null, submitter: 's', comment: null, vote_total: vote, spotifyUri: `spotify:track:${title}`, albumArtUrl: art };
+}
 
 function mkData(over: Partial<RoundData> = {}): RoundData {
   return {
@@ -17,7 +22,7 @@ function mkData(over: Partial<RoundData> = {}): RoundData {
       { number: 2, name: 'Must be love on the brain' },
     ],
     submissions: [
-      { artist: 'A', title: 's1', album: null, submitter: 'Sasha', comment: null, vote_total: 9 },
+      { artist: 'A', title: 's1', album: null, submitter: 'Sasha', comment: null, vote_total: 9, spotifyUri: 'spotify:track:s1', albumArtUrl: null },
     ],
     votes: [{ voter: 'Ronm', song: 's1', points: 3, comment: 'great' }],
     chatMentions: [],
@@ -90,5 +95,38 @@ describe('generation params', () => {
     const p = buildUserPrompt(mkData(), undefined, params);
     expect(p).toMatch(/Pasted WhatsApp chat/);
     expect(p).toMatch(/Bob: banger alert/);
+  });
+});
+
+describe('chat-restructure shape (sprint-15)', () => {
+  it('system prompt declares the chat section as { summary, moments[{label,detail}] }', () => {
+    const sys = buildSystemPrompt();
+    expect(sys).toMatch(/"chat":\s*\{ "title": string, "summary": string, "moments": \[\{"label": string, "detail": string\}\] \}/);
+  });
+});
+
+describe('podium album-art enrichment (sprint-15)', () => {
+  it('matches items to submissions by title, falls back to vote-rank position, and never overrides existing art', () => {
+    const subs = [sub('Chaise Longue', 'http://art/1', 9), sub('Teenage Dirtbag', 'http://art/2', 7)];
+    const content = {
+      items: [
+        { title: 'Chaise Longue' },          // title match → art/1
+        { title: 'Some Unlisted Song' },      // no match → position idx1 → art/2
+        { title: 'whatever', coverUrl: 'KEEP' }, // already has art → untouched
+      ],
+    };
+    enrichPodiumArt(content, subs);
+    expect(content.items[0].coverUrl).toBe('http://art/1');
+    expect(content.items[1].coverUrl).toBe('http://art/2');
+    expect(content.items[2].coverUrl).toBe('KEEP');
+  });
+
+  it('is a no-op when there is no art and when content is malformed', () => {
+    const subs = [sub('A', null, 5)];
+    const content = { items: [{ title: 'A' }] };
+    enrichPodiumArt(content, subs);
+    expect((content.items[0] as Record<string, unknown>).coverUrl).toBeUndefined();
+    expect(() => enrichPodiumArt(null, subs)).not.toThrow();
+    expect(() => enrichPodiumArt({ items: 'nope' }, subs)).not.toThrow();
   });
 });

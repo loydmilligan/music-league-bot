@@ -120,6 +120,18 @@ export async function fetchTrack(id: string): Promise<ResolvedTrack> {
   return toResolved(t);
 }
 
+// Batch track lookup (Spotify allows up to 50 ids per call). Paginates over
+// larger id lists; skips null entries (unmatched / removed tracks).
+export async function fetchTracks(ids: string[]): Promise<ResolvedTrack[]> {
+  const out: ResolvedTrack[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const { tracks } = await api<{ tracks: (SpotifyTrack | null)[] }>(`/tracks?ids=${batch.join(',')}`);
+    for (const t of tracks) if (t && t.id) out.push(toResolved(t));
+  }
+  return out;
+}
+
 interface SpotifyAlbumFull extends SpotifyAlbumRef {
   id: string;
   tracks: { items: SpotifyTrack[]; next: string | null };
