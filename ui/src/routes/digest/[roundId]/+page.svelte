@@ -3,6 +3,7 @@
   import { invalidateAll } from '$app/navigation';
   import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
+  import GenerateModal, { type GenerateParams } from '$lib/digest/GenerateModal.svelte';
   import RelContextDiffModal, { type DiffSegment } from '$lib/digest/RelContextDiffModal.svelte';
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
   import { coerceVariant, type SectionVariant, type VisualRegistry } from '$lib/digest/variants.js';
@@ -179,24 +180,56 @@
     }
   }
 
+  // -------- Generate modal (sprint-14) ----------
+  // The generate flow opens GenerateModal (per-section enable + style/context/
+  // variant + paste-chat). Submit posts the Generation-params contract to
+  // /draft, which (with params) regenerates the draft honoring the choices.
   let drafting = $state(false);
-  async function generateDraft() {
+  let genModalOpen = $state(false);
+  function openGenerate() { genModalOpen = true; }
+  function closeGenerate() { if (!drafting) genModalOpen = false; }
+
+  async function submitGenerate(params: GenerateParams) {
     drafting = true;
     try {
       const res = await fetch(`/api/digest/${data.roundId}/draft`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`draft failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      genModalOpen = false;
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    } finally {
+      drafting = false;
+    }
+  }
+
+  // -------- Unfinalize (sprint-14) ----------
+  // Clears finalized_at so a finalized digest re-enters the editable flow.
+  let unfinalizing = $state(false);
+  async function unfinalize() {
+    unfinalizing = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/unfinalize`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        throw new Error(`draft failed (${res.status}) ${text.slice(0, 200)}`);
+        throw new Error(`unfinalize failed (${res.status}) ${text.slice(0, 200)}`);
       }
       await invalidateAll();
     } catch (err) {
       showError(err);
     } finally {
-      drafting = false;
+      unfinalizing = false;
     }
   }
 
@@ -611,8 +644,8 @@
       </button>
       <span style="flex: 1;"></span>
       {#if allChecksOk}
-        <button type="button" class="mash-btn mash-btn--primary" onclick={generateDraft} disabled={drafting}>
-          {drafting ? '…' : '✎'} Generate draft
+        <button type="button" class="mash-btn mash-btn--primary" onclick={openGenerate} disabled={drafting}>
+          {drafting ? '…' : '✎'} Generate draft…
         </button>
       {/if}
     </div>
@@ -621,6 +654,9 @@
   <div class="dg-page-actions">
     <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen} disabled={finalizing}>
       ↻ Regenerate whole draft
+    </button>
+    <button type="button" class="mash-btn mash-btn--secondary" onclick={openGenerate} disabled={finalizing || drafting}>
+      ✎ Regenerate with options…
     </button>
     {#if data.stage === 'refine'}
       <div class="dg-fmt-toggle" role="group" aria-label="Export format">
@@ -646,6 +682,9 @@
       <span style="font: 600 11px/1 var(--font-mono); color: var(--moss);">
         ✓ finalized {data.draft.finalized_at}
       </span>
+      <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={unfinalize} disabled={unfinalizing}>
+        {unfinalizing ? '…' : '↩'} Unfinalize
+      </button>
     {/if}
     <span class="dg-page-actions-spacer"></span>
     <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">
@@ -697,6 +736,15 @@
       <button type="button" class="dg-relctx-link" onclick={openRelDiff}>view diff →</button>
     </div>
   {/if}
+{/if}
+
+{#if genModalOpen}
+  <GenerateModal
+    sectionLabels={SECTION_LABELS}
+    busy={drafting}
+    onCancel={closeGenerate}
+    onSubmit={submitGenerate}
+  />
 {/if}
 
 {#if modalTarget !== null}
