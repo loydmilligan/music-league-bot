@@ -6,20 +6,51 @@ export interface ParsedVote { spotifyUri: string; voterId: string; createdAt: st
 export interface ParsedCompetitor { id: string; name: string; }
 export interface ParsedZip { rounds: ParsedRound[]; submissions: ParsedSubmission[]; votes: ParsedVote[]; competitors: ParsedCompetitor[]; }
 
-function csv(text: string): Record<string,string>[] {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-  return lines.slice(1).map(line => {
-    const vals: string[] = []; let inQ = false; let cur = '';
-    for (const ch of line) {
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === ',' && !inQ) { vals.push(cur); cur = ''; }
-      else cur += ch;
+// RFC-4180-correct CSV parse. The old version did `text.split('\n')` and tracked
+// quote-state per physical line, so any quoted field containing an embedded
+// newline (a multi-line vote/submission Comment or round Description) fragmented
+// the row — trailing columns shifted/emptied (e.g. a submission's Round ID lost,
+// orphaning it from its round; or a Description split into garbage "rounds").
+// This parser scans the whole text with a single quote-aware state machine,
+// handling embedded newlines AND commas inside quotes, plus "" escaped quotes.
+export function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQ = false;
+  let started = false; // did the current row see any content/field?
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }  // escaped quote
+        else inQ = false;
+      } else {
+        field += ch;
+      }
+      continue;
     }
-    vals.push(cur);
-    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] ?? '').trim()]));
-  });
+    if (ch === '"') { inQ = true; started = true; continue; }
+    if (ch === ',') { row.push(field); field = ''; started = true; continue; }
+    if (ch === '\r') continue;                            // tolerate CRLF
+    if (ch === '\n') {
+      if (started || field.length) { row.push(field); rows.push(row); }
+      row = []; field = ''; started = false;
+      continue;
+    }
+    field += ch; started = true;
+  }
+  if (started || field.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function csv(text: string): Record<string,string>[] {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(cols =>
+    Object.fromEntries(headers.map((h, i) => [h, (cols[i] ?? '').trim()])),
+  );
 }
 
 export function parseZip(buf: Buffer): ParsedZip {
