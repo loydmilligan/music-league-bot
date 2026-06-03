@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-12-remediation-ml-login-data-digest
 created: 2026-05-31T22:50:32Z
-updated: 2026-05-31T22:50:32Z
-status: active
+updated: 2026-06-02T01:10:22Z
+status: complete
 ---
 
 # music-league-bot — coordination doc (sprint-12-remediation-ml-login-data-digest)
@@ -108,6 +108,12 @@ through the now-fixed importer and **de-duplicated rid=100 back to 11
 dup-collision rounds**. No raw `DELETE` needed.
 
 ## Activity Log
+
+### 2026-06-02 — docs — Sprint-12 closed (status → complete)
+- All 6 agent tasks done: login-fix, core-tests, data-refresh, recent-changes, check-clean, digest-verify. Plus unplanned wins: de-anon import duplication bug fixed, D3 premise corrected (`leagues export` ships *completed* rounds, not in-progress).
+- User finalized all three digests on prod — Hip Jammers r-104, Second Best r-110, Fam Jam III r-101 ("Did I Make Myself Clear?", imported from a manual FJ III export.zip).
+- Blockers B1 / B2 / B3 all resolved (B1: user picked the FJ III finale rid=101; B2: digest targets redefined to most-recent-completed; B3: dup auto-healed by the fixed importer). Retained below as history.
+- `status: active → complete` so the warren's active surface advances to sprint-13 (drops sprint-12's blockers from the dashboard). Sprint-review deferred per user.
 
 ### 2026-06-02 — frontend — digest-verify: r-101 verified → all three targets done
 

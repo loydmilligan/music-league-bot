@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-10-extension-ingest
 created: 2026-05-20T00:00:00Z
 updated: 2026-05-20T00:00:00Z
-status: planned
+status: complete-with-deferred
 ---
 
 # music-league-bot — coordination doc (sprint-10-extension-ingest)
@@ -383,3 +383,18 @@ Bumped extension to **v0.2.0**. Backend T9 (Songlink resolution) has not yet lan
 - Re-rendered `extension/icons/{16,32,48,128}.png` cropping tight to the wordmark's alpha bounding box before resize. Source canvas had ~26% horizontal + 47% vertical empty padding; previous pass inherited it.
 - Pipeline: open `ui/static/m-l-favicon-512x512.png` → `getbbox()` → crop (378×270 wordmark) → fit each square canvas with 1px breathing room (0px on 16) → LANCZOS resize → centered paste on transparent canvas.
 - Wordmark coverage now: **16 → 100%×69%, 32 → 94%×66%, 48 → 96%×69%, 128 → 98%×70%**. Vertical ceiling is the wordmark's natural 1.4:1 aspect; further width would require non-uniform scaling. No version bump (purely visual asset swap).
+
+### 2026-05-20 — orc — sprint-10 closed (with deferred YTM debug)
+
+- All 12 task items shipped. Spotify ingest end-to-end smoke-confirmed by user — install in Vivaldi via unpacked load, paste API token, click extension icon on a Spotify track page, song lands in shortlist.
+- **What landed:** `api_tokens` table + SHA-256 hashed Bearer auth via `requireBearerToken`; `POST /api/ingest/songs` accepting Spotify track/album/playlist URLs with dedup against existing `shortlist_songs.spotify_track_id`; `POST/GET/DELETE /api/tokens` for token mgmt with one-time plaintext reveal; Settings UI section for token CRUD; full Chrome MV3 extension (`extension/`) with manifest + options + popup + Spotify content script + YTM content script + background worker; M/L wordmark icons at 16/32/48/128 sizes (later re-cropped tight to wordmark bbox for visual punch); Wave 3 backend stretch (T9) wired Songlink fallback for YTM URLs.
+- **DEFERRED — YTM Songlink ingest broken in two ways:**
+  - **Track URL:** backend returns "no Spotify match found" for a YTM track URL that the user confirmed has a working Spotify match via manual Songlink lookup. Hypothesis: URL encoding / query-param mismatch between backend's call and what Songlink expects.
+  - **Playlist URL:** "Songlink API 400". Hypothesis: Songlink (`song.link` / `odesli.co`) may not support playlist lookups at all — it's typically song/album scoped. If true, the YTM playlist path needs a different strategy (YouTube Data API to expand the playlist into individual videos, then resolve each via Songlink).
+  - **Reproduction URLs pending.** User was on mobile when bug surfaced; agreed to skip debug for now. When ready, paste the exact failing YTM track + playlist URLs and dispatch backend to debug — likely a one-pull fix once reproducible.
+- **Out-of-scope items now formally tracked** (not blockers for sprint-10 close; queued for future sprints):
+  - YTM Songlink track/playlist debug (above)
+  - Spotify-only v1 of the extension is the canonical install path until YTM lands — README should call this out
+  - Firefox port (v2) — manifest-V3 differences from Chrome
+  - Chrome Web Store packaging — manual unpacked install is the v1 distribution
+- **Next:** sprint-11 — TBD. User mentioned more features on the way. Awaiting direction.

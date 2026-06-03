@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-11-export-import-and-rating-polish
 created: 2026-05-20T00:00:00Z
 updated: 2026-05-20T00:00:00Z
-status: active
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-11-export-import-and-rating-polish)
@@ -28,7 +28,7 @@ Two threads:
 
 ### Wave 1 — parallel (all four tasks)
 
-- [ ] {agent: backend, id: cli-import} Task A: `POST /api/digest/:roundId/import-export-zip` — host-side CLI trigger + import pipeline
+- [x] {agent: backend, id: cli-import} Task A: `POST /api/digest/:roundId/import-export-zip` — host-side CLI trigger + import pipeline
   - **Acceptance:**
     - New endpoint. Bearer-auth NOT required (consumed by the digest prep UI which is already same-origin). Validates round exists; 404 if not.
     - Triggers `cli-web-musicleague export` (or whatever the existing CLI command is — confirm by reading the CLI's help output or the existing `ml-auth-trigger.mjs` pattern) host-side. **Reuse the bridge pattern** from `scripts/ml-auth-trigger.mjs` (HTTP from container → host daemon → spawn CLI in user-graphical env). This means a NEW endpoint on the existing host trigger daemon, OR a separate small daemon — your call; document the choice.
@@ -39,7 +39,7 @@ Two threads:
     - If CLI auth has expired (the same auth state the existing `/api/ml-auth/login` flow manages), return `{ ok: false, reason: 'ml-auth required', stage: 'auth' }` so frontend can prompt the user to re-auth first instead of silently failing.
   - **Stay clear of:** `ui/src/routes/digest/**` (frontend territory), `ui/src/routes/api/digest/**` other than the new endpoint, `ui/src/routes/settings/**`.
 
-- [ ] {agent: frontend, id: import-button, depends: cli-import} Task B: Digest prep screen — "Import from CLI" action button
+- [x] {agent: frontend, id: import-button, depends: cli-import} Task B: Digest prep screen — "Import from CLI" action button
   - **Acceptance:**
     - On `/digest/[roundId]` in the prepare stage, add an "Import from CLI" button next to the existing "Generate draft" button (or below it, separated — your call for placement; match the existing button styling).
     - **Visibility rule:** button shows when at least one of the export.zip-resolvable checks is failing (submissions / votes / vote comments — match against backend's documented scope). If all those checks pass, button hides.
@@ -48,7 +48,7 @@ Two threads:
     - `npm run check` passes.
   - **Stay clear of:** any non-digest frontend files.
 
-- [ ] {agent: frontend, id: rating-unify, parallel-with: B,D} Task C: Unify rating component + realtime update fix
+- [x] {agent: frontend, id: rating-unify, parallel-with: B,D} Task C: Unify rating component + realtime update fix
   - **Acceptance:**
     - **Find the rating UI components.** Two locations:
       - **Shortlist screen** rating bars (multi-color, 4 criteria — current good UI)
@@ -58,7 +58,7 @@ Two threads:
     - **Fix the realtime-update bug.** Today, clicking a rating bar in the shortlist updates the DB but the song card's displayed ratings don't reflect the change until the user switches songs or presses Esc. Root cause is likely a `$state` / store / reactivity gap — find the source of truth for the displayed ratings on the song card and ensure click handlers update it immediately (not just after server roundtrip / invalidate). After this fix, BOTH shortlist AND research tab should show the new ratings immediately on click.
     - `npm run check` passes.
 
-- [ ] {agent: extension, id: research-sort-fix, parallel-with: B,C} Task D: Research tab — manual sort button + optional auto-after-all-4 toggle
+- [x] {agent: extension, id: research-sort-fix, parallel-with: B,C} Task D: Research tab — manual sort button + optional auto-after-all-4 toggle
   - **Acceptance:** (Note — pane 1.4 was the extension agent for sprint-10, but is being assigned this frontend task since the extension is paused. It's a capable Claude instance in the MLB repo; scope is contained.)
     - On the round-detail research tab, the songs list is currently auto-sorted by average rating across the 4 criteria, re-sorting on every rating click. That causes the song the user is currently rating to jump position mid-flow.
     - **Replace the auto-sort with:**

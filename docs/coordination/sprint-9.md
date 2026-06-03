@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-9-digest-preview
 created: 2026-05-19T00:00:00Z
-updated: 2026-05-19T00:00:00Z
-status: active
+updated: 2026-05-20T00:00:00Z
+status: complete
 ---
 
 # music-league-bot — coordination doc (sprint-9-digest-preview)
@@ -547,3 +547,14 @@ Variants A and B are parked stash — keep but don't wire.
 - **What I deliberately did NOT smoke live** (and why): forcing a fresh `POST /api/digest/14/finalize` would burn another LLM call (≈$0.10–0.20 + ~30 s) just to re-verify the `relContextFromFinalize` $state path — which is already exercised in code by the same handler that's been tested twice today. Backend's T12 smoke matrix already verified that re-finalize sets `relContext: { previous: <prior text>, proposed: <new LLM output> }` with the right snapshot semantics; the frontend $state path is a simple JSON-field passthrough. Not worth the LLM spend.
 - **Modal click flow (verified by code inspection, not live keyboard):** can't drive a real browser click headlessly. Verified by reading the component: `<svelte:window onkeydown>` calls `onClose` on Escape (unless `patching`), scrim click + Enter/Space call `onClose` (unless `patching`), explicit Close + Revert + Accept buttons all wired, `confirm()` guard before either PATCH, `patching` flag flips Close/buttons to disabled during the request. Same UX guardrails as `RegenModal` plus the explicit destructive-action confirm.
 - **Status:** Sprint-9 frontend tasks (T4 css, T5 route-scaffold, T6 section-components, T9 section-chrome, T10 regen-modal, T13 finalize-flow + diff modal, T14 round-selector + nav) all done and shipped to local prod (`bot-ui` Up on port 3002, mlb.mattmariani.com via Cloudflare). Awaiting any orc follow-on direction.
+
+### 2026-05-20 — orc — sprint-9 closed
+
+- All 14 task items shipped to prod. Sprint status flipped `active → complete`.
+- **What landed:** digest preview pipeline at `/digest/[roundId]` with prepare → generate → refine → finalize stages; 4 new DB tables (`digest_drafts`, `digest_sections`, `digest_regenerations`, `relationship_contexts`); 11 API endpoints under `/api/digest/**` and `/api/leagues/:leagueId/rel-context`; OpenRouter-driven LLM service for whole-draft + per-section regen; Puppeteer PNG export at 800px; rel-context auto-update on finalize with GET/PATCH endpoints; round selector + sidebar nav; rel-context diff modal with Accept/Revert PATCH affordance.
+- **Bugs caught + fixed mid-sprint:** em-dash in `X-Title` header tripping `fetch()` ByteString validation; code-fenced JSON from LLM tripping `JSON.parse`; dev metadata strip leaking into PNG exports; consensus section rendering raw JSON objects.
+- **Side-track items (not blockers, deferred):**
+  - `add-group.ts` event-listener bug — listens on `message`, missing self-sent messages on `message_create`. Trivial one-line fix; not a sprint-9 issue, queued for later.
+  - Consensus section schema-pinning in `llm.ts` — frontend's dual-shape fallback works fine; pinning is nice-to-have. Queued.
+  - `data/exports/` PNGs accumulate; no cleanup policy. Future hygiene item.
+- **Next:** sprint-10 (browser extension for song ingest) — coord doc at `docs/coordination/sprint-10.md`. Wave 1 backend + frontend dispatches imminent.

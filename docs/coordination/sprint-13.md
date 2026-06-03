@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-13-ytm-play-button
 created: 2026-06-02T01:10:22Z
-updated: 2026-06-02T20:45:55Z
-status: active
+updated: 2026-06-02T23:05:57Z
+status: paused
 ---
 
 # music-league-bot — coordination doc (sprint-13-ytm-play-button)
