@@ -10,6 +10,9 @@
   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import ChatMoments from '$lib/digest/ChatMoments.svelte';
+  import StatStrip from '$lib/digest/StatStrip.svelte';
+  import TastemakerLeaderboard from '$lib/digest/TastemakerLeaderboard.svelte';
+  import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
   import type { Reconcile, StandingsResult } from '$lib/db/standings.js';
@@ -426,13 +429,19 @@
   // -------- Variant system (sprint-14, +standings sprint-15) ----------
   // Visual component registry — frontend wires viz's visual components here.
   // Until a kind is registered, its visual slot falls back to VariantPlaceholder.
-  //   podium    → AlbumPodium      (LLM section, visual variant)
-  //   chat      → ChatMoments      (restructured { summary, moments[] }; web = expandable, PDF = anchor-linked)
-  //   standings → StandingsChart   (synthetic data-driven section, see below)
+  //   podium         → AlbumPodium          (LLM section, visual variant)
+  //   chat           → ChatMoments          (restructured { summary, moments[] }; web = expandable, PDF = anchor-linked)
+  //   standings      → StandingsChart       (synthetic data-driven section, see below)
+  //   stats          → StatStrip            (sprint-17 synthetic data-driven)
+  //   discoverability→ TastemakerLeaderboard(sprint-17 synthetic data-driven)
+  //   nextRound      → NextRoundPreview     (sprint-17 synthetic data-driven)
   const VISUAL_COMPONENTS: VisualRegistry = {
     podium: AlbumPodium,
     chat: ChatMoments,
     standings: StandingsChart,
+    stats: StatStrip,
+    discoverability: TastemakerLeaderboard,
+    nextRound: NextRoundPreview,
   };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
@@ -449,6 +458,22 @@
   const showStandings = $derived(
     !standingsExcluded && !!standingsData && (standingsData.standings?.length ?? 0) > 0,
   );
+
+  // --- sprint-17 data-driven sections (each reads data via visualData; the
+  //     component self-suppresses, but we also gate the wrap so no empty
+  //     eyebrow/section renders when the payload is empty/null). ---
+  const inDigest = $derived(data.stage === 'refine' || data.stage === 'finalize');
+  const statsData = $derived(inDigest ? data.stats : null);
+  const showStats = $derived(
+    !!statsData && Object.values(statsData).some((v) => typeof v === 'number'),
+  );
+  const discoverabilityData = $derived(inDigest ? data.discoverability : null);
+  const showDiscoverability = $derived((discoverabilityData?.length ?? 0) > 0);
+  const nextRoundData = $derived(inDigest ? data.nextRound : null);
+  const showNextRound = $derived(!!nextRoundData && (!!nextRoundData.theme || !!nextRoundData.deadline));
+  const StatSlot = $derived(VISUAL_COMPONENTS.stats);
+  const DiscoverabilitySlot = $derived(VISUAL_COMPONENTS.discoverability);
+  const NextRoundSlot = $derived(VISUAL_COMPONENTS.nextRound);
 
   // --- Reconciliation modal (fires on a gen/regen mismatch) + edit table ---
   let reconcileData = $state<Reconcile | null>(null);
@@ -809,6 +834,17 @@
       </p>
     </header>
 
+    <!-- By-the-numbers stat strip (sprint-17) — synthetic data-driven section,
+         near the top. Reads data.stats; self-suppresses when empty. -->
+    {#if showStats && StatSlot}
+      <div class="dg-section-wrap" data-section-kind="stats">
+        <section class="dg-section">
+          <p class="dg-section-eyebrow">By the numbers</p>
+          <StatSlot kind="stats" content={{}} data={statsData} variant="visual" />
+        </section>
+      </div>
+    {/if}
+
     {#each renderSections as section (section.id)}
       <DigestSection
         kind={kindOrFallback(section.kind)}
@@ -845,6 +881,27 @@
             >✎ edit figures</button>
           </div>
           <StandingsSlot kind="standings" content={{}} data={standingsData} variant="visual" />
+        </section>
+      </div>
+    {/if}
+
+    <!-- Discoverability "tastemaker leaderboard" (sprint-17) — after the
+         analytical sections. Reads data.discoverability; self-suppresses empty. -->
+    {#if showDiscoverability && DiscoverabilitySlot}
+      <div class="dg-section-wrap" data-section-kind="discoverability">
+        <section class="dg-section">
+          <p class="dg-section-eyebrow">Tastemaker leaderboard</p>
+          <DiscoverabilitySlot kind="discoverability" content={{}} data={discoverabilityData} variant="visual" />
+        </section>
+      </div>
+    {/if}
+
+    <!-- Next-round preview (sprint-17) — last. Reads data.nextRound; the
+         component renders nothing when null, and we gate the wrap too. -->
+    {#if showNextRound && NextRoundSlot}
+      <div class="dg-section-wrap" data-section-kind="nextRound">
+        <section class="dg-section">
+          <NextRoundSlot kind="nextRound" content={{}} data={nextRoundData} variant="visual" />
         </section>
       </div>
     {/if}

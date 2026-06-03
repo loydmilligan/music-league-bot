@@ -68,6 +68,28 @@ export type StandingsPayload = {
   reconcile: { status: 'match' | 'mismatch'; diffs: unknown[] };
 };
 
+// sprint-17 data-driven section payloads (each fetched server-side, mirroring
+// standings; passed to its section component as visualData). Shapes loose —
+// the components read them defensively.
+export type DigestStats = {
+  totalVotes?: number;
+  submitters?: number;
+  blowoutMargin?: number;
+  closestRace?: number;
+  uniqueArtists?: number;
+};
+export type DiscoverabilityRow = {
+  name: string;
+  obscurityScore: number;
+  submissionCount: number;
+  avgPopularity: number;
+};
+export type NextRoundInfo = {
+  theme?: string | null;
+  deadline?: string | null;
+  submissionsSoFar?: number | null;
+};
+
 type DigestPageBase = {
   roundId: number;
   roundsIndex: RoundIndexEntry[];
@@ -82,6 +104,9 @@ export type DigestPageData =
       draft: DigestDraftRow;
       sections: SectionWithContent[];
       standings: StandingsPayload | null;
+      stats: DigestStats | null;
+      discoverability: DiscoverabilityRow[] | null;
+      nextRound: NextRoundInfo | null;
     });
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
@@ -131,8 +156,16 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
         | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    const standings = await fetchStandings(fetch, roundId);
-    return { roundId, roundsIndex, currentRound, relContext, stage, draft, sections, standings } satisfies DigestPageData;
+    const [standings, stats, discoverability, nextRound] = await Promise.all([
+      fetchStandings(fetch, roundId),
+      fetchJson<{ stats: DigestStats }>(fetch, `/api/digest/${roundId}/stats`).then((b) => b?.stats ?? null),
+      fetchJson<{ discoverability: DiscoverabilityRow[] | null }>(fetch, `/api/digest/${roundId}/discoverability`).then((b) => b?.discoverability ?? null),
+      fetchJson<{ nextRound: NextRoundInfo | null }>(fetch, `/api/digest/${roundId}/next-round`).then((b) => b?.nextRound ?? null),
+    ]);
+    return {
+      roundId, roundsIndex, currentRound, relContext, stage, draft, sections,
+      standings, stats, discoverability, nextRound,
+    } satisfies DigestPageData;
   }
 
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
@@ -176,6 +209,18 @@ async function fetchStandings(
     const body = (await res.json()) as StandingsPayload;
     if (!body || !Array.isArray(body.standings)) return null;
     return body;
+  } catch {
+    return null;
+  }
+}
+
+// Generic failure-isolated GET → parsed JSON (null on any error). Used for the
+// sprint-17 data-driven section payloads (stats / discoverability / next-round).
+async function fetchJson<T>(fetcher: typeof fetch, url: string): Promise<T | null> {
+  try {
+    const res = await fetcher(url);
+    if (!res.ok) return null;
+    return (await res.json()) as T;
   } catch {
     return null;
   }
