@@ -51,6 +51,23 @@ export type RelContextSnapshot = {
   lastRoundId: number | null;
 };
 
+// Standings payload (GET /api/digest/:roundId/standings). Passed straight to
+// StandingsChart as its visualData; we keep the shape loose here.
+export type StandingsRow = {
+  competitorId?: number;
+  name: string;
+  rank: number;
+  prevRank: number | null;
+  priorTotal: number;
+  roundPoints: number;
+  currentTotal: number;
+};
+export type StandingsPayload = {
+  seasonId: number;
+  standings: StandingsRow[];
+  reconcile: { status: 'match' | 'mismatch'; diffs: unknown[] };
+};
+
 type DigestPageBase = {
   roundId: number;
   roundsIndex: RoundIndexEntry[];
@@ -60,7 +77,12 @@ type DigestPageBase = {
 
 export type DigestPageData =
   | (DigestPageBase & { stage: 'prepare'; checks: PrepareCheck[] })
-  | (DigestPageBase & { stage: 'refine' | 'finalize'; draft: DigestDraftRow; sections: SectionWithContent[] });
+  | (DigestPageBase & {
+      stage: 'refine' | 'finalize';
+      draft: DigestDraftRow;
+      sections: SectionWithContent[];
+      standings: StandingsPayload | null;
+    });
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
   const roundId = Number(params.roundId);
@@ -109,7 +131,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
         | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    return { roundId, roundsIndex, currentRound, relContext, stage, draft, sections } satisfies DigestPageData;
+    const standings = await fetchStandings(fetch, roundId);
+    return { roundId, roundsIndex, currentRound, relContext, stage, draft, sections, standings } satisfies DigestPageData;
   }
 
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
@@ -135,6 +158,24 @@ async function fetchRelContext(
       previousUpdatedAt: body.previousUpdatedAt ?? null,
       lastRoundId: body.lastRoundId ?? null,
     };
+  } catch {
+    return null;
+  }
+}
+
+// Standings payload for the data-driven standings section. Lazily computed +
+// persisted server-side on first access. Failure-isolated: a round without vote
+// data (or any error) yields null and the section simply doesn't render.
+async function fetchStandings(
+  fetcher: typeof fetch,
+  roundId: number,
+): Promise<StandingsPayload | null> {
+  try {
+    const res = await fetcher(`/api/digest/${roundId}/standings`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as StandingsPayload;
+    if (!body || !Array.isArray(body.standings)) return null;
+    return body;
   } catch {
     return null;
   }

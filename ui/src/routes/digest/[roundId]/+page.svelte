@@ -8,6 +8,7 @@
   import { SECTION_KINDS, type SectionKind } from '$lib/digest/llm.js';
   import { coerceVariant, type SectionVariant, type VisualRegistry } from '$lib/digest/variants.js';
   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
+  import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import type { PageData } from './$types.js';
@@ -388,15 +389,20 @@
   let lastInstructions = $state<Record<string, string>>({});
   let lastChips = $state<Record<string, string[]>>({});
 
-  // -------- Variant system (sprint-14) ----------
-  // Visual component registry — frontend wires viz's visual components here as
-  // they land. Until a kind is registered, its visual slot falls back to
-  // VariantPlaceholder (see DigestSection). To register, one line each:
-  //   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
-  //   const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium };
-  // StandingsChart (viz) plugs in here too once its host section + visualData
-  // (Standings payload) are wired.
-  const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium };
+  // -------- Variant system (sprint-14, +standings sprint-15) ----------
+  // Visual component registry — frontend wires viz's visual components here.
+  // Until a kind is registered, its visual slot falls back to VariantPlaceholder.
+  //   podium    → AlbumPodium      (LLM section, visual variant)
+  //   standings → StandingsChart   (synthetic data-driven section, see below)
+  const VISUAL_COMPONENTS: VisualRegistry = { podium: AlbumPodium, standings: StandingsChart };
+
+  // The standings chart's data slot (StandingsChart reads `data`, not content).
+  // null when the round has no vote data / fetch failed → section self-hides.
+  const standingsData = $derived(
+    data.stage === 'refine' || data.stage === 'finalize' ? data.standings : null,
+  );
+  const StandingsSlot = $derived(VISUAL_COMPONENTS.standings);
+  const showStandings = $derived(!!standingsData && (standingsData.standings?.length ?? 0) > 0);
 
   // Per-section variant override set by the in-page variant switcher. Keyed by
   // section id; falls back to the persisted section.variant (set by the modal /
@@ -744,6 +750,20 @@
         onKebabAction={(action) => kebabAction(section.id, action)}
       />
     {/each}
+
+    <!-- Synthetic, data-driven standings section (sprint-15 standings-wire).
+         NOT an LLM/DB section — it reads the Standings payload (data.standings)
+         and mounts viz's StandingsChart via the registry. Lives inside .dg-export
+         so it renders in the web view AND the PDF/PNG export; carries
+         data-section-kind="standings" so png-per-section picks it up. -->
+    {#if showStandings && StandingsSlot}
+      <div class="dg-section-wrap" data-section-kind="standings">
+        <section class="dg-section">
+          <p class="dg-section-eyebrow">Season standings</p>
+          <StandingsSlot kind="standings" content={{}} data={standingsData} variant="visual" />
+        </section>
+      </div>
+    {/if}
 
     <footer class="dgC-foot">
       <div>m/l · liner notes · r-{data.roundId}</div>
