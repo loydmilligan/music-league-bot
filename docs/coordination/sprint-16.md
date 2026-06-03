@@ -40,7 +40,7 @@ status: active
 - [x] {agent: backend, id: diagnose-missing-player} Diagnose why a known player ("Mom" / Lori) is absent from the Hip Jammers Season 3 standings for rounds 1 & 2 (she should be top of round 1 with 19 pts) while she **does** appear in round-109 (= S3 round 3, the "education" round). Trace the standings computation from its source data through to the `GET /api/digest/[roundId]/standings` payload. Map where players are canonically stored across the system: league membership, season/competitor roster, per-round submissions/results, and any identity / de-anonymization mapping (the sprint-12 de-anon import fix is a lead). Pin the root cause to one of: data gap (never imported for those rounds), identity mismatch (name-vs-id, de-anon alias), or a join/filter in the standings query that drops players with no submission in a given round. **Read-only diagnosis — no schema or data mutation in this task.**
   - **Acceptance:** an Activity Log entry names the exact root cause with `file:line` for the standings query/computation and the table(s) where players are canonically stored; states whether other players/leagues/rounds are affected by the same cause; and recommends the fix path (code fix vs. data correction vs. add-player). No code or data changed.
 
-- [ ] {agent: backend, id: fix-missing-player, depends: diagnose-missing-player} Apply the fix identified by `diagnose-missing-player` so the player appears in the Hip Jammers Season 3 standings for rounds 1 & 2 with correct points (round 1: 19 pts, top of standings), and so the standings computation correctly includes eligible players going forward (if the root cause is query/join logic, fix the computation; if it is a data/identity gap, correct the data via the canonical path). Do not hardcode a single player — fix the underlying cause.
+- [x] {agent: backend, id: fix-missing-player, depends: diagnose-missing-player} Apply the fix identified by `diagnose-missing-player` so the player appears in the Hip Jammers Season 3 standings for rounds 1 & 2 with correct points (round 1: 19 pts, top of standings), and so the standings computation correctly includes eligible players going forward (if the root cause is query/join logic, fix the computation; if it is a data/identity gap, correct the data via the canonical path). Do not hardcode a single player — fix the underlying cause.
   - **Acceptance:** on prod (`192.168.4.217:3002`), the standings for Hip Jammers S3 round 1 show the player at the top with 19 pts and round 2 includes her; `GET /api/digest/[roundId]/standings` for the relevant round ids returns her row with correct points. `npm run check` passes; deployed via `docker compose build --no-cache bot-ui && up -d --force-recreate bot-ui`; root cause + fix + verification recorded in the Activity Log.
 
 - [ ] {agent: backend, id: add-player-endpoint, depends: diagnose-missing-player} Extend the existing standings mutation endpoint `POST /api/digest/[roundId]/standings` (today `action: 'adopt' | 'edit'`) with a new `action: 'add-player'` that adds a player to the round's standings with a name + points **and** registers that player into the canonical season + league roster identified in `diagnose-missing-player` — so the player persists across rounds and future digests, not just this one round's standings. Reuse the existing standings persistence + reconciliation path (`action:'edit'` writes gospel); do not add a parallel route or a separate add-player mechanism.
@@ -70,6 +70,8 @@ Each change deploys to prod per `CLAUDE.md`: `docker compose build --no-cache bo
 - **D2** — Add-player extends the existing `POST /api/digest/[roundId]/standings` endpoint as `action: 'add-player'` — same mechanism as `adopt`/`edit`; no parallel route.
 - **D3** — Adding a player in a round writes through to the canonical season + league roster, not just that round's standings, so the player persists across rounds and future digests.
 - **D4** — Roster split: backend owns the endpoint + data model + computation; frontend owns the `EditableStandingsTable` UI. viz not staffed this sprint.
+- **D5** — **Points: accept 17 as truth.** Source export confirms Lori's "Goodbye Yellow Brick Road" scored 17 (8 clean votes); the user's "19" was a misrecollection, no votes were dropped. She still tops Hip Jammers S3 r1 at 17.
+- **D6** — **Fix = systemic parser fix + reimport-all (approved), not a one-off insert.** Root cause was the importer's CSV parser mangling quoted fields with embedded newlines; fixed `zipParser.ts` (RFC-4180) and re-imported every league/season + cleaned parser-spawned garbage rounds + re-adopted standings. User approved touching prod DB data across leagues.
 
 ## Blockers
 
@@ -134,3 +136,20 @@ Each change deploys to prod per `CLAUDE.md`: `docker compose build --no-cache bo
 2. `add-player-endpoint` is unaffected by this finding (still: upsert `competitors` + create an `ml_submissions` row in the round + write gospel via `applyEdits`).
 
 **Read-only — nothing imported or changed.** Awaiting decision: (a) confirm accept **17** as truth (recommended — it's the source value); (b) approve the parser-fix-and-reimport path over a one-off insert.
+
+### 2026-06-03 — backend — fix-missing-player DONE: parser fix + reimport-all + cleanup + re-adopt (deployed, prod-verified)
+
+Per decisions D5 (accept 17) + D6 (systemic parser fix + reimport-all).
+
+- **Code fix:** `ui/src/lib/import/zipParser.ts` — replaced the per-physical-line `split('\n')` CSV reader with `parseCsvRows()`, a single quote-aware state machine over the whole text (handles embedded newlines + commas inside quotes, `""` escaped quotes, CRLF). +5 unit tests (`zipParser.test.ts`); `npm run check` 0 errors, full suite **118 passing**.
+- **Reimport (all leagues/seasons):** `runStartupImport` runs on every boot and the upserts are idempotent (`ON CONFLICT` on canonical keys — verified before re-running), so the `build --no-cache && up -d --force-recreate` redeploy reimported everything with the fixed parser. `import_log` confirms success for all 8 league-seasons.
+- **Garbage cleanup:** deleted **57** parser-spawned rounds (mangled `ml_round_id` like "Theme provided by …", "Rules:", "(PRACTICE ROUND)") — all had **0** child rows across every round-referencing table (ml_submissions/votes/research/h2h/shortlist/chat/digest_drafts/season_standings), so the delete was FK-safe. 0 garbage rounds remain.
+- **Re-adopt:** re-adopted `season_standings` for every round that had stored gospel (14, 95, 102, 103, 104, 112) via `POST …/standings {action:'adopt'}` → all `match`; other rounds recompute fresh on first GET.
+- **Prod verification (`192.168.4.217:3002`):**
+  - **r102 (Hip Jammers S3 round 1): `lorimariani` is rank 1 with 17 pts** (next: missmara 13). ✅
+  - r103 (round 2): Lori rank 2, `priorTotal 17` (her r1 now carries), round 12, total 29. ✅
+  - r104 (round 3): Lori rank 1, `priorTotal 29` (17+12), round 15, total 44. ✅
+  - **Orphan votes (votes with no matching submission) across ALL rounds = 0** (was 7 rounds) → the other leagues' orphans (rounds 35/58/66/71/76/110) all resolved by the same fix. ✅
+  - Garbage rounds remaining = 0. ✅
+- **Scope of correction:** systemic — every league/season was reparsed; all previously-dropped multi-line-comment submissions are now imported, and all parser-artifact rounds removed. No per-player hardcoding.
+- **Note for `add-player-endpoint` (still pending, unaffected):** canonical player storage remains the global `competitors` table + implicit membership via `ml_submissions`/`votes`; add-player must upsert `competitors` + create an `ml_submissions` row in the round + write gospel via `applyEdits`.
