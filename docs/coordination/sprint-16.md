@@ -106,3 +106,31 @@ Each change deploys to prod per `CLAUDE.md`: `docker compose build --no-cache bo
 3. **`add-player-endpoint` implication:** since there's no roster table, "register a player into the season + league" must = **upsert a `competitors` row** (find-by-name or create with a generated `ml_competitor_id`) **+ create an `ml_submissions` row in the round** (that's what makes them a season member and what standings count) **+ write the gospel `season_standings` via the existing `applyEdits` path**. There is no separate membership write — the submission row *is* the membership.
 
 **No code or data changed.** Stopping here per the diagnose-before-fix gate — awaiting decision on (a) accept 17 vs pursue 19, and (b) one-off Lori correction vs systemic orphan-backfill across the 7 affected rounds.
+
+### 2026-06-03 — backend — diagnose-missing-player FOLLOW-UP: verified vs SOURCE EXPORT → it's an IMPORTER PARSER BUG (read-only)
+
+**Correction to my first entry:** the submission is **NOT missing from the source** — it's in the export and was **lost on import** by a CSV-parser bug. Root cause moves from "data gap" to **code bug in the importer**.
+
+**Source export located:** `data/hip-jammers/season-3/export.zip` (importer reads `data/<league>/season-<n>/export.zip` — `ui/src/lib/import/startupScan.ts:27`; parsed by `ui/src/lib/import/zipParser.ts`). Zip = `competitors.csv, rounds.csv, submissions.csv, votes.csv`.
+
+**1. Lori's submission IS in the export.** `competitors.csv` has her (`lorimariani`, ID `a12befea5b914fbf84f0330d4d151de5`). `submissions.csv` has her round-1 song: **"Goodbye Yellow Brick Road - Remastered 2014" — Elton John**, `spotify:track:4IRHwIZHzlHT1FQpRa5RdE` (Spotify-confirmed). It **is** the orphan from my first entry. ✅
+
+**2. It was dropped on IMPORT, not absent from source — embedded-newline CSV bug.** Her submission's quoted `Comment` contains literal newlines (raw submissions.csv lines 4–7: `…,Elton John,a12befea…,` then `""` / `"That experience started my love for concerts.  "` / `""`). `zipParser.ts` `csv()` does `text.trim().split('\n')` and tracks quote-state **per physical line** (`ui/src/lib/import/zipParser.ts:11`), so a quoted field spanning newlines **fragments the row**: trailing columns shift and her **`Round ID` parses as empty `''`**. With no round, the importer can't tie the submission to round 102 → it's invisible to the standings spine (`ml_submissions`), so Lori drops out of r1 standings and her song's votes (which parsed cleanly, carrying the correct Round ID) show up as the 17-pt orphan. The **votes** correctly carry `Round ID 00f5c8ab…` (round 102); the **submission** lost it. Same bug = the garbage "Theme provided by Matt,https://…" rounds (DB rounds 129/131/132) + blank-named rounds: those are mis-parsed fragments of multiline `Description` fields in rounds.csv.
+
+**3. Points: the export is authoritative at 17, NOT 19 — no votes were dropped.** The 8 votes on GYBR in votes.csv all have **empty comments** (no multiline breakage), each carries Round ID 00f5c8ab, and they sum to exactly **17** (3+3+2+2+2+2+2+1). The import preserved all 8 (DB also = 17). **The 17-vs-19 gap is not dropped vote data — the source says 17.** Lori's "19" appears to be a misrecollection; at 17 she still **tops round 1** (next is missmara, 13). No additional vote rows for this song exist in the export.
+
+**Scope — systemic across every zip (parser bug, not one league):** submissions with an empty Round ID + garbage round rows per export:
+| zip | valid subs | subs w/ empty RoundID | garbage round rows |
+|---|---|---|---|
+| hip-jammers/s3 | 27 | **1** (Lori GYBR) | 3 |
+| hip-jammers/s1 | 77 | 1 | 0 |
+| hip-jammers/s2 | 97 | **4** | 16 |
+| fam-jam/s3 | 116 | 1 | 12 |
+| second-best/s1 | 51 | 1 | 4 |
+(Undercount — the multiline break sometimes only shifts columns without emptying Round ID; the 7-round orphan-vote pattern from my first entry is the same bug seen from the votes side.)
+
+**Revised recommended fix (for decision — NOT applied):**
+1. **`fix-missing-player` becomes a CODE fix, not a manual insert:** make `zipParser.ts` an RFC-4180-correct parser (handle quoted fields with embedded newlines/commas — parse the whole text with a quote-aware state machine across lines, not `split('\n')` per line). Then **re-import** the affected leagues/seasons via the canonical importer (verify re-import idempotency — `INSERT OR IGNORE`/upserts — and clean up the already-imported garbage rounds 129/131/132 etc.), and re-`adopt` `season_standings`. This fixes Lori **and** all other orphaned submissions **and** the garbage/blank rounds in one systemic pass — no per-player hardcoding (satisfies D1).
+2. `add-player-endpoint` is unaffected by this finding (still: upsert `competitors` + create an `ml_submissions` row in the round + write gospel via `applyEdits`).
+
+**Read-only — nothing imported or changed.** Awaiting decision: (a) confirm accept **17** as truth (recommended — it's the source value); (b) approve the parser-fix-and-reimport path over a one-off insert.
