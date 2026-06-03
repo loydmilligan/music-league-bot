@@ -198,3 +198,52 @@ Wired all three new sections via the **sprint-15 standings mechanism** (syntheti
 - Re-backfill affected songs after whichever lookup change lands (the `fetched_at` cache makes a forced refresh easy).
 
 **Read-only — no code or data changed.** Reporting for the fix decision.
+
+### 2026-06-03 — backend — discoverability-fix: normalized search-based Last.fm lookup + S3 re-backfill (deployed; CLEAN data for user review)
+
+**Lookup fixed** (`src/api/lastfm.ts`): `getLastfmPopularity()` now (1) `normalizeTrackTitle()` strips `- Remaster(ed)/Mix/Mono/Stereo/Live/Originally Performed by…` dash + qualifier-parenthetical suffixes, then (2) uses `track.search` and takes the **highest-listener result for the artist**, then (3) `getInfo` on that canonical match for authoritative listeners+playcount. `scripts/backfill-popularity.ts` gained `--force` (re-fetch cached, upsert). **Proxy scale left as-is (log-norm)** per the brief — user reviews per-song numbers first. **Force re-backfilled Hip Jammers S3 (season 6): 27/27 refreshed.** `npm run check` 0 errors (ui) + root `tsc` clean; deployed.
+
+**CLEAN per-player → per-song (obsc = 100 − proxy):**
+
+| player | r | artist | title | listeners | playcount | proxy | obsc | sp |
+|---|---|---|---|--:|--:|--:|--:|--:|
+| Mashew | 102 | The Vandals | I Have a Date | 12,182 | 55,342 | 62 | **38** | 36 |
+| Mashew | 103 | Jawbreaker | Want | 78,935 | 483,042 | 75 | 25 | 40 |
+| Mashew | 104 | Beastie Boys | Fight For Your Right | 826,641 | 4,294,801 | 88 | 12 | 73 |
+| mmariani13 | 102 | Fleetwood Mac | Second Hand News | 487,071 | 2,689,325 | 85 | 15 | 56 |
+| mmariani13 | 103 | LL COOL J | I Need Love | 123,904 | 407,331 | 75 | 25 | 52 |
+| mmariani13 | 104 | Alanis Morissette | You Learn | 451,801 | 2,453,084 | 85 | 15 | 68 |
+| gregamariani | 102 | Nelly | Air Force Ones | 158,053 | 592,618 | 77 | 23 | 66 |
+| gregamariani | 103 | Steve Miller Band | The Joker | 935,059 | 5,732,481 | 89 | 11 | 79 |
+| gregamariani | 104 | Wheatus | Teenage Dirtbag | 1,651,254 | 14,982,227 | 94 | 6 | 87 |
+| Ronm | 102 | The Rolling Stones | (I Can't Get No) Satisfaction | 663,151 | 3,328,006 | 87 | 13 | 75 |
+| Ronm | 103 | Al Green | Let's Stay Together | 1,408,859 | 9,210,671 | 92 | 8 | 79 |
+| Ronm | 104 | Supertramp | The Logical Song | 588,961 | 3,254,190 | 86 | 14 | 55 |
+| margs | 102 | Darius Rucker | Wagon Wheel | 368,184 | 3,154,374 | 85 | 15 | 84 |
+| margs | 103 | Stevie Wonder | Isn't She Lovely | 921,122 | 5,036,086 | 89 | 11 | 75 |
+| margs | 104 | Britney Spears | ...Baby One More Time | 2,094,421 | 17,282,751 | 95 | 5 | 87 |
+| Sasha Mariana | 102 | George Michael | Careless Whisper | 1,724,952 | 14,743,216 | 94 | 6 | 79 |
+| Sasha Mariana | 103 | The Beatles | In My Life | 1,002,469 | 9,124,556 | 91 | 9 | 80 |
+| Sasha Mariana | 104 | The Police | Don't Stand So Close To Me | 826,212 | 4,227,540 | 88 | 12 | 73 |
+| lorimariani | 102 | Elton John | Goodbye Yellow Brick Road | 907,900 | 8,330,070 | 91 | 9 | 78 |
+| lorimariani | 103 | Neil Young | Harvest Moon | 947,387 | 7,836,083 | 91 | 9 | 79 |
+| lorimariani | 104 | Pearl Jam | Jeremy | 1,350,885 | 10,420,203 | 93 | 7 | 76 |
+| missmara | 102 | Bonnie Tyler | Total Eclipse of the Heart | 1,338,995 | 9,130,661 | 92 | 8 | 84 |
+| missmara | 103 | Arctic Monkeys | Do I Wanna Know? | 2,914,938 | 45,572,769 | 100 | 0 | 90 |
+| missmara | 104 | Wet Leg | Chaise Longue | 395,556 | 3,499,338 | 86 | 14 | 66 |
+| Kristin | 102 | The All-American Rejects | Move Along | 1,138,294 | 8,814,971 | 92 | 8 | 76 |
+| Kristin | 103 | Paramore | Still into You | 2,048,779 | 28,282,281 | 97 | 3 | 67 |
+| Kristin | 104 | Pink Floyd | Another Brick in the Wall, Pt. 2 | 1,203,375 | 8,676,834 | 92 | 8 | 85 |
+
+**CLEAN leaderboard (mean obscurity, most-obscure first):** Mashew 25 · mmariani13 **18** · gregamariani 13 · Ronm **12** · margs 10 · Sasha 9 · lorimariani 8 · missmara 7 · Kristin 6.
+
+**What changed vs the dirty run:**
+- **Rolling Stones "(I Can't Get No) Satisfaction": 296,392 → 663,151 listeners** (obsc 20 → 13). Was a stale/low variant; search-max found the canonical (Mono) entry. → **Ronm 14 → 12, drops rank 3 → 4.**
+- **Alanis "You Learn - 2015 Remaster": 132,649 → 451,801** (obsc 23 → 15). Normalized to "You Learn" → canonical, no longer the low remaster entry. → **mmariani13 21 → 18** (stays #2).
+- **Beastie Boys "Fight For Your Right": ~unchanged (826,641, obsc 12).** Search-max already returns the popular entry, not the 16k "(You Gotta)…" split — so it's correctly *not* obscure. Mashew's #1 rank is driven by **The Vandals (obsc 38) + Jawbreaker (25)** — genuinely obscure punk, not the Beastie Boys.
+- **Beatles "In My Life" / Fleetwood Mac "Second Hand News": unchanged** — search-max already picked the remaster entries (which legitimately have the *most* scrobbles), so no correction needed.
+- **missmara unchanged (7, near bottom) — confirmed not a data bug.** Her picks (Total Eclipse 1.34M, Arctic Monkeys 2.9M, Wet Leg 395k) are genuinely popular; numbers verified correct.
+
+**Note for the next pass (per orc heads-up):** per-song obscurity + spotify_popularity are now stored per `spotify_uri` and joinable in `discoverability.ts` — so a "repeated mainstream pick count" / per-song surfacing is a straightforward payload extension (not built this pass). **Scale still squashed** (corpus max = Arctic Monkeys 45.5M plays compresses proxy into ~62-100); rescale is the open follow-up after the user reviews these clean numbers.
+
+**Deploy note:** the lookup fix lives in `src/` (outside the ui build context) and the correction is DB data — so prod served the clean numbers the moment the re-backfill finished (verified live on `GET /api/digest/104/discoverability` before redeploy). bot-ui rebuilt anyway to keep the image in sync. Read/compute path unchanged.
