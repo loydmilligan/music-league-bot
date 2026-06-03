@@ -141,3 +141,19 @@ Each change deploys to prod per `CLAUDE.md`: `docker compose build --no-cache bo
 - ✅ in-app LLM cost ($0.0426) at top of finalized view — **absent from PNG/PDF export** (verified in the rendered mobile PNG: no cost anywhere)
 
 Deployed uncontended (build → up → verify-landed → in-container Puppeteer check). `npm run check` 0 errors. **All 6 sprint-15 tasks complete — sprint-15 closed.** Note: r-104 was regenerated during the final pass (now carries album-art podium + chat moments + cost), serving as the demo digest.
+
+### Polish pass — standings gen/edit/reconcile wiring (added post-UAT)
+
+- [x] {agent: frontend, id: standings-controls} Surface standings in the generate/regen flow (GenerateModal data-section row: include + recompute-from-votes) and ensure standings recompute + reconciliation run at gen/regen.
+- [x] {agent: frontend, id: standings-edit-reconcile} Wire the two orphaned sprint-14 components: ReconciliationModal (fires on gen/regen `reconcile.status==='mismatch'`; default=use table, adopt=POST adopt) + EditableStandingsTable (reachable from the standings section → POST edit → persists gospel → chart re-renders).
+
+### 2026-06-03 — frontend — standings gen/edit/reconcile wiring DONE (3rd built-but-not-wired gap closed)
+
+- **Gap:** `EditableStandingsTable.svelte` + `ReconciliationModal.svelte` (built sprint-14) were mounted **nowhere**, and `standings` was invisible in the generate/regen UX. The chart rendered (standings-wire), but the control + edit + reconcile surfaces were never hooked up.
+- **standings-controls:** `GenerateModal` now shows standings as a **data section** row — `include` toggle + **“recompute from votes”** (adopt). `GenerateParams` carries `standings:{include,recompute}`. `submitGenerate` reads the `/draft` response `{standings,reconcile}`: `recompute` → `POST /standings {action:'adopt'}`; else surfaces reconcile; `include=false` hides the section (session/web). Standings recompute + reconcile already run server-side on every `/draft` (getStandings).
+- **standings-edit-reconcile:** `ReconciliationModal` mounts on `reconcile.status==='mismatch'` after a gen/regen (default = use stored table; **Adopt computed** → `POST adopt`, applied live). `EditableStandingsTable` opens from a **“✎ edit figures”** affordance on the standings section (`data-export-hide`), `POST {action:'edit'}` persists as gospel and the chart re-renders from the returned payload (via a `standingsOverride` $state — no reload).
+- **Verified END-TO-END on prod r-104** (in-container Puppeteer, since the Playwright MCP profile was locked):
+  - editable table opens live (9 rows / 27 inputs); `edit` POST persists + re-ranks (Ronm 999→35).
+  - forced a mismatch (Ronm `current_total`=999) → opened **Regenerate with options** → **Generate** → live `/draft` regen → **ReconciliationModal FIRED** showing the Ronm stored-vs-computed diff; **adopt** restored `match`.
+  - standings data left clean (Ronm 35, reconcile match).
+- **Lesson logged:** `networkidle0` in the export/test Puppeteer hangs on r-104's 9 external Spotify cover images — use `domcontentloaded` for page-drive tests. `npm run check` 0 errors; deployed (build → up → verify-landed). Stayed in lane (page wiring + GenerateModal); the two modal components are viz's, mounted as-built.
