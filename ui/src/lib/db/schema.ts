@@ -193,6 +193,21 @@ export const SCHEMA = `
     PRIMARY KEY (round_id, competitor_id)
   );
   CREATE INDEX IF NOT EXISTS idx_season_standings_round ON season_standings(round_id, rank);
+  -- Per-song popularity metadata (sprint-17). Fetched once from Last.fm + Spotify
+  -- and persisted so the digest reads a STORED score (src/ is outside the ui build
+  -- context — never call Last.fm at render). Keyed by spotify_uri (songs recur
+  -- across rounds). popularity_proxy = log-normalized listeners+playcount → 0-100
+  -- (computePopularityProxies over the whole corpus); obscurity = 100 − proxy.
+  CREATE TABLE IF NOT EXISTS song_popularity (
+    spotify_uri        TEXT PRIMARY KEY,
+    artist             TEXT NOT NULL,
+    title              TEXT NOT NULL,
+    listeners          INTEGER,
+    playcount          INTEGER,
+    popularity_proxy   INTEGER,
+    spotify_popularity INTEGER,
+    fetched_at         TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS api_tokens (
     id            INTEGER PRIMARY KEY,
     hash          TEXT NOT NULL UNIQUE,
