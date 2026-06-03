@@ -15,12 +15,19 @@
 
   let { data }: { data: PageData } = $props();
 
-  // Export shape. The PNG renderer loads this page with ?format=mobile|wide; when
-  // mobile, the .dg-export frame gets the dg-export--mobile reflow class. The
-  // on-screen toggle (`exportShape`) drives which format the Finalize action
-  // requests — defaulting to mobile, since WhatsApp is the primary share target.
+  // Export format. The PNG/PDF renderers load this page with ?format=mobile|wide;
+  // when mobile, the .dg-export frame gets the dg-export--mobile reflow class. The
+  // on-screen selector (`exportFormat`) drives which artifact the Finalize / Export
+  // action requests. Default PDF — the primary phone share artifact this sprint.
   const isMobileExport = $derived(page.url.searchParams.get('format') === 'mobile');
-  let exportShape = $state<'mobile' | 'wide'>('mobile');
+  type ExportFormat = 'pdf' | 'mobile' | 'wide' | 'png-sections';
+  const EXPORT_FORMATS: { id: ExportFormat; label: string; title: string }[] = [
+    { id: 'pdf',          label: '📄 PDF',      title: 'Phone-portrait, multi-page, crisp/selectable text — primary share' },
+    { id: 'mobile',       label: '📱 PNG',      title: 'Phone-portrait single PNG (WhatsApp)' },
+    { id: 'wide',         label: '🖥 Wide',     title: 'Wide desktop broadsheet PNG (800px)' },
+    { id: 'png-sections', label: '🧩 Sections', title: 'One PNG per section + a podium-only image' },
+  ];
+  let exportFormat = $state<ExportFormat>('pdf');
 
   type LeagueGroup = {
     leagueId: number;
@@ -273,14 +280,25 @@
     relDiffOpen = false;
   }
 
-  // -------- Finalize stage ----------
-  // POST /api/digest/:roundId/finalize. Backend T11 was instructed to document
-  // the response shape (download URL vs PNG bytes). Until that lands the
-  // endpoint returns { stub: true, downloadUrl: null }; this handler accepts:
-  //   - response.body is image/* → blob download
-  //   - response is JSON with `downloadUrl` (or `url`) string → anchor download
-  //   - neither → invalidateAll() still runs so finalized_at-driven pipeline
-  //     state advances; user sees a non-fatal note that PNG wasn't returned.
+  // -------- Finalize / export stage ----------
+  // Both /finalize and /export return { files: [{ filename, downloadUrl, label }] }
+  // (finalize additionally sets finalized_at + returns relContext/warnings). The
+  // selected `exportFormat` drives which artifact(s) come back — pdf / mobile /
+  // wide PNG = one file; png-sections = one per section + a podium-only image.
+  type ExportFileRef = { filename: string; downloadUrl: string; label?: string };
+
+  function downloadFiles(files: ExportFileRef[]) {
+    if (!files.length) {
+      showError('Export returned no files.');
+      return;
+    }
+    // Stagger the clicks slightly so the browser doesn't drop concurrent
+    // downloads (matters for png-sections, which returns several files).
+    files.forEach((f, i) => {
+      setTimeout(() => triggerDownload(f.downloadUrl, f.filename, false), i * 250);
+    });
+  }
+
   let finalizing = $state(false);
   async function finalizeAndDownload() {
     finalizing = true;
@@ -288,48 +306,53 @@
       const res = await fetch(`/api/digest/${data.roundId}/finalize`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ format: exportShape }),
+        body: JSON.stringify({ format: exportFormat }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
         throw new Error(`finalize failed (${res.status}) ${text.slice(0, 200)}`);
       }
-      const ct = res.headers.get('content-type') ?? '';
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
-      const filename = `r-${data.roundId}-digest-${exportShape}-${ts}.png`;
-
-      if (ct.startsWith('image/')) {
-        const blob = await res.blob();
-        triggerDownload(URL.createObjectURL(blob), filename, true);
-      } else {
-        const body = (await res.json().catch(() => ({}))) as {
-          downloadUrl?: string | null;
-          url?: string | null;
-          filename?: string | null;
-          stub?: boolean;
-          relContext?: FinalizeRelContext | null;
-          warnings?: string[];
-        };
-        if (body.relContext && typeof body.relContext.previous === 'string' && typeof body.relContext.proposed === 'string') {
-          relContextFromFinalize = body.relContext;
-        }
-        if (body.warnings?.length) {
-          showError(`finalize warnings: ${body.warnings.join(' · ')}`);
-        }
-        const url = body.downloadUrl ?? body.url ?? null;
-        if (url) {
-          triggerDownload(url, body.filename ?? filename, false);
-        } else if (body.stub) {
-          showError('Finalize endpoint is still stubbed — PNG not yet generated. Pipeline state will not advance until backend T11 ships.');
-        } else {
-          showError('Finalize returned no downloadable PNG.');
-        }
+      const body = (await res.json().catch(() => ({}))) as {
+        files?: ExportFileRef[];
+        relContext?: FinalizeRelContext | null;
+        warnings?: string[];
+      };
+      if (body.relContext && typeof body.relContext.previous === 'string' && typeof body.relContext.proposed === 'string') {
+        relContextFromFinalize = body.relContext;
       }
+      if (body.warnings?.length) {
+        showError(`finalize warnings: ${body.warnings.join(' · ')}`);
+      }
+      downloadFiles(body.files ?? []);
       await invalidateAll();
     } catch (err) {
       showError(err);
     } finally {
       finalizing = false;
+    }
+  }
+
+  // Re-export an already-generated digest in the selected format WITHOUT
+  // re-finalizing (no finalized_at / rel-context change).
+  let exporting = $state(false);
+  async function exportOnly() {
+    exporting = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/export`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ format: exportFormat }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`export failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      const body = (await res.json().catch(() => ({}))) as { files?: ExportFileRef[] };
+      downloadFiles(body.files ?? []);
+    } catch (err) {
+      showError(err);
+    } finally {
+      exporting = false;
     }
   }
 
@@ -658,27 +681,25 @@
     <button type="button" class="mash-btn mash-btn--secondary" onclick={openGenerate} disabled={finalizing || drafting}>
       ✎ Regenerate with options…
     </button>
+    <div class="dg-fmt-toggle" role="group" aria-label="Export format">
+      {#each EXPORT_FORMATS as fmt (fmt.id)}
+        <button
+          type="button"
+          class:is-on={exportFormat === fmt.id}
+          onclick={() => (exportFormat = fmt.id)}
+          disabled={finalizing || exporting}
+          title={fmt.title}
+        >{fmt.label}</button>
+      {/each}
+    </div>
     {#if data.stage === 'refine'}
-      <div class="dg-fmt-toggle" role="group" aria-label="Export format">
-        <button
-          type="button"
-          class:is-on={exportShape === 'mobile'}
-          onclick={() => (exportShape = 'mobile')}
-          disabled={finalizing}
-          title="Phone-portrait card, tuned for WhatsApp"
-        >📱 Mobile</button>
-        <button
-          type="button"
-          class:is-on={exportShape === 'wide'}
-          onclick={() => (exportShape = 'wide')}
-          disabled={finalizing}
-          title="Wide desktop broadsheet (800px)"
-        >🖥 Wide</button>
-      </div>
-      <button type="button" class="mash-btn mash-btn--primary" onclick={finalizeAndDownload} disabled={finalizing}>
-        {finalizing ? '…' : '↓'} Finalize &amp; download {exportShape} png
+      <button type="button" class="mash-btn mash-btn--primary" onclick={finalizeAndDownload} disabled={finalizing || exporting}>
+        {finalizing ? '…' : '↓'} Finalize &amp; export
       </button>
     {:else if data.stage === 'finalize'}
+      <button type="button" class="mash-btn mash-btn--primary" onclick={exportOnly} disabled={exporting || finalizing}>
+        {exporting ? '…' : '↓'} Export
+      </button>
       <span style="font: 600 11px/1 var(--font-mono); color: var(--moss);">
         ✓ finalized {data.draft.finalized_at}
       </span>
