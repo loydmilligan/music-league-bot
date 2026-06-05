@@ -3,6 +3,8 @@ dist/
 .env
 data/
 data/*.db
+# Rendered html-share digest artifacts (sprint-20) — generated, not source.
+digests/
 coverage/
 .DS_Store
 *.log

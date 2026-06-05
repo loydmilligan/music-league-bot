@@ -26,6 +26,7 @@ services:
       - PORT=3002
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
+      - DIGESTS_DIR=/app/digests
       - ML_AUTH_TRIGGER_URL=http://host.docker.internal:7679
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
@@ -35,6 +36,23 @@ services:
       - "3002:3002"
     volumes:
       - ./data:/app/data
+      # Shared digests/ volume — bot-ui WRITES rendered html-share artifacts here
+      # (sprint-20 render-pipeline); digest-static serves the same dir read-only.
+      - ./digests:/app/digests
+    restart: unless-stopped
+
+  # Static-only public file server for the shared digests/ volume (sprint-20).
+  # No app, no DB, no Cloudflare Access. Fronted by a SEPARATE public Cloudflare
+  # tunnel → digest.mattmariani.com (created by the user). Serves the
+  # folder-per-slug artifacts at /d/<slug>/ (index.html per the packaging-spike).
+  digest-static:
+    image: caddy:2-alpine
+    volumes:
+      - ./digests:/srv/digests:ro
+      - ./Caddyfile.digest:/etc/caddy/Caddyfile:ro
+    ports:
+      # host:container — host port is what the cloudflared ingress targets.
+      - "8088:8080"
     restart: unless-stopped
 
   bracket:

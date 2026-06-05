@@ -46,7 +46,7 @@ A public digest.mattmariani.com page keeps the tap-modal alive, mlb stays hidden
 - [ ] {agent: backend, id: render-pipeline, depends: packaging-spike} Productionize the spike into a render function in `src/lib/digest/export.ts` (e.g. `renderDigestHtml(roundId)`) that renders any round's full digest to the self-contained artifact **with interactivity ON**, under the round's **stable unguessable slug**, and writes it into a shared `digests/` volume. Persist the **slug ⇄ round mapping** (DB row or json manifest in the volume — your call) so a round always resolves to the same slug and re-render overwrites in place.
   - **Acceptance:** `renderDigestHtml()` writes a working artifact for **r104 (HJ S3)** and **r101 (Fam Jam S3)** into the `digests/` volume at the spike's layout; re-running for the same round resolves to the **same slug** and overwrites (mapping persisted); the served artifact contains **no `mlb.mattmariani.com`** reference (relative/embedded assets only). `npm run check` passes.
 
-- [ ] {agent: backend, id: digest-static-container, depends: packaging-spike} Add a **`digest-static`** service (caddy/nginx, static file server only — no app, no Access) to `docker-compose.yml`, serving the shared `digests/` volume **read-only**; the same volume is mounted **read-write** into `bot-ui` (which writes artifacts). Expose it on an internal port. Document the **cloudflared ingress entry** the user's tunnel needs (`digest.mattmariani.com` → `digest-static:<port>`) — cloudflared is host/CF-managed, so this is the config the USER applies in the cf-tunnel step.
+- [x] {agent: backend, id: digest-static-container, depends: packaging-spike} Add a **`digest-static`** service (caddy/nginx, static file server only — no app, no Access) to `docker-compose.yml`, serving the shared `digests/` volume **read-only**; the same volume is mounted **read-write** into `bot-ui` (which writes artifacts). Expose it on an internal port. Document the **cloudflared ingress entry** the user's tunnel needs (`digest.mattmariani.com` → `digest-static:<port>`) — cloudflared is host/CF-managed, so this is the config the USER applies in the cf-tunnel step.
   - **Acceptance:** `docker compose up -d digest-static` serves a file placed in the `digests/` volume at `http://192.168.4.217:<port>/d/<slug>/` (or the spike's layout) → **HTTP 200**; the shared volume is mounted into both `bot-ui` (rw) and `digest-static` (ro); the exact cloudflared ingress mapping for the user is written to the Activity Log. Deployed; `npm run check` passes.
 
 - [ ] {agent: backend, id: export-endpoint, depends: render-pipeline} Extend the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` to handle **`format: 'html'`**: call `renderDigestHtml`, write to the `digests/` volume, and return the public URL `https://digest.mattmariani.com/d/<slug>`. Do NOT add a new route — extend the existing format dispatch (peer of pdf/mobile/wide/png-sections).
@@ -89,6 +89,31 @@ Deploy per `CLAUDE.md` (now fast — chromium base layer, sprint-19): `docker co
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-05 — backend — digest-static-container DONE (deployed) → **🔔 USER: cf-tunnel is unblocked — ingress mapping below**
+Added a static-only `digest-static` service (caddy:2-alpine, no app/DB, **no Access**) serving the shared `digests/` volume **read-only**; the same volume is mounted **read-write** into `bot-ui`.
+
+**>>> CLOUDFLARED INGRESS MAPPING (cf-tunnel — create a SEPARATE, PUBLIC tunnel, NO Access policy) <<<**
+```yaml
+# In the NEW digest tunnel's config (distinct from the mlb tunnel):
+ingress:
+  - hostname: digest.mattmariani.com
+    service: http://192.168.4.217:8088   # → digest-static container (host-published 8088 → container :8080)
+  - service: http_status:404
+```
+- Public host endpoint the tunnel targets: **`http://192.168.4.217:8088`** (same-host cloudflared may use `http://localhost:8088`). Mirrors the mlb pattern (`mlb → 192.168.4.217:3002`) but **must be a separate tunnel, public / NO Access** (D2/D6).
+- Live test artifact already in the volume: **`https://digest.mattmariani.com/d/spike-hjs3-r104/`** (the proven spike sample) — use it to confirm the tunnel resolves with no login. render-pipeline will replace it with real per-round slugs.
+
+**Wiring (docker-compose.yml):**
+- `bot-ui`: added `./digests:/app/digests` (rw) + env `DIGESTS_DIR=/app/digests` (render-pipeline writes here).
+- `digest-static`: `./digests:/srv/digests:ro` + `./Caddyfile.digest:/etc/caddy/Caddyfile:ro`; ports `8088:8080`.
+- `Caddyfile.digest`: `root /srv/digests`, `file_server` (serves `<dir>/index.html` for trailing-slash dirs, 308-redirects bare dirs; **no browse**), gzip/zstd, `Cache-Control public,max-age=300`, `admin off`/`auto_https off`. `digests/` added to `.gitignore` + `.dockerignore` (generated, not source).
+
+**Verified (deployed):** `docker compose up -d digest-static` + recreated `bot-ui`.
+- `GET http://192.168.4.217:8088/d/spike-hjs3-r104/` → **200** `text/html`; `/d/<slug>` (no slash) → **308** → trailing slash; `_app/.../start.*.js` → **200 `text/javascript`** (correct for ESM); unknown slug → **404**.
+- Volume split confirmed: `bot-ui` WROTE `/app/digests/.rw-probe` OK; `digest-static` write → **`Read-only file system`** (ro enforced).
+- **End-to-end through the real caddy container** (headless chromium → `:8088/d/spike-hjs3-r104/` → tap bucket): `{modalOpened:true, modalTitle:"Mashew", pageErrors:[]}`.
+- `npm run check` → 0 errors (31 pre-existing warnings).
 
 ### 2026-06-05 — backend — packaging-spike DONE → **mechanism decided; render-pipeline + digest-static-container unblocked**
 **Result: PROVEN.** A self-contained, still-interactive r104 (HJ S3) digest served by a plain `python3 -m http.server` (NO app/DB process) loads in chromium and the **tastemaker tap-modal opens** — tapping a bucket → chunked-bar song modal ("RECOGNIZABLE · 1 song · Mashew" → "Fight For Your Right — Beastie Boys, ob 13"). 0 page errors, 0 failed requests, **0 `mlb.mattmariani.com`** strings across all served files. Screenshot: `/tmp/html-share-spike/modal-open.png`.

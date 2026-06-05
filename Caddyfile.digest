@@ -1,0 +1,26 @@
+# digest-static (sprint-20) — dumb static file server for the shared digests/
+# volume. Serves the self-contained folder-per-slug HTML digests at /d/<slug>/.
+# No app, no DB, NO Cloudflare Access. Plain HTTP behind the public
+# digest.mattmariani.com Cloudflare tunnel (the user creates that tunnel).
+{
+	admin off
+	auto_https off
+}
+
+# Internal listen port (published to the host for the cloudflared tunnel).
+:8080 {
+	root * /srv/digests
+
+	encode gzip zstd
+
+	# file_server serves <dir>/index.html for a trailing-slash directory
+	# request and 301s /d/<slug> -> /d/<slug>/. No directory browsing.
+	file_server
+
+	# Share artifacts are immutable-per-render; a short cache is fine and a
+	# re-export (same slug) overwrites in place so links stay fresh.
+	header /d/* Cache-Control "public, max-age=300"
+
+	# Don't advertise the server software.
+	header -Server
+}

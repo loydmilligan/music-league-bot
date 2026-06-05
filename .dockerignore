@@ -3,6 +3,7 @@ node_modules
 **/.svelte-kit
 **/.vite
 data
+digests
 .wwebjs_auth
 .wwebjs_cache
 .env
