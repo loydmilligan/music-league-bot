@@ -52,7 +52,7 @@ A public digest.mattmariani.com page keeps the tap-modal alive, mlb stays hidden
 - [x] {agent: backend, id: export-endpoint, depends: render-pipeline} Extend the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` to handle **`format: 'html'`**: call `renderDigestHtml`, write to the `digests/` volume, and return the public URL `https://digest.mattmariani.com/d/<slug>`. Do NOT add a new route — extend the existing format dispatch (peer of pdf/mobile/wide/png-sections).
   - **Acceptance:** `POST /api/digest/104/export {"format":"html"}` on prod returns **200** with `{ url: "https://digest.mattmariani.com/d/<slug>" }`; the artifact is present in the volume; a second POST returns the **same** URL (stable slug). `npm run check` passes; deployed.
 
-- [ ] {agent: frontend, id: html-export-ui} Add **`html`** to the export-format toggle (`EXPORT_FORMATS` in `src/routes/digest/[roundId]/+page.svelte`) + a **"copy share link"** affordance that surfaces the URL returned by the export endpoint after an `html` export. Build against the documented contract (`{format:'html'}` → `{url}`) — can start in parallel with the backend chain; do the live verify once `export-endpoint` is deployed.
+- [x] {agent: frontend, id: html-export-ui} Add **`html`** to the export-format toggle (`EXPORT_FORMATS` in `src/routes/digest/[roundId]/+page.svelte`) + a **"copy share link"** affordance that surfaces the URL returned by the export endpoint after an `html` export. Build against the documented contract (`{format:'html'}` → `{url}`) — can start in parallel with the backend chain; do the live verify once `export-endpoint` is deployed.
   - **Acceptance:** the digest-page export toggle shows an `html` option; selecting it + exporting calls the endpoint and renders the returned `digest.mattmariani.com/d/<slug>` URL with a working **copy-link** control + a clear "published" confirmation; loading/error states present. `npm run check` passes; deployed; mobile + desktop visual check logged.
 
 - [ ] {id: cf-tunnel} **USER STEP (not an agent task).** In the Cloudflare console, create the `digest.mattmariani.com` DNS + a **separate** tunnel pointing at the `digest-static` container (per the ingress mapping `digest-static-container` logs), **public / NO Access policy** — fully distinct from the mlb tunnel. Confirm the hostname resolves and is reachable without login.
@@ -90,7 +90,30 @@ Deploy per `CLAUDE.md` (now fast — chromium base layer, sprint-19): `docker co
 
 ## Activity Log
 
-### 2026-06-05 — backend — export-endpoint DONE (deployed) → **backend chain complete; frontend e2e unblocked**
+### 2026-06-05 — frontend — html-export-ui DONE + deployed + prod-verified (UI-level, against contract) — commit c97a780
+
+Added **`html`** as a 5th export-format option + a **copy-share-link** affordance for the public URL the export endpoint returns. UI-level verification per scope (mock/stub the endpoint for happy + error states); the **live public-URL e2e is the separate `e2e-verify` task**, still gated on the `cf-tunnel` USER step (digest.mattmariani.com doesn't resolve yet).
+
+**Implementation (`src/routes/digest/[roundId]/+page.svelte`, frontend lane only):**
+- `EXPORT_FORMATS` gains `{ id:'html', label:'🔗 Share' }`; `ExportFormat` type extended. `html` is the one INTERACTIVE export — it returns `{ url }`, not `{ files }`, so it takes a **separate `publishHtml()` path** (`POST /export {format:'html'}` → surface URL), NOT `downloadFiles`.
+- Primary button **branches** on the selected format: `html` → **"🔗 Publish share link"** (with a publishing/loading state); non-html keeps the existing Finalize & export / Export buttons; the finalize chrome (finalized chip + Unfinalize) is unchanged.
+- **Share-result block:** `✓ published` badge + the `digest.mattmariani.com/d/<slug>` URL (linked, `target=_blank`) + a **Copy-link control** (clipboard write, "✓ Copied" feedback, select-to-copy fallback for insecure contexts) + a published confirmation note ("public · no login · interactive · re-publishing keeps this link"). **Error block** (`✕ publish failed` + the message + **Retry**); `publishHtml` clears the prior `shareUrl` up-front so a failed re-publish surfaces the error instead of a stale "published" URL.
+- Scoped Mash-chrome styling for the result/copy controls.
+
+**Prod verification (`192.168.4.217:3002`, Playwright, endpoint mocked to the contract `{format:'html'}→{url}`):**
+- ✅ **Toggle:** `🔗 Share` present as a 5th option (PDF · PNG · Wide · Sections · Share); selecting it swaps the primary button to "🔗 Publish share link".
+- ✅ **Happy path:** publish → share-result renders `✓ published` + `https://digest.mattmariani.com/d/hjs3-r104-7fq2a9k` (linked) + note.
+- ✅ **Copy control:** click writes the **exact URL** to the clipboard (verified value) and flips to "✓ Copied" (2s).
+- ✅ **Loading state:** button shows "… publishing" while in flight.
+- ✅ **Error state:** mocked 502 → `✕ publish failed` + message + **↻ Retry**, **no stale success link** (the up-front-clear fix; caught + fixed a real bug where a failed re-publish kept showing the old URL).
+- ✅ **Desktop (1280px)** clean; **Mobile (390px)** clean — toggle wraps to all 5 formats, share-result reflows, URL wraps, and the note drops to its own line (`flex:1 1 100%`) with **no horizontal overflow** (scrollWidth 392→328 ≤ width after the fix). Both screenshots captured + described; temp files removed per repo hygiene.
+- ✅ `npm run check` **0 errors** (31 pre-existing warnings, none in the file).
+
+**Deploy note (multi-agent shared-tree races):** this landed across several serialized `--no-cache bot-ui` builds. Two `up --force-recreate` steps hit a transient `No such container` stale-ref error (recovered by re-running `up`), and an intermediate image deployed an earlier tree snapshot (concurrent backend `export-endpoint` build won an `up` race), so the note-wrap fix needed a final clean rebuild to land — confirmed by diffing the **served** CSS bundle (`6.*.css`: `white-space:nowrap` → `flex:100%`). All my changes are committed in `c97a780` (in HEAD ancestry); did NOT touch the export endpoint internals / render pipeline / container (backend lane).
+
+**➡ Next (mine):** `e2e-verify` — **blocked on `cf-tunnel`** (USER creates the public `digest.mattmariani.com` tunnel). Per orc, I'll run the real export → open the public URL (incognito) → confirm interactivity + no `mlb.mattmariani.com` leak **once the tunnel is live**. Holding until the green light.
+
+
 Extended the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` (no new route) to handle **`format: 'html'`** as a peer of pdf/mobile/wide/png-sections: reads the raw requested format, keeps the round + draft existence checks, then branches — `html` → `renderDigestHtml(roundId)` → `json({ ok, roundId, format:'html', slug, url })`; everything else falls through to the unchanged `runDigestExport` files path (`isExportFormat` still gates the screenshot formats, invalid → `mobile`).
 
 **Verified on prod (real path — render runs INSIDE the bot-ui container):**
