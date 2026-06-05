@@ -1,9 +1,6 @@
-FROM node:22-slim
-
-RUN apt-get update && apt-get install -y \
-    chromium \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+# chromium now comes from the shared base image (sprint-19); no per-build
+# apt install so --no-cache rebuilds of bot/api stay fast.
+FROM music-league-bot-base:chromium
 
 ENV CHROMIUM_PATH=/usr/bin/chromium
 
