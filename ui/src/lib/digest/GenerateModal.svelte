@@ -27,30 +27,46 @@
   // Standings is a DATA section (computed from votes, not LLM prose), so it
   // carries no style/variant — just include + a recompute (adopt computed) opt.
   export type StandingsGenOpt = { include: boolean; recompute: boolean };
-  // Tastemaker (discoverability v2) is also a DATA section — pure recompute from
-  // popularity data, no LLM prompt path. Only control is include/exclude.
-  export type TastemakerGenOpt = { include: boolean };
+  // The other synthetic DATA sections (stats / next-round / Tastemaker) are pure
+  // recompute — no LLM prompt path. Their only control is include/exclude.
+  export type DataGenOpt = { include: boolean };
   export type GenerateParams = {
     sections: GenSection[];
     pastedChat: string;
     standings: StandingsGenOpt;
-    tastemaker: TastemakerGenOpt;
+    stats: DataGenOpt;
+    nextRound: DataGenOpt;
+    tastemaker: DataGenOpt;
   };
 
-  // Coverage state for the Tastemaker section's indicator. 'ready' = the season's
-  // popularity data is sufficient and the section will render; 'incomplete' = the
-  // payload self-suppressed (absent / <80% coverage) and the section stays hidden
-  // until popularity is backfilled.
-  export type TastemakerCoverage = 'ready' | 'incomplete';
+  // Availability state for a DATA section's indicator. 'ready' = the underlying
+  // data is present and the section will render; 'incomplete' = it self-suppresses
+  // (no/partial data) until the source is populated. (Tastemaker 'incomplete' =
+  // <80% popularity coverage; stats/next-round = the round has no such data yet.)
+  export type DataAvailability = 'ready' | 'incomplete';
+  // Back-compat alias — the page used to pass `tastemakerCoverage`.
+  export type TastemakerCoverage = DataAvailability;
 
   type Props = {
     sectionLabels: Record<SectionKind, string>;
     busy?: boolean;
-    tastemakerCoverage?: TastemakerCoverage;
+    statsAvailability?: DataAvailability;
+    standingsAvailability?: DataAvailability;
+    nextRoundAvailability?: DataAvailability;
+    tastemakerCoverage?: DataAvailability;
     onCancel: () => void;
     onSubmit: (params: GenerateParams) => void;
   };
-  let { sectionLabels, busy = false, tastemakerCoverage = 'incomplete', onCancel, onSubmit }: Props = $props();
+  let {
+    sectionLabels,
+    busy = false,
+    statsAvailability = 'incomplete',
+    standingsAvailability = 'ready',
+    nextRoundAvailability = 'incomplete',
+    tastemakerCoverage = 'incomplete',
+    onCancel,
+    onSubmit,
+  }: Props = $props();
 
   // Style / focus tags — plain descriptors (replaces the regen modal's
   // "more/less ___" phrasing). Combinable per section.
@@ -75,9 +91,16 @@
   let standingsInclude = $state(true);
   let standingsRecompute = $state(false);
 
-  // Tastemaker (discoverability v2) include toggle — default ON. Pure data, so no
-  // recompute opt: regen always recomputes it from the latest popularity data.
+  // The other synthetic DATA sections — include toggles, default ON. Pure data, so
+  // no recompute opt: regen always recomputes them from source on load.
+  let statsInclude = $state(true);
+  let nextRoundInclude = $state(true);
   let tastemakerInclude = $state(true);
+
+  // Shared indicator markup helper data (keeps the rows uniform).
+  function covLabel(a: DataAvailability): string {
+    return a === 'ready' ? '● coverage ready' : '⚠ incomplete coverage';
+  }
 
   function toggleExpand(id: string) {
     expanded[id] = !expanded[id];
@@ -93,6 +116,8 @@
       sections: $state.snapshot(sections),
       pastedChat,
       standings: { include: standingsInclude, recompute: standingsRecompute },
+      stats: { include: statsInclude },
+      nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
     });
   }
@@ -193,6 +218,24 @@
           </div>
         {/each}
 
+        <!-- Stats strip: a DATA section (by-the-numbers, computed not LLM). -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!statsInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={statsInclude} />
+              <span class="dg-gen-name">By the numbers</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+            <span
+              class="dg-gen-cov {statsAvailability === 'ready' ? 'dg-gen-cov--ok' : 'dg-gen-cov--warn'}"
+              title={statsAvailability === 'ready' ? 'Round stats are computable — the strip will render' : 'No computable stats yet — the section self-suppresses'}
+            >{covLabel(statsAvailability)}</span>
+          </div>
+          <p class="dg-gen-note">
+            Vote/submission tallies for the round. Pure data — regenerate recomputes it; no LLM prompt.
+          </p>
+        </div>
+
         <!-- Standings: a DATA section (computed from votes, not LLM prose). -->
         <div class="dg-gen-row dg-gen-row--data" class:is-off={!standingsInclude}>
           <div class="dg-gen-rowhead">
@@ -200,6 +243,11 @@
               <input type="checkbox" bind:checked={standingsInclude} />
               <span class="dg-gen-name">Season standings</span>
               <span class="dg-gen-databadge">data</span>
+              {#if standingsAvailability === 'ready'}
+                <span class="dg-gen-cov dg-gen-cov--ok" title="Vote data is present — the chart will render">● coverage ready</span>
+              {:else}
+                <span class="dg-gen-cov dg-gen-cov--warn" title="No computable standings yet — the section self-suppresses">⚠ incomplete coverage</span>
+              {/if}
             </label>
             <label class="dg-gen-recompute" title="Recompute standings from votes and adopt as the new gospel">
               <input type="checkbox" bind:checked={standingsRecompute} disabled={!standingsInclude} />
@@ -210,6 +258,24 @@
             Computed from votes, not written by the LLM — auto-reconciled against the stored table on
             generate (a mismatch pops the reconcile modal). “Recompute” overwrites the gospel with the
             fresh computed values.
+          </p>
+        </div>
+
+        <!-- Next-round preview: a DATA section (theme/deadline, not LLM prose). -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!nextRoundInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={nextRoundInclude} />
+              <span class="dg-gen-name">Next-round preview</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+            <span
+              class="dg-gen-cov {nextRoundAvailability === 'ready' ? 'dg-gen-cov--ok' : 'dg-gen-cov--warn'}"
+              title={nextRoundAvailability === 'ready' ? 'A next round with a theme/deadline exists — the preview will render' : 'No next round yet — the section self-suppresses'}
+            >{nextRoundAvailability === 'ready' ? '● coverage ready' : '⚠ no next round yet'}</span>
+          </div>
+          <p class="dg-gen-note">
+            Theme + deadline for the upcoming round. Pure data — regenerate recomputes it; no LLM prompt.
           </p>
         </div>
 

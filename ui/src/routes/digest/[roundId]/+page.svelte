@@ -226,9 +226,11 @@
       standingsExcluded = !params.standings.include;
       standingsOverride = null; // fall back to the freshly-loaded gospel
 
-      // Tastemaker (discoverability v2): pure-data section. Include toggle is
-      // session-scoped; regen recomputes it automatically — invalidateAll below
-      // re-fetches /discoverability, which recomputes from the latest popularity.
+      // Other synthetic data sections: include toggles are session-scoped; regen
+      // recomputes them automatically — invalidateAll below re-fetches each data
+      // endpoint, which recomputes from source (no LLM prompt path).
+      statsExcluded = !params.stats.include;
+      nextRoundExcluded = !params.nextRound.include;
       discoverabilityExcluded = !params.tastemaker.include;
       if (params.standings.recompute) {
         // "Recompute from votes" → adopt the computed values as the new gospel.
@@ -466,26 +468,37 @@
 
   // --- sprint-17 data-driven sections (each reads data via visualData; the
   //     component self-suppresses, but we also gate the wrap so no empty
-  //     eyebrow/section renders when the payload is empty/null). ---
+  //     eyebrow/section renders when the payload is empty/null). Each carries a
+  //     GenerateModal include toggle (session-scoped — like standings) + an
+  //     availability indicator (sprint-18 integration-audit). ---
   const inDigest = $derived(data.stage === 'refine' || data.stage === 'finalize');
+
   const statsData = $derived(inDigest ? data.stats : null);
-  const showStats = $derived(
-    !!statsData && Object.values(statsData).some((v) => typeof v === 'number'),
-  );
+  let statsExcluded = $state(false);
+  const statsAvailable = $derived(!!statsData && Object.values(statsData).some((v) => typeof v === 'number'));
+  const showStats = $derived(!statsExcluded && statsAvailable);
+
   const discoverabilityData = $derived(inDigest ? data.discoverability : null);
   // v2 payload is a TastemakerPayload object (`.players`), not the v1 row array.
   // The backend self-suppresses to null on absent/partial (<80%) coverage, so a
   // non-null payload with players = "coverage ready". `discoverabilityExcluded`
   // is the GenerateModal include toggle (session-scoped — web view).
   let discoverabilityExcluded = $state(false);
-  const showDiscoverability = $derived(
-    !discoverabilityExcluded && (discoverabilityData?.players?.length ?? 0) > 0,
-  );
-  const tastemakerCoverage = $derived<'ready' | 'incomplete'>(
-    (discoverabilityData?.players?.length ?? 0) > 0 ? 'ready' : 'incomplete',
-  );
+  const tastemakerAvailable = $derived((discoverabilityData?.players?.length ?? 0) > 0);
+  const showDiscoverability = $derived(!discoverabilityExcluded && tastemakerAvailable);
+  const tastemakerCoverage = $derived<'ready' | 'incomplete'>(tastemakerAvailable ? 'ready' : 'incomplete');
+
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
-  const showNextRound = $derived(!!nextRoundData && (!!nextRoundData.theme || !!nextRoundData.deadline));
+  let nextRoundExcluded = $state(false);
+  const nextRoundAvailable = $derived(!!nextRoundData && (!!nextRoundData.theme || !!nextRoundData.deadline));
+  const showNextRound = $derived(!nextRoundExcluded && nextRoundAvailable);
+
+  // Availability strings for the GenerateModal data-section indicators.
+  const statsAvailability = $derived<'ready' | 'incomplete'>(statsAvailable ? 'ready' : 'incomplete');
+  const standingsAvailability = $derived<'ready' | 'incomplete'>(
+    !!standingsData && (standingsData.standings?.length ?? 0) > 0 ? 'ready' : 'incomplete',
+  );
+  const nextRoundAvailability = $derived<'ready' | 'incomplete'>(nextRoundAvailable ? 'ready' : 'incomplete');
   const StatSlot = $derived(VISUAL_COMPONENTS.stats);
   const DiscoverabilitySlot = $derived(VISUAL_COMPONENTS.discoverability);
   const NextRoundSlot = $derived(VISUAL_COMPONENTS.nextRound);
@@ -941,6 +954,9 @@
   <GenerateModal
     sectionLabels={SECTION_LABELS}
     busy={drafting}
+    {statsAvailability}
+    {standingsAvailability}
+    {nextRoundAvailability}
     {tastemakerCoverage}
     onCancel={closeGenerate}
     onSubmit={submitGenerate}
