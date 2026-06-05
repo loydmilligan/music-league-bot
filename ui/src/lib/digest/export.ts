@@ -1,10 +1,18 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join, basename, extname } from 'node:path';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { join, basename, extname, dirname } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import { getDb } from '$lib/db/client.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
 const EXPORTS_DIR = join(process.env.DATA_DIR || '/app/data', 'exports');
+
+// sprint-20 html-share: where self-contained interactive digests are written
+// (shared volume; digest-static serves it read-only). Public base is the
+// separate no-Access Cloudflare tunnel.
+const DIGESTS_DIR = process.env.DIGESTS_DIR || '/app/digests';
+const PUBLIC_DIGEST_BASE = (process.env.PUBLIC_DIGEST_BASE_URL || 'https://digest.mattmariani.com').replace(/\/+$/, '');
 
 // WIDE = desktop broadsheet (800px). MOBILE = phone-portrait card (430px via the
 // dg-export--mobile class the page applies when ?format=mobile). The viewport is
@@ -192,6 +200,172 @@ export async function runDigestExport(roundId: number, format: DigestExportForma
     case 'mobile':
     default:
       return [await renderDigestPng(roundId, 'mobile')];
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// HTML share (sprint-20) — render the LIVE interactive digest into a
+// self-contained folder-per-slug artifact servable from a dumb static host.
+// Mechanism decided by the packaging-spike: capture the SSR document + the
+// same-origin /_app/ asset closure a real (hydrated, interactivity-ON) page
+// load fetches, rewrite the page→entry refs ../_app → ./_app, localize fonts,
+// drop root-absolute icon/manifest refs, neutralize the layout auth probe.
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface HtmlShareResult {
+  slug: string;
+  /** Public share URL — https://digest.mattmariani.com/d/<slug> */
+  url: string;
+  /** On-disk artifact directory in the shared digests/ volume. */
+  dir: string;
+  bytes: number;
+  files: number;
+}
+
+const CHROME_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+// Stable, unguessable slug per round (PK = round_id → one slug forever; re-render
+// overwrites in place so shared links never break).
+function getOrCreateShareSlug(roundId: number): string {
+  const db = getDb();
+  const row = db.prepare('SELECT slug FROM digest_shares WHERE round_id = ?').get(roundId) as
+    | { slug: string }
+    | undefined;
+  if (row?.slug) return row.slug;
+  const slug = randomBytes(12).toString('base64url'); // 16 url-safe chars, non-enumerable
+  db.prepare(
+    `INSERT INTO digest_shares (round_id, slug) VALUES (?, ?)
+     ON CONFLICT(round_id) DO NOTHING`,
+  ).run(roundId, slug);
+  // Re-read in case of a concurrent insert winning the race.
+  const after = db.prepare('SELECT slug FROM digest_shares WHERE round_id = ?').get(roundId) as {
+    slug: string;
+  };
+  return after.slug;
+}
+
+function touchShare(roundId: number): void {
+  getDb()
+    .prepare(`UPDATE digest_shares SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE round_id = ?`)
+    .run(roundId);
+}
+
+// Fetch the Google-Fonts CSS the app links, pull every woff2 it references into
+// the asset map under /_app/fonts/, and return the CSS rewritten to point at the
+// local copies (relative to _app/fonts.css). Returns null if no font link found
+// or the network is unreachable — the artifact still works (system fonts).
+async function localizeFonts(html: string, assets: Map<string, Buffer>): Promise<string | null> {
+  const m = html.match(/https:\/\/fonts\.googleapis\.com\/css2\?[^"'\s]+/);
+  if (!m) return null;
+  const cssUrl = m[0].replace(/&amp;/g, '&');
+  try {
+    let css = await (await fetch(cssUrl, { headers: { 'User-Agent': CHROME_UA } })).text();
+    const fontUrls = [...new Set([...css.matchAll(/https:\/\/fonts\.gstatic\.com\/[^)'"]+\.woff2/g)].map((x) => x[0]))];
+    let i = 0;
+    for (const fontUrl of fontUrls) {
+      const buf = Buffer.from(await (await fetch(fontUrl, { headers: { 'User-Agent': CHROME_UA } })).arrayBuffer());
+      const name = `f${i++}.woff2`;
+      assets.set(`/_app/fonts/${name}`, buf);
+      css = css.split(fontUrl).join(`./fonts/${name}`);
+    }
+    return css;
+  } catch {
+    return null; // offline / fetch failure → skip localization, keep rendering
+  }
+}
+
+// Pure HTML transforms applied to the captured SSR document.
+function transformShareHtml(html: string, opts: { hasLocalFonts: boolean }): string {
+  let h = html;
+  // 1. page→entry refs: ../_app → ./_app. The ./ prefix is MANDATORY — a bare
+  //    "_app/…" specifier is illegal for dynamic import() (packaging-spike).
+  h = h.replaceAll('../_app/', './_app/');
+  // 2. drop root-absolute icon / apple-touch / manifest links (would 404 under
+  //    /d/<slug>/ on the static host).
+  h = h.replace(/[ \t]*<link\b[^>]*\brel="(?:icon|apple-touch-icon|manifest)"[^>]*>\n?/g, '');
+  // 3. fonts: remove the Google preconnect/preload/stylesheet links; swap in the
+  //    localized stylesheet so the artifact has zero external dependencies.
+  h = h.replace(/[ \t]*<link\b[^>]*fonts\.(?:googleapis|gstatic)\.com[^>]*>\n?/g, '');
+  if (opts.hasLocalFonts) {
+    h = h.replace('</head>', '\t\t<link rel="stylesheet" href="./_app/fonts.css" />\n\t</head>');
+  }
+  // 4. neutralize the layout auth probe (MlAuthBadge polls /api/ml-auth — there
+  //    is no backend on the static host). Patch fetch before hydration runs.
+  const guard =
+    `<script>(function(){var f=window.fetch;window.fetch=function(u){try{` +
+    `var s=typeof u==="string"?u:(u&&u.url)||"";` +
+    `if(s.indexOf("/api/ml-auth")!==-1)return Promise.resolve(new Response(null,{status:204}));` +
+    `}catch(e){}return f.apply(this,arguments);};})();</script>`;
+  h = h.replace('<head>', '<head>\n\t\t' + guard);
+  return h;
+}
+
+export async function renderDigestHtml(roundId: number): Promise<HtmlShareResult> {
+  const slug = getOrCreateShareSlug(roundId);
+  const outDir = join(DIGESTS_DIR, 'd', slug);
+  const origin = new URL(APP_INTERNAL_URL).origin;
+
+  const browser = await launch();
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 480, height: 1000, deviceScaleFactor: 2 });
+
+    // Capture the same-origin /_app/ asset closure the browser fetches during a
+    // real hydrated load (entry + transitively-imported chunks/nodes + CSS).
+    const assets = new Map<string, Buffer>();
+    page.on('response', async (resp) => {
+      try {
+        if (resp.request().method() !== 'GET') return;
+        const u = new URL(resp.url());
+        if (u.origin !== origin || !u.pathname.startsWith('/_app/') || !resp.ok()) return;
+        assets.set(u.pathname, await resp.buffer());
+      } catch {
+        /* ignore a single asset capture failure */
+      }
+    });
+
+    // NO ?export=1 — interactivity stays ON (sprint-18 flag would disable it).
+    const url = `${APP_INTERNAL_URL}/digest/${roundId}`;
+    const resp = await page.goto(url, { waitUntil: 'networkidle0', timeout: 45_000 });
+    if (!resp || !resp.ok()) throw new Error(`html render load failed: ${resp?.status() ?? 'no-response'} ${url}`);
+    await page.waitForSelector('.dg-export', { timeout: 15_000 });
+    // Best-effort: ensure the interactive tastemaker chunk loaded (non-fatal if
+    // a round has no tastemaker section).
+    await page.waitForSelector('[data-component="tastemaker"]', { timeout: 8_000 }).catch(() => {});
+
+    const rawHtml = await resp.text();
+    const fontCss = await localizeFonts(rawHtml, assets);
+    await browser.close();
+
+    // Overwrite in place (stable slug → shared links never break).
+    await rm(outDir, { recursive: true, force: true });
+    await mkdir(outDir, { recursive: true });
+
+    let bytes = 0;
+    let files = 0;
+    for (const [pathname, buf] of assets) {
+      const dest = join(outDir, pathname.replace(/^\//, ''));
+      await mkdir(dirname(dest), { recursive: true });
+      await writeFile(dest, buf);
+      bytes += buf.length;
+      files += 1;
+    }
+    if (fontCss) {
+      await writeFile(join(outDir, '_app', 'fonts.css'), fontCss, 'utf8');
+      bytes += Buffer.byteLength(fontCss);
+      files += 1;
+    }
+
+    const indexHtml = transformShareHtml(rawHtml, { hasLocalFonts: !!fontCss });
+    await writeFile(join(outDir, 'index.html'), indexHtml, 'utf8');
+    bytes += Buffer.byteLength(indexHtml);
+    files += 1;
+
+    touchShare(roundId);
+    return { slug, url: `${PUBLIC_DIGEST_BASE}/d/${slug}`, dir: outDir, bytes, files };
+  } finally {
+    await browser.close().catch(() => {});
   }
 }
 

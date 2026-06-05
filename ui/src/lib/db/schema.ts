@@ -172,6 +172,15 @@ export const SCHEMA = `
     new_content_json   TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
+  -- sprint-20 html-share: stable, unguessable slug per round for the public
+  -- digest.mattmariani.com/d/<slug> artifact. One row per round (PK = round_id)
+  -- so a round always resolves to the SAME slug; re-export overwrites in place.
+  CREATE TABLE IF NOT EXISTS digest_shares (
+    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
+    slug       TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
   -- Canonical, human-verifiable season standings (sprint-14 D2). One row per
   -- (round, competitor): the competitor's running totals AS OF that round.
   -- prior_total = points received in earlier rounds; round_points = points this

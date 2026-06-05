@@ -416,7 +416,10 @@
 
   async function publishHtml() {
     publishing = true;
+    // Clear the prior result up-front so a failed re-publish surfaces the error
+    // block instead of leaving a stale "published" URL on screen.
     shareError = null;
+    shareUrl = null;
     try {
       const res = await fetch(`/api/digest/${data.roundId}/export`, {
         method: 'POST',
@@ -1179,9 +1182,9 @@
     opacity: 0.6;
   }
   .dg-share-note {
-    font: 500 10px/1 var(--font-mono);
+    font: 500 10px/1.4 var(--font-mono);
     color: var(--fg-quiet);
-    white-space: nowrap;
+    flex: 1 1 100%; /* own line — never clips on narrow phones */
   }
 
   .dg-standings-head {
