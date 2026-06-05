@@ -49,7 +49,7 @@ A public digest.mattmariani.com page keeps the tap-modal alive, mlb stays hidden
 - [x] {agent: backend, id: digest-static-container, depends: packaging-spike} Add a **`digest-static`** service (caddy/nginx, static file server only — no app, no Access) to `docker-compose.yml`, serving the shared `digests/` volume **read-only**; the same volume is mounted **read-write** into `bot-ui` (which writes artifacts). Expose it on an internal port. Document the **cloudflared ingress entry** the user's tunnel needs (`digest.mattmariani.com` → `digest-static:<port>`) — cloudflared is host/CF-managed, so this is the config the USER applies in the cf-tunnel step.
   - **Acceptance:** `docker compose up -d digest-static` serves a file placed in the `digests/` volume at `http://192.168.4.217:<port>/d/<slug>/` (or the spike's layout) → **HTTP 200**; the shared volume is mounted into both `bot-ui` (rw) and `digest-static` (ro); the exact cloudflared ingress mapping for the user is written to the Activity Log. Deployed; `npm run check` passes.
 
-- [ ] {agent: backend, id: export-endpoint, depends: render-pipeline} Extend the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` to handle **`format: 'html'`**: call `renderDigestHtml`, write to the `digests/` volume, and return the public URL `https://digest.mattmariani.com/d/<slug>`. Do NOT add a new route — extend the existing format dispatch (peer of pdf/mobile/wide/png-sections).
+- [x] {agent: backend, id: export-endpoint, depends: render-pipeline} Extend the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` to handle **`format: 'html'`**: call `renderDigestHtml`, write to the `digests/` volume, and return the public URL `https://digest.mattmariani.com/d/<slug>`. Do NOT add a new route — extend the existing format dispatch (peer of pdf/mobile/wide/png-sections).
   - **Acceptance:** `POST /api/digest/104/export {"format":"html"}` on prod returns **200** with `{ url: "https://digest.mattmariani.com/d/<slug>" }`; the artifact is present in the volume; a second POST returns the **same** URL (stable slug). `npm run check` passes; deployed.
 
 - [ ] {agent: frontend, id: html-export-ui} Add **`html`** to the export-format toggle (`EXPORT_FORMATS` in `src/routes/digest/[roundId]/+page.svelte`) + a **"copy share link"** affordance that surfaces the URL returned by the export endpoint after an `html` export. Build against the documented contract (`{format:'html'}` → `{url}`) — can start in parallel with the backend chain; do the live verify once `export-endpoint` is deployed.
@@ -89,6 +89,17 @@ Deploy per `CLAUDE.md` (now fast — chromium base layer, sprint-19): `docker co
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-05 — backend — export-endpoint DONE (deployed) → **backend chain complete; frontend e2e unblocked**
+Extended the **existing** export route `src/routes/api/digest/[roundId]/export/+server.ts` (no new route) to handle **`format: 'html'`** as a peer of pdf/mobile/wide/png-sections: reads the raw requested format, keeps the round + draft existence checks, then branches — `html` → `renderDigestHtml(roundId)` → `json({ ok, roundId, format:'html', slug, url })`; everything else falls through to the unchanged `runDigestExport` files path (`isExportFormat` still gates the screenshot formats, invalid → `mobile`).
+
+**Verified on prod (real path — render runs INSIDE the bot-ui container):**
+- `POST /api/digest/104/export {"format":"html"}` → **200** `{"ok":true,"roundId":104,"format":"html","slug":"v0lGP7SftWx-FQ3S","url":"https://digest.mattmariani.com/d/v0lGP7SftWx-FQ3S"}` — matches r104's stored slug exactly.
+- **Second POST → identical url** (stable slug, artifact re-written in place; index.html mtime refreshed by the container).
+- Artifact served by the real `digest-static` caddy: `/d/v0lGP7SftWx-FQ3S/` → **200 text/html**; **0 `mlb.mattmariani.com`**, **0 google-fonts**, 23 local woff2 (font localization confirmed running inside the container too).
+- Regression: `{"format":"bogus"}` still returns `"format":"mobile"` — existing screenshot formats untouched.
+- `npm run check` → 0 errors. bot-ui rebuilt `--no-cache` (no chromium download) + deployed.
+- **Contract for `html-export-ui` / `e2e-verify` is live:** `POST …/export {format:'html'}` → `{ ok, roundId, format:'html', slug, url }`. Frontend can now exercise the full flow against prod. (Public `digest.mattmariani.com` requires the user's `cf-tunnel`; locally reachable at `192.168.4.217:8088/d/<slug>/`.)
 
 ### 2026-06-05 — backend — render-pipeline DONE (deployed) → **export-endpoint unblocked**
 Added **`renderDigestHtml(roundId)`** to `src/lib/digest/export.ts` — renders the LIVE interactive digest (headless chromium, **no `?export=1`**) into the self-contained folder-per-slug artifact and writes it to `DIGESTS_DIR/d/<slug>/` (`/app/digests` → shared volume). Returns `{ slug, url, dir, bytes, files }`.
