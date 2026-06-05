@@ -28,12 +28,16 @@
   // on-screen selector (`exportFormat`) drives which artifact the Finalize / Export
   // action requests. Default PDF — the primary phone share artifact this sprint.
   const isMobileExport = $derived(page.url.searchParams.get('format') === 'mobile');
-  type ExportFormat = 'pdf' | 'mobile' | 'wide' | 'png-sections';
+  // `html` (sprint-20) is the one INTERACTIVE export — it publishes the live
+  // digest to the public static host and returns a share URL ({ url }), not
+  // downloadable files. It's handled by a separate publish path, not downloadFiles.
+  type ExportFormat = 'pdf' | 'mobile' | 'wide' | 'png-sections' | 'html';
   const EXPORT_FORMATS: { id: ExportFormat; label: string; title: string }[] = [
     { id: 'pdf',          label: '📄 PDF',      title: 'Phone-portrait, multi-page, crisp/selectable text — primary share' },
     { id: 'mobile',       label: '📱 PNG',      title: 'Phone-portrait single PNG (WhatsApp)' },
     { id: 'wide',         label: '🖥 Wide',     title: 'Wide desktop broadsheet PNG (800px)' },
     { id: 'png-sections', label: '🧩 Sections', title: 'One PNG per section + a podium-only image' },
+    { id: 'html',         label: '🔗 Share',    title: 'Publish the interactive digest to a public share link (digest.mattmariani.com) — no login, tap-modal works' },
   ];
   let exportFormat = $state<ExportFormat>('pdf');
 
@@ -398,6 +402,53 @@
       showError(err);
     } finally {
       exporting = false;
+    }
+  }
+
+  // -------- HTML share publish (sprint-20 html-export-ui) ----------
+  // The `html` format publishes the interactive digest to the public static host
+  // and returns a stable share URL ({ url: 'https://digest.mattmariani.com/d/<slug>' }),
+  // NOT files. Re-publishing overwrites the same slug → the shared link never breaks.
+  let publishing = $state(false);
+  let shareUrl = $state<string | null>(null);
+  let shareError = $state<string | null>(null);
+  let copied = $state(false);
+
+  async function publishHtml() {
+    publishing = true;
+    shareError = null;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/export`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ format: 'html' }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`publish failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      const body = (await res.json().catch(() => ({}))) as { url?: string };
+      if (!body.url) throw new Error('publish returned no url');
+      shareUrl = body.url;
+      copied = false;
+    } catch (err) {
+      shareError = err instanceof Error ? err.message : String(err);
+      showError(err);
+    } finally {
+      publishing = false;
+    }
+  }
+
+  async function copyShareLink() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      // Clipboard API can be blocked (insecure context / permissions) — the link
+      // stays visible and selectable as a fallback.
+      showError('Copy failed — select the link to copy it manually.');
     }
   }
 
@@ -809,12 +860,18 @@
           type="button"
           class:is-on={exportFormat === fmt.id}
           onclick={() => (exportFormat = fmt.id)}
-          disabled={finalizing || exporting}
+          disabled={finalizing || exporting || publishing}
           title={fmt.title}
         >{fmt.label}</button>
       {/each}
     </div>
-    {#if data.stage === 'refine'}
+    {#if exportFormat === 'html'}
+      <!-- HTML share: publishes the interactive digest to a public link (sprint-20).
+           Separate path from the file-download formats (returns { url }). -->
+      <button type="button" class="mash-btn mash-btn--primary" onclick={publishHtml} disabled={publishing || finalizing || exporting}>
+        {publishing ? '… publishing' : '🔗 Publish share link'}
+      </button>
+    {:else if data.stage === 'refine'}
       <button type="button" class="mash-btn mash-btn--primary" onclick={finalizeAndDownload} disabled={finalizing || exporting}>
         {finalizing ? '…' : '↓'} Finalize &amp; export
       </button>
@@ -822,6 +879,8 @@
       <button type="button" class="mash-btn mash-btn--primary" onclick={exportOnly} disabled={exporting || finalizing}>
         {exporting ? '…' : '↓'} Export
       </button>
+    {/if}
+    {#if data.stage === 'finalize'}
       <span style="font: 600 11px/1 var(--font-mono); color: var(--moss);">
         ✓ finalized {data.draft.finalized_at}
       </span>
@@ -834,6 +893,29 @@
       draft cached · {excludedCount} excluded · {lockedCount} locked
     </span>
   </div>
+
+  <!-- HTML share result (sprint-20). Shows the published public link + a copy
+       control after an `html` export. Only while the `html` format is selected. -->
+  {#if exportFormat === 'html' && (shareUrl || shareError)}
+    {#if shareUrl}
+      <div class="dg-share-result" role="status">
+        <span class="dg-share-badge">✓ published</span>
+        <a class="dg-share-url" href={shareUrl} target="_blank" rel="noopener noreferrer">{shareUrl}</a>
+        <button type="button" class="dg-share-copy" onclick={copyShareLink}>
+          {copied ? '✓ Copied' : '⧉ Copy link'}
+        </button>
+        <span class="dg-share-note">public · no login · interactive · re-publishing keeps this link</span>
+      </div>
+    {:else if shareError}
+      <div class="dg-share-result dg-share-result--err" role="alert">
+        <span class="dg-share-badge dg-share-badge--err">✕ publish failed</span>
+        <span class="dg-share-url">{shareError}</span>
+        <button type="button" class="dg-share-copy" onclick={publishHtml} disabled={publishing}>
+          {publishing ? '…' : '↻ Retry'}
+        </button>
+      </div>
+    {/if}
+  {/if}
 
   {#if data.stage === 'finalize'}
     <!-- LLM cost — in-app only (sprint-15 cost-display). Lives OUTSIDE .dg-export
@@ -1037,6 +1119,69 @@
   .dg-fmt-toggle button:disabled {
     cursor: default;
     opacity: 0.6;
+  }
+
+  /* HTML share-link result (sprint-20) */
+  .dg-share-result {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 9px 14px;
+    background: var(--mash-pulp-soft);
+    border: 1px solid var(--mash-pulp-edge, var(--line-strong));
+    border-radius: var(--r-2);
+  }
+  .dg-share-result--err {
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
+  .dg-share-badge {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mash-pulp);
+    white-space: nowrap;
+  }
+  .dg-share-badge--err {
+    color: var(--rust, #e0533a);
+  }
+  .dg-share-url {
+    font: 600 12px/1.3 var(--font-mono);
+    color: var(--fg);
+    text-decoration: none;
+    word-break: break-all;
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  a.dg-share-url:hover {
+    color: var(--mash-pulp);
+    text-decoration: underline;
+  }
+  .dg-share-copy {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    color: var(--fg);
+    cursor: pointer;
+    padding: 6px 11px;
+    font: 600 11px/1 var(--font-mono);
+    white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .dg-share-copy:hover:not(:disabled) {
+    color: var(--mash-pulp);
+    border-color: var(--mash-pulp);
+  }
+  .dg-share-copy:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+  .dg-share-note {
+    font: 500 10px/1 var(--font-mono);
+    color: var(--fg-quiet);
+    white-space: nowrap;
   }
 
   .dg-standings-head {
