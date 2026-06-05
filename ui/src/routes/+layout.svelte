@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/state';
+  import { fly, fade } from 'svelte/transition';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
@@ -57,9 +58,77 @@
     if (href === '/') return page.url.pathname === '/';
     return page.url.pathname.startsWith(href);
   }
+
+  // -------- Mobile / PWA nav (sprint-19 mobile-digest-menu) ----------
+  // The desktop rail is `hidden md:flex`, so below md there was no nav at all —
+  // phone + installed-PWA users couldn't reach the digest flow. This drawer is
+  // an ADDITIVE affordance shown only below md; the desktop sidebar is unchanged.
+  let mobileNavOpen = $state(false);
+  function closeMobileNav() {
+    mobileNavOpen = false;
+  }
+  // Close the drawer whenever the route changes (tap an item → navigate → close).
+  $effect(() => {
+    page.url.pathname; // track
+    mobileNavOpen = false;
+  });
+  function onNavKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') mobileNavOpen = false;
+  }
 </script>
 
-<div class="min-h-screen flex bg-bg text-fg">
+<!-- Shared primary-nav list — rendered by the desktop rail AND the mobile drawer
+     so the two never drift (sprint-19). -->
+{#snippet navList()}
+  <ul class="flex flex-col gap-0.5">
+    {#each navItems as item}
+      {@const current = isCurrent(item.href)}
+      <li>
+        <a
+          href={item.href}
+          class="flex items-center gap-2 pl-3 pr-2 py-1.5 text-sm rounded-sm border-l-2 transition-colors"
+          class:border-accent={current}
+          class:bg-accent-bg={current}
+          class:text-accent={current}
+          class:border-transparent={!current}
+          class:text-fg-muted={!current}
+          class:hover:text-fg={!current}
+          class:hover:bg-surface={!current}
+        >
+          <span class="text-fg-faint text-xs flex-shrink-0" aria-hidden="true">{item.glyph}</span>
+          <span class="flex-1 truncate">{item.label}</span>
+          {#if item.count}
+            <StatusChip label={item.count} tone="muted" />
+          {/if}
+        </a>
+      </li>
+    {/each}
+  </ul>
+{/snippet}
+
+<div class="min-h-screen flex flex-col md:flex-row bg-bg text-fg">
+  <!-- Mobile top bar — additive nav affordance below md (sprint-19). The desktop
+       rail is `hidden md:flex`; in the installed PWA (display: standalone) there
+       is no browser chrome, so this bar is the only way to reach the nav/digest. -->
+  <header
+    class="md:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 border-b border-border-muted bg-bg-elevated"
+  >
+    <a href="/" class="flex items-baseline gap-1.5 group">
+      <span class="ml-mark leading-none transition-colors">m/l</span>
+      <span class="font-mono text-xs text-fg-muted">music-league-bot</span>
+    </a>
+    <button
+      type="button"
+      class="flex items-center justify-center w-10 h-10 -mr-2 rounded-sm text-fg-muted hover:text-fg hover:bg-surface transition-colors"
+      aria-label="Open navigation menu"
+      aria-expanded={mobileNavOpen}
+      aria-controls="mobile-nav-drawer"
+      onclick={() => (mobileNavOpen = true)}
+    >
+      <span class="text-xl leading-none" aria-hidden="true">☰</span>
+    </button>
+  </header>
+
   <!-- Left rail -->
   <aside class="hidden md:flex flex-col w-[232px] flex-shrink-0 border-r border-border-muted bg-bg-elevated sticky top-0 h-screen overflow-y-auto">
     <!-- Header / wordmark -->
@@ -76,30 +145,7 @@
 
     <!-- Primary nav -->
     <nav class="px-2 py-4">
-      <ul class="flex flex-col gap-0.5">
-        {#each navItems as item}
-          {@const current = isCurrent(item.href)}
-          <li>
-            <a
-              href={item.href}
-              class="flex items-center gap-2 pl-3 pr-2 py-1.5 text-sm rounded-sm border-l-2 transition-colors"
-              class:border-accent={current}
-              class:bg-accent-bg={current}
-              class:text-accent={current}
-              class:border-transparent={!current}
-              class:text-fg-muted={!current}
-              class:hover:text-fg={!current}
-              class:hover:bg-surface={!current}
-            >
-              <span class="text-fg-faint text-xs flex-shrink-0" aria-hidden="true">{item.glyph}</span>
-              <span class="flex-1 truncate">{item.label}</span>
-              {#if item.count}
-                <StatusChip label={item.count} tone="muted" />
-              {/if}
-            </a>
-          </li>
-        {/each}
-      </ul>
+      {@render navList()}
     </nav>
 
     <!-- Leagues -->
@@ -157,7 +203,58 @@
       {@render children?.()}
     </div>
   </main>
+
+  <!-- Mobile nav drawer + scrim (below md only; under the z-50 digest modals so
+       a modal opened from a page still sits on top). Closes on tap-outside, Esc,
+       or route change. -->
+  {#if mobileNavOpen}
+    <button
+      type="button"
+      class="md:hidden fixed inset-0 z-40 bg-black/60"
+      aria-label="Close navigation menu"
+      onclick={closeMobileNav}
+      transition:fade={{ duration: 150 }}
+    ></button>
+    <aside
+      id="mobile-nav-drawer"
+      class="md:hidden fixed inset-y-0 left-0 z-40 w-[260px] max-w-[80vw] flex flex-col border-r border-border-muted bg-bg-elevated overflow-y-auto"
+      transition:fly={{ x: -280, duration: 200 }}
+    >
+      <header class="px-5 pt-6 pb-5 border-b border-border-muted flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <SectionLabel>Mash co.</SectionLabel>
+          <a href="/" class="flex items-baseline gap-1.5 mt-2 group">
+            <span class="ml-mark leading-none transition-colors">m/l</span>
+            <span class="font-mono text-xs text-fg-muted truncate">music-league-bot</span>
+          </a>
+          <div class="mt-2">
+            <MlAuthBadge />
+          </div>
+        </div>
+        <button
+          type="button"
+          class="flex items-center justify-center w-9 h-9 -mr-1 flex-shrink-0 rounded-sm text-fg-muted hover:text-fg hover:bg-surface transition-colors"
+          aria-label="Close navigation menu"
+          onclick={closeMobileNav}
+        >
+          <span class="text-lg leading-none" aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <nav class="px-2 py-4">
+        {@render navList()}
+      </nav>
+
+      <div class="flex-1"></div>
+
+      <footer class="px-5 pt-4 pb-5 border-t border-border-muted">
+        <div class="font-mono text-[11px] text-fg-faint">mash co. · v{appVersion}</div>
+      </footer>
+    </aside>
+  {/if}
 </div>
+
+<svelte:window onkeydown={onNavKey} />
 
 <style>
   /* Canonical pulp m/l mark — recipe from
