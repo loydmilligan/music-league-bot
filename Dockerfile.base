@@ -1,0 +1,16 @@
+# music-league-bot-base:chromium
+#
+# Stable base image that carries chromium + fonts so the app images
+# (Dockerfile.ui runtime → bot-ui; root Dockerfile → bot+api) can `FROM` it
+# and stop re-downloading ~150 MB of chromium on every `--no-cache` rebuild.
+#
+# Build once, rebuild ONLY when chromium / the base node version changes:
+#   docker build -f Dockerfile.base -t music-league-bot-base:chromium .
+FROM node:22-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium

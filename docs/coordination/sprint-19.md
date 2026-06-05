@@ -41,7 +41,7 @@ Chromium cached in a base image; mobile/PWA regains the digest menu.
 
 ## Active Sprint Plan
 
-- [ ] {agent: backend, id: chromium-base-image} Create a stable base Docker image that carries chromium so the app images stop re-installing it on `--no-cache` rebuilds. Add `Dockerfile.base` (`FROM node:22-bookworm-slim`, `apt-get install -y --no-install-recommends chromium fonts-liberation`, `rm -rf /var/lib/apt/lists/*`, and the puppeteer env `PUPPETEER_SKIP_DOWNLOAD=true` / `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`). Build + tag it `music-league-bot-base:chromium`. This is the shared foundation the two refactor tasks build on; it does not change any running service by itself.
+- [x] {agent: backend, id: chromium-base-image} Create a stable base Docker image that carries chromium so the app images stop re-installing it on `--no-cache` rebuilds. Add `Dockerfile.base` (`FROM node:22-bookworm-slim`, `apt-get install -y --no-install-recommends chromium fonts-liberation`, `rm -rf /var/lib/apt/lists/*`, and the puppeteer env `PUPPETEER_SKIP_DOWNLOAD=true` / `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`). Build + tag it `music-league-bot-base:chromium`. This is the shared foundation the two refactor tasks build on; it does not change any running service by itself.
   - **Acceptance:** `docker build -f Dockerfile.base -t music-league-bot-base:chromium .` succeeds; `docker run --rm music-league-bot-base:chromium chromium --version` prints a chromium version; base is `node:22-bookworm-slim`-derived so it can back both app images. Tag/name recorded in the Activity Log for the refactor tasks.
 
 - [ ] {agent: backend, id: bot-ui-on-base, depends: chromium-base-image} Refactor `Dockerfile.ui`'s **runtime** stage to `FROM music-league-bot-base:chromium` and **delete** its `apt-get install … chromium fonts-liberation` step (the base now provides them; keep the builder stage as-is). This is the primary deploy-latency win — `bot-ui` is the service deployed on every change. Verify a real `--no-cache bot-ui` build no longer fetches chromium and the digest **PNG export** still works on prod.
@@ -80,6 +80,12 @@ Until `deploy-flow-docs` lands, deploy per current `CLAUDE.md`: `docker compose 
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-05 — backend — chromium-base-image DONE
+- Added `Dockerfile.base`: `FROM node:22-bookworm-slim` → `apt-get install -y --no-install-recommends chromium fonts-liberation` → `rm -rf /var/lib/apt/lists/*`; env `PUPPETEER_SKIP_DOWNLOAD=true` + `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`.
+- **Image name/tag for follow-on tasks: `music-league-bot-base:chromium`** (build: `docker build -f Dockerfile.base -t music-league-bot-base:chromium .`).
+- Acceptance ✓: build succeeded; `docker run --rm music-league-bot-base:chromium chromium --version` → `Chromium 148.0.7778.215 built on Debian GNU/Linux 12 (bookworm)`. Base is `node:22-bookworm-slim`-derived, so it backs both `Dockerfile.ui` runtime (bot-ui) and root `Dockerfile` (bot+api).
+- No running service changed by this task alone. Next: bot-ui-on-base ∥ bot-on-base point their `FROM` at this base + drop their chromium apt lines.
 
 ### 2026-06-05 — docs — Sprint plan created: deploy-and-mobile (sprint-19)
 - 5 tasks: chromium-base-image → (bot-ui-on-base ∥ bot-on-base) → deploy-flow-docs [backend, 4]; mobile-digest-menu [frontend, 1]; viz idle
