@@ -70,29 +70,58 @@ describe('getNextRound', () => {
   });
 });
 
-describe('getDiscoverability', () => {
-  it('ranks players by mean obscurity (100 − proxy), most-obscure first', () => {
+describe('getDiscoverability (tastemaker v2)', () => {
+  // obscurity = 100 − proxy. A→s1(proxy90→obsc10), B→s2(proxy30→obsc70), C→s3(proxy10→obsc90).
+  function popR1(d: Database.Database) {
+    pop(d, 'spotify:track:s1', 100, 100, 90);
+    pop(d, 'spotify:track:s2', 100, 100, 30);
+    pop(d, 'spotify:track:s3', 100, 100, 10);
+  }
+
+  it('ranks by median discovery percentile, with buckets + per-song detail (single round)', () => {
     const { r1 } = seed(db);
-    // Full coverage: all 4 season submissions scored. A→s1(90)+s4(90), B→s2(30), C→s3(10).
-    pop(db, 'spotify:track:s1', 100, 100, 90);
-    pop(db, 'spotify:track:s2', 100, 100, 30);
-    pop(db, 'spotify:track:s3', 100, 100, 10);
-    pop(db, 'spotify:track:s4', 100, 100, 90);
+    popR1(db);
     const d = getDiscoverability(db, r1)!;
-    expect(d.map((r) => [r.name, r.obscurityScore, r.submissionCount, r.avgPopularity])).toEqual([
-      ['C', 90, 1, 10], // most obscure
-      ['B', 70, 1, 30],
-      ['A', 10, 2, 90], // crowd-pleaser, 2 submissions
+    expect(d.scope).toBe('season');
+    // 3 obscurities (10,70,90) → percentiles 0,50,100. Ranked most-obscure first.
+    expect(d.players.map((p) => [p.name, p.tastemakerScore, p.rank, p.prevRank])).toEqual([
+      ['C', 100, 1, null], // obsc90 → pct100, rabbitHole; no prior round → prevRank null
+      ['B', 50, 2, null],  // obsc70 → pct50, rabbitHole
+      ['A', 0, 3, null],   // obsc10 → pct0, recognizable
     ]);
+    const c = d.players[0];
+    expect(c.buckets).toEqual({ radioHit: 0, recognizable: 0, curiousCut: 0, rabbitHole: 1 });
+    expect(c.songs).toHaveLength(1);
+    expect(c.songs[0]).toMatchObject({ obscurity: 90, discoveryPercentile: 100, bucket: 'rabbitHole', points: 1 });
+    // buckets sum to submissionCount for each player
+    for (const p of d.players) {
+      const sum = p.buckets.radioHit + p.buckets.recognizable + p.buckets.curiousCut + p.buckets.rabbitHole;
+      expect(sum).toBe(p.submissionCount);
+    }
   });
+
+  it('prevRank comes from the cumulative ranking through the prior round', () => {
+    const { r2 } = seed(db);
+    popR1(db);
+    pop(db, 'spotify:track:s4', 100, 100, 50); // A's r2 pick, obsc50
+    const d = getDiscoverability(db, r2)!;
+    // Corpus r1+r2: obscurities 10,50,70,90 → percentiles 0,33,67,100.
+    // A has s1(0)+s4(33) → median 17; B s2→67; C s3→100.
+    const byName = Object.fromEntries(d.players.map((p) => [p.name, p]));
+    expect(byName.A.tastemakerScore).toBe(17);
+    expect(byName.A.submissionCount).toBe(2);
+    // prevRank = ranking through r1 only (A3,B2,C1) — present, not null.
+    expect([byName.C.prevRank, byName.B.prevRank, byName.A.prevRank]).toEqual([1, 2, 3]);
+  });
+
   it('self-suppresses (null) when no popularity data exists', () => {
     const { r1 } = seed(db);
     expect(getDiscoverability(db, r1)).toBeNull();
   });
-  it('self-suppresses (null) when coverage is PARTIAL (< 80% of submissions scored)', () => {
+
+  it('self-suppresses (null) when coverage is PARTIAL (< 80% of the corpus scored)', () => {
     const { r1 } = seed(db);
-    // Season has 4 submissions; score only 1 (25%) — a misleading lonely board.
-    pop(db, 'spotify:track:s2', 100, 100, 30);
+    pop(db, 'spotify:track:s2', 100, 100, 30); // only 1 of r1's 3 songs scored = 33%
     expect(getDiscoverability(db, r1)).toBeNull();
   });
 });
