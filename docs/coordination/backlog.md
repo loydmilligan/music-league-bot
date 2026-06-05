@@ -2,7 +2,7 @@
 project: music-league-bot
 type: backlog
 created: 2026-05-20T00:00:00Z
-updated: 2026-05-20T00:00:00Z
+updated: 2026-06-04T00:00:00Z
 ---
 
 # music-league-bot — backlog
@@ -45,3 +45,35 @@ updated: 2026-05-20T00:00:00Z
 - Caching policy: how long is a Songlink result good for? Songlink URLs typically don't change, so persistent cache is fine; only invalidate if a song is re-resolved manually by an operator.
 
 **Pairs with:** Sprint-10 T9 (YTM Songlink backend ingest path — already shipped, has the deferred debug bug; that debug informs the same code path this feature uses).
+
+## Deferred from sprint-16 (2026-06-03)
+
+- **Add-player capability on the standings section.** Extend `POST /api/digest/[roundId]/standings` with `action: 'add-player'` (backend: upsert a `competitors` row + create an `ml_submissions` row in the round + write gospel via `applyEdits` — there is no separate roster table; the submission row *is* season/league membership) plus an "add player" form in `EditableStandingsTable.svelte` (frontend). **Why deferred:** the sprint-16 importer parser fix resolved the missing-player bug (Lori + all 7 orphan rounds) systemically, so add-player is now only a general manual-correction tool, not a needed fix. Pull when a manual-add need actually arises. Full task specs + acceptance preserved in `docs/coordination/sprint-16.md` (tasks `add-player-endpoint`, `add-player-ui`).
+
+## Cache chromium in a stable Docker layer (drafted 2026-06-04) — do-next candidate
+
+**Source:** user, 2026-06-04, after watching a `--no-cache` deploy spend 15–25 min re-downloading chromium over wifi.
+
+**Problem.** `CLAUDE.md`'s deploy command is `docker compose build --no-cache bot-ui`. `--no-cache` invalidates *every* layer, so `Dockerfile.ui`'s `apt-get install -y --no-install-recommends chromium fonts-liberation` (line 23) **re-fetches ~150 MB of chromium on every deploy**, even when only app code changed. chromium is required for the digest PNG export (`ui/src/lib/digest/export.ts` → `puppeteer-core` → `/usr/bin/chromium`, set via `PUPPETEER_EXECUTABLE_PATH`), so it can't be dropped. The user confirmed `--no-cache` is still wanted *at times* (clean rebuilds) — so the fix must keep chromium cached **without** forcing the operator to give up `--no-cache` on the app image.
+
+**Direction (lane: backend / infra).**
+1. **Split the image:** move the `apt-get install chromium fonts-liberation` step into a **separate stable base image** (e.g. `Dockerfile.base` → `music-league-bot-base:chromium`) that the app `Dockerfile.ui` then `FROM`s. The base rarely changes, so it's built once and reused.
+2. **Adjust the deploy flow** so `--no-cache` rebuilds only the *app* layers (`docker compose build --no-cache bot-ui`) while the chromium base stays cached. Update `CLAUDE.md`'s deploy instruction to match (rebuild base only when the chromium/base layer actually changes).
+3. **Verify:** a normal `--no-cache bot-ui` deploy no longer re-downloads chromium (build time drops from ~15–25 min to a couple of minutes); PNG export still works on prod (chromium present at `/usr/bin/chromium`).
+
+**Why it matters.** Every deploy on this prod-first project currently pays the chromium-download tax; this is the single biggest deploy-latency win available. User wants `--no-cache` preserved for occasional clean rebuilds, so don't just drop the flag — restructure the layers.
+
+**Open question.** Pin a chromium version in the base image (reproducible, but needs manual bumps) vs. `apt-get install chromium` unpinned (auto-updates, but the base must be periodically rebuilt)? Probably unpinned base + periodic rebuild.
+
+## Mobile / Android PWA missing the digest-generation menu (drafted 2026-06-04) — fix needed
+
+**Source:** user, 2026-06-04. On the **Android PWA** and at **mobile viewport sizes**, the menu items to **choose / start digest generation are absent** — so a mobile user can't initiate a digest the way a desktop user can. Desktop has the option; mobile does not.
+
+**Problem.** The digest-generation entry point (the menu/nav action that opens digest generation — the `GenerateModal` flow) is not rendering (or not reachable) in the mobile/PWA layout. Needs investigation: is it a responsive nav that drops the item below a breakpoint, a hamburger/overflow menu that omits it, or a PWA-shell nav that was never wired? Confirm where the desktop entry point lives, then ensure an equivalent reachable affordance exists on mobile + PWA.
+
+**Direction (lane: frontend).**
+1. **Reproduce + locate:** find the desktop digest-generation menu entry point; check the responsive/mobile nav and the PWA shell for why it's missing (breakpoint hiding, overflow menu, or absent).
+2. **Add a reachable mobile affordance:** surface the digest-generation action in the mobile nav / PWA menu (overflow menu, bottom sheet, or visible button — match the existing mobile nav pattern).
+3. **Verify on a real mobile viewport + the installed Android PWA:** the user can reach digest generation and open the GenerateModal; the flow completes (web render + mobile-PNG export).
+
+**Why it matters.** The digest is the project's flagship output and the user consumes/operates it from a phone (WhatsApp digest workflow). Not being able to *start* a digest from mobile/PWA is a real workflow gap, not polish. Pairs with the sprint-18 `integration-audit` (GenerateModal control-surface coverage) but is distinct — that audits the modal's *contents*; this is about *reaching* the modal at all on mobile.
