@@ -40,7 +40,7 @@ A public digest.mattmariani.com page keeps the tap-modal alive, mlb stays hidden
 
 ## Active Sprint Plan
 
-- [ ] {agent: backend, id: packaging-spike} **SPIKE (gating).** Prove a self-contained, still-interactive digest can be served from a dumb static host (no app backend). Render one round's digest with interactivity ON (do NOT use the `?export=1` static path), embed/bundle data + JS + assets, and confirm a client-side interaction survives. Try the leading approach (SSR + bundled assets in a `<slug>/` folder) vs a true single-file build; pick one. Throwaway code is fine — **the decision + a working sample are the deliverable.**
+- [x] {agent: backend, id: packaging-spike} **SPIKE (gating).** Prove a self-contained, still-interactive digest can be served from a dumb static host (no app backend). Render one round's digest with interactivity ON (do NOT use the `?export=1` static path), embed/bundle data + JS + assets, and confirm a client-side interaction survives. Try the leading approach (SSR + bundled assets in a `<slug>/` folder) vs a true single-file build; pick one. Throwaway code is fine — **the decision + a working sample are the deliverable.**
   - **Acceptance:** a sample artifact for HJ S3 r104 served by a plain static server (e.g. `python3 -m http.server` or a throwaway caddy) with **no app/DB process running** loads in a browser and the **tastemaker tap-modal opens** (bucket count → chunked-bar song modal). Chosen mechanism (folder-vs-single-file), how data/JS/assets are embedded, and the on-disk + URL layout (`/d/<slug>/…`) recorded in the Activity Log for render-pipeline + digest-static-container.
 
 - [ ] {agent: backend, id: render-pipeline, depends: packaging-spike} Productionize the spike into a render function in `src/lib/digest/export.ts` (e.g. `renderDigestHtml(roundId)`) that renders any round's full digest to the self-contained artifact **with interactivity ON**, under the round's **stable unguessable slug**, and writes it into a shared `digests/` volume. Persist the **slug ⇄ round mapping** (DB row or json manifest in the volume — your call) so a round always resolves to the same slug and re-render overwrites in place.
@@ -89,6 +89,40 @@ Deploy per `CLAUDE.md` (now fast — chromium base layer, sprint-19): `docker co
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-05 — backend — packaging-spike DONE → **mechanism decided; render-pipeline + digest-static-container unblocked**
+**Result: PROVEN.** A self-contained, still-interactive r104 (HJ S3) digest served by a plain `python3 -m http.server` (NO app/DB process) loads in chromium and the **tastemaker tap-modal opens** — tapping a bucket → chunked-bar song modal ("RECOGNIZABLE · 1 song · Mashew" → "Fight For Your Right — Beastie Boys, ob 13"). 0 page errors, 0 failed requests, **0 `mlb.mattmariani.com`** strings across all served files. Screenshot: `/tmp/html-share-spike/modal-open.png`.
+
+**DECISION — folder-per-slug (SSR HTML + bundled `_app/` assets). NOT single-file.**
+- Why not single-file: the app is SvelteKit (Svelte 5 runes, adapter-node) and code-splits via native ESM `import()` of `_app/immutable/{entry,chunks,nodes}/*.js`. Inlining a dynamic ESM module graph into one file (import-maps + blob/data-URLs) is fragile and fights the framework. Folder-per-slug is the spec's leading candidate and the robust fit. Artifact is tiny (~492 KB / 20 files for r104), so per-slug asset duplication is a non-issue.
+
+**How data/JS/assets are embedded:**
+- **Data:** the full digest payload (every section incl. tastemaker `players[].songs/buckets`) is **inlined into the SSR HTML** by `+page.server.ts` at render time. The tap-modal (`TastemakerSection.svelte` `openModal`) reads already-loaded props (`p.songs`) — **no fetch at tap-time**, so interactivity needs zero backend. Confirmed `?export=1` is NOT set (it would disable the modal, sprint-18) → interactivity ON.
+- **JS/CSS:** capture the full same-origin asset closure the browser loads during a real hydrated view of `/digest/<id>` (entry `app.*.js`+`start.*.js`, transitively-imported `chunks/*` + route `nodes/*`, the section CSS) and save them **preserving the `_app/immutable/…` tree verbatim** — JS-to-JS relative imports then stay self-consistent regardless of where the folder is mounted.
+- **The only rewrite:** page→entry refs `../_app/` → `./_app/` (page depth changes from `/digest/104` to `/d/<slug>/`). **The `./` prefix is mandatory** — a bare `_app/…` specifier is illegal for dynamic `import()` (the one bug found + fixed in the spike; symptom = `Failed to resolve module specifier`).
+
+**On-disk + URL layout (for render-pipeline + digest-static-container):**
+```
+digests/                      ← shared volume root (digest-static serves this ro; bot-ui writes rw)
+  d/<slug>/
+    index.html                ← SSR HTML, interactivity ON, data inlined, ./_app refs
+    _app/immutable/
+      entry/{app,start}.*.js
+      chunks/*.js
+      nodes/{0,1,6}.*.js       ← root layout / layout / digest page
+      assets/*.css
+```
+URL: `https://digest.mattmariani.com/d/<slug>/` (trailing slash → `index.html`). **digest-static must serve `d/<slug>/` as a directory with an index.** Slug is unguessable+stable-per-round (render-pipeline owns the store; spike used a readable `spike-hjs3-r104`).
+
+**Render method for render-pipeline:** drive headless chromium (already in the sprint-19 base image) to load the LIVE page **without `?export=1`**, capture the SSR doc + same-origin asset closure, apply the single `../_app/`→`./_app/` rewrite, write the folder into `digests/d/<slug>/`. (Spike did this via puppeteer network-capture; productionize in `src/lib/digest/export.ts`.)
+
+**Follow-ups for render-pipeline (noted, none block the spike's claim):**
+1. **Google Fonts load from CDN** (`fonts.googleapis.com`/`gstatic.com`) — external but not app/DB. For a fully self-contained, zero-external, guaranteed-no-leak artifact, **localize the font CSS + woff2 into `_app/`** (recommended).
+2. **Absolute-root assets** (`/manifest.webmanifest`, `/m-l-favicon-*.png`) 404 under `/d/<slug>/` — non-critical (page renders), rewrite to `./` or drop.
+3. **Layout auth probe**: page fires a same-origin `GET /api/ml-auth/...` on load (captured as a static 200) — harmless on the static host; strip it.
+4. **SPA nav links** (`/digest`, `/chat`, logo `/`) 404 on the static host — out of scope (single-digest view; no index page by D3).
+
+Throwaway capture/verify scripts removed from `ui/` (kept the working sample at `/tmp/html-share-spike/`).
 
 ### 2026-06-05 — docs — Sprint plan created: html-share (sprint-20)
 - 7 items: packaging-spike → (render-pipeline ∥ digest-static-container) → export-endpoint [backend]; html-export-ui [frontend, parallel]; cf-tunnel [USER, parallel]; e2e-verify [frontend, ← endpoint+ui+container+tunnel]
