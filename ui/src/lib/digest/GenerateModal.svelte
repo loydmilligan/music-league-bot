@@ -27,19 +27,30 @@
   // Standings is a DATA section (computed from votes, not LLM prose), so it
   // carries no style/variant — just include + a recompute (adopt computed) opt.
   export type StandingsGenOpt = { include: boolean; recompute: boolean };
+  // Tastemaker (discoverability v2) is also a DATA section — pure recompute from
+  // popularity data, no LLM prompt path. Only control is include/exclude.
+  export type TastemakerGenOpt = { include: boolean };
   export type GenerateParams = {
     sections: GenSection[];
     pastedChat: string;
     standings: StandingsGenOpt;
+    tastemaker: TastemakerGenOpt;
   };
+
+  // Coverage state for the Tastemaker section's indicator. 'ready' = the season's
+  // popularity data is sufficient and the section will render; 'incomplete' = the
+  // payload self-suppressed (absent / <80% coverage) and the section stays hidden
+  // until popularity is backfilled.
+  export type TastemakerCoverage = 'ready' | 'incomplete';
 
   type Props = {
     sectionLabels: Record<SectionKind, string>;
     busy?: boolean;
+    tastemakerCoverage?: TastemakerCoverage;
     onCancel: () => void;
     onSubmit: (params: GenerateParams) => void;
   };
-  let { sectionLabels, busy = false, onCancel, onSubmit }: Props = $props();
+  let { sectionLabels, busy = false, tastemakerCoverage = 'incomplete', onCancel, onSubmit }: Props = $props();
 
   // Style / focus tags — plain descriptors (replaces the regen modal's
   // "more/less ___" phrasing). Combinable per section.
@@ -64,6 +75,10 @@
   let standingsInclude = $state(true);
   let standingsRecompute = $state(false);
 
+  // Tastemaker (discoverability v2) include toggle — default ON. Pure data, so no
+  // recompute opt: regen always recomputes it from the latest popularity data.
+  let tastemakerInclude = $state(true);
+
   function toggleExpand(id: string) {
     expanded[id] = !expanded[id];
   }
@@ -78,6 +93,7 @@
       sections: $state.snapshot(sections),
       pastedChat,
       standings: { include: standingsInclude, recompute: standingsRecompute },
+      tastemaker: { include: tastemakerInclude },
     });
   }
 
@@ -196,6 +212,30 @@
             fresh computed values.
           </p>
         </div>
+
+        <!-- Tastemaker (discoverability v2): a DATA section (median percentile from
+             Last.fm popularity, not LLM prose). Include toggle + coverage indicator. -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!tastemakerInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={tastemakerInclude} />
+              <span class="dg-gen-name">Tastemaker</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+            {#if tastemakerCoverage === 'ready'}
+              <span class="dg-gen-cov dg-gen-cov--ok" title="Popularity coverage is sufficient — the section will render">● coverage ready</span>
+            {:else}
+              <span class="dg-gen-cov dg-gen-cov--warn" title="Popularity data is absent or below the 80% threshold — the section self-suppresses until backfilled">⚠ incomplete coverage</span>
+            {/if}
+          </div>
+          <p class="dg-gen-note">
+            Per-player season taste profile (median discovery percentile from Last.fm). Pure data —
+            regenerate recomputes it from the latest popularity backfill; no LLM prompt.
+            {#if tastemakerCoverage !== 'ready'}
+              Hidden until ≥80% of the season has popularity data.
+            {/if}
+          </p>
+        </div>
       </div>
 
       <span class="dg-modal-eyebrow">Paste WhatsApp chat · feeds the back-cover chat section</span>
@@ -259,6 +299,18 @@
     border: 1px solid var(--mash-pulp-edge, var(--line-strong));
     border-radius: 999px;
     padding: 2px 6px;
+  }
+  .dg-gen-cov {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .dg-gen-cov--ok {
+    color: #3ec27a;
+  }
+  .dg-gen-cov--warn {
+    color: var(--mash-pulp, #e8a83a);
   }
   .dg-gen-recompute {
     display: inline-flex;

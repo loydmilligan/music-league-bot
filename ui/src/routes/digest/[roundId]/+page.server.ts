@@ -7,6 +7,7 @@ import {
   type DigestDraftRow,
   type DigestSectionRow,
 } from '$lib/digest/llm.js';
+import type { TastemakerPayload } from '$lib/db/discoverability.js';
 
 export type PrepareCheck = {
   name: string;
@@ -78,12 +79,8 @@ export type DigestStats = {
   closestRace?: number;
   uniqueArtists?: number;
 };
-export type DiscoverabilityRow = {
-  name: string;
-  obscurityScore: number;
-  submissionCount: number;
-  avgPopularity: number;
-};
+// Discoverability v2 (sprint-18): the Tastemaker payload (object with `.players`),
+// not the v1 row array. Type owned by `$lib/db/discoverability.ts` — imported above.
 export type NextRoundInfo = {
   theme?: string | null;
   deadline?: string | null;
@@ -105,7 +102,7 @@ export type DigestPageData =
       sections: SectionWithContent[];
       standings: StandingsPayload | null;
       stats: DigestStats | null;
-      discoverability: DiscoverabilityRow[] | null;
+      discoverability: TastemakerPayload | null;
       nextRound: NextRoundInfo | null;
     });
 
@@ -159,7 +156,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
     const [standings, stats, discoverability, nextRound] = await Promise.all([
       fetchStandings(fetch, roundId),
       fetchJson<{ stats: DigestStats }>(fetch, `/api/digest/${roundId}/stats`).then((b) => b?.stats ?? null),
-      fetchJson<{ discoverability: DiscoverabilityRow[] | null }>(fetch, `/api/digest/${roundId}/discoverability`).then((b) => b?.discoverability ?? null),
+      fetchJson<{ discoverability: TastemakerPayload | null }>(fetch, `/api/digest/${roundId}/discoverability`).then((b) => b?.discoverability ?? null),
       fetchJson<{ nextRound: NextRoundInfo | null }>(fetch, `/api/digest/${roundId}/next-round`).then((b) => b?.nextRound ?? null),
     ]);
     return {

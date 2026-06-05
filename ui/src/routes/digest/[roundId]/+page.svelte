@@ -11,7 +11,7 @@
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import ChatMoments from '$lib/digest/ChatMoments.svelte';
   import StatStrip from '$lib/digest/StatStrip.svelte';
-  import TastemakerLeaderboard from '$lib/digest/TastemakerLeaderboard.svelte';
+  import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
@@ -225,6 +225,11 @@
       // Standings handling (the draft endpoint recomputes + reconciles standings).
       standingsExcluded = !params.standings.include;
       standingsOverride = null; // fall back to the freshly-loaded gospel
+
+      // Tastemaker (discoverability v2): pure-data section. Include toggle is
+      // session-scoped; regen recomputes it automatically — invalidateAll below
+      // re-fetches /discoverability, which recomputes from the latest popularity.
+      discoverabilityExcluded = !params.tastemaker.include;
       if (params.standings.recompute) {
         // "Recompute from votes" → adopt the computed values as the new gospel.
         await adoptStandings();
@@ -433,14 +438,14 @@
   //   chat           → ChatMoments          (restructured { summary, moments[] }; web = expandable, PDF = anchor-linked)
   //   standings      → StandingsChart       (synthetic data-driven section, see below)
   //   stats          → StatStrip            (sprint-17 synthetic data-driven)
-  //   discoverability→ TastemakerLeaderboard(sprint-17 synthetic data-driven)
+  //   discoverability→ TastemakerSection    (sprint-18 v2 — replaces v1 leaderboard)
   //   nextRound      → NextRoundPreview     (sprint-17 synthetic data-driven)
   const VISUAL_COMPONENTS: VisualRegistry = {
     podium: AlbumPodium,
     chat: ChatMoments,
     standings: StandingsChart,
     stats: StatStrip,
-    discoverability: TastemakerLeaderboard,
+    discoverability: TastemakerSection,
     nextRound: NextRoundPreview,
   };
 
@@ -468,7 +473,17 @@
     !!statsData && Object.values(statsData).some((v) => typeof v === 'number'),
   );
   const discoverabilityData = $derived(inDigest ? data.discoverability : null);
-  const showDiscoverability = $derived((discoverabilityData?.length ?? 0) > 0);
+  // v2 payload is a TastemakerPayload object (`.players`), not the v1 row array.
+  // The backend self-suppresses to null on absent/partial (<80%) coverage, so a
+  // non-null payload with players = "coverage ready". `discoverabilityExcluded`
+  // is the GenerateModal include toggle (session-scoped — web view).
+  let discoverabilityExcluded = $state(false);
+  const showDiscoverability = $derived(
+    !discoverabilityExcluded && (discoverabilityData?.players?.length ?? 0) > 0,
+  );
+  const tastemakerCoverage = $derived<'ready' | 'incomplete'>(
+    (discoverabilityData?.players?.length ?? 0) > 0 ? 'ready' : 'incomplete',
+  );
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
   const showNextRound = $derived(!!nextRoundData && (!!nextRoundData.theme || !!nextRoundData.deadline));
   const StatSlot = $derived(VISUAL_COMPONENTS.stats);
@@ -885,12 +900,14 @@
       </div>
     {/if}
 
-    <!-- Discoverability "tastemaker leaderboard" (sprint-17) — after the
-         analytical sections. Reads data.discoverability; self-suppresses empty. -->
+    <!-- Tastemaker section (discoverability v2, sprint-18) — replaces the v1
+         leaderboard. Reads data.discoverability (TastemakerPayload); the component
+         self-suppresses on null/empty and renders its static fallback in the
+         export path (?export=1). Lives inside .dg-export → web + PNG export. -->
     {#if showDiscoverability && DiscoverabilitySlot}
       <div class="dg-section-wrap" data-section-kind="discoverability">
         <section class="dg-section">
-          <p class="dg-section-eyebrow">Tastemaker leaderboard</p>
+          <p class="dg-section-eyebrow">Tastemaker</p>
           <DiscoverabilitySlot kind="discoverability" content={{}} data={discoverabilityData} variant="visual" />
         </section>
       </div>
@@ -924,6 +941,7 @@
   <GenerateModal
     sectionLabels={SECTION_LABELS}
     busy={drafting}
+    {tastemakerCoverage}
     onCancel={closeGenerate}
     onSubmit={submitGenerate}
   />
