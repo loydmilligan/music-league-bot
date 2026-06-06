@@ -30,7 +30,7 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 
 ## Active Sprint Plan
 
-- [ ] {agent: frontend, id: history-shell} Rename the nav item **"Round history" → "History"** (`ui/src/routes/+layout.svelte`) and build the **tabbed History screen** at `/history` with **three tabs** — **Song search**, **Theme research**, **Player research** — present as **stubs** (empty/"coming soon" panels are fine; tab switching works, deep-link/route per tab if easy). Match the app's Mash Co. styling.
+- [x] {agent: frontend, id: history-shell} Rename the nav item **"Round history" → "History"** (`ui/src/routes/+layout.svelte`) and build the **tabbed History screen** at `/history` with **three tabs** — **Song search**, **Theme research**, **Player research** — present as **stubs** (empty/"coming soon" panels are fine; tab switching works, deep-link/route per tab if easy). Match the app's Mash Co. styling.
   - **Acceptance:** nav reads "History"; `/history` renders a 3-tab shell, tabs switch; stub panels labeled. `npm run check` passes; deployed; visual check (desktop + mobile) logged.
 
 - [x] {agent: backend, id: active-round-model} Backend for **active-round management**: a way to mark **leagues as active**, hold one **active-round slot per active league**, **create a round with dates** (submission + voting deadlines), and set/clear a league's active round. Build on existing `currentRoundId`/`currentRoundPhase` (`layout.ts`) + seasons `status`. Expose an API the UI reads/writes (follow existing route patterns).
@@ -39,7 +39,7 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 - [ ] {agent: frontend, id: active-round-ui, depends: active-round-model,history-shell} The **active-round screen/area**: one **slot per active league** showing its active round (theme + dates). When a league is active but has **no resolvable active round → a modal warning: "No active round — choose from this list, or create a new round now"** (create includes setting dates). Lets the user manually keep each league's active round accurate.
   - **Acceptance:** active leagues each show an active-round slot; a league missing an active round triggers the modal with choose-from-list + create-new (with date inputs); setting persists via active-round-model. `npm run check` passes; deployed; visual check logged.
 
-- [ ] {agent: backend, id: theme-tag-model} The **theme property-tag system**: a tag **taxonomy** (categories: semantic / musicality / energy-feel / instrument / artist; extensible) + **schema** to attach **multiple tags per theme/round** + API to read/write a round's tags. This powers Phase-3 theme similarity = **tag overlap (no LLM)**.
+- [x] {agent: backend, id: theme-tag-model} The **theme property-tag system**: a tag **taxonomy** (categories: semantic / musicality / energy-feel / instrument / artist; extensible) + **schema** to attach **multiple tags per theme/round** + API to read/write a round's tags. This powers Phase-3 theme similarity = **tag overlap (no LLM)**.
   - **Acceptance:** schema stores multi-tag-per-round with category; API reads/writes a round's tags; taxonomy seeded; `npm run check` passes; deployed; shape logged for theme-tagging.
 
 - [ ] {agent: backend, id: theme-tagging, depends: theme-tag-model} **Tag existing themes** with the taxonomy — at minimum the **active leagues' rounds** (a manual/seed pass + a simple way to add/edit tags later; NO LLM required). Capture how many themes got tagged.
@@ -69,6 +69,36 @@ Deploy per `CLAUDE.md` (chromium base = fast): `docker compose build --no-cache 
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-06 — backend — theme-tag-model LANDED (deployed + prod-verified) → unblocks theme-tagging
+Theme property-tag system complete (D11 — similarity = tag overlap, no LLM). `npm run check` 0 errors; 7 new unit tests + 65 db tests green; deployed to prod and all endpoints smoked, test tags cleaned up (no round is tagged — clean slate for theme-tagging).
+
+**⚠️ Deploy serialization note:** my build raced a concurrent frontend `bot-ui` build (we both saw a clear lane and started at 15:00). Both build from the same working tree so the image contains BOTH lanes' code (correctness OK), but the racing `up -d --force-recreate` collided ("removal already in progress" / stale-container errors). Resolved by waiting for both builds to exit then running one authoritative `up -d --force-recreate`. Container now fresh + serving. **Lesson for orc: serialize the whole build→up, not just "is a build running?" — check at dispatch, not just at agent start.**
+
+**Schema** (3 tables, in `schema.ts` via `CREATE IF NOT EXISTS` — auto-applies on existing prod DB, no migration; seeded idempotently by `seedThemeTags()` on every boot):
+- `theme_tag_categories (key, label, description, sort_order)` — the **seeded, extensible** category taxonomy. Seeded: `semantic, musicality, energy-feel, instrument, artist`.
+- `theme_tags (id, category→categories.key, value, created_at, UNIQUE(category,value))` — the (category,value) **vocabulary**, reused across rounds. Seeded with ~50 starter values.
+- `round_theme_tags (round_id→rounds, tag_id→theme_tags, added_at, PK(round_id,tag_id))` — the **multi-tag-per-round** join. `idx_round_theme_tags_tag` = reverse lookup for the Phase-3 overlap query. ON DELETE CASCADE both sides.
+- Normalization: category keys + values are trim+lowercase (spaces→hyphens) so overlap is clean equality — no "Chill" vs "chill" dupes.
+
+**API for `theme-tagging`:**
+- `GET /api/theme-tags` → `{ categories: [{key,label,description,sortOrder}], tags: [{id,category,value}] }` — the full taxonomy + current vocabulary.
+- `POST /api/theme-tags` `{ category, value }` → `{ tag }` — create/get a vocab tag; **auto-creates the category if new** (the extensibility hook).
+- `GET /api/rounds/:roundId/tags` → `{ roundId, tags: [{id,category,value}] }`.
+- `PUT /api/rounds/:roundId/tags` `{ tags: Array<{id} | {category,value}> }` → **replace** the round's full set (upserts vocab on the fly). **This is the workhorse for the seed pass** — send `{category,value}` pairs and unknown ones get created. Returns the new set.
+- `POST /api/rounds/:roundId/tags` `{ category, value }` → add a single tag (201). `DELETE /api/rounds/:roundId/tags/:tagId` → detach one (leaves vocab intact). These are the "simple add/edit later" path.
+- Errors: empty category/value → 400; unknown round → 404; bad tag-ref shape → 400.
+
+**DB helper for the count report:** `countTaggedRounds(db)` (db/themeTags.ts) → distinct rounds with ≥1 tag — use it to log "N themes tagged".
+
+**Prod-verified:** taxonomy seeded (5 cats / 50 tags); PUT replace on r118 created vocab `dance` on the fly; POST created `air-drums`; DELETE + empty-PUT cleanup confirmed; 400/404 paths confirmed. Round 118 left untagged.
+
+Backend lane now idle — `theme-tagging` is unblocked and is my next task unless redirected.
+
+### 2026-06-06 — orc — Wave 1 closed (2/2), Wave 2 dispatched
+- Wave 1 done + deployed: `history-shell` [x] (`1b2b5d5`) + `active-round-model` [x] (`08b12ad`, prod-verified). Ticked history-shell (agent left it `[ ]`).
+- Pushed: `4df04c9..1b2b5d5 master -> master` (was 11 ahead of origin; frontend did the single push).
+- Wave 2 in flight: frontend → `active-round-ui` (deps satisfied), backend → `theme-tag-model` (no dep). Deploys serialized (both target bot-ui). `theme-tagging` still waits on `theme-tag-model`.
 
 ### 2026-06-06 — frontend — history-shell BUILT + DEPLOYED
 - Renamed nav item **"Round history" → "History"** (`ui/src/routes/+layout.svelte`); dropped the stale round-count chip (was `13` — meaningless now it's a research tool, not a round list). Shared `navList` snippet → rename shows in both desktop rail + mobile drawer.

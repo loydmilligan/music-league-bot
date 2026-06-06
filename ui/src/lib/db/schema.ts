@@ -245,6 +245,32 @@ export const SCHEMA = `
     previous_text        TEXT,
     previous_updated_at  TEXT
   );
+  -- sprint-22 theme property-tags (D11). Themes carry property tags so Phase-3
+  -- similarity = TAG OVERLAP, no LLM. Three tables: a seeded, extensible
+  -- category taxonomy; a (category,value) tag vocabulary; and a round↔tag join.
+  -- A round can carry many tags; a tag is reused across rounds → overlap = a
+  -- join on round_theme_tags. Seeded by seedThemeTags() (db/themeTags.ts).
+  CREATE TABLE IF NOT EXISTS theme_tag_categories (
+    key         TEXT PRIMARY KEY,
+    label       TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    sort_order  INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS theme_tags (
+    id         INTEGER PRIMARY KEY,
+    category   TEXT NOT NULL REFERENCES theme_tag_categories(key),
+    value      TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    UNIQUE(category, value)
+  );
+  CREATE TABLE IF NOT EXISTS round_theme_tags (
+    round_id INTEGER NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+    tag_id   INTEGER NOT NULL REFERENCES theme_tags(id) ON DELETE CASCADE,
+    added_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    PRIMARY KEY (round_id, tag_id)
+  );
+  -- reverse lookup (which rounds share a tag) — the similarity-engine path.
+  CREATE INDEX IF NOT EXISTS idx_round_theme_tags_tag ON round_theme_tags(tag_id);
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {

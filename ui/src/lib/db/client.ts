@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { SCHEMA, DEFAULT_SETTINGS } from './schema.js';
+import { seedThemeTags } from './themeTags.js';
 
 let _db: Database.Database | null = null;
 
@@ -90,6 +91,9 @@ export function openLeagueDb(path?: string): Database.Database {
 	}
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
+	// sprint-22 theme-tags: seed the category taxonomy + starter vocabulary
+	// (idempotent INSERT OR IGNORE — safe to run every boot).
+	seedThemeTags(db);
 	return db;
 }
 
