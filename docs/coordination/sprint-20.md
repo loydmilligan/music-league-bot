@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-20-html-share
 created: 2026-06-05T06:00:00Z
-updated: 2026-06-05T06:00:00Z
-status: active
+updated: 2026-06-05T16:30:00Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-20-html-share)
