@@ -297,7 +297,17 @@ function transformShareHtml(html: string, opts: { hasLocalFonts: boolean }): str
     `var s=typeof u==="string"?u:(u&&u.url)||"";` +
     `if(s.indexOf("/api/ml-auth")!==-1)return Promise.resolve(new Response(null,{status:204}));` +
     `}catch(e){}return f.apply(this,arguments);};})();</script>`;
-  h = h.replace('<head>', '<head>\n\t\t' + guard);
+  // 5. hide the digest PAGE's editorial chrome (round picker, pipeline, prepare/
+  //    action buttons, per-section edit controls, internal deck) so the share
+  //    shows ONLY the digest card + interactive tap-modal. The app-shell chrome
+  //    (nav/footer/league-list) is already gone via the ?share=1 bare layout.
+  const hideChrome =
+    `<style id="dg-share-hide">` +
+    `.dg-page-head,.dg-pipeline,.dg-pipe,.dg-pipe-strip,.dg-page-actions,` +
+    `.dg-section-actions,.dg-section-banner,.dg-variant-switch,.dg-whole-regen,` +
+    `.dg-prepare,[data-export-hide="1"]{display:none !important}` +
+    `</style>`;
+  h = h.replace('<head>', '<head>\n\t\t' + guard + '\n\t\t' + hideChrome);
   return h;
 }
 
@@ -325,8 +335,10 @@ export async function renderDigestHtml(roundId: number): Promise<HtmlShareResult
       }
     });
 
-    // NO ?export=1 — interactivity stays ON (sprint-18 flag would disable it).
-    const url = `${APP_INTERNAL_URL}/digest/${roundId}`;
+    // ?share=1 → bare layout (no app chrome), interactivity ON. NOT ?export=1
+    // (that flag disables the tap-modal — sprint-18). The bare layout is driven
+    // by the page's inlined load data so it survives static serving at /d/<slug>/.
+    const url = `${APP_INTERNAL_URL}/digest/${roundId}?share=1`;
     const resp = await page.goto(url, { waitUntil: 'networkidle0', timeout: 45_000 });
     if (!resp || !resp.ok()) throw new Error(`html render load failed: ${resp?.status() ?? 'no-response'} ${url}`);
     await page.waitForSelector('.dg-export', { timeout: 15_000 });

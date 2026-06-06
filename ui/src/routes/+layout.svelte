@@ -14,6 +14,14 @@
 
   let { children } = $props();
 
+  // sprint-20 html-share hotfix: bare layout for the public share artifact —
+  // ONLY the digest content, none of the app chrome (nav rail, mobile drawer,
+  // league list, bot-health footer, links to other routes). Driven by the
+  // digest page's inlined load data (`page.data.share`), NOT the live URL, so
+  // it stays consistent across SSR (rendered at ?share=1) and client hydration
+  // (served at /d/<slug>/). Distinct from ?export=1 — interactivity stays ON.
+  const isShare = $derived(Boolean((page.data as { share?: boolean } | undefined)?.share));
+
   type NavItem = { href: string; label: string; glyph: string; count?: string };
   const chatUnassignedCount = $derived(((page.data as { chatUnassignedCount?: number } | undefined)?.chatUnassignedCount ?? 0));
   const navItems = $derived<NavItem[]>([
@@ -106,6 +114,16 @@
   </ul>
 {/snippet}
 
+{#if isShare}
+  <!-- Bare share layout — digest content only, zero app chrome. -->
+  <div class="min-h-screen bg-bg text-fg">
+    <main class="px-6 md:px-10 py-8">
+      <div class="max-w-5xl mx-auto">
+        {@render children?.()}
+      </div>
+    </main>
+  </div>
+{:else}
 <div class="min-h-screen flex flex-col md:flex-row bg-bg text-fg">
   <!-- Mobile top bar — additive nav affordance below md (sprint-19). The desktop
        rail is `hidden md:flex`; in the installed PWA (display: standalone) there
@@ -253,6 +271,7 @@
     </aside>
   {/if}
 </div>
+{/if}
 
 <svelte:window onkeydown={onNavKey} />
 

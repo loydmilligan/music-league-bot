@@ -112,6 +112,11 @@ type DigestPageBase = {
   roundsIndex: RoundIndexEntry[];
   currentRound: CurrentRoundMeta;
   relContext: RelContextSnapshot | null;
+  // sprint-20 html-share hotfix: ?share=1 → bare layout (no app chrome). Lives
+  // in the inlined LOAD data (not the live URL) so SSR-at-?share=1 and client
+  // hydration-at-/d/<slug>/ agree — a URL-derived flag would mismatch and the
+  // chrome would re-appear on hydration. The +layout reads `page.data.share`.
+  share: boolean;
 };
 
 export type DigestPageData =
@@ -127,9 +132,13 @@ export type DigestPageData =
       recap: RecapContext | null;
     });
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, fetch, url }) => {
   const roundId = Number(params.roundId);
   if (!Number.isFinite(roundId)) throw error(400, 'invalid roundId');
+
+  // Bare-layout share render (html-share artifact). Captured into the inlined
+  // load data so it survives static re-serving at /d/<slug>/.
+  const share = url.searchParams.get('share') === '1';
 
   const db = getDb();
   const round = db
@@ -209,7 +218,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
     }
 
     return {
-      roundId, roundsIndex, currentRound, relContext, stage, draft, sections,
+      roundId, roundsIndex, currentRound, relContext, share, stage, draft, sections,
       standings, stats: statsOut, discoverability, nextRound: nextRoundOut, recap,
     } satisfies DigestPageData;
   }
@@ -217,7 +226,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
-  return { roundId, roundsIndex, currentRound, relContext, stage: 'prepare', checks } satisfies DigestPageData;
+  return { roundId, roundsIndex, currentRound, relContext, share, stage: 'prepare', checks } satisfies DigestPageData;
 };
 
 async function fetchRelContext(
