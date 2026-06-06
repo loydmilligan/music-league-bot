@@ -3,6 +3,7 @@
   import DeadlineChip from '$lib/components/DeadlineChip.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
+  import ActiveRounds from '$lib/active/ActiveRounds.svelte';
   import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
@@ -160,6 +161,10 @@
     {/if}
   </p>
 </div>
+
+<!-- Active-round management (sprint-22 active-round-ui): one slot per active
+     league, with the "no active round → choose/create-with-dates" modal. -->
+<ActiveRounds />
 
 <!--
   Sections side-by-side at md+ (active wider, archive narrower) per

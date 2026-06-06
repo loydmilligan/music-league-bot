@@ -36,7 +36,7 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 - [x] {agent: backend, id: active-round-model} Backend for **active-round management**: a way to mark **leagues as active**, hold one **active-round slot per active league**, **create a round with dates** (submission + voting deadlines), and set/clear a league's active round. Build on existing `currentRoundId`/`currentRoundPhase` (`layout.ts`) + seasons `status`. Expose an API the UI reads/writes (follow existing route patterns).
   - **Acceptance:** API returns, per active league, its active-round (or null); endpoints to mark-league-active, set-active-round, and create-round-with-deadlines work; verified for the current leagues (HJ, Fam Jam, etc.) on prod. `npm run check` passes; deployed; shape logged for active-round-ui.
 
-- [ ] {agent: frontend, id: active-round-ui, depends: active-round-model,history-shell} The **active-round screen/area**: one **slot per active league** showing its active round (theme + dates). When a league is active but has **no resolvable active round → a modal warning: "No active round — choose from this list, or create a new round now"** (create includes setting dates). Lets the user manually keep each league's active round accurate.
+- [x] {agent: frontend, id: active-round-ui, depends: active-round-model,history-shell} The **active-round screen/area**: one **slot per active league** showing its active round (theme + dates). When a league is active but has **no resolvable active round → a modal warning: "No active round — choose from this list, or create a new round now"** (create includes setting dates). Lets the user manually keep each league's active round accurate.
   - **Acceptance:** active leagues each show an active-round slot; a league missing an active round triggers the modal with choose-from-list + create-new (with date inputs); setting persists via active-round-model. `npm run check` passes; deployed; visual check logged.
 
 - [x] {agent: backend, id: theme-tag-model} The **theme property-tag system**: a tag **taxonomy** (categories: semantic / musicality / energy-feel / instrument / artist; extensible) + **schema** to attach **multiple tags per theme/round** + API to read/write a round's tags. This powers Phase-3 theme similarity = **tag overlap (no LLM)**.
@@ -45,8 +45,8 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 - [ ] {agent: backend, id: theme-tagging, depends: theme-tag-model} **Tag existing themes** with the taxonomy — at minimum the **active leagues' rounds** (a manual/seed pass + a simple way to add/edit tags later; NO LLM required). Capture how many themes got tagged.
   - **Acceptance:** the active leagues' round themes carry property tags; a documented way to add/edit tags exists; count of tagged themes logged in the Activity Log. `npm run check` passes; deployed.
 
-### Deploy
-Deploy per `CLAUDE.md` (chromium base = fast): `docker compose build --no-cache bot-ui && docker compose up -d --force-recreate bot-ui`, smoke `192.168.4.217:3002`. Serialize deploys.
+### Deploy — NEW two-loop workflow (ratified D5, 2026-06-06)
+**Iterate on the dev server, not prod.** Inner loop per change: `cd ui && npm run dev -- --host --port 51XX` (unique port per lane) + `npm run check` — HMR, <1s, no Docker, no contention. Outer loop: **one orc-gated prod deploy per wave gate** after all lanes commit — `docker compose build bot-ui && docker compose up -d --force-recreate bot-ui` (no `--no-cache`), then **assert the change is live** + smoke `192.168.4.217:3002`. Full playbook: `docs/dev-loop-playbook.md`; canonical rules in `CLAUDE.md` → Deploy. Serialize the WHOLE build→up (orc owns the gate).
 
 ---
 
@@ -65,10 +65,24 @@ Deploy per `CLAUDE.md` (chromium base = fast): `docker compose build --no-cache 
 - **D2** — All 3 tabs exist as **stubs** from the shell now (Player research full build = Phase 4).
 - **D3** — Theme similarity (Phase 3) will use **tag overlap, no LLM**; this sprint builds the tag system + tags existing themes.
 - **D4** — Active-round mgmt is **manual-first** (mark-active, set/create with dates) on top of existing detection.
+- **D5** — **Dev-loop workflow ratified (2026-06-06).** Replaces "always deploy to prod for every change." Inner loop = per-lane `vite dev`/`tsx watch` + `npm run check` (HMR, seconds); outer loop = ONE orc-gated, serialized, **cached** (`--no-cache` dropped) prod deploy per wave gate, with a mandatory post-deploy "is it live?" assertion. Root cause of the slowdown was the concurrent-deploy race amplifying a 59s build (chromium was already off the build path since sprint-19), not build speed. Amends [[feedback_deploy_to_prod_for_test]]. Dockerfile cache-mount tuning + moving build tools to base = follow-up (viz).
 
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-06 — frontend — active-round-ui BUILT + DEPLOYED
+- New self-contained component `ui/src/lib/active/ActiveRounds.svelte`, mounted at the top of the home page `/` (`ui/src/routes/+page.svelte`) — the "Active round" nav target. One **slot per active league** (reads `GET /api/active-rounds`).
+- Each slot shows phase + **source** chip (manual/derived), theme, and **submission/voting deadlines** (absolute + relative "in 5d / overdue"). **Change** opens the modal; **Clear** (manual slots only) → `DELETE .../active-round`.
+- **No-active-round path:** when `activeRound === null` the slot turns warn-bordered with a "NO ACTIVE ROUND" chip + **Set active round** button → modal: **Choose from list** (`availableRounds` → `PUT .../active-round {roundId}`) or **Create new round** (name/theme + datetime-local submission/voting deadlines → `POST .../rounds {set_active:true}` per backend's one-call note). Client guards voting-after-submission; datetime-local sent as full ISO. Modal eyebrow reads "Change"/"No active round" by state; Esc + backdrop close.
+- **Acceptance met:** active leagues (fam-jam, nostalgia-pit) each render a slot with theme+dates; modal offers choose-from-list + create-with-dates; **persists** — prod round-trip verified: pinned fam-jam→r119 (slot flipped to UPCOMING/MANUAL in place), then Cleared back to derived r118 (prod state restored, both leagues `derived` again). `npm run check` → **0 errors** (warnings 31, none new). Deployed `bot-ui` (stop+rm+up to dodge the recurring container-rename conflict); smoked `192.168.4.217:3002`. Visual check: desktop (1280) + mobile (390) — fixed a mobile overflow (added base `grid-cols-1` + `min-w-0`/truncate so slot cards fit narrow screens).
+- Used the backend's documented API shape; honored serialized deploys (checked no `bot-ui` build running before each build). Did NOT touch the active-round backend model.
+
+### 2026-06-06 — viz — prod-build speedup: EDITS DONE, validation HELD (deploy lane in flight)
+Implemented `docs/dev-loop-playbook.md` → "Prod-build speedups" items 2 + 3 (path-scoped to `Dockerfile.base` + `Dockerfile.ui` only):
+- **`Dockerfile.base`:** added `python3 make g++` to the chromium apt layer (native-module toolchain for better-sqlite3). Requires a one-time base rebuild (`docker build -f Dockerfile.base -t music-league-bot-base:chromium .`).
+- **`Dockerfile.ui`:** added `# syntax=docker/dockerfile:1`; **builder stage now `FROM music-league-bot-base:chromium`** (was `node:22-bookworm-slim` + per-build apt of python3/make/g++ — now inherited from base); BuildKit cache mounts on `npm ci` (`/root/.npm`) and `npm run build` (`/app/ui/node_modules/.vite`). Base already sets `PUPPETEER_SKIP_DOWNLOAD=true`, so the builder inherits it — chromium is NOT re-downloaded during `npm ci`.
+- **COLLISION HOLD:** a `bot-ui` build is IN FLIGHT (active-round-ui, `docker compose build --no-cache bot-ui`, pid 3594911). Per the collision rule I ran **NO docker build** — neither the base rebuild nor the throwaway validation. Will run base rebuild + cold/warm measurement against throwaway tag `mlb-botui-exp` (no `up`/swap — orc gates the prod cutover) once `pgrep -af compose.*build` is empty and the coord-doc shows no active deploy. Measured before/after times to follow in a corrected entry.
 
 ### 2026-06-06 — backend — theme-tag-model LANDED (deployed + prod-verified) → unblocks theme-tagging
 Theme property-tag system complete (D11 — similarity = tag overlap, no LLM). `npm run check` 0 errors; 7 new unit tests + 65 db tests green; deployed to prod and all endpoints smoked, test tags cleaned up (no round is tagged — clean slate for theme-tagging).
