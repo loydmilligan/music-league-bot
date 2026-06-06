@@ -52,7 +52,7 @@ One checkbox re-renders every section across the whole season.
 - [ ] {agent: backend, id: data-section-recap-framing, depends: season-aggregation} Apply recap framing to the **data sections** (no LLM): **standings** → "FINAL STANDINGS · Champion: X" when `final`, "Standings through R{N}" when mid (reuse cumulative standings); **stat-strip** → season totals (from the stat-strip slice); **tastemaker** → reuse the existing season-scoped payload with a "final" heading; and **drop `next-round`** in recap mode. Heading/copy + the season aggregates — keep each section's existing visual component. Can run in parallel with recap-generate-wiring.
   - **Acceptance:** in recap mode for **HJ S2 r95**: standings shows final standings + the champion (and "through R95" when `final:false`); stat-strip shows season totals; tastemaker renders with final framing; **next-round is absent**. `npm run check` passes; deployed; verified on prod.
 
-- [ ] {agent: frontend, id: recap-modal-controls} GenerateModal recap controls (build against the contract in parallel). Add a **"Season recap"** checkbox (**default OFF**); when ON, reveal a **"Final recap"** sub-toggle (**default ON**). Keep the **chat paste box** (blank → skip chat). Show a **recap badge** reflecting state ("Season recap · final" / "· so far"). Pass **`recap: { enabled, final }`** through `GenerateParams` to `POST /draft` alongside the existing per-section toggles + `pastedChat`.
+- [x] {agent: frontend, id: recap-modal-controls} GenerateModal recap controls (build against the contract in parallel). Add a **"Season recap"** checkbox (**default OFF**); when ON, reveal a **"Final recap"** sub-toggle (**default ON**). Keep the **chat paste box** (blank → skip chat). Show a **recap badge** reflecting state ("Season recap · final" / "· so far"). Pass **`recap: { enabled, final }`** through `GenerateParams` to `POST /draft` alongside the existing per-section toggles + `pastedChat`.
   - **Acceptance:** the modal shows the "Season recap" checkbox (default OFF); enabling it reveals "Final recap" (default ON); toggling drives the badge text; the `recap` flags are included in the `/draft` request body (verify in the network call); chat-paste behavior intact. `npm run check` passes; deployed; mobile + desktop visual check logged.
 
 - [ ] {agent: frontend, id: recap-e2e, depends: recap-generate-wiring,data-section-recap-framing,recap-modal-controls} **End-to-end recap.** Generate a real **Hip Jammers S2 r95 FINAL recap** via the modal and verify the whole thing; also spot-check a **mid-season** recap framing. Confirm recap content flows through **web + the `html` share export**.
@@ -87,7 +87,27 @@ Deploy per `CLAUDE.md` (fast — chromium base, sprint-19): `docker compose buil
 
 ## Activity Log
 
-### 2026-06-06 — backend — season-aggregation DONE → **recap-generate-wiring + data-section-recap-framing unblocked**
+### 2026-06-06 — frontend — recap-modal-controls DONE + deployed + prod-verified (UI-level, against contract) — commit pending
+
+Added the **Season-recap mode controls** to `GenerateModal.svelte`. UI-level verification per scope (the `/draft` request payload captured/asserted; live recap generation is the separate `recap-e2e` task once backend's `recap-generate-wiring` deploys).
+
+**Implementation (`src/lib/digest/GenerateModal.svelte`, frontend lane only):**
+- **"Season recap"** checkbox (default **OFF**) as a banner at the top of the modal body. When ON: pulp "on" state, reveals a **"Final recap"** sub-toggle (default **ON**; OFF = mid-season) + a framing hint + a note ("re-renders every section across the whole season … next-round dropped; chat uses the paste box").
+- **Recap badge** reflecting state: `Season recap · final` / `Season recap · so far`. Header title + Generate button also relabel to "recap" when on.
+- Threads **`recap: { enabled, final }`** (`RecapGenOpt`) through `GenerateParams` → `submit()` → the existing `POST /draft` body (the page already posts the whole params object, so no `+page.svelte` change). Backend reads it off the body.
+- **Chat paste box unchanged** (blank → chat skipped, as before).
+
+**Prod verification (`192.168.4.217:3002`, Playwright; `/draft` POST intercepted to capture the body without firing a real LLM gen):**
+- ✅ Default: "Season recap" present + **unchecked**; Final sub-toggle + badge **hidden**; header "Generate digest"; chat box present.
+- ✅ Enable recap → Final sub-toggle appears **checked (default ON)**; badge **"Season recap · final"**; header → "Generate recap"; button → "✎ Generate recap".
+- ✅ Toggle Final OFF → badge → **"Season recap · so far"** + mid-season hint.
+- ✅ **Contract**: the captured `/draft` request body carried **`recap: { enabled: true, final: false }`** (toggled values) alongside `sections`/`standings`/`stats`/`nextRound`/`tastemaker`, and **`pastedChat: "recap chat test 123"`** (chat-paste intact).
+- ✅ **Desktop (1280px)** + **Mobile (390px)** both clean — recap banner/badge/sub-toggle reflow, no modal overflow (`scrollWidth ≤ width`). Screenshots captured + described; temp files removed.
+- ✅ `npm run check` **0 errors** (31 pre-existing warnings, none in the file). Deployed serialized (clean build → recreate).
+
+**Lane hygiene:** touched only `GenerateModal.svelte`; did NOT touch the generate pipeline / prompts / season aggregation / data-section payloads (backend lane). **➡ Next (mine):** `recap-e2e` — blocked on backend's `recap-generate-wiring` + `data-section-recap-framing` deploys; will generate a real **HJ S2 r95** final recap (+ mid-season spot-check) through web + the `html` share once those land.
+
+
 New file **`ui/src/lib/db/seasonData.ts`** — pure data, no LLM. Entry: **`gatherSeasonData(db, roundId): SeasonData`**, scoped to rounds ≤ roundId (cumulative, sprint-14 model; reuses `computeStandings` for the per-round progression + champion). Single `seasonSongs()` pass (cumulative points + voter count + agreement variance per submission) backs podium/villain/consensus; `competitor_id IS NOT NULL`, no track filter (matches standings' point math).
 
 **Defaults (tunable consts at top of file):** PODIUM_TOP_N=8, VILLAIN_TOP_N=6, CONSENSUS_TOP_N=6, QUOTES_POOL_N=25, RECURRING_MIN_SUBS=3, RECURRING_TOP_N=3.
