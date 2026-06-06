@@ -77,3 +77,11 @@ updated: 2026-06-04T00:00:00Z
 3. **Verify on a real mobile viewport + the installed Android PWA:** the user can reach digest generation and open the GenerateModal; the flow completes (web render + mobile-PNG export).
 
 **Why it matters.** The digest is the project's flagship output and the user consumes/operates it from a phone (WhatsApp digest workflow). Not being able to *start* a digest from mobile/PWA is a real workflow gap, not polish. Pairs with the sprint-18 `integration-audit` (GenerateModal control-surface coverage) but is distinct — that audits the modal's *contents*; this is about *reaching* the modal at all on mobile.
+
+## HTML share export — auto mobile + desktop friendly (drafted 2026-06-06) — sprint AFTER the History milestone
+
+**Source:** user, 2026-06-06. The **`html` share export** (sprint-20, `digest.mattmariani.com`) is becoming the **main export for digests**, but it currently really only works/looks right on **desktop**. It must be **automatically responsive** — render well on **mobile AND desktop** from the same self-contained artifact (recipients open the link on phones).
+
+**Direction (frontend/digest lane).** The html-share render packages the existing interactive digest page; make that artifact responsive so it reflows cleanly at phone widths (the digest content cards have a known ~390px horizontal-overflow nit — flagged in sprint-20 e2e-verify — fix that here). Verify on a real mobile viewport + desktop on the live `digest.mattmariani.com/d/<slug>/` artifact. Likely overlaps the digest's general mobile responsiveness (sprint-19 added mobile nav; the digest *content* still needs a mobile pass).
+
+**Sequencing:** **after** the History research milestone (sprint-22+) lands. Pairs with the pre-existing "digest content-card ~390px overflow" nit.

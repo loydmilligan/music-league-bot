@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-21-season-recap
 created: 2026-06-06T00:00:00Z
-updated: 2026-06-06T00:00:00Z
-status: active
+updated: 2026-06-06T21:30:00Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-21-season-recap)
@@ -55,7 +55,7 @@ One checkbox re-renders every section across the whole season.
 - [x] {agent: frontend, id: recap-modal-controls} GenerateModal recap controls (build against the contract in parallel). Add a **"Season recap"** checkbox (**default OFF**); when ON, reveal a **"Final recap"** sub-toggle (**default ON**). Keep the **chat paste box** (blank → skip chat). Show a **recap badge** reflecting state ("Season recap · final" / "· so far"). Pass **`recap: { enabled, final }`** through `GenerateParams` to `POST /draft` alongside the existing per-section toggles + `pastedChat`.
   - **Acceptance:** the modal shows the "Season recap" checkbox (default OFF); enabling it reveals "Final recap" (default ON); toggling drives the badge text; the `recap` flags are included in the `/draft` request body (verify in the network call); chat-paste behavior intact. `npm run check` passes; deployed; mobile + desktop visual check logged.
 
-- [ ] {agent: frontend, id: recap-e2e, depends: recap-generate-wiring,data-section-recap-framing,recap-modal-controls} **End-to-end recap.** Generate a real **Hip Jammers S2 r95 FINAL recap** via the modal and verify the whole thing; also spot-check a **mid-season** recap framing. Confirm recap content flows through **web + the `html` share export**.
+- [x] {agent: frontend, id: recap-e2e, depends: recap-generate-wiring,data-section-recap-framing,recap-modal-controls} **End-to-end recap.** Generate a real **Hip Jammers S2 r95 FINAL recap** via the modal and verify the whole thing; also spot-check a **mid-season** recap framing. Confirm recap content flows through **web + the `html` share export**.
   - **Acceptance:** via the modal, a HJ S2 r95 **final** recap renders season-spanning standings(+champion)/podium/flow/villain/consensus/quotes/tastemaker with **no next-round**, and reads coherently as a season recap; flipping **"Final recap" OFF** shifts the copy to "through R95 / so far"; the recap renders in the **web view AND the `html` share** (`digest.mattmariani.com/d/<slug>`). `npm run check` passes; screenshots + the generated recap logged → closes sprint-21.
 
 ### Deploy
