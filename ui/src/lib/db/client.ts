@@ -77,6 +77,17 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (msArtCols.length && !msArtCols.some(c => c.name === 'album_art_url')) {
 		db.exec("ALTER TABLE ml_submissions ADD COLUMN album_art_url TEXT");
 	}
+	// sprint-22 active-round mgmt: per-league active flag + active-round slot on
+	// existing DBs. Backfill is_active=1 for leagues that already have an active
+	// season so prod leagues come up "active" without a manual pass.
+	const leagueCols = db.prepare("PRAGMA table_info(leagues)").all() as { name: string }[];
+	if (leagueCols.length && !leagueCols.some(c => c.name === 'is_active')) {
+		db.exec("ALTER TABLE leagues ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0");
+		db.exec("UPDATE leagues SET is_active = 1 WHERE id IN (SELECT DISTINCT league_id FROM seasons WHERE status = 'active')");
+	}
+	if (leagueCols.length && !leagueCols.some(c => c.name === 'active_round_id')) {
+		db.exec("ALTER TABLE leagues ADD COLUMN active_round_id INTEGER REFERENCES rounds(id)");
+	}
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	return db;

@@ -33,7 +33,7 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 - [ ] {agent: frontend, id: history-shell} Rename the nav item **"Round history" → "History"** (`ui/src/routes/+layout.svelte`) and build the **tabbed History screen** at `/history` with **three tabs** — **Song search**, **Theme research**, **Player research** — present as **stubs** (empty/"coming soon" panels are fine; tab switching works, deep-link/route per tab if easy). Match the app's Mash Co. styling.
   - **Acceptance:** nav reads "History"; `/history` renders a 3-tab shell, tabs switch; stub panels labeled. `npm run check` passes; deployed; visual check (desktop + mobile) logged.
 
-- [ ] {agent: backend, id: active-round-model} Backend for **active-round management**: a way to mark **leagues as active**, hold one **active-round slot per active league**, **create a round with dates** (submission + voting deadlines), and set/clear a league's active round. Build on existing `currentRoundId`/`currentRoundPhase` (`layout.ts`) + seasons `status`. Expose an API the UI reads/writes (follow existing route patterns).
+- [x] {agent: backend, id: active-round-model} Backend for **active-round management**: a way to mark **leagues as active**, hold one **active-round slot per active league**, **create a round with dates** (submission + voting deadlines), and set/clear a league's active round. Build on existing `currentRoundId`/`currentRoundPhase` (`layout.ts`) + seasons `status`. Expose an API the UI reads/writes (follow existing route patterns).
   - **Acceptance:** API returns, per active league, its active-round (or null); endpoints to mark-league-active, set-active-round, and create-round-with-deadlines work; verified for the current leagues (HJ, Fam Jam, etc.) on prod. `npm run check` passes; deployed; shape logged for active-round-ui.
 
 - [ ] {agent: frontend, id: active-round-ui, depends: active-round-model,history-shell} The **active-round screen/area**: one **slot per active league** showing its active round (theme + dates). When a league is active but has **no resolvable active round → a modal warning: "No active round — choose from this list, or create a new round now"** (create includes setting dates). Lets the user manually keep each league's active round accurate.
@@ -69,6 +69,46 @@ Deploy per `CLAUDE.md` (chromium base = fast): `docker compose build --no-cache 
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-06 — backend — active-round-model LANDED (deployed + prod-verified)
+Active-round management backend complete. `npm run check` 0 errors; 8 new unit tests + 58 db tests green; deployed to prod (`bot-ui`) and all endpoints verified against live leagues, prod state restored (temp data cleaned).
+
+**Data model** — two columns on `leagues` (schema + in-place migration in `client.ts`):
+- `is_active INTEGER` — operator-marked "currently played" (D4 manual-first). Migration **backfilled is_active=1** for leagues with an active season → fam-jam (id 2) + nostalgia-pit (id 4) came up active automatically; hip-jammers/second-best inactive (all seasons complete).
+- `active_round_id INTEGER REFERENCES rounds(id)` — the manual active-round slot (one per league, nullable).
+
+**Resolution order** (`db/activeRound.ts`): manual slot → derived current-round of the active season → `null`. `null` is the signal for the UI's "no active round → choose/create" modal. `source` field tells which path won.
+
+**API for `active-round-ui`:**
+- `GET /api/active-rounds` → `{ leagues: LeagueActiveRound[] }`, only `is_active` leagues.
+  ```ts
+  LeagueActiveRound = {
+    leagueId, slug, name, isActive,
+    activeSeasonId: number | null,            // create-round target
+    activeRound: {                            // null → show the modal
+      id, name, theme, submissionDeadline, votingDeadline,
+      phase: 'upcoming'|'submission'|'voting'|'archive',
+      source: 'manual' | 'derived',
+    } | null,
+    availableRounds: [{ id, name, phase, submissionDeadline, votingDeadline }], // the modal's "choose from list" (active season's rounds)
+  }
+  ```
+- `PATCH /api/leagues/:leagueId/active` — body `{ active: boolean }` → returns the league's refreshed `LeagueActiveRound`. (mark-league-active)
+- `PUT /api/leagues/:leagueId/active-round` — body `{ roundId: number | null }` (null clears) → refreshed `LeagueActiveRound`. Rejects a round from another league with **400**. `DELETE` on same path also clears. (set-active-round)
+- `POST /api/leagues/:leagueId/rounds` — body `{ name, theme?, submission_deadline?, voting_deadline?, set_active? }` → `201 { round: { roundId, seasonId }, league: LeagueActiveRound }`. Validates ISO dates + voting-after-submission (400), needs an active season (409). Hand-created rounds get a synthetic `ml_round_id` = `manual:<seasonId>:<ts>`. (create-round-with-deadlines)
+
+**Prod verification:** GET shows fam-jam→r118(derived,voting)/nostalgia-pit→r113(derived); mark-active on HJ surfaced it with `activeRound:null` + empty list (modal path), then restored; set-active-round fam-jam→r119 flipped source to `manual`, cross-league r113 rejected 400, DELETE reverted to derived r118; create round 130 stored deadlines+theme then deleted.
+
+**Note for active-round-ui:** the modal's "create new round" should POST to `/api/leagues/:id/rounds` with `set_active:true` so the new round becomes the slot in one call. **Gotcha:** a manual round later imported from ML arrives under its real ml_round_id → a duplicate row; reconcile by pointing the slot at the imported round + deleting the manual one (same deadline-gap class we hit with S4/S2/r70).
+
+Next backend task: `theme-tag-model` (no dep — picking it up).
+
+### 2026-06-06 — orc — Wave 1 dispatched (in flight)
+- frontend → `history-shell` (pane 1.3): implementing; mid-deploy (`docker compose build --no-cache bot-ui`)
+- backend → `active-round-model` (pane 1.2): implementing (~11% ctx)
+- `theme-tag-model` [backend]: queued behind active-round-model (single backend agent serializes)
+- verify agent (pane 1.1): checking sprint-22 deploy + session bridge
+- Wave 2 (`active-round-ui`, `theme-tagging`) blocked on wave-1 deps; deploys serialized
 
 ### 2026-06-06 — docs — Sprint plan created: history-foundation (sprint-22)
 - 5 tasks: history-shell [frontend] + active-round-model [backend] + theme-tag-model [backend] kickoff in parallel → active-round-ui [frontend, ← model+shell], theme-tagging [backend, ← tag-model]

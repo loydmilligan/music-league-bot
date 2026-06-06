@@ -1,7 +1,13 @@
 export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS leagues (
     id INTEGER PRIMARY KEY, slug TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
-    exclude_from_combined INTEGER NOT NULL DEFAULT 0, notes TEXT
+    exclude_from_combined INTEGER NOT NULL DEFAULT 0, notes TEXT,
+    -- sprint-22 active-round mgmt: is_active = manually-marked "currently being
+    -- played" (D4 manual-first); active_round_id = the manual active-round slot
+    -- (one per league, nullable). Resolution falls back to derived current-round
+    -- when the slot is empty/dangling — see db/activeRound.ts.
+    is_active INTEGER NOT NULL DEFAULT 0,
+    active_round_id INTEGER REFERENCES rounds(id)
   );
   CREATE TABLE IF NOT EXISTS seasons (
     id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL REFERENCES leagues(id),
