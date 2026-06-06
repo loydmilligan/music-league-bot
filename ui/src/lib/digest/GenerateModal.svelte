@@ -30,6 +30,11 @@
   // The other synthetic DATA sections (stats / next-round / Tastemaker) are pure
   // recompute — no LLM prompt path. Their only control is include/exclude.
   export type DataGenOpt = { include: boolean };
+  // Season-recap mode (sprint-21). `enabled` re-renders every section at season
+  // scope (rounds ≤ this digest's round); `final` drives framing only (champion /
+  // past tense when true, "season so far / through R{N}" when false). Backend
+  // (recap-generate-wiring) reads this off the /draft body.
+  export type RecapGenOpt = { enabled: boolean; final: boolean };
   export type GenerateParams = {
     sections: GenSection[];
     pastedChat: string;
@@ -37,6 +42,7 @@
     stats: DataGenOpt;
     nextRound: DataGenOpt;
     tastemaker: DataGenOpt;
+    recap: RecapGenOpt;
   };
 
   // Availability state for a DATA section's indicator. 'ready' = the underlying
@@ -102,6 +108,12 @@
     return a === 'ready' ? '● coverage ready' : '⚠ incomplete coverage';
   }
 
+  // Season-recap mode (sprint-21). Default OFF; when ON the "Final recap"
+  // sub-toggle defaults ON (OFF = mid-season framing).
+  let recapEnabled = $state(false);
+  let recapFinal = $state(true);
+  const recapBadge = $derived(`Season recap · ${recapFinal ? 'final' : 'so far'}`);
+
   function toggleExpand(id: string) {
     expanded[id] = !expanded[id];
   }
@@ -119,6 +131,7 @@
       stats: { include: statsInclude },
       nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
+      recap: { enabled: recapEnabled, final: recapFinal },
     });
   }
 
@@ -142,11 +155,44 @@
 >
   <div class="dg-modal dg-genmodal">
     <header class="dg-modal-head">
-      <h3>Generate digest · <span style="color: var(--mash-pulp);">{enabledCount}/{sections.length} sections</span></h3>
+      <h3>
+        Generate {recapEnabled ? 'recap' : 'digest'} ·
+        <span style="color: var(--mash-pulp);">{enabledCount}/{sections.length} sections</span>
+      </h3>
       <button type="button" class="x" onclick={onCancel} aria-label="Close">✕</button>
     </header>
 
     <div class="dg-modal-body">
+      <!-- Season-recap mode (sprint-21) — re-renders every section at season scope. -->
+      <div class="dg-recap" class:is-on={recapEnabled}>
+        <div class="dg-recap-head">
+          <label class="dg-recap-check">
+            <input type="checkbox" bind:checked={recapEnabled} />
+            <span class="dg-recap-name">Season recap</span>
+          </label>
+          {#if recapEnabled}
+            <span class="dg-recap-badge">{recapBadge}</span>
+          {/if}
+        </div>
+        {#if recapEnabled}
+          <div class="dg-recap-sub">
+            <label class="dg-recap-final" title="Final = definitive full-season framing; off = mid-season ‘so far’">
+              <input type="checkbox" bind:checked={recapFinal} />
+              <span>Final recap</span>
+            </label>
+            <span class="dg-recap-hint">
+              {recapFinal
+                ? 'Definitive full-season framing — champion, past tense.'
+                : 'Mid-season framing — “the season so far”, current leader.'}
+            </span>
+          </div>
+          <p class="dg-recap-note">
+            Re-renders every section across the whole season (rounds up to this one). Next-round preview is
+            dropped; chat uses the paste box below.
+          </p>
+        {/if}
+      </div>
+
       <span class="dg-modal-eyebrow">Sections · check to include · expand for style / context / layout</span>
       <div class="dg-gen-sections">
         {#each sections as s (s.id)}
@@ -320,7 +366,7 @@
       <div style="display: flex; gap: 8px;">
         <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={onCancel} disabled={busy}>Cancel</button>
         <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" onclick={submit} disabled={busy || enabledCount === 0}>
-          {busy ? '… generating' : '✎ Generate'}
+          {busy ? '… generating' : recapEnabled ? '✎ Generate recap' : '✎ Generate'}
         </button>
       </div>
     </footer>
@@ -335,6 +381,86 @@
     max-height: min(70vh, 720px);
     overflow: auto;
   }
+
+  /* Season-recap mode banner (sprint-21) */
+  .dg-recap {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    background: var(--ink-0);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  }
+  .dg-recap.is-on {
+    border-color: var(--mash-pulp-edge, var(--mash-pulp));
+    background: var(--mash-pulp-soft);
+  }
+  .dg-recap-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .dg-recap-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+  }
+  .dg-recap-check input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--mash-pulp);
+    cursor: pointer;
+  }
+  .dg-recap-name {
+    font: 700 13px/1.2 var(--font-body);
+    color: var(--fg);
+  }
+  .dg-recap-badge {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mash-pulp);
+    border: 1px solid var(--mash-pulp-edge, var(--mash-pulp));
+    border-radius: 999px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .dg-recap-sub {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .dg-recap-final {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font: 600 12px/1 var(--font-body);
+    color: var(--fg);
+    white-space: nowrap;
+  }
+  .dg-recap-final input {
+    accent-color: var(--mash-pulp);
+    cursor: pointer;
+  }
+  .dg-recap-hint {
+    font: 500 11px/1.4 var(--font-mono);
+    color: var(--fg-quiet);
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+  .dg-recap-note {
+    margin: 8px 0 0;
+    font: 500 11px/1.4 var(--font-mono);
+    color: var(--fg-quiet);
+  }
+
   .dg-gen-sections {
     display: flex;
     flex-direction: column;
