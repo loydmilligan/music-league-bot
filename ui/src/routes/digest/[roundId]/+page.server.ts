@@ -8,6 +8,19 @@ import {
   type DigestSectionRow,
 } from '$lib/digest/llm.js';
 import type { TastemakerPayload } from '$lib/db/discoverability.js';
+import { gatherSeasonData } from '$lib/db/seasonData.js';
+
+// sprint-21 season-recap: framing the digest page applies to the DATA sections
+// when the active draft was generated in recap mode (standings/stat-strip/
+// tastemaker headings; next-round dropped). Final → champion/past; mid → "so far".
+export type RecapContext = {
+  enabled: boolean;
+  final: boolean;
+  champion: string | null;
+  throughRound: number;
+  totalRounds: number;
+  seasonLabel: string;
+};
 
 export type PrepareCheck = {
   name: string;
@@ -78,6 +91,13 @@ export type DigestStats = {
   blowoutMargin?: number;
   closestRace?: number;
   uniqueArtists?: number;
+  // sprint-21 recap totals (StatStrip renders a season tile-set when `recap`).
+  recap?: boolean;
+  songs?: number;
+  votes?: number;
+  rounds?: number;
+  players?: number;
+  biggestRoundVotes?: number;
 };
 // Discoverability v2 (sprint-18): the Tastemaker payload (object with `.players`),
 // not the v1 row array. Type owned by `$lib/db/discoverability.ts` — imported above.
@@ -104,6 +124,7 @@ export type DigestPageData =
       stats: DigestStats | null;
       discoverability: TastemakerPayload | null;
       nextRound: NextRoundInfo | null;
+      recap: RecapContext | null;
     });
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
@@ -159,9 +180,37 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
       fetchJson<{ discoverability: TastemakerPayload | null }>(fetch, `/api/digest/${roundId}/discoverability`).then((b) => b?.discoverability ?? null),
       fetchJson<{ nextRound: NextRoundInfo | null }>(fetch, `/api/digest/${roundId}/next-round`).then((b) => b?.nextRound ?? null),
     ]);
+
+    // sprint-21 season-recap: when the active draft was generated in recap mode,
+    // reframe the DATA sections at season scope — season stat-strip totals, a
+    // recap context for the standings/tastemaker headings, and DROP next-round.
+    let recap: RecapContext | null = null;
+    let statsOut = stats;
+    let nextRoundOut = nextRound;
+    if ((draft as DigestDraftRow & { recap_enabled?: number }).recap_enabled) {
+      const season = gatherSeasonData(db, roundId);
+      recap = {
+        enabled: true,
+        final: !!(draft as DigestDraftRow & { recap_final?: number }).recap_final,
+        champion: season.context.champion?.name ?? null,
+        throughRound: season.context.throughRound,
+        totalRounds: season.context.totalRounds,
+        seasonLabel: season.context.seasonLabel,
+      };
+      statsOut = {
+        recap: true,
+        songs: season.statStrip.songs,
+        votes: season.statStrip.votes,
+        rounds: season.statStrip.rounds,
+        players: season.statStrip.players,
+        biggestRoundVotes: season.statStrip.biggestRound?.totalVotes,
+      };
+      nextRoundOut = null; // next-round is irrelevant in a season recap
+    }
+
     return {
       roundId, roundsIndex, currentRound, relContext, stage, draft, sections,
-      standings, stats, discoverability, nextRound,
+      standings, stats: statsOut, discoverability, nextRound: nextRoundOut, recap,
     } satisfies DigestPageData;
   }
 

@@ -527,6 +527,9 @@
   //     availability indicator (sprint-18 integration-audit). ---
   const inDigest = $derived(data.stage === 'refine' || data.stage === 'finalize');
 
+  // sprint-21 season-recap: data-section framing when the active draft is a recap.
+  const recap = $derived(inDigest ? data.recap : null);
+
   const statsData = $derived(inDigest ? data.stats : null);
   let statsExcluded = $state(false);
   const statsAvailable = $derived(!!statsData && Object.values(statsData).some((v) => typeof v === 'number'));
@@ -941,7 +944,7 @@
         <span class="sep">/</span>
         <span class="pulp">generated {data.draft.generated_at}</span>
       </div>
-      <h1 class="dgC-mast-title">Round digest</h1>
+      <h1 class="dgC-mast-title">{recap ? (recap.final ? `Season recap · ${recap.seasonLabel}` : `Season recap so far · through R${recap.throughRound}`) : 'Round digest'}</h1>
       <p class="dgC-mast-deck" data-export-hide="1">
         {data.sections.length} sections · whole-regen count {data.draft.whole_regen_count}
       </p>
@@ -952,7 +955,7 @@
     {#if showStats && StatSlot}
       <div class="dg-section-wrap" data-section-kind="stats">
         <section class="dg-section">
-          <p class="dg-section-eyebrow">By the numbers</p>
+          <p class="dg-section-eyebrow">{recap ? 'By the numbers · season' : 'By the numbers'}</p>
           <StatSlot kind="stats" content={{}} data={statsData} variant="visual" />
         </section>
       </div>
@@ -984,7 +987,7 @@
       <div class="dg-section-wrap" data-section-kind="standings">
         <section class="dg-section">
           <div class="dg-standings-head">
-            <p class="dg-section-eyebrow" style="margin: 0;">Season standings</p>
+            <p class="dg-section-eyebrow" style="margin: 0;">{recap ? (recap.final ? `Final standings${recap.champion ? ` · Champion: ${recap.champion}` : ''}` : `Standings through R${recap.throughRound}`) : 'Season standings'}</p>
             <button
               type="button"
               class="dg-standings-edit"
@@ -1005,7 +1008,7 @@
     {#if showDiscoverability && DiscoverabilitySlot}
       <div class="dg-section-wrap" data-section-kind="discoverability">
         <section class="dg-section">
-          <p class="dg-section-eyebrow">Tastemaker</p>
+          <p class="dg-section-eyebrow">{recap ? (recap.final ? 'Tastemaker · final season' : 'Tastemaker · season so far') : 'Tastemaker'}</p>
           <DiscoverabilitySlot kind="discoverability" content={{}} data={discoverabilityData} variant="visual" />
         </section>
       </div>

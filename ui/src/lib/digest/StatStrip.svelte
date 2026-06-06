@@ -19,6 +19,13 @@
     blowoutMargin?: number;
     closestRace?: number;
     uniqueArtists?: number;
+    // sprint-21 season-recap: season totals tile-set (rendered when `recap`).
+    recap?: boolean;
+    songs?: number;
+    votes?: number;
+    rounds?: number;
+    players?: number;
+    biggestRoundVotes?: number;
   };
 
   type Tile = { key: keyof DigestStats; label: string; suffix?: string };
@@ -29,6 +36,14 @@
     { key: 'closestRace', label: 'Closest race', suffix: 'pt' },
     { key: 'uniqueArtists', label: 'Unique artists' },
   ];
+  // Season-recap totals (sprint-21) — by-the-numbers for the whole season.
+  const RECAP_TILES: Tile[] = [
+    { key: 'songs', label: 'Songs' },
+    { key: 'votes', label: 'Votes cast' },
+    { key: 'rounds', label: 'Rounds' },
+    { key: 'players', label: 'Players' },
+    { key: 'biggestRoundVotes', label: 'Biggest round', suffix: ' votes' },
+  ];
 </script>
 
 <script lang="ts">
@@ -36,8 +51,10 @@
 
   const stats = $derived((data ?? {}) as DigestStats);
   // Render only the tiles whose value is present (defensive against a partial
-  // payload); suppress the whole strip if nothing is populated.
-  const shown = $derived(TILES.filter((t) => typeof stats[t.key] === 'number'));
+  // payload); suppress the whole strip if nothing is populated. Recap mode
+  // (sprint-21) swaps in the season-totals tile-set.
+  const tiles = $derived(stats.recap ? RECAP_TILES : TILES);
+  const shown = $derived(tiles.filter((t) => typeof stats[t.key] === 'number'));
 </script>
 
 {#if shown.length}
