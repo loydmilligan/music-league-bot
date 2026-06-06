@@ -55,10 +55,10 @@ A public digest.mattmariani.com page keeps the tap-modal alive, mlb stays hidden
 - [x] {agent: frontend, id: html-export-ui} Add **`html`** to the export-format toggle (`EXPORT_FORMATS` in `src/routes/digest/[roundId]/+page.svelte`) + a **"copy share link"** affordance that surfaces the URL returned by the export endpoint after an `html` export. Build against the documented contract (`{format:'html'}` → `{url}`) — can start in parallel with the backend chain; do the live verify once `export-endpoint` is deployed.
   - **Acceptance:** the digest-page export toggle shows an `html` option; selecting it + exporting calls the endpoint and renders the returned `digest.mattmariani.com/d/<slug>` URL with a working **copy-link** control + a clear "published" confirmation; loading/error states present. `npm run check` passes; deployed; mobile + desktop visual check logged.
 
-- [ ] {id: cf-tunnel} **USER STEP (not an agent task).** In the Cloudflare console, create the `digest.mattmariani.com` DNS + a **separate** tunnel pointing at the `digest-static` container (per the ingress mapping `digest-static-container` logs), **public / NO Access policy** — fully distinct from the mlb tunnel. Confirm the hostname resolves and is reachable without login.
+- [x] {id: cf-tunnel} **USER STEP (not an agent task).** In the Cloudflare console, create the `digest.mattmariani.com` DNS + a **separate** tunnel pointing at the `digest-static` container (per the ingress mapping `digest-static-container` logs), **public / NO Access policy** — fully distinct from the mlb tunnel. Confirm the hostname resolves and is reachable without login. **DONE 2026-06-05 (user):** `digest.mattmariani.com → 192.168.4.217:8088` live; orc verified both real slugs (r104/r101) → HTTP 200, no CF Access challenge, 0 `mlb.mattmariani.com` refs in served HTML/JS.
   - **Acceptance:** `https://digest.mattmariani.com/` resolves over the new tunnel with **no Cloudflare Access prompt**; a file in the `digests/` volume is reachable at its `/d/<slug>` URL from off the local network.
 
-- [ ] {agent: frontend, id: e2e-verify, depends: export-endpoint,html-export-ui,digest-static-container,cf-tunnel} **End-to-end + hostname-leak check.** From the digest page, export `html`, open the returned public URL in a fresh browser session (no login), confirm the digest renders and **interactivity works**, and confirm the **mlb hostname is not exposed** anywhere in the served artifact or HTTP responses.
+- [x] {agent: frontend, id: e2e-verify, depends: export-endpoint,html-export-ui,digest-static-container,cf-tunnel} **End-to-end + hostname-leak check.** From the digest page, export `html`, open the returned public URL in a fresh browser session (no login), confirm the digest renders and **interactivity works**, and confirm the **mlb hostname is not exposed** anywhere in the served artifact or HTTP responses.
   - **Acceptance:** exporting `html` for a round → opening `https://digest.mattmariani.com/d/<slug>` in a **fresh/incognito** session renders the digest and the **tastemaker tap-modal opens**; `curl -sI` the URL + grep the served HTML/assets shows **zero `mlb.mattmariani.com`** strings and no Access redirect; verified on a real mobile viewport too. Logged in the Activity Log → closes sprint-20.
 
 ### Deploy
@@ -90,7 +90,24 @@ Deploy per `CLAUDE.md` (now fast — chromium base layer, sprint-19): `docker co
 
 ## Activity Log
 
-### 2026-06-05 — frontend — html-export-ui DONE + deployed + prod-verified (UI-level, against contract) — commit c97a780
+### 2026-06-05 — frontend — e2e-verify DONE on the LIVE public tunnel → **SPRINT-20 COMPLETE**
+
+End-to-end verification of the html-share feature on the now-live public tunnel (`digest.mattmariani.com → 192.168.4.217:8088`). Opened the real published artifacts in Playwright **cross-origin from the app** (no `mlb` app session carries to `digest.mattmariani.com` — a fresh public session), confirmed the interactive digest renders + the tastemaker tap-modal opens, and re-ran the hostname-leak/Access checks across the asset graph.
+
+**Interactivity (the key gotcha — HTML path must NOT use the `?export=1` static flag):**
+- `https://digest.mattmariani.com/d/v0lGP7SftWx-FQ3S/` (HJ S3 r104): HTTP 200, **`is-export` = false** (interactive variant), 9 sections render, tastemaker = 9 player bars + 20 tappable bucket buttons (none disabled). **Tap → song modal opens** — "RECOGNIZABLE · 1 SONG / Mashew", FAMILIAR→MOST OBSCURE chunked bar, "Fight For Your Right — Beastie Boys · ob 13". ✅
+- Verified on **desktop (1280px)** AND a **real mobile viewport (390px)** — tap-modal opens in both; only console error is a benign `favicon.ico` 404.
+- r101 (Fam Jam S3, `xEAD2nPUSuURtX5o`): HTTP 200, tastemaker component present, **no `?export=1`** in the served HTML (hydrates interactive). ✅
+
+**Hostname-leak + Access (D2/D3):**
+- `curl -sI` both slugs → **HTTP/2 200**, `server: cloudflare`, **no `cf-access*` header, no redirect** (num_redirects=0) — public, no login. ✅
+- Fetched the index + `_app/fonts.css` + both route CSS bundles (`0.*`, `6.*`) + the entry/app/start JS + transitive chunks (8 artifacts) and grepped: **ZERO `mlb.mattmariani.com`**, zero `mlb` substring, **no CF Access markers** (`cloudflareaccess` / `cf_authorization` / `cf-access-jwt`). Assets are relative (`./_app/…`). ✅
+
+**Note (pre-existing, out of scope):** the artifact packages the *existing* live web view, so it inherits that page's mild horizontal doc-overflow at ~390px (digest content cards) — not introduced by html-share; the tastemaker section + modal render legibly and the page scrolls. Screenshots (desktop modal, mobile modal) captured + described; temp files removed.
+
+**Sprint-20 complete:** packaging-spike ✅ · render-pipeline ✅ · digest-static-container ✅ · export-endpoint ✅ (backend) · html-export-ui ✅ · e2e-verify ✅ (frontend) · cf-tunnel ✅ (user). Interactive, no-login, shareable digests are live at `digest.mattmariani.com/d/<slug>` with the mlb hostname fully hidden.
+
+
 
 Added **`html`** as a 5th export-format option + a **copy-share-link** affordance for the public URL the export endpoint returns. UI-level verification per scope (mock/stub the endpoint for happy + error states); the **live public-URL e2e is the separate `e2e-verify` task**, still gated on the `cf-tunnel` USER step (digest.mattmariani.com doesn't resolve yet).
 
