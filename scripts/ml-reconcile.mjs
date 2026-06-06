@@ -19,7 +19,16 @@ const REPO_ROOT = resolve(__dirname, '..');
 const DB_PATH = process.env.LEAGUE_DB ?? resolve(REPO_ROOT, 'data/league.db');
 const APPLY = process.argv.includes('--apply');
 
-// Slug → ML league name pattern (substring match, lowercase)
+// Slug → exact ML league ID (preferred). Pins the league when several seasons
+// of the same name exist live (e.g. "Fam Jam III" vs "Fam Jam IV: Uncharted
+// Tracks", S4) so the name substring below can't match the wrong season. This
+// script reconciles a league's max-season_number, which for fam-jam is now S4.
+const SLUG_TO_ML_ID = {
+	'fam-jam': 'd3d3b2046a2c4c639976ca2621a8afa3' // Fam Jam IV: Uncharted Tracks (S4)
+};
+
+// Slug → ML league name pattern (substring match, lowercase) — fallback for any
+// league without a pinned ID above.
 const SLUG_TO_ML_NAME = {
 	'nostalgia-pit': 'nostalgia pit',
 	'hip-jammers':   'hip jammers',
@@ -43,14 +52,20 @@ async function main() {
 	console.log(`\nDB has ${dbLeagues.length} leagues: ${dbLeagues.map((l) => l.slug).join(', ')}`);
 
 	for (const dbL of dbLeagues) {
+		const pinnedId = SLUG_TO_ML_ID[dbL.slug];
 		const needle = SLUG_TO_ML_NAME[dbL.slug];
-		if (!needle) {
+		if (!pinnedId && !needle) {
 			console.log(`\n[${dbL.slug}] (no slug→ML mapping; skipping)`);
 			continue;
 		}
-		const mlL = mlLeagues.find((l) => l.name.toLowerCase().includes(needle));
+		// Prefer the exact pinned league ID; fall back to the name substring.
+		const mlL = pinnedId
+			? mlLeagues.find((l) => l.id === pinnedId)
+			: mlLeagues.find((l) => l.name.toLowerCase().includes(needle));
 		if (!mlL) {
-			console.log(`\n[${dbL.slug}] (no live league named like "${needle}"; skipping)`);
+			console.log(
+				`\n[${dbL.slug}] (${pinnedId ? `pinned league ${pinnedId.slice(0, 8)} not in live list` : `no live league named like "${needle}"`}; skipping)`
+			);
 			continue;
 		}
 		await reconcileLeague(dbL, mlL);

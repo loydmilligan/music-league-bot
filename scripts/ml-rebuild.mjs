@@ -33,8 +33,14 @@ const ML_LEAGUE_NAME = {
 	'nostalgia-pit': 'nostalgia pit',
 	'hip-jammers': 'hip jammers'
 };
+// Per-season targets. `mlLeagueId` pins the exact live ML league for that season
+// — required for fam-jam now that two seasons ("Fam Jam III" complete, "Fam Jam
+// IV: Uncharted Tracks" = S4 in-progress) both match the "fam jam" name needle;
+// without pinning, the name substring would mis-resolve S3 → the IV league.
+// Targets without `mlLeagueId` resolve by ML_LEAGUE_NAME (single-season leagues).
 const TARGETS = [
-	{ slug: 'fam-jam', season: 3 },
+	{ slug: 'fam-jam', season: 3, mlLeagueId: 'e2a5ee4ad1ef4a5ca951d7b51c9b936e' }, // Fam Jam III (complete → skips when not live)
+	{ slug: 'fam-jam', season: 4, mlLeagueId: 'd3d3b2046a2c4c639976ca2621a8afa3' }, // Fam Jam IV: Uncharted Tracks (S4)
 	{ slug: 'second-best', season: 1 },
 	{ slug: 'nostalgia-pit', season: 1 },
 	{ slug: 'hip-jammers', season: 3 }
@@ -67,10 +73,15 @@ async function main() {
 	const mlLeagues = await cli(['leagues', 'list']);
 
 	for (const target of TARGETS) {
-		const needle = ML_LEAGUE_NAME[target.slug];
-		const mlL = mlLeagues.find((l) => l.name.toLowerCase().includes(needle));
+		// Prefer the exact pinned league ID; fall back to the name substring.
+		const mlL = target.mlLeagueId
+			? mlLeagues.find((l) => l.id === target.mlLeagueId)
+			: mlLeagues.find((l) => l.name.toLowerCase().includes(ML_LEAGUE_NAME[target.slug]));
 		if (!mlL) {
-			console.log(`\n[${target.slug} s${target.season}] no live ML league matching "${needle}" — skipping`);
+			const why = target.mlLeagueId
+				? `pinned league ${target.mlLeagueId.slice(0, 8)} not in live list`
+				: `no live ML league matching "${ML_LEAGUE_NAME[target.slug]}"`;
+			console.log(`\n[${target.slug} s${target.season}] ${why} — skipping`);
 			continue;
 		}
 		await reconcileSeason(target.slug, target.season, mlL);
