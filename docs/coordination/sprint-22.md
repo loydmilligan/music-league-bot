@@ -70,6 +70,13 @@ Deploy per `CLAUDE.md` (chromium base = fast): `docker compose build --no-cache 
 
 ## Activity Log
 
+### 2026-06-06 — frontend — history-shell BUILT + DEPLOYED
+- Renamed nav item **"Round history" → "History"** (`ui/src/routes/+layout.svelte`); dropped the stale round-count chip (was `13` — meaningless now it's a research tool, not a round list). Shared `navList` snippet → rename shows in both desktop rail + mobile drawer.
+- New route `ui/src/routes/history/+page.svelte`: **3-tab shell** — Song search / Theme research / Player research. Each tab is a labeled **stub** ("COMING SOON" pill + one-line blurb of its future job). Mash Co. styling (font-display h1, mono breadcrumb, accent-underline tabs, dashed-border stub panel).
+- Tabs are **deep-linkable**: `?tab=themes` / `?tab=players` (songs = default, no param). ARIA `tablist`/`tab`/`tabpanel` + arrow-key nav. Tab strip `overflow-x-auto` so no tab clips on narrow mobile.
+- **Acceptance met:** nav reads "History"; `/history` renders 3-tab shell; tabs switch + deep-link; stubs labeled. `npm run check` → **0 errors** (warnings unchanged at 31; no new ones). Deployed to prod (`bot-ui`), smoked `192.168.4.217:3002`. Visual check logged: desktop (1280) + mobile (390) — all 3 tabs render, active state + panel content track selection.
+- Stayed in UI lane; did not touch active-round / theme-tag backend. NOTE for `active-round-ui`: the active-round screen + modal is a **separate later task** — this shell does not include it.
+
 ### 2026-06-06 — backend — active-round-model LANDED (deployed + prod-verified)
 Active-round management backend complete. `npm run check` 0 errors; 8 new unit tests + 58 db tests green; deployed to prod (`bot-ui`) and all endpoints verified against live leagues, prod state restored (temp data cleaned).
 
