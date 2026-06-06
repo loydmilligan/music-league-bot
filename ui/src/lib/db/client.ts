@@ -65,6 +65,13 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'llm_cost_usd')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN llm_cost_usd REAL NOT NULL DEFAULT 0");
 	}
+	// sprint-21 season-recap: persist recap mode + final/mid framing on existing DBs.
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'recap_enabled')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN recap_enabled INTEGER NOT NULL DEFAULT 0");
+	}
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'recap_final')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN recap_final INTEGER NOT NULL DEFAULT 1");
+	}
 	// sprint-15 podium-thumbnails: per-song album art cached on ml_submissions.
 	const msArtCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string }[];
 	if (msArtCols.length && !msArtCols.some(c => c.name === 'album_art_url')) {

@@ -144,7 +144,12 @@ export const SCHEMA = `
     whole_regen_count INTEGER NOT NULL DEFAULT 0,
     -- sprint-15 cost-capture: accumulated OpenRouter USD cost for this digest
     -- (draft generation + every regen / section gen).
-    llm_cost_usd      REAL NOT NULL DEFAULT 0
+    llm_cost_usd      REAL NOT NULL DEFAULT 0,
+    -- sprint-21 season-recap: the draft was generated in recap mode (season
+    -- scope) and whether it's a FINAL recap (champion/past tense) vs mid-season
+    -- ("so far, through R{N}"). Read by regen + the data-section framing.
+    recap_enabled     INTEGER NOT NULL DEFAULT 0,
+    recap_final       INTEGER NOT NULL DEFAULT 1
   );
   CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);
   CREATE TABLE IF NOT EXISTS digest_sections (

@@ -8,8 +8,10 @@ import {
   enrichPodiumArt,
   addDraftCost,
   type DigestSectionRow,
+  type GenParams,
   type SectionKind,
 } from '$lib/digest/llm.js';
+import { gatherSeasonData } from '$lib/db/seasonData.js';
 
 // POST /api/digest/:roundId/sections/:id/regenerate
 export const POST: RequestHandler = async ({ params, request }) => {
@@ -20,11 +22,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const db = getDb();
   const section = db
     .prepare(
-      `SELECT s.* FROM digest_sections s
+      `SELECT s.*, d.recap_enabled AS recap_enabled, d.recap_final AS recap_final
+       FROM digest_sections s
        JOIN digest_drafts d ON d.id = s.draft_id
        WHERE s.id = ? AND d.round_id = ?`,
     )
-    .get(sectionId, roundId) as DigestSectionRow | undefined;
+    .get(sectionId, roundId) as (DigestSectionRow & { recap_enabled: number; recap_final: number }) | undefined;
   if (!section) throw error(404, `section not found: ${sectionId}`);
   if (section.state === 'locked') throw error(400, 'section is locked');
 
@@ -35,6 +38,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const data = gatherRoundData(db, roundId);
   const priorContent = JSON.parse(section.content_json);
 
+  // sprint-21: regen a recap-mode section with its season slice + recap framing,
+  // inherited from the draft (the modal isn't in the loop on regen).
+  const recapEnabled = !!section.recap_enabled;
+  const genParams: GenParams | undefined = recapEnabled
+    ? { recap: { enabled: true, final: !!section.recap_final } }
+    : undefined;
+  const season = recapEnabled ? gatherSeasonData(db, roundId) : undefined;
+
   let newContent: unknown;
   let costUsd = 0;
   try {
@@ -44,6 +55,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       priorContent,
       chips,
       instructions,
+      genParams,
+      season,
     );
     newContent = res.section;
     costUsd = res.costUsd;

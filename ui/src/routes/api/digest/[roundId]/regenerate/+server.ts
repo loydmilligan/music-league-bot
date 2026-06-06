@@ -10,8 +10,10 @@ import {
   replaceSectionContent,
   enrichPodiumArt,
   addDraftCost,
+  type GenParams,
   type SectionKind,
 } from '$lib/digest/llm.js';
+import { gatherSeasonData } from '$lib/db/seasonData.js';
 
 // POST /api/digest/:roundId/regenerate — whole-draft regen.
 // Runs non-locked sections in parallel; locked sections are skipped entirely.
@@ -38,12 +40,19 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   const data = gatherRoundData(db, roundId);
 
+  // sprint-21: keep recap mode on whole-draft regen (inherited from the draft).
+  const recapEnabled = !!(draft as { recap_enabled?: number }).recap_enabled;
+  const genParams: GenParams | undefined = recapEnabled
+    ? { recap: { enabled: true, final: !!(draft as { recap_final?: number }).recap_final } }
+    : undefined;
+  const season = recapEnabled ? gatherSeasonData(db, roundId) : undefined;
+
   // Parallel LLM calls (writes happen sequentially after — better-sqlite3
   // transactions are synchronous and a single shared DB connection serializes
   // them anyway).
   const results = await Promise.allSettled(
     regenerable.map(s =>
-      regenerateOneSection(data, s.kind as SectionKind, JSON.parse(s.content_json), chips, instructions),
+      regenerateOneSection(data, s.kind as SectionKind, JSON.parse(s.content_json), chips, instructions, genParams, season),
     ),
   );
 

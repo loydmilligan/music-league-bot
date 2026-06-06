@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import type { SeasonData } from '../db/seasonData.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -16,6 +17,9 @@ export interface DigestDraftRow {
   prep_checks: string;
   whole_regen_count: number;
   llm_cost_usd: number;
+  /** sprint-21: generated in season-recap mode (1) and FINAL (1) vs mid (0). */
+  recap_enabled: number;
+  recap_final: number;
 }
 
 export interface DigestSectionRow {
@@ -53,9 +57,16 @@ export interface GenSectionParam {
   variant?: 'textual' | 'visual' | 'both';
   context?: string;
 }
+/** sprint-21 season-recap: re-render every section at season scope. */
+export interface RecapParams {
+  enabled: boolean;
+  /** FINAL = champion / past tense; false = mid-season "so far, through R{N}". */
+  final: boolean;
+}
 export interface GenParams {
   sections?: GenSectionParam[];
   pastedChat?: string;
+  recap?: RecapParams;
 }
 
 export function gatherRoundData(db: Database.Database, roundId: number): RoundData {
@@ -208,6 +219,129 @@ const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
   chat: 'Highlights from the WhatsApp chat tied to this round. Find the genuinely funny / notable exchanges and keep the dry, slightly-funny editorial voice. Output { "summary": <1-2 sentence overall read of the chat>, "moments": [{ "label": <short punchy title for one discrete chat moment>, "detail": <a fuller 1-2 sentence description of that moment, preserving the funny content> }] } with 3-6 moments.',
 };
 
+// sprint-21 season-recap: per-section recap-variant intents. Same OUTPUT shape
+// as the round prompts (the system prompt is unchanged) — only the scope +
+// editorial intent changes (the whole season vs one round).
+const SECTION_DESCRIPTIONS_RECAP: Record<SectionKind, string> = {
+  podium: 'The SEASON\'s standout tracks — the overall highest-scoring songs across every round (cumulative points). Crown the winners; for each give artist, title, submitter, the round it came from, and total season points, with a line of editorial color. This is the season\'s hall of fame.',
+  villain: 'The season\'s LEAST-LOVED track(s) — the lowest cumulative-point songs of the whole season. This league has all-positive voting, so frame it as "least-loved" / "lowest-scoring", NOT "most-downvoted". Playful roast using the real numbers; you may nod to a player whose picks consistently underperformed.',
+  flow: 'Narrate the ARC of the whole season — early leaders, lead changes, comebacks, and the race for #1 across the rounds. Use the round-by-round leader progression and the themes. This is the marquee recap section: tell the season\'s story.',
+  consensus: 'The season\'s CONSENSUS darlings — tracks that earned broad, even agreement (many voters, low spread) AND high totals across the season. Bulleted; note the agreement.',
+  quotes: 'The best lines from the SEASON\'s vote comments — punchy, full of personality, drawn from across all rounds. voter + quote. Pick the most memorable.',
+  chat: 'Season highlights from the pasted chat transcript (the whole season, not one round). Output { "summary", "moments":[{"label","detail"}] } with 3-6 moments.',
+};
+
+// Format the compact season slice for one section into prompt text.
+function recapSliceBlock(kind: SectionKind, s: SeasonData): string {
+  const lines: string[] = [];
+  switch (kind) {
+    case 'podium':
+      lines.push(`Season top ${s.podium.songs.length} by cumulative points:`);
+      for (const x of s.podium.songs)
+        lines.push(`  #${x.rank} [${x.points} pts] ${x.artist} — "${x.title}" (submitted by ${x.submitter ?? '—'}, round "${x.round}")`);
+      break;
+    case 'villain':
+      lines.push('Least-loved songs of the season (lowest cumulative points — all votes are positive in this league):');
+      for (const x of s.villain.lowest)
+        lines.push(`  [${x.points} pts, ${x.voters} voters] ${x.artist} — "${x.title}" (${x.submitter ?? '—'}, round "${x.round}")`);
+      if (s.villain.recurringLowScorers.length) {
+        lines.push('Players whose picks underperformed all season (avg points/submission):');
+        for (const r of s.villain.recurringLowScorers)
+          lines.push(`  ${r.submitter}: avg ${r.avgPoints} over ${r.submissions} songs (worst: "${r.worstSong?.title}" ${r.worstSong?.points} pts)`);
+      }
+      break;
+    case 'consensus':
+      lines.push('Season consensus darlings (high total + broad, even support — more voters & lower variance = stronger agreement):');
+      for (const x of s.consensus.songs)
+        lines.push(`  [${x.points} pts, ${x.voters} voters, variance ${x.variance}] ${x.artist} — "${x.title}" (${x.submitter ?? '—'})`);
+      break;
+    case 'quotes':
+      lines.push('Season vote-comment pool (voter → song, the points they gave, round, comment):');
+      for (const c of s.quotes.comments)
+        lines.push(`  ${c.voter} → "${c.song}" (${c.points} pts, round "${c.round}"): "${c.comment.replace(/\s+/g, ' ').trim()}"`);
+      break;
+    case 'flow':
+      lines.push('Round-by-round cumulative leader progression + themes:');
+      for (const r of s.flow.rounds)
+        lines.push(`  R${r.number} "${r.name}": leader ${r.leader ?? '—'} (${r.leaderTotal} pts); round-best "${r.topSong?.title ?? '—'}" by ${r.topSong?.artist ?? '—'} (${r.topSong?.points ?? 0} pts)`);
+      lines.push(`Lead changes across the season: ${s.flow.leadChanges}. Final leader: ${s.flow.finalLeader ?? '—'}.`);
+      break;
+    case 'chat':
+      lines.push('(Use the pasted chat transcript below as the source.)');
+      break;
+  }
+  return lines.join('\n');
+}
+
+// sprint-21: the season-recap user prompt. Same JSON output contract as the
+// round prompt; swaps round data → per-section season slices + recap intents +
+// final/mid framing. For a single-section regen, pass `steer.kind`.
+function buildRecapUserPrompt(
+  s: SeasonData,
+  final: boolean,
+  steer?: { chips: string[]; instructions: string; kind?: SectionKind; currentContent?: unknown },
+  genParams?: GenParams,
+): string {
+  const parts: string[] = [];
+  const c = s.context;
+  parts.push(`# SEASON RECAP — ${c.seasonLabel}`);
+  parts.push(`League: ${c.league.name}`);
+  if (final) {
+    parts.push(
+      `\n# Framing: FINAL RECAP\nThe season is COMPLETE (all ${c.throughRound} rounds done). Write definitively, in PAST tense. ${c.champion ? `The CHAMPION is ${c.champion.name} (${c.champion.total} pts).` : ''} Cover the WHOLE season, not any single round.`,
+    );
+  } else {
+    parts.push(
+      `\n# Framing: MID-SEASON ("the season so far")\nThis is the season THROUGH Round ${c.throughRound} of ${c.totalRounds}. Write as a provisional check-in — present tense, "so far", "through round ${c.throughRound}". ${c.champion ? `The CURRENT LEADER is ${c.champion.name} (${c.champion.total} pts) — call them the current leader, NOT the champion; the season isn't over.` : ''} Do NOT declare a winner.`,
+    );
+  }
+
+  parts.push(
+    `\n# Season at a glance\nSongs: ${s.statStrip.songs} · Votes: ${s.statStrip.votes} · Rounds: ${s.statStrip.rounds} · Players: ${s.statStrip.players}${s.statStrip.biggestRound ? ` · Biggest round: "${s.statStrip.biggestRound.name}" (${s.statStrip.biggestRound.totalVotes} votes)` : ''}`,
+  );
+
+  if (c.relContext.trim()) {
+    parts.push(`\n# Relationship context (people, history, recurring jokes)\n${c.relContext.trim()}`);
+  }
+
+  if (steer?.kind) {
+    parts.push(`\n# Regenerate the ONE recap section "${steer.kind}"`);
+    parts.push(SECTION_DESCRIPTIONS_RECAP[steer.kind]);
+    parts.push(`\n## Season data for "${steer.kind}":\n${recapSliceBlock(steer.kind, s)}`);
+    if (steer.kind === 'chat' && genParams?.pastedChat?.trim()) {
+      parts.push(`\n## Pasted chat transcript (the source for "chat"):\n${genParams.pastedChat.trim()}`);
+    }
+    if (steer.currentContent !== undefined) parts.push(`\nPrevious version (replace it):\n${JSON.stringify(steer.currentContent)}`);
+    if (steer.chips.length) parts.push(`\nSteer chips (apply ALL): ${steer.chips.join(', ')}`);
+    if (steer.instructions.trim()) parts.push(`\nUser instructions: ${steer.instructions.trim()}`);
+    parts.push(`\nReturn JSON: { "section": { ...content for "${steer.kind}"... } }`);
+  } else {
+    const activeKinds = activeKindsForRecap(genParams);
+    parts.push(`\n# Write ${activeKinds.length} season-recap sections`);
+    for (const k of activeKinds) {
+      parts.push(`\n## ${k} — ${SECTION_DESCRIPTIONS_RECAP[k]}`);
+      parts.push(recapSliceBlock(k, s));
+      if (k === 'chat' && genParams?.pastedChat?.trim()) {
+        parts.push(`Pasted chat transcript:\n${genParams.pastedChat.trim()}`);
+      }
+    }
+  }
+
+  return parts.join('\n');
+}
+
+// Recap-mode active kinds: same per-section enabled toggles, but chat depends
+// ONLY on pasted text (no auto chat-mentions at season scope).
+export function activeKindsForRecap(genParams?: GenParams): SectionKind[] {
+  const disabled = new Set((genParams?.sections ?? []).filter((p) => p.enabled === false).map((p) => p.id));
+  const hasChat = !!genParams?.pastedChat?.trim();
+  return SECTION_KINDS.filter((k) => {
+    if (disabled.has(k)) return false;
+    if (k === 'chat') return hasChat;
+    return true;
+  });
+}
+
 export function buildSystemPrompt(): string {
   return `You are the editorial voice of "Music League Bot" — a private music-league digest writer.
 Write in a sharp, dry, slightly literary tone. Be specific: use real song titles, real voter names, real numbers.
@@ -255,7 +389,12 @@ export function buildUserPrompt(
   data: RoundData,
   steer?: { chips: string[]; instructions: string; kind?: SectionKind; currentContent?: unknown },
   genParams?: GenParams,
+  season?: SeasonData,
 ): string {
+  // sprint-21: recap mode swaps the entire prompt body to season slices.
+  if (genParams?.recap?.enabled && season) {
+    return buildRecapUserPrompt(season, genParams.recap.final, steer, genParams);
+  }
   const parts: string[] = [];
   parts.push(`# Round\n${data.round.name}${data.round.description ? ` — ${data.round.description}` : ''}`);
   parts.push(`League: ${data.league.name}`);
@@ -341,11 +480,11 @@ interface DraftLLMOutput {
   costUsd: number;
 }
 
-export async function generateDraft(data: RoundData, genParams?: GenParams): Promise<DraftLLMOutput> {
+export async function generateDraft(data: RoundData, genParams?: GenParams, season?: SeasonData): Promise<DraftLLMOutput> {
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(data, undefined, genParams) },
+      { role: 'user', content: buildUserPrompt(data, undefined, genParams, season) },
     ],
     { jsonMode: true },
   );
@@ -366,11 +505,13 @@ export async function regenerateOneSection(
   currentContent: unknown,
   chips: string[],
   instructions: string,
+  genParams?: GenParams,
+  season?: SeasonData,
 ): Promise<{ section: unknown; costUsd: number }> {
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }) },
+      { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }, genParams, season) },
     ],
     { jsonMode: true },
   );
@@ -443,14 +584,18 @@ export function writeDraft(
   // renders covers (sprint-15 podium-thumbnails).
   enrichPodiumArt(output.sections.podium, data.submissions);
 
+  const recapEnabled = genParams?.recap?.enabled ? 1 : 0;
+  const recapFinal = genParams?.recap?.final === false ? 0 : 1;
+
   const tx = db.transaction(() => {
     db.prepare(
-      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd)
-       VALUES (?, ?, ?, ?, ?, 0, ?)`,
-    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0);
+      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal);
 
     // Only persist enabled + content-available sections; position is dense.
-    const activeKinds = activeKindsForDraft(data, genParams);
+    // Recap mode: chat depends on pasted text only (no season chat-mentions).
+    const activeKinds = recapEnabled ? activeKindsForRecap(genParams) : activeKindsForDraft(data, genParams);
     activeKinds.forEach((kind, idx) => {
       const id = `${draftId}-${kind}`;
       const variant = variantByKind.get(kind) ?? 'textual';

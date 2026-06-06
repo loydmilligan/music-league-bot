@@ -11,8 +11,10 @@ import {
   SECTION_KINDS,
   type GenParams,
   type GenSectionParam,
+  type RecapParams,
   type SectionKind,
 } from '$lib/digest/llm.js';
+import { gatherSeasonData } from '$lib/db/seasonData.js';
 import { getStandings } from '$lib/db/standings.js';
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 
@@ -63,9 +65,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
   }
 
   const data = gatherRoundData(db, roundId);
+  // sprint-21: recap mode feeds per-section season slices (rounds ≤ roundId).
+  const season = genParams?.recap?.enabled ? gatherSeasonData(db, roundId) : undefined;
   let output;
   try {
-    output = await generateDraft(data, genParams ?? undefined);
+    output = await generateDraft(data, genParams ?? undefined, season);
   } catch (e) {
     throw error(502, `LLM draft failed: ${(e as Error).message}`);
   }
@@ -121,12 +125,21 @@ function backfillPodiumArt(db: ReturnType<typeof getDb>, roundId: number, sectio
 
 // Returns a GenParams object only when the body carries meaningful generation
 // params; otherwise null (→ cached default behavior).
+function parseRecap(v: unknown): RecapParams | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const r = v as { enabled?: unknown; final?: unknown };
+  if (typeof r.enabled !== 'boolean') return undefined;
+  return { enabled: r.enabled, final: r.final === undefined ? true : !!r.final };
+}
+
 function parseGenParams(body: unknown): GenParams | null {
   if (!body || typeof body !== 'object') return null;
-  const b = body as { sections?: unknown; pastedChat?: unknown };
+  const b = body as { sections?: unknown; pastedChat?: unknown; recap?: unknown };
+  const recap = parseRecap(b.recap);
   const hasSections = Array.isArray(b.sections) && b.sections.length > 0;
   const hasPasted = typeof b.pastedChat === 'string' && b.pastedChat.trim().length > 0;
-  if (!hasSections && !hasPasted) return null;
+  // recap.enabled is itself a meaningful param → force a fresh (recap) generation.
+  if (!hasSections && !hasPasted && !recap?.enabled) return null;
 
   const validKinds = new Set<string>(SECTION_KINDS);
   const sections: GenSectionParam[] = (Array.isArray(b.sections) ? b.sections : [])
@@ -145,6 +158,7 @@ function parseGenParams(body: unknown): GenParams | null {
   return {
     sections,
     pastedChat: hasPasted ? String(b.pastedChat) : undefined,
+    recap,
   };
 }
 
