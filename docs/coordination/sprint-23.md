@@ -131,6 +131,12 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - **Verification:** 6 unit tests (`badges.test.ts`) green; `npm run check` → 0 errors. Verified read-only vs prod corpus: a known 7-song round → winner `song.gold=1`, runner-up `song.silver=1`, last `song.poop=1`; that winner's **artist** aggregated to `gold=2, bronze=1` across rounds. (D5: NOT prod-deployed — route goes live at the orc wave-gate; verified service vs prod DATA.)
 - **Backend lane wave-1 complete** (song-history-api + badges-api). Both routes ready for the wave-gate deploy; await orc gate before they're live at 192.168.4.217:3002.
 
+### 2026-06-07 — orc — wave-2 dispatched (post-restart recovery)
+- Laptop froze mid-session; warren server restarted (detached, PORT=4444) and the mlb workspace rebuilt around the surviving orc pane. backend(%11)/frontend(%12)/viz(%13) re-spawned + role-labeled; warren discovery clean (unmapped 0, broken 0).
+- **All agents switched to Sonnet 4.6** this session to conserve weekly quota (was at 77% on Opus). orc watching for 85%.
+- **Wave-2 dispatched** (parallel): frontend → commit the hanging integration-contract diff (`SongSearchCard.svelte`+`SongSearchTab.svelte`, authored pre-crash, uncommitted) then `promote-actions` → `corpus-history-panel`; viz → `history-coloring` (D3) + `badge-system` (D6/D7). backend idle (wave-1 done).
+- **Deploy held:** per D5, lanes iterate on `npm run dev`; orc gates ONE wave-gate prod deploy after wave-2, on user confirm. Uncommitted infra (`Dockerfile.base/ui`, `docker-compose.yml`) to reconcile at that gate.
+
 ### 2026-06-07 — frontend — songsearch-tab: real Song search tab live (wave-1)
 - Built `/history?tab=songs` for real (replaced the sprint-22 stub). New components:
   `ui/src/lib/components/SongSearchTab.svelte` (search box + results list + one-open-at-a-time + Esc)
@@ -140,3 +146,22 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - **Integration seams left for wave-2/viz** (stable, commented in `SongSearchCard.svelte`): history-coloring (D3) styles the `<article>` border/fill + collapsed-row pills; badge-system (D6/D7) song+artist badge areas; promote-actions = expanded `footer`/actions region; corpus-history-panel = expanded history region (consumes the `song-history-api` shape logged above).
 - **Verification:** `npm run check` → 0 errors (only pre-existing warnings elsewhere). Dev-loop (D5) on `:5180` with prod `.env`: real Spotify search returns 10 results; Playwright-confirmed click-to-expand collapses the previously-open card, and Esc collapses all. **NOT prod-deployed** — goes live at the orc wave-gate; smoke 192.168.4.217:3002 then.
 - Next: picking up wave-2 `promote-actions` (then `corpus-history-panel`).
+
+### 2026-06-07 — frontend — wave-2 DONE: promote-actions + corpus-history-panel
+
+**Step 0 (pre-work):** Committed the frozen wave-2 integration contract (`SongSearchCard.svelte` + `SongSearchTab.svelte`) that was authored pre-crash but never committed. 0 errors, contract is stable for viz to build against.
+
+**promote-actions** — `ui/src/lib/components/PromoteActions.svelte` (new):
+- **+ Shortlist:** auto-uses the active round (resolved from `GET /api/active-rounds` → `activeRoundId=118` Fam-Jam "Dance/air-drums" round) → `POST /api/research/{roundId}`. One-click. Falls back to inline round picker if no active round. Creates a `research_songs` row (status='reviewing' default).
+- **+ Round List** and **+ H2H:** both show a shared compact inline picker sourced from `GET /api/rounds/open`. Clicking a round → `POST /api/research/{roundId}`. Both add to `research_songs` which is the H2H candidate pool (H2H reads `WHERE status='reviewing'`). Added rounds show ✓. Picker closes on selection.
+- **▶ Play:** `<a>` link to `open.spotify.com/track/{id}`, opens in new tab.
+- Supporting data (`activeRoundId`, `openRounds`) loaded ONCE per tab mount (2 requests total, shared across all cards in the result page — not N×cards).
+
+**corpus-history-panel** — `ui/src/lib/components/CorpusHistoryPanel.svelte` (new):
+- Receives `SongStatus` via the `{corpusHistory}` snippet. Renders: **submittedByMe** indicator ("You submitted this"), **submittedByOthers** list (league · S{season} · round · by · points), **chatMentions** list (by + quoted message). Clean song shows "No corpus history — first time in our leagues."
+
+**SongSearchTab.svelte wiring:** both components injected as named snippets inside the `{#each}` loop (Svelte 5 slot-like syntax), closing over the loop variable `r`. `onMount` loads activeRoundId + openRounds once.
+
+**Verification:** `npm run check` → 0 errors (31 pre-existing warnings unchanged); dev server :5181 live; `GET /api/active-rounds`, `GET /api/rounds/open`, `POST /api/history/song-status` all responded correctly. Spotify search returns `[]` in dev (credentials not configured locally — expected); confirmed correct on prod at wave-gate.
+
+**NOT prod-deployed** — goes live at the orc wave-gate. Frontend wave-2 lane complete.
