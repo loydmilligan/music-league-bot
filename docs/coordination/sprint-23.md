@@ -165,3 +165,23 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 **Verification:** `npm run check` → 0 errors (31 pre-existing warnings unchanged); dev server :5181 live; `GET /api/active-rounds`, `GET /api/rounds/open`, `POST /api/history/song-status` all responded correctly. Spotify search returns `[]` in dev (credentials not configured locally — expected); confirmed correct on prod at wave-gate.
 
 **NOT prod-deployed** — goes live at the orc wave-gate. Frontend wave-2 lane complete.
+
+### 2026-06-07 — viz — history-coloring DONE (wave-2)
+
+- **CSS layer:** `ui/src/lib/history/history-coloring.css` (new), imported via `ui/src/app.css`. Global attribute-selector rules keyed on `data-history-status` / `data-submitted-by-*` / `data-artist-mine` / `data-chat-mention` — **no SongSearchCard edits needed**.
+- **D3 implementation (LOCKED contract respected):**
+  - `submitted-mine` → 2px solid red border + 25% red fill
+  - `submitted-others` → 1.5px dashed red border + 10% red fill
+  - `artist-mine` → 2px solid orange border + 25% orange fill
+  - `chat-mention` → 1.5px solid blue border + 10% blue fill
+  - Secondary signals as layered `box-shadow` rings: `submitted-mine + chat-mention` → outer blue ring; `submitted-others + artist-mine / chat-mention / both` → stacked orange + blue rings; `artist-mine + chat-mention` → outer blue ring.
+- **Cascade:** rules outside `@layer` — beat Tailwind v4 `@layer utilities` at equal specificity; no `!important` needed.
+- **Verification:** `npm run check` → 0 errors. Visual check desktop (1280px) + mobile (390px, iPhone 14 viewport) via Python Playwright against dev server `:5182` with prod `.env`. Bohemian Rhapsody (submitted-others) renders dashed red border + 10% red fill on both viewports. Unsubmitted songs render plain. **NOT prod-deployed.**
+
+### 2026-06-07 — viz — badge-system DONE (wave-2)
+
+- **Components:** `ui/src/lib/components/BadgeStrip.svelte` (full badge strip, takes `BadgeSet` + optional label), `ui/src/lib/components/ArtistBadgeHint.svelte` (collapsed-row subtle hint, shows top badge at 50% opacity).
+- **Wiring:** `SongSearchTab.svelte` defines three named snippets at tab scope (`songBadgesSnip`, `artistBadgesSnip`, `artistBadgeHintSnip`) and passes them to every `<SongSearchCard>` via `songBadges=`, `artistBadges=`, `artistBadgeHint=` props. One snippet definition shared across all 10 result cards — no per-card duplication.
+- **D6/D7 implementation:** 🥇🥈🥉 medals with `×N` count badge when `>1`, 💩 poop with count, 🗣️ big-discussion with count; all in pill styling (translucent bg + subtle border). Artist badges labeled "Artist". Collapsed row shows only the highest-prestige badge glyph at 50% opacity as a hint.
+- **Verification:** `npm run check` → 0 errors (0 errors, 34 warnings pre-existing). Visual check desktop + mobile: Bohemian Rhapsody collapsed row shows 🥈 artist hint; expanded card shows song badge 🥈 + "ARTIST" strip with 🥇🥈. Don't Stop Me Now + Somebody To Love also show 🥈 artist hints. **NOT prod-deployed.**
+- **Viz lane wave-2 complete.** Awaiting orc wave-gate for prod deploy.

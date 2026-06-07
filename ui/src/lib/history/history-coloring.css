@@ -1,0 +1,80 @@
+/* ── History Coloring (D3, sprint-23) ──────────────────────────────────────
+   Driven by data-attributes emitted by SongSearchCard.svelte on both the
+   collapsed <button> and the expanded <article>. No card edits needed.
+
+   Contract (SongSearchCard.svelte, FROZEN):
+     data-history-status  = "submitted-mine" | "submitted-others"
+                          | "artist-mine" | "chat-mention" | "none"
+     data-submitted-by-me, data-submitted-by-others,
+     data-artist-mine, data-chat-mention   (each = "true" when active)
+
+   Design language (D3, LOCKED):
+     Border weight:  mine → 2px solid    |  others → 1.5px dashed
+     Flat fill:      mine → 25% hue      |  others → 10% hue
+     Hues:           🔴 red = submitted  |  🟠 orange = artist-mine
+                     🔵 blue = chat-mention
+     Multi-status:   strongest-signal border + secondary outer ring(s)
+
+   Cascade note: these rules are outside any @layer, so they beat
+   Tailwind v4 @layer utilities at equal specificity — no !important needed.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Hue tokens ─────────────────────────────────────────────────────────── */
+[data-history-status] {
+  --h-red:    239 68  68;   /* red-500   */
+  --h-orange: 249 115 22;   /* orange-500 */
+  --h-blue:   59  130 246;  /* blue-500  */
+}
+
+/* ── submitted-mine: bold solid red + 25% red fill ─────────────────────── */
+[data-history-status="submitted-mine"] {
+  border: 2px solid rgb(var(--h-red) / 0.85);
+  background-color: rgb(var(--h-red) / 0.25);
+}
+
+/* ── submitted-others: dashed red + 10% red fill ───────────────────────── */
+[data-history-status="submitted-others"] {
+  border: 1.5px dashed rgb(var(--h-red) / 0.6);
+  background-color: rgb(var(--h-red) / 0.10);
+}
+
+/* ── artist-mine (orange, mine-only): bold solid orange + 25% fill ─────── */
+[data-history-status="artist-mine"] {
+  border: 2px solid rgb(var(--h-orange) / 0.85);
+  background-color: rgb(var(--h-orange) / 0.25);
+}
+
+/* ── chat-mention (blue): thin solid blue + 10% fill ───────────────────── */
+[data-history-status="chat-mention"] {
+  border: 1.5px solid rgb(var(--h-blue) / 0.70);
+  background-color: rgb(var(--h-blue) / 0.10);
+}
+
+/* ── Secondary signals: box-shadow rings for co-present lower signals ───── */
+/* Ring colour = the secondary signal's hue. Layered box-shadow = stacked    */
+/* rings when multiple secondaries are active at once.                        */
+
+/* submitted-mine may also carry chat-mention (blue ring) */
+[data-history-status="submitted-mine"][data-chat-mention] {
+  box-shadow: 0 0 0 3px rgb(var(--h-blue) / 0.35);
+}
+
+/* submitted-others may carry artist-mine (orange), chat-mention (blue), or both */
+[data-history-status="submitted-others"][data-artist-mine]:not([data-chat-mention]) {
+  box-shadow: 0 0 0 3px rgb(var(--h-orange) / 0.40);
+}
+
+[data-history-status="submitted-others"][data-chat-mention]:not([data-artist-mine]) {
+  box-shadow: 0 0 0 3px rgb(var(--h-blue) / 0.35);
+}
+
+[data-history-status="submitted-others"][data-artist-mine][data-chat-mention] {
+  box-shadow:
+    0 0 0 3px rgb(var(--h-orange) / 0.40),
+    0 0 0 6px rgb(var(--h-blue)   / 0.25);
+}
+
+/* artist-mine may also carry chat-mention (blue ring) */
+[data-history-status="artist-mine"][data-chat-mention] {
+  box-shadow: 0 0 0 3px rgb(var(--h-blue) / 0.35);
+}
