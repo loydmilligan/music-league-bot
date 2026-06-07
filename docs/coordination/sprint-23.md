@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-23-history-songsearch
 created: 2026-06-07T02:40:19Z
-updated: 2026-06-07T02:40:19Z
-status: active
+updated: 2026-06-07T16:30:00Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-23-history-songsearch)
@@ -42,16 +42,16 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - [x] {agent: frontend, id: songsearch-tab} **Build the real Song search tab** in `/history?tab=songs` (replace the stub). Spotify search box → results render as **collapsed cards** reusing/adapting `ResearchList.svelte` + `SongRatingBars`; **one open at a time, Esc collapses** (Card model "locked — mirror shortlist"). Wire to the existing `GET /api/spotify/search`. Mash Co. styling consistent with the rest of `/history`.
   - **Acceptance:** `/history?tab=songs` renders a working search → collapsed cards; clicking expands one (others collapse), Esc collapses; uses existing spotify search endpoint (no new search backend); `npm run check` passes; dev-loop verified (`npm run dev`), included in the wave-gate deploy + smoked at 192.168.4.217:3002.
 
-- [ ] {agent: frontend, id: promote-actions, depends: songsearch-tab} **Promote actions on the cards** (reuse existing surfaces): **+ Shortlist** (`addResearchSong` → `research_songs`), **+ add to a specific round's list** (round-scoped candidate list), **+ Head-to-head** (existing h2h pool via `headToHead.ts`), **▶ Play on Spotify**. Tab 1 is global, so shortlist add is corpus-wide and round-list add takes a chosen target round.
+- [x] {agent: frontend, id: promote-actions, depends: songsearch-tab} **Promote actions on the cards** (reuse existing surfaces): **+ Shortlist** (`addResearchSong` → `research_songs`), **+ add to a specific round's list** (round-scoped candidate list), **+ Head-to-head** (existing h2h pool via `headToHead.ts`), **▶ Play on Spotify**. Tab 1 is global, so shortlist add is corpus-wide and round-list add takes a chosen target round.
   - **Acceptance:** clicking **+ Shortlist** creates a `research_songs` row (verify via API/DB on prod); **+ H2H** adds the song to the candidate pool; round-list add persists to the chosen round; **▶** opens the Spotify URI; `npm run check` passes; in the wave-gate deploy + smoked.
 
-- [ ] {agent: frontend, id: corpus-history-panel, depends: songsearch-tab,song-history-api} **Expanded-card corpus-history panel.** In the expanded card, render the full appearance history (every league/season/round · who submitted · points) plus chat mentions with their quote, sourced from `song-history-api`.
+- [x] {agent: frontend, id: corpus-history-panel, depends: songsearch-tab,song-history-api} **Expanded-card corpus-history panel.** In the expanded card, render the full appearance history (every league/season/round · who submitted · points) plus chat mentions with their quote, sourced from `song-history-api`.
   - **Acceptance:** expanding a song with known history shows its appearances + chat mentions matching the `/api/history/song-status` payload; a clean song shows an empty/"no history" state; `npm run check` passes; in the wave-gate deploy.
 
-- [ ] {agent: viz, id: history-coloring, depends: songsearch-tab,song-history-api} **The "me vs others" visual encoding (D3, LOCKED)** as a reusable layer on the cards, driven by `song-history-api` status. **Border:** mine = bold solid, others = dotted. **Flat fill:** mine = 25%, others = 10% of the hue. **Hues:** 🔴 red = submitted, 🟠 orange = artist-you've-submitted (mine only), 🔵 blue = chat mention. Multiple statuses → border takes the strongest signal, the rest become small secondary pills.
+- [x] {agent: viz, id: history-coloring, depends: songsearch-tab,song-history-api} **The "me vs others" visual encoding (D3, LOCKED)** as a reusable layer on the cards, driven by `song-history-api` status. **Border:** mine = bold solid, others = dotted. **Flat fill:** mine = 25%, others = 10% of the hue. **Hues:** 🔴 red = submitted, 🟠 orange = artist-you've-submitted (mine only), 🔵 blue = chat mention. Multiple statuses → border takes the strongest signal, the rest become small secondary pills.
   - **Acceptance:** a submitted-by-me song renders bold-solid-red border + 25% red fill; an others-submitted song renders dotted-red + 10% fill; artist and chat-mention cases match the design table; a multi-status song shows strongest-signal border + secondary pills; visual check (desktop + mobile) logged in Activity Log.
 
-- [ ] {agent: viz, id: badge-system, depends: songsearch-tab,badges-api} **Badge rendering (D6/D7)** in two legible areas: **song badges** and **artist badges**. 🥇🥈🥉 medals with a count-on-badge (e.g. 🥇×2), 💩 poop with count, 🗣️ big-discussion. **Artist badges live mostly in the expanded card**; the collapsed row shows only a subtle "this artist carries badges" hint. Driven by `badges-api`.
+- [x] {agent: viz, id: badge-system, depends: songsearch-tab,badges-api} **Badge rendering (D6/D7)** in two legible areas: **song badges** and **artist badges**. 🥇🥈🥉 medals with a count-on-badge (e.g. 🥇×2), 💩 poop with count, 🗣️ big-discussion. **Artist badges live mostly in the expanded card**; the collapsed row shows only a subtle "this artist carries badges" hint. Driven by `badges-api`.
   - **Acceptance:** a song/artist with a known medal shows the correct medal + count in the correct area; collapsed row shows the subtle artist-has-badges hint (not the full set); expanded card shows the full song + artist badge sets; visual check (desktop + mobile) logged.
 
 ### Deploy — two-loop workflow (D5, see `CLAUDE.md` + `docs/dev-loop-playbook.md`)
@@ -185,3 +185,9 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - **D6/D7 implementation:** 🥇🥈🥉 medals with `×N` count badge when `>1`, 💩 poop with count, 🗣️ big-discussion with count; all in pill styling (translucent bg + subtle border). Artist badges labeled "Artist". Collapsed row shows only the highest-prestige badge glyph at 50% opacity as a hint.
 - **Verification:** `npm run check` → 0 errors (0 errors, 34 warnings pre-existing). Visual check desktop + mobile: Bohemian Rhapsody collapsed row shows 🥈 artist hint; expanded card shows song badge 🥈 + "ARTIST" strip with 🥇🥈. Don't Stop Me Now + Somebody To Love also show 🥈 artist hints. **NOT prod-deployed.**
 - **Viz lane wave-2 complete.** Awaiting orc wave-gate for prod deploy.
+
+### 2026-06-07 — orc — SPRINT-23 CLOSED (7/7) [orc bookkeeping]
+- All 7 tasks complete: wave-1 (song-history-api, badges-api, songsearch-tab) + wave-2 (promote-actions, corpus-history-panel, history-coloring, badge-system). Checkboxes flipped at close — agents had left wave-2 unchecked despite "DONE" Activity Log entries (recurring bookkeeping gap; logged for review).
+- **Wave-gate deploy done:** bot-ui rebuilt + force-recreated; wave-2 song-search tab live on prod (192.168.4.217:3002).
+- **Off-sprint fixes landed this session:** `MY_COMPETITOR_ID` set to "Mashew" (`2f0b5460…`) in prod `.env` → D3 "submitted-by-me" coloring verified live (schema is global, not per-league); FamJam S1/S2 round deadlines auto-filled (approximate, anchored on import dates) so the digest metadata checkbox goes green; digest html-share made mobile-responsive (`e2c0d9d`) and republished — user-confirmed live.
+- Status → closed. Next candidate: sprint-24 = History Phase 3 (Tab 2 theme research), per the milestone plan.
