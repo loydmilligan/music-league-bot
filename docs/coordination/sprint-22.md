@@ -42,7 +42,7 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 - [x] {agent: backend, id: theme-tag-model} The **theme property-tag system**: a tag **taxonomy** (categories: semantic / musicality / energy-feel / instrument / artist; extensible) + **schema** to attach **multiple tags per theme/round** + API to read/write a round's tags. This powers Phase-3 theme similarity = **tag overlap (no LLM)**.
   - **Acceptance:** schema stores multi-tag-per-round with category; API reads/writes a round's tags; taxonomy seeded; `npm run check` passes; deployed; shape logged for theme-tagging.
 
-- [ ] {agent: backend, id: theme-tagging, depends: theme-tag-model} **Tag existing themes** with the taxonomy — at minimum the **active leagues' rounds** (a manual/seed pass + a simple way to add/edit tags later; NO LLM required). Capture how many themes got tagged.
+- [x] {agent: backend, id: theme-tagging, depends: theme-tag-model} **Tag existing themes** with the taxonomy — at minimum the **active leagues' rounds** (a manual/seed pass + a simple way to add/edit tags later; NO LLM required). Capture how many themes got tagged.
   - **Acceptance:** the active leagues' round themes carry property tags; a documented way to add/edit tags exists; count of tagged themes logged in the Activity Log. `npm run check` passes; deployed.
 
 ### Deploy — NEW two-loop workflow (ratified D5, 2026-06-06)
@@ -70,6 +70,15 @@ Rename to History, 3 stub tabs, per-league active round + a theme-tag system to 
 ## Blockers
 
 ## Activity Log
+
+### 2026-06-06 — backend — theme-tagging DONE — **74 themes tagged** (132 attachments)
+Hand-authored (NO LLM) theme property-tag pass over the full corpus of all three played leagues, driving the live theme-tags API (data op — no image rebuild, per orc's instruction + D5).
+
+- **Count: 74 rounds tagged / 74** (0 failed), **132 tag-attachments**, vocabulary grew to **110 terms**. Scope chosen ABOVE the "active leagues only" floor (fam-jam S4 + nostalgia-pit = 15) because 15 current rounds give Phase-3 tag-overlap almost no signal — tagged **fam-jam S1–S4 (42), hip-jammers S1–S3 (27), nostalgia-pit S1 (3)** so similarity actually clusters.
+- **Category spread:** semantic 82 · energy-feel 22 · artist 15 · musicality 11 · instrument 2.
+- **Overlap sanity check (the Phase-3 engine):** `energy-feel:hype` already clusters 9 rounds **across fam-jam + hip-jammers** (Get Pumped / Just My Hype / Pump Up The Sasha / Pick Me Up / Windows Down…); recurring themes also re-cluster (storytelling: Plots So Thicc ×2; nostalgia/memory: Permanent Record ×2; instrumental: Speechless ×2; non-english ×2). Cross-league overlap = exactly what theme research needs.
+- **Documented add/edit mechanism:** `scripts/seed-theme-tags.mjs` — idempotent, re-runnable (PUT-replace), keyed by round id with theme names in comments. Header documents: edit the `ROUND_TAGS` map (`"category:value"` strings; unknown vocab/categories auto-created) and re-run `node scripts/seed-theme-tags.mjs [baseUrl]`. Single-tag edits also possible via `POST`/`DELETE /api/rounds/:id/tags`.
+- **Gates:** `npm run check` → 0 errors. **No prod deploy** — pure data write against the already-live theme-tags API (no code shipped to the running image); the seed script is committed for reproducibility. Verified persisted via DB count.
 
 ### 2026-06-06 — frontend — active-round-ui BUILT + DEPLOYED
 - New self-contained component `ui/src/lib/active/ActiveRounds.svelte`, mounted at the top of the home page `/` (`ui/src/routes/+page.svelte`) — the "Active round" nav target. One **slot per active league** (reads `GET /api/active-rounds`).
