@@ -6,11 +6,33 @@
   // History coloring (D3), badges (D6/D7), promote actions, and the
   // corpus-history panel layer onto SongSearchCard in later waves — this tab
   // owns search + the open-one-at-a-time card model only.
+  import { onMount } from 'svelte';
   import SongSearchCard, { type SpotifyResult } from './SongSearchCard.svelte';
   import BadgeStrip from './BadgeStrip.svelte';
   import ArtistBadgeHint from './ArtistBadgeHint.svelte';
-  import type { SongStatusMap } from '$lib/db/songHistory.js';
+  import PromoteActions from './PromoteActions.svelte';
+  import CorpusHistoryPanel from './CorpusHistoryPanel.svelte';
+  import type { SongStatusMap, SongStatus } from '$lib/db/songHistory.js';
   import type { BadgeMap } from '$lib/db/badges.js';
+
+  // Promote-actions supporting data — loaded once on mount, shared across all
+  // cards so the tab makes 2 requests total (not N×cards).
+  type OpenRound = { id: number; name: string; description: string | null; submissionDeadline: string | null; leagueName: string };
+  let activeRoundId = $state<number | null>(null);
+  let openRounds = $state<OpenRound[]>([]);
+
+  onMount(async () => {
+    const [arRes, orRes] = await Promise.all([
+      fetch('/api/active-rounds'),
+      fetch('/api/rounds/open'),
+    ]);
+    if (arRes.ok) {
+      const { leagues } = await arRes.json() as { leagues: { activeRound: { id: number } | null }[] };
+      const first = leagues.find((l) => l.activeRound);
+      activeRoundId = first?.activeRound?.id ?? null;
+    }
+    if (orRes.ok) openRounds = await orRes.json();
+  });
 
   let query = $state('');
   let searching = $state(false);
@@ -134,8 +156,14 @@
             songBadges={songBadgesSnip}
             artistBadges={artistBadgesSnip}
             artistBadgeHint={artistBadgeHintSnip}
-          />
-          <!-- frontend wave-2 wires {promoteActions}/{corpusHistory}. -->
+          >
+            {#snippet promoteActions()}
+              <PromoteActions result={r} {activeRoundId} {openRounds} />
+            {/snippet}
+            {#snippet corpusHistory(status: SongStatus)}
+              <CorpusHistoryPanel {status} />
+            {/snippet}
+          </SongSearchCard>
         {/each}
       </div>
     {:else if hasSearched && !searching && !searchError}
