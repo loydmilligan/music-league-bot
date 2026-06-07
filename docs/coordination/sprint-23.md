@@ -36,7 +36,7 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - [x] {agent: backend, id: song-history-api} **Song-history status service** powering the me-vs-others encoding (D3). Given a batch of search results (spotifyUri + artist), return per song: submitted-by-me, submitted-by-others (with league/season/round/by/points), artist-already-submitted-by-me, and chat-mentions (by + quote). Read from the existing corpus (`ml_submissions`/`votes`/chat tables — follow `research.ts` join patterns). Batch-shaped so a search page resolves in one call.
   - **Acceptance:** `POST /api/history/song-status` with `{ uris: [{uri,artist}] }` returns `{ [uri]: { submittedByMe: bool, submittedByOthers: [{league,season,round,by,points}], artistSubmittedByMe: bool, chatMentions: [{by,quote}] } }`; verified against a known previously-submitted song on prod (192.168.4.217:3002); `npm run check` passes. Shape logged in Activity Log for history-coloring + corpus-history-panel.
 
-- [ ] {agent: backend, id: badges-api} **Badge data service** (D6/D7). For a song + its artist compute: medals (1st/2nd/3rd round placements, with counts), poop (bottom-2 finishes, count), big-discussion (song drew a comment count over a documented threshold). Both song-level and artist-level. Thresholds live in one documented, easily-tweakable const.
+- [x] {agent: backend, id: badges-api} **Badge data service** (D6/D7). For a song + its artist compute: medals (1st/2nd/3rd round placements, with counts), poop (bottom-2 finishes, count), big-discussion (song drew a comment count over a documented threshold). Both song-level and artist-level. Thresholds live in one documented, easily-tweakable const.
   - **Acceptance:** `POST /api/history/badges` with `{ items:[{uri,artist}] }` returns `{ [uri]: { song:{ medals:{gold,silver,bronze}, poop, bigDiscussion }, artist:{ medals:{gold,silver,bronze}, poop, bigDiscussion } } }`; medal counts correct for a known top-3 song on prod; threshold const cited in Activity Log; `npm run check` passes.
 
 - [x] {agent: frontend, id: songsearch-tab} **Build the real Song search tab** in `/history?tab=songs` (replace the stub). Spotify search box → results render as **collapsed cards** reusing/adapting `ResearchList.svelte` + `SongRatingBars`; **one open at a time, Esc collapses** (Card model "locked — mirror shortlist"). Wire to the existing `GET /api/spotify/search`. Mash Co. styling consistent with the rest of `/history`.
@@ -109,6 +109,27 @@ Spotify search → cards that show your history + badges, promotable to shortlis
 - **Joins:** follows `research.ts`/`seasonData.ts` — `ml_submissions`→`rounds`→`seasons`→`leagues`, points via LEFT JOIN `votes`, "me" via `competitors.ml_competitor_id === MY_COMPETITOR_ID`; chat via `chat_songs`→`chat_mentions` (keyed by `spotify_uri`). Batch-shaped: one query per source table, whole search page in one POST.
 - **Verification:** 6 unit tests (`songHistory.test.ts`) green; `npm run check` → 0 errors. Logic verified read-only against the real prod corpus (`data/league.db`): a known me-submission → `submittedByMe/artistSubmittedByMe true`; a known other-submission → correct league/season/round/by + matching 10pts; a chat song → populated `chatMentions`. (D5: NOT prod-deployed — route goes live at the orc wave-gate; verified the service against prod DATA, not the live endpoint.)
 - Next: picking up `badges-api`.
+
+### 2026-06-07 — backend — badges-api DONE (wave 1)
+- **Service:** `ui/src/lib/db/badges.ts` → `getBadgesBatch(db, items)`. **Route:** `POST /api/history/badges`. **Thresholds const:** `BADGE_THRESHOLDS` (exported, top of `badges.ts`).
+- **Request:** `{ items: [{ uri, artist }] }`.
+- **Response shape** (consumed by `badge-system` D6/D7) — keyed by uri, **every requested uri present** (empty sets if clean), badges at TWO levels (`song` = this exact uri, `artist` = any song by the same first-artist):
+  ```jsonc
+  {
+    "spotify:track:…": {
+      "song":   { "medals": { "gold": 1, "silver": 0, "bronze": 0 }, "poop": 0, "bigDiscussion": 0 },
+      "artist": { "medals": { "gold": 2, "silver": 0, "bronze": 1 }, "poop": 0, "bigDiscussion": 0 }
+    }
+  }
+  ```
+  - All values are **counts** (medals/poop = # of rounds; bigDiscussion = # of rounds a song cleared the comment bar). `count-on-badge` (🥇×2) comes straight from these numbers. Artist counts are ≥ song counts (artist spans all their songs).
+- **Thresholds (cited, tuned to the real corpus 2026-06-07 — 569 submissions / 60 rounds):**
+  - `BIG_DISCUSSION_MIN_COMMENTS = 5` — vote-comment counts per song top out at 7; only 6 songs reach 5+, so 5 flags the genuinely talked-about ~1%. (🗣️ = a round where the song drew ≥5 distinct vote comments.)
+  - `POOP_MIN_ROUND_SIZE = 5` — every real round has 7–12 songs so top-3/bottom-2 never collide; this only guards future tiny rounds. (💩 = a bottom-2 finish in a round of ≥5.)
+  - **To tweak:** edit the one `BADGE_THRESHOLDS` block in `badges.ts` — no other code changes needed.
+- **Placement rule:** rank by SUM(votes.points) within the round; ties **share** a place ("# of songs with strictly more points" → 0=gold, 1=silver, 2=bronze; "# with strictly fewer" ≤1 → bottom-2). Artist match = first comma-separated artist, case-insensitive (matches `song-history-api`).
+- **Verification:** 6 unit tests (`badges.test.ts`) green; `npm run check` → 0 errors. Verified read-only vs prod corpus: a known 7-song round → winner `song.gold=1`, runner-up `song.silver=1`, last `song.poop=1`; that winner's **artist** aggregated to `gold=2, bronze=1` across rounds. (D5: NOT prod-deployed — route goes live at the orc wave-gate; verified service vs prod DATA.)
+- **Backend lane wave-1 complete** (song-history-api + badges-api). Both routes ready for the wave-gate deploy; await orc gate before they're live at 192.168.4.217:3002.
 
 ### 2026-06-07 — frontend — songsearch-tab: real Song search tab live (wave-1)
 - Built `/history?tab=songs` for real (replaced the sprint-22 stub). New components:
