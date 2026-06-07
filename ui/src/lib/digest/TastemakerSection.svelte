@@ -680,4 +680,32 @@
       font-size: 20px;
     }
   }
+
+  /* ── mobile-share: phone-portrait readability (html-share, ≤640px) ──── */
+  /* Target: bars as tall as the PDF output, segment counts legible at arm's
+     length. Bar height 24→40px, segment font 12→16px, score 22→28px. */
+  @media (max-width: 640px) {
+    .tm-row {
+      grid-template-columns: 54px 1fr;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    .tm-score {
+      font: 800 28px/1 var(--font-mono);
+    }
+    .tm-name {
+      font: 700 14px/1.2 var(--font-body);
+    }
+    .tm-bar {
+      height: 40px;
+      border-radius: 6px;
+    }
+    .tm-seg {
+      font: 800 16px/1 var(--font-mono);
+      min-width: 32px;
+    }
+    .tm-legend-score {
+      font-size: 11.5px;
+    }
+  }
 </style>

@@ -115,9 +115,11 @@
 {/snippet}
 
 {#if isShare}
-  <!-- Bare share layout — digest content only, zero app chrome. -->
+  <!-- Bare share layout — digest content only, zero app chrome.
+       No horizontal padding below sm (640px) so the digest card fills the
+       phone viewport edge-to-edge. px-6/md:px-10 kick in at tablet+. -->
   <div class="min-h-screen bg-bg text-fg">
-    <main class="px-6 md:px-10 py-8">
+    <main class="px-0 sm:px-6 md:px-10 py-8">
       <div class="max-w-5xl mx-auto">
         {@render children?.()}
       </div>

@@ -399,6 +399,41 @@
   }
 
   /* ── narrow / mobile-export reflow ───────────────────────────────────── */
+
+  /* html-share on phone (≤640px): stack the medal shelf vertically.
+     Gold first (it's center in the visual order array but rank 1), then
+     silver and bronze side-by-side. Achieves legible full-width art tiles. */
+  @media (max-width: 640px) {
+    .apod-shelf {
+      grid-template-columns: 1fr;
+    }
+    .apod-shelf.is-two {
+      grid-template-columns: 1fr;
+    }
+    /* Reorder: gold (2nd in DOM = rank 1) floats to top */
+    .apod-card.is-gold {
+      order: -1;
+    }
+    .apod-card.is-silver,
+    .apod-card.is-bronze {
+      /* side-by-side row below gold */
+    }
+    /* Put silver and bronze in a 2-col sub-row by switching the shelf
+       back to a 2-col grid once we know gold is first */
+    .apod-shelf:not(.is-one) {
+      grid-template-columns: 1fr 1fr;
+    }
+    .apod-card.is-gold {
+      grid-column: 1 / -1;
+    }
+    .apod-pts {
+      font-size: 16px;
+    }
+    .is-gold .apod-pts {
+      font-size: 20px;
+    }
+  }
+
   @media (max-width: 460px) {
     .apod-shelf {
       gap: 8px;

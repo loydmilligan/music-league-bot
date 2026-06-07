@@ -1991,3 +1991,143 @@
   text-align: center;
 }
 .dgC-foot .pulp { color: var(--mash-pulp); font-weight: 700; }
+
+/* =====================================================================
+   RESPONSIVE — html-share on narrow viewports (phone-portrait)
+   Only targets the interactive html-share; the PNG exports use fixed
+   Puppeteer viewport widths (800px wide, 520px mobile) and their own
+   .dg-export--mobile class with higher specificity.
+   ===================================================================== */
+@media (max-width: 640px) {
+
+  /* Page shell: strip the 32px horizontal padding so the export card can
+     fill the viewport edge-to-edge. The share bare-layout already has
+     px-0 at this breakpoint, so no extra gutter is needed. */
+  .dg-page {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+  }
+
+  /* Card fills the viewport. Belt-and-suspenders: max-width + no border on
+     sides so the 800px fixed width can't cause horizontal scroll. */
+  .dg-export:not(.dg-export--mobile) {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  /* Tighter section padding so content doesn't feel cramped at narrow width */
+  .dg-export:not(.dg-export--mobile) .dg-section { padding: 18px 16px; }
+
+  /* ---- Variant A ---- */
+
+  /* Masthead: scale headline down so long round titles don't overflow */
+  .dg-export:not(.dg-export--mobile) .dgA-title { font-size: 24px; }
+
+  /* Statbar: 4-col → 2×2 grid */
+  .dg-export:not(.dg-export--mobile) .dgA-statbar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Podium: 3-col cards → stacked single column */
+  .dg-export:not(.dg-export--mobile) .dgA-podium {
+    grid-template-columns: 1fr;
+  }
+
+  /* Villain: strip fixed 100px art column, shrink to 2-col */
+  .dg-export:not(.dg-export--mobile) .dgA-villain {
+    grid-template-columns: 72px 1fr;
+  }
+  .dg-export:not(.dg-export--mobile) .dgA-villain-points { display: none; }
+
+  /* Vote matrix: fixed-width grid — let it scroll horizontally */
+  .dg-export:not(.dg-export--mobile) .dgA-matrix { overflow-x: auto; }
+
+  /* Consensus/controversy pair: 2-col → 1-col */
+  .dg-export:not(.dg-export--mobile) .dgA-cc {
+    grid-template-columns: 1fr;
+  }
+
+  /* Header/footer padding */
+  .dg-export:not(.dg-export--mobile) .dgA-header { padding: 18px 16px 14px; }
+  .dg-export:not(.dg-export--mobile) .dgA-foot { padding: 12px 16px; }
+
+  /* ---- Variant B ---- */
+
+  /* Masthead headline */
+  .dg-export:not(.dg-export--mobile) .dgB-mast-title { font-size: 30px; }
+  .dg-export:not(.dg-export--mobile) .dgB-mast { padding: 18px 16px 12px; }
+  .dg-export:not(.dg-export--mobile) .dgB-foot { padding: 12px 16px; }
+
+  /* Winner feature: 2-col (art + body) → stacked */
+  .dg-export:not(.dg-export--mobile) .dgB-feature {
+    grid-template-columns: 1fr;
+  }
+
+  /* Runners-up: 2-col → 1-col */
+  .dg-export:not(.dg-export--mobile) .dgB-runners {
+    grid-template-columns: 1fr;
+  }
+
+  /* Villain body: 2-col → 1-col; giant point number → smaller */
+  .dg-export:not(.dg-export--mobile) .dgB-villain-body {
+    grid-template-columns: 1fr;
+  }
+  .dg-export:not(.dg-export--mobile) .dgB-villain-pull .num { font-size: 56px; }
+  /* Bleed villain undoes the -28px margins on mobile to avoid clipping */
+  .dg-export:not(.dg-export--mobile) .dgB-villain {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Consensus pair: 2-col → 1-col */
+  .dg-export:not(.dg-export--mobile) .dgB-cc {
+    grid-template-columns: 1fr;
+  }
+
+  /* Chat sidebar: 2-col → 1-col */
+  .dg-export:not(.dg-export--mobile) .dgB-chat {
+    grid-template-columns: 1fr;
+  }
+
+  /* ---- Variant C ---- */
+
+  /* Masthead */
+  .dg-export:not(.dg-export--mobile) .dgC-mast { padding: 20px 16px 14px; }
+  .dg-export:not(.dg-export--mobile) .dgC-mast-title { font-size: 22px; }
+  .dg-export:not(.dg-export--mobile) .dgC-foot { padding: 14px 16px 18px; }
+
+  /* Tracklist: 5-col → rank + meta + pts (3-col), sub on its own row.
+     Mirrors the .dg-export--mobile override already used for PNG exports. */
+  .dg-export:not(.dg-export--mobile) .dgC-track {
+    grid-template-columns: 32px 1fr auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 10px 12px;
+  }
+  .dg-export:not(.dg-export--mobile) .dgC-track-art { display: none; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-num { grid-column: 1; grid-row: 1; font-size: 18px; }
+  .dg-export:not(.dg-export--mobile) .dgC-track--gold .dgC-track-num { font-size: 22px; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-meta { grid-column: 2; grid-row: 1; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-pts { grid-column: 3; grid-row: 1; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-sub { grid-column: 2 / -1; grid-row: 2; }
+
+  /* Consensus pair: 2-col → 1-col */
+  .dg-export:not(.dg-export--mobile) .dgC-cc {
+    grid-template-columns: 1fr;
+  }
+
+  /* Credits: narrower label column */
+  .dg-export:not(.dg-export--mobile) .dgC-credit-item {
+    grid-template-columns: 70px 1fr auto;
+    gap: 8px;
+  }
+
+  /* Chat: min-width on label so it doesn't push body off-screen */
+  .dg-export:not(.dg-export--mobile) .dgC-chat-h { min-width: 80px; }
+}

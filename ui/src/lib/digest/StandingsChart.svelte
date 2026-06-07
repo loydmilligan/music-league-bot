@@ -252,6 +252,29 @@
     font-style: italic;
   }
 
+  /* html-share on phone (≤640px): taller bars, wider rankcell, larger type */
+  @media (max-width: 640px) {
+    .stch-row {
+      grid-template-columns: 60px 1fr;
+      gap: 10px;
+    }
+    .stch-track {
+      height: 24px;
+    }
+    .stch-rank {
+      font-size: 20px;
+    }
+    .stch-round-lbl {
+      font-size: 10px;
+    }
+    .stch-name {
+      font-size: 13.5px;
+    }
+    .stch-total {
+      font-size: 14px;
+    }
+  }
+
   @media (max-width: 460px) {
     .stch-row {
       grid-template-columns: 54px 1fr;
