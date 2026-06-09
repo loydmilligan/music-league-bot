@@ -7,6 +7,8 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import SongSearchTab from '$lib/components/SongSearchTab.svelte';
+  import ThemeResearchTab from '$lib/components/ThemeResearchTab.svelte';
+  import PlayerResearchTab from '$lib/components/PlayerResearchTab.svelte';
 
   type TabKey = 'songs' | 'themes' | 'players';
   type Tab = { key: TabKey; label: string; glyph: string; blurb: string };
@@ -110,19 +112,10 @@
   >
     {#if activeTab === 'songs'}
       <SongSearchTab />
+    {:else if activeTab === 'themes'}
+      <ThemeResearchTab />
     {:else}
-      <div
-        class="flex flex-col items-center justify-center text-center rounded-md border border-dashed border-border-muted bg-bg-elevated px-6 py-16"
-      >
-        <span class="text-3xl text-fg-faint mb-3" aria-hidden="true">{activeMeta.glyph}</span>
-        <h2 class="font-display text-xl font-bold text-fg">{activeMeta.label}</h2>
-        <span
-          class="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-accent bg-accent-bg border border-accent-deep rounded-full px-2.5 py-0.5"
-        >
-          Coming soon
-        </span>
-        <p class="text-fg-muted text-sm mt-4 max-w-md leading-relaxed">{activeMeta.blurb}</p>
-      </div>
+      <PlayerResearchTab />
     {/if}
   </section>
 </div>
