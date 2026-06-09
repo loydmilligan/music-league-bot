@@ -22,13 +22,22 @@ sessions/
 .playwright-mcp/
 .superpowers/
 
-# Local screenshots and ad-hoc data
-/bracket-*.png
+# Local screenshots and ad-hoc data — root-level PNGs are throwaway
+# smoke/verification captures, never source.
+/*.png
 /late-90s-bracket.csv
-/rating-tool.png
-/badge-zoom.png
-/mlb-auth-badge.png
-/mlb-prod.png
 
 # playwright-cli session artifacts
 .playwright-cli/
+
+# Agent / tooling config
+.claude/
+
+# Generated cli-web-musicleague CLI (traffic-capture may hold session tokens)
+musicleague/
+
+# Design scratch & handoff binaries (curated briefs live in docs/design-briefs/)
+docs/prototype/
+docs/*.zip
+docs/*-proto/
+docs/mashco-design-handoff-digest/
