@@ -4,7 +4,7 @@ sprint: sprint-24
 title: History Tool — Theme & Player Tabs
 status: planned
 created: 2026-06-08T00:00:00Z
-updated: 2026-06-09T02:55:00Z
+updated: 2026-06-09T05:36:00Z
 activated: 2026-06-08
 ---
 
@@ -52,6 +52,17 @@ activated: 2026-06-08
   - **Acceptance:** in `/history?tab=players`, a selected player's taste-overlap renders as ranked bars driven by the `tasteOverlap` map; verifiable via the rendered overlap component/class; `npm run check` 0 errors.
 
 ## Activity Log
+
+### 2026-06-09 — viz — PROD REGRESSION FIX: app-wide hydration crash from $env at client-hook init
+- **Symptom (live, http://192.168.4.217:3002):** every page threw `TypeError: Cannot read properties of undefined (reading 'env')` in `app.*.js`; client hydration died app-wide → History tabs stuck on "Loading…", even Song search lost interactivity.
+- **Root cause:** `theme-patterns.ts` imported `$env/dynamic/public` and is loaded from `hooks.client.ts`, which runs during the client entry *before* SvelteKit's `start()` populates the dynamic-env global. The bundler **hoists** `import { env }` to a module-top-level `var M = globalThis.__sveltekit_<hash>.env`, so the module **throws at import time** when that global doesn't exist yet. Vite dev populates the global eagerly (dev clean) and `svelte-check` never executes it — only the adapter-node **prod build** trips it. A try/catch or lazy/deferred read can't help: the throw is the hoisted import binding itself, not our property read.
+- **Fix:** dropped `$env` entirely from the client-hook path; "me" is now a plain inlined constant `OWNER = 'mashew'` (mirrors server `MY_COMPETITOR_ID` → `competitors.name`; single-owner private bot, so behaviour is identical to the previous default). No runtime global access remains. Documented in-file that future configurability must use `$env/static/public` (compile-time string literal, safe to import from a client hook) — never `$env/dynamic/public` here. **viz behaviour unchanged.**
+- **Verified in a real PRODUCTION build** (`npm run build && npm run preview`, `DATA_DIR=../data`), not just dev — because `npm run check` passed *with* the bug:
+  - Built client bundle: `PUBLIC_OWNER_NAME` / `globalThis.__sveltekit_*.env` access from our code is **gone**; `mashew` inlined as a literal.
+  - `/history?tab=themes`: **0 console errors** (no `env` TypeError), 80 themes populate, Deep Cuts → Mashew/Nirvana red `submitted-mine` (border `rgba(239,68,68,.85)`), Elton John ×2 orange `artist-mine`.
+  - `/history?tab=players`: Mashew detail populates (61 songs), 26 taste-overlap bars render, missmara (0.453) fills full width at red `.78`.
+  - `npm run check` → **0 errors** (32 pre-existing warnings, none in viz files).
+- **Ready for orc to redeploy to prod.**
 
 ### 2026-06-09 — viz — Theme pattern encoding + taste-overlap bars landed (theme-patterns, taste-overlap)
 - **All 6 sprint-24 tasks now complete — History tool done, MVP ready for sign-off.**

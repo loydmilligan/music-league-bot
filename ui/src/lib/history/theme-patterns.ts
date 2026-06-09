@@ -18,12 +18,22 @@
 // the seam exposes one theme's picks at once; we intentionally do NOT refetch
 // or re-wire data to reach across themes (viz lane contract).
 import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
 
-// Who "me" is, mirroring the server-side MY_COMPETITOR_ID → competitor.name.
-// Single-owner private bot, so a configurable default is sufficient; override
-// with PUBLIC_OWNER_NAME if the corpus owner ever changes.
-const OWNER = (env.PUBLIC_OWNER_NAME ?? 'Mashew').trim().toLowerCase();
+// Who "me" is, mirroring the server-side MY_COMPETITOR_ID → competitors.name
+// (= "Mashew" for this single-owner private bot). Held as a plain constant ON
+// PURPOSE — do NOT reach for $env here.
+//
+// Why not $env: this module is imported from hooks.client.ts, which runs during
+// the client entry BEFORE SvelteKit's start() populates the dynamic-env global.
+// The bundler hoists `import { env } from '$env/dynamic/public'` to a top-level
+// `var M = globalThis.__sveltekit_*.env`, so the module THROWS at import time
+// (`Cannot read properties of undefined (reading 'env')`) — an app-wide
+// hydration crash that Vite dev hides (it populates the global eagerly) and
+// `npm run check` can't see (only the adapter-node prod build trips it). A
+// try/catch or lazy read can't help: the throw is the hoisted import binding,
+// not our read. If this ever needs to be configurable, use $env/static/public
+// (compile-time inlined string literal, no runtime global, safe to import here).
+const OWNER = 'mashew';
 
 const norm = (s: string | null) => (s ?? '').trim().toLowerCase();
 
