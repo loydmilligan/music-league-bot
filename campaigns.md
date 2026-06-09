@@ -2,7 +2,7 @@
 id: music-league-bot-mvp
 title: Music League Bot MVP
 kind: mvp
-signedOff: false
+signedOff: true
 sprints:
   - sprint-1
   - sprint-2

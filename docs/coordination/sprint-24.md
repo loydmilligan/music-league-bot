@@ -2,9 +2,9 @@
 project: music-league-bot
 sprint: sprint-24
 title: History Tool — Theme & Player Tabs
-status: planned
+status: closed
 created: 2026-06-08T00:00:00Z
-updated: 2026-06-09T05:36:00Z
+updated: 2026-06-09T05:42:31Z
 activated: 2026-06-08
 ---
 
@@ -52,6 +52,11 @@ activated: 2026-06-08
   - **Acceptance:** in `/history?tab=players`, a selected player's taste-overlap renders as ranked bars driven by the `tasteOverlap` map; verifiable via the rendered overlap component/class; `npm run check` 0 errors.
 
 ## Activity Log
+
+### 2026-06-09 — orc-agent — Sprint-24 CLOSED — deployed + verified on prod
+- All 6 tasks done. Wave-gate deploy of `bot-ui` (cached build + force-recreate); first deploy hit the viz `$env` regression below — caught by the browser smoke, fixed, redeployed.
+- **Re-smoke on prod (http://192.168.4.217:3002, mobile 412×892): 0 console errors.** `/history?tab=themes` → 80 themes, expand shows ranked picks (submitter + score). `/history?tab=players` → 27 players, select shows songs + win rate + taste-overlap bars. theme-pattern coloring + overlap bars render.
+- History research tool complete. **All MVP-campaign sprints are now done — MVP is ready for sign-off** (orc to surface the exit gate).
 
 ### 2026-06-09 — viz — PROD REGRESSION FIX: app-wide hydration crash from $env at client-hook init
 - **Symptom (live, http://192.168.4.217:3002):** every page threw `TypeError: Cannot read properties of undefined (reading 'env')` in `app.*.js`; client hydration died app-wide → History tabs stuck on "Loading…", even Song search lost interactivity.

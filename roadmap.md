@@ -11,6 +11,12 @@ stage: planned
 effort: medium
 summary: One-time import of exported WhatsApp .txt chat history to backfill all song shares that happened before the bot was installed. chatDb schema is already in place — needs a parser + ingest pipeline.
 ---
+id: unified-research-song-card
+title: Unified Research Song Card
+stage: analyzed
+effort: large
+summary: One shared song-card on every surface where you research/evaluate songs — the History tabs (Song / Theme / Player), the chat screen, and the research-capable round tabs (NOT head-to-head). Canonical design is the sprint-23 History Tab-1 card (`ui/src/lib/components/SongSearchCard.svelte`): cover art, title, artist·album, me-vs-others history-status coloring, song/artist badges, expandable. Each card gains two add-actions available everywhere — "+ shortlist" (the global "might-be-of-interest-someday" stash) and "+ round list" (pick an active round → that round's candidate pool that feeds head-to-head → winner). The canonical card has no add buttons today (it's a search-result card), so this both consolidates every surface onto the one component AND adds the dual add affordance, with a round-target picker when adding from outside a round context.
+---
 id: submission-integration
 title: Submit to Music League from Shortlist
 stage: analyzed

@@ -4,6 +4,39 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.0] — 2026-06-09
+
+**MVP complete.** The History research tool's final two tabs land, closing the
+History milestone and the MVP campaign. Every committed MVP sprint is shipped;
+post-MVP roadmap work now unlocks.
+
+### Visible (UI)
+
+- **History → Theme research tab** — browse every past round/theme across all
+  seasons; expand a theme to see who submitted what and how it scored (picks
+  ranked by points, with submitter). Cross-season patterns are called out — your
+  own past picks and recurring artists via the me-vs-others coloring. (sprint-24)
+- **History → Player research tab** — pick any player to see their submission
+  history, win rate, and taste overlap with everyone else, drawn as ranked
+  overlap bars. (sprint-24)
+
+### Under the hood
+
+- **History data services** — `GET /api/history/themes` and
+  `/api/history/players[/:name]` (`$lib/db/themeHistory.ts`, `playerHistory.ts`),
+  built on the existing corpus joins. (sprint-24)
+- **Viz as a client-hook layer** — theme-pattern coloring + taste-overlap bars
+  mount via `hooks.client.ts` off the tabs' data-attribute seams, with zero edits
+  to the tab components. (sprint-24)
+
+### Fixes
+
+- **App-wide hydration crash (caught at the wave gate)** — `theme-patterns.ts`
+  read `$env/dynamic/public` at client-hook init, before SvelteKit's env global
+  exists, throwing `undefined.env` and killing client JS on every page in the
+  prod build (invisible to Vite dev / `svelte-check`). Switched to an inlined
+  constant; `$env/static/public` documented as the only client-hook-safe option.
+
 ## [0.3.0] — 2026-06-08
 
 The long catch-up since v0.2.0 — covers the digest, standings, season-recap, and
