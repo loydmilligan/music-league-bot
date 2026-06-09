@@ -54,10 +54,3 @@ services:
       # host:container — host port is what the cloudflared ingress targets.
       - "8088:8080"
     restart: unless-stopped
-
-  bracket:
-    build:
-      context: ../song-tournament-bracket
-    ports:
-      - "5173:5173"
-    restart: unless-stopped
