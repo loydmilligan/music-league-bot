@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-10-extension-ingest
 created: 2026-05-20T00:00:00Z
 updated: 2026-05-20T00:00:00Z
-status: complete-with-deferred
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-10-extension-ingest)

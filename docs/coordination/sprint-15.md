@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-15-digest-hotfix
 created: 2026-06-03T01:52:50Z
-updated: 2026-06-03T01:52:50Z
-status: active
+updated: 2026-06-03T10:36:19Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-15-digest-hotfix)

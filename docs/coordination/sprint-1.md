@@ -1,6 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-1
+title: Dashboard Foundation
+status: closed
 created: 2026-05-14T16:36:41.376Z
 updated: 2026-05-14T16:36:41.376Z
 ---

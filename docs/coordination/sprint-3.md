@@ -1,6 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-3
+title: Head-to-Head Picker
+status: closed
 created: 2026-05-15T00:30:00.000Z
 updated: 2026-05-15T00:30:00.000Z
 ---

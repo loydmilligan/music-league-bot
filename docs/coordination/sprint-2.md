@@ -1,6 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-2
+title: Design-System Reskin
+status: closed
 created: 2026-05-14T20:35:00.000Z
 updated: 2026-05-14T20:35:00.000Z
 ---

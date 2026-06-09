@@ -1,6 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-5
+title: Rounds, Voting & Ratings
+status: closed
 created: 2026-05-16T00:00:00.000Z
 updated: 2026-05-16T00:00:00.000Z
 ---

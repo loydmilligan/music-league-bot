@@ -1,7 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-8
-status: complete
+title: WhatsApp Chat Capture
+status: closed
 created: 2026-05-18T00:00:00.000Z
 updated: 2026-05-18T00:00:00.000Z
 closed: 2026-05-18T00:00:00.000Z

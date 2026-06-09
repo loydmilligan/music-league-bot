@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-17-digest-visuals
 created: 2026-06-03T11:15:15Z
-updated: 2026-06-03T11:56:50Z
-status: active
+updated: 2026-06-04T03:11:59Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-17-digest-visuals)
@@ -258,3 +258,8 @@ Two follow-ups from the Fam Jam S3 UAT (lonely 1-row leaderboard). No rescale, n
 - **Partial-coverage self-suppress** (`ui/src/lib/db/discoverability.ts`). Previously suppressed only at ZERO coverage, so a not-yet-backfilled season rendered a misleading near-empty board. Now `getDiscoverability` returns `null` unless **≥ 80%** (`COVERAGE_THRESHOLD = 0.8`) of the season's real submissions (`competitor_id` set, `spotify:track:` uri) have a `song_popularity` row — i.e. it self-suppresses on absent OR partial coverage. **Threshold rationale:** 80% tolerates a few unmatched songs (Last.fm misses, regional tracks) while killing the "1-of-11" lonely board; all current seasons are 100% so it won't fire now — it's a guard for future un-backfilled seasons. (Returns `null`, which the existing viz self-suppress treats as "render nothing" — no payload-shape change.)
 - **Verification:** `npm run check` 0 errors; full suite **124 passing** (+1 partial-coverage test). Deployed serialized (`build --no-cache && up -d --force-recreate`); Fam Jam r101 + HJ r104 verified live on `192.168.4.217:3002`.
 - **Lane:** backend only — the backfill (`src/api/lastfm.ts` path + script) and the discoverability query/coverage gate (`ui/src/lib/db/discoverability.ts`). No viz components, no page wiring touched. Per-song obscurity + `spotify_popularity` remain stored/joinable for the upcoming repeat-picks surfacing.
+
+### 2026-06-04T03:11:59Z — docs — Sprint-17 CLOSED (orc bookkeeping)
+- All 8 tasks done & prod-verified (stat strip, next-round preview, v1 discoverability leaderboard, wired web + export). Closed.
+- Follow-on UAT done within this sprint: Last.fm lookup fix (RFC-4180 parser + normalized search), all-seasons popularity backfill, partial-coverage self-suppress, Fam Jam S3 sample-data export, and the Concept C **design** mockups (mobile, percentile-median, tappable chunked modal, legend) — approved as DESIGN, not yet built.
+- Next: sprint-18 = build Concept C into the live digest (payload v2 + viz + gen/regen integration), spec'd via the new digest-feature spec template. Big-number tiles (E) = its own later sprint. Scatter parked in backlog.

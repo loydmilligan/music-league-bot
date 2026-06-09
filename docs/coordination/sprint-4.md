@@ -1,6 +1,8 @@
 ---
 project: music-league-bot
 sprint: sprint-4
+title: Home & Settings Polish
+status: closed
 created: 2026-05-15T01:00:00.000Z
 updated: 2026-05-15T01:00:00.000Z
 ---

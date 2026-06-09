@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-14-digest-improvements
 created: 2026-06-02T23:05:57Z
-updated: 2026-06-02T23:05:57Z
-status: active
+updated: 2026-06-03T01:52:50Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-14-digest-improvements)

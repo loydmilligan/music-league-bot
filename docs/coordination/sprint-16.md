@@ -2,8 +2,8 @@
 project: music-league-bot
 sprint: sprint-16-standings-players
 created: 2026-06-03T10:36:19Z
-updated: 2026-06-03T10:36:19Z
-status: active
+updated: 2026-06-03T11:56:50Z
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-16-standings-players)
@@ -43,10 +43,10 @@ status: active
 - [x] {agent: backend, id: fix-missing-player, depends: diagnose-missing-player} Apply the fix identified by `diagnose-missing-player` so the player appears in the Hip Jammers Season 3 standings for rounds 1 & 2 with correct points (round 1: 19 pts, top of standings), and so the standings computation correctly includes eligible players going forward (if the root cause is query/join logic, fix the computation; if it is a data/identity gap, correct the data via the canonical path). Do not hardcode a single player — fix the underlying cause.
   - **Acceptance:** on prod (`192.168.4.217:3002`), the standings for Hip Jammers S3 round 1 show the player at the top with 19 pts and round 2 includes her; `GET /api/digest/[roundId]/standings` for the relevant round ids returns her row with correct points. `npm run check` passes; deployed via `docker compose build --no-cache bot-ui && up -d --force-recreate bot-ui`; root cause + fix + verification recorded in the Activity Log.
 
-- [ ] {agent: backend, id: add-player-endpoint, depends: diagnose-missing-player} Extend the existing standings mutation endpoint `POST /api/digest/[roundId]/standings` (today `action: 'adopt' | 'edit'`) with a new `action: 'add-player'` that adds a player to the round's standings with a name + points **and** registers that player into the canonical season + league roster identified in `diagnose-missing-player` — so the player persists across rounds and future digests, not just this one round's standings. Reuse the existing standings persistence + reconciliation path (`action:'edit'` writes gospel); do not add a parallel route or a separate add-player mechanism.
+- [~] {agent: backend, id: add-player-endpoint, depends: diagnose-missing-player} **[DEFERRED to backlog 2026-06-03 — the parser fix resolved the motivating missing-player bug systemically; add-player remains wanted only as a general manual-correction capability, pulled when prioritized.]** Extend the existing standings mutation endpoint `POST /api/digest/[roundId]/standings` (today `action: 'adopt' | 'edit'`) with a new `action: 'add-player'` that adds a player to the round's standings with a name + points **and** registers that player into the canonical season + league roster identified in `diagnose-missing-player` — so the player persists across rounds and future digests, not just this one round's standings. Reuse the existing standings persistence + reconciliation path (`action:'edit'` writes gospel); do not add a parallel route or a separate add-player mechanism.
   - **Acceptance:** `POST /api/digest/[roundId]/standings` with `{ action: 'add-player', name, points }` returns 200 with the updated standings payload including the new player; a DB check confirms the player now exists in the season + league roster table(s) (not only this round's standings); fetching standings for a **different** round in the same season shows the player is known. `npm run check` passes; deployed; the request/response shape + exactly which tables were written are recorded in the Activity Log for frontend.
 
-- [ ] {agent: frontend, id: add-player-ui, depends: add-player-endpoint} Add an "add player" affordance to the standings-editing surface — extend the sprint-15 `EditableStandingsTable.svelte` (reachable via the standings section's "✎ edit figures" path). A control opens a small form (player name + round points) that submits via the new `action: 'add-player'` on `POST /api/digest/[roundId]/standings`; on success the standings chart/table re-render from the returned payload with the new player included, reusing the existing `standingsOverride` `$state` pattern (no page reload).
+- [~] {agent: frontend, id: add-player-ui, depends: add-player-endpoint} **[DEFERRED to backlog 2026-06-03 — paired with add-player-endpoint.]** Add an "add player" affordance to the standings-editing surface — extend the sprint-15 `EditableStandingsTable.svelte` (reachable via the standings section's "✎ edit figures" path). A control opens a small form (player name + round points) that submits via the new `action: 'add-player'` on `POST /api/digest/[roundId]/standings`; on success the standings chart/table re-render from the returned payload with the new player included, reusing the existing `standingsOverride` `$state` pattern (no page reload).
   - **Acceptance:** on prod, opening the editable standings table shows an "add player" control; submitting a name + points adds the row, persists, and the standings chart re-renders including the new player without a reload; the added player carries into the season (visible when generating a digest for another round in that season). `npm run check` passes; deployed; visual check recorded in the Activity Log.
 
 ### Deploy
@@ -153,3 +153,8 @@ Per decisions D5 (accept 17) + D6 (systemic parser fix + reimport-all).
   - Garbage rounds remaining = 0. ✅
 - **Scope of correction:** systemic — every league/season was reparsed; all previously-dropped multi-line-comment submissions are now imported, and all parser-artifact rounds removed. No per-player hardcoding.
 - **Note for `add-player-endpoint` (still pending, unaffected):** canonical player storage remains the global `competitors` table + implicit membership via `ml_submissions`/`votes`; add-player must upsert `competitors` + create an `ml_submissions` row in the round + write gospel via `applyEdits`.
+
+### 2026-06-03 — docs — Sprint-16 CLOSED (orc bookkeeping)
+- `diagnose-missing-player` + `fix-missing-player` done & prod-verified: the missing-player bug was an importer CSV parser bug (embedded newlines fragmenting rows); RFC-4180 parser fix + reimport-all of 8 league-seasons + 57 garbage rounds removed + standings re-adopted. Lori tops Hip Jammers S3 r1 @17; orphan votes across all rounds now 0 (was 7). The 11-commit backlog was pushed to origin.
+- `add-player-endpoint` + `add-player-ui` **deferred to backlog** (user decision): the parser fix resolved the motivating bug systemically, so add-player is now only a general manual-correction capability — pulled when prioritized, not needed now.
+- Sprint closed; warren advances to sprint-17 (digest visuals), promoted from its staged design-brief.

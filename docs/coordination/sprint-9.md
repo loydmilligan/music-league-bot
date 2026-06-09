@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-9-digest-preview
 created: 2026-05-19T00:00:00Z
 updated: 2026-05-20T00:00:00Z
-status: complete
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-9-digest-preview)

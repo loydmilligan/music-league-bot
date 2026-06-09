@@ -326,7 +326,18 @@ Important variables:
 
 Use `config/rules.json`, copied from `config/rules.example.json`.
 
-## 7. Suggested MVP Scope
+## 7. MVP Scope
+
+> **Superseded.** The original `!song`-bot MVP sketch below described a much
+> smaller product than what actually shipped. The live MVP is the SvelteKit
+> Music League companion app (dashboard, digest pipeline, standings, head-to-head,
+> tastemaker, season recap, History research tool). The **canonical, ratified MVP
+> definition now lives in `campaigns.md`** (`music-league-bot-mvp`) and is tracked
+> on the orc-tower War Table — full sprint history is in, and the finish line is
+> **sprint-24 (History Tool — Theme & Player tabs)**. Once sprint-24 lands the MVP
+> is signed off and post-MVP work (roadmap.md) unlocks.
+
+### Original sketch (historical, not the shipped MVP)
 
 Version 0.1:
 

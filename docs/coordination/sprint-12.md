@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-12-remediation-ml-login-data-digest
 created: 2026-05-31T22:50:32Z
 updated: 2026-06-02T01:10:22Z
-status: complete
+status: closed
 ---
 
 # music-league-bot — coordination doc (sprint-12-remediation-ml-login-data-digest)
