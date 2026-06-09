@@ -4,7 +4,7 @@ sprint: sprint-24
 title: History Tool — Theme & Player Tabs
 status: planned
 created: 2026-06-08T00:00:00Z
-updated: 2026-06-09T00:56:57Z
+updated: 2026-06-09T02:55:00Z
 activated: 2026-06-08
 ---
 
@@ -45,13 +45,20 @@ activated: 2026-06-08
 - [x] {agent: frontend, id: player-tab, depends: player-data} **Player research tab UI.** Build `$lib/components/PlayerResearchTab.svelte` and wire it into `/history/+page.svelte` for the `players` tab (replace the stub; keep `?tab=players` deep-link + keyboard nav). Player picker → per-player panel showing songs submitted + win rate. Mash Co. parity with the other tabs.
   - **Acceptance:** `/history?tab=players` renders the player picker from `GET /api/history/players`; selecting a player shows their submitted songs + win rate from `GET /api/history/players/:name`; the players stub is gone; `npm run check` 0 errors.
 
-- [ ] {agent: viz, id: theme-patterns, depends: theme-data,theme-tab} **Theme pattern encoding.** Within the Theme research tab, visually surface cross-season patterns — recurring artists across a theme and the current user's own past picks — reusing the sprint-23 history-coloring conventions (the me-vs-others CSS encoding). A visual layer over the picks frontend renders; do not refetch or re-wire the data.
+- [x] {agent: viz, id: theme-patterns, depends: theme-data,theme-tab} **Theme pattern encoding.** Within the Theme research tab, visually surface cross-season patterns — recurring artists across a theme and the current user's own past picks — reusing the sprint-23 history-coloring conventions (the me-vs-others CSS encoding). A visual layer over the picks frontend renders; do not refetch or re-wire the data.
   - **Acceptance:** in `/history?tab=themes`, recurring artists and the user's own past picks carry the history-coloring CSS classes consistent with sprint-23; verifiable by the applied class on a rendered pick element; `npm run check` 0 errors.
 
-- [ ] {agent: viz, id: taste-overlap, depends: player-data,player-tab} **Taste-overlap visualization.** Render the per-player `tasteOverlap` map as a scannable visual (ranked overlap bars) inside the Player research panel, reusing the existing color encoding. Visual layer only — consumes the data the player tab already loads.
+- [x] {agent: viz, id: taste-overlap, depends: player-data,player-tab} **Taste-overlap visualization.** Render the per-player `tasteOverlap` map as a scannable visual (ranked overlap bars) inside the Player research panel, reusing the existing color encoding. Visual layer only — consumes the data the player tab already loads.
   - **Acceptance:** in `/history?tab=players`, a selected player's taste-overlap renders as ranked bars driven by the `tasteOverlap` map; verifiable via the rendered overlap component/class; `npm run check` 0 errors.
 
 ## Activity Log
+
+### 2026-06-09 — viz — Theme pattern encoding + taste-overlap bars landed (theme-patterns, taste-overlap)
+- **All 6 sprint-24 tasks now complete — History tool done, MVP ready for sign-off.**
+- Pure presentation layer over the frozen sprint-23 data-attribute seams; **zero edits to the tab components, no refetch.** Mounted once via a new `src/hooks.client.ts` (browser-only) so the viz lane lives entirely outside the frontend's files. CSS reuse only — no new colour palette.
+- **theme-patterns** (`$lib/history/theme-patterns.ts`): a MutationObserver re-tags each rendered `.theme-pick` with the SAME `data-history-status` the sprint-23 `SongSearchCard` emits, so the existing `history-coloring.css` styles theme picks with no new rules. Encoding: the current user's own picks → `submitted-mine` (bold solid red); a **recurring artist within a theme** (artist on 2+ picks) → `artist-mine` (orange); mine + recurring → red border with the orange secondary ring. Everything else stays neutral so the patterns pop. "Me" = `MY_COMPETITOR_ID` → `competitors.name` = **Mashew** (configurable via `PUBLIC_OWNER_NAME`, defaults to Mashew). Observer watches `childList` only → our `data-*` writes never re-trigger it (no loop). Cross-theme recurrence is intentionally out of scope: the seam exposes one expanded theme's picks at a time and the lane must not refetch.
+- **taste-overlap** (`$lib/history/taste-overlap.ts` + `taste-overlap.css`): per `.taste-overlap` group, normalise each pre-sorted `.taste-overlap-row` to its leader and set `--bar-frac` (width) + `--bar-strength` (opacity); CSS draws a ranked horizontal bar behind each row via `::before`/`::after`, using the sprint-23 red hue token (`239 68 68`) with "stronger overlap = bolder" — the same me-vs-others convention. Row text sits above the bar (isolated stacking context).
+- **Verified live (dev server, prod DB copy via `DATA_DIR=../data`):** themes/Deep Cuts → Mashew's Nirvana pick rendered red `submitted-mine` (border `rgba(239,68,68,.85)`, bg `.25`); both Elton John picks rendered orange `artist-mine`; 8 neutral picks untouched. players/Mashew → 26 ranked bars, missmara (0.453) fills full width at red `.78`, descending widths 567→344px with descending opacity. `npm run check` → **0 errors** (32 pre-existing warnings elsewhere, none in new files). Inner-loop only; no prod deploy.
 
 ### 2026-06-08 — backend — Theme + Player data services landed (theme-data, player-data)
 - `$lib/db/themeHistory.ts` + `GET /api/history/themes` → `[{ theme, season, round, picks:[{title,artist,submitter,points}] }]`. `$lib/db/playerHistory.ts` + `GET /api/history/players` (roster) and `GET /api/history/players/:name` (detail). All mirror `songHistory.ts`/`research.ts` joins; no new data layer.

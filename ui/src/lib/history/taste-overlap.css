@@ -1,0 +1,47 @@
+/* ── Taste-overlap bars (viz, sprint-24) ────────────────────────────────────
+   Ranked horizontal bars behind each .taste-overlap-row in the Player research
+   panel. Bar width (--bar-frac) and fill opacity (--bar-strength) are set per
+   row by taste-overlap.ts; the colour reuses the sprint-23 history-coloring
+   red hue + "stronger signal = bolder" convention. CSS-only fallback (no JS):
+   rows still read fine, just without the bar track.
+
+   Outside any @layer so it beats Tailwind v4 @layer utilities — same cascade
+   note as history-coloring.css.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.taste-overlap {
+  --h-red: 239 68 68; /* red-500, matching history-coloring.css */
+}
+
+/* Row becomes the positioning context + bar track. The flex children
+   (name + percent) already sit inside; we tuck the bar behind them. */
+.taste-overlap-row {
+  position: relative;
+  isolation: isolate;
+  padding-inline: 0.5rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+/* Faint full-width track so even short bars read as "out of 100%". */
+.taste-overlap-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-color: rgb(var(--h-red) / 0.05);
+  border-radius: inherit;
+}
+
+/* The filled bar — width + opacity driven by the per-row custom properties. */
+.taste-overlap-row::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: -1;
+  width: calc(var(--bar-frac, 0) * 100%);
+  background-color: rgb(var(--h-red) / var(--bar-strength, 0.18));
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
