@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'/>
+<meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>Fam-Jam S3 — Recommendation concepts C + E + scatter</title>
+<style>
+:root{
+  --bg:#071019;
+  --panel:#0d1723;
+  --panel2:#101a28;
+  --line:#203247;
+  --text:#ecf2f8;
+  --muted:#9cb0c5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#0e1d30 0%, #071019 55%);color:var(--text);font:16px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;}
+.container{max-width:1440px;margin:0 auto;padding:30px 28px 60px;}
+.header{padding:8px 2px 24px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:26px}
+.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#82a8d6;font-weight:700;margin-bottom:10px}
+h1{margin:0 0 10px;font-size:46px;line-height:1.02;font-style:italic;font-weight:760;letter-spacing:-.03em}
+.sub{max-width:1050px;color:var(--muted);font-size:15px}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.badge{padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;color:#c0d0e0}
+.section{margin-top:30px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:22px;padding:22px 22px 24px;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.section h2{margin:0 0 8px;font-size:28px;line-height:1.08;letter-spacing:-.02em}
+.section .explain{color:var(--muted);max-width:980px;margin-bottom:18px}
+.reco-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.reco-box{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.reco-box .label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#88a4c4;margin-bottom:8px}
+.reco-box strong{display:block;font-size:18px;margin-bottom:6px}
+.legend-block{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-top:18px}
+.key{padding:16px;border-radius:16px;background:#0b1420;border:1px solid var(--line)}
+.key h3{margin:0 0 10px;font-size:16px}
+.key-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.key-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:12px;background:rgba(255,255,255,.03)}
+.swatch{width:14px;height:14px;border-radius:4px;margin-top:4px;flex:none}
+.key-item strong{display:block;font-size:14px}
+.key-item span{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.note{padding:16px;border-radius:16px;background:#0b1420;border:1px solid var(--line);color:var(--muted);font-size:14px}
+.players{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+.player-row{padding:14px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)}
+.player-head{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.rank{width:42px;height:42px;border-radius:999px;display:grid;place-items:center;background:#0d1b2b;border:1px solid var(--line);font-weight:800;color:#dce8f4}
+.player-meta .name{font-weight:760;font-size:18px}
+.subline{color:var(--muted);font-size:13px}
+.stack{height:16px;border-radius:999px;overflow:hidden;background:#0b1420;border:1px solid rgba(255,255,255,.08);display:flex}
+.seg{height:100%}
+.bucket-grid{margin-top:10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bucket-chip{padding:8px 10px;border-radius:12px;background:#0b1420;border:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:center;font-size:12px;color:#cad8e5}
+.bucket-chip strong{font-size:16px;color:#fff}
+.bucket-chip .dot{width:10px;height:10px;border-radius:999px;flex:none}
+.numbers-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}
+.num-card{position:relative;padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));overflow:hidden;min-height:220px}
+.num-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#7ca4d8)}
+.num-card .big{font-size:84px;line-height:.9;font-weight:830;letter-spacing:-.05em;margin:8px 0 10px;color:var(--num,#fff)}
+.num-card h4{margin:0 0 8px;font-size:22px;line-height:1.08}
+.num-card p{margin:0;color:var(--muted)}
+.num-card .foot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;color:#bfd0df}
+.num-card.mint{--accent:#34d399;--num:#d9fff0}
+.num-card.gold{--accent:#fbbf24;--num:#fff2cd}
+.num-card.green{--accent:#4ade80;--num:#ebfff1}
+.num-card.gray{--accent:#cbd5e1;--num:#ffffff}
+.num-card.ember{--accent:#fb7185;--num:#ffe4e8}
+.num-card.cyan{--accent:#38bdf8;--num:#e4f8ff}
+.num-card.violet{--accent:#a78bfa;--num:#f1ecff}
+.num-card.forest{--accent:#22c55e;--num:#ebfff1}
+.meta-note{margin-top:16px;padding:14px 16px;border-radius:14px;background:#0b1420;border:1px solid rgba(255,255,255,.07);color:var(--muted)}
+.scatter-wrap{margin-top:18px;padding:14px;border-radius:18px;background:#0b1420;border:1px solid rgba(255,255,255,.07)}
+.scatter-intro{display:grid;grid-template-columns:1fr .9fr;gap:18px;margin-bottom:12px}
+.smallkey{padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.smallkey h4{margin:0 0 8px;font-size:16px}
+.smallkey p{margin:0;color:var(--muted);font-size:14px}
+.legend-player{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);font-size:12px;color:#d2deea}
+.legend-swatch{width:10px;height:10px;border-radius:999px;display:inline-block}
+svg{width:100%;height:auto;display:block}
+.axis-title{color:#d7e5f1}
+.quad-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.quad-card{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.quad-card h5{margin:0 0 8px;font-size:15px}
+.quad-song{font-size:13px;color:#dce8f4;margin-bottom:6px}
+.quad-card p{margin:0;color:var(--muted);font-size:13px}
+.final-call{margin-top:18px;padding:16px 18px;border-radius:16px;background:linear-gradient(90deg, rgba(96,165,250,.08), rgba(52,211,153,.08));border:1px solid rgba(255,255,255,.08)}
+.final-call strong{font-size:16px}
+.help{border-bottom:1px dotted #9bb0c8;cursor:help}
+@media (max-width: 1180px){
+  .numbers-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .legend-block,.scatter-intro{grid-template-columns:1fr}
+  .quad-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width: 760px){
+  .container{padding:22px 16px 42px}
+  h1{font-size:36px}
+  .reco-strip,.numbers-grid,.quad-grid,.bucket-grid,.key-grid{grid-template-columns:1fr}
+  .num-card .big{font-size:70px}
+}
+</style>
+</head>
+<body>
+  <main class='container'>
+    <section class='header'>
+      <div class='kicker'>Music League digest • focused recommendation</div>
+      <h1>Concept C + big numbers + scatterplot</h1>
+      <div class='sub'>This page focuses only on the three pieces you said you want to explore next: <strong>Concept C</strong> as the clearest primary visual, a set of <strong>big-number / single-award tiles</strong>, and a <strong>4-quadrant scatterplot</strong> that shows whether adventurous picks actually paid off. Everything below is built from the real Fam-Jam S3 sample data.</div>
+      <div class='badges'>
+        <div class='badge'>Fam-Jam Season 3</div>
+        <div class='badge'>11 players</div>
+        <div class='badge'>11 rounds</div>
+        <div class='badge'>116 scored song rows used</div>
+      </div>
+      <div class='reco-strip'>
+        <div class='reco-box'><div class='label'>Primary</div><strong>Concept C</strong>Use this as the simplest season-long tastemaker view for both desktop and mobile.</div>
+        <div class='reco-box'><div class='label'>Supporting</div><strong>Big-number tiles</strong>Use 2–4 at a time to give the digest a few memorable, surprising takeaways.</div>
+        <div class='reco-box'><div class='label'>Detail / explainer</div><strong>Scatterplot</strong>Best as a richer desktop section or optional expanded view that shows the “why” behind the story.</div>
+      </div>
+    </section>
+
+    <section class='section'>
+      <h2>1) Concept C — make it dead simple</h2>
+      <div class='explain'>Each player's season gets summarized as a <strong>4-bucket taste profile</strong>. The buckets go from obvious to adventurous: <strong>Radio Hit → Recognizable → Curious Cut → Rabbit Hole</strong>. This is easy to read because it answers one simple question: <em>what kind of songs does this person tend to submit?</em></div>
+      <div class='legend-block'>
+        <div class='key'>
+          <h3>What makes a pick a Radio Hit vs a Rabbit Hole?</h3>
+          <div class='key-grid'>
+            <div class='key-item'><span class='swatch' style='background:#f97316'></span><div><strong>Radio Hit</strong><span>Obscurity &lt; 10. These are the most familiar, least discoverable picks in the sample.</span></div></div>
+            <div class='key-item'><span class='swatch' style='background:#facc15'></span><div><strong>Recognizable</strong><span>Obscurity 10–19. Known songs, but not necessarily the most obvious possible pick.</span></div></div>
+            <div class='key-item'><span class='swatch' style='background:#60a5fa'></span><div><strong>Curious Cut</strong><span>Obscurity 20–29. A nice middle lane: discoverable without being ultra-obscure.</span></div></div>
+            <div class='key-item'><span class='swatch' style='background:#34d399'></span><div><strong>Rabbit Hole</strong><span>Obscurity 30+. The kind of pick someone in the league is more likely to discover for the first time.</span></div></div>
+          </div>
+        </div>
+        <div class='note'>
+          <strong style='color:#eaf2f9'>Why this works</strong><br/><br/>
+          It is much easier for players to grasp than a dense stat chart: you can immediately tell who lives in the <strong>Recognizable</strong> lane, who has a real <strong>Rabbit Hole</strong> habit, and who keeps drifting back toward <strong>Radio Hit</strong> territory.<br/><br/>
+          The rows below are sorted by a simple headline <span class='help' title='Median percentile-style discovery score within the season sample.'>Tastemaker score</span>, but the color bars do most of the work.
+        </div>
+      </div>
+      <div class='players'>
+        
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#1</div>
+        <div class='player-meta'>
+          <div class='name'>Em</div>
+          <div class='subline'>Tastemaker score <strong>80</strong> • median obscurity 26 • avg points 9.0</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:10.00%; background:#f97316' title='Radio Hit: 1 song(s)'></div><div class='seg' style='width:30.00%; background:#facc15' title='Recognizable: 3 song(s)'></div><div class='seg' style='width:20.00%; background:#60a5fa' title='Curious Cut: 2 song(s)'></div><div class='seg' style='width:40.00%; background:#34d399' title='Rabbit Hole: 4 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>1</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>3</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>2</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>4</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#2</div>
+        <div class='player-meta'>
+          <div class='name'>Mashew</div>
+          <div class='subline'>Tastemaker score <strong>67</strong> • median obscurity 22 • avg points 10.3</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:9.09%; background:#f97316' title='Radio Hit: 1 song(s)'></div><div class='seg' style='width:18.18%; background:#facc15' title='Recognizable: 2 song(s)'></div><div class='seg' style='width:54.55%; background:#60a5fa' title='Curious Cut: 6 song(s)'></div><div class='seg' style='width:18.18%; background:#34d399' title='Rabbit Hole: 2 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>1</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>2</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>6</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>2</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#3</div>
+        <div class='player-meta'>
+          <div class='name'>Johanna Friedman</div>
+          <div class='subline'>Tastemaker score <strong>61</strong> • median obscurity 21 • avg points 8.5</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:9.09%; background:#f97316' title='Radio Hit: 1 song(s)'></div><div class='seg' style='width:27.27%; background:#facc15' title='Recognizable: 3 song(s)'></div><div class='seg' style='width:45.45%; background:#60a5fa' title='Curious Cut: 5 song(s)'></div><div class='seg' style='width:18.18%; background:#34d399' title='Rabbit Hole: 2 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>1</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>3</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>5</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>2</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#4</div>
+        <div class='player-meta'>
+          <div class='name'>missmara</div>
+          <div class='subline'>Tastemaker score <strong>61</strong> • median obscurity 21 • avg points 14.9</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:36.36%; background:#facc15' title='Recognizable: 4 song(s)'></div><div class='seg' style='width:63.64%; background:#60a5fa' title='Curious Cut: 7 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>0</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>4</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>7</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>0</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#5</div>
+        <div class='player-meta'>
+          <div class='name'>Jerry Bekier</div>
+          <div class='subline'>Tastemaker score <strong>61</strong> • median obscurity 21 • avg points 8.4</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:20.00%; background:#f97316' title='Radio Hit: 2 song(s)'></div><div class='seg' style='width:20.00%; background:#facc15' title='Recognizable: 2 song(s)'></div><div class='seg' style='width:50.00%; background:#60a5fa' title='Curious Cut: 5 song(s)'></div><div class='seg' style='width:10.00%; background:#34d399' title='Rabbit Hole: 1 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>2</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>2</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>5</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>1</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#6</div>
+        <div class='player-meta'>
+          <div class='name'>Marco</div>
+          <div class='subline'>Tastemaker score <strong>61</strong> • median obscurity 21 • avg points 9.1</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:9.09%; background:#f97316' title='Radio Hit: 1 song(s)'></div><div class='seg' style='width:36.36%; background:#facc15' title='Recognizable: 4 song(s)'></div><div class='seg' style='width:36.36%; background:#60a5fa' title='Curious Cut: 4 song(s)'></div><div class='seg' style='width:18.18%; background:#34d399' title='Rabbit Hole: 2 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>1</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>4</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>4</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>2</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#7</div>
+        <div class='player-meta'>
+          <div class='name'>Sarah</div>
+          <div class='subline'>Tastemaker score <strong>48</strong> • median obscurity 17 • avg points 9.5</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:75.00%; background:#facc15' title='Recognizable: 6 song(s)'></div><div class='seg' style='width:12.50%; background:#60a5fa' title='Curious Cut: 1 song(s)'></div><div class='seg' style='width:12.50%; background:#34d399' title='Rabbit Hole: 1 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>0</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>6</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>1</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>1</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#8</div>
+        <div class='player-meta'>
+          <div class='name'>Jorbo</div>
+          <div class='subline'>Tastemaker score <strong>48</strong> • median obscurity 17 • avg points 9.7</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:9.09%; background:#f97316' title='Radio Hit: 1 song(s)'></div><div class='seg' style='width:45.45%; background:#facc15' title='Recognizable: 5 song(s)'></div><div class='seg' style='width:27.27%; background:#60a5fa' title='Curious Cut: 3 song(s)'></div><div class='seg' style='width:18.18%; background:#34d399' title='Rabbit Hole: 2 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>1</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>5</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>3</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>2</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#9</div>
+        <div class='player-meta'>
+          <div class='name'>Bri</div>
+          <div class='subline'>Tastemaker score <strong>44</strong> • median obscurity 16 • avg points 10.1</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:72.73%; background:#facc15' title='Recognizable: 8 song(s)'></div><div class='seg' style='width:27.27%; background:#60a5fa' title='Curious Cut: 3 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>0</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>8</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>3</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>0</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#10</div>
+        <div class='player-meta'>
+          <div class='name'>Ellen Bekier</div>
+          <div class='subline'>Tastemaker score <strong>35</strong> • median obscurity 13 • avg points 6.1</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:27.27%; background:#f97316' title='Radio Hit: 3 song(s)'></div><div class='seg' style='width:63.64%; background:#facc15' title='Recognizable: 7 song(s)'></div><div class='seg' style='width:9.09%; background:#60a5fa' title='Curious Cut: 1 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>3</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>7</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>1</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>0</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+    <div class='player-row'>
+      <div class='player-head'>
+        <div class='rank'>#11</div>
+        <div class='player-meta'>
+          <div class='name'>arigrey83</div>
+          <div class='subline'>Tastemaker score <strong>24</strong> • median obscurity 11 • avg points 9.5</div>
+        </div>
+      </div>
+      <div class='stack' title='This bar shows how this player distributed their songs across the four discoverability buckets.'><div class='seg' style='width:36.36%; background:#f97316' title='Radio Hit: 4 song(s)'></div><div class='seg' style='width:54.55%; background:#facc15' title='Recognizable: 6 song(s)'></div><div class='seg' style='width:9.09%; background:#60a5fa' title='Curious Cut: 1 song(s)'></div></div>
+      <div class='bucket-grid'><div class='bucket-chip'><span class='dot' style='background:#f97316'></span><strong>4</strong><span>Radio Hit</span></div><div class='bucket-chip'><span class='dot' style='background:#facc15'></span><strong>6</strong><span>Recognizable</span></div><div class='bucket-chip'><span class='dot' style='background:#60a5fa'></span><strong>1</strong><span>Curious Cut</span></div><div class='bucket-chip'><span class='dot' style='background:#34d399'></span><strong>0</strong><span>Rabbit Hole</span></div></div>
+    </div>
+    
+      </div>
+      <div class='final-call'><strong>Simple recommendation:</strong> if you only ship one discoverability visual first, ship <strong>this one</strong>. It is the easiest for players to understand quickly, and it can scale to mobile very cleanly.</div>
+    </section>
+
+    <section class='section'>
+      <h2>2) Big-number / single-award tiles</h2>
+      <div class='explain'>These are the digest-friendly “look first, read second” modules. The number (or short phrase) is the hook; the smaller copy tells the story. The best ones feel a little surprising — either unusually high, unusually low, or just intriguingly specific.</div>
+      <div class='numbers-grid'>
+        
+    <article class='num-card mint'>
+      <div class='big'>47</div>
+      <h4>Deepest rabbit hole</h4>
+      <p>Mashew dug up the season&#x27;s most obscure pick: Peelander-Z — So Many Mike.</p>
+      <div class='foot'>Round: I&#x27;m a 2th</div>
+    </article>
+    
+    <article class='num-card gold'>
+      <div class='big'>26</div>
+      <h4>Biggest vote haul</h4>
+      <p>missmara posted the single highest score with Yeah Yeah Yeahs — Spitting Off the Edge of the World.</p>
+      <div class='foot'>Obscurity 19 • Round: Flying High</div>
+    </article>
+    
+    <article class='num-card green'>
+      <div class='big'>11/11</div>
+      <h4>Double digits every time</h4>
+      <p>missmara never dipped below 10 points all season.</p>
+      <div class='foot'>Average score 14.9</div>
+    </article>
+    
+    <article class='num-card gray'>
+      <div class='big'>0</div>
+      <h4>Radio-hit clean sheet</h4>
+      <p>missmara, Sarah and Bri never crossed into the Radio Hit bucket.</p>
+      <div class='foot'>Mainstream threshold: obscurity &lt; 10</div>
+    </article>
+    
+    <article class='num-card ember'>
+      <div class='big'>4</div>
+      <h4>Radio-hit reflex</h4>
+      <p>arigrey83 logged the most obvious picks this season.</p>
+      <div class='foot'>4 of 11 songs landed in Radio Hit</div>
+    </article>
+    
+    <article class='num-card cyan'>
+      <div class='big'>44</div>
+      <h4>Biggest taste swing</h4>
+      <p>Jerry Bekier ranged from very safe to very obscure more than anyone else.</p>
+      <div class='foot'>Obscurity spread 3 → 47</div>
+    </article>
+    
+    <article class='num-card violet'>
+      <div class='big'>7</div>
+      <h4>Biggest discovery/scoreboard split</h4>
+      <p>Em had the largest gap between tastemaker rank and average-points rank.</p>
+      <div class='foot'>Taste rank #1 • Points rank #8</div>
+    </article>
+    
+    <article class='num-card forest'>
+      <div class='big'>17</div>
+      <h4>Best rabbit-hole payoff</h4>
+      <p>The highest-scoring true rabbit hole was Mashew&#x27;s Peelander-Z — So Many Mike.</p>
+      <div class='foot'>Obscurity 47 • Round: I&#x27;m a 2th</div>
+    </article>
+    
+      </div>
+      <div class='meta-note'><strong style='color:#eaf2f9'>Next metadata to capture for even better big-number cards:</strong> release year / decade, genre, language, runtime, soundtrack/cover/live flags, and artist-country metadata. Those would unlock tiles like “11 decades,” “all classics,” “3 languages,” or “every pick under 3 minutes.”</div>
+    </section>
+
+    <section class='section'>
+      <h2>3) Scatterplot — did the rabbit hole pay off?</h2>
+      <div class='explain'>This chart is the richer companion to Concept C. Each dot is one song submission. It shows whether a pick was adventurous <em>and</em> whether the league rewarded it. This is the best candidate for a richer desktop view because it tells a full story without replacing the simpler summary above.</div>
+      <div class='scatter-wrap'>
+        <div class='scatter-intro'>
+          <div class='smallkey'>
+            <h4>How to read the plot</h4>
+            <p><strong>X-axis</strong> = <span class='help' title='Same discoverability idea as Concept C, but spread out into percentiles so the chart is easier to read.'>discovery percentile</span>. Left is more obvious / familiar; right is more rabbit-hole.<br/><br/>
+            <strong>Y-axis</strong> = <span class='help' title='Each song compared to the other songs in its own round based on points received.'>round vote percentile</span>. Higher means the league rewarded the pick more.<br/><br/>
+            <strong>Color</strong> = submitter. <strong>Point size</strong> = how out-of-character that pick was for that player compared with their usual obscurity range.</p>
+          </div>
+          <div class='smallkey'>
+            <h4>Why the size choice is useful</h4>
+            <p>Because we do not yet have listener-breadth or playlist-play data, the bubble size uses a “surprise factor.” Bigger circles are songs that sit far away from that player's normal lane. That makes one-off outliers pop visually instead of quietly distorting the season story.</p>
+            <div class='legend-player'><div class='legend-item'><span class='legend-swatch' style='background:#6ee7b7'></span>Em</div><div class='legend-item'><span class='legend-swatch' style='background:#f59e0b'></span>Mashew</div><div class='legend-item'><span class='legend-swatch' style='background:#60a5fa'></span>Johanna Friedman</div><div class='legend-item'><span class='legend-swatch' style='background:#f472b6'></span>missmara</div><div class='legend-item'><span class='legend-swatch' style='background:#a78bfa'></span>Jerry Bekier</div><div class='legend-item'><span class='legend-swatch' style='background:#34d399'></span>Marco</div><div class='legend-item'><span class='legend-swatch' style='background:#fb7185'></span>Sarah</div><div class='legend-item'><span class='legend-swatch' style='background:#facc15'></span>Jorbo</div><div class='legend-item'><span class='legend-swatch' style='background:#38bdf8'></span>Bri</div><div class='legend-item'><span class='legend-swatch' style='background:#c084fc'></span>Ellen Bekier</div><div class='legend-item'><span class='legend-swatch' style='background:#4ade80'></span>arigrey83</div></div>
+          </div>
+        </div>
+        <svg viewBox='0 0 1100 700' aria-label='Discoverability versus votes scatterplot'>
+          <rect x='100.0' y='55.0' width='465.0' height='282.5' fill='#2f1910' opacity='0.35'/><rect x='565.0' y='55.0' width='465.0' height='282.5' fill='#10251a' opacity='0.35'/><rect x='100.0' y='337.5' width='465.0' height='282.5' fill='#17181a' opacity='0.35'/><rect x='565.0' y='337.5' width='465.0' height='282.5' fill='#15212a' opacity='0.35'/><line x1='100.0' y1='55' x2='100.0' y2='620' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='100' y1='620.0' x2='1030' y2='620.0' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='332.5' y1='55' x2='332.5' y2='620' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='100' y1='478.8' x2='1030' y2='478.8' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='565.0' y1='55' x2='565.0' y2='620' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='100' y1='337.5' x2='1030' y2='337.5' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='797.5' y1='55' x2='797.5' y2='620' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='100' y1='196.2' x2='1030' y2='196.2' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='1030.0' y1='55' x2='1030.0' y2='620' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='100' y1='55.0' x2='1030' y2='55.0' stroke='rgba(255,255,255,0.08)' stroke-width='1'/><line x1='565.0' y1='55' x2='565.0' y2='620' stroke='rgba(255,255,255,0.25)' stroke-width='2' stroke-dasharray='6 6'/><line x1='100' y1='337.5' x2='1030' y2='337.5' stroke='rgba(255,255,255,0.25)' stroke-width='2' stroke-dasharray='6 6'/><line x1='100' y1='620' x2='1030' y2='620' stroke='rgba(255,255,255,0.6)' stroke-width='2'/><line x1='100' y1='55' x2='100' y2='620' stroke='rgba(255,255,255,0.6)' stroke-width='2'/><text x='100.0' y='648' text-anchor='middle' font-size='12' fill='#9fb0c2'>0</text><text x='84' y='624.0' text-anchor='end' font-size='12' fill='#9fb0c2'>0</text><text x='332.5' y='648' text-anchor='middle' font-size='12' fill='#9fb0c2'>25</text><text x='84' y='482.8' text-anchor='end' font-size='12' fill='#9fb0c2'>25</text><text x='565.0' y='648' text-anchor='middle' font-size='12' fill='#9fb0c2'>50</text><text x='84' y='341.5' text-anchor='end' font-size='12' fill='#9fb0c2'>50</text><text x='797.5' y='648' text-anchor='middle' font-size='12' fill='#9fb0c2'>75</text><text x='84' y='200.2' text-anchor='end' font-size='12' fill='#9fb0c2'>75</text><text x='1030.0' y='648' text-anchor='middle' font-size='12' fill='#9fb0c2'>100</text><text x='84' y='59.0' text-anchor='end' font-size='12' fill='#9fb0c2'>100</text><text x='332.5' y='156.7' text-anchor='middle' font-size='20' font-weight='700' fill='rgba(255,255,255,0.18)'>Crowd-pleaser worked</text><text x='797.5' y='156.7' text-anchor='middle' font-size='20' font-weight='700' fill='rgba(255,255,255,0.18)'>Rabbit-hole hit</text><text x='332.5' y='518.3' text-anchor='middle' font-size='20' font-weight='700' fill='rgba(255,255,255,0.18)'>Safe miss</text><text x='797.5' y='518.3' text-anchor='middle' font-size='20' font-weight='700' fill='rgba(255,255,255,0.18)'>Noble experiment</text><circle cx='252.3' cy='309.2' r='14.6' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Whitney Houston — I Wanna Dance with Somebody (Who Loves Me)
+Round: What&#x27;s My Age Again?
+Discovery percentile: 16
+Round vote percentile: 55
+Obscurity: 10 • Points: 11
+Out-of-character size score: 16</title></circle><circle cx='985.9' cy='252.8' r='14.6' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Quinn Christopherson — Good Boy
+Round: Boyyyy Powerrr
+Discovery percentile: 95
+Round vote percentile: 65
+Obscurity: 42 • Points: 10
+Out-of-character size score: 16</title></circle><circle cx='877.7' cy='196.2' r='7.1' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+spill tab — Calvaire
+Round: I&#x27;m a 2th
+Discovery percentile: 84
+Round vote percentile: 75
+Obscurity: 28 • Points: 12
+Out-of-character size score: 2</title></circle><circle cx='941.8' cy='388.9' r='9.8' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Anna Leone — My Soul I
+Round: Flying High
+Discovery percentile: 91
+Round vote percentile: 41
+Obscurity: 33 • Points: 7
+Out-of-character size score: 7</title></circle><circle cx='801.5' cy='363.2' r='7.1' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Angel Olsen — All The Good Times
+Round: My Current Jam
+Discovery percentile: 75
+Round vote percentile: 45
+Obscurity: 24 • Points: 8
+Out-of-character size score: 2</title></circle><circle cx='957.8' cy='106.4' r='10.8' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+spill tab — Suckerrr
+Round: The Import Market
+Discovery percentile: 92
+Round vote percentile: 91
+Obscurity: 35 • Points: 17
+Out-of-character size score: 9</title></circle><circle cx='208.2' cy='414.5' r='15.2' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Imogen Heap — Hide and Seek
+Round: Permanent Record
+Discovery percentile: 12
+Round vote percentile: 36
+Obscurity: 9 • Points: 8
+Out-of-character size score: 17</title></circle><circle cx='549.0' cy='440.2' r='10.8' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Eddie Vedder — Setting Forth
+Round: OST-erity Measures
+Discovery percentile: 48
+Round vote percentile: 32
+Obscurity: 17 • Points: 5
+Out-of-character size score: 9</title></circle><circle cx='589.1' cy='388.9' r='10.3' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Eric Clapton — Change the World
+Round: Bangers by Trash
+Discovery percentile: 53
+Round vote percentile: 41
+Obscurity: 18 • Points: 9
+Out-of-character size score: 8</title></circle><circle cx='1001.9' cy='568.6' r='15.2' fill='#6ee7b7' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Em
+Noga Erez — BUBBLING
+Round: Did I Make Myself Clear?
+Discovery percentile: 97
+Round vote percentile: 9
+Obscurity: 43 • Points: 3
+Out-of-character size score: 17</title></circle><circle cx='252.3' cy='55.0' r='11.9' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+The Human League — Don&#x27;t You Want Me
+Round: What&#x27;s My Age Again?
+Discovery percentile: 16
+Round vote percentile: 100
+Obscurity: 10 • Points: 13
+Out-of-character size score: 11</title></circle><circle cx='380.6' cy='365.8' r='10.8' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Harry Styles — Aperture
+Round: Boyyyy Powerrr
+Discovery percentile: 30
+Round vote percentile: 45
+Obscurity: 12 • Points: 8
+Out-of-character size score: 9</title></circle><circle cx='985.9' cy='563.5' r='17.3' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+TV Themes — Knight Rider
+Round: I&#x27;m a 2th
+Discovery percentile: 95
+Round vote percentile: 10
+Obscurity: 42 • Points: 3
+Out-of-character size score: 21</title></circle><circle cx='829.6' cy='568.6' r='8.7' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+JJ — Things Will Never Be The Same Again
+Round: Flying High
+Discovery percentile: 78
+Round vote percentile: 9
+Obscurity: 26 • Points: 3
+Out-of-character size score: 5</title></circle><circle cx='669.2' cy='243.3' r='6.0' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Mapei — Don&#x27;t Wait - Chance The Rapper &amp; The Social Experiment Remix
+Round: Twofer
+Discovery percentile: 61
+Round vote percentile: 67
+Obscurity: 21 • Points: 12
+Out-of-character size score: 0</title></circle><circle cx='152.1' cy='209.1' r='13.5' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Bad Bunny — DtMF
+Round: My Current Jam
+Discovery percentile: 6
+Round vote percentile: 73
+Obscurity: 7 • Points: 12
+Out-of-character size score: 14</title></circle><circle cx='973.9' cy='209.1' r='15.7' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Amason — You Don&#x27;t Have To Call Me
+Round: The Import Market
+Discovery percentile: 94
+Round vote percentile: 73
+Obscurity: 39 • Points: 11
+Out-of-character size score: 18</title></circle><circle cx='320.5' cy='106.4' r='11.4' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+The Knife — Heartbeats
+Round: Permanent Record
+Discovery percentile: 24
+Round vote percentile: 91
+Obscurity: 11 • Points: 14
+Out-of-character size score: 10</title></circle><circle cx='909.7' cy='440.2' r='10.3' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Tom Zé — Jimmy, Renda-Se
+Round: OST-erity Measures
+Discovery percentile: 87
+Round vote percentile: 32
+Obscurity: 29 • Points: 5
+Out-of-character size score: 8</title></circle><circle cx='725.3' cy='517.3' r='6.5' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+Ariel Pink — Baby
+Round: Bangers by Trash
+Discovery percentile: 67
+Round vote percentile: 18
+Obscurity: 22 • Points: 6
+Out-of-character size score: 1</title></circle><circle cx='629.1' cy='388.9' r='6.5' fill='#60a5fa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Johanna Friedman
+The B-52&#x27;s — Private Idaho
+Round: Did I Make Myself Clear?
+Discovery percentile: 57
+Round vote percentile: 41
+Obscurity: 20 • Points: 6
+Out-of-character size score: 1</title></circle><circle cx='320.5' cy='507.0' r='11.9' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Rush — Tom Sawyer
+Round: What&#x27;s My Age Again?
+Discovery percentile: 24
+Round vote percentile: 20
+Obscurity: 11 • Points: 4
+Out-of-character size score: 11</title></circle><circle cx='877.7' cy='365.8' r='9.2' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Jack White — Archbishop Harold Holmes
+Round: Boyyyy Powerrr
+Discovery percentile: 84
+Round vote percentile: 45
+Obscurity: 28 • Points: 8
+Out-of-character size score: 6</title></circle><circle cx='1026.0' cy='55.0' r='19.5' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Peelander-Z — So Many Mike
+Round: I&#x27;m a 2th
+Discovery percentile: 100
+Round vote percentile: 100
+Obscurity: 47 • Points: 17
+Out-of-character size score: 25</title></circle><circle cx='116.0' cy='106.4' r='15.2' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Radiohead — Everything In Its Right Place
+Round: Flying High
+Discovery percentile: 2
+Round vote percentile: 91
+Obscurity: 5 • Points: 14
+Out-of-character size score: 17</title></circle><circle cx='669.2' cy='55.0' r='6.5' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Baby Keem — Good Flirts (feat. Kendrick Lamar &amp; Momo Boyd)
+Round: Twofer
+Discovery percentile: 61
+Round vote percentile: 100
+Obscurity: 21 • Points: 16
+Out-of-character size score: 1</title></circle><circle cx='941.8' cy='260.5' r='11.9' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+T.I. — LET &#x27;EM KNOW
+Round: My Current Jam
+Discovery percentile: 91
+Round vote percentile: 64
+Obscurity: 33 • Points: 11
+Out-of-character size score: 11</title></circle><circle cx='725.3' cy='311.8' r='6.0' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Bloc Party — Ratchet
+Round: The Import Market
+Discovery percentile: 67
+Round vote percentile: 55
+Obscurity: 22 • Points: 9
+Out-of-character size score: 0</title></circle><circle cx='773.4' cy='568.6' r='6.5' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Goldfinger — Here In Your Bedroom
+Round: Permanent Record
+Discovery percentile: 72
+Round vote percentile: 9
+Obscurity: 23 • Points: 4
+Out-of-character size score: 1</title></circle><circle cx='725.3' cy='286.1' r='6.0' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+Tommy James &amp; The Shondells — Crystal Blue Persuasion
+Round: OST-erity Measures
+Discovery percentile: 67
+Round vote percentile: 59
+Obscurity: 22 • Points: 10
+Out-of-character size score: 0</title></circle><circle cx='424.7' cy='286.1' r='10.8' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+The Smashing Pumpkins — Mayonaise - 2011 Remaster
+Round: Bangers by Trash
+Discovery percentile: 35
+Round vote percentile: 59
+Obscurity: 13 • Points: 10
+Out-of-character size score: 9</title></circle><circle cx='669.2' cy='209.1' r='6.5' fill='#f59e0b' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Mashew
+underscores — Second hand embarrassment
+Round: Did I Make Myself Clear?
+Discovery percentile: 61
+Round vote percentile: 73
+Obscurity: 21 • Points: 10
+Out-of-character size score: 1</title></circle><circle cx='492.8' cy='168.0' r='9.2' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Billy Idol — White Wedding - Pt. 1
+Round: What&#x27;s My Age Again?
+Discovery percentile: 42
+Round vote percentile: 80
+Obscurity: 15 • Points: 12
+Out-of-character size score: 6</title></circle><circle cx='669.2' cy='111.5' r='6.0' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Viagra Boys — Punk Rock Loser
+Round: Boyyyy Powerrr
+Discovery percentile: 61
+Round vote percentile: 90
+Obscurity: 21 • Points: 12
+Out-of-character size score: 0</title></circle><circle cx='464.8' cy='196.2' r='9.8' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+John + Jane Q. Public — Watermelon
+Round: I&#x27;m a 2th
+Discovery percentile: 39
+Round vote percentile: 75
+Obscurity: 14 • Points: 12
+Out-of-character size score: 7</title></circle><circle cx='613.1' cy='55.0' r='7.1' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Yeah Yeah Yeahs — Spitting Off the Edge of the World
+Round: Flying High
+Discovery percentile: 55
+Round vote percentile: 100
+Obscurity: 19 • Points: 26
+Out-of-character size score: 2</title></circle><circle cx='801.5' cy='149.2' r='7.6' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+A$AP Rocky — ROBBERY (feat. Doechii)
+Round: Twofer
+Discovery percentile: 75
+Round vote percentile: 83
+Obscurity: 24 • Points: 14
+Out-of-character size score: 3</title></circle><circle cx='773.4' cy='106.4' r='7.1' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+James Blake — Where&#x27;s The Catch? (feat. André 3000)
+Round: My Current Jam
+Discovery percentile: 72
+Round vote percentile: 91
+Obscurity: 23 • Points: 16
+Out-of-character size score: 2</title></circle><circle cx='629.1' cy='55.0' r='6.5' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Little Simz — Point and Kill
+Round: The Import Market
+Discovery percentile: 57
+Round vote percentile: 100
+Obscurity: 20 • Points: 21
+Out-of-character size score: 1</title></circle><circle cx='877.7' cy='55.0' r='9.8' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Denis Leary — Asshole
+Round: Permanent Record
+Discovery percentile: 84
+Round vote percentile: 100
+Obscurity: 28 • Points: 18
+Out-of-character size score: 7</title></circle><circle cx='773.4' cy='209.1' r='7.1' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Discovery — Osaka Loop Line
+Round: OST-erity Measures
+Discovery percentile: 72
+Round vote percentile: 73
+Obscurity: 23 • Points: 11
+Out-of-character size score: 2</title></circle><circle cx='380.6' cy='209.1' r='10.8' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Led Zeppelin — Ramble On - 1990 Remaster
+Round: Bangers by Trash
+Discovery percentile: 30
+Round vote percentile: 73
+Obscurity: 12 • Points: 12
+Out-of-character size score: 9</title></circle><circle cx='877.7' cy='209.1' r='9.8' fill='#f472b6' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>missmara
+Cheekface — &quot;Listen to Your Heart.&quot; &quot;No.&quot;
+Round: Did I Make Myself Clear?
+Discovery percentile: 84
+Round vote percentile: 73
+Obscurity: 28 • Points: 10
+Out-of-character size score: 7</title></circle><circle cx='829.6' cy='309.2' r='8.7' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Eartha Kitt — C&#x27;est Si Bon
+Round: What&#x27;s My Age Again?
+Discovery percentile: 78
+Round vote percentile: 55
+Obscurity: 26 • Points: 11
+Out-of-character size score: 5</title></circle><circle cx='549.0' cy='563.5' r='8.2' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Elton John — Daniel
+Round: Boyyyy Powerrr
+Discovery percentile: 48
+Round vote percentile: 10
+Obscurity: 17 • Points: 5
+Out-of-character size score: 4</title></circle><circle cx='725.3' cy='422.2' r='6.5' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+David Bowie — Breaking Glass - 2017 Remaster
+Round: I&#x27;m a 2th
+Discovery percentile: 67
+Round vote percentile: 35
+Obscurity: 22 • Points: 6
+Out-of-character size score: 1</title></circle><circle cx='184.2' cy='517.3' r='13.0' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Eagles — Hotel California - Live; 1999 Remaster
+Round: Flying High
+Discovery percentile: 9
+Round vote percentile: 18
+Obscurity: 8 • Points: 4
+Out-of-character size score: 13</title></circle><circle cx='669.2' cy='491.6' r='6.0' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Bob Seger — Against The Wind
+Round: My Current Jam
+Discovery percentile: 61
+Round vote percentile: 23
+Obscurity: 21 • Points: 6
+Out-of-character size score: 0</title></circle><circle cx='320.5' cy='465.9' r='11.4' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Rush — Tom Sawyer
+Round: The Import Market
+Discovery percentile: 24
+Round vote percentile: 27
+Obscurity: 11 • Points: 6
+Out-of-character size score: 10</title></circle><circle cx='829.6' cy='414.5' r='8.7' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Elton John — Take Me To The Pilot
+Round: Permanent Record
+Discovery percentile: 78
+Round vote percentile: 36
+Obscurity: 26 • Points: 8
+Out-of-character size score: 5</title></circle><circle cx='1026.0' cy='363.2' r='20.0' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+The Great TV Crew — Gilligan&#x27;s Island Theme
+Round: OST-erity Measures
+Discovery percentile: 100
+Round vote percentile: 45
+Obscurity: 47 • Points: 9
+Out-of-character size score: 26</title></circle><circle cx='108.0' cy='106.4' r='15.7' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Michael Jackson — Billie Jean
+Round: Bangers by Trash
+Discovery percentile: 1
+Round vote percentile: 91
+Obscurity: 3 • Points: 14
+Out-of-character size score: 18</title></circle><circle cx='669.2' cy='55.0' r='6.0' fill='#a78bfa' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jerry Bekier
+Bob Seger — Against The Wind
+Round: Did I Make Myself Clear?
+Discovery percentile: 61
+Round vote percentile: 100
+Obscurity: 21 • Points: 15
+Out-of-character size score: 0</title></circle><circle cx='320.5' cy='168.0' r='11.4' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Talking Heads — Psycho Killer
+Round: What&#x27;s My Age Again?
+Discovery percentile: 24
+Round vote percentile: 80
+Obscurity: 11 • Points: 12
+Out-of-character size score: 10</title></circle><circle cx='252.3' cy='252.8' r='11.9' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Bronski Beat — Smalltown Boy
+Round: Boyyyy Powerrr
+Discovery percentile: 16
+Round vote percentile: 65
+Obscurity: 10 • Points: 10
+Out-of-character size score: 11</title></circle><circle cx='725.3' cy='111.5' r='6.5' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Yusuf / Cat Stevens — The Wind
+Round: I&#x27;m a 2th
+Discovery percentile: 67
+Round vote percentile: 90
+Obscurity: 22 • Points: 13
+Out-of-character size score: 1</title></circle><circle cx='669.2' cy='465.9' r='6.0' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Sibylle Baier — Tonight
+Round: Flying High
+Discovery percentile: 61
+Round vote percentile: 27
+Obscurity: 21 • Points: 6
+Out-of-character size score: 0</title></circle><circle cx='464.8' cy='149.2' r='9.8' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Temple Of The Dog — Hunger Strike
+Round: Twofer
+Discovery percentile: 39
+Round vote percentile: 83
+Obscurity: 14 • Points: 14
+Out-of-character size score: 7</title></circle><circle cx='773.4' cy='491.6' r='7.1' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+J.J. Cale — Don&#x27;t Go To Strangers
+Round: My Current Jam
+Discovery percentile: 72
+Round vote percentile: 23
+Obscurity: 23 • Points: 6
+Out-of-character size score: 2</title></circle><circle cx='252.3' cy='157.7' r='11.9' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Lola Young — Messy
+Round: The Import Market
+Discovery percentile: 16
+Round vote percentile: 82
+Obscurity: 10 • Points: 12
+Out-of-character size score: 11</title></circle><circle cx='941.8' cy='260.5' r='12.5' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Fairuz — Ana Le Habiby
+Round: Permanent Record
+Discovery percentile: 91
+Round vote percentile: 64
+Obscurity: 33 • Points: 11
+Out-of-character size score: 12</title></circle><circle cx='773.4' cy='568.6' r='7.1' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Sam Smith — Writing&#x27;s On The Wall - From &quot;Spectre&quot; Soundtrack
+Round: OST-erity Measures
+Discovery percentile: 72
+Round vote percentile: 9
+Obscurity: 23 • Points: 3
+Out-of-character size score: 2</title></circle><circle cx='128.1' cy='465.9' r='14.1' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Kanye West — Homecoming
+Round: Bangers by Trash
+Discovery percentile: 3
+Round vote percentile: 27
+Obscurity: 6 • Points: 8
+Out-of-character size score: 15</title></circle><circle cx='1014.0' cy='491.6' r='18.9' fill='#34d399' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Marco
+Harold Faltermeyer — Fletch Theme
+Round: Did I Make Myself Clear?
+Discovery percentile: 98
+Round vote percentile: 23
+Obscurity: 45 • Points: 5
+Out-of-character size score: 24</title></circle><circle cx='380.6' cy='157.7' r='8.7' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Arcade Fire — Sprawl II (Mountains Beyond Mountains)
+Round: Flying High
+Discovery percentile: 30
+Round vote percentile: 82
+Obscurity: 12 • Points: 12
+Out-of-character size score: 5</title></circle><circle cx='512.9' cy='400.3' r='6.5' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+The Pogues — Fairytale of New York (feat. Kirsty MacColl)
+Round: Twofer
+Discovery percentile: 44
+Round vote percentile: 39
+Obscurity: 16 • Points: 7
+Out-of-character size score: 1</title></circle><circle cx='424.7' cy='157.7' r='8.2' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Tainy — MOJABI GHOST
+Round: My Current Jam
+Discovery percentile: 35
+Round vote percentile: 82
+Obscurity: 13 • Points: 13
+Out-of-character size score: 4</title></circle><circle cx='589.1' cy='260.5' r='6.5' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Burna Boy — Last Last
+Round: The Import Market
+Discovery percentile: 53
+Round vote percentile: 64
+Obscurity: 18 • Points: 10
+Out-of-character size score: 1</title></circle><circle cx='589.1' cy='414.5' r='6.5' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Avicii — Levels - Original Version
+Round: Permanent Record
+Discovery percentile: 53
+Round vote percentile: 36
+Obscurity: 18 • Points: 8
+Out-of-character size score: 1</title></circle><circle cx='1001.9' cy='517.3' r='20.0' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Ennio Morricone — Guerra e pace, pollo e brace - From &quot;Grazie Zia&quot;
+Round: OST-erity Measures
+Discovery percentile: 97
+Round vote percentile: 18
+Obscurity: 43 • Points: 4
+Out-of-character size score: 26</title></circle><circle cx='464.8' cy='388.9' r='7.6' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Kanye West — Never Let Me Down
+Round: Bangers by Trash
+Discovery percentile: 39
+Round vote percentile: 41
+Obscurity: 14 • Points: 9
+Out-of-character size score: 3</title></circle><circle cx='725.3' cy='106.4' r='8.7' fill='#fb7185' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Sarah
+Geto Boys — Damn It Feels Good to Be a Gangsta
+Round: Did I Make Myself Clear?
+Discovery percentile: 67
+Round vote percentile: 91
+Obscurity: 22 • Points: 13
+Out-of-character size score: 5</title></circle><circle cx='320.5' cy='394.0' r='9.2' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Queen — I Want To Break Free
+Round: What&#x27;s My Age Again?
+Discovery percentile: 24
+Round vote percentile: 40
+Obscurity: 11 • Points: 7
+Out-of-character size score: 6</title></circle><circle cx='380.6' cy='168.0' r='8.7' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Silversun Pickups — Lazy Eye
+Round: Boyyyy Powerrr
+Discovery percentile: 30
+Round vote percentile: 80
+Obscurity: 12 • Points: 11
+Out-of-character size score: 5</title></circle><circle cx='829.6' cy='281.0' r='10.8' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Halsey — Letter to God (1983)
+Round: I&#x27;m a 2th
+Discovery percentile: 78
+Round vote percentile: 60
+Obscurity: 26 • Points: 9
+Out-of-character size score: 9</title></circle><circle cx='549.0' cy='311.8' r='6.0' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Little Dragon — Ritual Union
+Round: Flying High
+Discovery percentile: 48
+Round vote percentile: 55
+Obscurity: 17 • Points: 9
+Out-of-character size score: 0</title></circle><circle cx='965.9' cy='494.4' r='16.8' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+The Night Game — Do You Think About Us?
+Round: Twofer
+Discovery percentile: 93
+Round vote percentile: 22
+Obscurity: 37 • Points: 6
+Out-of-character size score: 20</title></circle><circle cx='829.6' cy='414.5' r='10.8' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+The Warning — MORE
+Round: My Current Jam
+Discovery percentile: 78
+Round vote percentile: 36
+Obscurity: 26 • Points: 7
+Out-of-character size score: 9</title></circle><circle cx='725.3' cy='465.9' r='8.7' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Olivia Dean — Echo
+Round: The Import Market
+Discovery percentile: 67
+Round vote percentile: 27
+Obscurity: 22 • Points: 6
+Out-of-character size score: 5</title></circle><circle cx='128.1' cy='311.8' r='11.9' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Pixies — Where Is My Mind?
+Round: Permanent Record
+Discovery percentile: 3
+Round vote percentile: 55
+Obscurity: 6 • Points: 9
+Out-of-character size score: 11</title></circle><circle cx='925.8' cy='106.4' r='14.1' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Lovefoxxx — Nightcall
+Round: OST-erity Measures
+Discovery percentile: 89
+Round vote percentile: 91
+Obscurity: 32 • Points: 15
+Out-of-character size score: 15</title></circle><circle cx='320.5' cy='55.0' r='9.2' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Dr. Dre — Forgot About Dre
+Round: Bangers by Trash
+Discovery percentile: 24
+Round vote percentile: 100
+Obscurity: 11 • Points: 18
+Out-of-character size score: 6</title></circle><circle cx='424.7' cy='209.1' r='8.2' fill='#facc15' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Jorbo
+Warren G — Regulate
+Round: Did I Make Myself Clear?
+Discovery percentile: 35
+Round vote percentile: 73
+Obscurity: 13 • Points: 10
+Out-of-character size score: 4</title></circle><circle cx='549.0' cy='450.5' r='6.5' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Madonna — Open Your Heart
+Round: What&#x27;s My Age Again?
+Discovery percentile: 48
+Round vote percentile: 30
+Obscurity: 17 • Points: 5
+Out-of-character size score: 1</title></circle><circle cx='252.3' cy='478.8' r='9.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Sabrina Carpenter — Coincidence
+Round: Boyyyy Powerrr
+Discovery percentile: 16
+Round vote percentile: 25
+Obscurity: 10 • Points: 6
+Out-of-character size score: 6</title></circle><circle cx='877.7' cy='422.2' r='12.5' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Regina Spektor — Jessica
+Round: I&#x27;m a 2th
+Discovery percentile: 84
+Round vote percentile: 35
+Obscurity: 28 • Points: 6
+Out-of-character size score: 12</title></circle><circle cx='252.3' cy='234.8' r='9.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Harry Styles — Music For a Sushi Restaurant
+Round: Flying High
+Discovery percentile: 16
+Round vote percentile: 68
+Obscurity: 10 • Points: 11
+Out-of-character size score: 6</title></circle><circle cx='629.1' cy='306.1' r='8.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Noah Cyrus — July (feat. Leon Bridges)
+Round: Twofer
+Discovery percentile: 57
+Round vote percentile: 56
+Obscurity: 20 • Points: 11
+Out-of-character size score: 4</title></circle><circle cx='512.9' cy='311.8' r='6.0' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Harry Styles — Ready, Steady, Go!
+Round: My Current Jam
+Discovery percentile: 44
+Round vote percentile: 55
+Obscurity: 16 • Points: 10
+Out-of-character size score: 0</title></circle><circle cx='512.9' cy='568.6' r='6.0' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+The Paper Kites — Paint
+Round: The Import Market
+Discovery percentile: 44
+Round vote percentile: 9
+Obscurity: 16 • Points: 5
+Out-of-character size score: 0</title></circle><circle cx='909.7' cy='157.7' r='13.0' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Scott Matthews — Eyes Wider Than Before
+Round: Permanent Record
+Discovery percentile: 87
+Round vote percentile: 82
+Obscurity: 29 • Points: 13
+Out-of-character size score: 13</title></circle><circle cx='380.6' cy='55.0' r='8.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Cat Power — Sea of Love
+Round: OST-erity Measures
+Discovery percentile: 30
+Round vote percentile: 100
+Obscurity: 12 • Points: 25
+Out-of-character size score: 4</title></circle><circle cx='380.6' cy='157.7' r='8.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Michael Jackson — Man in the Mirror - 2012 Remaster
+Round: Bangers by Trash
+Discovery percentile: 30
+Round vote percentile: 82
+Obscurity: 12 • Points: 13
+Out-of-character size score: 4</title></circle><circle cx='252.3' cy='388.9' r='9.2' fill='#38bdf8' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Bri
+Britney Spears — Till the World Ends
+Round: Did I Make Myself Clear?
+Discovery percentile: 16
+Round vote percentile: 41
+Obscurity: 10 • Points: 6
+Out-of-character size score: 6</title></circle><circle cx='909.7' cy='563.5' r='14.6' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Frankie Lymon — Why Do Fools Fall in Love
+Round: What&#x27;s My Age Again?
+Discovery percentile: 87
+Round vote percentile: 10
+Obscurity: 29 • Points: 3
+Out-of-character size score: 16</title></circle><circle cx='152.1' cy='55.0' r='9.2' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Billy Joel — Piano Man
+Round: Boyyyy Powerrr
+Discovery percentile: 6
+Round vote percentile: 100
+Obscurity: 7 • Points: 14
+Out-of-character size score: 6</title></circle><circle cx='464.8' cy='507.0' r='6.5' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+The Beatles — I Will - Remastered 2009
+Round: I&#x27;m a 2th
+Discovery percentile: 39
+Round vote percentile: 20
+Obscurity: 14 • Points: 5
+Out-of-character size score: 1</title></circle><circle cx='152.1' cy='234.8' r='9.2' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Billie Eilish — lovely
+Round: Flying High
+Discovery percentile: 6
+Round vote percentile: 68
+Obscurity: 7 • Points: 11
+Out-of-character size score: 6</title></circle><circle cx='252.3' cy='557.2' r='7.6' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Lady Gaga — Shallow - Radio Edit
+Round: Twofer
+Discovery percentile: 16
+Round vote percentile: 11
+Obscurity: 10 • Points: 3
+Out-of-character size score: 3</title></circle><circle cx='589.1' cy='568.6' r='8.7' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Benson Boone — Sorry I&#x27;m Here For Someone Else
+Round: My Current Jam
+Discovery percentile: 53
+Round vote percentile: 9
+Obscurity: 18 • Points: 2
+Out-of-character size score: 5</title></circle><circle cx='464.8' cy='465.9' r='6.5' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Peso Pluma — BELLAKEO
+Round: The Import Market
+Discovery percentile: 39
+Round vote percentile: 27
+Obscurity: 14 • Points: 6
+Out-of-character size score: 1</title></circle><circle cx='380.6' cy='517.3' r='6.5' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+The Beatles — I Want To Hold Your Hand - Remastered 2015
+Round: Permanent Record
+Discovery percentile: 30
+Round vote percentile: 18
+Obscurity: 12 • Points: 5
+Out-of-character size score: 1</title></circle><circle cx='512.9' cy='286.1' r='7.6' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Rihanna — Lift Me Up - From Black Panther: Wakanda Forever - Music From and Inspired By
+Round: OST-erity Measures
+Discovery percentile: 44
+Round vote percentile: 59
+Obscurity: 16 • Points: 10
+Out-of-character size score: 3</title></circle><circle cx='424.7' cy='568.6' r='6.0' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Kanye West — Say You Will
+Round: Bangers by Trash
+Discovery percentile: 35
+Round vote percentile: 9
+Obscurity: 13 • Points: 1
+Out-of-character size score: 0</title></circle><circle cx='208.2' cy='311.8' r='8.2' fill='#c084fc' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>Ellen Bekier
+Van Morrison — Brown Eyed Girl
+Round: Did I Make Myself Clear?
+Discovery percentile: 12
+Round vote percentile: 55
+Obscurity: 9 • Points: 7
+Out-of-character size score: 4</title></circle><circle cx='252.3' cy='168.0' r='6.5' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Bonnie Tyler — Total Eclipse of the Heart
+Round: What&#x27;s My Age Again?
+Discovery percentile: 16
+Round vote percentile: 80
+Obscurity: 10 • Points: 12
+Out-of-character size score: 1</title></circle><circle cx='320.5' cy='478.8' r='6.0' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Stevie Wonder — Sir Duke
+Round: Boyyyy Powerrr
+Discovery percentile: 24
+Round vote percentile: 25
+Obscurity: 11 • Points: 6
+Out-of-character size score: 0</title></circle><circle cx='184.2' cy='337.5' r='7.6' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+The White Stripes — Fell In Love With a Girl
+Round: I&#x27;m a 2th
+Discovery percentile: 9
+Round vote percentile: 50
+Obscurity: 8 • Points: 7
+Out-of-character size score: 3</title></circle><circle cx='549.0' cy='388.9' r='9.2' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Air — Venus
+Round: Flying High
+Discovery percentile: 48
+Round vote percentile: 41
+Obscurity: 17 • Points: 7
+Out-of-character size score: 6</title></circle><circle cx='184.2' cy='400.3' r='7.6' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Marvin Gaye — Ain&#x27;t No Mountain High Enough
+Round: Twofer
+Discovery percentile: 9
+Round vote percentile: 39
+Obscurity: 8 • Points: 7
+Out-of-character size score: 3</title></circle><circle cx='589.1' cy='55.0' r='9.8' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+SAULT — Wildfires
+Round: My Current Jam
+Discovery percentile: 53
+Round vote percentile: 100
+Obscurity: 18 • Points: 19
+Out-of-character size score: 7</title></circle><circle cx='320.5' cy='363.2' r='6.0' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+The Proclaimers — I&#x27;m Gonna Be (500 Miles)
+Round: The Import Market
+Discovery percentile: 24
+Round vote percentile: 45
+Obscurity: 11 • Points: 7
+Out-of-character size score: 0</title></circle><circle cx='853.6' cy='209.1' r='14.6' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Dirty Gold — California Sunrise
+Round: Permanent Record
+Discovery percentile: 81
+Round vote percentile: 73
+Obscurity: 27 • Points: 12
+Out-of-character size score: 16</title></circle><circle cx='464.8' cy='157.7' r='7.6' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Paul Simon — Me and Julio Down by the Schoolyard
+Round: OST-erity Measures
+Discovery percentile: 39
+Round vote percentile: 82
+Obscurity: 14 • Points: 13
+Out-of-character size score: 3</title></circle><circle cx='184.2' cy='286.1' r='7.6' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+The Mamas &amp; The Papas — California Dreamin&#x27;
+Round: Bangers by Trash
+Discovery percentile: 9
+Round vote percentile: 59
+Obscurity: 8 • Points: 10
+Out-of-character size score: 3</title></circle><circle cx='152.1' cy='491.6' r='8.2' fill='#4ade80' fill-opacity='0.72' stroke='rgba(255,255,255,0.7)' stroke-width='1.2'><title>arigrey83
+Foo Fighters — My Hero
+Round: Did I Make Myself Clear?
+Discovery percentile: 6
+Round vote percentile: 23
+Obscurity: 7 • Points: 5
+Out-of-character size score: 4</title></circle><line x1='1026.0' y1='55.0' x2='986.0' y2='0.0' stroke='rgba(255,255,255,0.45)' stroke-width='1.5'/><rect x='982.0' y='-18.0' width='193.8' height='34' rx='8' fill='rgba(8,15,24,0.88)' stroke='rgba(255,255,255,0.12)'/><text x='994.0' y='3.0' font-size='12' fill='#dce7f3'>Obscure + loved</text><text x='994.0' y='-6.0' font-size='11' fill='#8fb0c9'>Mashew: Peelander-Z — So Many Mike</text><line x1='152.1' y1='55.0' x2='187.1' y2='10.0' stroke='rgba(255,255,255,0.45)' stroke-width='1.5'/><rect x='183.1' y='-8.0' width='205.2' height='34' rx='8' fill='rgba(8,15,24,0.88)' stroke='rgba(255,255,255,0.12)'/><text x='195.1' y='13.0' font-size='12' fill='#dce7f3'>Known song + big result</text><text x='195.1' y='4.0' font-size='11' fill='#8fb0c9'>Ellen Bekier: Billy Joel — Piano Man</text><line x1='1026.0' y1='363.2' x2='1061.0' y2='398.2' stroke='rgba(255,255,255,0.45)' stroke-width='1.5'/><rect x='1057.0' y='380.2' width='324.9' height='34' rx='8' fill='rgba(8,15,24,0.88)' stroke='rgba(255,255,255,0.12)'/><text x='1069.0' y='401.2' font-size='12' fill='#dce7f3'>Deep cut that did not fully land</text><text x='1069.0' y='392.2' font-size='11' fill='#8fb0c9'>Jerry Bekier: The Great TV Crew — Gilligan&#x27;s Island Theme</text><line x1='128.1' y1='465.9' x2='88.1' y2='505.9' stroke='rgba(255,255,255,0.45)' stroke-width='1.5'/><rect x='84.1' y='487.9' width='180.0' height='34' rx='8' fill='rgba(8,15,24,0.88)' stroke='rgba(255,255,255,0.12)'/><text x='96.1' y='508.9' font-size='12' fill='#dce7f3'>Familiar pick without payoff</text><text x='96.1' y='499.9' font-size='11' fill='#8fb0c9'>Marco: Kanye West — Homecoming</text>
+          <text x='565.0' y='682' text-anchor='middle' font-size='15' fill='#d9e7f3'>Discovery percentile — obvious / familiar → rabbit hole</text>
+          <text x='20' y='337.5' transform='rotate(-90 20 337.5)' text-anchor='middle' font-size='15' fill='#d9e7f3'>Round vote percentile — lower response → stronger response</text>
+        </svg>
+        <div class='quad-grid'>
+          
+    <div class='quad-card'>
+      <h5>Rabbit-hole hit</h5>
+      <div class='quad-song'>Mashew • Peelander-Z — So Many Mike</div>
+      <p>Discovery percentile <strong>100</strong> • vote percentile <strong>100</strong> • points <strong>17</strong>.</p>
+    </div>
+    
+    <div class='quad-card'>
+      <h5>Crowd-pleaser worked</h5>
+      <div class='quad-song'>Ellen Bekier • Billy Joel — Piano Man</div>
+      <p>Discovery percentile <strong>6</strong> • vote percentile <strong>100</strong> • points <strong>14</strong>.</p>
+    </div>
+    
+    <div class='quad-card'>
+      <h5>Noble experiment</h5>
+      <div class='quad-song'>Jerry Bekier • The Great TV Crew — Gilligan&#x27;s Island Theme</div>
+      <p>Discovery percentile <strong>100</strong> • vote percentile <strong>45</strong> • points <strong>9</strong>.</p>
+    </div>
+    
+    <div class='quad-card'>
+      <h5>Safe miss</h5>
+      <div class='quad-song'>Marco • Kanye West — Homecoming</div>
+      <p>Discovery percentile <strong>3</strong> • vote percentile <strong>27</strong> • points <strong>8</strong>.</p>
+    </div>
+    
+        </div>
+      </div>
+      <div class='final-call'><strong>Scatterplot recommendation:</strong> use this as the richer “desktop explanation” view. It pairs especially well with Concept C because the bars tell you each player's overall lane, while the scatterplot shows how individual picks behaved inside the season.</div>
+    </section>
+  </main>
+</body>
+</html>

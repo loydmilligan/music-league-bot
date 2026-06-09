@@ -1,0 +1,2492 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Tastemaker Leaderboard · Concept C (mobile) · Fam-Jam S3</title>
+<style>
+  :root {
+    --bg: #07090c;
+    --surface: #0d1116;
+    --surface-2: #141921;
+    --line: #283039;
+    --line-strong: #3a4451;
+    --fg: #f1f4f7;
+    --fg-2: #c2cad3;
+    --fg-muted: #8b97a4;
+    --fg-quiet: #5a6773;
+    --bone: #faf7f2;
+    --ink-0: #07090c;
+    --pulp: #ff5b2e;
+    --moss: #3ec27a;
+    --ember: #e6566c;
+
+    /* bucket colors (per brief) */
+    --c-radio: #f5762e;   /* Radio Hit · obscurity <10 · orange  */
+    --c-recog: #e8a83a;   /* Recognizable · 10-19 · yellow       */
+    --c-curious: #5aa3ff; /* Curious Cut · 20-29 · blue          */
+    --c-rabbit: #3ec27a;  /* Rabbit Hole · 30+ · green           */
+
+    --font-body: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg-2);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    padding: 18px 10px 60px;
+  }
+
+  /* ── mobile-first card: phone content width ───────────────────────────── */
+  .card {
+    width: 100%;
+    max-width: 414px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .head {
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .head h1 {
+    margin: 0;
+    font: 800 18px/1.1 var(--font-body);
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .head .sub {
+    margin: 4px 0 0;
+    font: 600 10px/1.4 var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 10px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font: 600 9.5px/1.2 var(--font-mono);
+    color: var(--fg-muted);
+  }
+  .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+  .sw-radio { background: var(--c-radio); }
+  .sw-recog { background: var(--c-recog); }
+  .sw-curious { background: var(--c-curious); }
+  .sw-rabbit { background: var(--c-rabbit); }
+
+  .axis-note {
+    margin: 9px 0 0;
+    font: 500 9px/1.3 var(--font-mono);
+    color: var(--fg-quiet);
+    font-style: italic;
+  }
+
+  /* ── explainer (expandable score + bucket meanings) ───────────────────── */
+  .explainer {
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--ink-0);
+  }
+  .explainer summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 8px 11px;
+    font: 700 9.5px/1.2 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .explainer summary::-webkit-details-marker { display: none; }
+  .explainer summary::before {
+    content: "ⓘ";
+    color: var(--pulp);
+    font-size: 12px;
+  }
+  .explainer summary::after {
+    content: "▾";
+    margin-left: auto;
+    color: var(--fg-quiet);
+    transition: transform 150ms ease;
+  }
+  .explainer[open] summary::after { transform: rotate(180deg); }
+  .explainer-body { padding: 2px 12px 12px; }
+  .ex-score {
+    margin: 0 0 10px;
+    font: 400 11.5px/1.5 var(--font-body);
+    color: var(--fg-2);
+  }
+  .ex-score b { color: var(--fg); font-weight: 700; }
+  .ex-buckets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .ex-buckets li { display: flex; align-items: flex-start; gap: 8px; font: 400 11px/1.4 var(--font-body); color: var(--fg-muted); }
+  .ex-buckets li .sw { margin-top: 2px; }
+  .ex-buckets b { color: var(--fg-2); font-weight: 700; }
+  .ex-note { margin: 10px 0 0; font: 500 9.5px/1.4 var(--font-mono); color: var(--fg-quiet); }
+  .ex-note b { color: var(--fg-muted); }
+
+  /* ── rows ─────────────────────────────────────────────────────────────── */
+  .rows { padding: 6px 10px 10px; }
+  .row {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: 0; }
+
+  /* left: score headline + rank-change */
+  .left { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .score {
+    font: 800 22px/1 var(--font-mono);
+    color: var(--fg);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font: 700 9.5px/1 var(--font-mono);
+  }
+  .delta .arr { font-size: 10px; }
+  .delta.up { color: var(--moss); }
+  .delta.down { color: var(--ember); }
+  .delta.same { color: var(--fg-quiet); }
+  .delta .prev { color: var(--fg-quiet); font-weight: 600; }
+
+  /* right: name + segmented bar */
+  .right { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .name-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .name {
+    font: 700 12.5px/1.2 var(--font-body);
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rk { font: 700 9px/1 var(--font-mono); color: var(--fg-quiet); flex-shrink: 0; }
+
+  .bar {
+    display: flex;
+    width: 100%;
+    height: 24px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .seg {
+    flex-basis: 0;
+    min-width: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    font: 800 12px/1 var(--font-mono);
+    color: #07090c;
+    position: relative;
+    transition: filter 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg + .seg { box-shadow: inset 1px 0 0 rgba(7,9,12,0.35); }
+  .seg:hover, .seg:focus-visible { filter: brightness(1.12); outline: none; }
+  .seg:active { filter: brightness(0.9); }
+  .seg.radio { background: var(--c-radio); }
+  .seg.recog { background: var(--c-recog); }
+  .seg.curious { background: var(--c-curious); }
+  .seg.rabbit { background: var(--c-rabbit); }
+  /* a tiny "tap" affordance dot, top-right of each segment */
+  .seg::after {
+    content: "";
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(7,9,12,0.4);
+  }
+
+  .foot {
+    padding: 10px 14px 14px;
+    border-top: 1px solid var(--line);
+    font: 500 9px/1.4 var(--font-mono);
+    color: var(--fg-quiet);
+  }
+  .foot b { color: var(--fg-muted); font-weight: 700; }
+
+  /* ── modal (mobile = full screen) ─────────────────────────────────────── */
+  .modal-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(7,9,12,0.34);   /* light dim — background stays mostly visible */
+    backdrop-filter: blur(1px);      /* barely-there blur */
+    display: none;
+    z-index: 100;
+  }
+  .modal-scrim.open { display: flex; align-items: flex-end; justify-content: center; animation: scrim-in 240ms ease; }
+  @media (min-width: 520px) {
+    .modal-scrim.open { align-items: center; }
+  }
+  @keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    /* subtle bucket-color piping along the top (set per-tap via --bucket) */
+    border-top: 3px solid var(--bucket, var(--line-strong));
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: sheet-up 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  @media (min-width: 520px) {
+    .modal { border-radius: 16px; }
+  }
+  /* gentler: a soft fade + small rise, no hard pop */
+  @keyframes sheet-up { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .modal-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 700 9.5px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .modal-eyebrow .dot { width: 10px; height: 10px; border-radius: 3px; }
+  .modal-ico { display: inline-flex; width: 15px; height: 15px; }
+  .modal-ico svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .modal-h { margin: 0; font: 800 16px/1.15 var(--font-body); color: var(--fg); }
+  .modal-h .who { color: var(--fg-muted); font-weight: 700; }
+  .modal-x {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--fg-muted);
+    font: 700 16px/1 var(--font-mono);
+    cursor: pointer;
+  }
+  .modal-x:hover { color: var(--fg); }
+  .modal-list {
+    margin: 0; padding: 8px;
+    list-style: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .song {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+  }
+  .song:nth-child(odd) { background: var(--ink-0); }
+  .song-n { font: 700 10px/1.4 var(--font-mono); color: var(--fg-quiet); min-width: 16px; flex-shrink: 0; }
+  .song-main { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .song-title { font: 700 13px/1.25 var(--font-body); color: var(--fg); }
+  .song-artist { font: 500 11.5px/1.2 var(--font-mono); color: var(--fg-muted); }
+  .song-meta { margin-left: auto; text-align: right; flex-shrink: 0; }
+  .song-ob { font: 700 12px/1 var(--font-mono); }
+  .song-round { font: 500 8.5px/1.3 var(--font-mono); color: var(--fg-quiet); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ── chunked bar: one rectangle per song (rightmost = most obscure) ───── */
+  .chunkbar-wrap { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 6px; }
+  .chunkbar-cap {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font: 600 8.5px/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-quiet);
+  }
+  .chunkbar { display: flex; gap: 3px; height: 30px; }
+  .chunk {
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: 4px;
+    background: var(--bucket, var(--line-strong));
+    display: grid;
+    place-items: center;
+    font: 800 11px/1 var(--font-mono);
+    color: #07090c;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  /* left → right ramps toward full strength (more obscure = brighter/right) */
+  .chunk.hl, .chunk:hover { opacity: 1; transform: translateY(-2px); }
+  .song { transition: background 120ms ease, box-shadow 120ms ease; cursor: default; }
+  .song.hl { background: var(--surface-2) !important; box-shadow: inset 2px 0 0 var(--bucket, var(--line-strong)); }
+  .song-n {
+    font: 800 10px/1.4 var(--font-mono); color: var(--bucket, var(--fg-quiet));
+    min-width: 16px; flex-shrink: 0; text-align: center;
+  }
+  .modal-foot { padding: 10px 16px 16px; border-top: 1px solid var(--line); }
+  .btn-close {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-2);
+    color: var(--fg);
+    font: 700 13px/1 var(--font-body);
+    cursor: pointer;
+  }
+  .btn-close:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+  <main class="card" id="card">
+    <header class="head">
+      <h1>Tastemaker Leaderboard</h1>
+      <p class="sub">Fam-Jam S3 · Tastemaker score = discovery percentile · season cumulative</p>
+      <div class="legend">
+        <span><i class="sw sw-radio"></i>Radio Hit &lt;10</span>
+        <span><i class="sw sw-recog"></i>Recognizable 10–19</span>
+        <span><i class="sw sw-curious"></i>Curious Cut 20–29</span>
+        <span><i class="sw sw-rabbit"></i>Rabbit Hole 30+</span>
+      </div>
+
+      <details class="explainer">
+        <summary>How the score &amp; buckets work</summary>
+        <div class="explainer-body">
+          <p class="ex-score"><b>Tastemaker score:</b> each song gets a 0–100 <b>discovery percentile</b> — how obscure it is (from Last.fm play counts) vs. every other song this season. Your score is the <b>median</b> of your picks, so one mainstream night can't sink a discovery maven.</p>
+          <ul class="ex-buckets">
+            <li><i class="sw sw-radio"></i><span><b>Radio Hit</b> · obscurity &lt;10 — the most familiar, mainstream picks.</span></li>
+            <li><i class="sw sw-recog"></i><span><b>Recognizable</b> · 10–19 — known, but not the most obvious choice.</span></li>
+            <li><i class="sw sw-curious"></i><span><b>Curious Cut</b> · 20–29 — discoverable without being ultra-obscure.</span></li>
+            <li><i class="sw sw-rabbit"></i><span><b>Rabbit Hole</b> · 30+ — deep cuts, most likely a first-time discovery.</span></li>
+          </ul>
+          <p class="ex-note">Buckets use each song's <b>raw</b> obscurity (absolute scale); the headline score uses the season-relative <b>percentile</b>.</p>
+        </div>
+      </details>
+
+      <p class="axis-note">Big number = median Tastemaker score. Tap a count in a bar to see those songs. ▲▼ rank change is <b>illustrative</b> (no real prior-round ranks in this sample).</p>
+    </header>
+
+    <div class="rows" id="rows"></div>
+
+    <footer class="foot">
+      Higher median = picks more songs nobody's heard. Bars show each player's season songs split across the four buckets — <b>tap any number</b> for the song list.
+    </footer>
+  </main>
+
+  <!-- modal -->
+  <div class="modal-scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="modalH">
+    <div class="modal" id="modal">
+      <div class="modal-head">
+        <div class="modal-title">
+          <span class="modal-eyebrow" id="modalEyebrow"><span class="modal-ico" id="modalIco"></span><span id="modalBucket"></span></span>
+          <h2 class="modal-h" id="modalH"></h2>
+        </div>
+        <button class="modal-x" id="modalX" aria-label="Close">✕</button>
+      </div>
+      <div class="chunkbar-wrap" id="chunkbarWrap">
+        <div class="chunkbar-cap"><span>familiar</span><span>most obscure →</span></div>
+        <div class="chunkbar" id="chunkbar"></div>
+      </div>
+      <ul class="modal-list" id="modalList"></ul>
+      <div class="modal-foot">
+        <button class="btn-close" id="btnClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script id="famjam-data" type="application/json">{
+  "season": "Fam-Jam Season 3",
+  "leagueName": "Fam-Jam",
+  "seasonNumber": 3,
+  "roundCount": 11,
+  "songCount": 114,
+  "playerCount": 11,
+  "generatedNote": "Real Fam Jam S3 discoverability data exported from the league DB for discoverability-v2 visual mockups. Static snapshot — not a live feed.",
+  "obscurityFormula": "obscurity = 100 - popularity_proxy; popularity_proxy = log-normalized Last.fm listeners+playcount over the full corpus (0-100). meanObscurity/medianObscurity are per-player across scored songs. mainstreamPicks = count of a player's songs with obscurity < 10.",
+  "mainstreamThreshold": 10,
+  "songsMissingPopularity": [],
+  "players": [
+    {
+      "name": "Em",
+      "submissionCount": 10,
+      "scoredCount": 10,
+      "meanObscurity": 26,
+      "medianObscurity": 26,
+      "mainstreamPicks": 1,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Whitney Houston",
+          "title": "I Wanna Dance with Somebody (Who Loves Me)",
+          "spotify_uri": "spotify:track:2tUBqZG2AbRi7Q0BIrVrEj",
+          "listeners": 1352226,
+          "playcount": 8780223,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 86,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Quinn Christopherson",
+          "title": "Good Boy",
+          "spotify_uri": "spotify:track:5OON61U87cy8Lpi7kqWX7Y",
+          "listeners": 7855,
+          "playcount": 31074,
+          "popularity_proxy": 58,
+          "obscurity": 42,
+          "spotify_popularity": 17,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "spill tab",
+          "title": "Calvaire",
+          "spotify_uri": "spotify:track:1rJRb5A6ZfqOuqLCwpD7Ld",
+          "listeners": 66821,
+          "playcount": 364039,
+          "popularity_proxy": 72,
+          "obscurity": 28,
+          "spotify_popularity": 41,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Anna Leone",
+          "title": "My Soul I",
+          "spotify_uri": "spotify:track:4yzgJXvWFXWGLd4vQMYo9p",
+          "listeners": 36023,
+          "playcount": 148872,
+          "popularity_proxy": 67,
+          "obscurity": 33,
+          "spotify_popularity": 50,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Angel Olsen",
+          "title": "All The Good Times",
+          "spotify_uri": "spotify:track:6Tv21RLLA1Dt6OtPNz8QDq",
+          "listeners": 105524,
+          "playcount": 728122,
+          "popularity_proxy": 76,
+          "obscurity": 24,
+          "spotify_popularity": 46,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "spill tab",
+          "title": "Suckerrr",
+          "spotify_uri": "spotify:track:0vjwvjTIr3xicvWyDbMRLm",
+          "listeners": 27656,
+          "playcount": 83986,
+          "popularity_proxy": 65,
+          "obscurity": 35,
+          "spotify_popularity": 40,
+          "points": 17
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Imogen Heap",
+          "title": "Hide and Seek",
+          "spotify_uri": "spotify:track:2tej1KSqNuxwywIpY1rDRc",
+          "listeners": 1154670,
+          "playcount": 10626943,
+          "popularity_proxy": 91,
+          "obscurity": 9,
+          "spotify_popularity": 65,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Eddie Vedder",
+          "title": "Setting Forth",
+          "spotify_uri": "spotify:track:0NkeEkDFOby5xOZ7BIKVuD",
+          "listeners": 349281,
+          "playcount": 2380508,
+          "popularity_proxy": 83,
+          "obscurity": 17,
+          "spotify_popularity": 52,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Eric Clapton",
+          "title": "Change the World",
+          "spotify_uri": "spotify:track:5Ds0VGkTSQ1jf4KzLUpZPb",
+          "listeners": 433136,
+          "playcount": 2083503,
+          "popularity_proxy": 82,
+          "obscurity": 18,
+          "spotify_popularity": 68,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Noga Erez",
+          "title": "BUBBLING",
+          "spotify_uri": "spotify:track:6s5eOLOj3Zlb9x6eOfN1lM",
+          "listeners": 7617,
+          "playcount": 26157,
+          "popularity_proxy": 57,
+          "obscurity": 43,
+          "spotify_popularity": 56,
+          "points": 3
+        }
+      ]
+    },
+    {
+      "name": "Johanna Friedman",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 22,
+      "medianObscurity": 21,
+      "mainstreamPicks": 1,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "The Human League",
+          "title": "Don't You Want Me",
+          "spotify_uri": "spotify:track:3L7RtEcu1Hw3OXrpnthngx",
+          "listeners": 1148293,
+          "playcount": 7835020,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 78,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Harry Styles",
+          "title": "Aperture",
+          "spotify_uri": "spotify:track:45Z3m6yazmAi4jZuW0tzW0",
+          "listeners": 598504,
+          "playcount": 6499018,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 80,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "TV Themes",
+          "title": "Knight Rider",
+          "spotify_uri": "spotify:track:3FnSNtCcN0dySWXSQ0lFQl",
+          "listeners": 7686,
+          "playcount": 27835,
+          "popularity_proxy": 58,
+          "obscurity": 42,
+          "spotify_popularity": 46,
+          "points": 3
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "JJ",
+          "title": "Things Will Never Be The Same Again",
+          "spotify_uri": "spotify:track:3PuzCzuFmDqVtCp6PWlUio",
+          "listeners": 76485,
+          "playcount": 570819,
+          "popularity_proxy": 74,
+          "obscurity": 26,
+          "spotify_popularity": 22,
+          "points": 3
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Mapei",
+          "title": "Don't Wait - Chance The Rapper & The Social Experiment Remix",
+          "spotify_uri": "spotify:track:28aa0V0fyUENFIKxorRqw7",
+          "listeners": 186739,
+          "playcount": 1229527,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 38,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Bad Bunny",
+          "title": "DtMF",
+          "spotify_uri": "spotify:track:3sK8wGT43QFpWrvNQsrQya",
+          "listeners": 1332456,
+          "playcount": 17654079,
+          "popularity_proxy": 93,
+          "obscurity": 7,
+          "spotify_popularity": 97,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Amason",
+          "title": "You Don't Have To Call Me",
+          "spotify_uri": "spotify:track:3SRtBi7BOQopRV6ayIH0Ai",
+          "listeners": 12030,
+          "playcount": 54016,
+          "popularity_proxy": 61,
+          "obscurity": 39,
+          "spotify_popularity": 0,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "The Knife",
+          "title": "Heartbeats",
+          "spotify_uri": "spotify:track:5P2hEcHjoNMh33EsFPPOJE",
+          "listeners": 836649,
+          "playcount": 8354416,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 61,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Tom Zé",
+          "title": "Jimmy, Renda-Se",
+          "spotify_uri": "spotify:track:7mnmkNtSUpTAtI0PZFJWMo",
+          "listeners": 64125,
+          "playcount": 327190,
+          "popularity_proxy": 71,
+          "obscurity": 29,
+          "spotify_popularity": 25,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Ariel Pink",
+          "title": "Baby",
+          "spotify_uri": "spotify:track:2TUdxbIF3rpY887d8m0ZGV",
+          "listeners": 189840,
+          "playcount": 1077061,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 0,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "The B-52's",
+          "title": "Private Idaho",
+          "spotify_uri": "spotify:track:1y5V5qja332UyMeUurFhDS",
+          "listeners": 239695,
+          "playcount": 1460615,
+          "popularity_proxy": 80,
+          "obscurity": 20,
+          "spotify_popularity": 59,
+          "points": 6
+        }
+      ]
+    },
+    {
+      "name": "Mashew",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 22,
+      "medianObscurity": 22,
+      "mainstreamPicks": 1,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Rush",
+          "title": "Tom Sawyer",
+          "spotify_uri": "spotify:track:3QZ7uX97s82HFYSmQUAN1D",
+          "listeners": 939202,
+          "playcount": 7281253,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 74,
+          "points": 4
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Jack White",
+          "title": "Archbishop Harold Holmes",
+          "spotify_uri": "spotify:track:0hIYrRFTLlG8pRjAn9tW4P",
+          "listeners": 67920,
+          "playcount": 354010,
+          "popularity_proxy": 72,
+          "obscurity": 28,
+          "spotify_popularity": 57,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "Peelander-Z",
+          "title": "So Many Mike",
+          "spotify_uri": "spotify:track:4go5AK2AKAxSjufSTb4OQq",
+          "listeners": 3305,
+          "playcount": 12431,
+          "popularity_proxy": 53,
+          "obscurity": 47,
+          "spotify_popularity": 22,
+          "points": 17
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Radiohead",
+          "title": "Everything In Its Right Place",
+          "spotify_uri": "spotify:track:2kRFrWaLWiKq48YYVdGcm8",
+          "listeners": 2036328,
+          "playcount": 22691194,
+          "popularity_proxy": 95,
+          "obscurity": 5,
+          "spotify_popularity": 77,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Baby Keem",
+          "title": "Good Flirts (feat. Kendrick Lamar & Momo Boyd)",
+          "spotify_uri": "spotify:track:5sHeIGDbdzw8DeO57XZKIy",
+          "listeners": 236651,
+          "playcount": 1246103,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 76,
+          "points": 16
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "T.I.",
+          "title": "LET 'EM KNOW",
+          "spotify_uri": "spotify:track:6AXf9n3qazR1bE1dngnqxi",
+          "listeners": 32692,
+          "playcount": 144791,
+          "popularity_proxy": 67,
+          "obscurity": 33,
+          "spotify_popularity": 78,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Bloc Party",
+          "title": "Ratchet",
+          "spotify_uri": "spotify:track:1k5AiK2Gm2TaJtkkDeQnMi",
+          "listeners": 155074,
+          "playcount": 989265,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 53,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Goldfinger",
+          "title": "Here In Your Bedroom",
+          "spotify_uri": "spotify:track:7MH63filSWHfjwMlQrlQQG",
+          "listeners": 158812,
+          "playcount": 779859,
+          "popularity_proxy": 77,
+          "obscurity": 23,
+          "spotify_popularity": 52,
+          "points": 4
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Tommy James & The Shondells",
+          "title": "Crystal Blue Persuasion",
+          "spotify_uri": "spotify:track:0aD8W0ChzDgEKpB1zsJ8zv",
+          "listeners": 199784,
+          "playcount": 986162,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 60,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "The Smashing Pumpkins",
+          "title": "Mayonaise - 2011 Remaster",
+          "spotify_uri": "spotify:track:2junx9LRubsMY2OHaSc5DE",
+          "listeners": 543082,
+          "playcount": 5989966,
+          "popularity_proxy": 87,
+          "obscurity": 13,
+          "spotify_popularity": 47,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "underscores",
+          "title": "Second hand embarrassment",
+          "spotify_uri": "spotify:track:1PEPcLm2QEo0HCRIhQjPq1",
+          "listeners": 132326,
+          "playcount": 1416311,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 48,
+          "points": 10
+        }
+      ]
+    },
+    {
+      "name": "missmara",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 21,
+      "medianObscurity": 21,
+      "mainstreamPicks": 0,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Billy Idol",
+          "title": "White Wedding - Pt. 1",
+          "spotify_uri": "spotify:track:1gzIbdFnGJ226LTl0Cn2SX",
+          "listeners": 526956,
+          "playcount": 3194842,
+          "popularity_proxy": 85,
+          "obscurity": 15,
+          "spotify_popularity": 76,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Viagra Boys",
+          "title": "Punk Rock Loser",
+          "spotify_uri": "spotify:track:2pqoh1jUQoppztoQRRGyKK",
+          "listeners": 166145,
+          "playcount": 1453119,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 59,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "John + Jane Q. Public",
+          "title": "Watermelon",
+          "spotify_uri": "spotify:track:03W2WiY9OSnUI4F9dy9L60",
+          "listeners": 503687,
+          "playcount": 0,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 75,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Yeah Yeah Yeahs",
+          "title": "Spitting Off the Edge of the World",
+          "spotify_uri": "spotify:track:0JX23XA8E7aN1Chj32kgVn",
+          "listeners": 286762,
+          "playcount": 1774082,
+          "popularity_proxy": 81,
+          "obscurity": 19,
+          "spotify_popularity": 73,
+          "points": 26
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "A$AP Rocky",
+          "title": "ROBBERY (feat. Doechii)",
+          "spotify_uri": "spotify:track:5FYaSV8TLF7qvonB1BDOw0",
+          "listeners": 145947,
+          "playcount": 620840,
+          "popularity_proxy": 76,
+          "obscurity": 24,
+          "spotify_popularity": 62,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "James Blake",
+          "title": "Where's The Catch? (feat. André 3000)",
+          "spotify_uri": "spotify:track:7omij53d6AvXefx13NNyfn",
+          "listeners": 121281,
+          "playcount": 976564,
+          "popularity_proxy": 77,
+          "obscurity": 23,
+          "spotify_popularity": 47,
+          "points": 16
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Little Simz",
+          "title": "Point and Kill",
+          "spotify_uri": "spotify:track:52y4KhkcAbYcogFg2u7UVP",
+          "listeners": 215957,
+          "playcount": 1652469,
+          "popularity_proxy": 80,
+          "obscurity": 20,
+          "spotify_popularity": 62,
+          "points": 21
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Denis Leary",
+          "title": "Asshole",
+          "spotify_uri": "spotify:track:5i0BBU8OZdD7EkYeA5WrSq",
+          "listeners": 76200,
+          "playcount": 320057,
+          "popularity_proxy": 72,
+          "obscurity": 28,
+          "spotify_popularity": 53,
+          "points": 18
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Discovery",
+          "title": "Osaka Loop Line",
+          "spotify_uri": "spotify:track:5FhR3iMNhjkDDJYvS6e2wP",
+          "listeners": 140436,
+          "playcount": 946020,
+          "popularity_proxy": 77,
+          "obscurity": 23,
+          "spotify_popularity": 36,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Led Zeppelin",
+          "title": "Ramble On - 1990 Remaster",
+          "spotify_uri": "spotify:track:3MODES4TNtygekLl146Dxd",
+          "listeners": 810665,
+          "playcount": 6366038,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 73,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Cheekface",
+          "title": "\"Listen to Your Heart.\" \"No.\"",
+          "spotify_uri": "spotify:track:2YBVnFZlsRR4ssWXodkWPY",
+          "listeners": 45843,
+          "playcount": 405856,
+          "popularity_proxy": 72,
+          "obscurity": 28,
+          "spotify_popularity": 40,
+          "points": 10
+        }
+      ]
+    },
+    {
+      "name": "Jerry Bekier",
+      "submissionCount": 10,
+      "scoredCount": 10,
+      "meanObscurity": 20,
+      "medianObscurity": 21,
+      "mainstreamPicks": 2,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Eartha Kitt",
+          "title": "C'est Si Bon",
+          "spotify_uri": "spotify:track:3U69pCQwveSOn5bl9VAime",
+          "listeners": 127628,
+          "playcount": 406408,
+          "popularity_proxy": 74,
+          "obscurity": 26,
+          "spotify_popularity": 51,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Elton John",
+          "title": "Daniel",
+          "spotify_uri": "spotify:track:1BvJmtaXsqtH438BcDPeBb",
+          "listeners": 504161,
+          "playcount": 2378002,
+          "popularity_proxy": 83,
+          "obscurity": 17,
+          "spotify_popularity": 72,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "David Bowie",
+          "title": "Breaking Glass - 2017 Remaster",
+          "spotify_uri": "spotify:track:2xFq7wVYKmTHFUySyfv789",
+          "listeners": 186457,
+          "playcount": 973408,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 45,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Eagles",
+          "title": "Hotel California - Live; 1999 Remaster",
+          "spotify_uri": "spotify:track:5JU7FgGJqgGPUaJA2nhZvm",
+          "listeners": 1414682,
+          "playcount": 14220525,
+          "popularity_proxy": 92,
+          "obscurity": 8,
+          "spotify_popularity": 55,
+          "points": 4
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Bob Seger",
+          "title": "Against The Wind",
+          "spotify_uri": "spotify:track:1SWmFiFSIBoDbQJjNKC7SR",
+          "listeners": 247759,
+          "playcount": 1101783,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 73,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Rush",
+          "title": "Tom Sawyer",
+          "spotify_uri": "spotify:track:3QZ7uX97s82HFYSmQUAN1D",
+          "listeners": 939202,
+          "playcount": 7281253,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 74,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Elton John",
+          "title": "Take Me To The Pilot",
+          "spotify_uri": "spotify:track:1CPmTJHyeVRWsc6Va27fpQ",
+          "listeners": 101844,
+          "playcount": 451242,
+          "popularity_proxy": 74,
+          "obscurity": 26,
+          "spotify_popularity": 48,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "The Great TV Crew",
+          "title": "Gilligan's Island Theme",
+          "spotify_uri": "spotify:track:3T8lqmIn5TAUzU9wjPt2YD",
+          "listeners": 4096,
+          "playcount": 11665,
+          "popularity_proxy": 53,
+          "obscurity": 47,
+          "spotify_popularity": 36,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Michael Jackson",
+          "title": "Billie Jean",
+          "spotify_uri": "spotify:track:7J1uxwnxfQLu4APicE5Rnj",
+          "listeners": 3319021,
+          "playcount": 27663980,
+          "popularity_proxy": 97,
+          "obscurity": 3,
+          "spotify_popularity": 98,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Bob Seger",
+          "title": "Against The Wind",
+          "spotify_uri": "spotify:track:1SWmFiFSIBoDbQJjNKC7SR",
+          "listeners": 247759,
+          "playcount": 1101783,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 73,
+          "points": 15
+        }
+      ]
+    },
+    {
+      "name": "Marco",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 20,
+      "medianObscurity": 21,
+      "mainstreamPicks": 1,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Talking Heads",
+          "title": "Psycho Killer",
+          "spotify_uri": "spotify:track:7dSCxR4LqkmxoBrq9MzVSD",
+          "listeners": 1179689,
+          "playcount": 6657704,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 80,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Bronski Beat",
+          "title": "Smalltown Boy",
+          "spotify_uri": "spotify:track:5vmRQ3zELMLUQPo2FLQ76x",
+          "listeners": 1044242,
+          "playcount": 8547743,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 84,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "Yusuf / Cat Stevens",
+          "title": "The Wind",
+          "spotify_uri": "spotify:track:1L70BbUDG0C4EJQ1ZF10sG",
+          "listeners": 181198,
+          "playcount": 976657,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 0,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Sibylle Baier",
+          "title": "Tonight",
+          "spotify_uri": "spotify:track:2JIVtls9Jf9nAosUbFzbyw",
+          "listeners": 193302,
+          "playcount": 1135648,
+          "popularity_proxy": 79,
+          "obscurity": 21,
+          "spotify_popularity": 46,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Temple Of The Dog",
+          "title": "Hunger Strike",
+          "spotify_uri": "spotify:track:0W7AbEauB7cP4pidLclApe",
+          "listeners": 645831,
+          "playcount": 4257378,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 75,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "J.J. Cale",
+          "title": "Don't Go To Strangers",
+          "spotify_uri": "spotify:track:5qZKuuKGngifO5psg19XdO",
+          "listeners": 181600,
+          "playcount": 754926,
+          "popularity_proxy": 77,
+          "obscurity": 23,
+          "spotify_popularity": 61,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Lola Young",
+          "title": "Messy",
+          "spotify_uri": "spotify:track:3SKH53SPQbEnZR4cJPVaz2",
+          "listeners": 926774,
+          "playcount": 10279940,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 82,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Fairuz",
+          "title": "Ana Le Habiby",
+          "spotify_uri": "spotify:track:7cjCNwAwKNjgxfjt1TzK4e",
+          "listeners": 25368,
+          "playcount": 160511,
+          "popularity_proxy": 67,
+          "obscurity": 33,
+          "spotify_popularity": 56,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Sam Smith",
+          "title": "Writing's On The Wall - From \"Spectre\" Soundtrack",
+          "spotify_uri": "spotify:track:1PWnAEQcbwQwK759otUbta",
+          "listeners": 151511,
+          "playcount": 949651,
+          "popularity_proxy": 77,
+          "obscurity": 23,
+          "spotify_popularity": 65,
+          "points": 3
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Kanye West",
+          "title": "Homecoming",
+          "spotify_uri": "spotify:track:4iz9lGMjU1lXS51oPmUmTe",
+          "listeners": 1528871,
+          "playcount": 21147954,
+          "popularity_proxy": 94,
+          "obscurity": 6,
+          "spotify_popularity": 86,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Harold Faltermeyer",
+          "title": "Fletch Theme",
+          "spotify_uri": "spotify:track:2bnC2685wL0i7ATaFk4Faz",
+          "listeners": 4442,
+          "playcount": 19771,
+          "popularity_proxy": 55,
+          "obscurity": 45,
+          "spotify_popularity": 33,
+          "points": 5
+        }
+      ]
+    },
+    {
+      "name": "Sarah",
+      "submissionCount": 8,
+      "scoredCount": 8,
+      "meanObscurity": 20,
+      "medianObscurity": 17,
+      "mainstreamPicks": 0,
+      "songs": [
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Arcade Fire",
+          "title": "Sprawl II (Mountains Beyond Mountains)",
+          "spotify_uri": "spotify:track:0U0p8weaMIbIFMJ0CPlvHV",
+          "listeners": 665486,
+          "playcount": 6585885,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 54,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "The Pogues",
+          "title": "Fairytale of New York (feat. Kirsty MacColl)",
+          "spotify_uri": "spotify:track:3VTNVsTTu05dmTsVFrmGpK",
+          "listeners": 472315,
+          "playcount": 2910399,
+          "popularity_proxy": 84,
+          "obscurity": 16,
+          "spotify_popularity": 59,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Tainy",
+          "title": "MOJABI GHOST",
+          "spotify_uri": "spotify:track:46YjJXVXWHlQ21odKktg5e",
+          "listeners": 387540,
+          "playcount": 6331400,
+          "popularity_proxy": 87,
+          "obscurity": 13,
+          "spotify_popularity": 86,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Burna Boy",
+          "title": "Last Last",
+          "spotify_uri": "spotify:track:5YbPxJwPfrj7uswNwoF1pJ",
+          "listeners": 253499,
+          "playcount": 2519087,
+          "popularity_proxy": 82,
+          "obscurity": 18,
+          "spotify_popularity": 70,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Avicii",
+          "title": "Levels - Original Version",
+          "spotify_uri": "spotify:track:6Xe9wT5xeZETPwtaP2ynUz",
+          "listeners": 324964,
+          "playcount": 2400248,
+          "popularity_proxy": 82,
+          "obscurity": 18,
+          "spotify_popularity": 72,
+          "points": 8
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Ennio Morricone",
+          "title": "Guerra e pace, pollo e brace - From \"Grazie Zia\"",
+          "spotify_uri": "spotify:track:4CikhurSvIAPkMF2o3LNEv",
+          "listeners": 5641,
+          "playcount": 24505,
+          "popularity_proxy": 57,
+          "obscurity": 43,
+          "spotify_popularity": 37,
+          "points": 4
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Kanye West",
+          "title": "Never Let Me Down",
+          "spotify_uri": "spotify:track:34j4OxJxKznBs88cjSL2j9",
+          "listeners": 544968,
+          "playcount": 4315152,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 65,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Geto Boys",
+          "title": "Damn It Feels Good to Be a Gangsta",
+          "spotify_uri": "spotify:track:0HOqINudNgQFpg1le5Hnqe",
+          "listeners": 200124,
+          "playcount": 1043033,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 2,
+          "points": 13
+        }
+      ]
+    },
+    {
+      "name": "Jorbo",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 19,
+      "medianObscurity": 17,
+      "mainstreamPicks": 1,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Queen",
+          "title": "I Want To Break Free",
+          "spotify_uri": "spotify:track:25H6P7a94WUr5102lC6TNI",
+          "listeners": 1181779,
+          "playcount": 7115260,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 64,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Silversun Pickups",
+          "title": "Lazy Eye",
+          "spotify_uri": "spotify:track:3l24Vnw1YbWv8UEKaZLjCE",
+          "listeners": 763568,
+          "playcount": 7039134,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 70,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "Halsey",
+          "title": "Letter to God (1983)",
+          "spotify_uri": "spotify:track:3ypVmE3U84wPuWHkhh8uFi",
+          "listeners": 86600,
+          "playcount": 508095,
+          "popularity_proxy": 74,
+          "obscurity": 26,
+          "spotify_popularity": 36,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Little Dragon",
+          "title": "Ritual Union",
+          "spotify_uri": "spotify:track:5uTjNzGKCQ50synrf9dWmT",
+          "listeners": 419421,
+          "playcount": 2665355,
+          "popularity_proxy": 83,
+          "obscurity": 17,
+          "spotify_popularity": 62,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "The Night Game",
+          "title": "Do You Think About Us?",
+          "spotify_uri": "spotify:track:5qWfbqQUmQGS0fy15emahR",
+          "listeners": 14469,
+          "playcount": 89767,
+          "popularity_proxy": 63,
+          "obscurity": 37,
+          "spotify_popularity": 38,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "The Warning",
+          "title": "MORE",
+          "spotify_uri": "spotify:track:5IDRSA83ayUGCCRdfdl04z",
+          "listeners": 67608,
+          "playcount": 686218,
+          "popularity_proxy": 74,
+          "obscurity": 26,
+          "spotify_popularity": 60,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Olivia Dean",
+          "title": "Echo",
+          "spotify_uri": "spotify:track:1Gy9Ofi7nPnNf3kGWPjurm",
+          "listeners": 198932,
+          "playcount": 1088435,
+          "popularity_proxy": 78,
+          "obscurity": 22,
+          "spotify_popularity": 78,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Pixies",
+          "title": "Where Is My Mind?",
+          "spotify_uri": "spotify:track:0KzAbK6nItSqNh8q70tb0K",
+          "listeners": 1843288,
+          "playcount": 18128722,
+          "popularity_proxy": 94,
+          "obscurity": 6,
+          "spotify_popularity": 76,
+          "points": 9
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Lovefoxxx",
+          "title": "Nightcall",
+          "spotify_uri": "spotify:track:5MEkZ1euL2fizJmhZWUVs6",
+          "listeners": 36225,
+          "playcount": 169308,
+          "popularity_proxy": 68,
+          "obscurity": 32,
+          "spotify_popularity": 0,
+          "points": 15
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Dr. Dre",
+          "title": "Forgot About Dre",
+          "spotify_uri": "spotify:track:7iXF2W9vKmDoGAhlHdpyIa",
+          "listeners": 1049609,
+          "playcount": 7443666,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 81,
+          "points": 18
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Warren G",
+          "title": "Regulate",
+          "spotify_uri": "spotify:track:7nYvUtkQMx1v80S2FH2s9J",
+          "listeners": 827255,
+          "playcount": 4897675,
+          "popularity_proxy": 87,
+          "obscurity": 13,
+          "spotify_popularity": 74,
+          "points": 10
+        }
+      ]
+    },
+    {
+      "name": "Bri",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 16,
+      "medianObscurity": 16,
+      "mainstreamPicks": 0,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Madonna",
+          "title": "Open Your Heart",
+          "spotify_uri": "spotify:track:6poribUG9PSY1eudyCjJTS",
+          "listeners": 366342,
+          "playcount": 2899497,
+          "popularity_proxy": 83,
+          "obscurity": 17,
+          "spotify_popularity": 57,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Sabrina Carpenter",
+          "title": "Coincidence",
+          "spotify_uri": "spotify:track:5oIVNm56t6OIf9ZjdEG3ud",
+          "listeners": 744299,
+          "playcount": 11534609,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 73,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "Regina Spektor",
+          "title": "Jessica",
+          "spotify_uri": "spotify:track:5N3XUdnK5klAU2TffilhBG",
+          "listeners": 78787,
+          "playcount": 373592,
+          "popularity_proxy": 72,
+          "obscurity": 28,
+          "spotify_popularity": 30,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Harry Styles",
+          "title": "Music For a Sushi Restaurant",
+          "spotify_uri": "spotify:track:5LYMamLv12UPbemOaTPyeV",
+          "listeners": 754635,
+          "playcount": 10153019,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 76,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Noah Cyrus",
+          "title": "July (feat. Leon Bridges)",
+          "spotify_uri": "spotify:track:3V0nnQhqvbE3JmiDdnzQFQ",
+          "listeners": 246643,
+          "playcount": 1417147,
+          "popularity_proxy": 80,
+          "obscurity": 20,
+          "spotify_popularity": 69,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Harry Styles",
+          "title": "Ready, Steady, Go!",
+          "spotify_uri": "spotify:track:0i4qKfuKJ3juUsEwnJAxk3",
+          "listeners": 367818,
+          "playcount": 3263489,
+          "popularity_proxy": 84,
+          "obscurity": 16,
+          "spotify_popularity": 84,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "The Paper Kites",
+          "title": "Paint",
+          "spotify_uri": "spotify:track:6uHvbKL0Yi37AuvNRmUfMw",
+          "listeners": 420045,
+          "playcount": 2865089,
+          "popularity_proxy": 84,
+          "obscurity": 16,
+          "spotify_popularity": 69,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Scott Matthews",
+          "title": "Eyes Wider Than Before",
+          "spotify_uri": "spotify:track:7cgTmhKIKfTwqMBmrkAAfU",
+          "listeners": 77068,
+          "playcount": 289083,
+          "popularity_proxy": 71,
+          "obscurity": 29,
+          "spotify_popularity": 28,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Cat Power",
+          "title": "Sea of Love",
+          "spotify_uri": "spotify:track:33kKcOJoyNduHwXhEnga8X",
+          "listeners": 765862,
+          "playcount": 6024507,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 60,
+          "points": 25
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Michael Jackson",
+          "title": "Man in the Mirror - 2012 Remaster",
+          "spotify_uri": "spotify:track:1kiNatIrwDusOZfR29W0LJ",
+          "listeners": 930136,
+          "playcount": 5902237,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 77,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Britney Spears",
+          "title": "Till the World Ends",
+          "spotify_uri": "spotify:track:38iU2jg98IZZEIJPrP7aWD",
+          "listeners": 806932,
+          "playcount": 10338249,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 68,
+          "points": 6
+        }
+      ]
+    },
+    {
+      "name": "Ellen Bekier",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 14,
+      "medianObscurity": 13,
+      "mainstreamPicks": 3,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Frankie Lymon",
+          "title": "Why Do Fools Fall in Love",
+          "spotify_uri": "spotify:track:2xKfXRhw5xaUXfevJJspZf",
+          "listeners": 77893,
+          "playcount": 267253,
+          "popularity_proxy": 71,
+          "obscurity": 29,
+          "spotify_popularity": 54,
+          "points": 3
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Billy Joel",
+          "title": "Piano Man",
+          "spotify_uri": "spotify:track:70C4NyhjD5OZUMzvWZ3njJ",
+          "listeners": 1733239,
+          "playcount": 14324546,
+          "popularity_proxy": 93,
+          "obscurity": 7,
+          "spotify_popularity": 87,
+          "points": 14
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "The Beatles",
+          "title": "I Will - Remastered 2009",
+          "spotify_uri": "spotify:track:09x9v1o51dbqi5H0u7UGfp",
+          "listeners": 567816,
+          "playcount": 4876152,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 71,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Billie Eilish",
+          "title": "lovely",
+          "spotify_uri": "spotify:track:7b4eqsDeLUzSrGth8uB2D1",
+          "listeners": 1515191,
+          "playcount": 18375921,
+          "popularity_proxy": 93,
+          "obscurity": 7,
+          "spotify_popularity": 65,
+          "points": 11
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Lady Gaga",
+          "title": "Shallow - Radio Edit",
+          "spotify_uri": "spotify:track:6QfS2wq5sSC1xAJCQsTSlj",
+          "listeners": 937093,
+          "playcount": 8890755,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 71,
+          "points": 3
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "Benson Boone",
+          "title": "Sorry I'm Here For Someone Else",
+          "spotify_uri": "spotify:track:15zJeVUmKFnbrxm9dxcxYD",
+          "listeners": 302355,
+          "playcount": 2283398,
+          "popularity_proxy": 82,
+          "obscurity": 18,
+          "spotify_popularity": 82,
+          "points": 2
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "Peso Pluma",
+          "title": "BELLAKEO",
+          "spotify_uri": "spotify:track:05WVKTdZhlIMX4qqMLuo0f",
+          "listeners": 314002,
+          "playcount": 5572206,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 74,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "The Beatles",
+          "title": "I Want To Hold Your Hand - Remastered 2015",
+          "spotify_uri": "spotify:track:4pbG9SUmWIvsROVLF0zF9s",
+          "listeners": 855621,
+          "playcount": 5508182,
+          "popularity_proxy": 88,
+          "obscurity": 12,
+          "spotify_popularity": 67,
+          "points": 5
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Rihanna",
+          "title": "Lift Me Up - From Black Panther: Wakanda Forever - Music From and Inspired By",
+          "spotify_uri": "spotify:track:35ovElsgyAtQwYPYnZJECg",
+          "listeners": 416626,
+          "playcount": 2943155,
+          "popularity_proxy": 84,
+          "obscurity": 16,
+          "spotify_popularity": 72,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "Kanye West",
+          "title": "Say You Will",
+          "spotify_uri": "spotify:track:5e5MKPtJuFb8NaeSEyV5gD",
+          "listeners": 693034,
+          "playcount": 4968174,
+          "popularity_proxy": 87,
+          "obscurity": 13,
+          "spotify_popularity": 60,
+          "points": 1
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Van Morrison",
+          "title": "Brown Eyed Girl",
+          "spotify_uri": "spotify:track:4CNL4GBNTdVIU5Nk6hB4LC",
+          "listeners": 1557159,
+          "playcount": 10460458,
+          "popularity_proxy": 91,
+          "obscurity": 9,
+          "spotify_popularity": 83,
+          "points": 7
+        }
+      ]
+    },
+    {
+      "name": "arigrey83",
+      "submissionCount": 11,
+      "scoredCount": 11,
+      "meanObscurity": 13,
+      "medianObscurity": 11,
+      "mainstreamPicks": 4,
+      "songs": [
+        {
+          "round": {
+            "id": 43,
+            "name": "What's My Age Again?"
+          },
+          "artist": "Bonnie Tyler",
+          "title": "Total Eclipse of the Heart",
+          "spotify_uri": "spotify:track:7wuJGgpTNzbUyn26IOY6rj",
+          "listeners": 1338995,
+          "playcount": 9130661,
+          "popularity_proxy": 90,
+          "obscurity": 10,
+          "spotify_popularity": 84,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 45,
+            "name": "Boyyyy Powerrr"
+          },
+          "artist": "Stevie Wonder",
+          "title": "Sir Duke",
+          "spotify_uri": "spotify:track:4pNiE4LCVV74vfIBaUHm1b",
+          "listeners": 1020465,
+          "playcount": 6726594,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 76,
+          "points": 6
+        },
+        {
+          "round": {
+            "id": 47,
+            "name": "I'm a 2th"
+          },
+          "artist": "The White Stripes",
+          "title": "Fell In Love With a Girl",
+          "spotify_uri": "spotify:track:21Qsj3cMVCx2xF2EVVNbEu",
+          "listeners": 1503048,
+          "playcount": 13040358,
+          "popularity_proxy": 92,
+          "obscurity": 8,
+          "spotify_popularity": 70,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 50,
+            "name": "Flying High"
+          },
+          "artist": "Air",
+          "title": "Venus",
+          "spotify_uri": "spotify:track:14EMkYvQQ3E7gI8MFc9bFd",
+          "listeners": 462411,
+          "playcount": 2473005,
+          "popularity_proxy": 83,
+          "obscurity": 17,
+          "spotify_popularity": 49,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 52,
+            "name": "Twofer"
+          },
+          "artist": "Marvin Gaye",
+          "title": "Ain't No Mountain High Enough",
+          "spotify_uri": "spotify:track:7tqhbajSfrz2F7E1Z75ASX",
+          "listeners": 1615558,
+          "playcount": 12028900,
+          "popularity_proxy": 92,
+          "obscurity": 8,
+          "spotify_popularity": 87,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 54,
+            "name": "My Current Jam"
+          },
+          "artist": "SAULT",
+          "title": "Wildfires",
+          "spotify_uri": "spotify:track:4Tzw9IdZbVyzmpWrvsGaNX",
+          "listeners": 317464,
+          "playcount": 2209770,
+          "popularity_proxy": 82,
+          "obscurity": 18,
+          "spotify_popularity": 75,
+          "points": 19
+        },
+        {
+          "round": {
+            "id": 56,
+            "name": "The Import Market"
+          },
+          "artist": "The Proclaimers",
+          "title": "I'm Gonna Be (500 Miles)",
+          "spotify_uri": "spotify:track:67iAlVNDDdddxqSD2EZhFs",
+          "listeners": 1007734,
+          "playcount": 6949329,
+          "popularity_proxy": 89,
+          "obscurity": 11,
+          "spotify_popularity": 80,
+          "points": 7
+        },
+        {
+          "round": {
+            "id": 58,
+            "name": "Permanent Record"
+          },
+          "artist": "Dirty Gold",
+          "title": "California Sunrise",
+          "spotify_uri": "spotify:track:3khtVBKKSjLZie9bMSuf1g",
+          "listeners": 88102,
+          "playcount": 429467,
+          "popularity_proxy": 73,
+          "obscurity": 27,
+          "spotify_popularity": 41,
+          "points": 12
+        },
+        {
+          "round": {
+            "id": 60,
+            "name": "OST-erity Measures"
+          },
+          "artist": "Paul Simon",
+          "title": "Me and Julio Down by the Schoolyard",
+          "spotify_uri": "spotify:track:6vxHp3CDNo0afgKGp2yi1E",
+          "listeners": 657220,
+          "playcount": 3969480,
+          "popularity_proxy": 86,
+          "obscurity": 14,
+          "spotify_popularity": 72,
+          "points": 13
+        },
+        {
+          "round": {
+            "id": 100,
+            "name": "Bangers by Trash"
+          },
+          "artist": "The Mamas & The Papas",
+          "title": "California Dreamin'",
+          "spotify_uri": "spotify:track:1ZEOIhSn6BKErV59bIgn76",
+          "listeners": 1403312,
+          "playcount": 11689818,
+          "popularity_proxy": 92,
+          "obscurity": 8,
+          "spotify_popularity": 77,
+          "points": 10
+        },
+        {
+          "round": {
+            "id": 101,
+            "name": "Did I Make Myself Clear?"
+          },
+          "artist": "Foo Fighters",
+          "title": "My Hero",
+          "spotify_uri": "spotify:track:4dVbhS6OiYvFikshyaQaCN",
+          "listeners": 1831876,
+          "playcount": 15320405,
+          "popularity_proxy": 93,
+          "obscurity": 7,
+          "spotify_popularity": 80,
+          "points": 5
+        }
+      ]
+    }
+  ]
+}</script>
+  <script>
+  (function () {
+    "use strict";
+    const DATA = JSON.parse(document.getElementById("famjam-data").textContent);
+
+    // bucket definitions (obscurity ranges) — order = mainstream → obscure
+    const BUCKETS = [
+      { key: "radio",   label: "Radio Hit",    cls: "radio",   color: "#f5762e", test: o => o < 10 },
+      { key: "recog",   label: "Recognizable", cls: "recog",   color: "#e8a83a", test: o => o >= 10 && o < 20 },
+      { key: "curious", label: "Curious Cut",  cls: "curious", color: "#5aa3ff", test: o => o >= 20 && o < 30 },
+      { key: "rabbit",  label: "Rabbit Hole",  cls: "rabbit",  color: "#3ec27a", test: o => o >= 30 },
+    ];
+    const bucketOf = o => BUCKETS.find(b => b.test(o)) || BUCKETS[BUCKETS.length - 1];
+
+    // small line-art icons per bucket (24×24 viewBox, stroke = currentColor)
+    const ICONS = {
+      // radio receiver
+      radio: '<svg viewBox="0 0 24 24"><path d="M5 9l13-5"/><rect x="3" y="9" width="18" height="11" rx="2"/><circle cx="8" cy="14.5" r="2.5"/><path d="M15 13h3M15 16h3"/></svg>',
+      // headphones (you know the tune)
+      recog: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/></svg>',
+      // magnifier (a curious dig)
+      curious: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
+      // down the rabbit hole (arrow into a hole)
+      rabbit: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="18.5" rx="8" ry="3"/><path d="M12 3v11M8 10l4 4 4-4"/></svg>',
+    };
+
+    // ILLUSTRATIVE previous-round ranks (no real priors in the sample) — keyed
+    // by name, chosen to show a mix of ▲ / ▼ / – against the current order.
+    const PREV_RANK = {
+      "Em": 3, "Mashew": 1, "Johanna Friedman": 2, "missmara": 4, "Jerry Bekier": 7,
+      "Marco": 5, "Sarah": 6, "Jorbo": 11, "Bri": 9, "Ellen Bekier": 8, "arigrey83": 10,
+    };
+
+    // ── discovery-percentile transform (same as the c-e-scatter rec doc) ──
+    // RAW obscurity is squashed (the pack bunches 11–26), so the headline
+    // Tastemaker score is the percentile-shifted median instead:
+    //   1. rank each song's raw obscurity into a 0–100 discovery percentile
+    //      across ALL scored songs in the sample (midrank: ties share the
+    //      mean rank — matches the rec doc, e.g. raw obscurity 10 → ~16).
+    //   2. each player's score = MEDIAN of their songs' percentiles → the
+    //      readable ~24–80 race. Sort + headline use this score.
+    // The BUCKETS below stay on RAW obscurity thresholds (absolute/explainable).
+    const allObs = [];
+    DATA.players.forEach(p => (p.songs || []).forEach(s => allObs.push(s.obscurity)));
+    const NOBS = allObs.length || 1;
+    const pctOf = x => {
+      let below = 0, eq = 0;
+      for (const o of allObs) { if (o < x) below++; else if (o === x) eq++; }
+      return ((below + 0.5 * eq) / NOBS) * 100;
+    };
+    const median = arr => {
+      const a = [...arr].sort((m, n) => m - n);
+      const k = a.length;
+      if (!k) return 0;
+      return k % 2 ? a[(k - 1) / 2] : (a[k / 2 - 1] + a[k / 2]) / 2;
+    };
+
+    // build per-player rows: percentile-median headline + bucketed songs
+    const rows = DATA.players.map(p => {
+      const groups = { radio: [], recog: [], curious: [], rabbit: [] };
+      (p.songs || []).forEach(s => groups[bucketOf(s.obscurity).key].push(s));
+      const score = Math.round(median((p.songs || []).map(s => pctOf(s.obscurity))));
+      return {
+        name: p.name,
+        score,                        // percentile-median Tastemaker score (headline + sort)
+        rawMedian: p.medianObscurity, // raw median obscurity (surfaced in the score tooltip)
+        mean: p.meanObscurity,
+        n: p.submissionCount,
+        groups,
+      };
+    });
+    // sort by percentile-median score desc; tie-break raw median, mean, name
+    rows.sort((a, b) =>
+      (b.score - a.score) || (b.rawMedian - a.rawMedian) || (b.mean - a.mean) || a.name.localeCompare(b.name));
+    rows.forEach((r, i) => { r.rank = i + 1; r.prevRank = PREV_RANK[r.name] ?? null; });
+
+    // ── render rows ──────────────────────────────────────────────────────
+    const rowsEl = document.getElementById("rows");
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    rows.forEach((r, ri) => {
+      // delta vs illustrative prevRank (mirror standings: lower rank number = better)
+      let dCls = "same", dArr = "–", dPrev = "";
+      if (r.prevRank != null) {
+        if (r.rank < r.prevRank) { dCls = "up"; dArr = "▲"; }
+        else if (r.rank > r.prevRank) { dCls = "down"; dArr = "▼"; }
+        dPrev = "(" + r.prevRank + ")";
+      }
+
+      const total = BUCKETS.reduce((sum, b) => sum + r.groups[b.key].length, 0) || 1;
+      const segs = BUCKETS.map(b => {
+        const songs = r.groups[b.key];
+        if (!songs.length) return "";
+        return '<button class="seg ' + b.cls + '" style="flex-grow:' + songs.length + '"'
+          + ' data-row="' + ri + '" data-bucket="' + b.key + '"'
+          + ' aria-label="' + esc(r.name) + ', ' + songs.length + ' ' + b.label + ' songs — tap for list">'
+          + songs.length + "</button>";
+      }).join("");
+
+      const div = document.createElement("div");
+      div.className = "row";
+      div.innerHTML =
+        '<div class="left">' +
+          '<span class="score" title="Tastemaker score = median discovery percentile (raw median obscurity ' + r.rawMedian + ')">' + r.score + '</span>' +
+          '<span class="delta ' + dCls + '"><span class="arr">' + dArr + '</span><span class="prev">' + dPrev + '</span></span>' +
+        '</div>' +
+        '<div class="right">' +
+          '<div class="name-row"><span class="name">' + esc(r.name) + '</span><span class="rk">#' + r.rank + '</span></div>' +
+          '<div class="bar">' + segs + '</div>' +
+        '</div>';
+      rowsEl.appendChild(div);
+    });
+
+    // ── modal ────────────────────────────────────────────────────────────
+    const scrim = document.getElementById("scrim");
+    const modalEl = document.getElementById("modal");
+    const modalList = document.getElementById("modalList");
+    const modalH = document.getElementById("modalH");
+    const modalBucket = document.getElementById("modalBucket");
+    const modalIco = document.getElementById("modalIco");
+    const chunkbar = document.getElementById("chunkbar");
+    let lastFocus = null;
+
+    // highlight a chunk + its song row together (both carry data-idx)
+    function setHL(idx, on) {
+      modalEl.querySelectorAll('[data-idx="' + idx + '"]').forEach(el => el.classList.toggle("hl", on));
+    }
+
+    function openModal(rowIdx, bucketKey) {
+      const r = rows[rowIdx];
+      const b = BUCKETS.find(x => x.key === bucketKey);
+      // MOST-OBSCURE FIRST (top of list); list index = desc index = chunk number
+      const songs = r.groups[bucketKey].slice().sort((a, z) => z.obscurity - a.obscurity);
+      const n = songs.length;
+
+      // theme the modal to the bucket (piping, chunks, song numbers, hl accent)
+      modalEl.style.setProperty("--bucket", b.color);
+      modalIco.innerHTML = ICONS[b.key] || "";
+      modalBucket.textContent = b.label + " · " + n + " song" + (n === 1 ? "" : "s");
+      modalBucket.parentElement.style.color = b.color;
+      modalH.innerHTML = '<span class="who">' + esc(r.name) + '</span>';
+
+      // chunked bar: one rectangle per song, left→right = least→most obscure,
+      // so the RIGHTMOST chunk = the most obscure = the top row in the list.
+      // Each chunk is labelled with its song's list number (1 = most obscure).
+      chunkbar.innerHTML = songs.slice().reverse().map((s, j) => {
+        const idx = n - 1 - j;                  // index back into the most-obscure-first list
+        const op = (0.62 + 0.38 * (j / Math.max(1, n - 1))).toFixed(3); // ramps up toward the right
+        return '<div class="chunk" data-idx="' + idx + '" style="opacity:' + op + '"'
+          + ' title="#' + (idx + 1) + ' · ' + esc(s.title) + ' (ob ' + s.obscurity + ')">' + (idx + 1) + '</div>';
+      }).join("");
+
+      modalList.innerHTML = songs.map((s, i) =>
+        '<li class="song" data-idx="' + i + '">' +
+          '<span class="song-n">' + (i + 1) + '</span>' +
+          '<span class="song-main">' +
+            '<span class="song-title">' + esc(s.title) + '</span>' +
+            '<span class="song-artist">' + esc(s.artist) + '</span>' +
+          '</span>' +
+          '<span class="song-meta">' +
+            '<span class="song-ob" style="color:' + b.color + '">ob ' + s.obscurity + '</span><br>' +
+            '<span class="song-round">' + esc((s.round && s.round.name) || "") + '</span>' +
+          '</span>' +
+        '</li>'
+      ).join("");
+
+      lastFocus = document.activeElement;
+      scrim.classList.add("open");
+      document.body.style.overflow = "hidden";
+      document.getElementById("modalX").focus();
+    }
+
+    // hover/tap correspondence between chunks and song rows (event-delegated)
+    modalEl.addEventListener("pointerover", e => {
+      const el = e.target.closest("[data-idx]");
+      if (el) setHL(el.dataset.idx, true);
+    });
+    modalEl.addEventListener("pointerout", e => {
+      const el = e.target.closest("[data-idx]");
+      if (el) setHL(el.dataset.idx, false);
+    });
+    function closeModal() {
+      scrim.classList.remove("open");
+      document.body.style.overflow = "";
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    rowsEl.addEventListener("click", e => {
+      const seg = e.target.closest(".seg");
+      if (!seg) return;
+      openModal(Number(seg.dataset.row), seg.dataset.bucket);
+    });
+    document.getElementById("modalX").addEventListener("click", closeModal);
+    document.getElementById("btnClose").addEventListener("click", closeModal);
+    scrim.addEventListener("click", e => { if (e.target === scrim) closeModal(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && scrim.classList.contains("open")) closeModal(); });
+  })();
+  </script>
+</body>
+</html>
