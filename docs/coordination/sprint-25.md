@@ -2,9 +2,10 @@
 project: music-league-bot
 sprint: sprint-25
 title: League/Season/Round/Player Model Foundation
-status: planned
+status: active
 created: 2026-06-11T22:56:09Z
-updated: 2026-06-11T22:56:09Z
+activated: 2026-06-11
+updated: 2026-06-11T23:04:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-25)
