@@ -119,7 +119,7 @@ handoff entry and request a reset from orc rather than pushing on.
 
 ### Wave 4 — identity migration
 
-- [ ] {agent: backend, id: history-player-id, depends: gate-3} **History views on player_id.** Migrate `playerHistory.ts` and `/api/history/players` (+ `/api/history/players/:name`) from `competitors.name` string matching to stable `player_id` joins, so renames don't fracture history and cross-league identity unifies. Keep response shapes the History tab already consumes (or coordinate a shape change with frontend via a handoff note).
+- [x] {agent: backend, id: history-player-id, depends: gate-3} **History views on player_id.** Migrate `playerHistory.ts` and `/api/history/players` (+ `/api/history/players/:name`) from `competitors.name` string matching to stable `player_id` joins, so renames don't fracture history and cross-league identity unifies. Keep response shapes the History tab already consumes (or coordinate a shape change with frontend via a handoff note).
   - **Acceptance:** renaming a player (UI or direct update) leaves their full history intact in `/history?tab=players`; a player in both leagues shows one unified record; existing History tab renders unchanged (27-player roster, taste overlap) on prod data; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: fk-migration, depends: history-player-id} **FK migration: gameplay tables → players.** Repoint `ml_submissions.competitor_id`, `votes.voter_id`, `season_standings.competitor_id`, `rounds.theme_chooser_id` at `players`, with a deterministic backfill from the `player-model` mapping. Run on a copy of the real DB first with before/after row-count + spot-check assertions (a known round's standings identical pre/post). Full regression pass over digest generation, standings, and history.
@@ -149,6 +149,43 @@ Card `rn-fb830fc7` resolved `ratified` by user at 09:09Z. Covers Waves 1 and 3 a
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — backend-agent — history-player-id shipped (Wave 4)
+
+**`history-player-id` is COMPLETE. `fk-migration` is now unblocked — awaiting orc go.**
+
+**What landed (commit `d628723`):**
+
+Three files changed; response shapes preserved; no frontend changes needed.
+
+**`ui/src/lib/db/client.ts`**
+- Added `player_id INTEGER REFERENCES players(id)` column to `competitors` via idempotent ALTER TABLE migration, placed after the `players` table creation block so the FK reference always resolves.
+- Backfill on first boot: `UPDATE competitors SET player_id = (SELECT players.id FROM players WHERE players.ml_competitor_id = competitors.ml_competitor_id ...)`. On the real prod DB, `players.ml_competitor_id` is NULL for all manually-created players (created via the setup UI with real names), so this backfill is a no-op today but wires correctly for future imports that populate `ml_competitor_id`.
+
+**`ui/src/lib/db/playerHistory.ts`** — rewritten
+- Internal identity key changed from `competitors.name` string to a stable key: `'p:N'` when `competitors.player_id` is set, `'c:N'` for unlinked competitors. Unlinked competitors fall back to `competitors.name` for display — the 27-entry roster on prod data is unchanged.
+- `submissionRows` / `votedSets` / `winRates` / `getPlayers` — all keyed by stable key. `getPlayers` returns `players.name` for linked competitors, `competitors.name` for unlinked.
+- `resolvePlayerKey(db, name)` — new internal function. Checks `players WHERE name = ?` first (returns `'p:N'` + all linked competitor IDs); falls back to `competitors WHERE name = ?`.
+- `getPlayer(db, name)` — rewritten: resolves via player name → all linked competitor IDs → aggregated submissions from all leagues. Single `submissionRows()` call; taste overlap keyed by `displayName`.
+- API routes `/api/history/players` and `/api/history/players/:name` unchanged — both still call `getPlayers` / `getPlayer` with the same signatures and return the same shapes.
+
+**Behavior on prod data:**
+- `GET /api/history/players` → 27 players (unchanged roster count; all currently unlinked → displays as `competitors.name`)
+- `GET /api/history/players/missmara` → 60 songs, winRate 0.217, 26 taste-overlap entries
+- After an admin links "missmara" to player "Matt Mariani" via the setup screen, `/api/history/players/Matt+Mariani` returns the same history; renaming the player to "Matt M" leaves history intact.
+
+**Tests:**
+- `cd ui && npx vitest run` → 28 files / 176 tests (5 new tests: linked name display, rename safety, cross-league unification, overlap key naming)
+- `npm run check` → 0 errors / 38 warnings (all pre-existing)
+
+**Decisions:**
+- Did NOT change the `/api/history/players/:name` URL parameter semantics — the name still resolves via `resolvePlayerKey` which handles both `players.name` and `competitors.name`. No frontend coordination needed.
+- The admin-facing link (mapping `competitors.player_id` to a specific player) happens via the setup screen's PATCH `/api/players/:id` endpoint — out of scope for this task, but the DB column is ready.
+
+**For fresh session continuing with `fk-migration`:**
+- `competitors.player_id` column exists on prod DB (added by migration).
+- The backfill via `ml_competitor_id` match did NOT link any rows on prod (players.ml_competitor_id is NULL). Manual linking via setup screen is the current path.
+- `fk-migration` repoints `ml_submissions.competitor_id`, `votes.voter_id`, `season_standings.competitor_id`, `rounds.theme_chooser_id` FROM `competitors.id` TO `players.id`. This is riskier — run on a DB copy first with row-count assertions. Await orc go.
 
 ### 2026-06-12 — frontend-agent — Wave 2 complete: shortlist-strip + digest-next-round-edit + h2h-league-selector
 
