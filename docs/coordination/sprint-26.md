@@ -63,7 +63,7 @@ updated: 2026-06-12T22:08:06Z
 - [x] {agent: frontend, id: screen-inventory} **Hands-on screen + feature inventory.** Walk every route in `ui/src/routes` in the running dev app at both 412×892 and desktop. Produce `docs/coordination/inventory/screens.md`: per screen — purpose, every user action available, which API endpoint each action calls, and an overlap column flagging actions that mutate the same state as another screen (e.g. round editing exists in /setup rounds table AND digest next-round edit AND import).
   - **Acceptance:** every directory under `ui/src/routes` (pages, not API routes) appears in the doc; each screen's actions are mapped to endpoints (verified against the network tab or source); at least the round-editing overlap set is fully cross-referenced to the write-path inventory's rows.
 
-- [-] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
+- [x] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
   - **Acceptance:** `docs/coordination/inventory/collisions.md` committed with one entry per suspect: numbered repro steps, before/after state, verdict CONFIRMED / NOT-A-BUG / NEEDS-BACKEND-REPRO, and severity (data-loss / wrong-display / annoyance). Every CONFIRMED entry names the colliding writers by write-path-inventory row.
 
 - [x] {agent: backend, id: season-override-fix} **Make manual season-status flips durable (live bug).** Sprint-25 close-out finding 1: `seasons` has no override marker, so the importer heuristic re-derives status and clobbers manual flips (Nostalgia Pit re-activated itself). Add an override column (e.g. `status_source TEXT CHECK(status_source IN ('derived','manual')) DEFAULT 'derived'`) via the house-pattern idempotent boot migration; `setSeasonStatus` sets `manual`; the importer heuristic skips seasons marked `manual` in BOTH directions (no demotion AND no promotion).
@@ -98,6 +98,14 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — frontend-agent — collision-repros COMPLETE
+- Produced `docs/coordination/inventory/collisions.md` with 6 suspects tested (4 CONFIRMED, 2 NOT-A-BUG).
+- CONFIRMED data-loss: C1 (season status clobbered by importer rescan — W6 vs W1/W2), C2 (round name clobbered by ZIP re-import — W3 vs W1).
+- CONFIRMED wrong-display: C3 (digest next-round override persists after /settings deadline update — W14 vs W3/W11/W12), C4 (active-round pin vs layout.ts derived round diverge on home page — W9, D1 vs D3/D4).
+- NOT-A-BUG: C5 (excluded section state preserved across whole-draft regen; only wasted LLM tokens), C6 (league-active / active-round-pin same-endpoint overlap — last-write-wins is correct).
+- All DB mutations restored to baseline; dev server on port 5180 left running.
+- collision-repros ticked [x]. Frontend inventory pair DONE.
 
 ### 2026-06-12 — frontend-agent — screen-inventory COMPLETE
 - Produced `docs/coordination/inventory/screens.md` with all 10 page routes inventoried hands-on.
