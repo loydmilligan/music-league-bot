@@ -91,6 +91,12 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (msArtCols.length && !msArtCols.some(c => c.name === 'album_art_url')) {
 		db.exec("ALTER TABLE ml_submissions ADD COLUMN album_art_url TEXT");
 	}
+	// sprint-26 season-override-fix: status_source guards manual flips from being
+	// clobbered by re-imports. Default 'derived' preserves existing rows' behavior.
+	const seasonCols = db.prepare("PRAGMA table_info(seasons)").all() as { name: string }[];
+	if (seasonCols.length && !seasonCols.some(c => c.name === 'status_source')) {
+		db.exec("ALTER TABLE seasons ADD COLUMN status_source TEXT NOT NULL CHECK(status_source IN ('derived','manual')) DEFAULT 'derived'");
+	}
 	// sprint-22 active-round mgmt: per-league active flag + active-round slot on
 	// existing DBs. Backfill is_active=1 for leagues that already have an active
 	// season so prod leagues come up "active" without a manual pass.

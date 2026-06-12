@@ -24,7 +24,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   if (!changed) throw error(500, 'update failed');
 
   const updated = db.prepare('SELECT * FROM seasons WHERE id = ?').get(seasonId) as {
-    id: number; league_id: number; season_number: number; status: string;
+    id: number; league_id: number; season_number: number; status: string; status_source: string;
   };
-  return json({ id: updated.id, leagueId: updated.league_id, seasonNumber: updated.season_number, status: updated.status });
+  return json({ id: updated.id, leagueId: updated.league_id, seasonNumber: updated.season_number, status: updated.status, statusSource: updated.status_source });
 };

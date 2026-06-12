@@ -156,8 +156,8 @@ async function reconcileSeason(slug, seasonNumber, mlL) {
 	if (!APPLY) return;
 
 	const tx = db.transaction(() => {
-		// Flip status
-		db.prepare('UPDATE seasons SET status = ? WHERE id = ?').run('active', season.id);
+		// Flip status (skip seasons with a manual override — sprint-26 season-override-fix).
+		db.prepare("UPDATE seasons SET status = 'active' WHERE id = ? AND COALESCE(status_source,'derived') != 'manual'").run(season.id);
 
 		// Updates
 		const updateStmt = db.prepare(

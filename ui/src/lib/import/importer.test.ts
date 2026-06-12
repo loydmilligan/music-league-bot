@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openLeagueDb } from '../db/client.js';
-import { seedLeagues } from '../db/leagues.js';
+import { seedLeagues, setSeasonStatus } from '../db/leagues.js';
 import { parseZip } from './zipParser.js';
 import { importZipData, importLiveRoundsData } from './importer.js';
 import type { ParsedZip } from './zipParser.js';
@@ -134,4 +134,61 @@ it('imports live round metadata and re-activates a stale season when a live roun
      WHERE l.slug = 'hip-jammers' AND s.season_number = 3`,
   ).get() as { status: string };
   expect(season.status).toBe('active');
+});
+
+// sprint-26 season-override-fix regression: a manually-completed season must
+// survive a ZIP re-import that contains unvoted rounds (the scenario that bit
+// Nostalgia Pit in prod — sprint-25 gate-4 finding 1).
+it('manual complete season survives ZIP re-import with unvoted rounds', () => {
+  const db = mk();
+  importZipData(db, 'second-best', 1, parsedZip(['r1', 'r2'], ['r1']));
+
+  const row = db.prepare(
+    `SELECT s.id FROM seasons s JOIN leagues l ON l.id = s.league_id
+     WHERE l.slug = 'second-best' AND s.season_number = 1`,
+  ).get() as { id: number };
+
+  setSeasonStatus(db, row.id, 'complete');
+
+  const after = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(row.id) as {
+    status: string; status_source: string;
+  };
+  expect(after.status).toBe('complete');
+  expect(after.status_source).toBe('manual');
+
+  // Re-import with an unvoted round — derived status would be 'active',
+  // but the manual override must be preserved.
+  importZipData(db, 'second-best', 1, parsedZip(['r1', 'r2', 'r3'], ['r1']));
+
+  const recheck = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(row.id) as {
+    status: string; status_source: string;
+  };
+  expect(recheck.status).toBe('complete');
+  expect(recheck.status_source).toBe('manual');
+});
+
+// sprint-26 season-override-fix regression: a manually-completed season must
+// survive an importLiveRoundsData call (the W2 path which previously forced
+// 'active' unconditionally at importer.ts:76).
+it('manual complete season survives live-snapshot import (W2 path)', () => {
+  const db = mk();
+  importZipData(db, 'second-best', 1, parsedZip(['r1', 'r2'], ['r1', 'r2']));
+
+  const row = db.prepare(
+    `SELECT s.id FROM seasons s JOIN leagues l ON l.id = s.league_id
+     WHERE l.slug = 'second-best' AND s.season_number = 1`,
+  ).get() as { id: number };
+
+  setSeasonStatus(db, row.id, 'complete');
+
+  importLiveRoundsData(db, 'second-best', 1, [
+    { id: 'ml-live-1', number: 3, name: 'Live Round', description: 'theme', playlistUrl: null,
+      submissionsDueUtc: '2099-01-01T00:00:00Z', votesDueUtc: '2099-01-08T00:00:00Z' },
+  ]);
+
+  const recheck = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(row.id) as {
+    status: string; status_source: string;
+  };
+  expect(recheck.status).toBe('complete');
+  expect(recheck.status_source).toBe('manual');
 });

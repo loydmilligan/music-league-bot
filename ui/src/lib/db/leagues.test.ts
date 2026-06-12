@@ -54,3 +54,23 @@ it('setSeasonStatus explicitly overrides season lifecycle state', () => {
 
   expect(setSeasonStatus(db, 99999, 'complete')).toBe(false);
 });
+
+it('setSeasonStatus sets status_source=manual; upsertSeason skips manual seasons', () => {
+  const db = mk(); seedLeagues(db);
+  const [hj] = getAllLeagues(db);
+  const seasonId = upsertSeason(db, hj.id, 5, 'active');
+
+  const before = db.prepare('SELECT status_source FROM seasons WHERE id = ?').get(seasonId) as { status_source: string };
+  expect(before.status_source).toBe('derived');
+
+  setSeasonStatus(db, seasonId, 'complete');
+  const afterFlip = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(seasonId) as { status: string; status_source: string };
+  expect(afterFlip.status).toBe('complete');
+  expect(afterFlip.status_source).toBe('manual');
+
+  // upsertSeason with 'active' must not clobber the manual override.
+  upsertSeason(db, hj.id, 5, 'active');
+  const afterUpsert = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(seasonId) as { status: string; status_source: string };
+  expect(afterUpsert.status).toBe('complete');
+  expect(afterUpsert.status_source).toBe('manual');
+});

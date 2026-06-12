@@ -12,6 +12,10 @@ export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS seasons (
     id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL REFERENCES leagues(id),
     season_number INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','complete')),
+    -- sprint-26 season-override-fix: manual flips via setSeasonStatus set 'manual';
+    -- every import-path writer (upsertSeason) skips seasons with 'manual' in both
+    -- directions. Default 'derived' so all existing rows behave as before.
+    status_source TEXT NOT NULL CHECK(status_source IN ('derived','manual')) DEFAULT 'derived',
     UNIQUE(league_id, season_number)
   );
   CREATE TABLE IF NOT EXISTS rounds (

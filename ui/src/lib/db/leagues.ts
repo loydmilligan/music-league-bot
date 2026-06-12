@@ -47,12 +47,17 @@ export function getActiveSeasonsWithLeague(db: Database.Database): Array<Season 
 }
 
 export function upsertSeason(db: Database.Database, leagueId: number, seasonNumber: number, status: 'active'|'complete'): number {
-  return (db.prepare(`INSERT INTO seasons (league_id,season_number,status) VALUES (?,?,?)
-    ON CONFLICT(league_id,season_number) DO UPDATE SET status=excluded.status RETURNING id`)
+  // Preserve status for manually-overridden seasons — import-path callers must not
+  // clobber admin flips. A season with status_source='manual' keeps its current
+  // status regardless of what the importer derived.
+  return (db.prepare(`INSERT INTO seasons (league_id,season_number,status,status_source) VALUES (?,?,?,'derived')
+    ON CONFLICT(league_id,season_number) DO UPDATE SET
+      status = CASE WHEN seasons.status_source = 'manual' THEN seasons.status ELSE excluded.status END
+    RETURNING id`)
     .get(leagueId, seasonNumber, status) as { id: number }).id;
 }
 
 export function setSeasonStatus(db: Database.Database, seasonId: number, status: 'active'|'complete'): boolean {
-  const info = db.prepare('UPDATE seasons SET status = ? WHERE id = ?').run(status, seasonId);
+  const info = db.prepare("UPDATE seasons SET status = ?, status_source = 'manual' WHERE id = ?").run(status, seasonId);
   return info.changes > 0;
 }
