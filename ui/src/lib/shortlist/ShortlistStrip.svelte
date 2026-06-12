@@ -1,7 +1,8 @@
 <!--
-  ShortlistStrip — sticky quick-assign header on /shortlist (sprint-25 shortlist-strip).
+  ShortlistStrip - sticky quick-assign header on /shortlist (sprint-25 shortlist-strip).
   One row per active league showing league name, current round theme + deadlines.
   When a song is open (openSongId truthy), shows a quick-assign button per row.
+  H2H button always visible per row; calls onH2hStart with the target league context.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -23,9 +24,11 @@
   const {
     openSongId,
     onAssigned,
+    onH2hStart,
   } = $props<{
     openSongId: string | null;
     onAssigned: (songId: string, roundId: number) => void;
+    onH2hStart: (leagueId: number, leagueName: string, roundId: number) => void;
   }>();
 
   let leagues = $state<LeagueRow[]>([]);
@@ -40,9 +43,9 @@
   });
 
   function fmtDeadline(iso: string | null): string {
-    if (!iso) return '—';
+    if (!iso) return '--';
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '—';
+    if (Number.isNaN(d.getTime())) return '--';
     return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
@@ -81,19 +84,27 @@
             <span>vote {fmtDeadline(r.votingDeadline)}</span>
           </span>
         </div>
-        {#if openSongId}
+        <div class="sl-strip-actions">
+          {#if openSongId}
+            <button
+              type="button"
+              class="sl-strip-assign"
+              class:is-assigned={flash === r.id}
+              disabled={assigning !== null}
+              onclick={() => quickAssign(l)}
+            >
+              {#if flash === r.id}Assigned{:else if assigning === r.id}...{:else}Assign{/if}
+            </button>
+          {:else}
+            <span class="sl-strip-hint">open a song to assign</span>
+          {/if}
           <button
             type="button"
-            class="sl-strip-assign"
-            class:is-assigned={flash === r.id}
-            disabled={assigning !== null}
-            onclick={() => quickAssign(l)}
-          >
-            {#if flash === r.id}✓ Assigned{:else if assigning === r.id}…{:else}↗ Assign{/if}
-          </button>
-        {:else}
-          <span class="sl-strip-hint">open a song to assign</span>
-        {/if}
+            class="sl-strip-h2h"
+            onclick={() => onH2hStart(l.leagueId, l.name, r.id)}
+            title="Start H2H for {l.name}"
+          >H2H</button>
+        </div>
       </div>
     {/each}
   </div>
@@ -160,8 +171,13 @@
     flex-shrink: 0;
     white-space: nowrap;
   }
-  .sl-strip-assign {
+  .sl-strip-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex-shrink: 0;
+  }
+  .sl-strip-assign {
     padding: 5px 12px;
     font: 700 10px/1 var(--font-mono);
     text-transform: uppercase;
@@ -184,6 +200,23 @@
   .sl-strip-assign.is-assigned {
     border-color: var(--moss, #3fcb8a);
     color: var(--moss, #3fcb8a);
+  }
+  .sl-strip-h2h {
+    padding: 5px 10px;
+    font: 700 10px/1 var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--r-2, 5px);
+    border: 1px solid var(--line, #283039);
+    background: transparent;
+    color: var(--fg-quiet, #6b7b8a);
+    cursor: pointer;
+    transition: border-color 100ms, color 100ms;
+    white-space: nowrap;
+  }
+  .sl-strip-h2h:hover {
+    border-color: var(--mash-pulp, #7fb3ff);
+    color: var(--mash-pulp, #7fb3ff);
   }
   .sl-strip-hint {
     font: 400 10px/1 var(--font-mono);

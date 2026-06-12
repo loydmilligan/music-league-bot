@@ -3,6 +3,7 @@
   import SearchBar from '$lib/shortlist/SearchBar.svelte';
   import ShortlistRow from '$lib/shortlist/ShortlistRow.svelte';
   import ShortlistStrip from '$lib/shortlist/ShortlistStrip.svelte';
+  import ShortlistH2HPanel from '$lib/shortlist/ShortlistH2HPanel.svelte';
   import type { PageData } from './$types.js';
   import type { ShortlistSong } from '$lib/types.js';
 
@@ -14,6 +15,7 @@
   let songs = $state<ShortlistSong[]>(data.songs);
   let openId = $state<string | null>(null);
   let sortKey = $state<SortKey>('date');
+  let h2hTarget = $state<{ leagueId: number; leagueName: string; roundId: number } | null>(null);
   let showHelp = $state(false);
   let searchRef: { focusInput: () => void } | undefined;
   let rKeyHeld = $state(false);
@@ -55,6 +57,15 @@
     openId = openId === id ? null : id;
   }
 
+  function handleH2hStart(leagueId: number, leagueName: string, roundId: number) {
+    h2hTarget = { leagueId, leagueName, roundId };
+  }
+
+  function handleH2hAssigned(songId: string, roundId: number) {
+    handleQuickAssigned(songId, roundId);
+    h2hTarget = null;
+  }
+
   function handleQuickAssigned(songId: string, roundId: number) {
     songs = songs.map((s) =>
       s.id === songId
@@ -93,7 +104,17 @@
     <p class="text-fg-muted text-sm mt-1">Research songs for upcoming rounds. Rate, assign, track.</p>
   </header>
 
-  <ShortlistStrip openSongId={openId} onAssigned={handleQuickAssigned} />
+  <ShortlistStrip openSongId={openId} onAssigned={handleQuickAssigned} onH2hStart={handleH2hStart} />
+
+  {#if h2hTarget}
+    <ShortlistH2HPanel
+      leagueName={h2hTarget.leagueName}
+      roundId={h2hTarget.roundId}
+      songs={songs}
+      onAssigned={handleH2hAssigned}
+      onClose={() => h2hTarget = null}
+    />
+  {/if}
 
   <SearchBar bind:this={searchRef} onadd={handleAdd} />
 
