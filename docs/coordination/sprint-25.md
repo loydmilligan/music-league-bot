@@ -194,6 +194,57 @@ curl http://localhost:5182/api/rounds/open
 
 All three acceptance criteria: **PASS**.
 
+### 2026-06-12 — backend-agent — gate-2 cross-check: frontend Wave 2 acceptance verified
+
+Verified all three frontend Wave 2 acceptance lines plus the two backend-lane files frontend touched. Dev server at port 5183 against prod DB.
+
+**`npm run check`**: 0 errors / 38 warnings (5 new pre-existing warnings vs the 33 from the backend lane; all pre-existing Svelte state_referenced_locally warnings — no new errors introduced).
+
+---
+
+**shortlist-strip — PASS**
+
+- `/api/active-rounds` returns 3 active leagues: Hip Jammers, Fam-Jam, Second Best — each with a non-null `activeRound`.
+- `ShortlistStrip.svelte` fetches from `/api/active-rounds`, filters to leagues with `activeRound != null`, renders one row per league with league name, round theme, and sub/vote deadlines.
+- Quick-assign POST to `/api/shortlist/:id/assign` uses the row's `activeRound.id` → calls `assignToRound` → writes to both `shortlist_assignments` and `research_songs` for that roundId (the candidate pool). Assignment is league-scoped.
+- H2H button is always visible per row (no `openSongId` gate on it).
+- Mobile layout not directly verified in a browser at 412×892 — component uses flexbox `flex-wrap` on the info section; the actions column (`flex-shrink: 0`) could be tight at 412px with long theme text. Flagging for orc's browser smoke, not blocking.
+
+**digest-next-round-edit — PASS (with one minor note)**
+
+- Exclude persist: `PATCH /api/digest/111/next-round` with `{ excluded: true }` → `GET` returns `excluded: true`. Confirmed with real draft. ✓
+- Theme/deadline override persist: PATCH `{ themeOverride: "...", submissionDeadlineOverride: "..." }` → GET returns overridden theme + deadline with `hasOverride: true`. ✓
+- Clear override: PATCH `{ themeOverride: null, submissionDeadlineOverride: null }` → GET returns `hasOverride: false` and computed theme (confirmed correct computed value returned). ✓
+- PATCH to a round with no draft: correctly returns HTTP 404 `"no active draft for this round"` — expected; you must generate a draft before editing. ✓
+- **Minor note (non-blocking):** `clearOverrides()` in `NextRoundSection.svelte` sets `liveData = data` (the page-load prop). If the page was loaded while an override was already active, `data` contains the previously-overridden value; the local display after clearing will show that stale value rather than the true computed value. A page reload shows the correct computed value. The server state is always correct; only the immediate local display is stale. Does not break the acceptance criterion (which tests server persistence), but worth noting for polish.
+
+**h2h-league-selector — PASS**
+
+- Strip renders one H2H button per active league row (confirmed by code — no `openSongId` guard on H2H button).
+- Clicking H2H fires `onH2hStart(leagueId, leagueName, roundId)` with that league's active round ID — correctly captured into `h2hTarget` in the page.
+- `ShortlistH2HPanel` receives `leagueName` (shown prominently in header) and `roundId` (the target league's round).
+- `assignChampion()` calls `POST /api/shortlist/:id/assign` with `{ round_id: roundId }` — the league-specific roundId. Only that round is written. ✓
+- With Hip Jammers (round 107), Fam-Jam (round 119), and Second Best (round 130) all active, three H2H buttons appear — one per league, each scoped to that league's round.
+
+---
+
+**Backend-lane files touched by frontend — both OK**
+
+`ui/src/routes/api/digest/[roundId]/next-round/+server.ts`:
+- GET: applies draft overrides in priority order (stored override wins over computed), returns `{ nextRound, excluded, hasOverride }`. Handles no-draft case gracefully (returns defaults, no crash). ✓
+- PATCH: validates draft exists before UPDATE (404 on no-draft confirmed). Field-level update pattern (`'key' in body` guard) is correct — allows clearing an override to null without unintentionally clearing others. ✓
+- No security concerns; roundId is validated against the rounds table. ✓
+
+`ui/src/lib/db/client.ts`:
+- Four `ALTER TABLE digest_drafts ADD COLUMN` statements, each guarded by `digestDraftCols.some(...)` check (idempotent). Pattern is consistent with all other column migrations in this file. ✓
+- `next_round_excluded INTEGER NOT NULL DEFAULT 0` — correct; ensures existing rows are not-excluded without requiring a backfill. ✓
+- Three nullable TEXT columns for overrides — correct; null = "use computed value." ✓
+- No issues. OK to ship.
+
+---
+
+**Wave 2 cross-check summary: all frontend acceptance lines PASS; both backend-touched files are clean.**
+
 ### 2026-06-12 — backend-agent — open-rounds-multi landed (Wave 2)
 
 **`open-rounds-multi` is COMPLETE. Frontend `h2h-league-selector` is now unblocked.**
