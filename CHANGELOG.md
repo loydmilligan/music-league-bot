@@ -4,6 +4,38 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.2] — 2026-06-12
+
+### Visible (UI)
+
+- **Shortlist sticky strip** — `/shortlist` now shows a sticky header with one
+  row per active league, displaying league name, current round theme, and
+  submission/voting deadlines. When a song row is open, each league row shows a
+  quick-assign button that lands the song on that league's active round
+  immediately. Otherwise shows an "open a song to assign" hint.
+- **H2H league selector** — the head-to-head ranking panel now carries league
+  context. Each strip row has an H2H button; clicking it opens
+  `ShortlistH2HPanel` labelled with the target league. Completing the
+  king-of-the-hill tournament assigns the champion to that league's active round
+  only, never to the wrong league.
+- **Digest "Next Round Up" — persist, exclude, and inline edit** — the Next
+  Round Up section in the digest now has standard kebab controls (edit/exclude).
+  Excluding the section or editing the theme text and deadline survive a page
+  reload via a stored override. The computed value returns when the override is
+  cleared. The GenerateModal exclude toggle is also persisted.
+
+### Under the hood
+
+- **`/api/rounds/open` derived-active leagues** — the shortlist assign popover's
+  data source now returns rounds for every league with a derived-active round
+  (season `status='active'`, live round, or manual `is_active` flag), not just
+  leagues with the manual active flag. All three active leagues (Hip Jammers,
+  Fam-Jam, Second Best) appear as separate filter groups in the assign popover.
+- **Next-round override storage** — `PATCH /api/digest/:roundId/next-round`
+  persists theme text, deadline, and exclude flag to a `next_round_overrides`
+  table; `GET` returns the stored values, which win over the computed result on
+  load.
+
 ## [1.0.1] — 2026-06-11
 
 ### Visible (UI)
