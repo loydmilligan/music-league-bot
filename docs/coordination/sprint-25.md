@@ -85,13 +85,13 @@ handoff entry and request a reset from orc rather than pushing on.
 
 ### Wave 2 — multi-league surfacing
 
-- [ ] {agent: backend, id: open-rounds-multi, depends: gate-1} **Multi-league open rounds API.** `/api/rounds/open` (feeds the shortlist assign popover) must include every league with a derived active round — not just `is_active=1` — so the H2H flow can target either league. Keep the response shape grouped by league as the popover expects.
+- [-] {agent: backend, id: open-rounds-multi, depends: gate-1} **Multi-league open rounds API.** `/api/rounds/open` (feeds the shortlist assign popover) must include every league with a derived active round — not just `is_active=1` — so the H2H flow can target either league. Keep the response shape grouped by league as the popover expects.
   - **Acceptance:** `curl /api/rounds/open` returns rounds for both active leagues; assign popover (existing UI) lists both league groups; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: shortlist-strip, depends: gate-1} **Shortlist active-round header strip.** Sticky "quick assign" header on `/shortlist`: one row per active league showing league name, current round theme + deadlines (from `/api/active-rounds`), and per-song quick-assign to that league's active round. Pattern reference: `ActiveRounds.svelte`.
+- [-] {agent: frontend, id: shortlist-strip, depends: gate-1} **Shortlist active-round header strip.** Sticky "quick assign" header on `/shortlist`: one row per active league showing league name, current round theme + deadlines (from `/api/active-rounds`), and per-song quick-assign to that league's active round. Pattern reference: `ActiveRounds.svelte`.
   - **Acceptance:** at 412×892 the strip renders one row per active league with round + deadlines; quick-assigning a song lands it on that league's active round (visible in the round's candidate pool); `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: digest-next-round-edit, depends: gate-1} **Digest "Next Round Up" persist + edit.** Today the section renders outside `DigestSection` with no controls, and the GenerateModal exclude toggle is client-state only (lost on reload). Persist the exclude flag; wrap the section in the standard `DigestSection` controls (kebab: edit/exclude); add inline editing for theme text + deadline with a stored override that wins over the computed value on load. Persist via `PATCH /api/digest/:roundId/next-round`.
+- [-] {agent: frontend, id: digest-next-round-edit, depends: gate-1} **Digest "Next Round Up" persist + edit.** Today the section renders outside `DigestSection` with no controls, and the GenerateModal exclude toggle is client-state only (lost on reload). Persist the exclude flag; wrap the section in the standard `DigestSection` controls (kebab: edit/exclude); add inline editing for theme text + deadline with a stored override that wins over the computed value on load. Persist via `PATCH /api/digest/:roundId/next-round`.
   - **Acceptance:** excluding the section survives a page reload; editing theme/deadline persists and renders the override after reload; computed value returns when the override is cleared; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: h2h-league-selector, depends: open-rounds-multi} **H2H flow league context.** The head-to-head ranking trigger must carry a league: read from active-league context with an explicit selector when more than one league is active, and pass `leagueId` through the flow so the winner lands on the right league's round.
@@ -102,16 +102,16 @@ handoff entry and request a reset from orc rather than pushing on.
 
 ### Wave 3 — player model + setup screens
 
-- [ ] {agent: backend, id: player-model, depends: gate-2} **Players + season rosters (additive).** Add `players` (id, name, chat_type, chat_identifier, ml_competitor_id, created_at) and `season_players` (season_id, player_id, joined_at). Backfill one player per existing competitor (deterministic via `ml_competitor_id`). Importer upserts `season_players` rows from each imported round's competitors. No FK rewrites in this task — purely additive; migration is wave 4.
+- [x] {agent: backend, id: player-model, depends: gate-2} **Players + season rosters (additive).** Add `players` (id, name, chat_type, chat_identifier, ml_competitor_id, created_at) and `season_players` (season_id, player_id, joined_at). Backfill one player per existing competitor (deterministic via `ml_competitor_id`). Importer upserts `season_players` rows from each imported round's competitors. No FK rewrites in this task — purely additive; migration is wave 4.
   - **Acceptance:** migration runs on a copy of the real DB without data loss (row counts logged before/after); every competitor has exactly one player; `season_players` populated for all imported seasons; importer test proves roster upsert on re-import; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: mgmt-apis, depends: gate-2} **Season + player management APIs.** Endpoints to: mark a season active/complete (manual override from `season-status`); reassign a league's `active_round_id`; explicitly pin the "next round" per league (stored, wins over `getNextRound` inference); CRUD a player's chat identity (chat_type whatsapp|google-chat + chat_identifier) and season membership. Route chat_mentions.sender_name → player lookup as a service function (no ingestion changes).
+- [x] {agent: backend, id: mgmt-apis, depends: gate-2} **Season + player management APIs.** Endpoints to: mark a season active/complete (manual override from `season-status`); reassign a league's `active_round_id`; explicitly pin the "next round" per league (stored, wins over `getNextRound` inference); CRUD a player's chat identity (chat_type whatsapp|google-chat + chat_identifier) and season membership. Route chat_mentions.sender_name → player lookup as a service function (no ingestion changes).
   - **Acceptance:** each endpoint exercised by a test or curl transcript in the handoff (season status flip, next-round pin, player chat-identity set, season membership add/remove); pinned next round is returned by `/api/digest/:roundId/next-round`; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: league-season-mgmt, depends: mgmt-apis} **League + season management screen.** Setup surface (route or settings panel) per league: active flag, display name, chat type; its seasons with status controls (active/complete); current-round assignment and explicit next-round pin (from `mgmt-apis`).
+- [x] {agent: frontend, id: league-season-mgmt, depends: mgmt-apis} **League + season management screen.** Setup surface (route or settings panel) per league: active flag, display name, chat type; its seasons with status controls (active/complete); current-round assignment and explicit next-round pin (from `mgmt-apis`).
   - **Acceptance:** from the UI alone: flip a season's status, set the active round, pin the next round — each persists across reload and is reflected in the Active rounds panel and digest next-round section; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: roster-screen, depends: player-model,mgmt-apis} **Player roster screen.** Per league-season roster view/edit: add/remove players (season membership), display name, chat type (whatsapp | google-chat) + chat handle per player, and a membership picker showing every league/season a player belongs to (players span leagues).
+- [x] {agent: frontend, id: roster-screen, depends: player-model,mgmt-apis} **Player roster screen.** Per league-season roster view/edit: add/remove players (season membership), display name, chat type (whatsapp | google-chat) + chat handle per player, and a membership picker showing every league/season a player belongs to (players span leagues).
   - **Acceptance:** a player in both leagues shows both memberships; setting a chat handle persists and round-trips via the `mgmt-apis` endpoints; adding a player to the Fam Jam season with chat_type=google-chat works with no ML identity; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-3, depends: player-model,mgmt-apis,league-season-mgmt,roster-screen} **Gate 3 — the model is real and manageable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: from a clean browser, mark seasons, pin next rounds, and link 2–3 real players' chat identities (including one fam-jam Google Chat player) entirely through the new screens.
@@ -145,6 +145,16 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — orc — Wave 2 dispatched; retroactive gate-1+3 card emitted
+
+Session resumed from bridge. Wave 1 + Wave 3 are live on prod (`01b242c`, deployed to 192.168.4.217:3002) but gates 1 and 3 were never ceremonied — emitted ONE combined retroactive `ratification-needed` card covering both waves (owner verbally approved continuing to Wave 2 first). Gate-1/gate-3 task boxes flip to [x] when the card resolves `ratified`. Wave 3 task boxes marked [x] per Activity Log evidence + prod deploy.
+
+Wave 2 dispatch:
+- backend ← `open-rounds-multi`
+- frontend ← `shortlist-strip` + `digest-next-round-edit`; `h2h-league-selector` held until backend lands `open-rounds-multi` (dependency)
+
+Ops note: warren pane mapping for this workspace drifted (a user dev-app pane inserted at tmux index 2 shifted agent panes to 3/4; API still resolved both lanes to 1.2). Prompts sent via tmux pane IDs directly. Logged to orc-tower review queue.
 
 ### 2026-06-12 — frontend-agent — Setup/management UI + player API shipped (Wave 3)
 
