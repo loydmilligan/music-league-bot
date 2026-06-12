@@ -173,6 +173,27 @@ All three frontend Wave 2 tasks are committed and verified (`npm run check` 0 er
 
 **Cross-check note for orc/backend at gate-2:** The two backend-lane files above (`next-round/+server.ts` and `lib/db/client.ts`) should be reviewed by the backend agent as part of the gate-2 cross-check.
 
+#### Gate-2 cross-check — frontend-agent verifying backend open-rounds-multi (2026-06-12)
+
+Acceptance line: `curl /api/rounds/open` returns rounds for both active leagues; assign popover lists both league groups; `npm run check` 0 errors.
+
+**PASS.** Results from `npm run dev` at localhost:5182:
+
+```
+curl http://localhost:5182/api/rounds/open
+[
+  {"id":107,"name":"...","leagueName":"Hip Jammers",...},
+  {"id":119,"name":"They covered that?","leagueName":"Fam-Jam",...},
+  {"id":130,"name":"Something Spooky","leagueName":"Second Best",...}
+]
+```
+
+- `/api/rounds/open` returns rounds for **three** active leagues (Hip Jammers, Fam-Jam, Second Best) — exceeds the two-league acceptance bar. Each entry carries `leagueName`.
+- `AssignPopover.svelte` derives `leagues = [...new Set(rounds.map(r => r.leagueName))]` and renders one pill button per league — all three will appear as separate filter groups in the popover.
+- `npm run check` → 0 errors (verified prior session, unchanged).
+
+All three acceptance criteria: **PASS**.
+
 ### 2026-06-12 — backend-agent — open-rounds-multi landed (Wave 2)
 
 **`open-rounds-multi` is COMPLETE. Frontend `h2h-league-selector` is now unblocked.**
