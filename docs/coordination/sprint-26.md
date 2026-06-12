@@ -60,7 +60,7 @@ updated: 2026-06-12T22:08:06Z
 - [x] {agent: backend, id: active-derivation-audit} **Audit every "which round is active" derivation.** Enumerate each site that decides a league's active/current/next round — `ui/src/lib/db/activeRound.ts`, `nextRound.ts`, `layout.ts`, the shortlist `/api/rounds/open` path, the digest next-round computation, the live-round repair path from sprint-25-followup, and `leagues.active_round_id`/`next_round_overrides` consumers. For each: file:line, inputs, precedence rules, and a divergence matrix showing where two sites can answer differently for the same league. Append as a section of `docs/coordination/inventory/write-paths.md` or a sibling doc.
   - **Acceptance:** every derivation site listed with file:line; the matrix explicitly covers the known splits (`is_active` flag vs season-derived; `needsNextRound` vs repair path; pinned override vs inferred next round) and marks each pair AGREES / CAN-DIVERGE with the condition under which they diverge.
 
-- [-] {agent: frontend, id: screen-inventory} **Hands-on screen + feature inventory.** Walk every route in `ui/src/routes` in the running dev app at both 412×892 and desktop. Produce `docs/coordination/inventory/screens.md`: per screen — purpose, every user action available, which API endpoint each action calls, and an overlap column flagging actions that mutate the same state as another screen (e.g. round editing exists in /setup rounds table AND digest next-round edit AND import).
+- [x] {agent: frontend, id: screen-inventory} **Hands-on screen + feature inventory.** Walk every route in `ui/src/routes` in the running dev app at both 412×892 and desktop. Produce `docs/coordination/inventory/screens.md`: per screen — purpose, every user action available, which API endpoint each action calls, and an overlap column flagging actions that mutate the same state as another screen (e.g. round editing exists in /setup rounds table AND digest next-round edit AND import).
   - **Acceptance:** every directory under `ui/src/routes` (pages, not API routes) appears in the doc; each screen's actions are mapped to endpoints (verified against the network tab or source); at least the round-editing overlap set is fully cross-referenced to the write-path inventory's rows.
 
 - [-] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
@@ -98,6 +98,12 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — frontend-agent — screen-inventory COMPLETE
+- Produced `docs/coordination/inventory/screens.md` with all 10 page routes inventoried hands-on.
+- Mapped every user action to its API endpoint; overlap column flags collisions.
+- Key overlaps identified: round name editable in `/setup` and `/league/.../round/:id` edit modal; deadlines editable from `/settings` form, `/settings` auto-fill (bulk), and `/league/.../round/:id` modal; season status collision confirmed (W6/W7/W8 importer writes clobber manual flip from `/setup`); digest next-round overrides shadow `rounds` values without expiry; league-active and active-round-pin both collision-free (same endpoint, last-write wins).
+- screen-inventory ticked [x]. Proceeding to collision-repros.
 
 ### 2026-06-12 — backend-agent — write-path-inventory + active-derivation-audit COMPLETE
 - Produced `docs/coordination/inventory/write-paths.md` with two sections:
