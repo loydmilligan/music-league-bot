@@ -5,6 +5,7 @@ import {
   deleteShortlistSongById, deleteShortlistSongByUri,
   patchShortlistRating, patchShortlistNotes,
   patchSubmittedElsewhere, assignToRound, unassignFromRound,
+  getOpenRounds,
 } from './shortlist.js';
 import { unlinkSync, existsSync } from 'node:fs';
 import type Database from 'better-sqlite3';
@@ -107,6 +108,37 @@ describe('patchSubmittedElsewhere', () => {
     expect(getShortlistSongs(db).find(x => x.id === s.id)!.submittedElsewhere).toBe(true);
     patchSubmittedElsewhere(db, s.id, false);
     expect(getShortlistSongs(db).find(x => x.id === s.id)!.submittedElsewhere).toBe(false);
+  });
+});
+
+describe('getOpenRounds', () => {
+  it('returns the active round for each derived-active league', () => {
+    db.exec(`
+      INSERT OR IGNORE INTO leagues (id, slug, name, is_active) VALUES (1, 'league-a', 'League A', 0);
+      INSERT OR IGNORE INTO leagues (id, slug, name, is_active) VALUES (2, 'league-b', 'League B', 0);
+      INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active');
+      INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (2, 2, 1, 'active');
+      INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, description, submission_deadline, created_at)
+        VALUES (10, 1, 'rA', 'Round A', 'Theme A', NULL, '2026-01-01T00:00:00Z');
+      INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, description, submission_deadline, created_at)
+        VALUES (20, 2, 'rB', 'Round B', 'Theme B', NULL, '2026-01-01T00:00:00Z');
+      UPDATE leagues SET active_round_id = 10 WHERE id = 1;
+      UPDATE leagues SET active_round_id = 20 WHERE id = 2;
+    `);
+    const rounds = getOpenRounds(db);
+    const leagueNames = rounds.map(r => r.leagueName).sort();
+    expect(leagueNames).toEqual(['League A', 'League B']);
+  });
+
+  it('omits leagues with no derived active season (is_active=0 and no active season)', () => {
+    // All rounds have past deadlines → archive phase → seasonHasLiveRound=false
+    db.exec(`
+      INSERT OR IGNORE INTO leagues (id, slug, name, is_active) VALUES (1, 'inactive', 'Inactive', 0);
+      INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'complete');
+      INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, description, submission_deadline, voting_deadline, created_at)
+        VALUES (10, 1, 'rX', 'Round X', 'Theme X', '2020-01-01T00:00:00Z', '2020-01-07T00:00:00Z', '2020-01-01T00:00:00Z');
+    `);
+    expect(getOpenRounds(db)).toHaveLength(0);
   });
 });
 

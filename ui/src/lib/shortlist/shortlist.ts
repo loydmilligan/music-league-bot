@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { ShortlistSong, ShortlistAssignment } from '../types.js';
+import { getActiveLeaguesActiveRounds } from '../db/activeRound.js';
 
 function songRow(r: any): ShortlistSong {
   return {
@@ -88,19 +89,16 @@ export function unassignFromRound(db: Database.Database, shortlistSongId: string
 }
 
 export function getOpenRounds(db: Database.Database): { id: number; name: string; description: string | null; submissionDeadline: string | null; leagueName: string }[] {
-  return (db.prepare(`
-    SELECT r.id, r.name, r.description, r.submission_deadline,
-           l.name AS league_name
-    FROM rounds r
-    JOIN seasons s ON r.season_id = s.id
-    JOIN leagues l ON s.league_id = l.id
-    WHERE r.submission_deadline IS NULL OR r.submission_deadline > datetime('now')
-    ORDER BY r.submission_deadline ASC NULLS LAST
-  `).all() as any[]).map(r => ({
-    id: r.id,
-    name: r.name,
-    description: r.description,
-    submissionDeadline: r.submission_deadline,
-    leagueName: r.league_name,
-  }));
+  // Use derived-active leagues (active season OR is_active=1) rather than is_active=1 alone,
+  // so both leagues surface in the assign popover when both have live rounds.
+  const activeLeagues = getActiveLeaguesActiveRounds(db);
+  return activeLeagues
+    .filter(l => l.activeRound != null)
+    .map(l => ({
+      id: l.activeRound!.id,
+      name: l.activeRound!.name,
+      description: l.activeRound!.theme,
+      submissionDeadline: l.activeRound!.submissionDeadline,
+      leagueName: l.name,
+    }));
 }
