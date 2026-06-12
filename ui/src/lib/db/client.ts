@@ -168,6 +168,18 @@ export function openLeagueDb(path?: string): Database.Database {
 			);
 		`);
 	}
+	// sprint-25 history-player-id: stable player identity join on competitors.
+	// Placed after players table creation so the FK reference resolves.
+	const competitorCols = db.prepare("PRAGMA table_info(competitors)").all() as { name: string }[];
+	if (competitorCols.length && !competitorCols.some(c => c.name === 'player_id')) {
+		db.exec("ALTER TABLE competitors ADD COLUMN player_id INTEGER REFERENCES players(id)");
+		// Backfill: link competitors to players where ml_competitor_id matches.
+		db.exec(`UPDATE competitors SET player_id = (
+			SELECT players.id FROM players
+			WHERE players.ml_competitor_id = competitors.ml_competitor_id
+			AND competitors.ml_competitor_id IS NOT NULL
+		) WHERE player_id IS NULL`);
+	}
 	// sprint-25 round management: tag, theme_submitted_by, round_number.
 	const roundsCols2 = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
 	if (roundsCols2.length && !roundsCols2.some(c => c.name === 'tag')) {
