@@ -85,7 +85,7 @@ handoff entry and request a reset from orc rather than pushing on.
 
 ### Wave 2 — multi-league surfacing
 
-- [-] {agent: backend, id: open-rounds-multi, depends: gate-1} **Multi-league open rounds API.** `/api/rounds/open` (feeds the shortlist assign popover) must include every league with a derived active round — not just `is_active=1` — so the H2H flow can target either league. Keep the response shape grouped by league as the popover expects.
+- [x] {agent: backend, id: open-rounds-multi, depends: gate-1} **Multi-league open rounds API.** `/api/rounds/open` (feeds the shortlist assign popover) must include every league with a derived active round — not just `is_active=1` — so the H2H flow can target either league. Keep the response shape grouped by league as the popover expects.
   - **Acceptance:** `curl /api/rounds/open` returns rounds for both active leagues; assign popover (existing UI) lists both league groups; `npm run check` 0 errors.
 
 - [-] {agent: frontend, id: shortlist-strip, depends: gate-1} **Shortlist active-round header strip.** Sticky "quick assign" header on `/shortlist`: one row per active league showing league name, current round theme + deadlines (from `/api/active-rounds`), and per-song quick-assign to that league's active round. Pattern reference: `ActiveRounds.svelte`.
