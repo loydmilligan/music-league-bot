@@ -150,6 +150,60 @@ _None._
 
 ## Activity Log
 
+### 2026-06-12 — frontend-agent — gate-4 cross-check (Wave 4 backend, sprint close)
+
+Per Gate & Context-Reset Protocol step 2. Verified backend's Wave 4 acceptance lines against a live `npm run dev` instance (port 5183) against the real prod DB.
+
+**Backend Wave 4 summary (for context):**
+- `history-player-id` (d628723): `playerHistory.ts` rewritten to key history on stable `'p:N'`/`'c:N'` identity instead of `competitors.name` string. API shapes unchanged. On prod data all competitors are unlinked so roster displays as `competitors.name` (27-entry roster unchanged).
+- `fk-migration` (f0dcc10): ADDITIVE — nullable `player_id` columns added to `ml_submissions`, `votes`, `season_standings`, `rounds`; `competitors.player_id` link column added. All NULL on prod (backfill via `ml_competitor_id` is a no-op since players were created manually). No query rewrites — all reads still use `competitor_id` joins. Future sprint migrates read path once competitors are linked.
+
+**Cross-check results:**
+
+**(1) `/api/history/players` — 27-player roster**
+```
+Count: 27
+Mashew, missmara, Bri, Ellen Bekier, Jorbo, Em, Jerry Bekier, Johanna Friedman,
+arigrey83, lorimariani, margs, mmariani13, Sasha Mariana, Kristin, Marco,
+gregamariani, jellydru, Ronm, Sarah, jac, Jonathan Black, Michael Layous, Tj,
+Voltron's YoungLion, Philip Chapin, Sarah S, SusieQ
+```
+All 27 have real display names and non-null `winRate`/`songsSubmitted`. **PASS.**
+
+**(2) `/api/history/players/missmara` — full history + winRate**
+```json
+{ "songs": 60, "winRate": 0.21666..., "tasteOverlap": 26 entries }
+```
+- songs: 60 ✓ (matches backend's documented 60)
+- winRate: 0.21666… (~0.217) ✓
+- tasteOverlap: 26 entries ✓
+- Note: detail response has no `name` field — UI (`PlayerResearchTab.svelte`) does not use name from the detail response; it uses `p.name` from the list response for display and navigation. No regression. **PASS.**
+
+**(3) `/api/digest/104/standings` — r-104 standings correct**
+```
+rank=1 lorimariani  44pts
+rank=2 Ronm         39pts
+rank=3 Sasha Mariana 35pts
+rank=4 Kristin      33pts
+rank=5 missmara     31pts
+rank=6 gregamariani 30pts
+rank=7 margs        30pts
+rank=8 Mashew       28pts
+rank=9 mmariani13   27pts
+```
+Identical to backend's pre/post spot-check table. **PASS.**
+
+**(4) `npm run check`**
+```
+0 ERRORS / 38 WARNINGS (all pre-existing)
+```
+**PASS.**
+
+**Documented deviation — ADDITIVE FK migration (confirmed non-user-visible):**
+Backend documented: FK migration is additive (nullable columns alongside existing `competitor_id`), not a hard repoint, because all competitors are currently unlinked. Confirmed: all read queries (digest, standings, history) continue to use `competitor_id`/`voter_id` → `competitors` joins unchanged. No user-visible change to any surface. The new columns are structural infrastructure awaiting manual competitor→player linking via the setup screen. **PASS — deviation is expected and non-regressive.**
+
+**Overall: ALL ACCEPTANCE LINES PASS.** `gate-4` ceremony is clear to proceed.
+
 ### 2026-06-12 — backend-agent — fk-migration shipped (Wave 4, sprint close)
 
 **`fk-migration` is COMPLETE. All Wave 4 backend tasks done. `gate-4` is now unblocked — orc to run the sprint-close gate ceremony.**
