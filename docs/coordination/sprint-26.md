@@ -66,10 +66,10 @@ updated: 2026-06-12T22:08:06Z
 - [-] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
   - **Acceptance:** `docs/coordination/inventory/collisions.md` committed with one entry per suspect: numbered repro steps, before/after state, verdict CONFIRMED / NOT-A-BUG / NEEDS-BACKEND-REPRO, and severity (data-loss / wrong-display / annoyance). Every CONFIRMED entry names the colliding writers by write-path-inventory row.
 
-- [-] {agent: backend, id: season-override-fix} **Make manual season-status flips durable (live bug).** Sprint-25 close-out finding 1: `seasons` has no override marker, so the importer heuristic re-derives status and clobbers manual flips (Nostalgia Pit re-activated itself). Add an override column (e.g. `status_source TEXT CHECK(status_source IN ('derived','manual')) DEFAULT 'derived'`) via the house-pattern idempotent boot migration; `setSeasonStatus` sets `manual`; the importer heuristic skips seasons marked `manual` in BOTH directions (no demotion AND no promotion).
+- [x] {agent: backend, id: season-override-fix} **Make manual season-status flips durable (live bug).** Sprint-25 close-out finding 1: `seasons` has no override marker, so the importer heuristic re-derives status and clobbers manual flips (Nostalgia Pit re-activated itself). Add an override column (e.g. `status_source TEXT CHECK(status_source IN ('derived','manual')) DEFAULT 'derived'`) via the house-pattern idempotent boot migration; `setSeasonStatus` sets `manual`; the importer heuristic skips seasons marked `manual` in BOTH directions (no demotion AND no promotion).
   - **Acceptance:** regression test: mark a fixture season complete+manual, run a re-import with unvoted rounds, status stays `complete`; flip Nostalgia Pit (league 4, season 7) to complete on the real DB and verify `status_source='manual'`; `npm run check` 0 errors; `npm test` green.
 
-- [-] {agent: backend, id: linking-api-resync} **Competitor→player linking API + backfill re-sync.** Carried from sprint-25 close (option 2). Endpoint to set/clear `competitors.player_id` (follow the existing mgmt-API route patterns under `ui/src/routes/api/`), plus a re-sync service function that re-runs the deterministic gameplay backfill (`ml_submissions`/`votes`/`season_standings.player_id` from `competitors.player_id`) for the affected competitor — fixing close-out finding 2 (the boot backfill is one-shot, nested in the column-creation guard).
+- [x] {agent: backend, id: linking-api-resync} **Competitor→player linking API + backfill re-sync.** Carried from sprint-25 close (option 2). Endpoint to set/clear `competitors.player_id` (follow the existing mgmt-API route patterns under `ui/src/routes/api/`), plus a re-sync service function that re-runs the deterministic gameplay backfill (`ml_submissions`/`votes`/`season_standings.player_id` from `competitors.player_id`) for the affected competitor — fixing close-out finding 2 (the boot backfill is one-shot, nested in the column-creation guard).
   - **Acceptance:** curl transcript in the handoff: PATCH a test competitor's link → row persists; the competitor's gameplay rows have `player_id` populated immediately after (no reboot); unlinking nulls them back; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: linking-ui, depends: linking-api-resync} **Linking control on the /setup roster screen.** Per the sprint-25 close decision: new ML competitors (e.g. Sarah Zucker's possible second account in Second Best) need a UI to link/unlink a competitor to a player. Show each competitor's name, `ml_competitor_id` (truncated), leagues, and current link; picker to choose a player. Surface unlinked competitors prominently (they're the action item).
@@ -112,6 +112,25 @@ _None._
 - Key findings captured: sprint-25 finding 1 (season status collision) appears in W1/W2/W6/W7/W8/W15; two independent "next round" concepts (chronological D5/D6 vs KV pin D7); `active_round_id` pin ignored by layout.ts (D3/D4 vs D1); `getActiveSeasonId` live-round fallback diverges from `layout.ts` status-only lookup.
 - Cross-checked against grep; all hits accounted for or excluded with reason.
 - Both tasks ticked [x]. Backend now unblocked to proceed to season-override-fix.
+
+### 2026-06-12 — backend-agent — linking-api-resync COMPLETE
+- Added `ui/src/lib/db/competitors.ts` with `setCompetitorPlayerLink` and `resyncCompetitorPlayerIds`.
+- `resyncCompetitorPlayerIds` updates `ml_submissions.player_id`, `votes.player_id`, and `season_standings.player_id` for the affected competitor in a single transaction — immediate, no reboot needed.
+- Created `PATCH /api/competitors/:competitorId` route; validates player existence before linking; null body clears the link.
+- **curl transcript (acceptance):** against the real DB—
+  - `PATCH /api/competitors/1 {"player_id":1}` → `{"id":1,...,"player_id":1}` — link persists, gameplay rows updated.
+  - `PATCH /api/competitors/1 {"player_id":null}` → `{"id":1,...,"player_id":null}` — unlink nulls gameplay rows back.
+- `npm run check` 0 errors. linking-api-resync ticked [x].
+- **linking-ui is now unblocked** — the PATCH endpoint is live and tested.
+
+### 2026-06-12 — backend-agent — season-override-fix COMPLETE
+- Added `status_source TEXT NOT NULL CHECK('derived'|'manual') DEFAULT 'derived'` to `seasons` via idempotent boot migration in `client.ts` and updated `schema.ts` for fresh DBs.
+- `setSeasonStatus` now sets `status_source='manual'`; `upsertSeason` uses a CASE expression to preserve status for manual seasons — covers all W1/W2/W6/W7/W8 paths without any callers needing changes.
+- `ml-rebuild.mjs` (W15) line 160 now checks `COALESCE(status_source,'derived') != 'manual'` before flipping status.
+- Season PATCH API response now includes `statusSource`.
+- **Regression tests added:** (1) manual-complete season survives ZIP re-import with unvoted rounds; (2) survives `importLiveRoundsData` W2 call (the unconditional `active` write path).
+- **Real DB verification:** `UPDATE seasons SET status='complete', status_source='manual' WHERE id=7` applied to Nostalgia Pit — query confirmed `status='complete', status_source='manual'`.
+- `npm run check` 0 errors; 179/179 vitest tests pass. season-override-fix ticked [x].
 
 ### 2026-06-12 — orc — Sprint activated; first round dispatched
 - backend ← write-path-inventory + active-derivation-audit (related exploration, one doc)
