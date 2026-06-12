@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-25
 title: League/Season/Round/Player Model Foundation
-status: active
+status: closed
 created: 2026-06-11T22:56:09Z
 activated: 2026-06-11
-updated: 2026-06-11T23:04:00Z
+updated: 2026-06-12T22:30:00Z
+closed: 2026-06-12
 ---
 
 # music-league-bot — coordination doc (sprint-25)
@@ -125,7 +126,7 @@ handoff entry and request a reset from orc rather than pushing on.
 - [x] {agent: backend, id: fk-migration, depends: history-player-id} **FK migration: gameplay tables → players.** Repoint `ml_submissions.competitor_id`, `votes.voter_id`, `season_standings.competitor_id`, `rounds.theme_chooser_id` at `players`, with a deterministic backfill from the `player-model` mapping. Run on a copy of the real DB first with before/after row-count + spot-check assertions (a known round's standings identical pre/post). Full regression pass over digest generation, standings, and history.
   - **Acceptance:** migration script output (row counts, spot-checks) recorded in the handoff entry; digest for a known closed round (e.g. Hip Jammers r-104) generates identically pre/post migration; standings + History tabs render correctly on prod data; `npm test` and `npm run check` green.
 
-- [ ] {agent: orc, id: gate-4, depends: history-player-id,fk-migration} **Gate 4 — sprint close.** Run the Gate & Context-Reset Protocol one final time: handoffs, cross-check, version + CHANGELOG, ratification card (sprint review), deploy, full regression smoke (digest, standings, history, shortlist, setup screens). Flip this doc's `status` to closed on ratification.
+- [x] {agent: orc, id: gate-4, depends: history-player-id,fk-migration} **Gate 4 — sprint close.** Run the Gate & Context-Reset Protocol one final time: handoffs, cross-check, version + CHANGELOG, ratification card (sprint review), deploy, full regression smoke (digest, standings, history, shortlist, setup screens). Flip this doc's `status` to closed on ratification.
   - **Acceptance:** gate-4 ratification card resolved `ratified`; prod smoke at 412×892 covers digest/standings/history/shortlist/setup with 0 console errors; CHANGELOG lists all sprint-25 changes with the bumped version; doc `status: closed`.
 
 ## Decision Log
@@ -137,6 +138,13 @@ Owner ratified the full 20-job scope including the FK/history migration original
 Mid-sprint ratification gates a few times per sprint, ratified by both agents (cross-check) and the user (warren card). Agents reset context at every gate after writing handoff entries; mid-wave proactive reset at ~60–70% context. Rationale: short context with good handoffs minimizes long-session hallucinations.
 
 ## Ratification Log
+
+### 2026-06-12 — gate-4 — RATIFIED, deployed, smoked — SPRINT CLOSED
+Card `rn-d255fe2c` resolved `ratified` by user at 21:47Z (mobile warren). v1.0.3 deployed to prod. Between ratify and deploy, the user supplied the full competitor→player mapping and orc applied all 29 links (`competitors.player_id`, one transaction, backup `league.db.backup-player-linking-*` first) — every pair user-confirmed, incl. the double-Sarah disambiguation (Sarah=Sarah Zucker, Sarah S=Sara Black) and Voltron's YoungLion=Brian Pascoe. Backfill: the boot migration's backfill is one-shot (nested in the column-creation guard), so orc ran the identical UPDATEs manually → votes 3615/3615, season_standings 182/182, ml_submissions 579/600 (the 21 NULLs are shortlist candidate songs with no competitor — expected). Prod smoke at 412×892 PASS, 0 console errors: History tab shows 27 real-name players with unified cross-league records (Matt Mariani 62♪ across 3 leagues); r-104 standings correct; active leagues correct; setup renders.
+
+**Two collisions discovered during smoke (seeds for the next sprint — feature inventory & review):**
+1. **Season-status manual flips are not durable.** `seasons` has NO override column — Wave 1's "manual-override path" shipped as a plain status write. Something (importer heuristic re-derivation) flipped Nostalgia Pit's season back to `active` after orc's gate-2 manual flip; the Wave-1 guard prevents active→complete demotion but not complete→active promotion. Re-flipped via prod API as interim; will recur on next import touching that league.
+2. **player_id backfill is one-shot.** The client.ts backfill UPDATEs only run when the columns are first created. Future link changes (e.g. via the planned linking UI) won't propagate to gameplay tables without a re-sync path.
 
 ### 2026-06-12 — gate-2 — RATIFIED, deployed, smoked
 Card `rn-e8cb56fe` resolved `ratified` by user at 19:02Z (user also tested hands-on against a dev instance first — all green). v1.0.2 deployed to prod (192.168.4.217:3002) via cached `docker compose build bot-ui && up -d`. Prod smoke at 412×892 PASS: strip renders 3 league rows with deadlines + H2H buttons; Second Best H2H panel opens with league label (tournament not completed on prod — write path validated by user on dev); digest r-111 exclude→include round-trip persisted across reload; 0 console errors. Data fix during ratification review (user-directed): Nostalgia Pit's lingering `active` season flipped to `complete` via the Wave 3 mgmt API — derived-active is now exactly Hip Jammers, Fam-Jam, Second Best (Fam-Jam confirmed wanted: its season 4 is live).
