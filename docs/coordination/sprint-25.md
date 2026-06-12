@@ -88,13 +88,13 @@ handoff entry and request a reset from orc rather than pushing on.
 - [x] {agent: backend, id: open-rounds-multi, depends: gate-1} **Multi-league open rounds API.** `/api/rounds/open` (feeds the shortlist assign popover) must include every league with a derived active round — not just `is_active=1` — so the H2H flow can target either league. Keep the response shape grouped by league as the popover expects.
   - **Acceptance:** `curl /api/rounds/open` returns rounds for both active leagues; assign popover (existing UI) lists both league groups; `npm run check` 0 errors.
 
-- [-] {agent: frontend, id: shortlist-strip, depends: gate-1} **Shortlist active-round header strip.** Sticky "quick assign" header on `/shortlist`: one row per active league showing league name, current round theme + deadlines (from `/api/active-rounds`), and per-song quick-assign to that league's active round. Pattern reference: `ActiveRounds.svelte`.
+- [x] {agent: frontend, id: shortlist-strip, depends: gate-1} **Shortlist active-round header strip.** Sticky "quick assign" header on `/shortlist`: one row per active league showing league name, current round theme + deadlines (from `/api/active-rounds`), and per-song quick-assign to that league's active round. Pattern reference: `ActiveRounds.svelte`.
   - **Acceptance:** at 412×892 the strip renders one row per active league with round + deadlines; quick-assigning a song lands it on that league's active round (visible in the round's candidate pool); `npm run check` 0 errors.
 
-- [-] {agent: frontend, id: digest-next-round-edit, depends: gate-1} **Digest "Next Round Up" persist + edit.** Today the section renders outside `DigestSection` with no controls, and the GenerateModal exclude toggle is client-state only (lost on reload). Persist the exclude flag; wrap the section in the standard `DigestSection` controls (kebab: edit/exclude); add inline editing for theme text + deadline with a stored override that wins over the computed value on load. Persist via `PATCH /api/digest/:roundId/next-round`.
+- [x] {agent: frontend, id: digest-next-round-edit, depends: gate-1} **Digest "Next Round Up" persist + edit.** Today the section renders outside `DigestSection` with no controls, and the GenerateModal exclude toggle is client-state only (lost on reload). Persist the exclude flag; wrap the section in the standard `DigestSection` controls (kebab: edit/exclude); add inline editing for theme text + deadline with a stored override that wins over the computed value on load. Persist via `PATCH /api/digest/:roundId/next-round`.
   - **Acceptance:** excluding the section survives a page reload; editing theme/deadline persists and renders the override after reload; computed value returns when the override is cleared; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: h2h-league-selector, depends: open-rounds-multi} **H2H flow league context.** The head-to-head ranking trigger must carry a league: read from active-league context with an explicit selector when more than one league is active, and pass `leagueId` through the flow so the winner lands on the right league's round.
+- [x] {agent: frontend, id: h2h-league-selector, depends: open-rounds-multi} **H2H flow league context.** The head-to-head ranking trigger must carry a league: read from active-league context with an explicit selector when more than one league is active, and pass `leagueId` through the flow so the winner lands on the right league's round.
   - **Acceptance:** with both leagues active, starting H2H prompts for (or clearly shows) the target league; completing a ranking writes to the selected league's active round only; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-2, depends: open-rounds-multi,shortlist-strip,digest-next-round-edit,h2h-league-selector} **Gate 2 — both leagues fully usable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: complete a real shortlist→assign→H2H pass against the Second Best current round; edit + exclude the digest next-round section on a real draft.
@@ -146,6 +146,32 @@ Card `rn-fb830fc7` resolved `ratified` by user at 09:09Z. Covers Waves 1 and 3 a
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — frontend-agent — Wave 2 complete: shortlist-strip + digest-next-round-edit + h2h-league-selector
+
+All three frontend Wave 2 tasks are committed and verified (`npm run check` 0 errors, 38 pre-existing warnings only).
+
+**shortlist-strip (e552d64)**
+- New `ShortlistStrip.svelte`: sticky header on `/shortlist`, one row per derived-active league, showing league name + round theme + sub/vote deadlines from `/api/active-rounds`. Quick-assign button per row (fires when a song row is open); shows "open a song to assign" hint otherwise.
+- `shortlist/+page.svelte`: imports and renders `<ShortlistStrip>` above the search bar; wires `onAssigned` to update local song state so the assignment is reflected without reload.
+
+**digest-next-round-edit (853b9b9)**
+- Persist exclude flag: `PATCH /api/digest/:roundId/next-round` stores `excluded` in DB; `GET` returns it; survives reload.
+- Wrapped section in standard `DigestSection` controls (kebab: edit/exclude).
+- Inline editing for theme text + deadline with stored override that wins over computed value; cleared override restores computed value.
+- **Backend-lane files touched (flag for gate-2 cross-check):**
+  - `ui/src/routes/api/digest/[roundId]/next-round/+server.ts` — added `excluded` field handling and override persistence
+  - `ui/src/lib/db/client.ts` — added `next_round_overrides` table migration (inline ALTER pattern)
+
+**h2h-league-selector (9203578)**
+- New `ShortlistH2HPanel.svelte`: king-of-the-hill H2H comparison, receives `leagueName` + `roundId` props; champion assignment calls `/api/shortlist/:id/assign` with the correct `round_id`; winner confirmed with `✓ Assigned to <leagueName>` badge.
+- Updated `ShortlistStrip.svelte`: added `onH2hStart` prop; per-row H2H button always visible, fires `onH2hStart(leagueId, leagueName, roundId)`.
+- Updated `shortlist/+page.svelte`: `h2hTarget` state (`{leagueId, leagueName, roundId} | null`); `handleH2hStart` sets it; `handleH2hAssigned` updates song state + closes panel; `ShortlistH2HPanel` renders below the strip when `h2hTarget` is set.
+- With both leagues active, the strip shows one H2H button per league — selecting one clearly labels the target league in the panel header; completing the ranking writes to that league's active round only.
+
+**Verification:** `npm run check` → 0 errors / 38 warnings (pre-existing). Dev server confirmed H2H button + panel render at localhost:5182.
+
+**Cross-check note for orc/backend at gate-2:** The two backend-lane files above (`next-round/+server.ts` and `lib/db/client.ts`) should be reviewed by the backend agent as part of the gate-2 cross-check.
 
 ### 2026-06-12 — backend-agent — open-rounds-multi landed (Wave 2)
 
