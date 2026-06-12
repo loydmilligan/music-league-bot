@@ -191,6 +191,41 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (roundsCols2.length && !roundsCols2.some(c => c.name === 'round_number')) {
 		db.exec("ALTER TABLE rounds ADD COLUMN round_number INTEGER");
 	}
+	// sprint-25 fk-migration: add player_id FK columns to gameplay tables so they
+	// can reference players directly (rename-proof identity, non-ML league support).
+	// Additive alongside existing competitor_id FKs — no data loss. Backfill from
+	// competitors.player_id where the competitor→player link has been established
+	// via the setup screen. All NULL on first boot (mapping built lazily by admin).
+	const msCols2 = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string }[];
+	if (msCols2.length && !msCols2.some(c => c.name === 'player_id')) {
+		db.exec("ALTER TABLE ml_submissions ADD COLUMN player_id INTEGER REFERENCES players(id)");
+		db.exec(`UPDATE ml_submissions SET player_id = (
+			SELECT c.player_id FROM competitors c WHERE c.id = ml_submissions.competitor_id
+		) WHERE competitor_id IS NOT NULL AND player_id IS NULL`);
+	}
+	const votesCols = db.prepare("PRAGMA table_info(votes)").all() as { name: string }[];
+	if (votesCols.length && !votesCols.some(c => c.name === 'player_id')) {
+		db.exec("ALTER TABLE votes ADD COLUMN player_id INTEGER REFERENCES players(id)");
+		db.exec(`UPDATE votes SET player_id = (
+			SELECT c.player_id FROM competitors c WHERE c.id = votes.voter_id
+		) WHERE player_id IS NULL`);
+	}
+	const ssCols = db.prepare("PRAGMA table_info(season_standings)").all() as { name: string }[];
+	if (ssCols.length && !ssCols.some(c => c.name === 'player_id')) {
+		db.exec("ALTER TABLE season_standings ADD COLUMN player_id INTEGER REFERENCES players(id)");
+		db.exec(`UPDATE season_standings SET player_id = (
+			SELECT c.player_id FROM competitors c WHERE c.id = season_standings.competitor_id
+		) WHERE player_id IS NULL`);
+	}
+	// rounds.theme_submitted_by (already added in Wave 3) targets players(id).
+	// Backfill from theme_chooser_id→competitors.player_id where unlinked and
+	// theme_chooser_id is set (currently 0 rows on prod; future-proof).
+	const roundsCols3 = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
+	if (roundsCols3.length && roundsCols3.some(c => c.name === 'theme_submitted_by')) {
+		db.exec(`UPDATE rounds SET theme_submitted_by = (
+			SELECT c.player_id FROM competitors c WHERE c.id = rounds.theme_chooser_id
+		) WHERE theme_chooser_id IS NOT NULL AND theme_submitted_by IS NULL`);
+	}
 	return db;
 }
 
