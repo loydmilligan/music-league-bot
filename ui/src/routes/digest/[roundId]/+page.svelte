@@ -13,6 +13,7 @@
   import StatStrip from '$lib/digest/StatStrip.svelte';
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
+  import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
   import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
   import type { Reconcile, StandingsResult } from '$lib/db/standings.js';
@@ -236,6 +237,12 @@
       statsExcluded = !params.stats.include;
       nextRoundExcluded = !params.nextRound.include;
       discoverabilityExcluded = !params.tastemaker.include;
+      // Persist the next-round exclude flag to the draft (fire-and-forget).
+      fetch(`/api/digest/${data.roundId}/next-round`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ excluded: nextRoundExcluded }),
+      }).catch(() => {});
       if (params.standings.recompute) {
         // "Recompute from votes" → adopt the computed values as the new gospel.
         await adoptStandings();
@@ -546,7 +553,8 @@
   const tastemakerCoverage = $derived<'ready' | 'incomplete'>(tastemakerAvailable ? 'ready' : 'incomplete');
 
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
-  let nextRoundExcluded = $state(false);
+  // excluded flag loaded from server (persisted in draft) — falls back to false when no draft yet.
+  let nextRoundExcluded = $state(data.stage !== 'prepare' ? data.nextRoundMeta.excluded : false);
   const nextRoundAvailable = $derived(
     !!nextRoundData
       && (
@@ -556,7 +564,9 @@
         || !!nextRoundData.deadline
       )
   );
-  const showNextRound = $derived(!nextRoundExcluded && nextRoundAvailable);
+  const nextRoundHasOverride = $derived(data.stage !== 'prepare' ? data.nextRoundMeta.hasOverride : false);
+  // Show the section if the data is available (excluded state is handled by NextRoundSection's own rendering).
+  const showNextRound = $derived(nextRoundAvailable);
 
   // Availability strings for the GenerateModal data-section indicators.
   const statsAvailability = $derived<'ready' | 'incomplete'>(statsAvailable ? 'ready' : 'incomplete');
@@ -1022,14 +1032,16 @@
       </div>
     {/if}
 
-    <!-- Next-round preview (sprint-17) — last. Reads data.nextRound; the
-         component renders nothing when null, and we gate the wrap too. -->
-    {#if showNextRound && NextRoundSlot}
-      <div class="dg-section-wrap" data-section-kind="nextRound">
-        <section class="dg-section">
-          <NextRoundSlot kind="nextRound" content={{}} data={nextRoundData} variant="visual" />
-        </section>
-      </div>
+    <!-- Next-round preview (sprint-25 next-round-edit): wrapped in NextRoundSection
+         for persistent exclude + inline theme/deadline override editing. -->
+    {#if showNextRound}
+      <NextRoundSection
+        roundId={data.roundId}
+        data={nextRoundData ?? null}
+        initialExcluded={nextRoundExcluded}
+        hasOverride={nextRoundHasOverride}
+        onExcludedChange={(v) => { nextRoundExcluded = v; }}
+      />
     {/if}
 
     <footer class="dgC-foot">

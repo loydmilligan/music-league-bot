@@ -109,6 +109,11 @@ export type NextRoundInfo = {
   deadline?: string | null;
   submissionsSoFar?: number | null;
 };
+export type NextRoundMeta = {
+  data: NextRoundInfo | null;
+  excluded: boolean;
+  hasOverride: boolean;
+};
 
 type DigestPageBase = {
   roundId: number;
@@ -132,6 +137,7 @@ export type DigestPageData =
       stats: DigestStats | null;
       discoverability: TastemakerPayload | null;
       nextRound: NextRoundInfo | null;
+      nextRoundMeta: NextRoundMeta;
       recap: RecapContext | null;
     });
 
@@ -186,12 +192,18 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
         | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    const [standings, stats, discoverability, nextRound] = await Promise.all([
+    const [standings, stats, discoverability, nextRoundRaw] = await Promise.all([
       fetchStandings(fetch, roundId),
       fetchJson<{ stats: DigestStats }>(fetch, `/api/digest/${roundId}/stats`).then((b) => b?.stats ?? null),
       fetchJson<{ discoverability: TastemakerPayload | null }>(fetch, `/api/digest/${roundId}/discoverability`).then((b) => b?.discoverability ?? null),
-      fetchJson<{ nextRound: NextRoundInfo | null }>(fetch, `/api/digest/${roundId}/next-round`).then((b) => b?.nextRound ?? null),
+      fetchJson<{ nextRound: NextRoundInfo | null; excluded?: boolean; hasOverride?: boolean }>(fetch, `/api/digest/${roundId}/next-round`),
     ]);
+    const nextRound = nextRoundRaw?.nextRound ?? null;
+    const nextRoundMeta: NextRoundMeta = {
+      data: nextRound,
+      excluded: !!(nextRoundRaw?.excluded),
+      hasOverride: !!(nextRoundRaw?.hasOverride),
+    };
 
     // sprint-21 season-recap: when the active draft was generated in recap mode,
     // reframe the DATA sections at season scope — season stat-strip totals, a
@@ -220,9 +232,13 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       nextRoundOut = null; // next-round is irrelevant in a season recap
     }
 
+    const nextRoundMetaOut: NextRoundMeta = nextRoundOut === null
+      ? { data: null, excluded: nextRoundMeta.excluded, hasOverride: false }
+      : nextRoundMeta;
+
     return {
       roundId, roundsIndex, currentRound, relContext, share, stage, draft, sections,
-      standings, stats: statsOut, discoverability, nextRound: nextRoundOut, recap,
+      standings, stats: statsOut, discoverability, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
     } satisfies DigestPageData;
   }
 

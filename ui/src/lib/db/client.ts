@@ -73,6 +73,19 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'recap_final')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN recap_final INTEGER NOT NULL DEFAULT 1");
 	}
+	// sprint-25 next-round-edit: persist exclude flag + theme/deadline overrides on the draft.
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_excluded')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_excluded INTEGER NOT NULL DEFAULT 0");
+	}
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_theme_override')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_theme_override TEXT");
+	}
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_sub_deadline_override')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_sub_deadline_override TEXT");
+	}
+	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_vote_deadline_override')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_vote_deadline_override TEXT");
+	}
 	// sprint-15 podium-thumbnails: per-song album art cached on ml_submissions.
 	const msArtCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string }[];
 	if (msArtCols.length && !msArtCols.some(c => c.name === 'album_art_url')) {
