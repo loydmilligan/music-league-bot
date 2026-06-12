@@ -2,6 +2,7 @@
   import '$lib/shortlist/shortlist.css';
   import SearchBar from '$lib/shortlist/SearchBar.svelte';
   import ShortlistRow from '$lib/shortlist/ShortlistRow.svelte';
+  import ShortlistStrip from '$lib/shortlist/ShortlistStrip.svelte';
   import type { PageData } from './$types.js';
   import type { ShortlistSong } from '$lib/types.js';
 
@@ -54,6 +55,20 @@
     openId = openId === id ? null : id;
   }
 
+  function handleQuickAssigned(songId: string, roundId: number) {
+    songs = songs.map((s) =>
+      s.id === songId
+        ? {
+            ...s,
+            assignments: [
+              ...(s.assignments ?? []),
+              { shortlistSongId: songId, roundId, assignedAt: new Date().toISOString() },
+            ],
+          }
+        : s,
+    );
+  }
+
   function handleGlobalKeydown(e: KeyboardEvent) {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -77,6 +92,8 @@
     <h1 class="font-display text-3xl font-bold text-fg">Shortlist</h1>
     <p class="text-fg-muted text-sm mt-1">Research songs for upcoming rounds. Rate, assign, track.</p>
   </header>
+
+  <ShortlistStrip openSongId={openId} onAssigned={handleQuickAssigned} />
 
   <SearchBar bind:this={searchRef} onadd={handleAdd} />
 
