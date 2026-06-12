@@ -30,7 +30,8 @@
     { href: '/chat',      label: 'Chat watcher',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
     { href: '/digest',    label: 'Digest preview', glyph: '▸', count: '3 new' },
     { href: '/history',   label: 'History',        glyph: '▸' },
-    { href: '/settings',  label: 'Setup',          glyph: '▸' },
+    { href: '/settings',  label: 'Settings',       glyph: '▸' },
+    { href: '/setup',     label: 'Setup',          glyph: '▸' },
   ]);
 
   // Opportunistically pull active-leagues data from the home page's loader when

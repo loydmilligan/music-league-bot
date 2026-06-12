@@ -4,6 +4,26 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.1] — 2026-06-11
+
+### Visible (UI)
+
+- **League active controls** — home league cards and the Active rounds panel can
+  toggle a league's manual active flag through the existing league API.
+- **Next Round Up deadlines** — digest next-round previews now render submission
+  and voting deadlines separately instead of one ambiguous deadline.
+
+### Under the hood
+
+- **Season import status is conservative** — re-imports preserve active seasons,
+  and a season is inferred complete only when every imported round has votes.
+- **Active-round derivation is season-aware** — leagues with active seasons
+  surface even without the manual active flag, and all-archived active seasons
+  report a next-round-needed state instead of pretending the latest archive is
+  active.
+- **Next-round lookup crosses seasons** — digest next-round data now walks the
+  whole league in season order and prefers round descriptions as the theme text.
+
 ## [1.0.0] — 2026-06-09
 
 **MVP complete.** The History research tool's final two tabs land, closing the

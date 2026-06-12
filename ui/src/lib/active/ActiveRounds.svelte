@@ -34,7 +34,9 @@
     slug: string;
     name: string;
     isActive: boolean;
+    manuallyActive: boolean;
     activeSeasonId: number | null;
+    needsNextRound: boolean;
     activeRound: ActiveRound | null;
     availableRounds: AvailableRound[];
   };
@@ -153,6 +155,15 @@
     if (res.ok) replaceLeague((await res.json()) as LeagueActiveRound);
   }
 
+  async function toggleManualActive(l: LeagueActiveRound) {
+    const res = await fetch(`/api/leagues/${l.leagueId}/active`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: !l.manuallyActive }),
+    });
+    if (res.ok) replaceLeague((await res.json()) as LeagueActiveRound);
+  }
+
   // ---- formatting helpers (browser-side; Date is fine here) ----
   function fmtDeadline(iso: string | null): string {
     if (!iso) return '—';
@@ -232,6 +243,22 @@
           </div>
 
           <div class="font-bold text-fg truncate" title={l.name}>{l.name}</div>
+          <div class="mt-2 flex items-center justify-between gap-3">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">
+              {l.manuallyActive ? 'manual active' : 'derived active'}
+            </span>
+            <button
+              type="button"
+              class="font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm border transition-colors"
+              class:border-accent={l.manuallyActive}
+              class:text-accent={l.manuallyActive}
+              class:border-border-muted={!l.manuallyActive}
+              class:text-fg-muted={!l.manuallyActive}
+              onclick={() => toggleManualActive(l)}
+            >
+              {l.manuallyActive ? 'On' : 'Off'}
+            </button>
+          </div>
 
           {#if r}
             <div class="font-sans text-sm font-bold text-fg mt-1.5 truncate" title={r.theme ?? r.name}>
@@ -272,7 +299,9 @@
             </div>
           {:else}
             <p class="text-fg-muted text-sm mt-2 flex-1">
-              This league is active but no active round could be resolved.
+              {l.needsNextRound
+                ? 'Every round in the active season is archived. Create or pin the next round.'
+                : 'This league is active but no active round could be resolved.'}
             </p>
             <button
               type="button"

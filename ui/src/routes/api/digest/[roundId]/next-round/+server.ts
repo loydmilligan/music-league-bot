@@ -3,7 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getNextRound } from '$lib/db/nextRound.js';
 
-// GET /api/digest/:roundId/next-round → { nextRound: { theme, deadline, submissionsSoFar } | null }
+// GET /api/digest/:roundId/next-round → { nextRound: { theme, submissionDeadline, votingDeadline, submissionsSoFar } | null }
 export const GET: RequestHandler = ({ params }) => {
   const roundId = Number(params.roundId);
   if (!roundId) throw error(400, 'invalid roundId');

@@ -7,6 +7,13 @@
   import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
+  let manualActiveOverrides = $state<Record<string, boolean>>({});
+  const manualActiveBySlug = $derived(
+    {
+      ...Object.fromEntries(data.leagueActiveStates.map(l => [l.slug, l.manuallyActive])),
+      ...manualActiveOverrides,
+    } as Record<string, boolean>
+  );
 
   type ActiveSeason = (typeof data.activeSeasons)[number];
 
@@ -83,6 +90,7 @@
   // TODO: once backend's +layout.server.ts loader lands, switch to page.data.leagues
   // for the canonical full list including idle leagues with no past seasons.
   type LeagueRow = {
+    leagueId: number;
     slug: string;
     name: string;
     status: 'active' | 'voting' | 'open' | 'idle';
@@ -105,6 +113,7 @@
         : phase === 'upcoming' ? 'active'
         : 'idle'; // archive or null
       rows.set(s.league.slug, {
+        leagueId: s.league.id,
         slug: s.league.slug,
         name: s.league.name,
         status,
@@ -121,6 +130,7 @@
       if (rows.has(item.league.slug)) continue;
       const lastSeason = item.seasons.at(-1);
       rows.set(item.league.slug, {
+        leagueId: item.league.id,
         slug: item.league.slug,
         name: item.league.name,
         status: 'idle',
@@ -142,6 +152,18 @@
 
   const activeCount = $derived(activeLeagues.length);
   const totalLeagues = $derived(allLeagues.length);
+
+  async function toggleLeagueActive(row: LeagueRow) {
+    const active = !manualActiveBySlug[row.slug];
+    const res = await fetch(`/api/leagues/${row.leagueId}/active`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active }),
+    });
+    if (res.ok) {
+      manualActiveOverrides = { ...manualActiveOverrides, [row.slug]: active };
+    }
+  }
 </script>
 
 <svelte:head><title>Mash League · music-league-bot</title></svelte:head>
@@ -247,11 +269,10 @@
     {#each allLeagues as row (row.slug)}
       {@const currentTheme = row.activeSeason?.currentRound?.name ?? null}
       {@const phase = row.activeSeason?.currentRound?.phase ?? null}
-      <a
-        href={row.href}
-        class="block bg-bg-elevated border border-border-muted hover:border-accent-deep rounded-xl p-4 transition-colors group"
+      <article
+        class="bg-bg-elevated border border-border-muted rounded-xl p-4 transition-colors group"
       >
-        <div class="flex items-center gap-2 mb-3 h-5 flex-wrap">
+        <div class="flex items-center gap-2 mb-3 min-h-5 flex-wrap">
           {#if phase === 'submission'}
             <StatusChip label="SUBMITTING" tone="accent" />
           {:else if phase === 'voting'}
@@ -266,28 +287,41 @@
               {row.status}
             </span>
           {/if}
+          <button
+            type="button"
+            class="ml-auto font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded-sm border transition-colors"
+            class:border-accent={manualActiveBySlug[row.slug]}
+            class:text-accent={manualActiveBySlug[row.slug]}
+            class:border-border-muted={!manualActiveBySlug[row.slug]}
+            class:text-fg-muted={!manualActiveBySlug[row.slug]}
+            onclick={() => toggleLeagueActive(row)}
+          >
+            {manualActiveBySlug[row.slug] ? 'Active' : 'Inactive'}
+          </button>
         </div>
-        <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
-          {row.name}
-        </div>
-        <!-- TODO: backend loader should surface season.name when available; falling back to Season {n}. -->
-        <div class="font-mono text-sm text-fg-muted mt-0.5 truncate">
-          {row.seasonNumber != null ? `Season ${row.seasonNumber}` : row.slug}
-        </div>
-        {#if currentTheme}
-          <div class="font-sans text-sm font-bold text-fg mt-2 truncate" title={currentTheme}>
-            {currentTheme}
+        <a href={row.href} class="block hover:text-accent transition-colors">
+          <div class="font-bold text-fg group-hover:text-accent transition-colors truncate">
+            {row.name}
           </div>
-        {/if}
-        <!-- TODO: backend standings query needed for real placement — placeholder until then. -->
-        <div class="font-mono text-[11px] text-fg-dim mt-3 truncate">
-          {#if row.status === 'idle'}
-            Finished: —{row.finishedRounds != null ? `/${row.finishedRounds}` : ''}
-          {:else}
-            My place: —
+          <!-- TODO: backend loader should surface season.name when available; falling back to Season {n}. -->
+          <div class="font-mono text-sm text-fg-muted mt-0.5 truncate">
+            {row.seasonNumber != null ? `Season ${row.seasonNumber}` : row.slug}
+          </div>
+          {#if currentTheme}
+            <div class="font-sans text-sm font-bold text-fg mt-2 truncate" title={currentTheme}>
+              {currentTheme}
+            </div>
           {/if}
-        </div>
-      </a>
+          <!-- TODO: backend standings query needed for real placement — placeholder until then. -->
+          <div class="font-mono text-[11px] text-fg-dim mt-3 truncate">
+            {#if row.status === 'idle'}
+              Finished: —{row.finishedRounds != null ? `/${row.finishedRounds}` : ''}
+            {:else}
+              My place: —
+            {/if}
+          </div>
+        </a>
+      </article>
     {/each}
   </div>
 </section>

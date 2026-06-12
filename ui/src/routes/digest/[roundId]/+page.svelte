@@ -547,7 +547,15 @@
 
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
   let nextRoundExcluded = $state(false);
-  const nextRoundAvailable = $derived(!!nextRoundData && (!!nextRoundData.theme || !!nextRoundData.deadline));
+  const nextRoundAvailable = $derived(
+    !!nextRoundData
+      && (
+        !!nextRoundData.theme
+        || !!nextRoundData.submissionDeadline
+        || !!nextRoundData.votingDeadline
+        || !!nextRoundData.deadline
+      )
+  );
   const showNextRound = $derived(!nextRoundExcluded && nextRoundAvailable);
 
   // Availability strings for the GenerateModal data-section indicators.

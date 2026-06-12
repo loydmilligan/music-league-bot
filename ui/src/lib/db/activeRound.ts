@@ -43,7 +43,9 @@ export interface LeagueActiveRound {
   slug: string;
   name: string;
   isActive: boolean;
+  manuallyActive: boolean;
   activeSeasonId: number | null;
+  needsNextRound: boolean;
   /** The resolved active round (manual slot → derived → null). */
   activeRound: ActiveRoundView | null;
   /** Rounds of the active season — the "choose from this list" set for the modal. */
@@ -58,13 +60,24 @@ interface LeagueRow {
   active_round_id: number | null;
 }
 
+function seasonHasLiveRound(db: Database.Database, seasonId: number): boolean {
+  const current = getCurrentRoundForSeason(db, seasonId);
+  return !!current && current.phase !== 'archive';
+}
+
 /** Most-recent active season id for a league (null if none). */
 export function getActiveSeasonId(db: Database.Database, leagueId: number): number | null {
-  const row = db.prepare(
-    `SELECT id FROM seasons WHERE league_id = ? AND status = 'active'
-       ORDER BY season_number DESC LIMIT 1`,
-  ).get(leagueId) as { id: number } | undefined;
-  return row?.id ?? null;
+  const seasons = db.prepare(
+    `SELECT id, season_number, status FROM seasons
+     WHERE league_id = ?
+     ORDER BY season_number DESC`,
+  ).all(leagueId) as Array<{ id: number; season_number: number; status: string }>;
+  for (const season of seasons) {
+    if (season.status === 'active' || seasonHasLiveRound(db, season.id)) {
+      return season.id;
+    }
+  }
+  return null;
 }
 
 /** Mark a league active / inactive. Returns true if a row changed. */
@@ -104,7 +117,7 @@ function resolveActiveRound(db: Database.Database, league: LeagueRow, activeSeas
   // 2. Derived current round of the active season.
   if (activeSeasonId != null) {
     const d = getCurrentRoundForSeason(db, activeSeasonId);
-    if (d) {
+    if (d && d.phase !== 'archive') {
       return {
         id: d.id, name: d.name, theme: d.description,
         submissionDeadline: d.submissionDeadline, votingDeadline: d.votingDeadline,
@@ -124,12 +137,16 @@ function buildLeagueActiveRound(db: Database.Database, league: LeagueRow): Leagu
         submissionDeadline: r.submissionDeadline, votingDeadline: r.votingDeadline,
       }))
     : [];
+  const manualRound = league.active_round_id != null ? getRoundById(db, league.active_round_id) : null;
+  const needsNextRound = !manualRound && availableRounds.length > 0 && availableRounds.every((r) => r.phase === 'archive');
   return {
     leagueId: league.id,
     slug: league.slug,
     name: league.name,
-    isActive: !!league.is_active,
+    isActive: !!league.is_active || activeSeasonId != null,
+    manuallyActive: !!league.is_active,
     activeSeasonId,
+    needsNextRound,
     activeRound: resolveActiveRound(db, league, activeSeasonId),
     availableRounds,
   };
@@ -138,9 +155,11 @@ function buildLeagueActiveRound(db: Database.Database, league: LeagueRow): Leagu
 /** Per active league: its resolved active round (or null) + the choose-list. */
 export function getActiveLeaguesActiveRounds(db: Database.Database): LeagueActiveRound[] {
   const leagues = db.prepare(
-    'SELECT id, slug, name, is_active, active_round_id FROM leagues WHERE is_active = 1 ORDER BY id',
+    'SELECT id, slug, name, is_active, active_round_id FROM leagues ORDER BY id',
   ).all() as LeagueRow[];
-  return leagues.map(l => buildLeagueActiveRound(db, l));
+  return leagues
+    .map(l => buildLeagueActiveRound(db, l))
+    .filter(l => l.isActive);
 }
 
 /** Single league's active-round view (used by the set/create endpoints to echo state). */

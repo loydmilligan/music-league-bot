@@ -16,6 +16,10 @@ export const load: PageServerLoad = async () => {
   });
 
   const allLeagues = getAllLeagues(db);
+  const leagueActiveStates = (db.prepare(
+    'SELECT id, slug, is_active FROM leagues ORDER BY id',
+  ).all() as { id: number; slug: string; is_active: number }[])
+    .map(l => ({ id: l.id, slug: l.slug, manuallyActive: !!l.is_active }));
   const pastLeagues = allLeagues.filter(l => !l.excludeFromCombined).map(league => {
     const seasons = getSeasonsForLeague(db, league.id).filter(s => s.status === 'complete');
     const totalRounds = seasons.reduce((sum, s) =>
@@ -33,5 +37,5 @@ export const load: PageServerLoad = async () => {
     ORDER BY r.created_at DESC`).all() as any[]);
   const chatMentions = getAllMentions();
 
-  return { activeSeasons, pastLeagues, mlSongs, chatMentions };
+  return { activeSeasons, pastLeagues, leagueActiveStates, mlSongs, chatMentions };
 };

@@ -2,7 +2,7 @@ import { it, expect, beforeEach, describe } from 'vitest';
 import type Database from 'better-sqlite3';
 import { openLeagueDb } from './client.js';
 import { seedLeagues, upsertSeason } from './leagues.js';
-import { upsertRound } from './rounds.js';
+import { upsertRound, updateDeadlines } from './rounds.js';
 import { getRoundStats } from './roundStats.js';
 import { getNextRound } from './nextRound.js';
 import { getDiscoverability } from './discoverability.js';
@@ -61,12 +61,41 @@ describe('getNextRound', () => {
     const { r1 } = seed(db);
     const nx = getNextRound(db, r1)!;
     expect(nx.theme).toBe('Round Two');
-    expect(nx.deadline).toBe('2026-02-10T00:00:00Z');
+    expect(nx.submissionDeadline).toBe('2026-02-10T00:00:00Z');
+    expect(nx.votingDeadline).toBeNull();
     expect(nx.submissionsSoFar).toBe(1);
   });
   it('returns null on the latest round', () => {
     const { r2 } = seed(db);
     expect(getNextRound(db, r2)).toBeNull();
+  });
+  it('continues across seasons within the same league', () => {
+    seedLeagues(db);
+    const leagueId = (db.prepare("SELECT id FROM leagues WHERE slug='hip-jammers'").get() as { id: number }).id;
+    const s1 = upsertSeason(db, leagueId, 1, 'complete');
+    const s2 = upsertSeason(db, leagueId, 2, 'active');
+    const last = upsertRound(db, s1, {
+      mlRoundId: 'cross-s1-r2',
+      name: 'Round 2',
+      description: 'Finale theme',
+      spotifyPlaylistUrl: '',
+      createdAt: '2026-01-02T00:00:00Z',
+    });
+    const next = upsertRound(db, s2, {
+      mlRoundId: 'cross-s2-r1',
+      name: 'Round 1',
+      description: 'New season theme',
+      spotifyPlaylistUrl: '',
+      createdAt: '2026-02-01T00:00:00Z',
+    });
+    updateDeadlines(db, next, '2026-02-10T00:00:00Z', '2026-02-17T00:00:00Z');
+
+    const nx = getNextRound(db, last)!;
+
+    expect(nx.theme).toBe('New season theme');
+    expect(nx.themeSource).toBe('description');
+    expect(nx.submissionDeadline).toBe('2026-02-10T00:00:00Z');
+    expect(nx.votingDeadline).toBe('2026-02-17T00:00:00Z');
   });
 });
 

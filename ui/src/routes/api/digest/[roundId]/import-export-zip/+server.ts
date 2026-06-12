@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { getDb } from '$lib/db/client.js';
 import { parseZip } from '$lib/import/zipParser.js';
-import { importZipData } from '$lib/import/importer.js';
+import { importLiveRoundsData, importZipData } from '$lib/import/importer.js';
 import { logImport } from '$lib/db/importLog.js';
 import { probeMlAuth } from '$lib/mlAuth.js';
 import { runPrepChecks } from '$lib/digest/prepChecks.js';
@@ -27,6 +27,7 @@ interface SuccessBody {
   checks: ReturnType<typeof runPrepChecks>;
   durationMs: number;
   mlLeagueId?: string;
+  liveRoundsImported?: number;
 }
 
 interface RoundContext {
@@ -140,7 +141,65 @@ export const POST: RequestHandler = async ({ params }) => {
     return fail(stage, bridge.reason ?? `host daemon returned ${bridgeStatus}`);
   }
 
-  // 3. Import the zip via the existing pipeline. Daemon already dropped it
+  // 3. Best-effort live-round reconciliation via the CLI snapshot. This can
+  //    repair stale complete seasons before the ZIP import lands.
+  let liveRoundsImported = 0;
+  try {
+    const snapshotRes = await fetch(`${TRIGGER_URL}/rounds-snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        leagueName: ctx.leagueName,
+        slug: ctx.slug,
+        seasonNumber: ctx.seasonNumber,
+      }),
+      signal: ac.signal,
+    });
+    if (snapshotRes.ok) {
+      const snapshotBody = (await snapshotRes.json().catch(() => ({}))) as {
+        ok?: boolean;
+        rounds?: Array<{
+          id?: string;
+          number?: number;
+          name?: string;
+          description?: string | null;
+          playlistUrl?: string | null;
+          submissionsDueUtc?: string | null;
+          votesDueUtc?: string | null;
+        }>;
+      };
+      if (snapshotBody.ok !== false && Array.isArray(snapshotBody.rounds) && snapshotBody.rounds.length > 0) {
+        const liveRounds = snapshotBody.rounds
+          .filter((r): r is {
+            id: string;
+            number: number;
+            name: string;
+            description?: string | null;
+            playlistUrl?: string | null;
+            submissionsDueUtc?: string | null;
+            votesDueUtc?: string | null;
+          } => typeof r.id === 'string' && Number.isFinite(r.number) && typeof r.name === 'string' && r.name.trim() !== '')
+          .map((r) => ({
+            id: r.id,
+            number: r.number,
+            name: r.name,
+            description: r.description ?? '',
+            playlistUrl: r.playlistUrl ?? null,
+            submissionsDueUtc: r.submissionsDueUtc ?? null,
+            votesDueUtc: r.votesDueUtc ?? null,
+          }));
+        const liveImport = importLiveRoundsData(getDb(), ctx.slug, ctx.seasonNumber, liveRounds);
+        if (liveImport.status === 'error') {
+          return fail('import', liveImport.error ?? 'live round reconciliation failed');
+        }
+        liveRoundsImported = liveImport.roundsCount;
+      }
+    }
+  } catch {
+    // fall through to ZIP import; live snapshot is a repair path, not a hard dependency here
+  }
+
+  // 4. Import the zip via the existing pipeline. Daemon already dropped it
   //    in the shared volume at data/<slug>/season-<N>/export.zip — read from
   //    the container's view of that path.
   const zipPath = resolve(DATA_DIR, ctx.slug, `season-${ctx.seasonNumber}`, 'export.zip');
@@ -194,6 +253,7 @@ export const POST: RequestHandler = async ({ params }) => {
     checks,
     durationMs: Date.now() - startedAt,
     mlLeagueId: bridge.mlLeagueId,
+    liveRoundsImported,
   };
   return json(body);
 };

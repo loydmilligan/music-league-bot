@@ -134,6 +134,11 @@ const server = createServer((req, res) => {
 		return;
 	}
 
+	if (req.method === 'POST' && req.url === '/rounds-snapshot') {
+		void handleRoundsSnapshot(req, res);
+		return;
+	}
+
 	res.writeHead(404, { 'Content-Type': 'application/json' });
 	res.end(JSON.stringify({ error: 'Not found' }));
 });
@@ -159,92 +164,9 @@ async function handleExportZip(req, res) {
 	}
 
 	const startedAt = Date.now();
-
-	// 1. Resolve ML league id by name via `leagues list --json`.
-	const listResult = await runCli(['--json', 'leagues', 'list'], LEAGUES_LIST_TIMEOUT_MS);
-	if (listResult.kind === 'spawn-error') {
-		return writeJson(res, 500, {
-			ok: false,
-			stage: 'cli',
-			reason: `cli-web-musicleague not on PATH: ${listResult.message}`
-		});
-	}
-	if (listResult.kind === 'timeout') {
-		return writeJson(res, 504, { ok: false, stage: 'cli', reason: 'leagues list timed out' });
-	}
-	let listPayload = null;
-	try {
-		listPayload = JSON.parse(listResult.stdout || 'null');
-	} catch {
-		return writeJson(res, 500, {
-			ok: false,
-			stage: 'cli',
-			reason: `leagues list emitted non-JSON: ${listResult.stderr.slice(0, 200) || 'unknown'}`
-		});
-	}
-	if (listPayload && listPayload.error === true) {
-		const code = listPayload.code ?? '';
-		if (code === 'AUTH_EXPIRED') {
-			return writeJson(res, 200, { ok: false, stage: 'auth', reason: 'ml-auth required' });
-		}
-		return writeJson(res, 502, {
-			ok: false,
-			stage: 'cli',
-			reason: listPayload.message ?? `leagues list failed: ${code || listResult.exitCode}`
-		});
-	}
-	const leagues = Array.isArray(listPayload)
-		? listPayload
-		: Array.isArray(listPayload?.leagues)
-		? listPayload.leagues
-		: Array.isArray(listPayload?.data)
-		? listPayload.data
-		: [];
-	// Normalize for matching: strip punctuation, collapse whitespace, lowercase.
-	// ML names drift from our slugged DB names (e.g. our "Hip Jammers" is ML's
-	// "Hip Jammers 3: its all hippening"; our "Nostalgia Pit" is ML's "The
-	// Nostalgia Pit"). Try exact first, then substring either direction.
-	const normalize = (s) =>
-		String(s ?? '')
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, ' ')
-			.trim();
-	const needle = normalize(leagueName);
-	const exact = leagues.find((l) => normalize(l?.name) === needle);
-	let target = exact;
-	if (!target) {
-		const fuzzy = leagues.filter((l) => {
-			const n = normalize(l?.name);
-			return n.includes(needle) || needle.includes(n);
-		});
-		if (fuzzy.length === 1) target = fuzzy[0];
-		else if (fuzzy.length > 1) {
-			return writeJson(res, 409, {
-				ok: false,
-				stage: 'cli',
-				reason: `ambiguous league name "${leagueName}" — matches ${fuzzy.length}: ${fuzzy
-					.map((l) => l?.name)
-					.join(', ')}`
-			});
-		}
-	}
-	if (!target) {
-		return writeJson(res, 404, {
-			ok: false,
-			stage: 'cli',
-			reason: `league "${leagueName}" not found in leagues list (got ${leagues.length}: ${leagues
-				.map((l) => l?.name)
-				.join(', ')})`
-		});
-	}
-	const mlLeagueId = target.id ?? target.league_id ?? target.leagueId;
-	if (!mlLeagueId || typeof mlLeagueId !== 'string') {
-		return writeJson(res, 500, {
-			ok: false,
-			stage: 'cli',
-			reason: 'matched league has no usable id field'
-		});
-	}
+	const resolved = await resolveLeagueId({ leagueName, slug });
+	if (!resolved.mlLeagueId) return writeJson(res, resolved.status, resolved.error);
+	const { mlLeagueId } = resolved;
 
 	// 2. Spawn `leagues export <id> -o <path>` writing into the shared volume.
 	const outDir = resolve(DATA_DIR, slug, `season-${seasonNumber}`);
@@ -295,6 +217,176 @@ async function handleExportZip(req, res) {
 		path: outPath,
 		durationMs: Date.now() - startedAt
 	});
+}
+
+async function handleRoundsSnapshot(req, res) {
+	let body = '';
+	for await (const chunk of req) body += chunk.toString();
+	let payload;
+	try {
+		payload = body ? JSON.parse(body) : {};
+	} catch {
+		return writeJson(res, 400, { ok: false, stage: 'other', reason: 'invalid JSON body' });
+	}
+	const leagueName = typeof payload?.leagueName === 'string' ? payload.leagueName.trim() : '';
+	const slug = typeof payload?.slug === 'string' ? payload.slug.trim() : '';
+	if (!leagueName || !slug) {
+		return writeJson(res, 400, { ok: false, stage: 'other', reason: 'leagueName, slug required' });
+	}
+
+	const startedAt = Date.now();
+	const resolved = await resolveLeagueId({ leagueName, slug });
+	if (!resolved.mlLeagueId) return writeJson(res, resolved.status, resolved.error);
+	const { mlLeagueId } = resolved;
+
+	const roundsResult = await runCli(['--json', 'rounds', 'themes', mlLeagueId], LEAGUES_LIST_TIMEOUT_MS);
+	if (roundsResult.kind === 'spawn-error') {
+		return writeJson(res, 500, {
+			ok: false,
+			stage: 'cli',
+			reason: `cli-web-musicleague not on PATH: ${roundsResult.message}`
+		});
+	}
+	if (roundsResult.kind === 'timeout') {
+		return writeJson(res, 504, { ok: false, stage: 'cli', reason: 'rounds themes timed out' });
+	}
+	let roundsPayload = null;
+	try {
+		roundsPayload = JSON.parse(roundsResult.stdout || 'null');
+	} catch {
+		return writeJson(res, 500, {
+			ok: false,
+			stage: 'cli',
+			reason: `rounds themes emitted non-JSON: ${roundsResult.stderr.slice(0, 200) || 'unknown'}`
+		});
+	}
+	if (roundsPayload && roundsPayload.error === true) {
+		const code = roundsPayload.code ?? '';
+		if (code === 'AUTH_EXPIRED') {
+			return writeJson(res, 200, { ok: false, stage: 'auth', reason: 'ml-auth required' });
+		}
+		return writeJson(res, 502, {
+			ok: false,
+			stage: 'cli',
+			reason: roundsPayload.message ?? `rounds themes failed: ${code || roundsResult.exitCode}`
+		});
+	}
+
+	const rounds = normalizeLiveRounds(roundsPayload);
+	return writeJson(res, 200, {
+		ok: true,
+		stage: 'cli',
+		mlLeagueId,
+		rounds,
+		durationMs: Date.now() - startedAt,
+	});
+}
+
+async function resolveLeagueId({ leagueName, slug }) {
+	const listResult = await runCli(['--json', 'leagues', 'list'], LEAGUES_LIST_TIMEOUT_MS);
+	if (listResult.kind === 'spawn-error') {
+		return {
+			error: { ok: false, stage: 'cli', reason: `cli-web-musicleague not on PATH: ${listResult.message}` },
+			status: 500,
+		};
+	}
+	if (listResult.kind === 'timeout') {
+		return { error: { ok: false, stage: 'cli', reason: 'leagues list timed out' }, status: 504 };
+	}
+	let listPayload = null;
+	try {
+		listPayload = JSON.parse(listResult.stdout || 'null');
+	} catch {
+		return {
+			error: {
+				ok: false,
+				stage: 'cli',
+				reason: `leagues list emitted non-JSON: ${listResult.stderr.slice(0, 200) || 'unknown'}`
+			},
+			status: 500,
+		};
+	}
+	if (listPayload && listPayload.error === true) {
+		const code = listPayload.code ?? '';
+		if (code === 'AUTH_EXPIRED') {
+			return { error: { ok: false, stage: 'auth', reason: 'ml-auth required' }, status: 200 };
+		}
+		return {
+			error: { ok: false, stage: 'cli', reason: listPayload.message ?? `leagues list failed: ${code || listResult.exitCode}` },
+			status: 502,
+		};
+	}
+	const leagues = Array.isArray(listPayload)
+		? listPayload
+		: Array.isArray(listPayload?.leagues)
+		? listPayload.leagues
+		: Array.isArray(listPayload?.data)
+		? listPayload.data
+		: [];
+	const normalize = (s) =>
+		String(s ?? '')
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, ' ')
+			.trim();
+	const needle = normalize(leagueName);
+	const exact = leagues.find((l) => normalize(l?.name) === needle);
+	let target = exact;
+	if (!target) {
+		const fuzzy = leagues.filter((l) => {
+			const n = normalize(l?.name);
+			return n.includes(needle) || needle.includes(n);
+		});
+		if (fuzzy.length === 1) target = fuzzy[0];
+		else if (fuzzy.length > 1) {
+			return {
+				error: {
+					ok: false,
+					stage: 'cli',
+					reason: `ambiguous league name "${leagueName}" — matches ${fuzzy.length}: ${fuzzy.map((l) => l?.name).join(', ')}`
+				},
+				status: 409,
+			};
+		}
+	}
+	if (!target) {
+		return {
+			error: {
+				ok: false,
+				stage: 'cli',
+				reason: `league "${leagueName}" not found in leagues list (got ${leagues.length}: ${leagues.map((l) => l?.name).join(', ')})`
+			},
+			status: 404,
+		};
+	}
+	const mlLeagueId = target.id ?? target.league_id ?? target.leagueId;
+	if (!mlLeagueId || typeof mlLeagueId !== 'string') {
+		return {
+			error: { ok: false, stage: 'cli', reason: 'matched league has no usable id field' },
+			status: 500,
+		};
+	}
+	return { mlLeagueId };
+}
+
+function normalizeLiveRounds(payload) {
+	const items = Array.isArray(payload)
+		? payload
+		: Array.isArray(payload?.rounds)
+		? payload.rounds
+		: Array.isArray(payload?.data)
+		? payload.data
+		: [];
+	return items
+		.map((r) => ({
+			id: String(r?.id ?? r?.round_id ?? ''),
+			number: Number(r?.number ?? r?.round_number ?? r?.seq ?? 0),
+			name: String(r?.name ?? r?.title ?? ''),
+			description: r?.description ?? r?.desc ?? '',
+			playlistUrl: r?.playlist_id ? `https://open.spotify.com/playlist/${r.playlist_id}` : (r?.playlistUrl ?? null),
+			submissionsDueUtc: r?.submissions_due_utc ?? r?.deadline_iso ?? r?.submissionsDueUtc ?? null,
+			votesDueUtc: r?.votes_due_utc ?? r?.votesDueUtc ?? null,
+		}))
+		.filter((r) => r.id && Number.isFinite(r.number));
 }
 
 function writeJson(res, status, body) {

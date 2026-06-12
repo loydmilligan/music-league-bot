@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { League, Season } from '../types.js';
+import { getCurrentRoundForSeason } from './rounds.js';
 
 const SEED = [
   { slug: 'hip-jammers',  name: 'Hip Jammers',  exclude: 0 },
@@ -31,16 +32,27 @@ export function getSeasonsForLeague(db: Database.Database, leagueId: number): Se
 }
 
 export function getActiveSeasonsWithLeague(db: Database.Database): Array<Season & { league: League }> {
-  return (db.prepare(`SELECT s.*,l.slug league_slug,l.name league_name,l.exclude_from_combined
-    FROM seasons s JOIN leagues l ON s.league_id=l.id WHERE s.status='active'
-    ORDER BY l.id,s.season_number`).all() as any[]).map(r => ({
-    id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status,
-    league: { id: r.league_id, slug: r.league_slug, name: r.league_name, excludeFromCombined: !!r.exclude_from_combined, notes: null },
-  }));
+  const rows = db.prepare(`SELECT s.*,l.slug league_slug,l.name league_name,l.exclude_from_combined
+    FROM seasons s JOIN leagues l ON s.league_id=l.id
+    ORDER BY l.id,s.season_number`).all() as any[];
+  return rows
+    .filter(r => {
+      const current = getCurrentRoundForSeason(db, r.id);
+      return r.status === 'active' || (!!current && current.phase !== 'archive');
+    })
+    .map(r => ({
+      id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status,
+      league: { id: r.league_id, slug: r.league_slug, name: r.league_name, excludeFromCombined: !!r.exclude_from_combined, notes: null },
+    }));
 }
 
 export function upsertSeason(db: Database.Database, leagueId: number, seasonNumber: number, status: 'active'|'complete'): number {
   return (db.prepare(`INSERT INTO seasons (league_id,season_number,status) VALUES (?,?,?)
     ON CONFLICT(league_id,season_number) DO UPDATE SET status=excluded.status RETURNING id`)
     .get(leagueId, seasonNumber, status) as { id: number }).id;
+}
+
+export function setSeasonStatus(db: Database.Database, seasonId: number, status: 'active'|'complete'): boolean {
+  const info = db.prepare('UPDATE seasons SET status = ? WHERE id = ?').run(status, seasonId);
+  return info.changes > 0;
 }

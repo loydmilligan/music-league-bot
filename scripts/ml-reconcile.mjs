@@ -148,6 +148,11 @@ async function reconcileLeague(dbL, mlL) {
 		if (APPLY && dbR) {
 			const liveSub = haveThemes ? mlR.submissions_due_utc : mlR.deadline_iso;
 			const liveVote = haveThemes ? mlR.votes_due_utc : null;
+			// If a different row already has the live ml_round_id (phantom from a
+			// prior live-snapshot import), remove it so the positional row can take it.
+			if (mlR.id !== dbR.ml_round_id) {
+				db.prepare(`DELETE FROM rounds WHERE ml_round_id = ? AND id != ?`).run(mlR.id, dbR.id);
+			}
 			db.prepare(
 				`UPDATE rounds
 				 SET ml_round_id = ?,

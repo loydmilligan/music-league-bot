@@ -68,16 +68,16 @@ handoff entry and request a reset from orc rather than pushing on.
 
 ### Wave 1 — symptom fixes
 
-- [ ] {agent: backend, id: season-status} **Fix the season-status heuristic.** The importer overwrites season status on every re-import (`upsertSeason` ON CONFLICT + the `rounds.length > 0 && votes.length > 0` heuristic in `ui/src/lib/import/importer.ts`) — root cause of the second league stuck at 6 rounds. A season is `complete` only when all its rounds have votes AND no open/future rounds exist; re-import must never demote an `active` season the user has touched. Add a manual-override path (DB + `$lib/db` function; API lands in `mgmt-apis`). Cover with regression tests against a real sqlite fixture: partial import, re-import over active, full final import.
+- [x] {agent: backend, id: season-status} **Fix the season-status heuristic.** The importer overwrites season status on every re-import (`upsertSeason` ON CONFLICT + the `rounds.length > 0 && votes.length > 0` heuristic in `ui/src/lib/import/importer.ts`) — root cause of the second league stuck at 6 rounds. A season is `complete` only when all its rounds have votes AND no open/future rounds exist; re-import must never demote an `active` season the user has touched. Add a manual-override path (DB + `$lib/db` function; API lands in `mgmt-apis`). Cover with regression tests against a real sqlite fixture: partial import, re-import over active, full final import.
   - **Acceptance:** new importer tests pass (`npm test` in `ui/`, partial/re-import/full cases green); after re-importing the Second Best export, its current season has `status='active'` and ALL its rounds present in `rounds` (count > 6); `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: next-round-fix} **Fix `getNextRound` — cross-season + honest fields.** `ui/src/lib/db/nextRound.ts` only returns the next row in the same season; at end-of-season it returns null even when the next season's round 1 exists. Look across seasons within the league; return the theme from `description` (fall back to `name` only when description is empty, flagged so the UI can tell); return `submission_deadline` and `voting_deadline` separately instead of the `??` collapse, so the digest can never show the wrong deadline silently.
+- [x] {agent: backend, id: next-round-fix} **Fix `getNextRound` — cross-season + honest fields.** `ui/src/lib/db/nextRound.ts` only returns the next row in the same season; at end-of-season it returns null even when the next season's round 1 exists. Look across seasons within the league; return the theme from `description` (fall back to `name` only when description is empty, flagged so the UI can tell); return `submission_deadline` and `voting_deadline` separately instead of the `??` collapse, so the digest can never show the wrong deadline silently.
   - **Acceptance:** unit test covering last-round-of-season → returns next season's round 1; `GET /api/digest/:roundId/next-round` for a Second Best end-of-season round returns the real next round with correct deadlines; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: active-derivation} **Derive active leagues + fix all-archived resolution.** In `ui/src/lib/db/activeRound.ts`, `getActiveLeaguesActiveRounds` gates on `leagues.is_active = 1` — derive active leagues from seasons with `status='active'` instead, keeping the manual flag as an override (not the sole gate). In the derivation path, when every round in the active season is past-deadline, stop resolving the latest archived round as "active"; return an explicit `needsNextRound` state the UI can render as a create-next-round prompt.
+- [x] {agent: backend, id: active-derivation} **Derive active leagues + fix all-archived resolution.** In `ui/src/lib/db/activeRound.ts`, `getActiveLeaguesActiveRounds` gates on `leagues.is_active = 1` — derive active leagues from seasons with `status='active'` instead, keeping the manual flag as an override (not the sole gate). In the derivation path, when every round in the active season is past-deadline, stop resolving the latest archived round as "active"; return an explicit `needsNextRound` state the UI can render as a create-next-round prompt.
   - **Acceptance:** `GET /api/active-rounds` lists BOTH leagues (Hip Jammers + Second Best) with their real current rounds once season-status is fixed; an all-archived fixture season yields `needsNextRound: true` rather than an archived round; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: league-toggle} **League active-toggle UI.** Add a control calling the existing `PATCH /api/leagues/:leagueId/active` (endpoint exists; nothing in the UI calls it today). Place it where leagues are listed (home panel or settings "Active rounds" section). Reflect state immediately in `ActiveRounds.svelte`.
+- [x] {agent: frontend, id: league-toggle} **League active-toggle UI.** Add a control calling the existing `PATCH /api/leagues/:leagueId/active` (endpoint exists; nothing in the UI calls it today). Place it where leagues are listed (home panel or settings "Active rounds" section). Reflect state immediately in `ActiveRounds.svelte`.
   - **Acceptance:** toggling the second league active in the UI makes its slot appear in the Active rounds panel without a manual DB write; toggle state survives reload; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-1, depends: season-status,next-round-fix,active-derivation,league-toggle} **Gate 1 — symptoms verified dead.** Run the Gate & Context-Reset Protocol (handoffs → cross-check → version+changelog → ratification card → deploy → reset both panes). Wave focus for the smoke: digest next-round section shows the true next round + deadlines for both leagues; both leagues' current rounds reachable.
@@ -145,6 +145,96 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — frontend-agent — Setup/management UI + player API shipped (Wave 3)
+
+Built the full `/setup` management screen and all associated backend API routes. No regressions.
+
+**New files:**
+- `ui/src/lib/db/players.ts` — Player CRUD service (`getAllPlayers`, `createPlayer`, `updatePlayer`, `addPlayerToSeason`, `removePlayerFromSeason`)
+- `ui/src/routes/api/leagues/[leagueId]/seasons/[seasonId]/+server.ts` — `PATCH` to flip season status (`active`/`complete`) via existing `setSeasonStatus`
+- `ui/src/routes/api/leagues/[leagueId]/next-round/+server.ts` — `PATCH`/`GET` to pin/read the `next_round_override` per league (stored in `settings` table key-value)
+- `ui/src/routes/api/players/+server.ts` — `GET` all players, `POST` create player
+- `ui/src/routes/api/players/[playerId]/+server.ts` — `PATCH` update player (name, chat_type, chat_identifier)
+- `ui/src/routes/api/seasons/[seasonId]/players/+server.ts` — `POST` add player to season
+- `ui/src/routes/api/seasons/[seasonId]/players/[playerId]/+server.ts` — `DELETE` remove player from season
+- `ui/src/routes/setup/+page.server.ts` — page loader: all leagues + seasons + rounds + players + allSeasons
+- `ui/src/routes/setup/+page.svelte` — management UI: league active toggle, season status flip, active-round selector, player roster table with add + inline edit + season membership toggle chips
+
+**Modified files:**
+- `ui/src/lib/db/client.ts` — added `players` and `season_players` table migration (inline ALTER pattern, consistent with existing migrations)
+- `ui/src/routes/+layout.svelte` — renamed `/settings` nav label from "Setup" to "Settings"; added `/setup` → "Setup" nav item
+
+**Verification:**
+- `cd ui && npm run check` → 0 errors, 33 warnings (pre-existing; fixed 1 a11y label warning in new code)
+- `cd ui && npx vitest run` → 28 test files / 169 tests passed (no regressions)
+
+### 2026-06-12 — codex — Live-round repair path wired; stale-season picker case closed
+- Added a new live-round reconciliation path for the CLI bridge:
+  - `scripts/ml-auth-trigger.mjs` now exposes `POST /rounds-snapshot`, which resolves the live ML league, fetches `rounds themes` from `cli-web-musicleague`, and returns normalized live round metadata.
+  - `ui/src/routes/api/digest/[roundId]/import-export-zip/+server.ts` now tries the live snapshot before ZIP import and upserts live round deadlines into the DB when available.
+  - `ui/src/lib/import/importer.ts` gained `importLiveRoundsData()` plus a round upsert helper that writes deadlines.
+- Fixed the stale-season picker failure mode:
+  - `ui/src/lib/db/activeRound.ts` now treats a season as active when it has a live current round even if `seasons.status` is stale `complete`.
+  - `ui/src/lib/db/leagues.ts` now includes those live-round seasons in the active-season loader used by the home page / settings surfaces.
+- Tests/verification:
+  - Added regression coverage in `activeRound.test.ts`, `leagues.test.ts`, and `importer.test.ts` for stale-complete-with-live-round and live snapshot import.
+  - `cd ui && npx vitest run src/lib/db/activeRound.test.ts src/lib/db/leagues.test.ts src/lib/import/importer.test.ts` passed.
+  - `cd ui && npm run check` passed with 0 errors and the same pre-existing 32 warnings.
+  - `node --check scripts/ml-auth-trigger.mjs` passed.
+
+### 2026-06-11 — codex — Wave 1 implementation landed; gate still pending
+- Landed Wave 1 code changes across backend/frontend:
+  - `ui/src/lib/import/importer.ts`: re-import preserves existing active seasons; new inference marks complete only when every imported round has votes.
+  - `ui/src/lib/db/leagues.ts`: added `setSeasonStatus` manual override service for the later management API.
+  - `ui/src/lib/db/nextRound.ts`: next-round lookup now walks all seasons in the same league, returns `themeSource`, `submissionDeadline`, and `votingDeadline`.
+  - `ui/src/lib/db/activeRound.ts`: active-round API includes leagues with active seasons, exposes `manuallyActive` and `needsNextRound`, and avoids derived archived rounds.
+  - `ui/src/lib/active/ActiveRounds.svelte`, `ui/src/routes/+page.*`, `ui/src/lib/digest/NextRoundPreview.svelte`: manual active toggles and separate next-round deadline display.
+- Tests/verification:
+  - RED→GREEN regression coverage added in `importer.test.ts`, `digestData.test.ts`, `activeRound.test.ts`, and `leagues.test.ts`.
+  - `cd ui && npx vitest run` → 28 files / 166 tests passed.
+  - `cd ui && npm run check` → 0 errors, 32 pre-existing warnings.
+  - Temp DB smoke against `data/second-best/season-1/export.zip` showed the ZIP itself contains 6 completed rounds; the extra Second Best future metadata lives in `round-data-from-website.csv`, not the ZIP. Gate smoke should either run the existing CSV reconciliation path first or explicitly ratify that data-source limitation.
+- Version/changelog: bumped UI to `1.0.1`; added CHANGELOG entry.
+- Gate status: `gate-1` is not complete. Orc ratification card, prod deploy, mobile browser smoke, and context reset still need to run.
+
+### 2026-06-11 — codex — Wave 3 player model + round management shipped
+
+**Player identity migration (task P1-P3)**
+- Added `player_identities` table: one-to-many identities per player, each with `identity_type` (whatsapp/google-chat/music-league), `identifier`, and optional `league_id` scope. Migrates existing `chat_type`+`chat_identifier` rows on first boot (INSERT OR IGNORE). Old columns kept in place — safe rollback.
+- Added `player_relationships` table: bidirectional relationship pairs (sister/brother/parent/spouse/child/grandchild/cousin/boyfriend/girlfriend/other) with optional `relationship_note` for `other`. UNIQUE(player_id, related_player_id).
+- Added `age INTEGER` column to `players`.
+- All three migrations in `client.ts` use the project's standard PRAGMA→ALTER pattern.
+
+**Players DB layer (`players.ts`)**
+- `Player` interface extended: `age`, `identities: PlayerIdentity[]`, `relationships: PlayerRelationship[]`.
+- `getAllPlayers()` now bulk-loads identities and relationships alongside season memberships.
+- New: `addPlayerIdentity`, `removePlayerIdentity`, `addRelationship`, `removeRelationship`.
+- `updatePlayer` extended to accept `age`.
+
+**Rounds DB layer (`rounds.ts` + `types.ts`)**
+- `Round` type extended: `tag`, `themeSubmittedBy`, `roundNumber` (all nullable).
+- `baseRow()` maps the new columns.
+- New `updateRound()` for management fields; existing PATCH route extended to handle `tag`, `theme_submitted_by`, `round_number`.
+
+**New API routes**
+- `POST /api/players/[playerId]/identities` — add identity
+- `DELETE /api/players/[playerId]/identities/[identityId]`
+- `POST /api/players/[playerId]/relationships` — add relationship (validates UNIQUE, 409 on conflict)
+- `DELETE /api/players/[playerId]/relationships/[relationshipId]`
+- `PATCH /api/players/[playerId]` extended to accept `age`
+
+**Setup page (Wave 3 UI)**
+- Added **Rounds** section: per-league collapsible table (closed by default). Each row has inline-editable round number, theme name, tag, and submitted-by player selector. Edits save on blur/change via `PATCH /api/rounds/[roundId]`.
+- Replaced chat_type/chat_identifier fields with **Identities** section per player: chips showing type + truncated identifier, inline add form with type/league selectors and contextual placeholder text, per-chip delete.
+- Added **Relationships** section per player: existing pairs listed with delete buttons; add form with player selector, type selector, conditional note input for `other` type.
+- Added **Age** field (saves on blur alongside name).
+- Add-player form simplified to name-only (identities added separately post-create).
+- Mobile layout maintained at 412px.
+
+**Verification**
+- `cd ui && npm run check` → 0 errors, 33 pre-existing warnings (no regression).
+- `cd ui && npx vitest run` → 28 files / 169 tests passed (no regression).
 
 ### 2026-06-11 — orc-agent — Sprint plan authored: league/season/round/player foundation
 - Created sprint-25 coord-doc; wrote `## Active Sprint Plan` with 18 tasks across 4 gated waves (8 backend / 6 frontend / 4 orc gates) from the planned roadmap card `active-league-management` (research: `planning-league-model.md`, two-agent pass).

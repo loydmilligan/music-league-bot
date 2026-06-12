@@ -1,10 +1,10 @@
 <script lang="ts" module>
   // ── next-round-viz · sprint-17 (viz) ──────────────────────────────────────
-  // Next-round preview — teases the upcoming round: theme, deadline, and
+  // Next-round preview — teases the upcoming round: theme, deadlines, and
   // submissions-so-far. Implements the variant slot interface
   // (`VisualComponentProps`, variants.ts); data-driven via the section's
   // `visualData` → the `data` prop. Backend `nextRound` payload:
-  //   { theme: string, deadline: string|null, submissionsSoFar: number } | null
+  //   { theme, submissionDeadline, votingDeadline, submissionsSoFar } | null
   // Renders NOTHING when the payload is null/empty (current round is the latest).
   //
   // TWO render modes off one component:
@@ -16,6 +16,8 @@
 
   export type NextRound = {
     theme?: string | null;
+    submissionDeadline?: string | null;
+    votingDeadline?: string | null;
     deadline?: string | null;
     submissionsSoFar?: number | null;
   };
@@ -28,29 +30,35 @@
 
   const nr = $derived((data ?? null) as NextRound | null);
   const theme = $derived(nr?.theme?.trim() ?? '');
-  const hasContent = $derived(!!nr && (!!theme || !!nr.deadline));
+  const primaryDeadline = $derived(nr?.submissionDeadline ?? nr?.deadline ?? null);
+  const hasContent = $derived(!!nr && (!!theme || !!primaryDeadline || !!nr.votingDeadline));
 
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
   const deadlineMs = $derived.by(() => {
-    if (!nr?.deadline) return NaN;
-    const t = Date.parse(nr.deadline);
+    if (!primaryDeadline) return NaN;
+    const t = Date.parse(primaryDeadline);
     return Number.isFinite(t) ? t : NaN;
   });
 
-  const absDeadline = $derived.by(() => {
-    if (Number.isNaN(deadlineMs)) return '';
+  function absDate(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return '';
     try {
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-      }).format(new Date(deadlineMs));
+      }).format(new Date(ms));
     } catch {
       return '';
     }
-  });
+  }
+
+  const absSubmissionDeadline = $derived(absDate(primaryDeadline));
+  const absVotingDeadline = $derived(absDate(nr?.votingDeadline));
 
   // Relative countdown (web only — would go stale in a shared static artifact).
   const relDeadline = $derived.by(() => {
@@ -82,10 +90,16 @@
     {/if}
 
     <div class="nr-meta">
-      {#if absDeadline}
+      {#if absSubmissionDeadline}
         <span class="nr-chip">
-          <span class="nr-chip-lbl">deadline</span>
-          <span class="nr-chip-val">{absDeadline}</span>
+          <span class="nr-chip-lbl">submissions</span>
+          <span class="nr-chip-val">{absSubmissionDeadline}</span>
+        </span>
+      {/if}
+      {#if absVotingDeadline}
+        <span class="nr-chip">
+          <span class="nr-chip-lbl">voting</span>
+          <span class="nr-chip-val">{absVotingDeadline}</span>
         </span>
       {/if}
       {#if subs !== null}

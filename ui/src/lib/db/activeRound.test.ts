@@ -19,6 +19,63 @@ it('fresh seeded leagues start inactive — getActiveLeaguesActiveRounds is empt
   expect(getActiveLeaguesActiveRounds(db)).toEqual([]);
 });
 
+it('surfaces leagues with active seasons even when the manual active flag is unset', () => {
+  const hj = leagueId('hip-jammers');
+  const seasonId = upsertSeason(db, hj, 1, 'active');
+  const rid = upsertRound(db, seasonId, {
+    mlRoundId: 'derived-active-r1',
+    name: 'Round 1',
+    description: 'theme one',
+    spotifyPlaylistUrl: '',
+    createdAt: '2026-01-01T00:00:00Z',
+  });
+  updateDeadlines(db, rid, '2099-01-01T00:00:00Z', '2099-02-01T00:00:00Z');
+
+  const out = getActiveLeaguesActiveRounds(db);
+
+  expect(out.map(l => l.slug)).toContain('hip-jammers');
+  expect(out.find(l => l.slug === 'hip-jammers')?.isActive).toBe(true);
+  expect(out.find(l => l.slug === 'hip-jammers')?.activeRound?.id).toBe(rid);
+});
+
+it('treats a complete season with a live round as active for the picker', () => {
+  const hj = leagueId('hip-jammers');
+  const seasonId = upsertSeason(db, hj, 1, 'complete');
+  const rid = upsertRound(db, seasonId, {
+    mlRoundId: 'live-r1',
+    name: 'Round 1',
+    description: 'theme one',
+    spotifyPlaylistUrl: '',
+    createdAt: '2026-01-01T00:00:00Z',
+  });
+  updateDeadlines(db, rid, '2099-01-01T00:00:00Z', '2099-02-01T00:00:00Z');
+
+  expect(getActiveSeasonId(db, hj)).toBe(seasonId);
+
+  const out = getActiveLeaguesActiveRounds(db);
+  const view = out.find(l => l.slug === 'hip-jammers');
+  expect(view?.activeSeasonId).toBe(seasonId);
+  expect(view?.activeRound?.id).toBe(rid);
+});
+
+it('does not resolve an archived round as active when every active-season round is past deadline', () => {
+  const hj = leagueId('hip-jammers');
+  const seasonId = upsertSeason(db, hj, 1, 'active');
+  const r1 = upsertRound(db, seasonId, {
+    mlRoundId: 'archived-r1',
+    name: 'Round 1',
+    description: 'old theme',
+    spotifyPlaylistUrl: '',
+    createdAt: '2026-01-01T00:00:00Z',
+  });
+  updateDeadlines(db, r1, '2020-01-01T00:00:00Z', '2020-01-08T00:00:00Z');
+
+  const view = getLeagueActiveRound(db, hj)!;
+
+  expect(view.activeRound).toBeNull();
+  expect(view.needsNextRound).toBe(true);
+});
+
 it('markLeagueActive surfaces the league with a null active round when it has no rounds', () => {
   const hj = leagueId('hip-jammers');
   upsertSeason(db, hj, 1, 'active');

@@ -94,6 +94,78 @@ export function openLeagueDb(path?: string): Database.Database {
 	// sprint-22 theme-tags: seed the category taxonomy + starter vocabulary
 	// (idempotent INSERT OR IGNORE — safe to run every boot).
 	seedThemeTags(db);
+	// sprint-25 player management: create players + season_players tables on first
+	// boot (and any existing DB that lacks them).
+	const tableNames = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map(r => r.name);
+	if (!tableNames.includes('players')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS players (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				chat_type TEXT CHECK(chat_type IN ('whatsapp','google-chat')),
+				chat_identifier TEXT,
+				ml_competitor_id TEXT,
+				created_at TEXT DEFAULT (datetime('now'))
+			);
+		`);
+	}
+	if (!tableNames.includes('season_players')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS season_players (
+				season_id INTEGER NOT NULL REFERENCES seasons(id),
+				player_id INTEGER NOT NULL REFERENCES players(id),
+				joined_at TEXT DEFAULT (datetime('now')),
+				PRIMARY KEY (season_id, player_id)
+			);
+		`);
+	}
+	// sprint-25 player identities: one-to-many identities per player, optionally
+	// scoped to a league. Migrates existing chat_type+chat_identifier data.
+	if (!tableNames.includes('player_identities')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS player_identities (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+				league_id INTEGER REFERENCES leagues(id) ON DELETE SET NULL,
+				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league')),
+				identifier TEXT NOT NULL,
+				created_at TEXT DEFAULT (datetime('now'))
+			);
+			INSERT OR IGNORE INTO player_identities (player_id, league_id, identity_type, identifier)
+				SELECT id, NULL, chat_type, chat_identifier
+				FROM players
+				WHERE chat_type IS NOT NULL AND chat_identifier IS NOT NULL;
+		`);
+	}
+	// sprint-25 player age + relationships.
+	const playerCols = db.prepare("PRAGMA table_info(players)").all() as { name: string }[];
+	if (playerCols.length && !playerCols.some(c => c.name === 'age')) {
+		db.exec("ALTER TABLE players ADD COLUMN age INTEGER");
+	}
+	if (!tableNames.includes('player_relationships')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS player_relationships (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+				related_player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+				relationship_type TEXT NOT NULL,
+				relationship_note TEXT,
+				created_at TEXT DEFAULT (datetime('now')),
+				UNIQUE(player_id, related_player_id)
+			);
+		`);
+	}
+	// sprint-25 round management: tag, theme_submitted_by, round_number.
+	const roundsCols2 = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
+	if (roundsCols2.length && !roundsCols2.some(c => c.name === 'tag')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN tag TEXT");
+	}
+	if (roundsCols2.length && !roundsCols2.some(c => c.name === 'theme_submitted_by')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN theme_submitted_by INTEGER REFERENCES players(id) ON DELETE SET NULL");
+	}
+	if (roundsCols2.length && !roundsCols2.some(c => c.name === 'round_number')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN round_number INTEGER");
+	}
 	return db;
 }
 

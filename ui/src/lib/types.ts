@@ -5,6 +5,7 @@ export interface Round {
   id: number; seasonId: number; mlRoundId: string; name: string; description: string | null;
   spotifyPlaylistUrl: string | null; submissionDeadline: string | null; votingDeadline: string | null; createdAt: string;
   phase?: RoundPhase;
+  tag?: string | null; themeSubmittedBy?: number | null; roundNumber?: number | null;
 }
 export interface Competitor { id: number; mlCompetitorId: string; name: string; }
 export interface MlSubmission {

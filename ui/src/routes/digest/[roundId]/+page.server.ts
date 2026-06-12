@@ -103,6 +103,9 @@ export type DigestStats = {
 // not the v1 row array. Type owned by `$lib/db/discoverability.ts` — imported above.
 export type NextRoundInfo = {
   theme?: string | null;
+  themeSource?: 'description' | 'name';
+  submissionDeadline?: string | null;
+  votingDeadline?: string | null;
   deadline?: string | null;
   submissionsSoFar?: number | null;
 };

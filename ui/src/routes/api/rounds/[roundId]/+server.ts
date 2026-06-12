@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
-import { getRoundById, patchRound, type RoundPatch } from '$lib/db/rounds.js';
+import { getRoundById, patchRound, updateRound, type RoundPatch } from '$lib/db/rounds.js';
 import { getRoundPhase } from '$lib/lifecycle.js';
 import { ingestPlaylist } from '$lib/import/playlistIngest.js';
 
@@ -11,6 +11,10 @@ interface PatchBody {
   submission_deadline?: string | null;
   voting_deadline?: string | null;
   playlist_url?: string | null; // → spotify_playlist_url column
+  // round management fields
+  tag?: string | null;
+  theme_submitted_by?: number | null;
+  round_number?: number | null;
 }
 
 const SPOTIFY_PLAYLIST_RE = /^https:\/\/open\.spotify\.com\/playlist\/[A-Za-z0-9]+(?:\?.*)?$/;
@@ -78,11 +82,28 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     patch.spotifyPlaylistUrl = body.playlist_url;
   }
 
-  if (Object.keys(patch).length === 0) {
+  // Round management fields (tag, theme_submitted_by, round_number).
+  const mgmtPatch: Parameters<typeof updateRound>[2] = {};
+  if (body.tag !== undefined) mgmtPatch.tag = body.tag;
+  if (body.theme_submitted_by !== undefined) {
+    if (body.theme_submitted_by !== null && typeof body.theme_submitted_by !== 'number') {
+      throw error(400, 'theme_submitted_by must be a player id or null');
+    }
+    mgmtPatch.theme_submitted_by = body.theme_submitted_by;
+  }
+  if (body.round_number !== undefined) {
+    if (body.round_number !== null && (typeof body.round_number !== 'number' || !Number.isInteger(body.round_number))) {
+      throw error(400, 'round_number must be an integer or null');
+    }
+    mgmtPatch.round_number = body.round_number;
+  }
+
+  if (Object.keys(patch).length === 0 && Object.keys(mgmtPatch).length === 0) {
     // No-op patch: return the unchanged row.
     return json({ round: existing, phase: existing.phase });
   }
 
+  if (Object.keys(mgmtPatch).length > 0) updateRound(db, roundId, mgmtPatch);
   patchRound(db, roundId, patch);
   const updated = getRoundById(db, roundId)!;
   const newPhase = getRoundPhase(updated);

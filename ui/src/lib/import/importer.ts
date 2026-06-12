@@ -1,10 +1,31 @@
 import type Database from 'better-sqlite3';
 import type { ParsedZip } from './zipParser.js';
 import { getLeagueBySlug, upsertSeason } from '../db/leagues.js';
-import { upsertRound } from '../db/rounds.js';
+import { getCurrentRoundForSeason, upsertRound, upsertRoundWithDeadlines } from '../db/rounds.js';
 import { upsertCompetitor, upsertSubmission, upsertVote } from '../db/submissions.js';
 
 export interface ImportResult { roundsCount: number; submissionsCount: number; votesCount: number; status: 'success'|'partial'|'error'; error?: string; }
+
+export interface LiveRoundSnapshot {
+  id: string;
+  number: number;
+  name: string;
+  description?: string | null;
+  playlistUrl?: string | null;
+  submissionsDueUtc?: string | null;
+  votesDueUtc?: string | null;
+}
+
+function inferSeasonStatus(db: Database.Database, leagueId: number, seasonNumber: number, parsed: ParsedZip): 'active' | 'complete' {
+  const existing = db.prepare(
+    'SELECT status FROM seasons WHERE league_id = ? AND season_number = ?',
+  ).get(leagueId, seasonNumber) as { status: 'active' | 'complete' } | undefined;
+  if (existing?.status === 'active') return 'active';
+
+  if (parsed.rounds.length === 0) return 'active';
+  const votedRounds = new Set(parsed.votes.map((v) => v.roundId));
+  return parsed.rounds.every((r) => votedRounds.has(r.id)) ? 'complete' : 'active';
+}
 
 export function importZipData(db: Database.Database, leagueSlug: string, seasonNumber: number, parsed: ParsedZip): ImportResult {
   const league = getLeagueBySlug(db, leagueSlug);
@@ -12,7 +33,7 @@ export function importZipData(db: Database.Database, leagueSlug: string, seasonN
   let rc = 0, sc = 0, vc = 0;
   try {
     db.transaction(() => {
-      const status = parsed.rounds.length > 0 && parsed.votes.length > 0 ? 'complete' : 'active';
+      const status = inferSeasonStatus(db, league.id, seasonNumber, parsed);
       const seasonId = upsertSeason(db, league.id, seasonNumber, status);
       const cMap = new Map<string,number>();
       for (const c of parsed.competitors) cMap.set(c.id, upsertCompetitor(db, c.id, c.name));
@@ -37,5 +58,43 @@ export function importZipData(db: Database.Database, leagueSlug: string, seasonN
     return { roundsCount: rc, submissionsCount: sc, votesCount: vc, status: 'success' };
   } catch (err) {
     return { roundsCount: rc, submissionsCount: sc, votesCount: vc, status: 'error', error: String(err) };
+  }
+}
+
+export function importLiveRoundsData(
+  db: Database.Database,
+  leagueSlug: string,
+  seasonNumber: number,
+  liveRounds: LiveRoundSnapshot[],
+): ImportResult {
+  const league = getLeagueBySlug(db, leagueSlug);
+  if (!league) return { roundsCount: 0, submissionsCount: 0, votesCount: 0, status: 'error', error: `Unknown league: ${leagueSlug}` };
+
+  let rc = 0;
+  try {
+    db.transaction(() => {
+      const seasonId = upsertSeason(db, league.id, seasonNumber, 'active');
+      for (const r of [...liveRounds].sort((a, b) => a.number - b.number)) {
+        if (!r.id || !Number.isFinite(r.number)) continue;
+        upsertRoundWithDeadlines(db, seasonId, {
+          mlRoundId: r.id,
+          name: r.name,
+          description: r.description ?? '',
+          spotifyPlaylistUrl: r.playlistUrl ?? null,
+          submissionDeadline: r.submissionsDueUtc ?? null,
+          votingDeadline: r.votesDueUtc ?? null,
+          createdAt: new Date().toISOString(),
+        });
+        rc++;
+      }
+
+      const current = getCurrentRoundForSeason(db, seasonId);
+      const status: 'active' | 'complete' =
+        current && current.phase !== 'archive' ? 'active' : 'complete';
+      upsertSeason(db, league.id, seasonNumber, status);
+    })();
+    return { roundsCount: rc, submissionsCount: 0, votesCount: 0, status: 'success' };
+  } catch (err) {
+    return { roundsCount: rc, submissionsCount: 0, votesCount: 0, status: 'error', error: String(err) };
   }
 }

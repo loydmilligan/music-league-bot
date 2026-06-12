@@ -5,7 +5,8 @@ import { getRoundPhase, getRoundPhasesForSeason } from '../lifecycle.js';
 function baseRow(r: any): Omit<Round, 'phase'> {
   return { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
     description: r.description, spotifyPlaylistUrl: r.spotify_playlist_url,
-    submissionDeadline: r.submission_deadline, votingDeadline: r.voting_deadline, createdAt: r.created_at };
+    submissionDeadline: r.submission_deadline, votingDeadline: r.voting_deadline, createdAt: r.created_at,
+    tag: r.tag ?? null, themeSubmittedBy: r.theme_submitted_by ?? null, roundNumber: r.round_number ?? null };
 }
 
 function row(r: any): Round {
@@ -26,6 +27,31 @@ export function upsertRound(db: Database.Database, seasonId: number, r: {
     VALUES (@seasonId,@mlRoundId,@name,@description,@spotifyPlaylistUrl,@createdAt)
     ON CONFLICT(ml_round_id) DO UPDATE SET name=excluded.name,description=excluded.description,
     spotify_playlist_url=excluded.spotify_playlist_url RETURNING id`).get({ seasonId, ...r }) as { id: number }).id;
+}
+
+export function upsertRoundWithDeadlines(db: Database.Database, seasonId: number, r: {
+  mlRoundId: string;
+  name: string;
+  description: string;
+  spotifyPlaylistUrl: string | null;
+  createdAt: string;
+  submissionDeadline: string | null;
+  votingDeadline: string | null;
+}): number {
+  return (db.prepare(`INSERT INTO rounds (
+      season_id, ml_round_id, name, description, spotify_playlist_url,
+      submission_deadline, voting_deadline, created_at
+    )
+    VALUES (@seasonId,@mlRoundId,@name,@description,@spotifyPlaylistUrl,@submissionDeadline,@votingDeadline,@createdAt)
+    ON CONFLICT(ml_round_id) DO UPDATE SET
+      season_id=excluded.season_id,
+      name=excluded.name,
+      description=excluded.description,
+      spotify_playlist_url=excluded.spotify_playlist_url,
+      submission_deadline=excluded.submission_deadline,
+      voting_deadline=excluded.voting_deadline,
+      created_at=excluded.created_at
+    RETURNING id`).get({ seasonId, ...r }) as { id: number }).id;
 }
 
 export function getRoundsForSeason(db: Database.Database, seasonId: number): Round[] {
@@ -92,6 +118,41 @@ export function patchRound(db: Database.Database, id: number, p: RoundPatch): bo
   }
   if (!fields.length) return false;
   vals.push(id);
+  const info = db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
+  return info.changes > 0;
+}
+
+export interface RoundManagePatch {
+  tag?: string | null;
+  theme_submitted_by?: number | null;
+  round_number?: number | null;
+  name?: string;
+  description?: string | null;
+  submission_deadline?: string | null;
+  voting_deadline?: string | null;
+}
+
+/**
+ * Update round management fields (tag, theme_submitted_by, round_number, etc.).
+ * Used by the setup page's round management section.
+ */
+export function updateRound(db: Database.Database, roundId: number, p: RoundManagePatch): boolean {
+  const map: Array<[keyof RoundManagePatch, string]> = [
+    ['tag', 'tag'],
+    ['theme_submitted_by', 'theme_submitted_by'],
+    ['round_number', 'round_number'],
+    ['name', 'name'],
+    ['description', 'description'],
+    ['submission_deadline', 'submission_deadline'],
+    ['voting_deadline', 'voting_deadline'],
+  ];
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  for (const [k, col] of map) {
+    if (p[k] !== undefined) { fields.push(`${col}=?`); vals.push(p[k]); }
+  }
+  if (!fields.length) return false;
+  vals.push(roundId);
   const info = db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
   return info.changes > 0;
 }
