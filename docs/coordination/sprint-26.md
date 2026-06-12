@@ -2,9 +2,10 @@
 project: music-league-bot
 sprint: sprint-26
 title: Feature Inventory & Collision Review
-status: planned
+status: active
 created: 2026-06-12T22:03:42Z
-updated: 2026-06-12T22:03:42Z
+activated: 2026-06-12
+updated: 2026-06-12T22:08:06Z
 ---
 
 # music-league-bot — coordination doc (sprint-26)
@@ -53,16 +54,16 @@ updated: 2026-06-12T22:03:42Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: write-path-inventory} **Inventory every write path to round/season/league state.** Find every code path that INSERTs/UPDATEs `rounds`, `seasons`, `leagues`, or `next_round_overrides` — importer, mgmt APIs (`/api/leagues/...`), digest next-round editor (`/api/digest/:roundId/next-round`), setup-screen endpoints, reconcile scripts in `scripts/`, the CLI-bridge snapshot supplement, and any bot/api-container writers. Produce `docs/coordination/inventory/write-paths.md`: one table row per writer — surface, file:line, fields written, trigger (user action / import / boot), and a collision-notes column flagging where two writers touch the same field with different rules.
+- [-] {agent: backend, id: write-path-inventory} **Inventory every write path to round/season/league state.** Find every code path that INSERTs/UPDATEs `rounds`, `seasons`, `leagues`, or `next_round_overrides` — importer, mgmt APIs (`/api/leagues/...`), digest next-round editor (`/api/digest/:roundId/next-round`), setup-screen endpoints, reconcile scripts in `scripts/`, the CLI-bridge snapshot supplement, and any bot/api-container writers. Produce `docs/coordination/inventory/write-paths.md`: one table row per writer — surface, file:line, fields written, trigger (user action / import / boot), and a collision-notes column flagging where two writers touch the same field with different rules.
   - **Acceptance:** doc committed; cross-checked complete against `grep -rn "UPDATE rounds\|UPDATE seasons\|UPDATE leagues\|INSERT INTO rounds\|INSERT INTO seasons" ui/src scripts` (every hit appears in the table or is justified as excluded); the two known cases (multiple round-info edit paths; season-status writers) each have a filled collision-notes cell.
 
-- [ ] {agent: backend, id: active-derivation-audit} **Audit every "which round is active" derivation.** Enumerate each site that decides a league's active/current/next round — `ui/src/lib/db/activeRound.ts`, `nextRound.ts`, `layout.ts`, the shortlist `/api/rounds/open` path, the digest next-round computation, the live-round repair path from sprint-25-followup, and `leagues.active_round_id`/`next_round_overrides` consumers. For each: file:line, inputs, precedence rules, and a divergence matrix showing where two sites can answer differently for the same league. Append as a section of `docs/coordination/inventory/write-paths.md` or a sibling doc.
+- [-] {agent: backend, id: active-derivation-audit} **Audit every "which round is active" derivation.** Enumerate each site that decides a league's active/current/next round — `ui/src/lib/db/activeRound.ts`, `nextRound.ts`, `layout.ts`, the shortlist `/api/rounds/open` path, the digest next-round computation, the live-round repair path from sprint-25-followup, and `leagues.active_round_id`/`next_round_overrides` consumers. For each: file:line, inputs, precedence rules, and a divergence matrix showing where two sites can answer differently for the same league. Append as a section of `docs/coordination/inventory/write-paths.md` or a sibling doc.
   - **Acceptance:** every derivation site listed with file:line; the matrix explicitly covers the known splits (`is_active` flag vs season-derived; `needsNextRound` vs repair path; pinned override vs inferred next round) and marks each pair AGREES / CAN-DIVERGE with the condition under which they diverge.
 
-- [ ] {agent: frontend, id: screen-inventory} **Hands-on screen + feature inventory.** Walk every route in `ui/src/routes` in the running dev app at both 412×892 and desktop. Produce `docs/coordination/inventory/screens.md`: per screen — purpose, every user action available, which API endpoint each action calls, and an overlap column flagging actions that mutate the same state as another screen (e.g. round editing exists in /setup rounds table AND digest next-round edit AND import).
+- [-] {agent: frontend, id: screen-inventory} **Hands-on screen + feature inventory.** Walk every route in `ui/src/routes` in the running dev app at both 412×892 and desktop. Produce `docs/coordination/inventory/screens.md`: per screen — purpose, every user action available, which API endpoint each action calls, and an overlap column flagging actions that mutate the same state as another screen (e.g. round editing exists in /setup rounds table AND digest next-round edit AND import).
   - **Acceptance:** every directory under `ui/src/routes` (pages, not API routes) appears in the doc; each screen's actions are mapped to endpoints (verified against the network tab or source); at least the round-editing overlap set is fully cross-referenced to the write-path inventory's rows.
 
-- [ ] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
+- [-] {agent: frontend, id: collision-repros} **Reproduce the suspected collisions in the real UI.** For each suspected collision (seed list: round info edited in /setup vs digest next-round override vs re-import; season status flipped manually vs importer re-derivation; active-round pin vs derived active round; digest exclude state vs regeneration), drive the actual UI/API sequence and record a verdict. DB before/after via sqlite queries; UI steps listed so they're re-runnable.
   - **Acceptance:** `docs/coordination/inventory/collisions.md` committed with one entry per suspect: numbered repro steps, before/after state, verdict CONFIRMED / NOT-A-BUG / NEEDS-BACKEND-REPRO, and severity (data-loss / wrong-display / annoyance). Every CONFIRMED entry names the colliding writers by write-path-inventory row.
 
 - [ ] {agent: backend, id: season-override-fix} **Make manual season-status flips durable (live bug).** Sprint-25 close-out finding 1: `seasons` has no override marker, so the importer heuristic re-derives status and clobbers manual flips (Nostalgia Pit re-activated itself). Add an override column (e.g. `status_source TEXT CHECK(status_source IN ('derived','manual')) DEFAULT 'derived'`) via the house-pattern idempotent boot migration; `setSeasonStatus` sets `manual`; the importer heuristic skips seasons marked `manual` in BOTH directions (no demotion AND no promotion).
@@ -97,6 +98,11 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — orc — Sprint activated; first round dispatched
+- backend ← write-path-inventory + active-derivation-audit (related exploration, one doc)
+- frontend ← screen-inventory + collision-repros (both hands-on UI, own dev server)
+- backend's fixes (season-override-fix, linking-api-resync) queue behind its inventory pair; frontend's linking-ui waits on linking-api-resync
 
 ### 2026-06-12 — docs — Sprint plan authored: feature inventory & collision review
 - replaced `## Active Sprint Plan` body with 9 tasks (4 inventory/audit, 3 fixes carried from sprint-25 findings, 1 groundwork doc, 1 gate)
