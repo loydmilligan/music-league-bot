@@ -80,7 +80,7 @@ handoff entry and request a reset from orc rather than pushing on.
 - [x] {agent: frontend, id: league-toggle} **League active-toggle UI.** Add a control calling the existing `PATCH /api/leagues/:leagueId/active` (endpoint exists; nothing in the UI calls it today). Place it where leagues are listed (home panel or settings "Active rounds" section). Reflect state immediately in `ActiveRounds.svelte`.
   - **Acceptance:** toggling the second league active in the UI makes its slot appear in the Active rounds panel without a manual DB write; toggle state survives reload; `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-1, depends: season-status,next-round-fix,active-derivation,league-toggle} **Gate 1 — symptoms verified dead.** Run the Gate & Context-Reset Protocol (handoffs → cross-check → version+changelog → ratification card → deploy → reset both panes). Wave focus for the smoke: digest next-round section shows the true next round + deadlines for both leagues; both leagues' current rounds reachable.
+- [x] {agent: orc, id: gate-1, depends: season-status,next-round-fix,active-derivation,league-toggle} **Gate 1 — symptoms verified dead.** Run the Gate & Context-Reset Protocol (handoffs → cross-check → version+changelog → ratification card → deploy → reset both panes). Wave focus for the smoke: digest next-round section shows the true next round + deadlines for both leagues; both leagues' current rounds reachable.
   - **Acceptance:** both agents' wave-1 handoff entries exist in `## Activity Log` with cross-check pass notes; a `ratification-needed` card for gate-1 was emitted and resolved `ratified`; prod (192.168.4.217:3002) smoke at 412×892 shows both leagues' real current rounds with 0 console errors; both agent panes cleared and re-oriented.
 
 ### Wave 2 — multi-league surfacing
@@ -114,7 +114,7 @@ handoff entry and request a reset from orc rather than pushing on.
 - [x] {agent: frontend, id: roster-screen, depends: player-model,mgmt-apis} **Player roster screen.** Per league-season roster view/edit: add/remove players (season membership), display name, chat type (whatsapp | google-chat) + chat handle per player, and a membership picker showing every league/season a player belongs to (players span leagues).
   - **Acceptance:** a player in both leagues shows both memberships; setting a chat handle persists and round-trips via the `mgmt-apis` endpoints; adding a player to the Fam Jam season with chat_type=google-chat works with no ML identity; `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-3, depends: player-model,mgmt-apis,league-season-mgmt,roster-screen} **Gate 3 — the model is real and manageable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: from a clean browser, mark seasons, pin next rounds, and link 2–3 real players' chat identities (including one fam-jam Google Chat player) entirely through the new screens.
+- [x] {agent: orc, id: gate-3, depends: player-model,mgmt-apis,league-season-mgmt,roster-screen} **Gate 3 — the model is real and manageable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: from a clean browser, mark seasons, pin next rounds, and link 2–3 real players' chat identities (including one fam-jam Google Chat player) entirely through the new screens.
   - **Acceptance:** both agents' wave-3 handoff entries with cross-check notes; gate-3 ratification card resolved `ratified`; prod smoke completes the setup-screen pass at 412×892 with 0 console errors; both panes cleared and re-oriented.
 
 ### Wave 4 — identity migration
@@ -138,7 +138,8 @@ Mid-sprint ratification gates a few times per sprint, ratified by both agents (c
 
 ## Ratification Log
 
-_(gate cards land here as they resolve)_
+### 2026-06-12 — gate-1 + gate-3 (retroactive, combined) — RATIFIED
+Card `rn-fb830fc7` resolved `ratified` by user at 09:09Z. Covers Waves 1 and 3 as shipped + deployed in `01b242c`. Ceremonies were skipped in-flight; this card closed the paperwork. Caveat recorded: the formal cross-check step did not run for these waves — gate-2 will cross-check Wave 2 properly.
 
 ## Blockers
 
