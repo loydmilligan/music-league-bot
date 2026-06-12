@@ -146,6 +146,26 @@ _None._
 
 ## Activity Log
 
+### 2026-06-12 — backend-agent — open-rounds-multi landed (Wave 2)
+
+**`open-rounds-multi` is COMPLETE. Frontend `h2h-league-selector` is now unblocked.**
+
+**Root cause:** `getOpenRounds` in `ui/src/lib/shortlist/shortlist.ts` used a raw SQL query that only filtered by `submission_deadline` — no league-activity filter at all. Leagues with rounds past their submission deadlines (or with all-archived rounds) were silently omitted. The task required surfacing all derived-active leagues, not just those with open submission windows.
+
+**Fix (`e9f2da9`):**
+- `getOpenRounds` now calls `getActiveLeaguesActiveRounds(db)` (derived active = `status='active'` season OR `seasonHasLiveRound` OR `is_active=1`) and returns one entry per league that has a resolved `activeRound`. Response shape is unchanged: flat array of `{ id, name, description, submissionDeadline, leagueName }` that the `AssignPopover` groups by `leagueName` pill buttons.
+- Added 2 tests in `shortlist.test.ts`: dual-league active case (both leagues appear) and inactive-league omission case (complete season, archived round → 0 results).
+
+**Modified files:**
+- `ui/src/lib/shortlist/shortlist.ts` — rewrote `getOpenRounds`; added import of `getActiveLeaguesActiveRounds`
+- `ui/src/lib/shortlist/shortlist.test.ts` — added `getOpenRounds` describe block (12 → 12+2 = 12 tests, now 171 total)
+
+**Verification:**
+- `cd ui && npx vitest run` → 28 files / 171 tests passed (no regressions)
+- `cd ui && npm run check` → 0 errors, 33 pre-existing warnings
+
+**Cross-check note for frontend agent:** `/api/rounds/open` now returns one round per derived-active league. The `AssignPopover` (`$lib/shortlist/AssignPopover.svelte`) already handles this flat array and groups by `leagueName` — no frontend changes needed for the popover itself. The `h2h-league-selector` task can now read from this endpoint to know which leagues are available.
+
 ### 2026-06-12 — orc — Wave 2 dispatched; retroactive gate-1+3 card emitted
 
 Session resumed from bridge. Wave 1 + Wave 3 are live on prod (`01b242c`, deployed to 192.168.4.217:3002) but gates 1 and 3 were never ceremonied — emitted ONE combined retroactive `ratification-needed` card covering both waves (owner verbally approved continuing to Wave 2 first). Gate-1/gate-3 task boxes flip to [x] when the card resolves `ratified`. Wave 3 task boxes marked [x] per Activity Log evidence + prod deploy.
