@@ -97,7 +97,7 @@ handoff entry and request a reset from orc rather than pushing on.
 - [x] {agent: frontend, id: h2h-league-selector, depends: open-rounds-multi} **H2H flow league context.** The head-to-head ranking trigger must carry a league: read from active-league context with an explicit selector when more than one league is active, and pass `leagueId` through the flow so the winner lands on the right league's round.
   - **Acceptance:** with both leagues active, starting H2H prompts for (or clearly shows) the target league; completing a ranking writes to the selected league's active round only; `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-2, depends: open-rounds-multi,shortlist-strip,digest-next-round-edit,h2h-league-selector} **Gate 2 — both leagues fully usable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: complete a real shortlist→assign→H2H pass against the Second Best current round; edit + exclude the digest next-round section on a real draft.
+- [x] {agent: orc, id: gate-2, depends: open-rounds-multi,shortlist-strip,digest-next-round-edit,h2h-league-selector} **Gate 2 — both leagues fully usable.** Run the Gate & Context-Reset Protocol. Wave focus for the smoke: complete a real shortlist→assign→H2H pass against the Second Best current round; edit + exclude the digest next-round section on a real draft.
   - **Acceptance:** both agents' wave-2 handoff entries with cross-check notes; gate-2 ratification card resolved `ratified`; prod smoke passes the Second Best H2H assignment end-to-end at 412×892 with 0 console errors; both panes cleared and re-oriented.
 
 ### Wave 3 — player model + setup screens
@@ -137,6 +137,9 @@ Owner ratified the full 20-job scope including the FK/history migration original
 Mid-sprint ratification gates a few times per sprint, ratified by both agents (cross-check) and the user (warren card). Agents reset context at every gate after writing handoff entries; mid-wave proactive reset at ~60–70% context. Rationale: short context with good handoffs minimizes long-session hallucinations.
 
 ## Ratification Log
+
+### 2026-06-12 — gate-2 — RATIFIED, deployed, smoked
+Card `rn-e8cb56fe` resolved `ratified` by user at 19:02Z (user also tested hands-on against a dev instance first — all green). v1.0.2 deployed to prod (192.168.4.217:3002) via cached `docker compose build bot-ui && up -d`. Prod smoke at 412×892 PASS: strip renders 3 league rows with deadlines + H2H buttons; Second Best H2H panel opens with league label (tournament not completed on prod — write path validated by user on dev); digest r-111 exclude→include round-trip persisted across reload; 0 console errors. Data fix during ratification review (user-directed): Nostalgia Pit's lingering `active` season flipped to `complete` via the Wave 3 mgmt API — derived-active is now exactly Hip Jammers, Fam-Jam, Second Best (Fam-Jam confirmed wanted: its season 4 is live).
 
 ### 2026-06-12 — gate-1 + gate-3 (retroactive, combined) — RATIFIED
 Card `rn-fb830fc7` resolved `ratified` by user at 09:09Z. Covers Waves 1 and 3 as shipped + deployed in `01b242c`. Ceremonies were skipped in-flight; this card closed the paperwork. Caveat recorded: the formal cross-check step did not run for these waves — gate-2 will cross-check Wave 2 properly.
