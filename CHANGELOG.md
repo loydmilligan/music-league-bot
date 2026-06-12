@@ -4,6 +4,30 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.3] — 2026-06-12
+
+### Under the hood
+
+- **Stable player-ID history joins** — `/api/history/players` and
+  `/api/history/players/:name` now key history on stable identity tokens
+  (`'p:N'` for linked competitors, `'c:N'` fallback for unlinked) instead of
+  `competitors.name` string matching. Renaming a player via the setup screen
+  leaves their full submission history intact; a player active in multiple
+  leagues shows one unified history record. Response shapes are unchanged —
+  the 27-entry roster and all stats are identical on current prod data.
+- **Additive `player_id` FK columns** — `ml_submissions`, `votes`,
+  `season_standings`, and `rounds` each gain a nullable `player_id` column
+  alongside the existing `competitor_id`/`voter_id` columns. All NULL on prod
+  until competitors are manually linked to players via the setup screen. No
+  read-query changes — all digest, standings, and history reads continue to
+  use the existing `competitor_id` join path. Structural groundwork for the
+  future write-path migration.
+- **`competitors.player_id` link column** — `competitors` gains a
+  `player_id INTEGER REFERENCES players(id)` column wired for the
+  `ml_competitor_id` backfill path. Backfill on current prod data is a no-op
+  (manually-created players have `ml_competitor_id = NULL`); future imports
+  that populate `ml_competitor_id` will auto-link on first boot.
+
 ## [1.0.2] — 2026-06-12
 
 ### Visible (UI)
