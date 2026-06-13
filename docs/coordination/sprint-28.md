@@ -57,7 +57,7 @@ updated: 2026-06-13T04:30:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [-] {agent: backend, id: dossier-schema} **Two new tables via idempotent boot migrations** (spec §5). In `ui/src/lib/db/client.ts` (house migration pattern), create `player_profiles` (1:1 with players: `player_id` PK → `players(id)`, `notes TEXT`, `tags TEXT NOT NULL DEFAULT '[]'`, `taste_fingerprint TEXT`, `fingerprint_model TEXT`, `fingerprint_cost_usd REAL`, `fingerprint_generated_at TEXT`, `updated_at TEXT`) and `prediction_runs` (`id` PK uuid, `task_id TEXT`, `player_id INTEGER`, `round_id INTEGER` NULL, `input_json TEXT`, `output_json TEXT`, `model TEXT`, `cost_usd REAL`, `latency_ms INTEGER`, `created_at TEXT`, `actual_json TEXT` NULL, `score_json TEXT` NULL — last two reserved for Sprint 3).
+- [x] {agent: backend, id: dossier-schema} **Two new tables via idempotent boot migrations** (spec §5). In `ui/src/lib/db/client.ts` (house migration pattern), create `player_profiles` (1:1 with players: `player_id` PK → `players(id)`, `notes TEXT`, `tags TEXT NOT NULL DEFAULT '[]'`, `taste_fingerprint TEXT`, `fingerprint_model TEXT`, `fingerprint_cost_usd REAL`, `fingerprint_generated_at TEXT`, `updated_at TEXT`) and `prediction_runs` (`id` PK uuid, `task_id TEXT`, `player_id INTEGER`, `round_id INTEGER` NULL, `input_json TEXT`, `output_json TEXT`, `model TEXT`, `cost_usd REAL`, `latency_ms INTEGER`, `created_at TEXT`, `actual_json TEXT` NULL, `score_json TEXT` NULL — last two reserved for Sprint 3).
   - **Acceptance:** a fresh DB boot creates both tables; re-running boot is a no-op (idempotent guard); `PRAGMA table_info` shows every column above; a vitest confirms boot + both schemas; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: context-pack, depends: dossier-schema} **Player Context Pack builder** (spec §4.1). New `ui/src/lib/predict/playerContext.ts` — `buildPlayerContext(db, playerId, opts) → PlayerContext`: assembles the player's dossier (notes/tags) + a token-bounded history slice (their submissions w/ comments+points, votes they cast w/ points, taste overlap), keyed on stable `player_id`, reusing `playerHistory.ts`/`seasonData.ts` queries. One documented exported shape.
@@ -108,6 +108,13 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — dossier-schema COMPLETE (commit 1b8321b)
+- added `player_profiles` + `prediction_runs` boot migrations to `ui/src/lib/db/client.ts`
+- idempotent: guarded by `tableNames` check (computed once at boot start); `CREATE TABLE IF NOT EXISTS`
+- 12 vitest assertions in `ui/src/lib/db/predict.schema.test.ts` — all pass
+- `npm run check`: 0 errors; task `[x]` ticked
+- unlocks: context-pack, harness-runner, api-dossier (parallel Wave 2)
 
 ### 2026-06-13 — orc — Sprint-28 ACTIVATED · dossier-schema dispatched (Wave 1)
 - status planned → active; dispatched `dossier-schema` to the backend pane (the sole
