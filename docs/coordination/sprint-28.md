@@ -60,7 +60,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: dossier-schema} **Two new tables via idempotent boot migrations** (spec §5). In `ui/src/lib/db/client.ts` (house migration pattern), create `player_profiles` (1:1 with players: `player_id` PK → `players(id)`, `notes TEXT`, `tags TEXT NOT NULL DEFAULT '[]'`, `taste_fingerprint TEXT`, `fingerprint_model TEXT`, `fingerprint_cost_usd REAL`, `fingerprint_generated_at TEXT`, `updated_at TEXT`) and `prediction_runs` (`id` PK uuid, `task_id TEXT`, `player_id INTEGER`, `round_id INTEGER` NULL, `input_json TEXT`, `output_json TEXT`, `model TEXT`, `cost_usd REAL`, `latency_ms INTEGER`, `created_at TEXT`, `actual_json TEXT` NULL, `score_json TEXT` NULL — last two reserved for Sprint 3).
   - **Acceptance:** a fresh DB boot creates both tables; re-running boot is a no-op (idempotent guard); `PRAGMA table_info` shows every column above; a vitest confirms boot + both schemas; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: context-pack, depends: dossier-schema} **Player Context Pack builder** (spec §4.1). New `ui/src/lib/predict/playerContext.ts` — `buildPlayerContext(db, playerId, opts) → PlayerContext`: assembles the player's dossier (notes/tags) + a token-bounded history slice (their submissions w/ comments+points, votes they cast w/ points, taste overlap), keyed on stable `player_id`, reusing `playerHistory.ts`/`seasonData.ts` queries. One documented exported shape.
+- [x] {agent: backend, id: context-pack, depends: dossier-schema} **Player Context Pack builder** (spec §4.1). New `ui/src/lib/predict/playerContext.ts` — `buildPlayerContext(db, playerId, opts) → PlayerContext`: assembles the player's dossier (notes/tags) + a token-bounded history slice (their submissions w/ comments+points, votes they cast w/ points, taste overlap), keyed on stable `player_id`, reusing `playerHistory.ts`/`seasonData.ts` queries. One documented exported shape.
   - **Acceptance:** `buildPlayerContext` returns the documented `PlayerContext` shape; history is bounded (caps rows/tokens, not the entire corpus); vitest covers a player with dossier+history and one with neither; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: harness-runner, depends: dossier-schema} **Prediction harness — contract + runner** (spec §4.2–4.4). New `ui/src/lib/predict/predict.ts`: the `PredictionTask<TIn,TOut>` type (`id`, zod `inputSchema`, `buildMessages`, `model`, `params`, zod `outputSchema`, optional `scorer`) and `runPrediction(task, input) → { output, meta }` — validates input, renders the template, calls `callOpenRouter` in JSON mode with the task's `model`/`params`, validates output against `outputSchema` (one retry on schema miss), captures `{ model, costUsd, latencyMs }`, and writes one `prediction_runs` row. Reuse `callOpenRouter`; add no new LLM client.
@@ -108,6 +108,16 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — context-pack COMPLETE (commit c79017f)
+- new `ui/src/lib/predict/playerContext.ts`: `PlayerContext` type + `buildPlayerContext(db, playerId, opts)`
+- dossier: notes/tags/tasteFingerprint from player_profiles; manual and AI fields explicitly separated
+- submissions via `getPlayer()` reuse (reversed to most-recent-first, capped); votes cast via direct SQL
+  (competitorIds→votes join, only points>0, most-recent-first); tasteOverlap sorted + capped
+- row caps: maxSubmissions=40, maxVotes=60, maxTasteOverlapEntries=10; boundingApplied flag on trim
+- 7 vitest assertions: full dossier+history, empty player, sub bounding, vote bounding, unknown id,
+  malformed tags, zero-point vote exclusion; `npm run check`: 0 errors
+- task `[x]` ticked; unlocks task-fingerprint + task-vote-probe (once harness-runner also lands)
 
 ### 2026-06-13 — backend — dossier-schema COMPLETE (commit 1b8321b)
 - added `player_profiles` + `prediction_runs` boot migrations to `ui/src/lib/db/client.ts`
