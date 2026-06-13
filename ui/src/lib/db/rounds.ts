@@ -139,6 +139,9 @@ export function patchRound(db: Database.Database, id: number, p: RoundPatch): bo
     if (p.description !== undefined) edited.push('description');
     if (p.spotifyPlaylistUrl !== undefined) edited.push('spotify_playlist_url');
     markEditedFields(db, id, edited);
+    if (p.submissionDeadline !== undefined || p.votingDeadline !== undefined) {
+      clearNextRoundDeadlineOverrides(db, id);
+    }
   }
   return info.changes > 0;
 }
@@ -180,6 +183,9 @@ export function updateRound(db: Database.Database, roundId: number, p: RoundMana
     if (p.name !== undefined) edited.push('name');
     if (p.description !== undefined) edited.push('description');
     markEditedFields(db, roundId, edited);
+    if (p.submission_deadline !== undefined || p.voting_deadline !== undefined) {
+      clearNextRoundDeadlineOverrides(db, roundId);
+    }
   }
   return info.changes > 0;
 }
@@ -198,4 +204,41 @@ export function updateDeadlines(
   if (!fields.length) return;
   vals.push(roundId);
   db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
+  clearNextRoundDeadlineOverrides(db, roundId);
+}
+
+/**
+ * FB-2: When deadline fields are written to round `roundId`, clear any
+ * digest_drafts deadline overrides that shadow this round as a "next round".
+ *
+ * The digest next-round override stores deadline values per draft; when the
+ * underlying round's deadlines change the override becomes stale and silently
+ * wins. Clearing on write removes the shadow — the GET endpoint then returns
+ * the live rounds-table values.
+ */
+function clearNextRoundDeadlineOverrides(db: Database.Database, roundId: number): void {
+  // Find the predecessor round whose "next" is roundId (mirrors getNextRound ordering).
+  const predecessor = db.prepare(`
+    WITH target AS (
+      SELECT s.league_id, s.season_number, r.id AS round_id
+      FROM rounds r JOIN seasons s ON s.id = r.season_id WHERE r.id = ?
+    )
+    SELECT r2.id
+    FROM rounds r2
+    JOIN seasons s2 ON s2.id = r2.season_id
+    JOIN target t ON s2.league_id = t.league_id
+    WHERE s2.season_number < t.season_number
+       OR (s2.season_number = t.season_number AND r2.id < t.round_id)
+    ORDER BY s2.season_number DESC, r2.id DESC
+    LIMIT 1
+  `).get(roundId) as { id: number } | undefined;
+  if (!predecessor) return;
+  db.prepare(`
+    UPDATE digest_drafts
+    SET next_round_sub_deadline_override = NULL,
+        next_round_vote_deadline_override = NULL
+    WHERE round_id = ?
+      AND (next_round_sub_deadline_override IS NOT NULL
+           OR next_round_vote_deadline_override IS NOT NULL)
+  `).run(predecessor.id);
 }
