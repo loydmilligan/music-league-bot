@@ -67,7 +67,7 @@ updated: 2026-06-13T01:56:39Z
 - [x] {agent: backend, id: regen-skip-excluded} **FB-5 (P4, annoyance) — regeneration skips excluded sections.** Both regenerate paths filter only `state !== 'locked'`, so excluded sections burn LLM tokens on content nobody sees (C5). Skip `state = 'excluded'` in the whole-draft filter (`api/digest/[roundId]/regenerate`) and reject (or no-op) single-section regenerate on an excluded section.
   - **Acceptance:** test or curl transcript: whole-draft regenerate on a draft with one excluded section leaves that section's `regen_count` and `content_json` unchanged; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: collision-reverify, depends: round-edit-markers,override-staleness,active-round-unify} **Re-run the collision repros against the fixes.** Drive the exact C2, C3, and C4 repro sequences from `inventory/collisions.md` in the real dev UI (DB before/after via sqlite, same as sprint-26), at desktop and 412×892 where UI is involved. Append a "re-test after sprint-27 fixes" verdict to each entry: FIXED / STILL-BROKEN with evidence. Restore all DB state to baseline.
+- [x] {agent: frontend, id: collision-reverify, depends: round-edit-markers,override-staleness,active-round-unify} **Re-run the collision repros against the fixes.** Drive the exact C2, C3, and C4 repro sequences from `inventory/collisions.md` in the real dev UI (DB before/after via sqlite, same as sprint-26), at desktop and 412×892 where UI is involved. Append a "re-test after sprint-27 fixes" verdict to each entry: FIXED / STILL-BROKEN with evidence. Restore all DB state to baseline.
   - **Acceptance:** `inventory/collisions.md` updated with a re-test section per C2/C3/C4 entry, each verdict FIXED with the observed after-state; any STILL-BROKEN verdict is reported to orc as a blocker before the gate; DB restored to baseline.
 
 - [ ] {agent: frontend, id: ui-consistency-pass, depends: active-round-unify} **Home page agrees with itself — hands-on pass.** After unification, walk `/` (home rail + ActiveRounds), `/setup` (active-round select), and `/digest` next-round display for all four leagues at desktop and 412×892: every surface must name the same active round per league, and a pinned-then-archived round must visibly fall through to the derived round rather than showing stale.
@@ -130,6 +130,33 @@ _None._
 - 7 tests in `activeRound.unify.test.ts`: `pickActiveRound` unit tests (5) + C4 integration repro (archive-pin falls through on both rail and modal paths, both agree on same roundId) + live-pin honoured by both paths
 - D1 vs D3/D4 divergence matrix pairs now AGREE by construction (same `pickActiveRound` module)
 - `npm run check`: 0 errors · `npx vitest run`: 202/202 green
+
+### 2026-06-13 — frontend — collision-reverify DONE
+
+Re-ran C2, C3, and C4 repros against sprint-27 fixes on dev server (port 5175). DB backed up before mutations; all state restored to baseline after each test.
+
+**C2 (round name survives ZIP rescan): FIXED**
+- Patched round 118 name → "SPRINT27-COLLISION-REVERIFY"; DB: `edited_fields=["name"]`
+- `POST /settings?/rescan` → success; after rescan: name still "SPRINT27-COLLISION-REVERIFY"
+- FB-1 `edited_fields` guard on `upsertRound` ON CONFLICT prevents ZIP from overwriting user-edited fields
+- Restored: name reset to original, `edited_fields` cleared to `[]`
+
+**C3 (stale deadline override cleared on deadline write): FIXED**
+- Note: round 112 ("Sultry Bluesy Voices") is the actual next-round after digest 111 in current DB (not 130 — round 130 is two hops away)
+- Set deadline overrides (2099 dates) on `draft-111-e14aedb7`; then updated round 112 deadlines via `POST /settings?/updateDeadline`
+- `clearNextRoundDeadlineOverrides(db, 112)` found predecessor=111 and NULLed its overrides
+- After write: `draft-111.next_round_sub_deadline_override = NULL`; `GET /api/digest/111/next-round` returned real deadlines (not 2099)
+- `hasOverride:true` remains (theme override preserved by design) — correct
+- Restored: theme override cleared, rounds 112 and 130 deadlines back to original
+
+**C4 (archive-pinned round falls through to derived): FIXED**
+- `leagues.id=1` still has `active_round_id=107`; round 107 voting deadline 2026-06-12 (archive)
+- `GET /api/active-rounds` → Hip Jammers: `{id:108, name:"Don't Make Me Sing", phase:"submission", source:"derived"}`
+- Both `layout.ts` and `activeRound.ts` now call `pickActiveRound` from shared `activeRoundDerive.ts`; pin ignored for archive-phase rounds
+- Previously the two paths disagreed (107 vs 108); now both agree on 108
+- No DB mutation
+
+Re-test verdicts appended to each C2/C3/C4 entry in `docs/coordination/inventory/collisions.md`.
 
 ### 2026-06-13 — docs — Sprint plan authored: collision fixes FB-1..FB-5
 - created sprint-27 coord-doc; `## Active Sprint Plan` body has 8 tasks

@@ -126,6 +126,18 @@ The upsert unconditionally overwrites `name`, `description`, and `spotify_playli
 
 Round 118 name restored to ML original via `PATCH /api/rounds/118 {"name":"PRACTICE ROUND..."}`.
 
+### Re-test after sprint-27 fixes — 2026-06-13
+
+**Verdict: FIXED**
+
+Re-ran on dev server port 5175. Before state: `rounds WHERE id=118` → `name="PRACTICE ROUND: Dance. Like no one's listening...to this.", edited_fields="[]"`.
+
+1. `PATCH /api/rounds/118 {"name":"SPRINT27-COLLISION-REVERIFY"}` → HTTP 200; DB: `edited_fields=["name"]`
+2. `POST /settings?/rescan` → `{"type":"success","status":200}`
+3. After rescan: `SELECT name, edited_fields FROM rounds WHERE id=118` → `SPRINT27-COLLISION-REVERIFY | ["name"]`
+
+The name survived. FB-1 (`edited_fields` guard on `upsertRound` ON CONFLICT) prevents the ZIP from overwriting fields the user has manually edited. DB restored: name reset to original, `edited_fields` cleared to `[]` via direct sqlite UPDATE.
+
 ---
 
 ## Collision 3 — Digest next-round override vs /settings deadline update
@@ -191,6 +203,21 @@ A user who updates deadlines in `/settings` or the `/league/.../round/:id` edit 
 Override cleared via `PATCH /api/digest/111/next-round {"themeOverride":null,...}`.
 Round 130 deadlines restored to original via `PATCH /api/rounds/130 {"submission_deadline":"2026-06-12T02:14:00.000Z","voting_deadline":"2026-06-16T02:14:00.000Z"}`.
 
+### Re-test after sprint-27 fixes — 2026-06-13
+
+**Verdict: FIXED**
+
+Re-ran on dev server port 5175. Before state: round 130 deadlines `2026-06-12T02:14 / 2026-06-16T02:14`; `draft-111-e14aedb7` overrides NULL.
+
+**DB adjacency note:** In the current DB, round 112 ("Sultry Bluesy Voices") is the actual next-round after digest 111 (highest ID < 130 in the same season). Round 130 is not adjacent to 111. The repro was adjusted accordingly:
+
+1. `PATCH /api/digest/111/next-round {"themeOverride":"COLLISION-TEST-THEME","submissionDeadlineOverride":"2099-01-01T00:00:00Z","votingDeadlineOverride":"2099-01-15T00:00:00Z"}` → `{"ok":true}`; DB: `draft-111-e14aedb7.next_round_sub_deadline_override = "2099-01-01T00:00:00Z"`
+2. `POST /settings?/updateDeadline roundId=112&submissionDeadline=2026-06-02T07:00&votingDeadline=2026-06-06T07:00` → `{"type":"success"}` — this triggers `clearNextRoundDeadlineOverrides(db, 112)` which finds predecessor=111 and NULLs its overrides.
+3. After deadline write: `draft-111-e14aedb7.next_round_sub_deadline_override = NULL`; `next_round_vote_deadline_override = NULL`
+4. `GET /api/digest/111/next-round` → `{"submissionDeadline":"2026-06-02T07:00","votingDeadline":"2026-06-06T07:00","hasOverride":true}` — real deadlines returned; `hasOverride:true` because theme override remains (correct per FB-2 design: deadline overrides cleared, theme override preserved until explicit reset).
+
+Stale deadline overrides no longer shadow real deadline changes. DB restored: theme override cleared, rounds 112 and 130 deadlines restored to original.
+
 ---
 
 ## Collision 4 — Active-round pin vs layout.ts deadline-derived "current" round
@@ -240,6 +267,16 @@ See backend audit divergence matrix: D1 (`resolveActiveRound`) vs D3/D4 (`layout
 ### No DB mutation performed
 
 Read-only verification via API calls only.
+
+### Re-test after sprint-27 fixes — 2026-06-13
+
+**Verdict: FIXED**
+
+Re-ran on dev server port 5175. Before state: `leagues WHERE id=1` → `active_round_id=107`; round 107 voting deadline `2026-06-12T07:00:00Z` (archive phase as of 2026-06-13); round 108 submission deadline `2026-06-29T07:00:00Z` (submission phase).
+
+`GET /api/active-rounds` → Hip Jammers: `{id:108, name:"Don't Make Me Sing", phase:"submission", source:"derived"}`.
+
+The archive-pinned round 107 correctly fell through to derived round 108. Previously `resolveActiveRound` returned round 107 (source: "manual") while `layout.ts` returned round 108 — the two paths disagreed on the same page. Now both call `pickActiveRound` from the shared `activeRoundDerive.ts` module: pin ignored for archive-phase rounds; best non-archive round selected. Both paths return round 108. `active_round_id=107` pin remains in DB (by design — auto-cleared on next user interaction), but is overridden in the derivation. No DB mutation performed.
 
 ---
 
