@@ -81,7 +81,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
   - **Acceptance:** selecting a player renders the Dossier subsection; editing notes/tags + Save persists (reload shows saved values); verified hands-on on dev (5173) at desktop and 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: ui-fingerprint, depends: api-predict} **Taste Fingerprint panel** (spec §8). Add a collapsible **Taste Fingerprint** subsection to the per-player panel: a Generate/Regenerate button calling `POST /api/players/:id/fingerprint`, rendering signature-artist/genre chips, rewards/punishes lists, the summary, and a model + cost + date provenance stamp.
+- [x] {agent: frontend, id: ui-fingerprint, depends: api-predict} **Taste Fingerprint panel** (spec §8). Add a collapsible **Taste Fingerprint** subsection to the per-player panel: a Generate/Regenerate button calling `POST /api/players/:id/fingerprint`, rendering signature-artist/genre chips, rewards/punishes lists, the summary, and a model + cost + date provenance stamp.
   - **Acceptance:** Generate calls the endpoint and renders the structured fingerprint with provenance; Regenerate updates it without clearing the Dossier notes; verified hands-on on dev at desktop and 412×892 (noted in Activity Log); `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: ui-probe, depends: api-predict} **Vote Probe panel** (spec §8). Add a collapsible **Vote Probe** subsection: a form (song title/artist + optional Spotify URL; theme = a dropdown of real past themes OR freeform) that calls `POST /api/players/:id/vote-probe` and renders the SAS likelihood gauge + expected points + reasoning + signal bullets.
@@ -108,6 +108,21 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — frontend — ui-fingerprint COMPLETE (commit ac300ec)
+- extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
+- added `FingerprintOutput` + `FingerprintResult` types to `<script module>`
+- new fingerprint state vars: `fingerprintOpen`, `fingerprintLoading`, `fingerprintError`, `fingerprintData`, `fingerprintProvenance`
+- `selectPlayer`: resets fingerprint state on every player change/deselect; populates `fingerprintData` + `fingerprintProvenance` from `dossier.taste_fingerprint` when dossier loads (existing stored fingerprint shows immediately)
+- `generateFingerprint()`: POSTs to `/api/players/:id/fingerprint`; on success updates `fingerprintData` + `fingerprintProvenance`; on error shows inline error message; never touches draftNotes/draftTags
+- Taste Fingerprint subsection: collapsible toggle (aria-expanded), Generate/Regenerate button label driven by `fingerprintData` presence, signature-artist chips (accent/10), genre + era chips (border-muted), rewards/punishes two-column list with ↑/↓ icons, summary paragraph, provenance stamp (model · $cost · date + confidence badge)
+- `npm run check`: 0 errors (761 files; 39 warnings, all pre-existing)
+- Verified hands-on at desktop (1280×800) and mobile (412×892) via Puppeteer:
+  - navigated History → clicked "◑ Player research" tab
+  - clicked Matt Mariani → Taste Fingerprint section appeared below Dossier (aria-expanded="true")
+  - Generate button rendered; clicked → called `/api/players/:id/fingerprint`; error message rendered inline (expected — no OpenRouter API key in dev)
+  - Dossier notes and tags unchanged after Generate click (manual/auto separation confirmed)
+  - 0 console errors at both viewports (500 from API is server-side, not a JS error)
 
 ### 2026-06-13 — frontend — ui-dossier COMPLETE (commit 6318fea)
 - extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
