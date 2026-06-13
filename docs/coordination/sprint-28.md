@@ -66,7 +66,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: harness-runner, depends: dossier-schema} **Prediction harness — contract + runner** (spec §4.2–4.4). New `ui/src/lib/predict/predict.ts`: the `PredictionTask<TIn,TOut>` type (`id`, zod `inputSchema`, `buildMessages`, `model`, `params`, zod `outputSchema`, optional `scorer`) and `runPrediction(task, input) → { output, meta }` — validates input, renders the template, calls `callOpenRouter` in JSON mode with the task's `model`/`params`, validates output against `outputSchema` (one retry on schema miss), captures `{ model, costUsd, latencyMs }`, and writes one `prediction_runs` row. Reuse `callOpenRouter`; add no new LLM client.
   - **Acceptance:** with `callOpenRouter` stubbed to fixture JSON, `runPrediction` validates I/O and inserts one `prediction_runs` row carrying model+cost+latency; the malformed-output retry path is covered; `npm run check` 0 errors; `npx vitest run` green.
 
-- [ ] {agent: backend, id: task-fingerprint, depends: context-pack,harness-runner} **Task ③ `taste-fingerprint` + persistence** (spec §6.1). New `ui/src/lib/predict/tasks/tasteFingerprint.ts`: the PredictionTask (input = PlayerContext; output zod = `{ signature_artists[], genres[], eras[], rewards[], punishes[], summary, confidence: 'low'|'medium'|'high' }`) plus `generateFingerprint(db, playerId)` that runs it and persists the result + provenance (`fingerprint_model`/`_cost_usd`/`_generated_at`) to `player_profiles` — writing ONLY those columns, never `notes`/`tags`.
+- [x] {agent: backend, id: task-fingerprint, depends: context-pack,harness-runner} **Task ③ `taste-fingerprint` + persistence** (spec §6.1). New `ui/src/lib/predict/tasks/tasteFingerprint.ts`: the PredictionTask (input = PlayerContext; output zod = `{ signature_artists[], genres[], eras[], rewards[], punishes[], summary, confidence: 'low'|'medium'|'high' }`) plus `generateFingerprint(db, playerId)` that runs it and persists the result + provenance (`fingerprint_model`/`_cost_usd`/`_generated_at`) to `player_profiles` — writing ONLY those columns, never `notes`/`tags`.
   - **Acceptance:** with stubbed `callOpenRouter`, `generateFingerprint` persists a schema-valid fingerprint + provenance; a vitest proves regenerating leaves pre-existing `notes`/`tags` byte-identical (manual/auto separation invariant); output zod rejects a malformed shape; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: task-vote-probe, depends: context-pack,harness-runner} **Task ② `vote-probe` / SAS** (spec §3, §6.2). New `ui/src/lib/predict/tasks/voteProbe.ts`: the PredictionTask (input = PlayerContext + `{ song:{title,artist,spotify_url?}, theme:{name,description} }`; output zod = `{ upvote_likelihood: 0..100, expected_points, confidence, reasoning, signals[] }`) plus `runVoteProbe(db, playerId, { song, theme })` that runs it and logs a `prediction_runs` row (`task_id='vote-probe'`, `round_id` set when the theme is a real round). `upvote_likelihood` IS the SAS — a standalone affinity lean, not a round allocation.
@@ -108,6 +108,16 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — task-fingerprint COMPLETE (commit 0470f08)
+- new `ui/src/lib/predict/tasks/tasteFingerprint.ts`
+- `FingerprintOutputSchema` (zod): signature_artists[], genres[], eras[], rewards[], punishes[], summary, confidence enum
+- `tasteFingerprintTask`: PredictionTask<PlayerContext, FingerprintOutput> with calibrated confidence guidance in system prompt
+- `generateFingerprint(db, playerId)`: builds PlayerContext → runPrediction → INSERT OR IGNORE + targeted UPDATE of AI-only columns
+- manual/auto separation: UPDATE touches ONLY taste_fingerprint + fingerprint_model/cost_usd/generated_at/updated_at; notes/tags never referenced
+- 15 vitest assertions: happy path, profile row creation, JSON persistence, provenance, prediction_runs row, byte-identical notes/tags after 3 regenerations, fingerprint updated on regen, schema rejection (missing fields, bad confidence, non-array, non-string array items), empty-player edge case
+- `npm run check`: 0 errors; 259 tests pass; task `[x]` ticked
+- unlocks: api-predict (once task-vote-probe also lands)
 
 ### 2026-06-13 — backend — api-dossier COMPLETE (commit f2a009b)
 - new `ui/src/routes/api/players/[playerId]/profile/+server.ts`: GET + PATCH handlers
