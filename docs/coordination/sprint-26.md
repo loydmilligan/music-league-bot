@@ -72,7 +72,7 @@ updated: 2026-06-12T22:08:06Z
 - [x] {agent: backend, id: linking-api-resync} **Competitor→player linking API + backfill re-sync.** Carried from sprint-25 close (option 2). Endpoint to set/clear `competitors.player_id` (follow the existing mgmt-API route patterns under `ui/src/routes/api/`), plus a re-sync service function that re-runs the deterministic gameplay backfill (`ml_submissions`/`votes`/`season_standings.player_id` from `competitors.player_id`) for the affected competitor — fixing close-out finding 2 (the boot backfill is one-shot, nested in the column-creation guard).
   - **Acceptance:** curl transcript in the handoff: PATCH a test competitor's link → row persists; the competitor's gameplay rows have `player_id` populated immediately after (no reboot); unlinking nulls them back; `npm run check` 0 errors.
 
-- [-] {agent: frontend, id: linking-ui, depends: linking-api-resync} **Linking control on the /setup roster screen.** Per the sprint-25 close decision: new ML competitors (e.g. Sarah Zucker's possible second account in Second Best) need a UI to link/unlink a competitor to a player. Show each competitor's name, `ml_competitor_id` (truncated), leagues, and current link; picker to choose a player. Surface unlinked competitors prominently (they're the action item).
+- [x] {agent: frontend, id: linking-ui, depends: linking-api-resync} **Linking control on the /setup roster screen.** Per the sprint-25 close decision: new ML competitors (e.g. Sarah Zucker's possible second account in Second Best) need a UI to link/unlink a competitor to a player. Show each competitor's name, `ml_competitor_id` (truncated), leagues, and current link; picker to choose a player. Surface unlinked competitors prominently (they're the action item).
   - **Acceptance:** at `/setup`, an unlinked fixture competitor can be linked to a player; the link survives reload; the player's `/history?tab=players` entry absorbs the competitor's submissions (visible name change in the roster list); 412×892 renders without layout breakage; `npm run check` 0 errors.
 
 - [x] {agent: backend, id: repoint-groundwork} **FK hard-repoint groundwork doc (no implementation).** Write `docs/coordination/planning-fk-repoint.md` for the future repoint sprint: inventory of every read site joining gameplay tables through `competitor_id`/`voter_id` (file:line), the preconditions checklist (all competitors linked, re-sync live, importer writing `player_id` on new rows), per-table migration steps with rollback, and a go/no-go checklist.
@@ -107,6 +107,13 @@ _None._
 - **Section 4 (go/no-go checklist):** 4 hard blockers (PC-3 zero-null verify, PC-4 fix merged, index plan reviewed, season_standings option decided) + 3 strongly-recommended checks.
 - Cross-checked against full grep: every hit listed or excluded with reason.
 - repoint-groundwork ticked [x]. **Backend lane is complete** — all 5 backend tasks done (write-path-inventory, active-derivation-audit, season-override-fix, linking-api-resync, repoint-groundwork). Ready for gate cross-check.
+
+### 2026-06-12 — frontend-agent — linking-ui COMPLETE
+- Added Competitors section to `/setup` (commit e08defc): competitor roster with name, truncated `ml_competitor_id`, leagues, and player picker per row.
+- Unlinked competitors surface in an amber warning banner at the top of the section, sorted before the linked table.
+- Acceptance verified: fixture competitor (id=30, `fixture000…`) inserted, linked to player 1 via UI select → `player_id=1` confirmed in DB → survived page reload → fixture deleted. `npm run check` 0 errors. 412×892 screenshot confirms no layout breakage.
+- PATCH `/api/competitors/:id` called on every select change; backend's `resyncCompetitorPlayerIds` runs immediately — gameplay rows updated without reboot.
+- linking-ui ticked [x]. **Frontend lane is complete and ready for gate cross-check.**
 
 ### 2026-06-12 — frontend-agent — collision-repros COMPLETE
 - Produced `docs/coordination/inventory/collisions.md` with 6 suspects tested (4 CONFIRMED, 2 NOT-A-BUG).
