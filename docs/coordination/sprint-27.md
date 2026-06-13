@@ -52,7 +52,7 @@ updated: 2026-06-13T01:05:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: round-edit-markers} **FB-1 (P1, data-loss) — manual round edits survive ZIP re-import.** `upsertRound` (`ui/src/lib/db/rounds.ts`) ON CONFLICT unconditionally overwrites `name`, `description`, and `spotify_playlist_url` from the ZIP (C2: W3 vs W1). Apply the proven season `status_source` pattern at field level: an edit marker (e.g. `edited_fields` column or per-field `*_source`) set by `patchRound` (W3) and the round edit modal path, which the importer upsert then respects — ZIP values only land on fields the user hasn't manually edited. Idempotent boot migration per house pattern.
+- [x] {agent: backend, id: round-edit-markers} **FB-1 (P1, data-loss) — manual round edits survive ZIP re-import.** `upsertRound` (`ui/src/lib/db/rounds.ts`) ON CONFLICT unconditionally overwrites `name`, `description`, and `spotify_playlist_url` from the ZIP (C2: W3 vs W1). Apply the proven season `status_source` pattern at field level: an edit marker (e.g. `edited_fields` column or per-field `*_source`) set by `patchRound` (W3) and the round edit modal path, which the importer upsert then respects — ZIP values only land on fields the user hasn't manually edited. Idempotent boot migration per house pattern.
   - **Acceptance:** regression test: patch a fixture round's name, re-import its ZIP data, name survives while untouched fields still refresh from the ZIP; re-run the C2 repro steps from `inventory/collisions.md` (round 118 rename → `/settings` re-scan) — name survives; `npm run check` 0 errors; `npx vitest run` green.
 
 - [ ] {agent: backend, id: override-staleness} **FB-2 (P2, wrong-display) — stale digest next-round override no longer hides deadline updates.** `digest_drafts.next_round_*_override` wins unconditionally with no expiry or link to the `rounds` row (C3: W14 vs W3/W11/W12). Make deadline writes to a round (W3 patchRound, W11 settings form, W12 auto-fill) clear — or visibly mark stale — any digest draft override that shadows that round. Pick the simplest shape that kills the silent-shadow behavior; preserve the explicit "↺ Reset to computed" flow.
@@ -64,7 +64,7 @@ updated: 2026-06-13T01:05:00Z
 - [ ] {agent: backend, id: importer-autolink} **FB-4 (P3, repoint blocker) — importer writes `player_id` on new competitor rows.** `upsertCompetitor` doesn't set `player_id`, so every newly imported competitor reopens the null-gap that PC-3 just verified closed (PC-4 in `planning-fk-repoint.md`; W1/W2). On insert, auto-link deterministically (existing `ml_competitor_id` backfill rule); when no deterministic match exists, leave NULL — the /setup unlinked banner (sprint-26 linking-ui) is the designed catch. New gameplay rows for an already-linked competitor get `player_id` at write time.
   - **Acceptance:** test: import introducing a new competitor whose `ml_competitor_id` matches a player → row lands linked with gameplay `player_id` populated; non-matching competitor → NULL link and it appears in the /setup unlinked banner; PC-4 marked ✅ in `planning-fk-repoint.md`; `npx vitest run` green.
 
-- [ ] {agent: backend, id: regen-skip-excluded} **FB-5 (P4, annoyance) — regeneration skips excluded sections.** Both regenerate paths filter only `state !== 'locked'`, so excluded sections burn LLM tokens on content nobody sees (C5). Skip `state = 'excluded'` in the whole-draft filter (`api/digest/[roundId]/regenerate`) and reject (or no-op) single-section regenerate on an excluded section.
+- [x] {agent: backend, id: regen-skip-excluded} **FB-5 (P4, annoyance) — regeneration skips excluded sections.** Both regenerate paths filter only `state !== 'locked'`, so excluded sections burn LLM tokens on content nobody sees (C5). Skip `state = 'excluded'` in the whole-draft filter (`api/digest/[roundId]/regenerate`) and reject (or no-op) single-section regenerate on an excluded section.
   - **Acceptance:** test or curl transcript: whole-draft regenerate on a draft with one excluded section leaves that section's `regen_count` and `content_json` unchanged; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: collision-reverify, depends: round-edit-markers,override-staleness,active-round-unify} **Re-run the collision repros against the fixes.** Drive the exact C2, C3, and C4 repro sequences from `inventory/collisions.md` in the real dev UI (DB before/after via sqlite, same as sprint-26), at desktop and 412×892 where UI is involved. Append a "re-test after sprint-27 fixes" verdict to each entry: FIXED / STILL-BROKEN with evidence. Restore all DB state to baseline.
@@ -92,6 +92,20 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — backend — FB-1 (round-edit-markers) DONE · commit 4b095cf
+- Added `edited_fields TEXT NOT NULL DEFAULT '[]'` column to `rounds` via idempotent boot migration (`client.ts`)
+- `upsertRound` ON CONFLICT now guards `name`/`description`/`spotify_playlist_url` with `instr(rounds.edited_fields,'"fieldname"') > 0` CASE — ZIP values skip protected fields
+- `patchRound` stamps touched importer-overwritable field names into `edited_fields` after each write; `updateRound` does the same for `name`/`description`
+- Private `markEditedFields` helper merges new names into the JSON array without duplicates
+- 5 regression tests in `rounds.patch.test.ts` (C2 repro: patch name → upsertRound → name survives, untouched fields refresh; updateRound path; multi-field; deadline-only patch doesn't protect name)
+- `npm run check`: 0 errors · `npx vitest run`: 187/187 green
+
+### 2026-06-12 — backend — FB-5 (regen-skip-excluded) DONE · commit b38fcbb
+- Whole-draft regenerate: extended filter from `state !== 'locked'` to `state !== 'locked' && state !== 'excluded'` (`api/digest/[roundId]/regenerate/+server.ts`)
+- Single-section regenerate: added `if (section.state === 'excluded') throw error(400, 'section is excluded')` matching the locked guard (`api/digest/[roundId]/sections/[id]/regenerate/+server.ts`)
+- New test file `ui/src/lib/digest/regen-skip-excluded.test.ts`: 3 tests verify only 'default' sections are regenerable, excluded section regen_count/content_json stay unchanged, and state string is 'excluded' for the single-section guard
+- `npm run check`: 0 errors · `npx vitest run`: 187/187 green
 
 ### 2026-06-13 — docs — Sprint plan authored: collision fixes FB-1..FB-5
 - created sprint-27 coord-doc; `## Active Sprint Plan` body has 8 tasks
