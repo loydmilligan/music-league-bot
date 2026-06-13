@@ -238,6 +238,43 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (roundsCols4.length && !roundsCols4.some(c => c.name === 'edited_fields')) {
 		db.exec("ALTER TABLE rounds ADD COLUMN edited_fields TEXT NOT NULL DEFAULT '[]'");
 	}
+	// sprint-28 player dossier: 1:1 profile row per player (notes, tags, AI fingerprint).
+	// Manual fields (notes/tags) and AI fields (fingerprint_*) are separate columns so
+	// regenerating a fingerprint never overwrites owner-authored content.
+	if (!tableNames.includes('player_profiles')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS player_profiles (
+				player_id INTEGER PRIMARY KEY REFERENCES players(id),
+				notes TEXT,
+				tags TEXT NOT NULL DEFAULT '[]',
+				taste_fingerprint TEXT,
+				fingerprint_model TEXT,
+				fingerprint_cost_usd REAL,
+				fingerprint_generated_at TEXT,
+				updated_at TEXT
+			);
+		`);
+	}
+	// sprint-28 prediction audit log: one row per LLM prediction task run.
+	// actual_json and score_json are reserved for Sprint 3 backtest scoring.
+	if (!tableNames.includes('prediction_runs')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS prediction_runs (
+				id TEXT PRIMARY KEY,
+				task_id TEXT,
+				player_id INTEGER,
+				round_id INTEGER,
+				input_json TEXT,
+				output_json TEXT,
+				model TEXT,
+				cost_usd REAL,
+				latency_ms INTEGER,
+				created_at TEXT,
+				actual_json TEXT,
+				score_json TEXT
+			);
+		`);
+	}
 	return db;
 }
 
