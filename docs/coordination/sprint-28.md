@@ -84,7 +84,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: frontend, id: ui-fingerprint, depends: api-predict} **Taste Fingerprint panel** (spec §8). Add a collapsible **Taste Fingerprint** subsection to the per-player panel: a Generate/Regenerate button calling `POST /api/players/:id/fingerprint`, rendering signature-artist/genre chips, rewards/punishes lists, the summary, and a model + cost + date provenance stamp.
   - **Acceptance:** Generate calls the endpoint and renders the structured fingerprint with provenance; Regenerate updates it without clearing the Dossier notes; verified hands-on on dev at desktop and 412×892 (noted in Activity Log); `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: ui-probe, depends: api-predict} **Vote Probe panel** (spec §8). Add a collapsible **Vote Probe** subsection: a form (song title/artist + optional Spotify URL; theme = a dropdown of real past themes OR freeform) that calls `POST /api/players/:id/vote-probe` and renders the SAS likelihood gauge + expected points + reasoning + signal bullets.
+- [x] {agent: frontend, id: ui-probe, depends: api-predict} **Vote Probe panel** (spec §8). Add a collapsible **Vote Probe** subsection: a form (song title/artist + optional Spotify URL; theme = a dropdown of real past themes OR freeform) that calls `POST /api/players/:id/vote-probe` and renders the SAS likelihood gauge + expected points + reasoning + signal bullets.
   - **Acceptance:** submitting a song + theme renders a SAS result (gauge + expected points + reasoning + signals); the theme dropdown lists real themes and freeform also works; verified hands-on on dev at desktop and 412×892 (noted in Activity Log); `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-close, depends: ui-dossier,ui-fingerprint,ui-probe} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, version bump + CHANGELOG, ratification card summarizing the dossier + harness + fingerprint + SAS, one cached prod deploy, a 412×892 prod smoke (write a dossier note → persists; run one fingerprint and one vote-probe → both return), panes reset, doc closed.
@@ -108,6 +108,23 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — frontend — ui-probe COMPLETE (commit TBD)
+- extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
+- added `ThemeEntry` + `VoteProbeResult` types to `<script module>`
+- new probe state vars: `probeOpen`, `probeThemes`, `probeSongTitle`, `probeSongArtist`, `probeSongUrl`, `probeThemeKey`, `probeCustomThemeName`, `probeCustomThemeDesc`, `probeLoading`, `probeError`, `probeResult`
+- `onMount`: added `/api/history/themes` fetch in parallel; deduplicates by theme string → `probeThemes` array (85 unique themes from live data)
+- `selectPlayer`: resets all probe state on every player change/deselect
+- `runVoteProbe()`: POSTs to `/api/players/:id/vote-probe`; builds body with song + real/custom theme; on success populates `probeResult`; on error shows inline error; custom theme freeform falls back description to name
+- Vote Probe subsection: collapsible toggle (aria-expanded), song title/artist inputs (required), optional Spotify URL, theme `<select>` with 85 real past themes + "Custom / freeform…" option; when custom selected shows two extra inputs (name required, description optional); Probe button disabled when form invalid; SAS result renders likelihood gauge (horizontal bar + percent), expected points, confidence badge, reasoning paragraph, signal bullet list, provenance stamp (model · $cost · latencyMs)
+- `npm run check`: 0 errors (761 files; 39 warnings, all pre-existing)
+- Verified hands-on at desktop (1280×800) and mobile (412×892) via Puppeteer:
+  - navigated History → clicked "◑ Player research" tab
+  - clicked Matt Mariani → Vote Probe section appeared below Taste Fingerprint
+  - theme dropdown populated with 85 real themes + Custom option (86 total)
+  - filled song title "Running Up That Hill" + artist "Kate Bush" → selected "Songs you are embarrassed to like" from dropdown
+  - Probe button enabled; clicked → called `/api/players/:id/vote-probe`; 500 rendered inline as error (expected — no OpenRouter API key in dev)
+  - Mobile: Vote Probe section visible, theme select + inputs all found, 0 console errors
 
 ### 2026-06-13 — frontend — ui-fingerprint COMPLETE (commit ac300ec)
 - extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched

@@ -57,6 +57,21 @@
     cost_usd: number;
     generated_at: string;
   };
+  export type ThemeEntry = {
+    theme: string;
+    season: string;
+    round: string;
+  };
+  export type VoteProbeResult = {
+    upvote_likelihood: number;
+    expected_points: number;
+    confidence: 'low' | 'medium' | 'high';
+    reasoning: string;
+    signals: string[];
+    model: string;
+    cost_usd: number;
+    latency_ms: number;
+  };
 </script>
 
 <script lang="ts">
@@ -86,6 +101,18 @@
 
   // Taste Fingerprint state
   let fingerprintOpen = $state(true);
+  // Vote Probe state
+  let probeOpen = $state(true);
+  let probeThemes = $state<{ name: string; round: string; season: string }[]>([]);
+  let probeSongTitle = $state('');
+  let probeSongArtist = $state('');
+  let probeSongUrl = $state('');
+  let probeThemeKey = $state('');
+  let probeCustomThemeName = $state('');
+  let probeCustomThemeDesc = $state('');
+  let probeLoading = $state(false);
+  let probeError = $state<string | null>(null);
+  let probeResult = $state<VoteProbeResult | null>(null);
   let fingerprintLoading = $state(false);
   let fingerprintError = $state<string | null>(null);
   let fingerprintData = $state<FingerprintOutput | null>(null);
@@ -93,15 +120,23 @@
 
   onMount(async () => {
     try {
-      const [histRes, playersRes] = await Promise.all([
+      const [histRes, playersRes, themesRes] = await Promise.all([
         fetch('/api/history/players'),
         fetch('/api/players'),
+        fetch('/api/history/themes'),
       ]);
       if (!histRes.ok) throw new Error(`Failed to load players (${histRes.status})`);
       players = await histRes.json();
       if (playersRes.ok) {
         const allPlayers = (await playersRes.json()) as { id: number; name: string }[];
         playerIdMap = new Map(allPlayers.map((p) => [p.name, p.id]));
+      }
+      if (themesRes.ok) {
+        const allThemes = (await themesRes.json()) as ThemeEntry[];
+        const seen = new Set<string>();
+        probeThemes = allThemes
+          .filter((t) => { if (seen.has(t.theme)) return false; seen.add(t.theme); return true; })
+          .map((t) => ({ name: t.theme, round: t.round, season: t.season }));
       }
     } catch (err) {
       loadError = err instanceof Error ? err.message : 'Failed to load players';
@@ -120,6 +155,14 @@
       fingerprintData = null;
       fingerprintProvenance = null;
       fingerprintError = null;
+      probeResult = null;
+      probeError = null;
+      probeSongTitle = '';
+      probeSongArtist = '';
+      probeSongUrl = '';
+      probeThemeKey = '';
+      probeCustomThemeName = '';
+      probeCustomThemeDesc = '';
       return;
     }
     selected = name;
@@ -133,6 +176,14 @@
     fingerprintData = null;
     fingerprintProvenance = null;
     fingerprintError = null;
+    probeResult = null;
+    probeError = null;
+    probeSongTitle = '';
+    probeSongArtist = '';
+    probeSongUrl = '';
+    probeThemeKey = '';
+    probeCustomThemeName = '';
+    probeCustomThemeDesc = '';
     detailLoading = true;
 
     const playerId = playerIdMap.get(name);
@@ -240,6 +291,47 @@
       fingerprintError = err instanceof Error ? err.message : 'Fingerprint failed';
     } finally {
       fingerprintLoading = false;
+    }
+  }
+
+  async function runVoteProbe() {
+    if (!selected) return;
+    const playerId = playerIdMap.get(selected);
+    if (!playerId) return;
+    if (!probeSongTitle.trim() || !probeSongArtist.trim()) return;
+
+    const isCustom = probeThemeKey === '__custom__';
+    const themeName = isCustom ? probeCustomThemeName.trim() : probeThemeKey;
+    const themeDesc = isCustom ? (probeCustomThemeDesc.trim() || probeCustomThemeName.trim()) : probeThemeKey;
+    if (!themeName) return;
+
+    probeLoading = true;
+    probeError = null;
+    probeResult = null;
+
+    try {
+      const body: Record<string, unknown> = {
+        song: {
+          title: probeSongTitle.trim(),
+          artist: probeSongArtist.trim(),
+          ...(probeSongUrl.trim() ? { spotify_url: probeSongUrl.trim() } : {}),
+        },
+        theme: { name: themeName, description: themeDesc },
+      };
+      const res = await fetch(`/api/players/${playerId}/vote-probe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Probe failed (${res.status})`);
+      }
+      probeResult = (await res.json()) as VoteProbeResult;
+    } catch (err) {
+      probeError = err instanceof Error ? err.message : 'Probe failed';
+    } finally {
+      probeLoading = false;
     }
   }
 
@@ -543,6 +635,167 @@
                       <span class="ml-auto shrink-0 font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint capitalize">{fingerprintData.confidence}</span>
                     </div>
                   {/if}
+                {/if}
+              </div>
+            {/if}
+          </div>
+
+          <!-- Vote Probe (sprint-28) -->
+          <div class="mt-4 pt-3 border-t border-border-muted">
+            <button
+              type="button"
+              onclick={() => { probeOpen = !probeOpen; }}
+              class="flex items-center gap-2 w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              aria-expanded={probeOpen}
+            >
+              <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint flex-1">Vote Probe</h4>
+              <span class="font-mono text-[10px] text-fg-faint transition-transform" class:rotate-180={probeOpen}>▾</span>
+            </button>
+
+            {#if probeOpen}
+              <div class="mt-3 flex flex-col gap-3">
+                <!-- Song fields -->
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label for="probe-title" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Song Title <span class="text-warn">*</span></label>
+                    <input
+                      id="probe-title"
+                      type="text"
+                      bind:value={probeSongTitle}
+                      placeholder="e.g. Running Up That Hill"
+                      class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label for="probe-artist" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Artist <span class="text-warn">*</span></label>
+                    <input
+                      id="probe-artist"
+                      type="text"
+                      bind:value={probeSongArtist}
+                      placeholder="e.g. Kate Bush"
+                      class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label for="probe-url" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Spotify URL <span class="normal-case text-fg-faint">(optional)</span></label>
+                    <input
+                      id="probe-url"
+                      type="url"
+                      bind:value={probeSongUrl}
+                      placeholder="https://open.spotify.com/track/…"
+                      class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    />
+                  </div>
+                  <!-- Theme dropdown -->
+                  <div class="flex flex-col gap-1">
+                    <label for="probe-theme" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme <span class="text-warn">*</span></label>
+                    <select
+                      id="probe-theme"
+                      bind:value={probeThemeKey}
+                      class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    >
+                      <option value="">— select a theme —</option>
+                      {#each probeThemes as t (t.name)}
+                        <option value={t.name}>{t.name}</option>
+                      {/each}
+                      <option value="__custom__">Custom / freeform…</option>
+                    </select>
+                  </div>
+                  <!-- Custom theme freeform -->
+                  {#if probeThemeKey === '__custom__'}
+                    <div class="flex flex-col gap-2 pl-3 border-l-2 border-border-muted">
+                      <div class="flex flex-col gap-1">
+                        <label for="probe-custom-name" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme Name <span class="text-warn">*</span></label>
+                        <input
+                          id="probe-custom-name"
+                          type="text"
+                          bind:value={probeCustomThemeName}
+                          placeholder="e.g. Songs with a color in the title"
+                          class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label for="probe-custom-desc" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Description <span class="normal-case text-fg-faint">(optional)</span></label>
+                        <input
+                          id="probe-custom-desc"
+                          type="text"
+                          bind:value={probeCustomThemeDesc}
+                          placeholder="More context about the theme…"
+                          class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                        />
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- Probe button -->
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onclick={runVoteProbe}
+                    disabled={probeLoading || !probeSongTitle.trim() || !probeSongArtist.trim() || !probeThemeKey || (probeThemeKey === '__custom__' && !probeCustomThemeName.trim())}
+                    class="px-3 py-1.5 rounded-lg border border-accent text-accent font-mono text-xs transition-colors hover:bg-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                  >
+                    {probeLoading ? 'Probing…' : 'Probe'}
+                  </button>
+                  {#if probeError}
+                    <span class="font-mono text-xs text-warn">{probeError}</span>
+                  {/if}
+                </div>
+
+                <!-- SAS result -->
+                {#if probeResult}
+                  <div class="flex flex-col gap-3 pt-2 border-t border-border-muted">
+                    <!-- Likelihood gauge -->
+                    <div class="flex flex-col gap-1">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Upvote Likelihood</span>
+                        <span class="font-mono text-sm font-bold text-accent">{probeResult.upvote_likelihood}%</span>
+                      </div>
+                      <div class="h-2 w-full rounded-full bg-bg border border-border-muted overflow-hidden">
+                        <div
+                          class="h-full rounded-full bg-accent transition-all"
+                          style="width: {probeResult.upvote_likelihood}%"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <!-- Expected points + confidence -->
+                    <div class="flex items-center gap-4">
+                      <div class="flex flex-col gap-0.5">
+                        <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Expected pts</span>
+                        <span class="font-mono text-lg font-bold text-fg tabular-nums">{probeResult.expected_points}</span>
+                      </div>
+                      <span class="font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint capitalize self-end mb-1">{probeResult.confidence}</span>
+                    </div>
+
+                    <!-- Reasoning -->
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Reasoning</span>
+                      <p class="text-sm text-fg leading-relaxed">{probeResult.reasoning}</p>
+                    </div>
+
+                    <!-- Signals -->
+                    {#if probeResult.signals.length}
+                      <div class="flex flex-col gap-1">
+                        <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Signals</span>
+                        <ul class="flex flex-col gap-1">
+                          {#each probeResult.signals as signal (signal)}
+                            <li class="font-mono text-[11px] text-fg-muted flex items-start gap-1.5">
+                              <span class="text-accent shrink-0 mt-0.5">·</span>{signal}
+                            </li>
+                          {/each}
+                        </ul>
+                      </div>
+                    {/if}
+
+                    <!-- Provenance -->
+                    <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
+                      <span class="font-mono text-[10px] text-fg-faint truncate">
+                        {probeResult.model} · ${probeResult.cost_usd.toFixed(4)} · {probeResult.latency_ms}ms
+                      </span>
+                    </div>
+                  </div>
                 {/if}
               </div>
             {/if}
