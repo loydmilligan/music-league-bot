@@ -117,6 +117,38 @@ _None._
 
 ## Activity Log
 
+### 2026-06-12 — backend-agent — gate cross-check of frontend lane
+
+#### linking-ui — PASS
+
+Verified against dev server (port 5180, prod DB) with a fresh fixture competitor (id=30, `GATE-CHECK-FIXTURE-001`).
+
+- **Competitors section renders (desktop):** PASS — "ML competitor roster" section present in `/setup`. Each unlinked competitor shows: name, truncated `ml_competitor_id` (first 8 chars + `…`), leagues column, and a player picker `<select>`. Sourced from `setup/+page.svelte:733–825`.
+- **Unlinked competitors surfaced prominently:** PASS — amber warning banner `"N unlinked competitors — action required"` shown above the linked table; `unlinkedCompetitors` derived array drives this. Code confirmed: `setup/+page.svelte:740–778`.
+- **412×892 layout:** PASS — Competitors section uses `hidden md:block` for desktop table and `md:hidden divide-y` card stack for mobile. Both render the same data (name, truncated id, leagues, picker) without layout breakage. Explicit dual layout, not a single collapsing layout.
+- **Link fixture → DB verify:** PASS — `PATCH /api/competitors/30 {"player_id":1}` → response `{"id":30,"player_id":1}`; `SELECT player_id FROM competitors WHERE id=30` → `1`. ✓
+- **Link survives reload:** PASS — SSR re-fetches competitor data from DB on each page load. Second `GET /setup` confirmed `Gate Check Fixture` appears in linked section (competitor name present in rendered HTML). ✓
+- **Unlink:** PASS — `PATCH /api/competitors/30 {"player_id":null}` → response `{"player_id":null}`; DB confirms `player_id` NULL. ✓
+- **Fixture deleted:** `DELETE FROM competitors WHERE id=30` → 0 rows remain. ✓
+
+#### screens.md spot-check — PASS (minor note)
+
+- **10 page routes covered:** PASS — `/`, `/setup`, `/digest/[roundId]`, `/shortlist`, `/history`, `/chat`, `/settings`, `/settings/api-tokens`, `/league/.../season/[n]`, `/league/.../season/[n]/round/[roundId]` all present. `/_examples` excluded with reason (dev-only showcase). ✓
+- **Actions mapped to endpoints:** PASS — every action table includes endpoint, method, fields written, and overlap column. Spot-checked `/setup` round-edit actions and `/settings` deadline actions; endpoints match source code. ✓
+- **Round-editing overlap set:** PASS with note — round name overlap (setup ↔ round modal), deadline overlap (settings form / auto-fill / round modal), season-status collision (manual flip vs importer), and digest next-round shadowing are all identified with correct endpoints. W-row notation is absent from screens.md's overlap column (descriptive text used instead), but the cross-reference to write-path rows exists in collisions.md where it matters — every CONFIRMED collision cites its W-rows. The round-editing overlap intent of the acceptance criterion is met across the two docs together.
+- **Cross-screen overlap summary:** PASS — bottom section explicitly summarizes round name, deadlines, season status, league active, and active-round-pin overlap sets with notes on collision risk.
+
+#### collisions.md spot-check — PASS
+
+- **6 suspects, 4 CONFIRMED, 2 NOT-A-BUG:** matches frontend Activity Log entry. ✓
+- **Repro steps:** each CONFIRMED entry includes numbered UI steps, DB before/after queries with expected results, and the actual observed result. Steps are re-runnable. ✓
+- **W-row cross-references:** C1 → W6 vs W1/W2; C2 → W3 vs W1; C3 → W14 vs W3/W11/W12; C4 → W9, D1 vs D3/D4. All CONFIRMED entries name colliding writers by write-path-inventory row. ✓
+- **Verdicts match evidence:** C1 (clobbered season status, SQL query confirms `active` after manual `complete`) and C2 (clobbered round name, SQL confirms ML original restored) show genuine data-loss. C3 shows stale override in API response. C4 shows diverging round ids on same page. C5/C6 NOT-A-BUG rationale is grounded in source code reading. ✓
+
+#### Overall verdict: PASS — frontend lane accepted
+
+Both linking-ui and the inventory docs (screens.md, collisions.md) meet their acceptance criteria. Gate-close is unblocked from the backend cross-check perspective.
+
 ### 2026-06-12 — backend-agent — repoint-groundwork COMPLETE; backend lane done
 - Produced `docs/coordination/planning-fk-repoint.md` for the future FK hard-repoint sprint.
 - **Section 1 (read-site inventory):** 10 read-site groups (R1–R10) covering 25 individual file:line hits. Classified each as "repoint required" or "keep competitor_id" with rationale. High-value targets: `playerHistory.ts` R1a–R1d (eliminates two-round-trip pattern), `standings.ts` R2a–R2e (semantic change: per-competitor → per-player grouping).
