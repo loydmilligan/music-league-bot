@@ -78,7 +78,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
   - **Acceptance:** `POST .../fingerprint` returns 200 with the structured fingerprint and persists it; `POST .../vote-probe` with a valid body returns the SAS result and creates a `prediction_runs` row; a malformed body → 400; route tests green; `npm run check` 0 errors.
 
-- [-] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
+- [x] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
   - **Acceptance:** selecting a player renders the Dossier subsection; editing notes/tags + Save persists (reload shows saved values); verified hands-on on dev (5173) at desktop and 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: ui-fingerprint, depends: api-predict} **Taste Fingerprint panel** (spec §8). Add a collapsible **Taste Fingerprint** subsection to the per-player panel: a Generate/Regenerate button calling `POST /api/players/:id/fingerprint`, rendering signature-artist/genre chips, rewards/punishes lists, the summary, and a model + cost + date provenance stamp.
@@ -108,6 +108,27 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — frontend — ui-dossier COMPLETE (commit 6318fea)
+- extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
+- on mount, co-fetches `/api/players` alongside `/api/history/players` to build a
+  `Map<name, player_id>` (only players in the `players` table get a dossier section)
+- `selectPlayer` now parallel-fetches history detail + `/api/players/:id/profile`; seeds
+  `draftNotes` / `draftTags` from the profile; deselect clears dossier state
+- `saveDossier` PATCHes `/api/players/:id/profile`; "Saved ✓" flash 2 s + last-saved
+  date stamp on success; inline error surface on failure
+- Dossier subsection: collapsible toggle (aria-expanded), notes `<textarea>`, comma-
+  separated tags `<input>` with saved-tag chip row, Save button — all Mash Co. tokens
+- `DossierProfile` type added to `<script module>`; 0 new TS errors
+- `npm run check`: 0 errors (755→761 files; 39 warnings, all pre-existing)
+- Verified hands-on at desktop (1280×800) and mobile (412×892) via Puppeteer:
+  - navigated History → clicked "◑ Player research" tab
+  - clicked Matt Mariani → Dossier section appeared (aria-expanded="true")
+  - notes textarea + tags input rendered (correct placeholders)
+  - typed note + "indie, 80s" in tags → clicked Save → "Saved ✓" + last saved date
+  - reloaded page → re-selected player → notes and tags persisted correctly
+  - clicked Dossier toggle → form hidden; clicked again → re-expanded
+  - 0 console errors at both viewports
 
 ### 2026-06-13 — backend — task-fingerprint COMPLETE (commit 0470f08)
 - new `ui/src/lib/predict/tasks/tasteFingerprint.ts`
