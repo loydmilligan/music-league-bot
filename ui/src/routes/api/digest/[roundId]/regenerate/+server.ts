@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   if (!draft) throw error(404, `no draft for round ${roundId} — call /draft first`);
 
   const sections = getSectionsForDraft(db, draft.id);
-  const regenerable = sections.filter(s => s.state !== 'locked');
+  const regenerable = sections.filter(s => s.state !== 'locked' && s.state !== 'excluded');
   if (regenerable.length === 0) {
     return json({ draft, sections, skipped: sections.length, regenerated: 0 });
   }

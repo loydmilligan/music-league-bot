@@ -30,6 +30,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
     .get(sectionId, roundId) as (DigestSectionRow & { recap_enabled: number; recap_final: number }) | undefined;
   if (!section) throw error(404, `section not found: ${sectionId}`);
   if (section.state === 'locked') throw error(400, 'section is locked');
+  if (section.state === 'excluded') throw error(400, 'section is excluded');
 
   const body = (await request.json().catch(() => ({}))) as { chips?: string[]; instructions?: string };
   const chips = Array.isArray(body.chips) ? body.chips : [];
