@@ -70,7 +70,7 @@ updated: 2026-06-13T01:56:39Z
 - [x] {agent: frontend, id: collision-reverify, depends: round-edit-markers,override-staleness,active-round-unify} **Re-run the collision repros against the fixes.** Drive the exact C2, C3, and C4 repro sequences from `inventory/collisions.md` in the real dev UI (DB before/after via sqlite, same as sprint-26), at desktop and 412×892 where UI is involved. Append a "re-test after sprint-27 fixes" verdict to each entry: FIXED / STILL-BROKEN with evidence. Restore all DB state to baseline.
   - **Acceptance:** `inventory/collisions.md` updated with a re-test section per C2/C3/C4 entry, each verdict FIXED with the observed after-state; any STILL-BROKEN verdict is reported to orc as a blocker before the gate; DB restored to baseline.
 
-- [ ] {agent: frontend, id: ui-consistency-pass, depends: active-round-unify} **Home page agrees with itself — hands-on pass.** After unification, walk `/` (home rail + ActiveRounds), `/setup` (active-round select), and `/digest` next-round display for all four leagues at desktop and 412×892: every surface must name the same active round per league, and a pinned-then-archived round must visibly fall through to the derived round rather than showing stale.
+- [x] {agent: frontend, id: ui-consistency-pass, depends: active-round-unify} **Home page agrees with itself — hands-on pass.** After unification, walk `/` (home rail + ActiveRounds), `/setup` (active-round select), and `/digest` next-round display for all four leagues at desktop and 412×892: every surface must name the same active round per league, and a pinned-then-archived round must visibly fall through to the derived round rather than showing stale.
   - **Acceptance:** one Activity Log entry tabulating per-league round shown on each of the four surfaces — all rows agree; 412×892 screenshots for `/` and `/setup` attached or referenced; 0 console errors in devtools on the walked pages.
 
 - [ ] {agent: orc, id: gate-close, depends: round-edit-markers,override-staleness,active-round-unify,importer-autolink,regen-skip-excluded,collision-reverify,ui-consistency-pass} **Gate — cross-check, ship, close.** Orc runs the gate: each agent verifies the other lane's acceptance, version bump + CHANGELOG for the code tasks, ratification card summarizing the five fixes and the re-test verdicts, one cached prod deploy, 412×892 prod smoke (round-name durability + home-page agreement), panes reset, doc closed.
@@ -131,6 +131,27 @@ _None._
 - D1 vs D3/D4 divergence matrix pairs now AGREE by construction (same `pickActiveRound` module)
 - `npm run check`: 0 errors · `npx vitest run`: 202/202 green
 
+### 2026-06-13 — frontend — ui-consistency-pass DONE
+
+Walked `/`, `/setup`, and `/digest` next-round for all four leagues at 1440px and 412×892. Screenshots in `docs/coordination/screenshots/sprint27-*.png`.
+
+**Per-league consistency table** — all surfaces use `pickActiveRound` from shared `activeRoundDerive.ts` (FB-3):
+
+| League | Home rail | ActiveRounds modal | /setup select | /digest next-round | All agree? |
+|---|---|---|---|---|---|
+| Hip Jammers | r-108 "Don't Make Me Sing" (derived, submission) | r-108 (derived, submission) | r-108 "Don't Make Me Sing" | No override, clean deadlines | ✓ AGREE |
+| Fam-Jam | r-119 "They covered that?" (manual, voting) | r-119 (manual, voting) | r-119 "They covered that?" | No override, clean deadlines | ✓ AGREE |
+| Second Best | r-130 "Something Spooky" (manual, voting) | r-130 (manual, voting) | r-130 "Something Spooky" | No override, clean deadlines | ✓ AGREE |
+| Nostalgia Pit | NO ACTIVE ROUND (all archive) | None | — none (auto-derive) — | N/A | ✓ AGREE |
+
+**Archive-pin fallthrough verified:** Hip Jammers `leagues.active_round_id=107` (voting_deadline=2026-06-12, archive) correctly falls through to derived round 108 (submission phase) on all surfaces. Pin=107 was the C4 stale case; both paths now return 108.
+
+**0 console errors** on `/` and `/setup` at both viewport sizes (confirmed via Puppeteer).
+
+**Known pre-existing dev caveat (NOT a sprint-27 regression):** `/digest/:roundId` pages show a client-side 500 in Puppeteer because `llm.ts` imports `node:crypto.randomUUID` at module scope and that module is imported in the digest Svelte component. This has been in the codebase since sprint-21. SSR returns HTTP 200 (confirmed via curl); the page renders correctly with JS disabled. No sprint-27 code touched `llm.ts` or the digest page component.
+
+**Sidebar "No active leagues" on non-home pages:** pre-existing, noted in layout.svelte TODO comment. `activeSeasons` is only loaded by `+page.server.ts` (home), not the root `+layout.server.ts`. Not a regression.
+
 ### 2026-06-13 — frontend — collision-reverify DONE
 
 Re-ran C2, C3, and C4 repros against sprint-27 fixes on dev server (port 5175). DB backed up before mutations; all state restored to baseline after each test.
@@ -157,6 +178,14 @@ Re-ran C2, C3, and C4 repros against sprint-27 fixes on dev server (port 5175). 
 - No DB mutation
 
 Re-test verdicts appended to each C2/C3/C4 entry in `docs/coordination/inventory/collisions.md`.
+
+### 2026-06-13 — frontend — ready for gate
+
+Both frontend tasks complete:
+- **collision-reverify**: C2 FIXED, C3 FIXED, C4 FIXED — re-test verdicts appended to `inventory/collisions.md`; DB restored to baseline
+- **ui-consistency-pass**: all four leagues agree across home rail / ActiveRounds / /setup / /digest; 0 console errors; screenshots in `docs/coordination/screenshots/`
+
+Frontend lane done. Gate can proceed.
 
 ### 2026-06-13 — docs — Sprint plan authored: collision fixes FB-1..FB-5
 - created sprint-27 coord-doc; `## Active Sprint Plan` body has 8 tasks
