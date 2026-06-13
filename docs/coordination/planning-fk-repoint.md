@@ -185,34 +185,23 @@ All three counts must be 0. If any row has a NULL `player_id` with a non-null
 `competitor_id`/`voter_id`, the corresponding competitor was either added after
 the boot backfill ran or the re-sync was not triggered.
 
-### PC-4 — Importer writes `player_id` on new competitor rows ⚠️ MISSING
+### PC-4 — Importer writes `player_id` on new competitor rows ✅ DONE
 
-**Status: NOT MET** — `upsertCompetitor` in `submissions.ts:4-7` inserts
-only `ml_competitor_id` and `name`. No `player_id` is written on new competitor
-rows during a ZIP import. The boot backfill at `client.ts:182-210` is one-shot
-(guarded by the column-add check) and will not fire for competitors added after
-the initial migration.
-
-**Effect:** Any new ML participant (e.g. Sarah Zucker's second account in Second
-Best) that arrives via a future ZIP import will have `player_id = NULL` in
-`ml_submissions` and `votes` until an operator uses the linking UI (sprint-26
-`linking-ui`) to link the competitor and trigger `resyncCompetitorPlayerIds`.
-
-**Required fix before repoint sprint:** Add auto-link logic to `upsertCompetitor`
-(or call it from `importZipData`/`importLiveRoundsData`) — e.g.:
+**Status: MET** — sprint-27 `importer-autolink` (FB-4). `upsertCompetitor` in
+`submissions.ts` now runs a deterministic auto-link step after each INSERT/UPDATE:
 
 ```sql
 UPDATE competitors SET player_id = (
-  SELECT p.id FROM players p WHERE p.ml_competitor_id = competitors.ml_competitor_id
-) WHERE id = <newly-upserted-id> AND player_id IS NULL;
+  SELECT id FROM players WHERE ml_competitor_id = ? LIMIT 1
+) WHERE id = ? AND player_id IS NULL;
 ```
 
-Then call `resyncCompetitorPlayerIds` for the newly-linked competitor. Without
-this, PC-3 will degrade over time and the repoint sprint will need to re-run a
-full backfill before it can proceed.
+`upsertSubmission` and `upsertVote` also write `player_id` at insert time via a
+subquery on the competitor row, with `COALESCE(excluded.player_id, existing)` on
+conflict to preserve links if the competitor was already linked. Non-matching
+competitors stay NULL — the /setup unlinked banner is the designed catch.
 
-**Blocking:** YES — the repoint sprint should not begin until PC-4 is resolved and
-PC-3 is verified at 0 nulls.
+**Satisfying task:** sprint-27 `importer-autolink` ✅
 
 ### PC-5 — Linking UI available for operator corrections
 **Status: In-progress** — sprint-26 `linking-ui` task (frontend lane) will land
@@ -319,7 +308,7 @@ Before the repoint sprint may begin:
 ### Hard blockers (all must be YES to start)
 
 - [ ] **PC-3 verified at zero:** query from Section 2 PC-3 returns 0 for all three tables on the live DB.
-- [ ] **PC-4 fix merged:** `upsertCompetitor` auto-links new competitors on import; sprint-26 `linking-ui` allows manual correction of misses.
+- [x] **PC-4 fix merged:** `upsertCompetitor` auto-links new competitors on import (sprint-27 importer-autolink); sprint-26 `linking-ui` allows manual correction of misses.
 - [ ] **New index plan reviewed:** the indexes listed in Section 3 have been reviewed for size impact (ML corpus is small; no concern expected, but verify row counts).
 - [ ] **`season_standings` option decided:** Option A vs Option B scoped in the repoint sprint plan. Digest rendering must be listed as in-scope or explicitly out-of-scope.
 

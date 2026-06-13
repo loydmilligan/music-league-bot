@@ -61,7 +61,7 @@ updated: 2026-06-13T01:56:39Z
 - [-] {agent: backend, id: active-round-unify} **FB-3 (P2, wrong-display) — one answer for "which round is active".** `layout.ts pickCurrentRound` ignores the `leagues.active_round_id` pin while `resolveActiveRound` honors it even into archive, so the home rail and the ActiveRounds modal disagree on the same page (C4: W9; D1 vs D3/D4; also the dual next-round concepts D5/D6 vs D7). Unify: one shared derivation module consumed by both paths, and the pin loses force (auto-clear or fall through to derived) once the pinned round reaches archive phase.
   - **Acceptance:** re-run the C4 observation from `inventory/collisions.md` — home rail and ActiveRounds modal report the same round for Hip Jammers; unit test: pinned round in archive phase → derivation falls through to the deadline-derived round; the divergence-matrix pairs D1 vs D3/D4 now AGREE by construction (same module); `npm run check` 0 errors; `npx vitest run` green.
 
-- [-] {agent: backend, id: importer-autolink} **FB-4 (P3, repoint blocker) — importer writes `player_id` on new competitor rows.** `upsertCompetitor` doesn't set `player_id`, so every newly imported competitor reopens the null-gap that PC-3 just verified closed (PC-4 in `planning-fk-repoint.md`; W1/W2). On insert, auto-link deterministically (existing `ml_competitor_id` backfill rule); when no deterministic match exists, leave NULL — the /setup unlinked banner (sprint-26 linking-ui) is the designed catch. New gameplay rows for an already-linked competitor get `player_id` at write time.
+- [x] {agent: backend, id: importer-autolink} **FB-4 (P3, repoint blocker) — importer writes `player_id` on new competitor rows.** `upsertCompetitor` doesn't set `player_id`, so every newly imported competitor reopens the null-gap that PC-3 just verified closed (PC-4 in `planning-fk-repoint.md`; W1/W2). On insert, auto-link deterministically (existing `ml_competitor_id` backfill rule); when no deterministic match exists, leave NULL — the /setup unlinked banner (sprint-26 linking-ui) is the designed catch. New gameplay rows for an already-linked competitor get `player_id` at write time.
   - **Acceptance:** test: import introducing a new competitor whose `ml_competitor_id` matches a player → row lands linked with gameplay `player_id` populated; non-matching competitor → NULL link and it appears in the /setup unlinked banner; PC-4 marked ✅ in `planning-fk-repoint.md`; `npx vitest run` green.
 
 - [x] {agent: backend, id: regen-skip-excluded} **FB-5 (P4, annoyance) — regeneration skips excluded sections.** Both regenerate paths filter only `state !== 'locked'`, so excluded sections burn LLM tokens on content nobody sees (C5). Skip `state = 'excluded'` in the whole-draft filter (`api/digest/[roundId]/regenerate`) and reject (or no-op) single-section regenerate on an excluded section.
@@ -106,6 +106,15 @@ _None._
 - Single-section regenerate: added `if (section.state === 'excluded') throw error(400, 'section is excluded')` matching the locked guard (`api/digest/[roundId]/sections/[id]/regenerate/+server.ts`)
 - New test file `ui/src/lib/digest/regen-skip-excluded.test.ts`: 3 tests verify only 'default' sections are regenerable, excluded section regen_count/content_json stay unchanged, and state string is 'excluded' for the single-section guard
 - `npm run check`: 0 errors · `npx vitest run`: 187/187 green
+
+### 2026-06-12 — backend (frontend pane, temp second backend lane) — FB-4 (importer-autolink) DONE
+- `upsertCompetitor` (`submissions.ts`): after INSERT/UPDATE, auto-links competitor to player via `players.ml_competitor_id = ?` match; non-matching stays NULL (designed /setup banner catch)
+- `upsertSubmission`: includes `player_id` in INSERT via subquery on competitor row; ON CONFLICT updates `player_id = COALESCE(excluded.player_id, existing)` to preserve existing links
+- `upsertVote`: same pattern — `player_id` written at insert time from competitor's `player_id`
+- 2 new tests in `importer.test.ts`: (1) matching competitor lands linked + gameplay rows populated, (2) non-matching stays NULL
+- PC-4 marked ✅ in `planning-fk-repoint.md`; go/no-go checklist updated
+- `npx vitest run`: 189/189 green (was 187; +2 new tests)
+- Note: ran as temporary second backend lane in the frontend pane per owner approval; flips back to frontend work next round
 
 ### 2026-06-13 — docs — Sprint plan authored: collision fixes FB-1..FB-5
 - created sprint-27 coord-doc; `## Active Sprint Plan` body has 8 tasks

@@ -167,6 +167,39 @@ it('manual complete season survives ZIP re-import with unvoted rounds', () => {
   expect(recheck.status_source).toBe('manual');
 });
 
+// FB-4 (importer-autolink): upsertCompetitor must write player_id on insert when
+// a matching player exists (ml_competitor_id match). Non-matching competitor stays NULL.
+it('new competitor auto-links to player via ml_competitor_id on import', () => {
+  const db = mk();
+  // Create a player whose ml_competitor_id matches the competitor being imported.
+  db.prepare(`INSERT INTO players (name, ml_competitor_id) VALUES ('Alice Player', 'c1')`).run();
+  const player = db.prepare(`SELECT id FROM players WHERE ml_competitor_id = 'c1'`).get() as { id: number };
+
+  importZipData(db, 'second-best', 1, parsedZip(['r1'], ['r1']));
+
+  const comp = db.prepare(`SELECT player_id FROM competitors WHERE ml_competitor_id = 'c1'`).get() as { player_id: number | null };
+  expect(comp.player_id).toBe(player.id);
+
+  const sub = db.prepare(`SELECT player_id FROM ml_submissions WHERE competitor_id = (SELECT id FROM competitors WHERE ml_competitor_id = 'c1')`).get() as { player_id: number | null };
+  expect(sub.player_id).toBe(player.id);
+
+  const vote = db.prepare(`SELECT player_id FROM votes WHERE voter_id = (SELECT id FROM competitors WHERE ml_competitor_id = 'c2')`).get() as { player_id: number | null };
+  // c2 has no matching player, so vote.player_id is null
+  expect(vote.player_id).toBeNull();
+});
+
+it('non-matching competitor gets NULL player_id on import (unlinked banner catch)', () => {
+  const db = mk();
+  // No player created for c1 or c2 — deterministic match fails → NULL.
+  importZipData(db, 'second-best', 1, parsedZip(['r1'], ['r1']));
+
+  const comp = db.prepare(`SELECT player_id FROM competitors WHERE ml_competitor_id = 'c1'`).get() as { player_id: number | null };
+  expect(comp.player_id).toBeNull();
+
+  const sub = db.prepare(`SELECT player_id FROM ml_submissions WHERE competitor_id = (SELECT id FROM competitors WHERE ml_competitor_id = 'c1')`).get() as { player_id: number | null };
+  expect(sub.player_id).toBeNull();
+});
+
 // sprint-26 season-override-fix regression: a manually-completed season must
 // survive an importLiveRoundsData call (the W2 path which previously forced
 // 'active' unconditionally at importer.ts:76).
