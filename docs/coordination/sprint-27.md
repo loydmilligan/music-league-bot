@@ -55,10 +55,10 @@ updated: 2026-06-13T01:56:39Z
 - [x] {agent: backend, id: round-edit-markers} **FB-1 (P1, data-loss) — manual round edits survive ZIP re-import.** `upsertRound` (`ui/src/lib/db/rounds.ts`) ON CONFLICT unconditionally overwrites `name`, `description`, and `spotify_playlist_url` from the ZIP (C2: W3 vs W1). Apply the proven season `status_source` pattern at field level: an edit marker (e.g. `edited_fields` column or per-field `*_source`) set by `patchRound` (W3) and the round edit modal path, which the importer upsert then respects — ZIP values only land on fields the user hasn't manually edited. Idempotent boot migration per house pattern.
   - **Acceptance:** regression test: patch a fixture round's name, re-import its ZIP data, name survives while untouched fields still refresh from the ZIP; re-run the C2 repro steps from `inventory/collisions.md` (round 118 rename → `/settings` re-scan) — name survives; `npm run check` 0 errors; `npx vitest run` green.
 
-- [-] {agent: backend, id: override-staleness} **FB-2 (P2, wrong-display) — stale digest next-round override no longer hides deadline updates.** `digest_drafts.next_round_*_override` wins unconditionally with no expiry or link to the `rounds` row (C3: W14 vs W3/W11/W12). Make deadline writes to a round (W3 patchRound, W11 settings form, W12 auto-fill) clear — or visibly mark stale — any digest draft override that shadows that round. Pick the simplest shape that kills the silent-shadow behavior; preserve the explicit "↺ Reset to computed" flow.
+- [x] {agent: backend, id: override-staleness} **FB-2 (P2, wrong-display) — stale digest next-round override no longer hides deadline updates.** `digest_drafts.next_round_*_override` wins unconditionally with no expiry or link to the `rounds` row (C3: W14 vs W3/W11/W12). Make deadline writes to a round (W3 patchRound, W11 settings form, W12 auto-fill) clear — or visibly mark stale — any digest draft override that shadows that round. Pick the simplest shape that kills the silent-shadow behavior; preserve the explicit "↺ Reset to computed" flow.
   - **Acceptance:** re-run the C3 repro from `inventory/collisions.md` (set override on digest 111 → update round 130 deadlines in `/settings`) — `GET /api/digest/111/next-round` returns the updated deadlines, or returns the override explicitly flagged stale and the digest UI shows the flag; unit test covering the clear/flag path; `npm run check` 0 errors.
 
-- [-] {agent: backend, id: active-round-unify} **FB-3 (P2, wrong-display) — one answer for "which round is active".** `layout.ts pickCurrentRound` ignores the `leagues.active_round_id` pin while `resolveActiveRound` honors it even into archive, so the home rail and the ActiveRounds modal disagree on the same page (C4: W9; D1 vs D3/D4; also the dual next-round concepts D5/D6 vs D7). Unify: one shared derivation module consumed by both paths, and the pin loses force (auto-clear or fall through to derived) once the pinned round reaches archive phase.
+- [x] {agent: backend, id: active-round-unify} **FB-3 (P2, wrong-display) — one answer for "which round is active".** `layout.ts pickCurrentRound` ignores the `leagues.active_round_id` pin while `resolveActiveRound` honors it even into archive, so the home rail and the ActiveRounds modal disagree on the same page (C4: W9; D1 vs D3/D4; also the dual next-round concepts D5/D6 vs D7). Unify: one shared derivation module consumed by both paths, and the pin loses force (auto-clear or fall through to derived) once the pinned round reaches archive phase.
   - **Acceptance:** re-run the C4 observation from `inventory/collisions.md` — home rail and ActiveRounds modal report the same round for Hip Jammers; unit test: pinned round in archive phase → derivation falls through to the deadline-derived round; the divergence-matrix pairs D1 vs D3/D4 now AGREE by construction (same module); `npm run check` 0 errors; `npx vitest run` green.
 
 - [x] {agent: backend, id: importer-autolink} **FB-4 (P3, repoint blocker) — importer writes `player_id` on new competitor rows.** `upsertCompetitor` doesn't set `player_id`, so every newly imported competitor reopens the null-gap that PC-3 just verified closed (PC-4 in `planning-fk-repoint.md`; W1/W2). On insert, auto-link deterministically (existing `ml_competitor_id` backfill rule); when no deterministic match exists, leave NULL — the /setup unlinked banner (sprint-26 linking-ui) is the designed catch. New gameplay rows for an already-linked competitor get `player_id` at write time.
@@ -115,6 +115,21 @@ _None._
 - PC-4 marked ✅ in `planning-fk-repoint.md`; go/no-go checklist updated
 - `npx vitest run`: 189/189 green (was 187; +2 new tests)
 - Note: ran as temporary second backend lane in the frontend pane per owner approval; flips back to frontend work next round
+
+### 2026-06-12 — backend — FB-2 (override-staleness) DONE · commit 27300cd
+- `clearNextRoundDeadlineOverrides(db, roundId)` added to `rounds.ts`: finds the predecessor round (mirrors `getNextRound` ordering via CTE) and NULLs `next_round_sub_deadline_override` + `next_round_vote_deadline_override` in any `digest_drafts` for that predecessor
+- Called from all three W-paths: `patchRound` (when submissionDeadline or votingDeadline in patch), `updateRound` (same), `updateDeadlines` (always)
+- Theme override is preserved — only deadline fields are cleared
+- 6 tests in `override-staleness.test.ts`: C3 repro (patchRound path), W11/W12 path (updateDeadlines), updateRound path, name-only patch does NOT clear, theme-only preserved, no-op on drafts without overrides
+- `npm run check`: 0 errors · `npx vitest run`: 202/202 green
+
+### 2026-06-12 — backend — FB-3 (active-round-unify) DONE · commit 3c34721
+- New `activeRoundDerive.ts`: `pickActiveRound<T extends DerivableRound>(rounds, pinnedRoundId)` — shared derivation: pin if non-archive, else best non-archive by (submission > voting > upcoming), else null; archive-pinned rounds fall through automatically
+- `resolveActiveRound` in `activeRound.ts` rewritten to call `pickActiveRound` on the active season's rounds; cross-season pin edge case handled via `getRoundById` check
+- `getAllAdoptedLeagues` in `layout.ts` now fetches `l.active_round_id` in the SQL and calls `pickActiveRound` before falling back to `pickCurrentRound` (display-only archive fallback preserved)
+- 7 tests in `activeRound.unify.test.ts`: `pickActiveRound` unit tests (5) + C4 integration repro (archive-pin falls through on both rail and modal paths, both agree on same roundId) + live-pin honoured by both paths
+- D1 vs D3/D4 divergence matrix pairs now AGREE by construction (same `pickActiveRound` module)
+- `npm run check`: 0 errors · `npx vitest run`: 202/202 green
 
 ### 2026-06-13 — docs — Sprint plan authored: collision fixes FB-1..FB-5
 - created sprint-27 coord-doc; `## Active Sprint Plan` body has 8 tasks
