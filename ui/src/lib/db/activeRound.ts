@@ -17,6 +17,7 @@
 import type Database from 'better-sqlite3';
 import type { RoundPhase } from '../types.js';
 import { getRoundById, getCurrentRoundForSeason, getRoundsForSeason } from './rounds.js';
+import { pickActiveRound } from './activeRoundDerive.js';
 
 export type ActiveRoundSource = 'manual' | 'derived';
 
@@ -102,31 +103,32 @@ export function setActiveRound(db: Database.Database, leagueId: number, roundId:
 }
 
 function resolveActiveRound(db: Database.Database, league: LeagueRow, activeSeasonId: number | null): ActiveRoundView | null {
-  // 1. Manual slot, if it still resolves to a real round.
-  if (league.active_round_id != null) {
-    const r = getRoundById(db, league.active_round_id);
-    if (r) {
+  const seasonRounds = activeSeasonId != null ? getRoundsForSeason(db, activeSeasonId) : [];
+
+  // If the pin points outside the active season, evaluate it directly.
+  // A cross-season pin that is non-archive is honoured; archive or dangling → treat as no pin.
+  let effectivePinId = league.active_round_id;
+  if (effectivePinId != null && !seasonRounds.some(r => r.id === effectivePinId)) {
+    const pinned = getRoundById(db, effectivePinId);
+    if (pinned && pinned.phase !== 'archive') {
       return {
-        id: r.id, name: r.name, theme: r.description,
-        submissionDeadline: r.submissionDeadline, votingDeadline: r.votingDeadline,
-        phase: r.phase ?? 'upcoming', source: 'manual',
+        id: pinned.id, name: pinned.name, theme: pinned.description,
+        submissionDeadline: pinned.submissionDeadline, votingDeadline: pinned.votingDeadline,
+        phase: pinned.phase ?? 'upcoming', source: 'manual',
       };
     }
-    // dangling slot → fall through to derived
+    effectivePinId = null; // dangling or archived cross-season pin → fall through
   }
-  // 2. Derived current round of the active season.
-  if (activeSeasonId != null) {
-    const d = getCurrentRoundForSeason(db, activeSeasonId);
-    if (d && d.phase !== 'archive') {
-      return {
-        id: d.id, name: d.name, theme: d.description,
-        submissionDeadline: d.submissionDeadline, votingDeadline: d.votingDeadline,
-        phase: d.phase ?? 'upcoming', source: 'derived',
-      };
-    }
-  }
-  // 3. Nothing resolvable → modal.
-  return null;
+
+  // Shared derivation: pin (if non-archive) → deadline-derived → null.
+  const picked = pickActiveRound(seasonRounds, effectivePinId);
+  if (!picked) return null;
+  const r = picked.round;
+  return {
+    id: r.id, name: r.name, theme: r.description,
+    submissionDeadline: r.submissionDeadline, votingDeadline: r.votingDeadline,
+    phase: r.phase ?? 'upcoming', source: picked.source,
+  };
 }
 
 function buildLeagueActiveRound(db: Database.Database, league: LeagueRow): LeagueActiveRound {

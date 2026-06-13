@@ -1,6 +1,7 @@
 import { statSync } from 'node:fs';
 import type Database from 'better-sqlite3';
 import { getRoundPhasesForSeason, seasonIsActive, type RoundPhase } from '../lifecycle.js';
+import { pickActiveRound } from './activeRoundDerive.js';
 
 export type LeagueRailStatus = 'active' | 'voting' | 'open' | 'idle';
 
@@ -60,17 +61,18 @@ function deriveRailStatus(currentPhase: RoundPhase | null): LeagueRailStatus {
 }
 
 export function getAllAdoptedLeagues(db: Database.Database, now = Date.now()): LeagueRailEntry[] {
-  // Pull every league with its most-recent active-status season id.
+  // Pull every league with its most-recent active-status season id and the manual pin.
   const rows = db.prepare(`
     SELECT
       l.slug,
       l.name,
+      l.active_round_id,
       (SELECT s.id FROM seasons s WHERE s.league_id = l.id AND s.status = 'active'
          ORDER BY s.season_number DESC LIMIT 1) AS active_season_id
     FROM leagues l
     WHERE l.exclude_from_combined = 0
     ORDER BY l.id
-  `).all() as { slug: string; name: string; active_season_id: number | null }[];
+  `).all() as { slug: string; name: string; active_round_id: number | null; active_season_id: number | null }[];
 
   const roundsStmt = db.prepare(`
     SELECT id, name, submission_deadline, voting_deadline, created_at
@@ -95,7 +97,20 @@ export function getAllAdoptedLeagues(db: Database.Database, now = Date.now()): L
     // The season is "active" in DB terms because status='active'; the rail
     // status reflects whether any round is actually open right now.
     const seasonOpen = seasonIsActive({ rounds: phased });
-    const current = pickCurrentRound(rounds, phaseById);
+
+    // Shared derivation: pin (if not archive) → deadline-derived → null.
+    // Falls back to pickCurrentRound for the display-only case when all rounds
+    // are archive (the home rail still labels the last round; the modal returns null).
+    const derivable = rounds.map(round => ({
+      id: round.id,
+      phase: phaseById.get(round.id) ?? ('upcoming' as RoundPhase),
+      createdAt: round.created_at,
+    }));
+    const pinPicked = pickActiveRound(derivable, r.active_round_id);
+    const current = pinPicked
+      ? { round: rounds.find(rr => rr.id === pinPicked.round.id)!, phase: pinPicked.round.phase }
+      : pickCurrentRound(rounds, phaseById);
+
     const phase = current?.phase ?? null;
     const status: LeagueRailStatus = seasonOpen
       ? deriveRailStatus(phase)
