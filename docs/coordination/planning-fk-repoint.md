@@ -7,6 +7,31 @@ from additive/nullable backfill to the primary join column in gameplay tables.
 
 ---
 
+## ⏸️ STATUS: POSTPONED INDEFINITELY (owner decision, 2026-06-13)
+
+**Decision:** Do not schedule this sprint. Owner confirmed that **no person in any
+of their leagues has more than one Music League account, and that is not expected
+to change**; if it ever does, the owner would rather hand-fix that one case at the
+time than carry this refactor now.
+
+**Rationale:** The cross-account merge (one player → many competitors) was the *only*
+user-facing payoff. Without multi-account players:
+- the merge capability is moot (never triggers),
+- the standings behavior-change risk (summing two accounts) evaporates,
+- what remains is a pure internal refactor (2 SQLite round-trips → 1 on a ~29-player
+  local DB = no real latency win) touching hot query files with regression risk for
+  zero observable gain. Not worth a sprint. (Cleaner-for-its-own-sake explicitly is
+  not a reason here.)
+
+**Nothing is lost by postponing.** The additive `player_id` columns stay populated;
+sprint-27 **FB-4** keeps them populated on every new import (cheap insurance, no
+upkeep). This doc already maps every read site, so resuming later is quick. The door
+stays fully open — revisit ONLY if a real multi-account player appears.
+
+**Do not re-propose** this sprint in future planning without surfacing this decision.
+
+---
+
 ## Background
 
 Sprint-25 added `player_id` columns additively to `ml_submissions`, `votes`, and
