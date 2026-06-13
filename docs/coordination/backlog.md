@@ -65,7 +65,7 @@ updated: 2026-06-13T00:00:00Z
 
 **Open question.** Pin a chromium version in the base image (reproducible, but needs manual bumps) vs. `apt-get install chromium` unpinned (auto-updates, but the base must be periodically rebuilt)? Probably unpinned base + periodic rebuild.
 
-## Mobile / Android PWA missing the digest-generation menu (drafted 2026-06-04) — fix needed
+## Mobile / Android PWA missing the digest-generation menu (drafted 2026-06-04) — ✅ COMPLETE (owner-confirmed 2026-06-13)
 
 **Source:** user, 2026-06-04. On the **Android PWA** and at **mobile viewport sizes**, the menu items to **choose / start digest generation are absent** — so a mobile user can't initiate a digest the way a desktop user can. Desktop has the option; mobile does not.
 
@@ -78,7 +78,7 @@ updated: 2026-06-13T00:00:00Z
 
 **Why it matters.** The digest is the project's flagship output and the user consumes/operates it from a phone (WhatsApp digest workflow). Not being able to *start* a digest from mobile/PWA is a real workflow gap, not polish. Pairs with the sprint-18 `integration-audit` (GenerateModal control-surface coverage) but is distinct — that audits the modal's *contents*; this is about *reaching* the modal at all on mobile.
 
-## HTML share export — auto mobile + desktop friendly (drafted 2026-06-06) — sprint AFTER the History milestone
+## HTML share export — auto mobile + desktop friendly (drafted 2026-06-06) — ✅ COMPLETE (sprint-23, `e2c0d9d`, user-confirmed live)
 
 **Source:** user, 2026-06-06. The **`html` share export** (sprint-20, `digest.mattmariani.com`) is becoming the **main export for digests**, but it currently really only works/looks right on **desktop**. It must be **automatically responsive** — render well on **mobile AND desktop** from the same self-contained artifact (recipients open the link on phones).
 
