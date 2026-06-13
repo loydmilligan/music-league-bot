@@ -72,7 +72,7 @@ updated: 2026-06-13T04:30:00Z
 - [ ] {agent: backend, id: task-vote-probe, depends: context-pack,harness-runner} **Task ② `vote-probe` / SAS** (spec §3, §6.2). New `ui/src/lib/predict/tasks/voteProbe.ts`: the PredictionTask (input = PlayerContext + `{ song:{title,artist,spotify_url?}, theme:{name,description} }`; output zod = `{ upvote_likelihood: 0..100, expected_points, confidence, reasoning, signals[] }`) plus `runVoteProbe(db, playerId, { song, theme })` that runs it and logs a `prediction_runs` row (`task_id='vote-probe'`, `round_id` set when the theme is a real round). `upvote_likelihood` IS the SAS — a standalone affinity lean, not a round allocation.
   - **Acceptance:** with stubbed `callOpenRouter`, `runVoteProbe` returns a schema-valid SAS result and writes a `prediction_runs` row; `reasoning` is non-empty; output zod enforces the 0–100 bound on `upvote_likelihood`; `npm run check` 0 errors; `npx vitest run` green.
 
-- [-] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
+- [x] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
   - **Acceptance:** `GET` returns 200 with the profile shape; `PATCH {notes, tags}` persists and a follow-up `GET` reflects it; `PATCH` leaves `taste_fingerprint` untouched; a route test (house vitest pattern) covers both; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
@@ -108,6 +108,17 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — api-dossier COMPLETE (commit f2a009b)
+- new `ui/src/routes/api/players/[playerId]/profile/+server.ts`: GET + PATCH handlers
+- GET: reads player_profiles; returns empty-default shape when no row exists (notes null,
+  tags [], taste_fingerprint null); 404 for unknown player
+- PATCH: INSERT OR IGNORE + targeted UPDATE — taste_fingerprint structurally unreachable;
+  bumps updated_at; creates row on first write; returns updated profile
+- 13 vitest assertions (house pattern): empty-default GET, persisted-row GET, follow-up
+  GET reflects PATCH, taste_fingerprint untouched, partial-field updates, null notes,
+  404/400 guards; `npm run check`: 0 errors
+- task `[x]` ticked; ui-dossier (frontend) is now unblocked
 
 ### 2026-06-13 — backend — harness-runner COMPLETE (commit 6ee7e8c)
 - new `ui/src/lib/predict/predict.ts`: `PredictionTask<TIn,TOut>` type + `runPrediction(db, task, input, opts?)`
