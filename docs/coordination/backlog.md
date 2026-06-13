@@ -11,6 +11,15 @@ updated: 2026-06-13T00:00:00Z
 
 ---
 
+## ⭐ Next up (priority — owner, 2026-06-13)
+
+1. **Cache chromium in a stable Docker layer** (full spec below under its own heading) — top infra priority; pays back on every prod deploy (15–25 min → ~couple min).
+
+*(Owner is brainstorming a larger "Music League Producer" prediction system + near-term
+player-research-screen improvements in parallel — see `docs/superpowers/specs/` once specced.)*
+
+---
+
 ## YouTube Music play button alongside Spotify (drafted 2026-05-20) — ✅ PULLED into sprint-13 (2026-06-02)
 
 **Source:** user request 2026-05-20 while wrapping sprint-10. Every song card in the webapp currently has a Spotify play button. We want a parallel YTM play button so the user can listen via whichever service they prefer.
