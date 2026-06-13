@@ -69,7 +69,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: task-fingerprint, depends: context-pack,harness-runner} **Task ③ `taste-fingerprint` + persistence** (spec §6.1). New `ui/src/lib/predict/tasks/tasteFingerprint.ts`: the PredictionTask (input = PlayerContext; output zod = `{ signature_artists[], genres[], eras[], rewards[], punishes[], summary, confidence: 'low'|'medium'|'high' }`) plus `generateFingerprint(db, playerId)` that runs it and persists the result + provenance (`fingerprint_model`/`_cost_usd`/`_generated_at`) to `player_profiles` — writing ONLY those columns, never `notes`/`tags`.
   - **Acceptance:** with stubbed `callOpenRouter`, `generateFingerprint` persists a schema-valid fingerprint + provenance; a vitest proves regenerating leaves pre-existing `notes`/`tags` byte-identical (manual/auto separation invariant); output zod rejects a malformed shape; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: task-vote-probe, depends: context-pack,harness-runner} **Task ② `vote-probe` / SAS** (spec §3, §6.2). New `ui/src/lib/predict/tasks/voteProbe.ts`: the PredictionTask (input = PlayerContext + `{ song:{title,artist,spotify_url?}, theme:{name,description} }`; output zod = `{ upvote_likelihood: 0..100, expected_points, confidence, reasoning, signals[] }`) plus `runVoteProbe(db, playerId, { song, theme })` that runs it and logs a `prediction_runs` row (`task_id='vote-probe'`, `round_id` set when the theme is a real round). `upvote_likelihood` IS the SAS — a standalone affinity lean, not a round allocation.
+- [x] {agent: backend, id: task-vote-probe, depends: context-pack,harness-runner} **Task ② `vote-probe` / SAS** (spec §3, §6.2). New `ui/src/lib/predict/tasks/voteProbe.ts`: the PredictionTask (input = PlayerContext + `{ song:{title,artist,spotify_url?}, theme:{name,description} }`; output zod = `{ upvote_likelihood: 0..100, expected_points, confidence, reasoning, signals[] }`) plus `runVoteProbe(db, playerId, { song, theme })` that runs it and logs a `prediction_runs` row (`task_id='vote-probe'`, `round_id` set when the theme is a real round). `upvote_likelihood` IS the SAS — a standalone affinity lean, not a round allocation.
   - **Acceptance:** with stubbed `callOpenRouter`, `runVoteProbe` returns a schema-valid SAS result and writes a `prediction_runs` row; `reasoning` is non-empty; output zod enforces the 0–100 bound on `upvote_likelihood`; `npm run check` 0 errors; `npx vitest run` green.
 
 - [x] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
@@ -78,7 +78,7 @@ updated: 2026-06-13T04:30:00Z
 - [ ] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
   - **Acceptance:** `POST .../fingerprint` returns 200 with the structured fingerprint and persists it; `POST .../vote-probe` with a valid body returns the SAS result and creates a `prediction_runs` row; a malformed body → 400; route tests green; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
+- [-] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
   - **Acceptance:** selecting a player renders the Dossier subsection; editing notes/tags + Save persists (reload shows saved values); verified hands-on on dev (5173) at desktop and 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: ui-fingerprint, depends: api-predict} **Taste Fingerprint panel** (spec §8). Add a collapsible **Taste Fingerprint** subsection to the per-player panel: a Generate/Regenerate button calling `POST /api/players/:id/fingerprint`, rendering signature-artist/genre chips, rewards/punishes lists, the summary, and a model + cost + date provenance stamp.
@@ -156,6 +156,15 @@ _None._
 - 12 vitest assertions in `ui/src/lib/db/predict.schema.test.ts` — all pass
 - `npm run check`: 0 errors; task `[x]` ticked
 - unlocks: context-pack, harness-runner, api-dossier (parallel Wave 2)
+
+### 2026-06-13 — backend — task-vote-probe COMPLETE (commit 2ead248)
+- new `ui/src/lib/predict/tasks/voteProbe.ts`
+- `VoteProbeOutputSchema` (zod): upvote_likelihood (min 0, max 100), expected_points, confidence enum, reasoning (min length 1), signals[]
+- `voteProbeTask`: PredictionTask<VoteProbeInput, VoteProbeOutput> — system prompt enforces SAS framing (standalone affinity, not round allocation) with evidence-grounded reasoning requirement
+- `runVoteProbe(db, playerId, { song, theme, roundId? })`: builds PlayerContext → runPrediction → returns { output, meta }; logs prediction_runs row with task_id='vote-probe', round_id nullable
+- 15 vitest assertions: happy path (output shape, meta, reasoning non-empty), prediction_runs row (task_id, player_id, model, cost, latency), roundId passthrough, NULL round_id default, empty-player edge case, schema validation (0/100 boundaries, >100 rejected, <0 rejected, empty reasoning rejected, bad confidence, missing fields, non-array signals)
+- `npm run check`: 0 errors; 15 tests pass; task `[x]` ticked
+- unlocks: api-predict (both task-fingerprint and task-vote-probe now complete)
 
 ### 2026-06-13 — orc — Sprint-28 ACTIVATED · dossier-schema dispatched (Wave 1)
 - status planned → active; dispatched `dossier-schema` to the backend pane (the sole
