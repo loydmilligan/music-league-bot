@@ -4,6 +4,41 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.6] — 2026-06-13
+
+Producer Sprint 1 — the first slice of the "Music League Producer". The Player
+Research tab gains a per-player dossier and two AI tools, all built on a reusable
+prediction harness so later predictors (submissions, whole-round) plug in without
+new plumbing.
+
+### Visible (UI)
+
+- **Player dossier** — on the Player Research tab, each player now has an editable
+  **Dossier**: free-text notes + taste tags you control. Your manual context is
+  kept strictly separate from anything the AI generates, so it's never clobbered.
+- **Taste fingerprint** — a Generate/Regenerate button drafts an AI taste profile
+  for the selected player (signature artists, genres, eras, what they reward vs.
+  punish, a one-line summary), with a model + cost + date stamp. Regenerating never
+  touches your dossier notes.
+- **Vote probe (Standalone Affinity Score)** — paste a song + pick a theme (real
+  past themes or freeform) and get an estimate of how much that player would like
+  it: a likelihood gauge, expected points, history-grounded reasoning, and signal
+  bullets. It scores one song's standalone affinity — the future whole-round
+  predictor will build on this.
+
+### Under the hood
+
+- **Prediction harness** — a reusable `PredictionTask` engine (`$lib/predict`) over
+  the existing OpenRouter client: structured zod input → templated prompt → JSON-mode
+  model call → validated structured output, with swappable model/params (the tuning
+  knob) and per-call cost capture.
+- **Two new tables** — `player_profiles` (manual dossier + AI fingerprint, separated)
+  and `prediction_runs` (logs every prediction with model/cost from day one, seeding
+  the future accuracy backtest).
+- **Endpoints** — `GET`/`PATCH /api/players/:id/profile`, `POST /api/players/:id/fingerprint`,
+  `POST /api/players/:id/vote-probe`.
+- Tests: 291 green (was 202).
+
 ## [1.0.5] — 2026-06-13
 
 The collision-fix sprint (sprint-27). Sprint-26 inventoried every write path and
