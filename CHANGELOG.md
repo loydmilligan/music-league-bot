@@ -4,6 +4,46 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.5] — 2026-06-13
+
+The collision-fix sprint (sprint-27). Sprint-26 inventoried every write path and
+confirmed four live collisions; this release lands the fixes (FB-1..FB-5), each
+re-verified by re-running the sprint-26 collision repros against the fix.
+
+### Visible (UI)
+
+- **Manual round edits survive a ZIP re-import** (FB-1, was data-loss) — renaming
+  a round (or editing its description / playlist URL) and then re-importing the
+  league ZIP no longer clobbers your edit. A per-field `edited_fields` marker
+  records which fields you've touched; the importer refreshes everything else
+  from the ZIP but leaves your edits alone. Re-verified: round 118 rename
+  survived a `/settings` rescan (C2 → FIXED).
+- **Digest next-round deadlines stop going stale** (FB-2, was wrong-display) —
+  updating a round's deadlines now clears any digest draft's next-round deadline
+  override that was silently shadowing it, so the digest shows the real deadline.
+  The explicit "↺ Reset to computed" flow is preserved. Re-verified C3 → FIXED.
+- **The home page agrees with itself about the active round** (FB-3, was
+  wrong-display) — the home rail and the Active Rounds modal now derive "which
+  round is active" from one shared module, so they can't disagree on the same
+  page. A pinned round that has reached the archive phase falls through to the
+  derived active round instead of sticking. Re-verified across all four leagues
+  at desktop and mobile (C4 → FIXED).
+
+### Under the hood
+
+- **Importer links new competitors to players on insert** (FB-4) —
+  `upsertCompetitor` now auto-links `player_id` via the deterministic
+  `ml_competitor_id` rule, and `upsertSubmission`/`upsertVote` write `player_id`
+  at insert time. Newly imported competitors no longer reopen the null-gap;
+  non-matching competitors stay NULL and surface in the `/setup` unlinked banner.
+  Clears precondition PC-4 for the future FK hard-repoint sprint.
+- **Digest regeneration skips excluded sections** (FB-5) — both the whole-draft
+  and single-section regenerate paths now skip `state = 'excluded'` sections
+  instead of burning LLM tokens on content nobody sees.
+- **Known caveat (pre-existing, not a sprint-27 regression):** the digest page
+  throws a client-side 500 in dev because `llm.ts` imports `node:crypto`
+  (present since sprint-21); tracked separately.
+
 ## [1.0.4] — 2026-06-12
 
 ### Visible (UI)
