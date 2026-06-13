@@ -42,6 +42,21 @@
     fingerprint_generated_at: string | null;
     updated_at: string | null;
   };
+  export type FingerprintOutput = {
+    signature_artists: string[];
+    genres: string[];
+    eras: string[];
+    rewards: string[];
+    punishes: string[];
+    summary: string;
+    confidence: 'low' | 'medium' | 'high';
+  };
+  export type FingerprintResult = {
+    fingerprint: FingerprintOutput;
+    model: string;
+    cost_usd: number;
+    generated_at: string;
+  };
 </script>
 
 <script lang="ts">
@@ -69,6 +84,13 @@
   let dossierSaveError = $state<string | null>(null);
   let dossierSaved = $state(false);
 
+  // Taste Fingerprint state
+  let fingerprintOpen = $state(true);
+  let fingerprintLoading = $state(false);
+  let fingerprintError = $state<string | null>(null);
+  let fingerprintData = $state<FingerprintOutput | null>(null);
+  let fingerprintProvenance = $state<{ model: string; cost_usd: number; generated_at: string } | null>(null);
+
   onMount(async () => {
     try {
       const [histRes, playersRes] = await Promise.all([
@@ -95,6 +117,9 @@
       dossier = null;
       draftNotes = '';
       draftTags = '';
+      fingerprintData = null;
+      fingerprintProvenance = null;
+      fingerprintError = null;
       return;
     }
     selected = name;
@@ -105,6 +130,9 @@
     dossierError = null;
     dossierSaveError = null;
     dossierSaved = false;
+    fingerprintData = null;
+    fingerprintProvenance = null;
+    fingerprintError = null;
     detailLoading = true;
 
     const playerId = playerIdMap.get(name);
@@ -133,6 +161,16 @@
       dossier = dossierResult.value;
       draftNotes = dossier.notes ?? '';
       draftTags = dossier.tags.join(', ');
+      if (dossier.taste_fingerprint) {
+        fingerprintData = dossier.taste_fingerprint as FingerprintOutput;
+        if (dossier.fingerprint_model && dossier.fingerprint_generated_at) {
+          fingerprintProvenance = {
+            model: dossier.fingerprint_model,
+            cost_usd: dossier.fingerprint_cost_usd ?? 0,
+            generated_at: dossier.fingerprint_generated_at,
+          };
+        }
+      }
     } else if (dossierResult.status === 'rejected') {
       dossierError =
         dossierResult.reason instanceof Error ? dossierResult.reason.message : 'Failed to load dossier';
@@ -174,6 +212,34 @@
       dossierSaveError = err instanceof Error ? err.message : 'Save failed';
     } finally {
       dossierSaving = false;
+    }
+  }
+
+  async function generateFingerprint() {
+    if (!selected) return;
+    const playerId = playerIdMap.get(selected);
+    if (!playerId) return;
+
+    fingerprintLoading = true;
+    fingerprintError = null;
+
+    try {
+      const res = await fetch(`/api/players/${playerId}/fingerprint`, { method: 'POST' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Fingerprint failed (${res.status})`);
+      }
+      const result = (await res.json()) as FingerprintResult;
+      fingerprintData = result.fingerprint;
+      fingerprintProvenance = {
+        model: result.model,
+        cost_usd: result.cost_usd,
+        generated_at: result.generated_at,
+      };
+    } catch (err) {
+      fingerprintError = err instanceof Error ? err.message : 'Fingerprint failed';
+    } finally {
+      fingerprintLoading = false;
     }
   }
 
@@ -367,6 +433,116 @@
                       </span>
                     {/if}
                   </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+
+          <!-- Taste Fingerprint (sprint-28) -->
+          <div class="mt-4 pt-3 border-t border-border-muted">
+            <button
+              type="button"
+              onclick={() => { fingerprintOpen = !fingerprintOpen; }}
+              class="flex items-center gap-2 w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              aria-expanded={fingerprintOpen}
+            >
+              <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint flex-1">Taste Fingerprint</h4>
+              <span class="font-mono text-[10px] text-fg-faint transition-transform" class:rotate-180={fingerprintOpen}>▾</span>
+            </button>
+
+            {#if fingerprintOpen}
+              <div class="mt-3 flex flex-col gap-3">
+                <!-- Generate / Regenerate row -->
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onclick={generateFingerprint}
+                    disabled={fingerprintLoading}
+                    class="px-3 py-1.5 rounded-lg border border-accent text-accent font-mono text-xs transition-colors hover:bg-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                  >
+                    {fingerprintLoading ? 'Generating…' : fingerprintData ? 'Regenerate' : 'Generate'}
+                  </button>
+                  {#if fingerprintError}
+                    <span class="font-mono text-xs text-warn">{fingerprintError}</span>
+                  {/if}
+                </div>
+
+                {#if fingerprintData}
+                  <!-- Signature artists -->
+                  {#if fingerprintData.signature_artists.length}
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Signature Artists</span>
+                      <div class="flex flex-wrap gap-1">
+                        {#each fingerprintData.signature_artists as artist (artist)}
+                          <span class="px-2 py-0.5 rounded-full bg-accent/10 text-accent font-mono text-[10px]">{artist}</span>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Genres -->
+                  {#if fingerprintData.genres.length}
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Genres</span>
+                      <div class="flex flex-wrap gap-1">
+                        {#each fingerprintData.genres as genre (genre)}
+                          <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{genre}</span>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Eras -->
+                  {#if fingerprintData.eras.length}
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Eras</span>
+                      <div class="flex flex-wrap gap-1">
+                        {#each fingerprintData.eras as era (era)}
+                          <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{era}</span>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Rewards / Punishes -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Rewards</span>
+                      <ul class="flex flex-col gap-0.5">
+                        {#each fingerprintData.rewards as r (r)}
+                          <li class="font-mono text-[11px] text-fg-muted flex items-start gap-1">
+                            <span class="text-accent shrink-0 mt-0.5">↑</span>{r}
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Punishes</span>
+                      <ul class="flex flex-col gap-0.5">
+                        {#each fingerprintData.punishes as p (p)}
+                          <li class="font-mono text-[11px] text-fg-muted flex items-start gap-1">
+                            <span class="text-warn shrink-0 mt-0.5">↓</span>{p}
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Summary -->
+                  <div class="flex flex-col gap-1">
+                    <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Summary</span>
+                    <p class="text-sm text-fg leading-relaxed">{fingerprintData.summary}</p>
+                  </div>
+
+                  <!-- Provenance stamp -->
+                  {#if fingerprintProvenance}
+                    <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
+                      <span class="font-mono text-[10px] text-fg-faint truncate">
+                        {fingerprintProvenance.model} · ${fingerprintProvenance.cost_usd.toFixed(4)} · {new Date(fingerprintProvenance.generated_at).toLocaleDateString()}
+                      </span>
+                      <span class="ml-auto shrink-0 font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint capitalize">{fingerprintData.confidence}</span>
+                    </div>
+                  {/if}
                 {/if}
               </div>
             {/if}
