@@ -63,7 +63,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: context-pack, depends: dossier-schema} **Player Context Pack builder** (spec §4.1). New `ui/src/lib/predict/playerContext.ts` — `buildPlayerContext(db, playerId, opts) → PlayerContext`: assembles the player's dossier (notes/tags) + a token-bounded history slice (their submissions w/ comments+points, votes they cast w/ points, taste overlap), keyed on stable `player_id`, reusing `playerHistory.ts`/`seasonData.ts` queries. One documented exported shape.
   - **Acceptance:** `buildPlayerContext` returns the documented `PlayerContext` shape; history is bounded (caps rows/tokens, not the entire corpus); vitest covers a player with dossier+history and one with neither; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: harness-runner, depends: dossier-schema} **Prediction harness — contract + runner** (spec §4.2–4.4). New `ui/src/lib/predict/predict.ts`: the `PredictionTask<TIn,TOut>` type (`id`, zod `inputSchema`, `buildMessages`, `model`, `params`, zod `outputSchema`, optional `scorer`) and `runPrediction(task, input) → { output, meta }` — validates input, renders the template, calls `callOpenRouter` in JSON mode with the task's `model`/`params`, validates output against `outputSchema` (one retry on schema miss), captures `{ model, costUsd, latencyMs }`, and writes one `prediction_runs` row. Reuse `callOpenRouter`; add no new LLM client.
+- [x] {agent: backend, id: harness-runner, depends: dossier-schema} **Prediction harness — contract + runner** (spec §4.2–4.4). New `ui/src/lib/predict/predict.ts`: the `PredictionTask<TIn,TOut>` type (`id`, zod `inputSchema`, `buildMessages`, `model`, `params`, zod `outputSchema`, optional `scorer`) and `runPrediction(task, input) → { output, meta }` — validates input, renders the template, calls `callOpenRouter` in JSON mode with the task's `model`/`params`, validates output against `outputSchema` (one retry on schema miss), captures `{ model, costUsd, latencyMs }`, and writes one `prediction_runs` row. Reuse `callOpenRouter`; add no new LLM client.
   - **Acceptance:** with `callOpenRouter` stubbed to fixture JSON, `runPrediction` validates I/O and inserts one `prediction_runs` row carrying model+cost+latency; the malformed-output retry path is covered; `npm run check` 0 errors; `npx vitest run` green.
 
 - [ ] {agent: backend, id: task-fingerprint, depends: context-pack,harness-runner} **Task ③ `taste-fingerprint` + persistence** (spec §6.1). New `ui/src/lib/predict/tasks/tasteFingerprint.ts`: the PredictionTask (input = PlayerContext; output zod = `{ signature_artists[], genres[], eras[], rewards[], punishes[], summary, confidence: 'low'|'medium'|'high' }`) plus `generateFingerprint(db, playerId)` that runs it and persists the result + provenance (`fingerprint_model`/`_cost_usd`/`_generated_at`) to `player_profiles` — writing ONLY those columns, never `notes`/`tags`.
@@ -72,7 +72,7 @@ updated: 2026-06-13T04:30:00Z
 - [ ] {agent: backend, id: task-vote-probe, depends: context-pack,harness-runner} **Task ② `vote-probe` / SAS** (spec §3, §6.2). New `ui/src/lib/predict/tasks/voteProbe.ts`: the PredictionTask (input = PlayerContext + `{ song:{title,artist,spotify_url?}, theme:{name,description} }`; output zod = `{ upvote_likelihood: 0..100, expected_points, confidence, reasoning, signals[] }`) plus `runVoteProbe(db, playerId, { song, theme })` that runs it and logs a `prediction_runs` row (`task_id='vote-probe'`, `round_id` set when the theme is a real round). `upvote_likelihood` IS the SAS — a standalone affinity lean, not a round allocation.
   - **Acceptance:** with stubbed `callOpenRouter`, `runVoteProbe` returns a schema-valid SAS result and writes a `prediction_runs` row; `reasoning` is non-empty; output zod enforces the 0–100 bound on `upvote_likelihood`; `npm run check` 0 errors; `npx vitest run` green.
 
-- [ ] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
+- [-] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
   - **Acceptance:** `GET` returns 200 with the profile shape; `PATCH {notes, tags}` persists and a follow-up `GET` reflects it; `PATCH` leaves `taste_fingerprint` untouched; a route test (house vitest pattern) covers both; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
@@ -108,6 +108,16 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — harness-runner COMPLETE (commit 6ee7e8c)
+- new `ui/src/lib/predict/predict.ts`: `PredictionTask<TIn,TOut>` type + `runPrediction(db, task, input, opts?)`
+- `PredictionTask`: id, zod inputSchema, buildMessages, model, params, zod outputSchema, optional scorer
+- `runPrediction`: validates input (zod), renders template via buildMessages, calls callOpenRouter in JSON mode, validates output (one retry on schema miss), captures model/costUsd/latencyMs, writes one prediction_runs row
+- retry path: on outputSchema miss, re-calls with corrected prompt; accumulates cost across both calls
+- zod v4.4.3 added as dependency; callOpenRouter reused unchanged from llm.ts
+- 10 vitest assertions: happy path, DB row shape, UUID id, null player/round, input rejection, retry success, cost accumulation, double-fail throws, non-JSON throw, one-row guarantee
+- `npm run check`: 0 errors; 231 tests pass; task `[x]` ticked
+- unlocks: task-fingerprint + task-vote-probe (both already unblocked by context-pack)
 
 ### 2026-06-13 — backend — context-pack COMPLETE (commit c79017f)
 - new `ui/src/lib/predict/playerContext.ts`: `PlayerContext` type + `buildPlayerContext(db, playerId, opts)`
