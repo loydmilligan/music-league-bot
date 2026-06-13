@@ -117,6 +117,31 @@ _None._
 
 ## Activity Log
 
+### 2026-06-12 — frontend-agent — gate cross-check of backend lane
+
+**1. season-override-fix — PASS**
+- `npx vitest run`: 28 test files, 179 tests, all passed (includes the two importer regression tests added by backend: manual-complete season survives ZIP re-import; survives `importLiveRoundsData` W2 call).
+- Real-DB: `SELECT status, status_source FROM seasons WHERE id=7` → `active|manual`. The `status_source='manual'` is correctly set. Current status is `active` (not `complete` as in backend's session snapshot) — this reflects a subsequent manual flip back to `active` via the UI "Reactivate" button, which also calls `setSeasonStatus` and preserves `status_source='manual'`. The durability guard is intact: `upsertSeason` CASE expression and `ml-rebuild.mjs` `COALESCE(status_source,'derived') != 'manual'` guard both verified in source.
+
+**2. linking-api-resync — PASS**
+- Fixture competitor (id=30, `gatefix000…`) created; one `ml_submissions` row and one `votes` row inserted with `player_id=NULL`.
+- `PATCH /api/competitors/30 {"player_id":1}` → `{"id":30,"player_id":1}`; DB: `ml_submissions.player_id=1`, `votes.player_id=1` immediately (no reboot). ✓
+- `PATCH /api/competitors/30 {"player_id":null}` → `{"id":30,"player_id":null}`; DB: both rows nulled back. ✓
+- All fixture rows deleted (competitors, ml_submissions, votes).
+
+**3. repoint-groundwork cross-check — PASS**
+- `grep -rn 'competitor_id\|voter_id' ui/src/lib --include='*.ts'` run; all production (non-test) `.ts` hits accounted for in planning-fk-repoint.md:
+  - R1 `playerHistory.ts:54,95,167,171` ✅ · R2 `standings.ts:73-78,136,153-161` ✅ · R3 `seasonData.ts:175,177,293` ✅ · R4 `roundStats.ts:17,25` ✅ · R5 `llm.ts:102,123` ✅ · R6 `songHistory.ts:81,114-115` ✅ (lines 54,75 are JSDoc comment + select-clause within R6a query — not independent read sites) · R7 `themeHistory.ts:63` ✅ · R8 `research.ts:25,27,31` ✅ · R9 `discoverability.ts:92,94,158` ✅ · R10 `submissions.ts:41` ✅.
+  - Excluded correctly: `schema.ts` (DDL), `client.ts` (boot migrations/write paths), `competitors.ts` (write path), `submissions.ts` write-path lines, `players.ts` (`ml_competitor_id` is a different column on the `players` table), `playlistIngest.ts` (write path + comment), all `*.test.ts` files.
+
+**4. PC-3 zero-null verify — PASS**
+- `ml_submissions WHERE player_id IS NULL AND competitor_id IS NOT NULL`: **0**
+- `votes WHERE player_id IS NULL`: **0**
+- `season_standings WHERE player_id IS NULL`: **0**
+- All counts zero at gate. Repoint sprint PC-3 precondition is met as of this snapshot.
+
+**Overall: all 4 items PASS. Backend lane accepted.**
+
 ### 2026-06-12 — backend-agent — gate cross-check of frontend lane
 
 #### linking-ui — PASS
