@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-27
 title: Collision Fixes (FB-1..FB-5)
-status: active
+status: closed
 created: 2026-06-13T01:05:00Z
 activated: 2026-06-13
-updated: 2026-06-13T01:56:39Z
+closed: 2026-06-13
+updated: 2026-06-13T03:30:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-27)
@@ -73,7 +74,7 @@ updated: 2026-06-13T01:56:39Z
 - [x] {agent: frontend, id: ui-consistency-pass, depends: active-round-unify} **Home page agrees with itself — hands-on pass.** After unification, walk `/` (home rail + ActiveRounds), `/setup` (active-round select), and `/digest` next-round display for all four leagues at desktop and 412×892: every surface must name the same active round per league, and a pinned-then-archived round must visibly fall through to the derived round rather than showing stale.
   - **Acceptance:** one Activity Log entry tabulating per-league round shown on each of the four surfaces — all rows agree; 412×892 screenshots for `/` and `/setup` attached or referenced; 0 console errors in devtools on the walked pages.
 
-- [ ] {agent: orc, id: gate-close, depends: round-edit-markers,override-staleness,active-round-unify,importer-autolink,regen-skip-excluded,collision-reverify,ui-consistency-pass} **Gate — cross-check, ship, close.** Orc runs the gate: each agent verifies the other lane's acceptance, version bump + CHANGELOG for the code tasks, ratification card summarizing the five fixes and the re-test verdicts, one cached prod deploy, 412×892 prod smoke (round-name durability + home-page agreement), panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: round-edit-markers,override-staleness,active-round-unify,importer-autolink,regen-skip-excluded,collision-reverify,ui-consistency-pass} **Gate — cross-check, ship, close.** Orc runs the gate: each agent verifies the other lane's acceptance, version bump + CHANGELOG for the code tasks, ratification card summarizing the five fixes and the re-test verdicts, one cached prod deploy, 412×892 prod smoke (round-name durability + home-page agreement), panes reset, doc closed.
   - **Acceptance:** cross-check Activity Log entries from both agents all PASS; v-bump + CHANGELOG committed; card ratified; prod smoke passes with 0 console errors; doc `status: closed`.
 
 ## Decision Log
@@ -85,13 +86,41 @@ the FK repoint sprint becomes schedulable afterward.
 
 ## Ratification Log
 
-_(gate cards land here as they resolve)_
+### 2026-06-13 — Sprint-27 gate RATIFIED (owner) · card `rn-c7b8f1bb`
+Owner ratified the gate card "Sprint-27 gate — ship v1.0.5 (collision fixes) to
+prod". All five fixes (FB-1..FB-5) landed and re-verified hands-on (C2/C3/C4 all
+FIXED); v1.0.5 bump + CHANGELOG committed (`de944d8`); deployed to prod
+(192.168.4.217:3002) via cached `docker compose build bot-ui && up -d`; 412×892
+prod smoke passed. Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — orc — GATE-CLOSE DONE · sprint-27 closed
+- Cross-check: all 7 worker tasks `[x]`, committed to master, tree clean; tests 202/202.
+  collision-reverify (`9e312e5`) re-verified C2/C3/C4 all FIXED with DB before/after +
+  API traces in `inventory/collisions.md`; ui-consistency-pass (`b4e6f9c`) confirmed all
+  four leagues agree across surfaces. Frontend's collision-reverify IS the cross-lane
+  verification of backend's fixes — accepted.
+- Version: `ui/package.json` 1.0.4 → 1.0.5; CHANGELOG `[1.0.5]` entry for FB-1..FB-5 +
+  the pre-existing `node:crypto` dev caveat; committed `de944d8`. Footer auto-syncs from
+  package.json (`+layout.svelte` imports `pkg`).
+- Ratification card `rn-c7b8f1bb` emitted and ratified by owner.
+- Prod deploy: cached `docker compose build bot-ui && docker compose up -d bot-ui`;
+  container recreated, clean boot ("Listening on http://0.0.0.0:3002"). Prod serves
+  `mash co. · v1.0.5`.
+- 412×892 prod smoke PASS: home-page agreement holds for all four leagues (Hip Jammers /
+  Fam-Jam / Second Best all name the same active round across the active-rounds card,
+  "Needs you this week", and "All leagues"); Nostalgia Pit correctly shows NO ACTIVE ROUND
+  / DERIVED (archive-pin fall-through — FB-3 live on prod). Round names render intact (FB-1
+  sanity). Hip Jammers shows the `DERIVED` source badge. Screenshot:
+  `mlb-v105-prod-home-412.png`. 0 console errors on `/`.
+- Known caveat carried forward (NOT a sprint-27 regression): digest page client-side 500
+  from `llm.ts` importing `node:crypto` (since sprint-21) — logged to review queue.
+- Panes reset; doc `status: closed`.
 
 ### 2026-06-12 — backend — FB-1 (round-edit-markers) DONE · commit 4b095cf
 - Added `edited_fields TEXT NOT NULL DEFAULT '[]'` column to `rounds` via idempotent boot migration (`client.ts`)
