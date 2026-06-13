@@ -81,6 +81,24 @@ updated: 2026-06-12T22:08:06Z
 - [ ] {agent: orc, id: gate-close, depends: write-path-inventory,active-derivation-audit,screen-inventory,collision-repros,season-override-fix,linking-api-resync,linking-ui,repoint-groundwork} **Gate — consolidate findings, close sprint.** Orc consolidates the inventory docs + collision verdicts into a prioritized fix backlog (severity-ordered, each item naming its inventory row), runs cross-checks (each agent verifies the other lane's acceptance), version + CHANGELOG for the code tasks, ratification card with the backlog summary, one cached prod deploy, 412×892 smoke on /setup linking + season-status durability, panes reset, doc closed.
   - **Acceptance:** fix-backlog section added to this doc and ratified via card; v-bump + CHANGELOG committed; prod smoke passes with 0 console errors; doc `status: closed`.
 
+## Fix Backlog (gate output, severity-ordered)
+
+Consolidated by orc from `inventory/write-paths.md` (W/D rows),
+`inventory/screens.md`, `inventory/collisions.md` (C verdicts), and
+`planning-fk-repoint.md` (PC preconditions). Feeds sprint-27 planning.
+
+| # | Pri | Item | Source rows | Fix shape |
+|---|-----|------|-------------|-----------|
+| FB-1 | P1 · data-loss | Round name/description/playlist clobbered by ZIP re-import — `upsertRound` ON CONFLICT unconditionally overwrites manual edits made in /setup or the round edit modal | C2 (W3 vs W1) | Per-field edit marker following the proven season `status_source` pattern; importer skips manually-edited fields |
+| FB-2 | P2 · wrong-display | Stale digest next-round override silently hides later deadline updates — no expiry, no link to the `rounds` row, no staleness signal | C3 (W14 vs W3/W11/W12) | Auto-clear (or visibly flag) the override when the underlying `rounds` deadlines change |
+| FB-3 | P2 · wrong-display | `layout.ts` ignores the `active_round_id` pin — home rail and ActiveRounds modal disagree on the same page; stale pin persists after the round archives | C4 (W9; D1 vs D3/D4; also D5/D6 vs D7 dual next-round concepts) | One shared derivation module consumed by both paths; auto-clear pin when the pinned round reaches archive |
+| FB-4 | P3 · repoint blocker | Importer does not write `player_id` on new competitor rows — FK repoint precondition PC-4 is MISSING; the repoint sprint cannot start until this lands | PC-4 (planning-fk-repoint.md); W1/W2 | Auto-link in `upsertCompetitor`, backstopped by the new /setup linking UI for non-deterministic cases |
+| FB-5 | P4 · annoyance | Whole-draft regeneration spends LLM tokens on excluded sections (state preserved but content silently replaced) | C5 | Skip `state='excluded'` in both regenerate filters |
+
+Resolved this sprint, no backlog entry: **C1** season-status clobber — fixed by
+`season-override-fix` (`status_source` column covers W1/W2/W6/W7/W8/W15).
+**C6** — not a bug (same-endpoint last-write-wins is correct behavior).
+
 ## Decision Log
 
 ### 2026-06-12 — Sprint scope set at sprint-25 close (owner)
