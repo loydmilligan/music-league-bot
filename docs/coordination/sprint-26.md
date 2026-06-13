@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-26
 title: Feature Inventory & Collision Review
-status: active
+status: closed
 created: 2026-06-12T22:03:42Z
 activated: 2026-06-12
-updated: 2026-06-12T22:08:06Z
+closed: 2026-06-13T00:59:48Z
+updated: 2026-06-13T00:59:48Z
 ---
 
 # music-league-bot — coordination doc (sprint-26)
@@ -109,7 +110,19 @@ All 29 existing competitors were linked by orc via user-confirmed mapping at spr
 
 ## Ratification Log
 
-_(gate cards land here as they resolve)_
+### 2026-06-13 — gate-close RATIFIED (owner, via TUI)
+
+Card `rn-af85e974-8a25-4dfd-81f1-4adf3d2870a5` ratified by owner. Gate summary:
+
+- All 8 agent tasks done; both lanes cross-checked PASS (backend↔frontend,
+  Activity Log entries committed).
+- Fix backlog **FB-1..FB-5** adopted as the sprint-27 planning seed
+  (see "Fix Backlog" section above). C1 fixed in-sprint; FB-4 (importer
+  auto-link `player_id`) is the FK-repoint blocker.
+- **v1.0.4** + CHANGELOG committed; cached `bot-ui` deploy to prod
+  (192.168.4.217:3002); 412×892 smoke on /setup passed with 0 console
+  errors; Nostalgia Pit `status_source='manual'` survived the deploy.
+- Doc closed; agent panes reset for sprint-27.
 
 ## Blockers
 
