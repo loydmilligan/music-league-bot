@@ -75,7 +75,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: backend, id: api-dossier, depends: dossier-schema} **Dossier CRUD endpoints** (spec §7). Following the existing `/api/players/:playerId` route pattern: `GET /api/players/:playerId/profile` (read dossier; return an empty default if none yet) and `PATCH /api/players/:playerId/profile` (persist `notes` + `tags` only, bump `updated_at`).
   - **Acceptance:** `GET` returns 200 with the profile shape; `PATCH {notes, tags}` persists and a follow-up `GET` reflects it; `PATCH` leaves `taste_fingerprint` untouched; a route test (house vitest pattern) covers both; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
+- [x] {agent: backend, id: api-predict, depends: task-fingerprint,task-vote-probe} **Prediction endpoints** (spec §7). `POST /api/players/:playerId/fingerprint` → runs `generateFingerprint`, returns the stored fingerprint. `POST /api/players/:playerId/vote-probe` (body `{ song, theme }`) → runs `runVoteProbe`, returns the SAS result.
   - **Acceptance:** `POST .../fingerprint` returns 200 with the structured fingerprint and persists it; `POST .../vote-probe` with a valid body returns the SAS result and creates a `prediction_runs` row; a malformed body → 400; route tests green; `npm run check` 0 errors.
 
 - [-] {agent: frontend, id: ui-dossier, depends: api-dossier} **Dossier editor on the Player Research tab** (spec §8). Extend the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte` with a collapsible **Dossier** subsection: a notes textarea + a tags editor, loaded via `GET /api/players/:id/profile` and saved via `PATCH`. Follow the existing Mash Co. tokens/patterns already in the tab.
@@ -156,6 +156,16 @@ _None._
 - 12 vitest assertions in `ui/src/lib/db/predict.schema.test.ts` — all pass
 - `npm run check`: 0 errors; task `[x]` ticked
 - unlocks: context-pack, harness-runner, api-dossier (parallel Wave 2)
+
+### 2026-06-13 — backend — api-predict COMPLETE (commit 975f5d5)
+- new `ui/src/routes/api/players/[playerId]/fingerprint/+server.ts`: POST handler
+  - validates playerId + 404 guard; calls `generateFingerprint(db, playerId)`; reads back persisted provenance; returns `{ fingerprint, model, cost_usd, generated_at }`
+- new `ui/src/routes/api/players/[playerId]/vote-probe/+server.ts`: POST handler
+  - validates playerId + 404 guard; parses + validates body (song.title, song.artist required, song.spotify_url optional string, theme.name + theme.description required); malformed JSON or missing fields → 400; calls `runVoteProbe`; returns SAS output + `{ model, cost_usd, latency_ms }`
+- 5 vitest assertions for fingerprint route: 200 + fingerprint shape, persists to player_profiles, writes prediction_runs row (task_id='taste-fingerprint'), 404 unknown player, 400 invalid id
+- 11 vitest assertions for vote-probe route: 200 SAS output, prediction_runs row (task_id='vote-probe'), provenance fields in response, spotify_url passthrough, 404 unknown, 400 invalid id, 400 missing song/theme/song.title/song.artist/theme.name, 400 bad JSON
+- `npm run check`: 0 errors; 291 tests pass; task `[x]` ticked
+- unlocks: ui-fingerprint + ui-probe (frontend lane)
 
 ### 2026-06-13 — backend — task-vote-probe COMPLETE (commit 2ead248)
 - new `ui/src/lib/predict/tasks/voteProbe.ts`
