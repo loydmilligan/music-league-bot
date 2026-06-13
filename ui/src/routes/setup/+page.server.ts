@@ -6,6 +6,14 @@ import { getActiveLeaguesActiveRounds } from '$lib/db/activeRound.js';
 import { getAllPlayers } from '$lib/db/players.js';
 import type { Round } from '$lib/types.js';
 
+interface CompetitorRow {
+  id: number;
+  name: string;
+  ml_competitor_id: string;
+  player_id: number | null;
+  leagues: string | null;
+}
+
 export const load: PageServerLoad = async () => {
   const db = getDb();
   const allLeagues = getAllLeagues(db);
@@ -54,5 +62,22 @@ export const load: PageServerLoad = async () => {
     leagueRounds[league.id] = rounds;
   }
 
-  return { leagues, players, allSeasons, leagueRounds };
+  // Competitors with their linked player and leagues they appear in.
+  const competitors = db.prepare<[], CompetitorRow>(`
+    SELECT
+      c.id,
+      c.name,
+      c.ml_competitor_id,
+      c.player_id,
+      GROUP_CONCAT(DISTINCT l.name ORDER BY l.name) AS leagues
+    FROM competitors c
+    LEFT JOIN ml_submissions ms ON ms.competitor_id = c.id
+    LEFT JOIN rounds r ON r.id = ms.round_id
+    LEFT JOIN seasons s ON s.id = r.season_id
+    LEFT JOIN leagues l ON l.id = s.league_id
+    GROUP BY c.id
+    ORDER BY (c.player_id IS NULL) DESC, c.name ASC
+  `).all();
+
+  return { leagues, players, allSeasons, leagueRounds, competitors };
 };

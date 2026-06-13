@@ -239,6 +239,31 @@
     await invalidateAll();
   }
 
+  // ---- competitors section -------------------------------------------------
+  let competitorLink = $state<Record<number, number | ''>>(
+    Object.fromEntries(data.competitors.map(c => [c.id, c.player_id ?? ''])),
+  );
+  let competitorSaving = $state<Record<number, boolean>>({});
+
+  const unlinkedCompetitors = $derived(data.competitors.filter(c => c.player_id == null));
+  const linkedCompetitors = $derived(data.competitors.filter(c => c.player_id != null));
+
+  $effect(() => {
+    for (const c of data.competitors) {
+      competitorLink[c.id] = c.player_id ?? '';
+    }
+  });
+
+  async function setCompetitorLink(competitorId: number, value: number | '') {
+    competitorSaving = { ...competitorSaving, [competitorId]: true };
+    const playerId = value === '' ? null : value;
+    const res = await apiCall(`/api/competitors/${competitorId}`, 'PATCH', { player_id: playerId });
+    competitorSaving = { ...competitorSaving, [competitorId]: false };
+    if (!res.ok) { showBanner('Error updating competitor link', 'warn'); return; }
+    showBanner(playerId ? 'Competitor linked' : 'Competitor unlinked');
+    await invalidateAll();
+  }
+
   // ---- rounds section ------------------------------------------------------
   // Track which leagues have their rounds expanded.
   let roundsExpanded = $state<Record<number, boolean>>({});
@@ -700,6 +725,135 @@
       </div>
     {/each}
   </div>
+</section>
+
+<!-- ======== COMPETITORS ======== -->
+<section class="mb-10">
+  <header class="mb-4">
+    <SectionLabel>Competitors</SectionLabel>
+    <h2 class="text-2xl font-bold text-fg mt-1">ML competitor roster</h2>
+    <p class="text-xs text-fg-dim mt-1">
+      Link Music League competitor accounts to players. Unlinked competitors are shown first.
+    </p>
+  </header>
+
+  {#if unlinkedCompetitors.length > 0}
+    <div class="mb-4 bg-warn/10 border border-warn/40 rounded-xl p-4">
+      <div class="font-mono text-[10px] tracking-widest uppercase text-warn mb-3">
+        {unlinkedCompetitors.length} unlinked competitor{unlinkedCompetitors.length === 1 ? '' : 's'} — action required
+      </div>
+      <div class="flex flex-col gap-2">
+        {#each unlinkedCompetitors as comp (comp.id)}
+          <div class="flex flex-wrap items-center gap-3 bg-surface border border-warn/30 rounded-lg px-4 py-2.5">
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-fg">{comp.name}</div>
+              <div class="font-mono text-[10px] text-fg-faint mt-0.5">
+                {comp.ml_competitor_id.slice(0, 8)}…
+                {#if comp.leagues}
+                  · {comp.leagues}
+                {/if}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <select
+                bind:value={competitorLink[comp.id]}
+                disabled={competitorSaving[comp.id]}
+                onchange={() => setCompetitorLink(comp.id, competitorLink[comp.id])}
+                class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50 max-w-[180px]"
+              >
+                <option value="">— unlinked —</option>
+                {#each data.players as p (p.id)}
+                  <option value={p.id}>{p.name}</option>
+                {/each}
+              </select>
+              {#if competitorSaving[comp.id]}
+                <span class="font-mono text-[10px] text-fg-faint">saving…</span>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if linkedCompetitors.length > 0}
+    <div class="bg-surface border border-border-muted rounded-xl overflow-hidden">
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint px-4 py-2.5 border-b border-border-muted">
+        Linked competitors ({linkedCompetitors.length})
+      </div>
+      <!-- Desktop table -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="font-mono text-[10px] tracking-widest uppercase text-fg-faint border-b border-border-muted">
+              <th class="text-left px-4 py-2 font-bold">Name</th>
+              <th class="text-left px-4 py-2 font-bold w-28">ID</th>
+              <th class="text-left px-4 py-2 font-bold">Leagues</th>
+              <th class="text-left px-4 py-2 font-bold w-44">Linked player</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each linkedCompetitors as comp (comp.id)}
+              <tr class="border-t border-border-muted hover:bg-surface-hover">
+                <td class="px-4 py-2 font-medium text-fg">{comp.name}</td>
+                <td class="px-4 py-2 font-mono text-[10px] text-fg-faint">{comp.ml_competitor_id.slice(0, 8)}…</td>
+                <td class="px-4 py-2 text-fg-muted text-xs">{comp.leagues ?? '—'}</td>
+                <td class="px-4 py-2">
+                  <div class="flex items-center gap-2">
+                    <select
+                      bind:value={competitorLink[comp.id]}
+                      disabled={competitorSaving[comp.id]}
+                      onchange={() => setCompetitorLink(comp.id, competitorLink[comp.id])}
+                      class="w-full bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none disabled:opacity-50"
+                    >
+                      <option value="">— unlinked —</option>
+                      {#each data.players as p (p.id)}
+                        <option value={p.id}>{p.name}</option>
+                      {/each}
+                    </select>
+                    {#if competitorSaving[comp.id]}
+                      <span class="font-mono text-[10px] text-fg-faint whitespace-nowrap">saving…</span>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <!-- Mobile cards -->
+      <div class="md:hidden divide-y divide-border-muted">
+        {#each linkedCompetitors as comp (comp.id)}
+          <div class="px-4 py-3 flex flex-col gap-2">
+            <div class="flex items-start gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-fg">{comp.name}</div>
+                <div class="font-mono text-[10px] text-fg-faint mt-0.5">
+                  {comp.ml_competitor_id.slice(0, 8)}…{#if comp.leagues} · {comp.leagues}{/if}
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <select
+                bind:value={competitorLink[comp.id]}
+                disabled={competitorSaving[comp.id]}
+                onchange={() => setCompetitorLink(comp.id, competitorLink[comp.id])}
+                class="flex-1 bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none disabled:opacity-50"
+              >
+                <option value="">— unlinked —</option>
+                {#each data.players as p (p.id)}
+                  <option value={p.id}>{p.name}</option>
+                {/each}
+              </select>
+              {#if competitorSaving[comp.id]}
+                <span class="font-mono text-[10px] text-fg-faint">saving…</span>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </section>
 
 <!-- ======== PLAYERS ======== -->
