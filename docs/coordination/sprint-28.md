@@ -109,7 +109,7 @@ _None._
 
 ## Activity Log
 
-### 2026-06-13 — frontend — ui-probe COMPLETE (commit TBD)
+### 2026-06-13 — frontend — ui-probe COMPLETE (commit c77106f)
 - extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
 - added `ThemeEntry` + `VoteProbeResult` types to `<script module>`
 - new probe state vars: `probeOpen`, `probeThemes`, `probeSongTitle`, `probeSongArtist`, `probeSongUrl`, `probeThemeKey`, `probeCustomThemeName`, `probeCustomThemeDesc`, `probeLoading`, `probeError`, `probeResult`
