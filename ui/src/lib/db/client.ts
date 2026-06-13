@@ -232,6 +232,12 @@ export function openLeagueDb(path?: string): Database.Database {
 			SELECT c.player_id FROM competitors c WHERE c.id = rounds.theme_chooser_id
 		) WHERE theme_chooser_id IS NOT NULL AND theme_submitted_by IS NULL`);
 	}
+	// sprint-27 round-edit-markers (FB-1): tracks which fields were manually edited
+	// via patchRound/updateRound so upsertRound (importer) skips overwriting them.
+	const roundsCols4 = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
+	if (roundsCols4.length && !roundsCols4.some(c => c.name === 'edited_fields')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN edited_fields TEXT NOT NULL DEFAULT '[]'");
+	}
 	return db;
 }
 

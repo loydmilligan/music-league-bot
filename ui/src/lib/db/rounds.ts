@@ -23,10 +23,16 @@ function rowWithPhase(r: any, phase: RoundPhase): Round {
 export function upsertRound(db: Database.Database, seasonId: number, r: {
   mlRoundId: string; name: string; description: string; spotifyPlaylistUrl: string; createdAt: string;
 }): number {
+  // Fields that were manually edited via patchRound/updateRound are protected:
+  // edited_fields is a JSON array of field names (e.g. '["name","description"]').
+  // instr checks membership without needing json_each — field names are unique substrings.
   return (db.prepare(`INSERT INTO rounds (season_id,ml_round_id,name,description,spotify_playlist_url,created_at)
     VALUES (@seasonId,@mlRoundId,@name,@description,@spotifyPlaylistUrl,@createdAt)
-    ON CONFLICT(ml_round_id) DO UPDATE SET name=excluded.name,description=excluded.description,
-    spotify_playlist_url=excluded.spotify_playlist_url RETURNING id`).get({ seasonId, ...r }) as { id: number }).id;
+    ON CONFLICT(ml_round_id) DO UPDATE SET
+      name=CASE WHEN instr(rounds.edited_fields,'"name"')>0 THEN rounds.name ELSE excluded.name END,
+      description=CASE WHEN instr(rounds.edited_fields,'"description"')>0 THEN rounds.description ELSE excluded.description END,
+      spotify_playlist_url=CASE WHEN instr(rounds.edited_fields,'"spotify_playlist_url"')>0 THEN rounds.spotify_playlist_url ELSE excluded.spotify_playlist_url END
+    RETURNING id`).get({ seasonId, ...r }) as { id: number }).id;
 }
 
 export function upsertRoundWithDeadlines(db: Database.Database, seasonId: number, r: {
@@ -91,6 +97,14 @@ export function getCurrentRoundForSeason(db: Database.Database, seasonId: number
 // (e.g. the layout loader walks all of a season's rounds at once).
 export { rowWithPhase };
 
+function markEditedFields(db: Database.Database, id: number, fields: string[]): void {
+  if (!fields.length) return;
+  const row = db.prepare('SELECT edited_fields FROM rounds WHERE id=?').get(id) as { edited_fields: string } | undefined;
+  const current: string[] = JSON.parse(row?.edited_fields ?? '[]');
+  const merged = [...new Set([...current, ...fields])];
+  db.prepare('UPDATE rounds SET edited_fields=? WHERE id=?').run(JSON.stringify(merged), id);
+}
+
 export interface RoundPatch {
   name?: string;
   description?: string | null;     // body field is "theme" — mapped at the API boundary
@@ -119,6 +133,13 @@ export function patchRound(db: Database.Database, id: number, p: RoundPatch): bo
   if (!fields.length) return false;
   vals.push(id);
   const info = db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
+  if (info.changes > 0) {
+    const edited: string[] = [];
+    if (p.name !== undefined) edited.push('name');
+    if (p.description !== undefined) edited.push('description');
+    if (p.spotifyPlaylistUrl !== undefined) edited.push('spotify_playlist_url');
+    markEditedFields(db, id, edited);
+  }
   return info.changes > 0;
 }
 
@@ -154,6 +175,12 @@ export function updateRound(db: Database.Database, roundId: number, p: RoundMana
   if (!fields.length) return false;
   vals.push(roundId);
   const info = db.prepare(`UPDATE rounds SET ${fields.join(',')} WHERE id=?`).run(...vals);
+  if (info.changes > 0) {
+    const edited: string[] = [];
+    if (p.name !== undefined) edited.push('name');
+    if (p.description !== undefined) edited.push('description');
+    markEditedFields(db, roundId, edited);
+  }
   return info.changes > 0;
 }
 
