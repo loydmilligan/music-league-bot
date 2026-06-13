@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-28
 title: Player Prediction Tools — Sprint 1 (Dossier + Harness + SAS)
-status: active
+status: closed
 created: 2026-06-13T04:20:00Z
 activated: 2026-06-13
-updated: 2026-06-13T04:30:00Z
+closed: 2026-06-13
+updated: 2026-06-13T21:15:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-28)
@@ -87,7 +88,7 @@ updated: 2026-06-13T04:30:00Z
 - [x] {agent: frontend, id: ui-probe, depends: api-predict} **Vote Probe panel** (spec §8). Add a collapsible **Vote Probe** subsection: a form (song title/artist + optional Spotify URL; theme = a dropdown of real past themes OR freeform) that calls `POST /api/players/:id/vote-probe` and renders the SAS likelihood gauge + expected points + reasoning + signal bullets.
   - **Acceptance:** submitting a song + theme renders a SAS result (gauge + expected points + reasoning + signals); the theme dropdown lists real themes and freeform also works; verified hands-on on dev at desktop and 412×892 (noted in Activity Log); `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-close, depends: ui-dossier,ui-fingerprint,ui-probe} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, version bump + CHANGELOG, ratification card summarizing the dossier + harness + fingerprint + SAS, one cached prod deploy, a 412×892 prod smoke (write a dossier note → persists; run one fingerprint and one vote-probe → both return), panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: ui-dossier,ui-fingerprint,ui-probe} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, version bump + CHANGELOG, ratification card summarizing the dossier + harness + fingerprint + SAS, one cached prod deploy, a 412×892 prod smoke (write a dossier note → persists; run one fingerprint and one vote-probe → both return), panes reset, doc closed.
   - **Acceptance:** all worker tasks `[x]`; v-bump + CHANGELOG committed; ratification card emitted + ratified; prod smoke passes (dossier persists, fingerprint + probe return) with 0 console errors; doc `status: closed`.
 
 ## Decision Log
@@ -101,13 +102,37 @@ primitive the future whole-round predictor will consume. Full contract in the sp
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-13 — Sprint-28 gate RATIFIED (owner) · card `rn-1d23b092`
+Owner ratified "Sprint-28 gate — ship v1.0.6 (Producer Sprint 1) to prod". All 10
+worker tasks done + cross-checked (0 typecheck errors, 291/291 tests, was 202);
+v1.0.6 bump + CHANGELOG (`afa86d7`); deployed to prod (192.168.4.217:3002) via cached
+`docker compose build bot-ui && up -d`; 412×892 prod smoke passed (see Activity Log).
+Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — orc — GATE-CLOSE DONE · sprint-28 closed, v1.0.6 shipped
+- Cross-check: all 10 worker tasks `[x]`, committed, tree clean; orc independently ran
+  `npm run check` (0 errors) + `npx vitest run` (291/291, was 202). Each UI panel was
+  hands-on verified at desktop + 412×892 by the frontend lane during its task.
+- Version: `ui/package.json` 1.0.5 → 1.0.6; CHANGELOG `[1.0.6]`; committed `afa86d7`.
+- Ratification card `rn-1d23b092` emitted + ratified by owner.
+- Prod deploy: cached `docker compose build bot-ui && up -d`; clean boot; prod serves `mash co. · v1.0.6`.
+- 412×892 prod smoke PASS (player_id 1 / Matt Mariani): (1) PATCH dossier note → GET
+  reflects it; (2) POST /fingerprint → real `claude-sonnet-4-5` call $0.0166, structured
+  profile (Kendrick/Beastie Boys/IDLES/RATM, rewards/punishes, summary); (3) POST
+  /vote-probe (RATM "Bulls on Parade" vs high-energy theme) → SAS 85, expected 4pts,
+  reasoning cited real history ("'Know Your Enemy' for 15pts in 'Unsung Heroes'");
+  (4) cleared the smoke note → fingerprint RETAINED (manual/auto separation holds on
+  prod). UI: all three panels render at 412×892, theme dropdown populated from real
+  themes. Screenshot `mlb-v106-prod-player-research-412.png`.
+- Notable: one mid-task context reset (task-vote-probe) handled via handoff + resume;
+  frontend pane temp-flipped to a 2nd backend lane for the harness wave, then back for
+  the UI tasks. Panes reset; doc `status: closed`.
 
 ### 2026-06-13 — frontend — ui-probe COMPLETE (commit c77106f)
 - extended `ui/src/lib/components/PlayerResearchTab.svelte` — no other files touched
