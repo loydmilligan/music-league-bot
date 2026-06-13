@@ -119,7 +119,7 @@ _None._
   sanity). Hip Jammers shows the `DERIVED` source badge. Screenshot:
   `mlb-v105-prod-home-412.png`. 0 console errors on `/`.
 - Known caveat carried forward (NOT a sprint-27 regression): digest page client-side 500
-  from `llm.ts` importing `node:crypto` (since sprint-21) — logged to review queue.
+  from `llm.ts` importing `node:crypto` (since sprint-21) — logged to `backlog.md`.
 - Panes reset; doc `status: closed`.
 
 ### 2026-06-12 — backend — FB-1 (round-edit-markers) DONE · commit 4b095cf

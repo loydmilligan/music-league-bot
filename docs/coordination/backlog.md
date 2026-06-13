@@ -2,7 +2,7 @@
 project: music-league-bot
 type: backlog
 created: 2026-05-20T00:00:00Z
-updated: 2026-06-04T00:00:00Z
+updated: 2026-06-13T00:00:00Z
 ---
 
 # music-league-bot — backlog
@@ -85,3 +85,16 @@ updated: 2026-06-04T00:00:00Z
 **Direction (frontend/digest lane).** The html-share render packages the existing interactive digest page; make that artifact responsive so it reflows cleanly at phone widths (the digest content cards have a known ~390px horizontal-overflow nit — flagged in sprint-20 e2e-verify — fix that here). Verify on a real mobile viewport + desktop on the live `digest.mattmariani.com/d/<slug>/` artifact. Likely overlaps the digest's general mobile responsiveness (sprint-19 added mobile nav; the digest *content* still needs a mobile pass).
 
 **Sequencing:** **after** the History research milestone (sprint-22+) lands. Pairs with the pre-existing "digest content-card ~390px overflow" nit.
+
+## Digest page client-side 500 in dev — `llm.ts` imports `node:crypto` (flagged sprint-27) — bug
+
+**Source:** frontend agent during sprint-27 collision re-verification (2026-06-13). While driving the dev UI for the C2/C3/C4 repros, the **digest page throws a client-side 500** because `llm.ts` imports `node:crypto`, which gets pulled into a client bundle. **Pre-existing since sprint-21** — NOT a sprint-27 regression (the sprint-27 fixes are unrelated DB/importer/derivation changes), so it did not block the gate; carried forward here.
+
+**Problem.** A server-only module (`node:crypto` consumer in `llm.ts`) is reachable from the digest route's client graph, so SvelteKit tries to bundle `node:crypto` for the browser and the page 500s in dev. Needs investigation: is `llm.ts` imported (transitively) by a `+page.svelte` / `+page.ts` load that runs client-side, when it should be `+page.server.ts` / `$lib/server/` only?
+
+**Direction (lane: frontend/backend).**
+1. **Locate the leak:** trace what on the digest route imports `llm.ts` and why it lands in the client bundle (likely a shared import that should be server-only).
+2. **Fix the boundary:** move the crypto-using code behind `$lib/server/` (SvelteKit server-only enforcement) or split `llm.ts` so the client graph never pulls `node:crypto`; if only a hash util is needed client-side, use a Web Crypto equivalent.
+3. **Verify:** digest page loads with 0 console errors in dev at desktop + 412×892; prod unaffected (it already builds, so this is primarily a dev-bundle correctness fix — confirm).
+
+**Why it matters.** It makes the digest page un-loadable in `npm run dev`, which is exactly where UI agents do hands-on verification — every digest-touching sprint pays a friction tax working around it. Low user-facing severity (prod builds), but it degrades the dev/verify loop. Also recorded as a known caveat in CHANGELOG `[1.0.5]`.
