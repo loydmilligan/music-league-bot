@@ -75,7 +75,7 @@ updated: 2026-06-12T22:08:06Z
 - [-] {agent: frontend, id: linking-ui, depends: linking-api-resync} **Linking control on the /setup roster screen.** Per the sprint-25 close decision: new ML competitors (e.g. Sarah Zucker's possible second account in Second Best) need a UI to link/unlink a competitor to a player. Show each competitor's name, `ml_competitor_id` (truncated), leagues, and current link; picker to choose a player. Surface unlinked competitors prominently (they're the action item).
   - **Acceptance:** at `/setup`, an unlinked fixture competitor can be linked to a player; the link survives reload; the player's `/history?tab=players` entry absorbs the competitor's submissions (visible name change in the roster list); 412×892 renders without layout breakage; `npm run check` 0 errors.
 
-- [-] {agent: backend, id: repoint-groundwork} **FK hard-repoint groundwork doc (no implementation).** Write `docs/coordination/planning-fk-repoint.md` for the future repoint sprint: inventory of every read site joining gameplay tables through `competitor_id`/`voter_id` (file:line), the preconditions checklist (all competitors linked, re-sync live, importer writing `player_id` on new rows), per-table migration steps with rollback, and a go/no-go checklist.
+- [x] {agent: backend, id: repoint-groundwork} **FK hard-repoint groundwork doc (no implementation).** Write `docs/coordination/planning-fk-repoint.md` for the future repoint sprint: inventory of every read site joining gameplay tables through `competitor_id`/`voter_id` (file:line), the preconditions checklist (all competitors linked, re-sync live, importer writing `player_id` on new rows), per-table migration steps with rollback, and a go/no-go checklist.
   - **Acceptance:** doc committed; the read-site inventory is cross-checked against `grep -rn "competitor_id\|voter_id" ui/src/lib --include="*.ts"` (every hit listed or excluded with reason); preconditions reference the sprint-26 task ids that satisfy them.
 
 - [ ] {agent: orc, id: gate-close, depends: write-path-inventory,active-derivation-audit,screen-inventory,collision-repros,season-override-fix,linking-api-resync,linking-ui,repoint-groundwork} **Gate — consolidate findings, close sprint.** Orc consolidates the inventory docs + collision verdicts into a prioritized fix backlog (severity-ordered, each item naming its inventory row), runs cross-checks (each agent verifies the other lane's acceptance), version + CHANGELOG for the code tasks, ratification card with the backlog summary, one cached prod deploy, 412×892 smoke on /setup linking + season-status durability, panes reset, doc closed.
@@ -98,6 +98,15 @@ _(gate cards land here as they resolve)_
 _None._
 
 ## Activity Log
+
+### 2026-06-12 — backend-agent — repoint-groundwork COMPLETE; backend lane done
+- Produced `docs/coordination/planning-fk-repoint.md` for the future FK hard-repoint sprint.
+- **Section 1 (read-site inventory):** 10 read-site groups (R1–R10) covering 25 individual file:line hits. Classified each as "repoint required" or "keep competitor_id" with rationale. High-value targets: `playerHistory.ts` R1a–R1d (eliminates two-round-trip pattern), `standings.ts` R2a–R2e (semantic change: per-competitor → per-player grouping).
+- **Section 2 (preconditions):** PC-1 (all linked, sprint-25 manual action ✅), PC-2 (re-sync live, `linking-api-resync` ✅), PC-3 (zero-null verify — DB query to run at gate), PC-4 (**⚠️ MISSING** — `upsertCompetitor` does not write `player_id` on new rows; importer auto-link must be added before repoint sprint begins), PC-5 (linking UI, sprint-26 `linking-ui` frontend lane).
+- **Section 3 (per-table migration):** `ml_submissions` and `votes` — additive index + read-site rewrites, no UNIQUE constraint change; `season_standings` — recommends Option A (additive player-level table) over Option B (PK change) to preserve digest gospel.
+- **Section 4 (go/no-go checklist):** 4 hard blockers (PC-3 zero-null verify, PC-4 fix merged, index plan reviewed, season_standings option decided) + 3 strongly-recommended checks.
+- Cross-checked against full grep: every hit listed or excluded with reason.
+- repoint-groundwork ticked [x]. **Backend lane is complete** — all 5 backend tasks done (write-path-inventory, active-derivation-audit, season-override-fix, linking-api-resync, repoint-groundwork). Ready for gate cross-check.
 
 ### 2026-06-12 — frontend-agent — collision-repros COMPLETE
 - Produced `docs/coordination/inventory/collisions.md` with 6 suspects tested (4 CONFIRMED, 2 NOT-A-BUG).
