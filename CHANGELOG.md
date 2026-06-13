@@ -4,6 +4,37 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.4] — 2026-06-12
+
+### Visible (UI)
+
+- **Competitors section on `/setup`** — new roster section listing every ML
+  competitor with name, truncated `ml_competitor_id`, leagues, and a player
+  picker to link/unlink the competitor to a player. Unlinked competitors
+  surface in an amber banner at the top — they're the action item (e.g. a new
+  account joining a league mid-season). Linking re-syncs the competitor's
+  gameplay rows immediately; the player's unified history absorbs them without
+  a reboot.
+
+### Under the hood
+
+- **Durable manual season status** — `seasons.status_source`
+  (`derived`/`manual`): flipping a season's status from `/setup` now sticks.
+  The importer, CLI live-round import, and `ml-rebuild.mjs` all skip
+  re-deriving status for manually-flipped seasons in both directions. Fixes
+  the "Nostalgia Pit re-activated itself after a manual flip" bug.
+- **Competitor→player linking API** — `PATCH /api/competitors/:competitorId`
+  sets/clears `competitors.player_id` and immediately re-runs the gameplay
+  backfill (`ml_submissions`/`votes`/`season_standings.player_id`) for that
+  competitor in one transaction — the boot-time backfill is no longer the only
+  sync path.
+- **Feature inventory + collision audit (sprint-26 artifacts)** — full
+  write-path inventory (19 writers), active-round derivation audit (10 sites +
+  divergence matrix), hands-on screen inventory (10 routes), and 6 collision
+  reproductions (4 confirmed) under `docs/coordination/inventory/`; prioritized
+  fix backlog FB-1..FB-5 in the sprint doc; FK hard-repoint planning doc at
+  `docs/coordination/planning-fk-repoint.md`.
+
 ## [1.0.3] — 2026-06-12
 
 ### Under the hood
