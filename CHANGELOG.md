@@ -4,6 +4,37 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.7] — 2026-06-13
+
+Producer Sprint 2 — the **Submission Predictor**, the mirror of Sprint 1's Vote
+Probe. Pick a player + a theme and the app predicts what they'd submit.
+
+### Visible (UI)
+
+- **Submission Predictor** — a new panel on the Player Research tab (under Vote
+  Probe). Pick a player, pick a theme (real past themes or freeform), hit Predict,
+  and get a three-part read:
+  1. **Property profile** — the *kind* of song they'd likely bring (genres,
+     artists/types, era, mood/energy, obscurity lean, whether a comment's likely),
+     with a rationale grounded in their history.
+  2. **Ranked candidates** — several concrete song guesses, each with a short "why
+     it's here."
+  3. **Final pick** — the single most-likely song, with detail on why it beat the
+     others and explicit links to *similar songs they've actually submitted before*,
+     plus a confidence level.
+  Candidate songs are validated against Spotify, so picks are real (and carry a
+  Spotify link where resolved).
+
+### Under the hood
+
+- New `submission-predict` task on the Sprint-1 prediction harness (no new
+  plumbing — a new template + schemas), logged to `prediction_runs` like every
+  other prediction.
+- `validateTracks` helper reuses the existing Spotify client-credentials flow to
+  resolve candidate songs (no new auth path).
+- Endpoint `POST /api/players/:id/submission-predict`.
+- Tests: 336 green (was 291).
+
 ## [1.0.6] — 2026-06-13
 
 Producer Sprint 1 — the first slice of the "Music League Producer". The Player
