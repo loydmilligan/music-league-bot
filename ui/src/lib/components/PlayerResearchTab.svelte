@@ -78,6 +78,8 @@
     model: string;
     cost_usd: number;
     latency_ms: number;
+    generated_at: string;
+    cache_hit: boolean;
   };
   export type SubmissionProfile = {
     genres: string[];
@@ -118,6 +120,8 @@
     model: string;
     cost_usd: number;
     latency_ms: number;
+    generated_at: string;
+    cache_hit: boolean;
   };
 </script>
 
@@ -368,7 +372,7 @@
     }
   }
 
-  async function runVoteProbe() {
+  async function runVoteProbe(forceRegen = false) {
     if (!selected) return;
     const playerId = playerIdMap.get(selected);
     if (!playerId) return;
@@ -394,6 +398,7 @@
           ...(probeSongUrl.trim() ? { spotify_url: probeSongUrl.trim() } : {}),
         },
         theme: { name: themeName, description: themeDesc },
+        ...(forceRegen ? { forceRegen: true } : {}),
       };
       const res = await fetch(`/api/players/${playerId}/vote-probe`, {
         method: 'POST',
@@ -412,7 +417,7 @@
     }
   }
 
-  async function runPredict() {
+  async function runPredict(forceRegen = false) {
     if (!selected) return;
     const playerId = playerIdMap.get(selected);
     if (!playerId) return;
@@ -433,7 +438,7 @@
       const res = await fetch(`/api/players/${playerId}/submission-predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme: { name: themeName, description: themeDesc } }),
+        body: JSON.stringify({ theme: { name: themeName, description: themeDesc }, ...(forceRegen ? { forceRegen: true } : {}) }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
@@ -446,6 +451,20 @@
       predictLoading = false;
     }
   }
+
+  // Auto-fetch submission-predict when theme changes — serves cached result instantly if available
+  let _predictAutoKey = '';
+  $effect(() => {
+    const sel = selected;
+    const key = predictThemeKey;
+    const newKey = `${sel ?? ''}::${key}`;
+    if (!key || key === '__custom__' || !sel) { _predictAutoKey = ''; return; }
+    if (newKey === _predictAutoKey) return;
+    _predictAutoKey = newKey;
+    const playerId = playerIdMap.get(sel);
+    if (!playerId) return;
+    runPredict();
+  });
 
   // PR-11: league-scoped theme picking derived state
   const openRoundsById = $derived(new Map(openRounds.map((r) => [String(r.id), r])));
@@ -869,15 +888,23 @@
                 </div>
 
                 <!-- Probe button -->
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                   <button
                     type="button"
-                    onclick={runVoteProbe}
+                    onclick={() => runVoteProbe()}
                     disabled={probeLoading || !probeSongTitle.trim() || !probeSongArtist.trim() || !probeThemeKey || (probeThemeKey === '__custom__' && !probeCustomThemeName.trim())}
                     class="px-3 py-1.5 rounded-lg border border-accent text-accent font-mono text-xs transition-colors hover:bg-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                   >
                     {probeLoading ? 'Probing…' : 'Probe'}
                   </button>
+                  {#if probeResult}
+                    <button
+                      type="button"
+                      onclick={() => runVoteProbe(true)}
+                      disabled={probeLoading}
+                      class="px-3 py-1.5 rounded-lg border border-border-muted text-fg-faint font-mono text-xs transition-colors hover:border-border hover:text-fg disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    >Regenerate</button>
+                  {/if}
                   {#if probeError}
                     <span class="font-mono text-xs text-warn">{probeError}</span>
                   {/if}
@@ -929,11 +956,14 @@
                       </div>
                     {/if}
 
-                    <!-- Provenance -->
+                    <!-- Provenance stamp -->
                     <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
                       <span class="font-mono text-[10px] text-fg-faint truncate">
-                        {probeResult.model} · ${probeResult.cost_usd.toFixed(4)} · {probeResult.latency_ms}ms
+                        generated {new Date(probeResult.generated_at).toLocaleDateString()} · {probeResult.model} · ${probeResult.cost_usd.toFixed(4)}
                       </span>
+                      {#if probeResult.cache_hit}
+                        <span class="ml-auto shrink-0 font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint">cached</span>
+                      {/if}
                     </div>
                   </div>
                 {/if}
@@ -1026,15 +1056,23 @@
                 </div>
 
                 <!-- Predict button -->
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                   <button
                     type="button"
-                    onclick={runPredict}
+                    onclick={() => runPredict()}
                     disabled={predictLoading || !predictThemeKey || (predictThemeKey === '__custom__' && !predictCustomThemeName.trim())}
                     class="px-3 py-1.5 rounded-lg border border-accent text-accent font-mono text-xs transition-colors hover:bg-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                   >
                     {predictLoading ? 'Predicting…' : 'Predict'}
                   </button>
+                  {#if predictResult}
+                    <button
+                      type="button"
+                      onclick={() => runPredict(true)}
+                      disabled={predictLoading}
+                      class="px-3 py-1.5 rounded-lg border border-border-muted text-fg-faint font-mono text-xs transition-colors hover:border-border hover:text-fg disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    >Regenerate</button>
+                  {/if}
                   {#if predictError}
                     <span class="font-mono text-xs text-warn">{predictError}</span>
                   {/if}
@@ -1191,11 +1229,14 @@
                       {/if}
                     </div>
 
-                    <!-- Provenance -->
+                    <!-- Provenance stamp -->
                     <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
                       <span class="font-mono text-[10px] text-fg-faint truncate">
-                        {predictResult.model} · ${predictResult.cost_usd.toFixed(4)} · {predictResult.latency_ms}ms
+                        generated {new Date(predictResult.generated_at).toLocaleDateString()} · {predictResult.model} · ${predictResult.cost_usd.toFixed(4)}
                       </span>
+                      {#if predictResult.cache_hit}
+                        <span class="ml-auto shrink-0 font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint">cached</span>
+                      {/if}
                     </div>
                   </div>
                 {/if}
