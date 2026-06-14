@@ -36,10 +36,20 @@ export const POST: RequestHandler = async ({ params, request }) => {
   if (typeof name !== 'string' || !name.trim()) throw error(400, 'theme.name must be a non-empty string');
   if (typeof description !== 'string') throw error(400, 'theme.description must be a string');
 
-  const { output, meta } = await runVoteProbe(db, playerId, {
+  const { forceRegen } = body as Record<string, unknown>;
+
+  const { output, meta, cacheHit, generatedAt } = await runVoteProbe(db, playerId, {
     song: { title, artist, spotify_url: spotify_url as string | undefined },
     theme: { name, description },
+    forceRegen: forceRegen === true,
   });
 
-  return json({ ...output, model: meta.model, cost_usd: meta.costUsd, latency_ms: meta.latencyMs });
+  return json({
+    ...output,
+    model: meta.model,
+    cost_usd: meta.costUsd,
+    latency_ms: meta.latencyMs,
+    generated_at: generatedAt,
+    cache_hit: cacheHit,
+  });
 };

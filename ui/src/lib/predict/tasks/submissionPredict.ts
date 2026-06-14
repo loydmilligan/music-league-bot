@@ -194,6 +194,28 @@ export const submissionPredictTask: PredictionTask<
 export interface RunSubmissionPredictResult {
 	output: SubmissionPredictOutput;
 	meta: PredictionMeta;
+	cacheHit: boolean;
+	generatedAt: string;
+}
+
+// ── Cache lookup ───────────────────────────────────────────────────────────────
+
+type CachedRun = { output_json: string; model: string; cost_usd: number; latency_ms: number; created_at: string };
+
+function lookupSubmissionPredictCache(
+	db: Database.Database,
+	playerId: number,
+	theme: SubmissionPredictTheme,
+): CachedRun | undefined {
+	return db.prepare(
+		`SELECT output_json, model, cost_usd, latency_ms, created_at
+		 FROM prediction_runs
+		 WHERE task_id = 'submission-predict'
+		   AND player_id = ?
+		   AND json_extract(input_json, '$.theme.name') = ?
+		 ORDER BY created_at DESC
+		 LIMIT 1`,
+	).get(playerId, theme.name) as CachedRun | undefined;
 }
 
 // ── runSubmissionPredict ───────────────────────────────────────────────────────
@@ -201,6 +223,10 @@ export interface RunSubmissionPredictResult {
 /**
  * Build the player's context, run the submission-predict task, and log a
  * prediction_runs row.
+ *
+ * On repeat calls with the same (player, theme), returns the cached
+ * prediction_runs row without calling the model. Pass forceRegen:true to
+ * bypass the cache and write a fresh row.
  *
  * Returns RAW candidates — Spotify validation is applied downstream by
  * api-submission (spotifyValidate.ts), not here.
@@ -214,8 +240,22 @@ export async function runSubmissionPredict(
 	opts: {
 		theme: SubmissionPredictTheme;
 		roundId?: number;
+		forceRegen?: boolean;
 	},
 ): Promise<RunSubmissionPredictResult> {
+	if (!opts.forceRegen) {
+		const cached = lookupSubmissionPredictCache(db, playerId, opts.theme);
+		if (cached) {
+			const output = SubmissionPredictOutputSchema.parse(JSON.parse(cached.output_json));
+			return {
+				output,
+				meta: { model: cached.model, costUsd: cached.cost_usd, latencyMs: cached.latency_ms },
+				cacheHit: true,
+				generatedAt: cached.created_at,
+			};
+		}
+	}
+
 	const context = buildPlayerContext(db, playerId);
 	const input: SubmissionPredictInput = { ...context, theme: opts.theme };
 
@@ -224,5 +264,11 @@ export async function runSubmissionPredict(
 		roundId: opts.roundId,
 	});
 
-	return { output, meta };
+	const row = db.prepare(
+		`SELECT created_at FROM prediction_runs
+		 WHERE task_id = 'submission-predict' AND player_id = ?
+		 ORDER BY created_at DESC LIMIT 1`,
+	).get(playerId) as { created_at: string } | undefined;
+
+	return { output, meta, cacheHit: false, generatedAt: row?.created_at ?? new Date().toISOString() };
 }

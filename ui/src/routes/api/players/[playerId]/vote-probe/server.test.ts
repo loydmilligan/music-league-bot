@@ -159,4 +159,64 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 		} as unknown as Parameters<typeof POST>[0];
 		await expect(POST(badEvt)).rejects.toMatchObject({ status: 400 });
 	});
+
+	it('response includes generated_at and cache_hit fields', async () => {
+		const id = mkPlayer();
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+
+		const res = await POST(postEvt(id, VALID_BODY));
+		const body = await res.json();
+		expect(typeof body.generated_at).toBe('string');
+		expect(body.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(body.cache_hit).toBe(false);
+	});
+
+	it('second identical POST returns cached result without a new LLM call', async () => {
+		const id = mkPlayer();
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+
+		// First call — hits LLM, writes prediction_runs row
+		await POST(postEvt(id, VALID_BODY));
+		// Second call — same player + song + theme → cache hit
+		const res2 = await POST(postEvt(id, VALID_BODY));
+
+		expect(mockCallOpenRouter).toHaveBeenCalledTimes(1);
+		const body2 = await res2.json();
+		expect(body2.upvote_likelihood).toBe(72);
+		expect(body2.cache_hit).toBe(true);
+		expect(typeof body2.generated_at).toBe('string');
+	});
+
+	it('forceRegen:true bypasses cache and calls LLM again', async () => {
+		const id = mkPlayer();
+		mockCallOpenRouter
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+
+		// First call — hits LLM
+		await POST(postEvt(id, VALID_BODY));
+		// Second call with forceRegen — bypasses cache, hits LLM again
+		const res2 = await POST(postEvt(id, { ...VALID_BODY, forceRegen: true }));
+
+		expect(mockCallOpenRouter).toHaveBeenCalledTimes(2);
+		const body2 = await res2.json();
+		expect(body2.cache_hit).toBe(false);
+	});
+
+	it('different song skips cache and calls LLM', async () => {
+		const id = mkPlayer();
+		mockCallOpenRouter
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 })
+			.mockResolvedValueOnce({ content: JSON.stringify({ ...FIXTURE_OUTPUT, upvote_likelihood: 50 }), costUsd: 0.007 });
+
+		await POST(postEvt(id, VALID_BODY));
+		const res2 = await POST(postEvt(id, {
+			...VALID_BODY,
+			song: { title: 'Different Song', artist: 'Different Artist' },
+		}));
+
+		expect(mockCallOpenRouter).toHaveBeenCalledTimes(2);
+		const body2 = await res2.json();
+		expect(body2.cache_hit).toBe(false);
+	});
 });

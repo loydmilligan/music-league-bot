@@ -158,6 +158,31 @@ export const voteProbeTask: PredictionTask<VoteProbeInput, VoteProbeOutput> = {
 export interface RunVoteProbeResult {
   output: VoteProbeOutput;
   meta: PredictionMeta;
+  cacheHit: boolean;
+  generatedAt: string;
+}
+
+// ── Cache lookup ──────────────────────────────────────────────────────────────
+
+type CachedRun = { output_json: string; model: string; cost_usd: number; latency_ms: number; created_at: string };
+
+function lookupVoteProbeCache(
+  db: Database.Database,
+  playerId: number,
+  song: VoteProbeSong,
+  theme: VoteProbeTheme,
+): CachedRun | undefined {
+  return db.prepare(
+    `SELECT output_json, model, cost_usd, latency_ms, created_at
+     FROM prediction_runs
+     WHERE task_id = 'vote-probe'
+       AND player_id = ?
+       AND json_extract(input_json, '$.song.title') = ?
+       AND json_extract(input_json, '$.song.artist') = ?
+       AND json_extract(input_json, '$.theme.name') = ?
+     ORDER BY created_at DESC
+     LIMIT 1`,
+  ).get(playerId, song.title, song.artist, theme.name) as CachedRun | undefined;
 }
 
 // ── runVoteProbe ──────────────────────────────────────────────────────────────
@@ -165,8 +190,9 @@ export interface RunVoteProbeResult {
 /**
  * Build the player's context, run the vote-probe task, and log a prediction_runs row.
  *
- * `output.upvote_likelihood` is the SAS — this player's standalone affinity lean
- * toward the song, independent of any round or competition context.
+ * On repeat calls with the same (player, song, theme), returns the cached
+ * prediction_runs row without calling the model. Pass forceRegen:true to
+ * bypass the cache and write a fresh row.
  *
  * `roundId` should be set when `theme` corresponds to a real DB round so the
  * prediction_runs row is linkable for Sprint 3 backtest scoring.
@@ -178,8 +204,22 @@ export async function runVoteProbe(
     song: VoteProbeSong;
     theme: VoteProbeTheme;
     roundId?: number;
+    forceRegen?: boolean;
   },
 ): Promise<RunVoteProbeResult> {
+  if (!opts.forceRegen) {
+    const cached = lookupVoteProbeCache(db, playerId, opts.song, opts.theme);
+    if (cached) {
+      const output = VoteProbeOutputSchema.parse(JSON.parse(cached.output_json));
+      return {
+        output,
+        meta: { model: cached.model, costUsd: cached.cost_usd, latencyMs: cached.latency_ms },
+        cacheHit: true,
+        generatedAt: cached.created_at,
+      };
+    }
+  }
+
   const context = buildPlayerContext(db, playerId);
   const input: VoteProbeInput = { ...context, song: opts.song, theme: opts.theme };
 
@@ -188,5 +228,11 @@ export async function runVoteProbe(
     roundId: opts.roundId,
   });
 
-  return { output, meta };
+  const row = db.prepare(
+    `SELECT created_at FROM prediction_runs
+     WHERE task_id = 'vote-probe' AND player_id = ?
+     ORDER BY created_at DESC LIMIT 1`,
+  ).get(playerId) as { created_at: string } | undefined;
+
+  return { output, meta, cacheHit: false, generatedAt: row?.created_at ?? new Date().toISOString() };
 }

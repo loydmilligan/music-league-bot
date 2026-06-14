@@ -32,8 +32,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	if (typeof name !== 'string' || !name.trim()) throw error(400, 'theme.name must be a non-empty string');
 	if (typeof description !== 'string') throw error(400, 'theme.description must be a string');
 
-	const { output, meta } = await runSubmissionPredict(db, playerId, {
+	const { forceRegen } = body as Record<string, unknown>;
+
+	const { output, meta, cacheHit, generatedAt } = await runSubmissionPredict(db, playerId, {
 		theme: { name, description },
+		forceRegen: forceRegen === true,
 	});
 
 	// Spotify-validate candidates — merge resolved fields back alongside LLM `why`
@@ -62,5 +65,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		model: meta.model,
 		cost_usd: meta.costUsd,
 		latency_ms: meta.latencyMs,
+		generated_at: generatedAt,
+		cache_hit: cacheHit,
 	});
 };
