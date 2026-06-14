@@ -62,6 +62,13 @@
     season: string;
     round: string;
   };
+  export type OpenRound = {
+    id: number;
+    name: string;
+    description: string | null;
+    leagueName: string;
+    submissionDeadline: string | null;
+  };
   export type VoteProbeResult = {
     upvote_likelihood: number;
     expected_points: number;
@@ -145,13 +152,16 @@
 
   // Taste Fingerprint state
   let fingerprintOpen = $state(false);
+  // Open rounds (PR-11): sourced from /api/rounds/open; grouped by league for theme pickers
+  let openRounds = $state<OpenRound[]>([]);
+
   // Vote Probe state
   let probeOpen = $state(false);
-  let probeThemes = $state<{ name: string; round: string; season: string }[]>([]);
   let probeSongTitle = $state('');
   let probeSongArtist = $state('');
   let probeSongUrl = $state('');
   let probeThemeKey = $state('');
+  let probeLeagueFilter = $state<string | null>(null);
   let probeCustomThemeName = $state('');
   let probeCustomThemeDesc = $state('');
   let probeLoading = $state(false);
@@ -165,6 +175,7 @@
   // Submission Predictor state
   let predictOpen = $state(false);
   let predictThemeKey = $state('');
+  let predictLeagueFilter = $state<string | null>(null);
   let predictCustomThemeName = $state('');
   let predictCustomThemeDesc = $state('');
   let predictLoading = $state(false);
@@ -173,10 +184,10 @@
 
   onMount(async () => {
     try {
-      const [histRes, playersRes, themesRes] = await Promise.all([
+      const [histRes, playersRes, roundsRes] = await Promise.all([
         fetch('/api/history/players'),
         fetch('/api/players'),
-        fetch('/api/history/themes'),
+        fetch('/api/rounds/open'),
       ]);
       if (!histRes.ok) throw new Error(`Failed to load players (${histRes.status})`);
       players = await histRes.json();
@@ -184,12 +195,8 @@
         const allPlayers = (await playersRes.json()) as { id: number; name: string }[];
         playerIdMap = new Map(allPlayers.map((p) => [p.name, p.id]));
       }
-      if (themesRes.ok) {
-        const allThemes = (await themesRes.json()) as ThemeEntry[];
-        const seen = new Set<string>();
-        probeThemes = allThemes
-          .filter((t) => { if (seen.has(t.theme)) return false; seen.add(t.theme); return true; })
-          .map((t) => ({ name: t.theme, round: t.round, season: t.season }));
+      if (roundsRes.ok) {
+        openRounds = (await roundsRes.json()) as OpenRound[];
       }
     } catch (err) {
       loadError = err instanceof Error ? err.message : 'Failed to load players';
@@ -214,11 +221,13 @@
       probeSongArtist = '';
       probeSongUrl = '';
       probeThemeKey = '';
+      probeLeagueFilter = null;
       probeCustomThemeName = '';
       probeCustomThemeDesc = '';
       predictResult = null;
       predictError = null;
       predictThemeKey = '';
+      predictLeagueFilter = null;
       predictCustomThemeName = '';
       predictCustomThemeDesc = '';
       return;
@@ -240,11 +249,13 @@
     probeSongArtist = '';
     probeSongUrl = '';
     probeThemeKey = '';
+    probeLeagueFilter = null;
     probeCustomThemeName = '';
     probeCustomThemeDesc = '';
     predictResult = null;
     predictError = null;
     predictThemeKey = '';
+    predictLeagueFilter = null;
     predictCustomThemeName = '';
     predictCustomThemeDesc = '';
     detailLoading = true;
@@ -364,8 +375,11 @@
     if (!probeSongTitle.trim() || !probeSongArtist.trim()) return;
 
     const isCustom = probeThemeKey === '__custom__';
-    const themeName = isCustom ? probeCustomThemeName.trim() : probeThemeKey;
-    const themeDesc = isCustom ? (probeCustomThemeDesc.trim() || probeCustomThemeName.trim()) : probeThemeKey;
+    const probeRound = isCustom ? null : openRoundsById.get(probeThemeKey);
+    const themeName = probeRound ? probeRound.name : (isCustom ? probeCustomThemeName.trim() : '');
+    const themeDesc = probeRound
+      ? (probeRound.description ?? probeRound.name)
+      : (isCustom ? (probeCustomThemeDesc.trim() || probeCustomThemeName.trim()) : '');
     if (!themeName) return;
 
     probeLoading = true;
@@ -404,8 +418,11 @@
     if (!playerId) return;
 
     const isCustom = predictThemeKey === '__custom__';
-    const themeName = isCustom ? predictCustomThemeName.trim() : predictThemeKey;
-    const themeDesc = isCustom ? (predictCustomThemeDesc.trim() || predictCustomThemeName.trim()) : predictThemeKey;
+    const predictRound = isCustom ? null : openRoundsById.get(predictThemeKey);
+    const themeName = predictRound ? predictRound.name : (isCustom ? predictCustomThemeName.trim() : '');
+    const themeDesc = predictRound
+      ? (predictRound.description ?? predictRound.name)
+      : (isCustom ? (predictCustomThemeDesc.trim() || predictCustomThemeName.trim()) : '');
     if (!themeName) return;
 
     predictLoading = true;
@@ -429,6 +446,17 @@
       predictLoading = false;
     }
   }
+
+  // PR-11: league-scoped theme picking derived state
+  const openRoundsById = $derived(new Map(openRounds.map((r) => [String(r.id), r])));
+  const probeLeagues = $derived([...new Set(openRounds.map((r) => r.leagueName))]);
+  const filteredProbeRounds = $derived(
+    openRounds.filter((r) => !probeLeagueFilter || r.leagueName === probeLeagueFilter),
+  );
+  const predictLeagues = $derived([...new Set(openRounds.map((r) => r.leagueName))]);
+  const filteredPredictRounds = $derived(
+    openRounds.filter((r) => !predictLeagueFilter || r.leagueName === predictLeagueFilter),
+  );
 
   const pct = (winRate: number) => `${Math.round(winRate * 100)}%`;
 
@@ -771,17 +799,44 @@
                       class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                     />
                   </div>
-                  <!-- Theme dropdown -->
+                  <!-- Theme dropdown (PR-11: league-scoped) -->
                   <div class="flex flex-col gap-1">
                     <label for="probe-theme" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme <span class="text-warn">*</span></label>
+                    {#if probeLeagues.length > 1}
+                      <div class="flex flex-wrap gap-1 mb-1">
+                        <button
+                          type="button"
+                          onclick={() => { probeLeagueFilter = null; }}
+                          class="px-2 py-0.5 rounded-full font-mono text-[10px] border transition-colors focus:outline-none"
+                          class:border-accent={probeLeagueFilter === null}
+                          class:text-accent={probeLeagueFilter === null}
+                          class:bg-accent={probeLeagueFilter === null}
+                          class:text-white={probeLeagueFilter === null}
+                          class:border-border-muted={probeLeagueFilter !== null}
+                          class:text-fg-faint={probeLeagueFilter !== null}
+                        >All</button>
+                        {#each probeLeagues as league (league)}
+                          <button
+                            type="button"
+                            onclick={() => { probeLeagueFilter = probeLeagueFilter === league ? null : league; }}
+                            class="px-2 py-0.5 rounded-full font-mono text-[10px] border transition-colors focus:outline-none"
+                            class:border-accent={probeLeagueFilter === league}
+                            class:text-white={probeLeagueFilter === league}
+                            class:bg-accent={probeLeagueFilter === league}
+                            class:border-border-muted={probeLeagueFilter !== league}
+                            class:text-fg-faint={probeLeagueFilter !== league}
+                          >{league}</button>
+                        {/each}
+                      </div>
+                    {/if}
                     <select
                       id="probe-theme"
                       bind:value={probeThemeKey}
                       class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                     >
                       <option value="">— select a theme —</option>
-                      {#each probeThemes as t (t.name)}
-                        <option value={t.name}>{t.name}</option>
+                      {#each filteredProbeRounds as r (r.id)}
+                        <option value={String(r.id)}>{r.description ?? r.name}</option>
                       {/each}
                       <option value="__custom__">Custom / freeform…</option>
                     </select>
@@ -900,18 +955,45 @@
 
             {#if predictOpen}
               <div class="mt-3 flex flex-col gap-3">
-                <!-- Theme picker -->
+                <!-- Theme picker (PR-11: league-scoped) -->
                 <div class="flex flex-col gap-2">
                   <div class="flex flex-col gap-1">
                     <label for="predict-theme" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme <span class="text-warn">*</span></label>
+                    {#if predictLeagues.length > 1}
+                      <div class="flex flex-wrap gap-1 mb-1">
+                        <button
+                          type="button"
+                          onclick={() => { predictLeagueFilter = null; }}
+                          class="px-2 py-0.5 rounded-full font-mono text-[10px] border transition-colors focus:outline-none"
+                          class:border-accent={predictLeagueFilter === null}
+                          class:text-accent={predictLeagueFilter === null}
+                          class:bg-accent={predictLeagueFilter === null}
+                          class:text-white={predictLeagueFilter === null}
+                          class:border-border-muted={predictLeagueFilter !== null}
+                          class:text-fg-faint={predictLeagueFilter !== null}
+                        >All</button>
+                        {#each predictLeagues as league (league)}
+                          <button
+                            type="button"
+                            onclick={() => { predictLeagueFilter = predictLeagueFilter === league ? null : league; }}
+                            class="px-2 py-0.5 rounded-full font-mono text-[10px] border transition-colors focus:outline-none"
+                            class:border-accent={predictLeagueFilter === league}
+                            class:text-white={predictLeagueFilter === league}
+                            class:bg-accent={predictLeagueFilter === league}
+                            class:border-border-muted={predictLeagueFilter !== league}
+                            class:text-fg-faint={predictLeagueFilter !== league}
+                          >{league}</button>
+                        {/each}
+                      </div>
+                    {/if}
                     <select
                       id="predict-theme"
                       bind:value={predictThemeKey}
                       class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                     >
                       <option value="">— select a theme —</option>
-                      {#each probeThemes as t (t.name)}
-                        <option value={t.name}>{t.name}</option>
+                      {#each filteredPredictRounds as r (r.id)}
+                        <option value={String(r.id)}>{r.description ?? r.name}</option>
                       {/each}
                       <option value="__custom__">Custom / freeform…</option>
                     </select>
