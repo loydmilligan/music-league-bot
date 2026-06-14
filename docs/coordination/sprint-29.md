@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-29
 title: Submission Predictor — Producer Sprint 2
-status: active
+status: closed
 created: 2026-06-13T21:45:00Z
 activated: 2026-06-13
-updated: 2026-06-13T22:00:00Z
+closed: 2026-06-13
+updated: 2026-06-13T22:40:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-29)
@@ -68,7 +69,7 @@ updated: 2026-06-13T22:00:00Z
 - [x] {agent: frontend, id: ui-submission, depends: api-submission} **Submission Predictor panel** (spec §6). Add a collapsible **Submission Predictor** subsection to the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte`, mirroring the Vote Probe panel: a theme picker (real-themes dropdown via `/api/history/themes` + freeform) → **Predict** → renders (a) the property profile as chips/labels, (b) the ranked candidate list each with its `why`, and (c) the highlighted final pick with `detail`, the "similar to your past picks" links, and confidence. Match the Mash Co. tokens + the sibling panel styles.
   - **Acceptance:** selecting a player + theme + clicking Predict renders all three parts (profile chips; candidate list with rationales; final pick with similar-past-picks links + confidence); the theme dropdown lists real themes and freeform works; verified hands-on on dev (5173) at desktop AND 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-close, depends: ui-submission} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card summarizing the submission predictor, one cached prod deploy, a 412×892 prod smoke (run a submission prediction for a real player + theme → the three-part result returns with Spotify-resolved picks), panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: ui-submission} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card summarizing the submission predictor, one cached prod deploy, a 412×892 prod smoke (run a submission prediction for a real player + theme → the three-part result returns with Spotify-resolved picks), panes reset, doc closed.
   - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; prod smoke passes (submission prediction returns the three-part result) with 0 console errors; doc `status: closed`.
 
 ## Decision Log
@@ -82,13 +83,30 @@ follow-on (pipe the prediction into the Vote Probe/H2H) is a separate backlog it
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-13 — Sprint-29 RATIFIED (owner, verbal after hands-on prod testing)
+Orc deployed v1.0.7 to prod (`mlbot2.mattmariani.com` / 192.168.4.217:3002) ahead of the
+formal card so the owner could test first. Owner tested the Submission Predictor live and
+approved ("the predictor is legit … let's close it up"). The two nits raised — no result
+caching, and the long scroll to reach the panel — are already captured in backlog (PR-4,
+PR-1/PR-2); a third nit (theme picker should be league-scoped) captured as PR-11. Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — orc — GATE-CLOSE DONE · sprint-29 closed, v1.0.7 shipped
+- Cross-check: all 4 worker tasks `[x]`, committed, tree clean; orc ran `npm run check`
+  (0 errors) + `npx vitest run` (336/336, was 291).
+- Version: `ui/package.json` 1.0.6 → 1.0.7; CHANGELOG `[1.0.7]`; committed `70669ef`.
+- Prod deploy (cached `docker compose build bot-ui && up -d`) ahead of formal ratification so
+  the owner could test; clean boot, prod serves `mash co. · v1.0.7`.
+- Smoke = owner's own hands-on test on prod ("the predictor is legit"). Ratified verbally
+  (see Ratification Log). Follow-up nits → backlog PR-1/PR-2/PR-4/PR-11.
+- Notable orchestration: both backend tasks ran parallel (submission-task on backend, spotify-validate
+  on the temp-flipped frontend lane); a concurrent coord-doc Edit conflict (orc activation commit vs.
+  agent's checkbox tick) self-recovered. Panes reset; doc `status: closed`.
 
 ### 2026-06-13 — frontend — ui-submission DONE · 71efcd2
 - Added Submission Predictor collapsible panel to `ui/src/lib/components/PlayerResearchTab.svelte`

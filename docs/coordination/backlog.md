@@ -305,5 +305,8 @@ Add a set of **dials** (like the current settings-screen weighting) — percenta
 3. **Theme fit** (least important — owner treats it mostly as binary "does it fit → can score it," occasionally a bit more weight for a perfect-example song).
 These feed the SAS / submission / H2H tools. **Naming help wanted on factor 1** ("Goodness" → Appeal? Crowd Appeal? Likeability?).
 
+## PR-11 — Theme picker: filter to the relevant league (S) — reuse AssignPopover pattern
+The Submission Predictor (and Vote Probe) theme dropdown currently lists ALL themes globally (`/api/history/themes`, deduped across every league) — annoying and unscoped. Filter it to the rounds/themes of the **relevant league**. **Reuse the existing pattern from `AssignPopover.svelte`** (the song-card "assign to round" dropdown): it sources rounds and groups/filters by `leagueName` with a league selector (`AssignPopover.svelte:41-43`, `/api/rounds/open`). Apply the same league-scoped approach to the theme picker so the user only sees themes from the league they care about. (Owner: "I think we already solved this in the song-card assign-to-round feature — its much easier.")
+
 ## PR-10 — Judge each player's own voting-weight profile (L, research-y)
 Per-player, *estimate the weighting* each player actually uses when voting (their personal version of the PR-9 dials) — because it strongly drives how they vote. May need **more than the owner's 3 factors** (some players weight by weird/idiosyncratic factors). Capture for now; don't over-engineer. This is high-leverage for the whole prediction engine (knowing a player's weighting makes SAS far more accurate) — likely its own spec, and a natural input to the future whole-round predictor.
