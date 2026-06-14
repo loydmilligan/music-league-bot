@@ -2,9 +2,10 @@
 project: music-league-bot
 sprint: sprint-30
 title: Player Research Polish — collapsible UX, league themes, LLM caching
-status: planned
+status: active
 created: 2026-06-14T00:00:00Z
-updated: 2026-06-14T00:00:00Z
+activated: 2026-06-14
+updated: 2026-06-14T00:10:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-30)
@@ -54,10 +55,10 @@ updated: 2026-06-14T00:00:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: predict-cache} **PR-4 — cache LLM predictions with provenance.** Add a cache path for the costly per-player LLM tasks so repeat views don't re-pay. For `vote-probe` and `submission-predict`: before calling the model, look up the latest matching `prediction_runs` row by cache key (vote-probe: `player_id` + song + theme; submission-predict: `player_id` + theme) and return it instead of calling, UNLESS a `forceRegen` flag is passed. The endpoints' responses must include provenance — `model`, `cost_usd`, `generated_at`, and call params — and a flag indicating cache-hit vs fresh. The Taste Fingerprint already works this way (persist + provenance + explicit regenerate) — match that pattern. Touch only `$lib/predict/*` + the two `/api/players/:id/{vote-probe,submission-predict}` route files.
+- [-] {agent: backend, id: predict-cache} **PR-4 — cache LLM predictions with provenance.** Add a cache path for the costly per-player LLM tasks so repeat views don't re-pay. For `vote-probe` and `submission-predict`: before calling the model, look up the latest matching `prediction_runs` row by cache key (vote-probe: `player_id` + song + theme; submission-predict: `player_id` + theme) and return it instead of calling, UNLESS a `forceRegen` flag is passed. The endpoints' responses must include provenance — `model`, `cost_usd`, `generated_at`, and call params — and a flag indicating cache-hit vs fresh. The Taste Fingerprint already works this way (persist + provenance + explicit regenerate) — match that pattern. Touch only `$lib/predict/*` + the two `/api/players/:id/{vote-probe,submission-predict}` route files.
   - **Acceptance:** a second identical `POST .../vote-probe` (or `.../submission-predict`) returns the cached result WITHOUT a new model call (assert via a spy/stub call-count in a vitest); passing `forceRegen:true` does call the model and writes a new `prediction_runs` row; the response carries `model`/`cost_usd`/`generated_at` provenance; `npm run check` 0 errors; `npx vitest run` green.
 
-- [ ] {agent: frontend, id: layout-polish} **PR-1 + PR-2 — collapsible sections (default collapsed) + song list last.** In `ui/src/lib/components/PlayerResearchTab.svelte`, make each section of the per-player panel collapsible and **default to collapsed**; move the **Songs Submitted** section to the **bottom** of the panel (it's the longest). Keep all existing functionality; just restructure layout + add collapse state per section. Match the Mash Co. tokens already in the file.
+- [-] {agent: frontend, id: layout-polish} **PR-1 + PR-2 — collapsible sections (default collapsed) + song list last.** In `ui/src/lib/components/PlayerResearchTab.svelte`, make each section of the per-player panel collapsible and **default to collapsed**; move the **Songs Submitted** section to the **bottom** of the panel (it's the longest). Keep all existing functionality; just restructure layout + add collapse state per section. Match the Mash Co. tokens already in the file.
   - **Acceptance:** selecting a player shows all sections collapsed by default; each expands/collapses on click; Songs Submitted renders last; verified hands-on on dev (5173) at desktop AND 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: theme-picker, depends: layout-polish} **PR-3 + PR-11 — theme picker: pass description + scope to league.** Two fixes to the theme picker shared by the Vote Probe and Submission Predictor panels in `PlayerResearchTab.svelte`: (PR-3) when a real theme is selected, pass its real `description` (not an empty string) to the predict/probe API — the backend templates already emit Name+Description, so confirm a real description reaches the model; freeform must let the user enter both name + description. (PR-11) **scope the theme list to the relevant league** instead of the global `/api/history/themes` dump — reuse the `AssignPopover.svelte` pattern (rounds grouped by `leagueName`, sourced from `/api/rounds/open` or the league-scoped equivalent); add a league selector if needed so the user only sees that league's themes.
@@ -87,6 +88,12 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — orc — Sprint-30 ACTIVATED · predict-cache + layout-polish dispatched (Wave 1)
+- status planned → active; dispatched the two dependency-free tasks in parallel —
+  predict-cache to backend (%55), layout-polish to frontend (%56). File-disjoint
+  (backend = $lib/predict + routes; frontend = PlayerResearchTab.svelte). Both `[-]`.
+- theme-picker opens when layout-polish lands; cache-affordances needs both theme-picker + predict-cache; then gate.
 
 ### 2026-06-14 — docs — Sprint plan authored: Player Research polish (PR-1..4, PR-11)
 - created sprint-30 coord-doc; `## Active Sprint Plan` body has 5 tasks
