@@ -196,3 +196,7 @@ Auto-detect themes that **require** a comment to earn votes ("REQUIRED: explain 
 ## Orange-box / collision predictor (orc-proposed 2026-06-13) — M
 
 Before committing a pick, predict likely **"orange-box" collisions** — an artist someone else is likely to submit for this theme — based on which artists tend to get submitted for similar themes historically. Helps avoid the familiar "someone already took my artist" surprise. Likely wants the historical submission patterns + possibly the song metadata.
+
+## Predict how a predicted pick will fare (orc+owner 2026-06-13) — S (once submission-predictor lands)
+
+**Source:** owner, during the Sprint-2 submission-predictor spec. Take the **final predicted pick** from the submission predictor and run it through the **Vote Probe / H2H group SAS** to project how that song would *fare* in the group — closing the loop from "what will they submit" → "and how will it do." The Sprint-2 output schema is deliberately built so `prediction.{title, artist, spotify_url}` pipes straight into the SAS tasks; this item just wires that hand-off (a button on the predicted-pick card, or auto-run). Effectively a per-player mini round-prediction. Could live as part of the submission-predictor panel or alongside the H2H tool.
