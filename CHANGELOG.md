@@ -4,6 +4,36 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.8] — 2026-06-14
+
+Polish pass on the Player Research tab — making the tools the last two sprints
+added pleasant and cheap to use.
+
+### Visible (UI)
+
+- **Collapsible sections, collapsed by default** — the per-player panel no longer
+  unfurls into a wall; each section (Taste Overlap, Dossier, Taste Fingerprint,
+  Vote Probe, Submission Predictor, Songs Submitted) opens on click.
+- **Songs Submitted moved to the bottom** — the longest section no longer buries
+  the prediction tools.
+- **League-scoped theme picker** — the Vote Probe and Submission Predictor theme
+  dropdowns now show only the relevant league's themes (was: every theme from
+  every league), and pass the theme's real description to the model so predictions
+  account for the full theme wording.
+- **Cached predictions with provenance** — re-opening a player+theme you've already
+  run shows the cached result instantly (no new LLM call / no new cost), stamped
+  with when it was generated, the model, and the cost. A **Regenerate** button
+  forces a fresh run when you want one.
+
+### Under the hood
+
+- `vote-probe` and `submission-predict` now check `prediction_runs` for a matching
+  prior result before calling the model, keyed on player + song/theme; `forceRegen`
+  bypasses the cache. Mirrors the Taste Fingerprint persist+provenance+regenerate
+  pattern.
+- Theme picker reuses the existing `AssignPopover` league-scoping pattern.
+- Tests: 344 green (was 336).
+
 ## [1.0.7] — 2026-06-13
 
 Producer Sprint 2 — the **Submission Predictor**, the mirror of Sprint 1's Vote
