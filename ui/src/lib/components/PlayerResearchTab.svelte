@@ -72,6 +72,46 @@
     cost_usd: number;
     latency_ms: number;
   };
+  export type SubmissionProfile = {
+    genres: string[];
+    artists_or_types: string[];
+    era: string;
+    mood_energy: string;
+    obscurity_lean: string;
+    comment_likely: boolean;
+    rationale: string;
+  };
+  export type SubmissionCandidate = {
+    title: string;
+    artist: string;
+    why: string;
+    spotify_url?: string;
+    album_art_url?: string;
+    resolved?: boolean;
+  };
+  export type SimilarPastPick = {
+    title: string;
+    artist: string;
+    round: string;
+    similarity: string;
+  };
+  export type SubmissionPrediction = {
+    title: string;
+    artist: string;
+    spotify_url?: string;
+    album_art_url?: string;
+    detail: string;
+    similar_past_picks: SimilarPastPick[];
+    confidence: 'low' | 'medium' | 'high';
+  };
+  export type SubmissionPredictResult = {
+    profile: SubmissionProfile;
+    candidates: SubmissionCandidate[];
+    prediction: SubmissionPrediction;
+    model: string;
+    cost_usd: number;
+    latency_ms: number;
+  };
 </script>
 
 <script lang="ts">
@@ -118,6 +158,15 @@
   let fingerprintData = $state<FingerprintOutput | null>(null);
   let fingerprintProvenance = $state<{ model: string; cost_usd: number; generated_at: string } | null>(null);
 
+  // Submission Predictor state
+  let predictOpen = $state(true);
+  let predictThemeKey = $state('');
+  let predictCustomThemeName = $state('');
+  let predictCustomThemeDesc = $state('');
+  let predictLoading = $state(false);
+  let predictError = $state<string | null>(null);
+  let predictResult = $state<SubmissionPredictResult | null>(null);
+
   onMount(async () => {
     try {
       const [histRes, playersRes, themesRes] = await Promise.all([
@@ -163,6 +212,11 @@
       probeThemeKey = '';
       probeCustomThemeName = '';
       probeCustomThemeDesc = '';
+      predictResult = null;
+      predictError = null;
+      predictThemeKey = '';
+      predictCustomThemeName = '';
+      predictCustomThemeDesc = '';
       return;
     }
     selected = name;
@@ -184,6 +238,11 @@
     probeThemeKey = '';
     probeCustomThemeName = '';
     probeCustomThemeDesc = '';
+    predictResult = null;
+    predictError = null;
+    predictThemeKey = '';
+    predictCustomThemeName = '';
+    predictCustomThemeDesc = '';
     detailLoading = true;
 
     const playerId = playerIdMap.get(name);
@@ -332,6 +391,38 @@
       probeError = err instanceof Error ? err.message : 'Probe failed';
     } finally {
       probeLoading = false;
+    }
+  }
+
+  async function runPredict() {
+    if (!selected) return;
+    const playerId = playerIdMap.get(selected);
+    if (!playerId) return;
+
+    const isCustom = predictThemeKey === '__custom__';
+    const themeName = isCustom ? predictCustomThemeName.trim() : predictThemeKey;
+    const themeDesc = isCustom ? (predictCustomThemeDesc.trim() || predictCustomThemeName.trim()) : predictThemeKey;
+    if (!themeName) return;
+
+    predictLoading = true;
+    predictError = null;
+    predictResult = null;
+
+    try {
+      const res = await fetch(`/api/players/${playerId}/submission-predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: { name: themeName, description: themeDesc } }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Predict failed (${res.status})`);
+      }
+      predictResult = (await res.json()) as SubmissionPredictResult;
+    } catch (err) {
+      predictError = err instanceof Error ? err.message : 'Predict failed';
+    } finally {
+      predictLoading = false;
     }
   }
 
@@ -793,6 +884,241 @@
                     <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
                       <span class="font-mono text-[10px] text-fg-faint truncate">
                         {probeResult.model} · ${probeResult.cost_usd.toFixed(4)} · {probeResult.latency_ms}ms
+                      </span>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+
+          <!-- Submission Predictor (sprint-29) -->
+          <div class="mt-4 pt-3 border-t border-border-muted">
+            <button
+              type="button"
+              onclick={() => { predictOpen = !predictOpen; }}
+              class="flex items-center gap-2 w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              aria-expanded={predictOpen}
+            >
+              <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint flex-1">Submission Predictor</h4>
+              <span class="font-mono text-[10px] text-fg-faint transition-transform" class:rotate-180={predictOpen}>▾</span>
+            </button>
+
+            {#if predictOpen}
+              <div class="mt-3 flex flex-col gap-3">
+                <!-- Theme picker -->
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label for="predict-theme" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme <span class="text-warn">*</span></label>
+                    <select
+                      id="predict-theme"
+                      bind:value={predictThemeKey}
+                      class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    >
+                      <option value="">— select a theme —</option>
+                      {#each probeThemes as t (t.name)}
+                        <option value={t.name}>{t.name}</option>
+                      {/each}
+                      <option value="__custom__">Custom / freeform…</option>
+                    </select>
+                  </div>
+                  <!-- Custom theme freeform -->
+                  {#if predictThemeKey === '__custom__'}
+                    <div class="flex flex-col gap-2 pl-3 border-l-2 border-border-muted">
+                      <div class="flex flex-col gap-1">
+                        <label for="predict-custom-name" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Theme Name <span class="text-warn">*</span></label>
+                        <input
+                          id="predict-custom-name"
+                          type="text"
+                          bind:value={predictCustomThemeName}
+                          placeholder="e.g. Songs that feel like a road trip"
+                          class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label for="predict-custom-desc" class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Description <span class="normal-case text-fg-faint">(optional)</span></label>
+                        <input
+                          id="predict-custom-desc"
+                          type="text"
+                          bind:value={predictCustomThemeDesc}
+                          placeholder="More context about the theme…"
+                          class="w-full bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg placeholder:text-fg-faint font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                        />
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- Predict button -->
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onclick={runPredict}
+                    disabled={predictLoading || !predictThemeKey || (predictThemeKey === '__custom__' && !predictCustomThemeName.trim())}
+                    class="px-3 py-1.5 rounded-lg border border-accent text-accent font-mono text-xs transition-colors hover:bg-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                  >
+                    {predictLoading ? 'Predicting…' : 'Predict'}
+                  </button>
+                  {#if predictError}
+                    <span class="font-mono text-xs text-warn">{predictError}</span>
+                  {/if}
+                </div>
+
+                <!-- Three-part result -->
+                {#if predictResult}
+                  <div class="flex flex-col gap-4 pt-2 border-t border-border-muted">
+
+                    <!-- (a) Property profile -->
+                    <div class="flex flex-col gap-2">
+                      <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Predicted Profile</span>
+
+                      {#if predictResult.profile.genres.length}
+                        <div class="flex flex-col gap-1">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Genres</span>
+                          <div class="flex flex-wrap gap-1">
+                            {#each predictResult.profile.genres as g (g)}
+                              <span class="px-2 py-0.5 rounded-full bg-accent/10 text-accent font-mono text-[10px]">{g}</span>
+                            {/each}
+                          </div>
+                        </div>
+                      {/if}
+
+                      {#if predictResult.profile.artists_or_types.length}
+                        <div class="flex flex-col gap-1">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Artists / Types</span>
+                          <div class="flex flex-wrap gap-1">
+                            {#each predictResult.profile.artists_or_types as a (a)}
+                              <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{a}</span>
+                            {/each}
+                          </div>
+                        </div>
+                      {/if}
+
+                      <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Era</span>
+                          <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{predictResult.profile.era}</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Mood / Energy</span>
+                          <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{predictResult.profile.mood_energy}</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Obscurity</span>
+                          <span class="px-2 py-0.5 rounded-full bg-bg border border-border-muted text-fg-muted font-mono text-[10px]">{predictResult.profile.obscurity_lean}</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Comment?</span>
+                          <span class="px-2 py-0.5 rounded-full font-mono text-[10px]"
+                            class:bg-accent={predictResult.profile.comment_likely}
+                            class:text-white={predictResult.profile.comment_likely}
+                            class:bg-bg={!predictResult.profile.comment_likely}
+                            class:border={!predictResult.profile.comment_likely}
+                            class:border-border-muted={!predictResult.profile.comment_likely}
+                            class:text-fg-muted={!predictResult.profile.comment_likely}
+                          >{predictResult.profile.comment_likely ? 'Yes' : 'No'}</span>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-1">
+                        <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Rationale</span>
+                        <p class="text-sm text-fg leading-relaxed">{predictResult.profile.rationale}</p>
+                      </div>
+                    </div>
+
+                    <!-- (b) Ranked candidates -->
+                    <div class="flex flex-col gap-2">
+                      <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Candidates</span>
+                      <ol class="flex flex-col gap-2">
+                        {#each predictResult.candidates as c, i (c.title + '::' + c.artist)}
+                          <li class="flex flex-col gap-0.5 pl-3 border-l-2 border-border-muted">
+                            <div class="flex items-start gap-2">
+                              <span class="font-mono text-[10px] text-fg-faint tabular-nums shrink-0 mt-0.5">{i + 1}.</span>
+                              <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                  <span class="font-bold text-fg text-sm">{c.title}</span>
+                                  {#if c.spotify_url}
+                                    <a
+                                      href={c.spotify_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="font-mono text-[10px] text-accent hover:underline shrink-0"
+                                    >↗ Spotify</a>
+                                  {/if}
+                                </div>
+                                <span class="font-mono text-[11px] text-fg-dim">{c.artist}</span>
+                                <p class="font-mono text-[11px] text-fg-muted mt-0.5">{c.why}</p>
+                              </div>
+                            </div>
+                          </li>
+                        {/each}
+                      </ol>
+                    </div>
+
+                    <!-- (c) Final prediction (highlighted) -->
+                    <div class="flex flex-col gap-2 rounded-xl border border-accent/40 bg-accent/5 p-3">
+                      <div class="flex items-center gap-2">
+                        <span class="font-mono text-[10px] tracking-widest uppercase text-accent flex-1">Predicted Pick</span>
+                        <span class="font-mono text-[10px] rounded-full px-1.5 py-0.5 bg-bg border border-border-muted text-fg-faint capitalize">{predictResult.prediction.confidence}</span>
+                      </div>
+
+                      <div class="flex items-start gap-3">
+                        {#if predictResult.prediction.album_art_url}
+                          <img
+                            src={predictResult.prediction.album_art_url}
+                            alt="album art"
+                            class="w-12 h-12 rounded object-cover shrink-0"
+                          />
+                        {/if}
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-fg text-base">{predictResult.prediction.title}</span>
+                            {#if predictResult.prediction.spotify_url}
+                              <a
+                                href={predictResult.prediction.spotify_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="font-mono text-[10px] text-accent hover:underline shrink-0"
+                              >↗ Spotify</a>
+                            {/if}
+                          </div>
+                          <span class="font-mono text-[11px] text-fg-dim">{predictResult.prediction.artist}</span>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-1">
+                        <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Why this pick</span>
+                        <p class="text-sm text-fg leading-relaxed">{predictResult.prediction.detail}</p>
+                      </div>
+
+                      {#if predictResult.prediction.similar_past_picks.length}
+                        <div class="flex flex-col gap-1">
+                          <span class="font-mono text-[10px] tracking-wide uppercase text-fg-faint">Similar past picks</span>
+                          <ul class="flex flex-col gap-1">
+                            {#each predictResult.prediction.similar_past_picks as pick (pick.title + '::' + pick.round)}
+                              <li class="font-mono text-[11px] text-fg-muted flex items-start gap-1.5">
+                                <span class="text-accent shrink-0 mt-0.5">·</span>
+                                <span>
+                                  <span class="text-fg font-medium">{pick.title}</span>
+                                  {' '}by {pick.artist}
+                                  {#if pick.round}
+                                    <span class="text-fg-faint"> · {pick.round}</span>
+                                  {/if}
+                                  {#if pick.similarity}
+                                    <span class="text-fg-faint"> — {pick.similarity}</span>
+                                  {/if}
+                                </span>
+                              </li>
+                            {/each}
+                          </ul>
+                        </div>
+                      {/if}
+                    </div>
+
+                    <!-- Provenance -->
+                    <div class="flex items-center gap-2 pt-1 border-t border-border-muted">
+                      <span class="font-mono text-[10px] text-fg-faint truncate">
+                        {predictResult.model} · ${predictResult.cost_usd.toFixed(4)} · {predictResult.latency_ms}ms
                       </span>
                     </div>
                   </div>
