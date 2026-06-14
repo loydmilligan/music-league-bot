@@ -59,7 +59,7 @@ updated: 2026-06-13T22:00:00Z
 - [x] {agent: backend, id: submission-task} **`submission-predict` task + run function** (spec §3, §5). New `ui/src/lib/predict/tasks/submissionPredict.ts`: define the `submission-predict` PredictionTask on the existing harness contract — input = `PlayerContext` (from `playerContext.ts`) + `{ theme:{name,description} }`; output zod = the three-part shape: `profile{genres[], artists_or_types[], era, mood_energy, obscurity_lean, comment_likely, rationale}`, `candidates[]{title, artist, why}` (4–6, ranked best-first), `prediction{title, artist, spotify_url?, detail, similar_past_picks[]{title, artist, round, similarity}, confidence:'low'|'medium'|'high'}`. Export `runSubmissionPredict(db, playerId, {theme})` that builds context, runs via `runPrediction`, and logs a `prediction_runs` row (`task_id='submission-predict'`, `round_id` when the theme is a real round). Default model = the capable model (Sonnet) via task config. Returns RAW candidates — Spotify validation is applied downstream by `api-submission`.
   - **Acceptance:** with `callOpenRouter` stubbed to fixture JSON, `runSubmissionPredict` returns the schema-valid three-part output and writes a `prediction_runs` row; output zod enforces the candidate count (4–6) and required fields on all three parts; `npm run check` 0 errors; `npx vitest run` green.
 
-- [-] {agent: backend, id: spotify-validate} **Spotify candidate validator** (spec §4, option A). New helper `ui/src/lib/predict/spotifyValidate.ts`: `validateTracks(candidates: {title, artist}[]) → {title, artist, spotify_url?, resolved: boolean}[]` (carry through the canonical title/artist/uri/art on a match). Resolve each via the app's EXISTING Spotify search — find and reuse whatever powers the `/api/history` song search / the `spotify-oauth` token flow; do NOT add a new auth path. Order-preserving; `resolved:false` (never throw) when no match. This validates `candidates` + `prediction` before the API responds.
+- [x] {agent: backend, id: spotify-validate} **Spotify candidate validator** (spec §4, option A). New helper `ui/src/lib/predict/spotifyValidate.ts`: `validateTracks(candidates: {title, artist}[]) → {title, artist, spotify_url?, resolved: boolean}[]` (carry through the canonical title/artist/uri/art on a match). Resolve each via the app's EXISTING Spotify search — find and reuse whatever powers the `/api/history` song search / the `spotify-oauth` token flow; do NOT add a new auth path. Order-preserving; `resolved:false` (never throw) when no match. This validates `candidates` + `prediction` before the API responds.
   - **Acceptance:** with the Spotify search stubbed, a known title/artist resolves to a track and a nonsense one returns `resolved:false`; output order matches input; no-match never throws; `npm run check` 0 errors; vitest covers both the resolved and unresolved paths.
 
 - [ ] {agent: backend, id: api-submission, depends: submission-task,spotify-validate} **Submission-predict endpoint** (spec §6). `POST /api/players/:playerId/submission-predict`, body `{ theme }` → runs `runSubmissionPredict`, then applies `validateTracks` to the `candidates` and the `prediction` (Spotify-validate, option A), and returns the enriched three-part result. Follow the existing `/api/players/:playerId/*` route pattern.
@@ -97,6 +97,14 @@ _None._
 - Default model: `anthropic/claude-sonnet-4-5` (env-overridable via OPENROUTER_PREDICT_MODEL)
 - 21 vitest tests green; `npm run check` 0 errors
 - Strictly within `ui/src/lib/predict/tasks/submissionPredict.ts` + test — no collision with spotify-validate lane
+
+### 2026-06-13 — backend — spotify-validate DONE · 4cf207f
+- Created `ui/src/lib/predict/spotifyValidate.ts`: `validateTracks(candidates) → ValidatedTrack[]`
+- Reuses `getSpotifyToken()` from `lib/spotify.ts` (client-credentials, no new auth path)
+- Injectable `fetcher` for testability; order-preserved via `Promise.all`; never throws (all errors → resolved:false)
+- Returns canonical title/artist/spotify_url/album_art_url on match; echoes input title/artist with resolved:false on no-match
+- 9 vitest tests green (resolved path, unresolved path, order preservation, null-token, fetch-throw, non-ok response); `npm run check` 0 errors
+- Strictly within `ui/src/lib/predict/spotifyValidate.ts` + test — no collision with submission-task lane
 
 ### 2026-06-13 — orc — Sprint-29 ACTIVATED · submission-task + spotify-validate dispatched (Wave 1)
 - status planned → active; dispatched both independent backend tasks in parallel —
