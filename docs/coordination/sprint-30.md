@@ -55,7 +55,7 @@ updated: 2026-06-14T00:10:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [-] {agent: backend, id: predict-cache} **PR-4 — cache LLM predictions with provenance.** Add a cache path for the costly per-player LLM tasks so repeat views don't re-pay. For `vote-probe` and `submission-predict`: before calling the model, look up the latest matching `prediction_runs` row by cache key (vote-probe: `player_id` + song + theme; submission-predict: `player_id` + theme) and return it instead of calling, UNLESS a `forceRegen` flag is passed. The endpoints' responses must include provenance — `model`, `cost_usd`, `generated_at`, and call params — and a flag indicating cache-hit vs fresh. The Taste Fingerprint already works this way (persist + provenance + explicit regenerate) — match that pattern. Touch only `$lib/predict/*` + the two `/api/players/:id/{vote-probe,submission-predict}` route files.
+- [x] {agent: backend, id: predict-cache} **PR-4 — cache LLM predictions with provenance.** Add a cache path for the costly per-player LLM tasks so repeat views don't re-pay. For `vote-probe` and `submission-predict`: before calling the model, look up the latest matching `prediction_runs` row by cache key (vote-probe: `player_id` + song + theme; submission-predict: `player_id` + theme) and return it instead of calling, UNLESS a `forceRegen` flag is passed. The endpoints' responses must include provenance — `model`, `cost_usd`, `generated_at`, and call params — and a flag indicating cache-hit vs fresh. The Taste Fingerprint already works this way (persist + provenance + explicit regenerate) — match that pattern. Touch only `$lib/predict/*` + the two `/api/players/:id/{vote-probe,submission-predict}` route files.
   - **Acceptance:** a second identical `POST .../vote-probe` (or `.../submission-predict`) returns the cached result WITHOUT a new model call (assert via a spy/stub call-count in a vitest); passing `forceRegen:true` does call the model and writes a new `prediction_runs` row; the response carries `model`/`cost_usd`/`generated_at` provenance; `npm run check` 0 errors; `npx vitest run` green.
 
 - [-] {agent: frontend, id: layout-polish} **PR-1 + PR-2 — collapsible sections (default collapsed) + song list last.** In `ui/src/lib/components/PlayerResearchTab.svelte`, make each section of the per-player panel collapsible and **default to collapsed**; move the **Songs Submitted** section to the **bottom** of the panel (it's the longest). Keep all existing functionality; just restructure layout + add collapse state per section. Match the Mash Co. tokens already in the file.
@@ -88,6 +88,14 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — predict-cache DONE (726bd2f)
+- Cache lookup added to `runVoteProbe` (key: player_id+song.title+song.artist+theme.name) and `runSubmissionPredict` (key: player_id+theme.name) via SQLite `json_extract` on `prediction_runs.input_json`.
+- `forceRegen:true` in the request body bypasses the cache; omitted or false returns cached row.
+- Both route responses now include `generated_at`, `cache_hit`, plus the existing `model`, `cost_usd`, `latency_ms` provenance.
+- New vitest cache tests: spy asserts LLM called once on two identical POSTs; forceRegen asserts two calls; different song/theme asserts cache miss.
+- `npm run check`: 0 errors. `npx vitest run`: 344/344 green.
+- Touched: `$lib/predict/tasks/voteProbe.ts`, `$lib/predict/tasks/submissionPredict.ts`, two route `+server.ts` files, two `server.test.ts` files.
 
 ### 2026-06-14 — orc — Sprint-30 ACTIVATED · predict-cache + layout-polish dispatched (Wave 1)
 - status planned → active; dispatched the two dependency-free tasks in parallel —
