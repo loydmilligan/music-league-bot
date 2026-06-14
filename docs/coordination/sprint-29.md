@@ -56,7 +56,7 @@ updated: 2026-06-13T22:00:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [-] {agent: backend, id: submission-task} **`submission-predict` task + run function** (spec §3, §5). New `ui/src/lib/predict/tasks/submissionPredict.ts`: define the `submission-predict` PredictionTask on the existing harness contract — input = `PlayerContext` (from `playerContext.ts`) + `{ theme:{name,description} }`; output zod = the three-part shape: `profile{genres[], artists_or_types[], era, mood_energy, obscurity_lean, comment_likely, rationale}`, `candidates[]{title, artist, why}` (4–6, ranked best-first), `prediction{title, artist, spotify_url?, detail, similar_past_picks[]{title, artist, round, similarity}, confidence:'low'|'medium'|'high'}`. Export `runSubmissionPredict(db, playerId, {theme})` that builds context, runs via `runPrediction`, and logs a `prediction_runs` row (`task_id='submission-predict'`, `round_id` when the theme is a real round). Default model = the capable model (Sonnet) via task config. Returns RAW candidates — Spotify validation is applied downstream by `api-submission`.
+- [x] {agent: backend, id: submission-task} **`submission-predict` task + run function** (spec §3, §5). New `ui/src/lib/predict/tasks/submissionPredict.ts`: define the `submission-predict` PredictionTask on the existing harness contract — input = `PlayerContext` (from `playerContext.ts`) + `{ theme:{name,description} }`; output zod = the three-part shape: `profile{genres[], artists_or_types[], era, mood_energy, obscurity_lean, comment_likely, rationale}`, `candidates[]{title, artist, why}` (4–6, ranked best-first), `prediction{title, artist, spotify_url?, detail, similar_past_picks[]{title, artist, round, similarity}, confidence:'low'|'medium'|'high'}`. Export `runSubmissionPredict(db, playerId, {theme})` that builds context, runs via `runPrediction`, and logs a `prediction_runs` row (`task_id='submission-predict'`, `round_id` when the theme is a real round). Default model = the capable model (Sonnet) via task config. Returns RAW candidates — Spotify validation is applied downstream by `api-submission`.
   - **Acceptance:** with `callOpenRouter` stubbed to fixture JSON, `runSubmissionPredict` returns the schema-valid three-part output and writes a `prediction_runs` row; output zod enforces the candidate count (4–6) and required fields on all three parts; `npm run check` 0 errors; `npx vitest run` green.
 
 - [-] {agent: backend, id: spotify-validate} **Spotify candidate validator** (spec §4, option A). New helper `ui/src/lib/predict/spotifyValidate.ts`: `validateTracks(candidates: {title, artist}[]) → {title, artist, spotify_url?, resolved: boolean}[]` (carry through the canonical title/artist/uri/art on a match). Resolve each via the app's EXISTING Spotify search — find and reuse whatever powers the `/api/history` song search / the `spotify-oauth` token flow; do NOT add a new auth path. Order-preserving; `resolved:false` (never throw) when no match. This validates `candidates` + `prediction` before the API responds.
@@ -89,6 +89,14 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — backend — submission-task DONE · 787b154
+- Created `ui/src/lib/predict/tasks/submissionPredict.ts`: `submission-predict` PredictionTask on harness contract
+- Three-part output zod: profile (7 fields) → candidates (4–6, ranked) → prediction (title/artist/spotify_url?/detail/similar_past_picks/confidence)
+- `runSubmissionPredict(db, playerId, {theme, roundId?})` builds context via `buildPlayerContext`, runs via `runPrediction`, returns raw candidates (Spotify validation downstream)
+- Default model: `anthropic/claude-sonnet-4-5` (env-overridable via OPENROUTER_PREDICT_MODEL)
+- 21 vitest tests green; `npm run check` 0 errors
+- Strictly within `ui/src/lib/predict/tasks/submissionPredict.ts` + test — no collision with spotify-validate lane
 
 ### 2026-06-13 — orc — Sprint-29 ACTIVATED · submission-task + spotify-validate dispatched (Wave 1)
 - status planned → active; dispatched both independent backend tasks in parallel —
