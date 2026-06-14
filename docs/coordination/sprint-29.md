@@ -65,7 +65,7 @@ updated: 2026-06-13T22:00:00Z
 - [x] {agent: backend, id: api-submission, depends: submission-task,spotify-validate} **Submission-predict endpoint** (spec §6). `POST /api/players/:playerId/submission-predict`, body `{ theme }` → runs `runSubmissionPredict`, then applies `validateTracks` to the `candidates` and the `prediction` (Spotify-validate, option A), and returns the enriched three-part result. Follow the existing `/api/players/:playerId/*` route pattern.
   - **Acceptance:** `POST` with a valid body returns 200 with the three-part result — `candidates`/`prediction` carrying resolved Spotify handles where found — and creates a `prediction_runs` row; a malformed body → 400; a route test (house vitest pattern) covers it; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: ui-submission, depends: api-submission} **Submission Predictor panel** (spec §6). Add a collapsible **Submission Predictor** subsection to the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte`, mirroring the Vote Probe panel: a theme picker (real-themes dropdown via `/api/history/themes` + freeform) → **Predict** → renders (a) the property profile as chips/labels, (b) the ranked candidate list each with its `why`, and (c) the highlighted final pick with `detail`, the "similar to your past picks" links, and confidence. Match the Mash Co. tokens + the sibling panel styles.
+- [x] {agent: frontend, id: ui-submission, depends: api-submission} **Submission Predictor panel** (spec §6). Add a collapsible **Submission Predictor** subsection to the per-player panel in `ui/src/lib/components/PlayerResearchTab.svelte`, mirroring the Vote Probe panel: a theme picker (real-themes dropdown via `/api/history/themes` + freeform) → **Predict** → renders (a) the property profile as chips/labels, (b) the ranked candidate list each with its `why`, and (c) the highlighted final pick with `detail`, the "similar to your past picks" links, and confidence. Match the Mash Co. tokens + the sibling panel styles.
   - **Acceptance:** selecting a player + theme + clicking Predict renders all three parts (profile chips; candidate list with rationales; final pick with similar-past-picks links + confidence); the theme dropdown lists real themes and freeform works; verified hands-on on dev (5173) at desktop AND 412×892 with the clicks noted in the Activity Log; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-close, depends: ui-submission} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card summarizing the submission predictor, one cached prod deploy, a 412×892 prod smoke (run a submission prediction for a real player + theme → the three-part result returns with Spotify-resolved picks), panes reset, doc closed.
@@ -89,6 +89,17 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-13 — frontend — ui-submission DONE · 71efcd2
+- Added Submission Predictor collapsible panel to `ui/src/lib/components/PlayerResearchTab.svelte`
+- Theme picker: real-themes dropdown (85 themes from `/api/history/themes`) + Custom/freeform (name + description fields); reuses `probeThemes` loaded in `onMount`
+- Predict button calls `POST /api/players/:id/submission-predict` with `{ theme: { name, description } }`
+- Renders all three parts: (a) profile chips/labels (genres, artists_or_types, era, mood_energy, obscurity_lean, comment_likely badge, rationale), (b) numbered candidate list with artist, why, and ↗ Spotify link where resolved, (c) highlighted final prediction card with album art, confidence badge, detail, similar_past_picks with round + similarity, and provenance stamp
+- State reset on player select/deselect; types added to module context block
+- Verified hands-on desktop (1440×900): clicked "◑ Player research" → selected Matt Mariani → SUBMISSION PREDICTOR section visible → selected "Songs you are embarrassed to like" from dropdown → Predict enabled → mock result rendered all three parts correctly including Spotify links and similar past picks
+- Verified hands-on mobile (412×892): same flow; all three parts render correctly in narrow layout
+- Freeform verified: Custom/freeform → typed "Songs that sound like autumn" → Predict enabled
+- `npm run check` 0 errors
 
 ### 2026-06-13 — backend — api-submission DONE · f6ae2b7
 - Created `ui/src/routes/api/players/[playerId]/submission-predict/+server.ts`
