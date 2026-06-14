@@ -11,12 +11,14 @@ updated: 2026-06-13T00:00:00Z
 
 ---
 
-## ⭐ Next up (priority — owner, 2026-06-13)
+## ⭐ Next up (owner, updated 2026-06-13)
 
-1. **Cache chromium in a stable Docker layer** (full spec below under its own heading) — top infra priority; pays back on every prod deploy (15–25 min → ~couple min).
+- **Likely next sprint: Producer Sprint 2 — submission predictor** ("what would they submit?"), pending owner final-confirm.
+- The **chromium Docker-layer caching** infra item is **demoted to LOW priority** — the cached-deploy workflow (one `docker compose build bot-ui` *without* `--no-cache` per gate) sidesteps the chromium re-download tax, so the problem isn't being paid right now. Revive only if `--no-cache` deploys (and the 15–25 min tax) come back.
 
-*(Owner is brainstorming a larger "Music League Producer" prediction system + near-term
-player-research-screen improvements in parallel — see `docs/superpowers/specs/` once specced.)*
+*(The "Music League Producer" milestone is the active throughline — see
+`docs/superpowers/specs/2026-06-13-player-prediction-sprint1-design.md` and the
+Producer follow-ons section below.)*
 
 ---
 
@@ -59,7 +61,7 @@ player-research-screen improvements in parallel — see `docs/superpowers/specs/
 
 - **Add-player capability on the standings section.** Extend `POST /api/digest/[roundId]/standings` with `action: 'add-player'` (backend: upsert a `competitors` row + create an `ml_submissions` row in the round + write gospel via `applyEdits` — there is no separate roster table; the submission row *is* season/league membership) plus an "add player" form in `EditableStandingsTable.svelte` (frontend). **Why deferred:** the sprint-16 importer parser fix resolved the missing-player bug (Lori + all 7 orphan rounds) systemically, so add-player is now only a general manual-correction tool, not a needed fix. Pull when a manual-add need actually arises. Full task specs + acceptance preserved in `docs/coordination/sprint-16.md` (tasks `add-player-endpoint`, `add-player-ui`).
 
-## Cache chromium in a stable Docker layer (drafted 2026-06-04) — do-next candidate
+## Cache chromium in a stable Docker layer (drafted 2026-06-04) — ⬇️ LOW priority (demoted 2026-06-13; cached-deploy workflow sidesteps it)
 
 **Source:** user, 2026-06-04, after watching a `--no-cache` deploy spend 15–25 min re-downloading chromium over wifi.
 
@@ -137,7 +139,7 @@ Render as two separate bars, not one blended number — they answer different qu
 
 ## Head-to-Head — group SAS button (drafted 2026-06-13) — S–M
 
-**Source:** owner, 2026-06-13. Add a button on the round **Head-to-Head** tab that runs SAS for **both songs in the matchup across all players in the round**, to inform the decision — effectively a 2-song round simulation (a stepping-stone toward the Sprint-3 whole-round predictor, which is the point).
+**Source:** owner, 2026-06-13. Add a button on the round **Head-to-Head** tab that runs SAS for **both candidate songs across all OTHER players in the round** (exclude the owner / submitter). **Purpose: help the owner decide which of their two candidate songs is the better submission for their league** — show a projected vote-total per song (e.g. "Song A ~12 vs Song B ~6") as a decision-useful stand-in for how the group would receive each. (Not a literal vote prediction, but a strong proxy — and effectively a 2-song round simulation, a stepping-stone toward the Sprint-3 whole-round predictor.)
 
 **Direction (backend + frontend).** Reuse the sprint-28 `vote-probe` task. Cost discipline is the design constraint (~2 songs × N players):
 - **Pin a cheap model** for this task (Haiku-tier) via the harness's per-task model override — keep it off the high-end model.
@@ -182,3 +184,15 @@ Render as two separate bars, not one blended number — they answer different qu
 3. Surface the analysis in Theme Research; feed taste vectors (Taste Similarity) + future predictors.
 
 **Why it matters.** Audio/lyric attributes turn taste from "which songs" into "what *kind* of music," which is what makes cross-league comparison and stronger prediction possible. High-leverage but research-heavy — own spec.
+
+## Obscurity / Discovery score (orc-proposed 2026-06-13) — S
+
+For any candidate song, score how obscure it is **for this group** — reusing the listener/popularity counts already captured for the digest tastemaker section. High obscurity = likely to do well on the many themes that explicitly reward unfamiliar picks ("familiar songs should receive the least votes — Discovery points rule this season"). A direct picking aid, nearly free from existing data. Pairs with the Theme Research metadata item.
+
+## Comment-required detector (+ later, a drafter) (orc-proposed 2026-06-13) — S now / M later
+
+Auto-detect themes that **require** a comment to earn votes ("REQUIRED: explain your reasoning in the comment… make sure 'Show comment to others' is checked") and flag them in the UI so a required comment is never forgotten. Later: draft a comment in the player's voice. Connects to the broader comment-style / Producer line (the deferred ⑦ from the sprint-28 brainstorm).
+
+## Orange-box / collision predictor (orc-proposed 2026-06-13) — M
+
+Before committing a pick, predict likely **"orange-box" collisions** — an artist someone else is likely to submit for this theme — based on which artists tend to get submitted for similar themes historically. Helps avoid the familiar "someone already took my artist" surprise. Likely wants the historical submission patterns + possibly the song metadata.
