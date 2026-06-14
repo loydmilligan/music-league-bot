@@ -128,11 +128,15 @@
   let detailLoading = $state(false);
   let detailError = $state<string | null>(null);
 
+  // Collapse state — all default collapsed (PR-1)
+  let songsOpen = $state(false);
+  let overlapOpen = $state(false);
+
   // Dossier state
   let dossier = $state<DossierProfile | null>(null);
   let dossierLoading = $state(false);
   let dossierError = $state<string | null>(null);
-  let dossierOpen = $state(true);
+  let dossierOpen = $state(false);
   let draftNotes = $state('');
   let draftTags = $state('');
   let dossierSaving = $state(false);
@@ -140,9 +144,9 @@
   let dossierSaved = $state(false);
 
   // Taste Fingerprint state
-  let fingerprintOpen = $state(true);
+  let fingerprintOpen = $state(false);
   // Vote Probe state
-  let probeOpen = $state(true);
+  let probeOpen = $state(false);
   let probeThemes = $state<{ name: string; round: string; season: string }[]>([]);
   let probeSongTitle = $state('');
   let probeSongArtist = $state('');
@@ -159,7 +163,7 @@
   let fingerprintProvenance = $state<{ model: string; cost_usd: number; generated_at: string } | null>(null);
 
   // Submission Predictor state
-  let predictOpen = $state(true);
+  let predictOpen = $state(false);
   let predictThemeKey = $state('');
   let predictCustomThemeName = $state('');
   let predictCustomThemeDesc = $state('');
@@ -504,42 +508,32 @@
           >×</button>
         </header>
 
-        <!-- Songs submitted -->
-        <div class="mt-4">
-          <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Songs submitted</h4>
-          {#if detail.songs.length}
-            <ul class="flex flex-col divide-y divide-border-muted">
-              {#each rankedSongs(detail.songs) as s (s.round + '::' + s.title)}
-                <li class="flex items-center gap-3 py-2 first:pt-0">
-                  <span class="flex-1 min-w-0">
-                    <span class="block font-bold text-fg text-sm truncate">{s.title}</span>
-                    <span class="block font-mono text-[11px] text-fg-dim truncate">{s.artist} · {s.round}</span>
-                  </span>
-                  <span class="flex-shrink-0 font-mono text-xs tabular-nums text-accent w-10 text-right">{s.points}</span>
-                </li>
-              {/each}
-            </ul>
-          {:else}
-            <p class="text-fg-faint text-sm font-mono italic">No songs recorded.</p>
-          {/if}
-        </div>
-
         <!-- Taste overlap (viz layer renders ranked bars off this markup) -->
         {#if detail.tasteOverlap && Object.keys(detail.tasteOverlap).length}
           <div class="mt-4 pt-3 border-t border-border-muted">
-            <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Taste overlap</h4>
-            <div class="taste-overlap flex flex-col gap-1">
-              {#each rankedOverlap(detail.tasteOverlap) as [name, score] (name)}
-                <div
-                  class="taste-overlap-row flex items-center gap-3 py-1"
-                  data-name={name}
-                  data-score={score}
-                >
-                  <span class="flex-1 min-w-0 font-mono text-[11px] text-fg-muted truncate">{name}</span>
-                  <span class="flex-shrink-0 font-mono text-xs tabular-nums text-accent w-12 text-right">{pct(score)}</span>
-                </div>
-              {/each}
-            </div>
+            <button
+              type="button"
+              onclick={() => { overlapOpen = !overlapOpen; }}
+              class="flex items-center gap-2 w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              aria-expanded={overlapOpen}
+            >
+              <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint flex-1">Taste overlap</h4>
+              <span class="font-mono text-[10px] text-fg-faint transition-transform" class:rotate-180={overlapOpen}>▾</span>
+            </button>
+            {#if overlapOpen}
+              <div class="taste-overlap flex flex-col gap-1 mt-2">
+                {#each rankedOverlap(detail.tasteOverlap) as [name, score] (name)}
+                  <div
+                    class="taste-overlap-row flex items-center gap-3 py-1"
+                    data-name={name}
+                    data-score={score}
+                  >
+                    <span class="flex-1 min-w-0 font-mono text-[11px] text-fg-muted truncate">{name}</span>
+                    <span class="flex-shrink-0 font-mono text-xs tabular-nums text-accent w-12 text-right">{pct(score)}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
 
@@ -1127,6 +1121,38 @@
             {/if}
           </div>
         {/if}
+
+        <!-- Songs submitted (PR-2 — moved to bottom; collapsible per PR-1) -->
+        <div class="mt-4 pt-3 border-t border-border-muted">
+          <button
+            type="button"
+            onclick={() => { songsOpen = !songsOpen; }}
+            class="flex items-center gap-2 w-full text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            aria-expanded={songsOpen}
+          >
+            <h4 class="font-mono text-[10px] tracking-widest uppercase text-fg-faint flex-1">Songs submitted</h4>
+            <span class="font-mono text-[10px] text-fg-faint transition-transform" class:rotate-180={songsOpen}>▾</span>
+          </button>
+          {#if songsOpen}
+            <div class="mt-2">
+              {#if detail.songs.length}
+                <ul class="flex flex-col divide-y divide-border-muted">
+                  {#each rankedSongs(detail.songs) as s (s.round + '::' + s.title)}
+                    <li class="flex items-center gap-3 py-2 first:pt-0">
+                      <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-fg text-sm truncate">{s.title}</span>
+                        <span class="block font-mono text-[11px] text-fg-dim truncate">{s.artist} · {s.round}</span>
+                      </span>
+                      <span class="flex-shrink-0 font-mono text-xs tabular-nums text-accent w-10 text-right">{s.points}</span>
+                    </li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class="text-fg-faint text-sm font-mono italic">No songs recorded.</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
       {/if}
     </section>
   {/if}
