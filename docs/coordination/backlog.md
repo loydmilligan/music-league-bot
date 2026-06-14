@@ -197,6 +197,50 @@ Auto-detect themes that **require** a comment to earn votes ("REQUIRED: explain 
 
 Before committing a pick, predict likely **"orange-box" collisions** — an artist someone else is likely to submit for this theme — based on which artists tend to get submitted for similar themes historically. Helps avoid the familiar "someone already took my artist" surprise. Likely wants the historical submission patterns + possibly the song metadata.
 
+## Shareable League Dashboard — public read-only league site (drafted 2026-06-13) — XL, needs own spec
+
+**Source:** owner, 2026-06-13. A small **no-auth, read-only public website per league** —
+hosted on the existing `digest.mattmariani.com` infra (same reason as the share button: a
+shareable surface that never exposes the internal mlb app URL). It surfaces a curated,
+read-only slice of what mlb already generates, for league members to browse. This is a
+*consumer-facing* sibling to the operator app — distinct audience, distinct surface.
+
+**Five content pillars:**
+1. **Digest archive** — browsable history of past digests for the league, so members can
+   re-read old ones. (Reuses the sprint-20 HTML digest render pipeline / `digest.mattmariani.com`.)
+2. **Player profiles** — one per league member: taste fingerprint (sprint-28), **Player
+   Overlap v2.0** (the two-metric rework — Vote Agreement + cross-league Taste Similarity —
+   already in this backlog; this is a consumer of that fix), plus *fun* social content:
+   - **Superlatives** — high-school-yearbook-style awards per player (e.g. biggest fan of X,
+     biggest hater, most obscure taste, most consistent, etc.). Design the award set to be
+     funny + flattering-enough; see strife note below.
+   - **Biggest Fan / Biggest Hater** — the asymmetric vote relationships (who rewards vs.
+     buries this player) — same data as the "Rival/Champion map" idea.
+3. **League-wide KPIs** (and possibly **cross-league / all-league KPIs**) — stats about the
+   league. **DESIGN CAREFULLY to avoid inter-family strife / annoyance** (owner flagged: these
+   are family leagues — avoid metrics that read as ranking people as "worse," or that stoke
+   rivalry in a bad way). Lean celebratory/quirky over leaderboard-brutal.
+4. **Historical league results** — past seasons/rounds/standings, read-only.
+5. **Recommendations + optional Discovery playlist** — from each player's taste fingerprint +
+   past songs, recommend other artists/songs; optionally a generated **Discovery playlist**.
+   If we do the playlist: **discuss how to make it funny / interesting / useful as a gentle
+   nudge** — e.g. steer leagues toward certain behaviors, surface delightful finds — not just a
+   flat recommender. Worth a dedicated design conversation.
+
+**Why it matters.** Turns mlb's internal analysis into a shareable, social, members-facing
+artifact — increases engagement, gives the leagues something to enjoy between rounds, and
+showcases the prediction/taste work. It is also the natural public home for several other
+backlog items (overlap v2.0, superlatives/rival map, share button).
+
+**Open questions / dependencies (resolve in spec — this is XL, decompose into sub-projects):**
+- Hosting/auth model: static-generated per league on `digest.mattmariani.com`? regenerated
+  when? truly no-auth (public link) vs. unguessable slug?
+- Depends on **Player Overlap v2.0** (backlog) for the profile overlap section.
+- KPI selection needs an explicit "no-strife" design pass with the owner.
+- Discovery playlist needs its own "make it fun/nudgey" design conversation.
+- This is a big multi-pillar build — spec it as a milestone and decompose (archive, profiles,
+  KPIs, history, recommendations are largely independent slices).
+
 ## Predict how a predicted pick will fare (orc+owner 2026-06-13) — S (once submission-predictor lands)
 
 **Source:** owner, during the Sprint-2 submission-predictor spec. Take the **final predicted pick** from the submission predictor and run it through the **Vote Probe / H2H group SAS** to project how that song would *fare* in the group — closing the loop from "what will they submit" → "and how will it do." The Sprint-2 output schema is deliberately built so `prediction.{title, artist, spotify_url}` pipes straight into the SAS tasks; this item just wires that hand-off (a button on the predicted-pick card, or auto-run). Effectively a per-player mini round-prediction. Could live as part of the submission-predictor panel or alongside the H2H tool.
