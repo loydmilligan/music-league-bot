@@ -244,3 +244,66 @@ backlog items (overlap v2.0, superlatives/rival map, share button).
 ## Predict how a predicted pick will fare (orc+owner 2026-06-13) — S (once submission-predictor lands)
 
 **Source:** owner, during the Sprint-2 submission-predictor spec. Take the **final predicted pick** from the submission predictor and run it through the **Vote Probe / H2H group SAS** to project how that song would *fare* in the group — closing the loop from "what will they submit" → "and how will it do." The Sprint-2 output schema is deliberately built so `prediction.{title, artist, spotify_url}` pipes straight into the SAS tasks; this item just wires that hand-off (a button on the predicted-pick card, or auto-run). Effectively a per-player mini round-prediction. Could live as part of the submission-predictor panel or alongside the H2H tool.
+
+---
+
+# Player Research cleanup + Producer enhancements (owner batch, 2026-06-13)
+
+Ten items from owner review after sprint-29 shipped. Several are UX cleanup of the
+Player Research tab; several deepen the prediction tools. Loosely ordered; can be
+grouped into a "Player Research polish" sprint (1,2,5) + prediction-quality items.
+
+## PR-1 — Collapsible Player Research sections, default collapsed (S)
+Make each section of the per-player panel collapsible, **defaulting to collapsed** (the panel is very tall — sprint-28/29 stacked Songs, Taste Overlap, Dossier, Taste Fingerprint, Vote Probe, Submission Predictor). User opens what they want. Pairs with PR-5 (header redesign).
+
+## PR-2 — Move the song list to the end (S)
+Put **Songs Submitted at the bottom** of the per-player panel (it's the longest section — 60+ rows — and currently sits near the top, burying the prediction tools). Combine with PR-1 so it's collapsed by default.
+
+## PR-3 — Ensure predictors use theme TITLE + DESCRIPTION (S) — partly already done; verify the UI path
+**Current state (verified 2026-06-13):** both `voteProbe.ts` and `submissionPredict.ts` templates already emit `Name:` AND `Description:` for the theme. **The likely real gap is the UI/API path:** the theme dropdown carries the theme *string* (name) — confirm the frontend actually sends a real `description` (not an empty string) for real themes, and that freeform lets the user enter both. Fix: when a real theme is picked, look up + pass its stored description; for freeform, expose a description field. Acceptance: a probe/predict for a real theme shows the description reaching the model (log/inspect the prompt).
+
+## PR-4 — Cache LLM-generated content (esp. costly calls) (M) — map below
+Cache + persist LLM outputs so repeat views don't re-pay. **Wherever cached, ALWAYS track + display generation provenance: timestamp, model, cost, and call params.** (The Taste Fingerprint already does exactly this — use it as the template.)
+
+**Map of LLM-generated areas and cacheability:**
+| Area | Today | Cacheable? | Notes / problems |
+|---|---|---|---|
+| **Taste Fingerprint** | persisted to `player_profiles` + provenance; explicit Regenerate | ✅ already done | This is the reference pattern. |
+| **Vote Probe / SAS** | logged to `prediction_runs`, but re-run = new call | ✅ yes | Cache key = (player_id, song, theme). **Staleness problem:** a player's history grows → a cached SAS can go stale. Mitigate: include a context/history fingerprint in the key (or accept staleness with the visible "generated at" stamp + Regenerate). |
+| **Submission Predictor** | logged to `prediction_runs`, re-run = new call | ✅ yes (highest value — costliest) | Same key/staleness as SAS, keyed on (player_id, theme). |
+| **Digest sections** | already cached (draft cached, explicit regen) | ✅ already done | Confirm parity of the provenance display. |
+| **H2H group SAS** (future) | n/a yet | ✅ build it cached from day 1 | N players × 2 songs — caching is essential here. |
+| **Taste Similarity / overlap v2 LLM bits** (future) | n/a | ✅ | Same staleness considerations. |
+
+**Approach:** generalize the fingerprint pattern — on request, look up the latest matching `prediction_runs` row (by cache key) and return it with its provenance + a Regenerate button, instead of calling the model; only call on cache-miss or explicit regen. `prediction_runs` already stores input/output/model/cost — add the cache-key lookup + a staleness policy (data-version in the key, or time-based, or user-driven regen).
+
+## PR-5 — Player picker redesign: player cards / carousel + rich header (M–L)
+Replace the flat player-button list with a **card grid (desktop) / card carousel (mobile)**, where each card IS a rich player header:
+- **slim by default, expandable**; expanded shows tags + a link to edit Dossier.
+- **Badges:** which leagues the player is in; ever-on-the-podium (any season); currently top-3 in an active season; last place in a historical season; last place currently in an active season.
+- **Uploadable / editable avatar** per player, managed right in the card.
+The selected card's header sits atop the per-player panel. (Pairs with PR-1/PR-2 cleanup.)
+
+## PR-6 — Submission Predictor: same-artist recency penalty (M)
+Players almost never re-submit an artist they've already used **in the same league** — strongest within the same season, decaying over later seasons. Add an explicit penalty factor that multiplies the predicted likelihood of an already-used artist:
+- **Same artist, same season:** factor ≈ **0.01** (e.g. a raw 50% → ~0.5%).
+- **Following season:** ≈ **0.1**, then easing each subsequent year: ~**0.15 → 0.25 → 0.50 → 0.80**, **stalling at 0.80**.
+(Numbers are owner ballpark — tune later.) Scope is **per-league** (the same artist in a *different* league isn't penalized). Implement either as prompt guidance with the player's already-used-artists-by-season list, or as a post-LLM re-weighting of candidate likelihoods (likely cleaner + more controllable as post-processing). Relates to PR-7 (the exclude checkbox is the hard version of this soft penalty).
+
+## PR-7 — Submission Predictor: "exclude already-submitted artists" checkbox (S–M)
+A checkbox to **exclude artists the player has already submitted** (in that league). Sub-option: **only exclude when the artist was the PRIMARY artist** — e.g. "Mona Lisa" by Lil Wayne feat. Kendrick should NOT count as a Kendrick submission for this filter. Needs primary-vs-featured artist resolution (from existing submission data / Spotify metadata). The hard-filter complement to PR-6's soft penalty.
+
+## PR-8 — Player Research analysis: comments + WhatsApp chat toggles (M)
+**Current state (verified 2026-06-13):** the player context ALREADY includes submission comments + vote comments. WhatsApp **chat mentions are NOT** included (they live in digest round data only).
+- For the data already used (comments): add a **runtime checkbox to include/exclude** it from the analysis.
+- For chat mentions (not yet used): add the **ability to fold WhatsApp chat data into the player-research LLM analysis**, behind an optional runtime checkbox. (Chat is where songs get discussed — rich signal.)
+
+## PR-9 — Voting-weight dials for the prediction tools (M)
+Add a set of **dials** (like the current settings-screen weighting) — percentages that must sum to 1 — that scale how songs are rated in the LLM prediction tools, **separate from** the existing settings-screen weighting. **Three factors** (in priority order, which matters):
+1. **Appeal** *(owner's "Goodness" — orc suggests "Appeal" or "Crowd Appeal": do YOU like it and will others like it)* — most important.
+2. **Discovery/Nostalgia** (is it new to people / likely new to the group) — note: owner is **combining nostalgia INTO discovery** (in practice they're related); do NOT keep nostalgia as a separate dial.
+3. **Theme fit** (least important — owner treats it mostly as binary "does it fit → can score it," occasionally a bit more weight for a perfect-example song).
+These feed the SAS / submission / H2H tools. **Naming help wanted on factor 1** ("Goodness" → Appeal? Crowd Appeal? Likeability?).
+
+## PR-10 — Judge each player's own voting-weight profile (L, research-y)
+Per-player, *estimate the weighting* each player actually uses when voting (their personal version of the PR-9 dials) — because it strongly drives how they vote. May need **more than the owner's 3 factors** (some players weight by weird/idiosyncratic factors). Capture for now; don't over-engineer. This is high-leverage for the whole prediction engine (knowing a player's weighting makes SAS far more accurate) — likely its own spec, and a natural input to the future whole-round predictor.
