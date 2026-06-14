@@ -107,3 +107,78 @@ player-research-screen improvements in parallel — see `docs/superpowers/specs/
 3. **Verify:** digest page loads with 0 console errors in dev at desktop + 412×892; prod unaffected (it already builds, so this is primarily a dev-bundle correctness fix — confirm).
 
 **Why it matters.** It makes the digest page un-loadable in `npm run dev`, which is exactly where UI agents do hands-on verification — every digest-touching sprint pays a friction tax working around it. Low user-facing severity (prod builds), but it degrades the dev/verify loop. Also recorded as a known caveat in CHANGELOG `[1.0.5]`.
+
+---
+
+# Producer milestone — Sprint-1 follow-ons & adjacent ideas (drafted 2026-06-13, owner brainstorm)
+
+## Player Research tab — section tooltips (drafted 2026-06-13) — S, ready
+
+**Source:** owner, 2026-06-13, after the sprint-28 panels shipped. Each section of the Player Research per-player panel should have an info tooltip (ⓘ / hover or tap) explaining what it is and how to read it. Copy is owner-approved below — implementing agent just drops these strings in.
+
+**Tooltip copy (final):**
+- **Songs Submitted:** "Every song this player has submitted across all leagues, ranked by the points it earned (shown on the right)."
+- **Taste Overlap:** "How closely each other player's taste matches this one — scored on the songs they *both* gave points to (0–100%). Higher means more similar taste, so it's a quick read on whose votes tend to move together." — **NOTE:** revise this string when the Taste Overlap rework lands (see next item); the current copy describes the current global-Jaccard method.
+- **Dossier:** "Your own notes on this player — freeform context plus taste tags, wild guesses welcome. It's yours: the AI fingerprint never overwrites it, and both feed the predictions."
+- **Taste Fingerprint:** "An AI read of this player's taste — signature artists, genres, eras, and what they reward vs. punish — drafted from their full submission and voting history. Regenerate to refresh it (small LLM cost); it never overwrites your Dossier notes."
+- **Vote Probe:** "Give it a song + a theme and it estimates how this player would react: a standalone affinity score (0–100), the points they'd likely give, and the reasoning — all grounded in their real history. It scores one song for one player, not a whole round."
+
+**Direction (lane: frontend).** Add a consistent tooltip affordance per section header in `PlayerResearchTab.svelte` (match Mash Co. tokens; tap-friendly at 412×892). Coupled to the Taste Overlap rework for that one string.
+
+## Taste Overlap — method rework (two honest metrics) (drafted 2026-06-13) — M, owner-approved approach
+
+**Source:** owner, 2026-06-13. The current Taste Overlap is Jaccard over the *global* set of songs each player rewarded, so it measures **shared exposure, not shared taste**: players who never sat in the same rounds get a misleadingly low % (e.g. Jon Black, Second-Best-only, shows low overlap with everyone in Hip Jammers / Fam Jam simply because he couldn't vote on those songs — and even with Mara/Matt, who *are* in Second Best but also play two leagues Jon isn't in).
+
+**Direction — split into two labeled metrics** (owner approved this shape):
+1. **Vote Agreement (within shared rounds)** — the quick fix done right. Compare only songs *both players could actually vote on* (songs in rounds they both played); of those, how often did they agree (both reward / both pass). Players with zero shared rounds show **"no shared rounds"**, not a fake low %. Pure existing data. Strictly better than "same-league only" — also fixes the in-league-different-rounds skew.
+2. **Taste Similarity (cross-league, content-based)** — compare players by the *attributes* of the music they reward, not the specific songs, so it works across leagues. **Now (cheap):** compare the AI taste fingerprints (shared signature artists / genres / rewards-punishes). **Later (richer):** taste vectors from song metadata (genre/bpm/audio features) + cosine — depends on the Theme Research metadata item below.
+
+Render as two separate bars, not one blended number — they answer different questions ("whose votes move with mine here" vs. "whose taste is like mine anywhere").
+
+## Head-to-Head — group SAS button (drafted 2026-06-13) — S–M
+
+**Source:** owner, 2026-06-13. Add a button on the round **Head-to-Head** tab that runs SAS for **both songs in the matchup across all players in the round**, to inform the decision — effectively a 2-song round simulation (a stepping-stone toward the Sprint-3 whole-round predictor, which is the point).
+
+**Direction (backend + frontend).** Reuse the sprint-28 `vote-probe` task. Cost discipline is the design constraint (~2 songs × N players):
+- **Pin a cheap model** for this task (Haiku-tier) via the harness's per-task model override — keep it off the high-end model.
+- **Use each player's cached *taste fingerprint* as the SAS context, not their full history** (the fingerprint is a ~200-token taste compression — the biggest token saving; auto-generate a missing fingerprint or fall back to slim history).
+- **Cache** results by `(player, song, theme)` (already logged in `prediction_runs`) so re-opening a matchup is free.
+- **Small-group batching (3–5 players/call)** is worthwhile *on top of* compact fingerprint-context (shares song+theme+system tokens), but NOT a 27-player mega-call (quality + all-or-nothing failure).
+- Output: per-song aggregate (total/avg projected points across the group) → "Song A projected over Song B," with the per-player breakdown available.
+
+## Screen / feature inventory + diagram (Obsidian doc) (drafted 2026-06-13) — S–M, NOT-NOW (doc task)
+
+**Source:** owner, 2026-06-13. Navigation/screen naming has drifted — most glaringly a separate **Setup** AND **Settings** screen, which is confusing. Before any redesign, produce an accurate **inventory of features by screen** plus a **visible diagram (mermaid or similar)** of the current menu items and each screen's layout.
+
+**Direction (lane: docs/research).** Create an md note in the **Obsidian project dir** (vault `~/.config/taw/wiki/`, project-note frontmatter per house convention) containing: (1) a feature-by-screen inventory (every screen, its sections, what each does, which API/data it reads), (2) a mermaid diagram of the current nav tree + per-screen layout. **Purpose: hand this to Claude design as the basis for proposing how to rename / combine / reorder screens (esp. Setup vs Settings).** This item is just the inventory+diagram; the redesign is a separate later effort.
+
+## Universal Share button (drafted 2026-06-13) — L, needs own spec
+
+**Source:** owner, 2026-06-13. A reusable share control on as many elements as possible. Motivation: sharing a screenshot once leaked the internal mlb app URL — owner wants every share to go out under **`digest.mattmariani.com`**, never the app's own subdomain.
+
+**Shape (owner-specified).** A share-arrow icon button → modal/slideout with a **two-stage picker: format first, then destination.**
+- **Formats:** HTML (hosted on `digest.mattmariani.com` via the existing digest exporter / sprint-20 render pipeline), PNG, PDF.
+- **Destinations:** Download, WhatsApp, Copy link. For HTML → host + copy the public link; for PNG/PDF → render, upload to `digest.mattmariani.com` to host the file, copy the link. **Toast/popup** confirms when the link/clipboard is ready.
+- Hosting under `digest.mattmariani.com` for ALL formats is the load-bearing requirement (hide the app URL). Reuses the existing exporter/host plumbing — mostly generalizing it to arbitrary elements.
+
+**Placement.** Every digest section; history sections; the Player Research panels (Songs Submitted, Taste Overlap, Dossier, Taste Fingerprint, Vote Probe); Theme Research theme cards; "+ wherever else makes sense."
+
+**Open questions (resolve in spec):**
+- WhatsApp destination: generic share (wa.me link handoff) vs. post into a specific group via mlb's existing WhatsApp integration ("specific conversation options")? Pick the v1 scope.
+- **Expiring links** — nice-to-have, NOT required for v1 (owner flagged). Decide whether to bake an expiry concept into the hosted-file model now or later.
+- A clean "shareable element" abstraction so the button can wrap any section without bespoke export code per spot.
+
+## Theme Research — song-metadata analysis (drafted 2026-06-13) — L, needs research + own spec
+
+**Source:** owner, 2026-06-13. New analysis on **Theme Research**, available **only once a theme's playlist is populated**. Purpose: gather as much per-song metadata as possible to model player preferences far more richly (also feeds Taste Similarity above and the broader Producer engine).
+
+**Candidate metadata per song:** title, artist, album, release date, **genre (multi-tag)**, **bpm**, singer gender (M/F), **key**, length, **lyrics** (likely its own category — see below), **listener/popularity counts** (already captured for the digest tastemaker section — reuse).
+
+**Lyrics sub-properties (probably break out into its own category):** word count, unique-word count, meaning/themes, rhyme scheme, chorus-specific analysis. Note: owner's other project already resolves lyrics via **lrclib.net** (or transcribes from audio when not found) — reuse that approach/source here.
+
+**Direction (lane: research → backend).**
+1. **Research the data sources** — which APIs/tools yield genre/bpm/key/gender/audio-features (Spotify audio-features deprecation status?, MusicBrainz, AcousticBrainz, GetSongBPM, etc.) and at what cost/coverage. Lyrics via lrclib.net + transcription fallback.
+2. Define a `song_metadata` store and a populate-on-demand flow per theme playlist.
+3. Surface the analysis in Theme Research; feed taste vectors (Taste Similarity) + future predictors.
+
+**Why it matters.** Audio/lyric attributes turn taste from "which songs" into "what *kind* of music," which is what makes cross-league comparison and stronger prediction possible. High-leverage but research-heavy — own spec.
