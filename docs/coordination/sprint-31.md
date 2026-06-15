@@ -73,7 +73,7 @@ updated: 2026-06-14T17:00:00Z
 - [-] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
   - **Acceptance:** with `callOpenRouter` stubbed, generators return schema-valid superlatives/blurbs with accent in the allowed set; output zod rejects a brutal/ranking phrasing shape (e.g. a "lastPlace" field); prompts include the no-strife constraint (asserted in the message text); `npm run check` 0 errors; `npx vitest run` green.
 
-- [-] {agent: backend, id: gen-profile-llm} **Profile LLM generators — spectrum + discovery playlist** (spec §7, decision §3.1). New `ui/src/lib/dashboard/generators/profile.ts`: PredictionTasks producing each member's **spectrum** (3 axes Polished↔Raw / Sunny↔Melancholy / Familiar↔Obscure, derived from the player's taste fingerprint + history — no audio data) and the personality-driven **discovery playlist** (named, a one-line "agenda" nudge, 3 tracks each with a "why"). Export slice types.
+- [x] {agent: backend, id: gen-profile-llm} **Profile LLM generators — spectrum + discovery playlist** (spec §7, decision §3.1). New `ui/src/lib/dashboard/generators/profile.ts`: PredictionTasks producing each member's **spectrum** (3 axes Polished↔Raw / Sunny↔Melancholy / Familiar↔Obscure, derived from the player's taste fingerprint + history — no audio data) and the personality-driven **discovery playlist** (named, a one-line "agenda" nudge, 3 tracks each with a "why"). Export slice types.
   - **Acceptance:** with `callOpenRouter` stubbed, spectrum returns 3 axis values in range and playlist returns name + agenda + 3 tracks-with-why; a `lite` member with a thin fingerprint still returns a coherent (possibly shorter) result; `npm run check` 0 errors; `npx vitest run` green.
 
 - [ ] {agent: backend, id: build-readmodel, depends: schema,overlap-v2,gen-deterministic,gen-narrative-llm,gen-profile-llm} **Read-model orchestrator** (spec §7). New `ui/src/lib/dashboard/buildReadModel.ts`: `buildReadModel(db, leagueId, opts) → ReadModel` — fetch/generate each member's taste fingerprint (reuse sprint-28; generate if missing), then assemble league meta + members[] (fingerprint, spectrum, superlatives, fan/hater, voteTogether/voteTwins, playlist, tier, stat) + reel[] + kpis[] + moments + archive[] by composing all the generator slices. Validate the assembled object against a `ReadModel` zod schema mirroring `ml-dashboard-data.jsx`. `lite`-tier members omit sections they lack (no empty blocks).
@@ -102,6 +102,14 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — gen-profile-llm complete (2a5749b)
+- `ui/src/lib/dashboard/generators/profile.ts`: two PredictionTasks (`profile-spectrum`, `profile-playlist`) on the sprint-28 harness; `generateProfile(db, playerId)` runs both in parallel, logs to `prediction_runs`
+- Exports: `SpectrumSlice` / `SpectrumSliceSchema`, `PlaylistSlice` / `PlaylistSliceSchema`, `ProfileSlice` / `ProfileSliceSchema`, `spectrumTask`, `playlistTask`, `generateProfile`
+- LLM returns raw integer values (0-100) for spectrum axes; axis labels (Polished/Raw, Sunny/Melancholy, Familiar/Obscure) attached in code to prevent label drift
+- Lite members (thin fingerprint, no history) return coherent result; playlist allows 1-3 tracks
+- `callOpenRouter` stubbed in tests; 16/16 vitest green; 400/400 full suite green; 0 svelte-check errors
+- `[-]` → `[x]`
 
 ### 2026-06-14 — orc — Sprint-31 ACTIVATED · gen-narrative-llm + gen-profile-llm dispatched (Wave 1)
 - status planned → active; dispatched the two longest-pole LLM generators in parallel —
