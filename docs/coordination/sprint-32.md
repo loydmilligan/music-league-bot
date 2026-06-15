@@ -3,10 +3,11 @@ project: music-league-bot
 sprint: sprint-32
 campaign: the-b-side
 title: the b-side — Public site (Home / Profile / Archive)
-status: active
+status: closed
 created: 2026-06-15T00:00:00Z
 activated: 2026-06-15
-updated: 2026-06-15T04:45:00Z
+closed: 2026-06-15
+updated: 2026-06-15T06:15:00ZZ
 ---
 
 # music-league-bot — coordination doc (sprint-32)
@@ -82,7 +83,7 @@ updated: 2026-06-15T04:45:00Z
 - [x] {agent: frontend, id: bside-buildable} **GATE FINDING — make the bside app reproducibly buildable.** `bside/package.json` has EMPTY dependencies/devDependencies, but the app imports svelte + vite + @sveltejs/vite-plugin-svelte — a clean `cd bside && npm install && npm run build` fails (ERR_MODULE_NOT_FOUND). The agent-built dist/ exists but is not reproducible. Fix: populate `bside/package.json` devDependencies to match ui/package.json versions (svelte ^5.55.2, vite ^8.0.7, @sveltejs/vite-plugin-svelte ^7.0.0, typescript ^6.0.2, svelte-check ^4.4.6) + any others the build needs; ensure `npm install && npm run build` is green from a clean node_modules; commit the fixed package.json + package-lock.json.
   - **Acceptance:** `cd bside && rm -rf node_modules && npm install && npm run build` succeeds and writes dist/bside.js + dist/bside.css; `npm run check` (if defined) clean.
 
-- [ ] {agent: orc, id: gate-close, depends: host-pipeline,route-home,route-profile,route-archive,bside-buildable} **Gate — cross-check, ship, walk the live site, close.** Orc runs the gate: cross-check all lanes, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, re-publish a league, then **load the LIVE `digest.mattmariani.com/{slug}` at 412×892** and walk Home → a full profile → a lite profile → Archive (+ a deep-linked digest), fire a share card, and verify `noindex` + NO operator-app link + bad-slug 404. Panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: host-pipeline,route-home,route-profile,route-archive,bside-buildable} **Gate — cross-check, ship, walk the live site, close.** Orc runs the gate: cross-check all lanes, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, re-publish a league, then **load the LIVE `digest.mattmariani.com/{slug}` at 412×892** and walk Home → a full profile → a lite profile → Archive (+ a deep-linked digest), fire a share card, and verify `noindex` + NO operator-app link + bad-slug 404. Panes reset, doc closed.
   - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; the live public site loads at `digest.mattmariani.com/{slug}` (Home/Profile/Archive all render, share card works, lite member coherent, deep-link resolves), noindex set, no operator-app link, bad slug → 404, 0 console errors; doc `status: closed`.
 
 ## Decision Log
@@ -95,13 +96,32 @@ that produces a real, viewable, shareable league link.
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-15 — Sprint-32 RATIFIED (owner, verbal after walking the live site)
+Orc built + deployed v1.1.0, copied the bside bundle to DIGESTS_DIR/_bside/, restarted
+digest-static, and re-published Fam-Jam → live at https://digest.mattmariani.com/8BFuCmH1YXBMqsqqT_YK6w/.
+Owner walked the live site (Home / full profile / lite profile / Archive) and approved
+("very happy"). Content tweaks deferred to a post-campaign b-side polish sprint. Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — orc — GATE-CLOSE DONE · sprint-32 closed (campaign the-b-side, sprint 2/3)
+- Cross-check: all 5 worker tasks + the bside-buildable gate-fix `[x]`, committed; ui `npm run check`
+  0 errors + `npx vitest run` 469/469; bside builds clean from a fresh `npm install`.
+- **Gate finding:** `bside/package.json` had empty deps → not reproducibly buildable; added +
+  dispatched `bside-buildable` (874fb77) which populated devDeps to match ui/. Second gate-find of
+  the campaign (after sprint-31's JSON-parse bug) — both caught live, both fixed.
+- Version 1.0.9 → 1.1.0; CHANGELOG `[1.1.0]`; deploy: rebuilt bot-ui (publish.ts), copied
+  bside/dist → DIGESTS_DIR/_bside/, restarted digest-static (Caddyfile {slug} routes).
+- Re-published Fam-Jam (slug `8BFuCmH1YXBMqsqqT_YK6w`) → per-slug index.html + read_model.json written.
+- **Live verification (digest.mattmariani.com, 412×892):** Home + full profile (Jordan) + lite
+  profile (Sarah, graceful degradation, distinct monogram hue) + Archive all render; `noindex` header
+  set; bad slug → 404; bundle + read_model serve. Owner walked it + approved.
+- Nit: Archive cards show "—" for winnerSong (sparse read-model field) → backlog with the sprint-31
+  read-model nits. Panes reset; doc `status: closed`.
 
 ### 2026-06-15 — backend — host-pipeline done (edb8e7c)
 - `publishSite` writes `DIGESTS_DIR/{slug}/read_model.json` + `index.html` (SPA shell) after every DB write; fs mocked in tests
