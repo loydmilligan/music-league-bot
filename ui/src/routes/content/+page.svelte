@@ -1,5 +1,6 @@
 <script lang="ts">
   import '$lib/content/content.css';
+  import UpdateModal from '$lib/content/UpdateModal.svelte';
   import type { PageData } from './$types.js';
 
   let { data }: { data: PageData } = $props();
@@ -38,6 +39,7 @@
   let leagues = $state(data.leagues);
   let publishing = $state<number | null>(null);
   let publishErr = $state<string | null>(null);
+  let updateLeague = $state<(typeof leagues)[number] | null>(null);
 
   type ReshareData = {
     leagueId: number;
@@ -98,8 +100,22 @@
     window.open(`https://wa.me/?text=${encodeURIComponent(published.cardText)}`, '_blank');
   }
 
-  function openUpdateStub(_league: (typeof leagues)[number]) {
-    // update-modal task wires this
+  function openUpdate(lg: (typeof leagues)[number]) {
+    updateLeague = lg;
+  }
+
+  function handlePublished(reshare: {
+    leagueId: number;
+    url: string;
+    round: number;
+    theme: string;
+    league: string;
+    headline: string;
+    blurb: string;
+    cardText: string;
+  }) {
+    published = reshare;
+    updateLeague = null;
   }
 </script>
 
@@ -241,7 +257,7 @@
                 <a href={b.url} target="_blank" rel="noopener" class="mash-btn mash-btn--ghost mash-btn--sm">↗ View</a>
               {/if}
               {#if ready}
-                <button class="mash-btn mash-btn--primary mash-btn--sm" onclick={() => openUpdateStub(league)}>Update archive →</button>
+                <button class="mash-btn mash-btn--primary mash-btn--sm" onclick={() => openUpdate(league)}>Update archive →</button>
               {:else if !b}
                 <button
                   class="mash-btn mash-btn--primary mash-btn--sm"
@@ -260,3 +276,11 @@
     </div>
   {/if}
 </div>
+
+{#if updateLeague}
+  <UpdateModal
+    league={updateLeague}
+    onClose={() => (updateLeague = null)}
+    onPublished={handlePublished}
+  />
+{/if}
