@@ -8,6 +8,28 @@
 	let { readModel, nav }: Props = $props();
 
 	const league = $derived(readModel.league);
+	const latestRound = $derived(readModel.archive[0] ?? null);
+	const latestSubmitter = $derived(
+		latestRound ? (readModel.members.find((m) => m.id === latestRound.submitter) ?? null) : null
+	);
+
+	const momentRows = $derived(readModel.moments ? [
+		{ key: 'mostLoved',    icon: icons.heart, accent: 'moss'  as const, kicker: 'Most loved',    d: readModel.moments.mostLoved },
+		{ key: 'mostDivisive', icon: icons.bolt,  accent: 'amber' as const, kicker: 'Most divisive', d: readModel.moments.mostDivisive },
+		{ key: 'biggestUpset', icon: icons.spark, accent: 'sky'   as const, kicker: 'Biggest upset', d: readModel.moments.biggestUpset },
+	] : []);
+
+	function openLeagueShare() {
+		const payload: SharePayload = {
+			award: `${league.name} · Season ${league.season}`,
+			blurb: `${league.memberCount} members · Round ${league.round}`,
+			who: 'Share the league',
+			hue: 'oklch(0.72 0.15 25)',
+			initials: league.name.slice(0, 2).toUpperCase(),
+			accent: 'pulp',
+		};
+		nav.openShare(payload);
+	}
 
 	function openReelShare(item: ReadModel['reel'][number]) {
 		const member = readModel.members.find((m) => m.id === item.winner);
@@ -25,30 +47,28 @@
 </script>
 
 <div class="bs-pad">
+
 	<!-- Masthead -->
-	<div style="display:flex; align-items:center; justify-content:space-between;">
-		<span class="bs-mark bs-mark--md">the b/side</span>
-		<button class="bs-share-btn" onclick={() => {
-			const first = readModel.reel[0];
-			if (first) openReelShare(first);
-		}}>
-			{@html icons.share} Share this league
+	<div class="bs-topbar">
+		<span class="bs-mini-mark">b/s</span>
+		<button class="bs-icon-btn" onclick={openLeagueShare} aria-label="Share this league"
+			style="margin-left:auto">
+			{@html icons.share}
 		</button>
 	</div>
 
-	<!-- Hero -->
-	<div class="bs-hero">
-		<div class="bs-hero-eyebrow">Season {league.season} · {league.memberCount} members</div>
-		<div class="bs-hero-name">{league.name}</div>
-		<div class="bs-fresh">
-			<span class="bs-pulse"></span>
-			Updated {league.updated}
-		</div>
-	</div>
+	<!-- League hero -->
+	<header class="bs-hero">
+		<div class="bs-hero-eyebrow">{league.name} · Season {league.season} · Round {league.round}</div>
+		<h1 class="bs-hero-name">{league.name}</h1>
+		<span class="bs-fresh"><span class="bs-pulse"></span>Updated {league.updated}</span>
+	</header>
 
-	<!-- KPI ribbon -->
-	<div class="bs-sec">
+	<!-- KPI ribbon — celebratory, no win/loss ladder -->
+	<section class="bs-sec">
 		<div class="bs-eyebrow">By the numbers</div>
+		<div class="bs-sec-title">The season so far</div>
+		<div class="bs-sec-sub">Quirky over competitive — nobody's framed as a loser here.</div>
 		<div class="bs-ribbon">
 			{#each readModel.kpis as kpi}
 				<div class="bs-kpi">
@@ -58,11 +78,13 @@
 				</div>
 			{/each}
 		</div>
-	</div>
+	</section>
 
 	<!-- Superlative reel -->
-	<div class="bs-sec">
-		<div class="bs-eyebrow bs-acc-pulp"><span class="bs-acc-dot"></span>Season awards</div>
+	<section class="bs-sec">
+		<div class="bs-eyebrow bs-acc-amber"><span class="bs-acc-dot"></span>Yearbook awards</div>
+		<div class="bs-sec-title">Season {league.season} superlatives</div>
+		<div class="bs-sec-sub">Tap an award to open that player's profile.</div>
 		<div class="bs-reel">
 			{#each readModel.reel as item}
 				{@const member = readModel.members.find((m) => m.id === item.winner)}
@@ -76,11 +98,9 @@
 					{#if member}
 						<div class="bs-award-winner">
 							<Avatar hue={member.hue} initials={member.initials} size="sm" />
-							<div class="bs-who">
-								{member.name}
-								<small>tap to see profile</small>
-							</div>
-							<button class="bs-share-mini" onclick={(e) => { e.stopPropagation(); openReelShare(item); }}
+							<span class="bs-who">{member.name}<small>tap to see profile</small></span>
+							<button class="bs-share-mini"
+								onclick={(e) => { e.stopPropagation(); openReelShare(item); }}
 								aria-label="Share award">
 								{@html icons.share}
 							</button>
@@ -89,39 +109,95 @@
 				</div>
 			{/each}
 		</div>
-	</div>
+	</section>
 
-	<!-- Family grid -->
-	<div class="bs-sec">
-		<div class="bs-eyebrow">The family</div>
+	<!-- The family -->
+	<section class="bs-sec">
+		<div class="bs-eyebrow">{league.memberCount} members</div>
+		<div class="bs-sec-title">The family</div>
+		<div class="bs-sec-sub">Everyone gets a page. Tap a face.</div>
 		<div class="bs-players">
 			{#each readModel.members as m}
 				<button class="bs-player" onclick={() => nav.goProfile(m.id)}>
-					<Avatar hue={m.hue} initials={m.initials} />
-					<div class="bs-player-txt">
-						<div class="bs-player-name">{m.name}</div>
+					<Avatar hue={m.hue} initials={m.initials} size="md" />
+					<span class="bs-player-txt">
+						<span class="bs-player-name">{m.name}</span>
 						{#if m.headline}
-							<div class="bs-player-role">{m.headline}</div>
+							<span class="bs-player-role">{m.headline}</span>
 						{/if}
-					</div>
+					</span>
 				</button>
 			{/each}
 		</div>
-	</div>
+	</section>
 
-	<!-- Archive link -->
-	<button class="bs-featured" onclick={() => nav.goArchive()}>
-		<div class="bs-featured-top">
-			<div class="bs-roundbadge">R{league.round} · Latest digest</div>
-			{@html icons.chevR}
-		</div>
-		<div class="bs-featured-theme">Digest Archive →</div>
-		<div class="bs-sec-sub">Every round, forever. See all {readModel.archive.length} digests.</div>
-	</button>
+	<!-- Moments of the season -->
+	{#if momentRows.length > 0}
+		<section class="bs-sec">
+			<div class="bs-eyebrow">Consensus, not ranking</div>
+			<div class="bs-sec-title">Moments of the season</div>
+			<div class="bs-moments">
+				{#each momentRows as r}
+					{@const sub = readModel.members.find((m) => m.id === r.d.submitter)}
+					<div class="bs-moment">
+						<div class={'bs-moment-icon ' + bsAcc(r.accent)} style="color:var(--acc)">
+							{@html r.icon}
+						</div>
+						<div class="bs-moment-body">
+							<div class="bs-moment-kicker">{r.kicker} · R-{r.d.round}</div>
+							<div class="bs-moment-song">{r.d.title} <span>— {r.d.artist}</span></div>
+							<div class="bs-moment-line">
+								{r.d.line}
+								{#if sub}<span style="color:var(--fg-quiet)"> ({sub.name})</span>{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	<!-- Latest digest teaser -->
+	{#if latestRound}
+		<section class="bs-sec">
+			<div class="bs-eyebrow">Fresh off the press</div>
+			<div class="bs-sec-title">Latest round</div>
+			<div class="bs-sec-sub">The full digest archive lives here too.</div>
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+			<div class="bs-featured" role="button" tabindex="0"
+				onclick={nav.goArchive}
+				onkeydown={(e) => e.key === 'Enter' && nav.goArchive()}
+				style="--hue:{latestRound.hue}">
+				<div class="bs-featured-top">
+					<span class="bs-roundbadge">ROUND {latestRound.n}</span>
+					<span class="bs-tag-new">Just closed</span>
+				</div>
+				<div class="bs-featured-theme">{latestRound.theme}</div>
+				<div class="bs-winner-row">
+					{#if latestSubmitter}
+						<Avatar hue={latestSubmitter.hue} initials={latestSubmitter.initials} size="sm" />
+					{/if}
+					<div class="bs-winner-meta">
+						<div class="bs-winner-song">{latestRound.winnerSong} — {latestRound.winnerArtist}</div>
+						<div class="bs-winner-by">
+							Won by {latestSubmitter?.name ?? latestRound.submitter} · {latestRound.votes} votes cast
+						</div>
+					</div>
+					<span class="bs-winner-medal" style="color:var(--amber)">{@html icons.trophy}</span>
+				</div>
+			</div>
+			<button class="bs-share-btn" onclick={nav.goArchive}
+				style="align-self:stretch; justify-content:center">
+				Open the archive — {readModel.archive.length} rounds &nbsp;{@html icons.chevR}
+			</button>
+		</section>
+	{/if}
 
 	<!-- Footer -->
-	<div class="bs-footer">
-		<div class="bs-mark bs-mark--sm">the b/side</div>
-		<div class="bs-footer-note">A fan-facing companion to your music league.<br /><b>No login required. No rankings. Just music.</b></div>
-	</div>
+	<footer class="bs-footer">
+		<div class="bs-footer-mark">the b/side</div>
+		<div class="bs-footer-note">
+			<b>No login. Just this link.</b> Share it with the family — it never reveals the league HQ.
+		</div>
+	</footer>
 </div>
