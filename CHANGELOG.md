@@ -4,6 +4,40 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.1.1] — 2026-06-15
+
+Campaign **the b-side**, sprint 3 of 3 (final) — the **operator Content screen**.
+The b-side that sprint-32 made public can now be published and updated entirely
+from the operator app, replacing the orc-curl path. This **closes the campaign**.
+
+### Operator app
+
+- **Content screen** — the sidebar's **Digest** item becomes **Content** (`/content`,
+  with a `/digest` redirect) and a pending-update count badge, split into two tabs:
+  - **Digest** — the existing generate → refine → finalize pipeline, unchanged
+    (just wrapped in the new tab chrome).
+  - **Archive** — manage each league's b-side. A league list with three states —
+    update-ready, up-to-date, not-published — each row showing emblem, name,
+    season, the b-side URL, and meta (members · rounds archived · last updated).
+- **First publish** — "Publish b-side →" mints the slug and shows the published /
+  reshare state (the reshare card with Send to WhatsApp / Copy share card / Copy
+  link, honoring the Announce config).
+- **Archive-update modal** — refresh / hold / lock per section (superlatives,
+  stats·KPIs, fingerprints, moments, overlap) plus a required new-archive-entry
+  row, steerable rewrites (quick-steer chips + free text), an Announce strip, and
+  a cost estimate. Updates always rewrite the read-model **in place on the same
+  slug** — locked sections are never regenerated.
+
+### Under the hood
+
+- New `/api/content/*` routes: `leagues` (per-league b-side state + pending-update
+  flag = a finalized round not yet in `archived_rounds`), `:leagueId/update-plan`,
+  `:leagueId/update` (section-wise `buildReadModel` recompute, persists per-section
+  decisions in `dashboard_section_state`, appends the round to `archived_rounds`),
+  and `:leagueId/reshare`. 16 new route tests.
+- `publishSite` now tracks `archived_rounds` by round ID and exports
+  `writePublicArtifacts` for the update path to reuse.
+
 ## [1.1.0] — 2026-06-15
 
 Campaign **the b-side**, sprint 2 of 3 — the **public league site is live**. The
