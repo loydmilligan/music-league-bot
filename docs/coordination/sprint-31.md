@@ -64,7 +64,7 @@ updated: 2026-06-14T17:00:00Z
 - [ ] {agent: backend, id: schema} **Schema — `dashboard_sites` + `dashboard_section_state`** (spec §6). Two new tables via idempotent boot migrations in `ui/src/lib/db/client.ts` (house pattern). `dashboard_sites` (slug PK unguessable ≥80-bit, league_id UNIQUE, season, read_model TEXT, archived_rounds TEXT DEFAULT '[]', is_live, published_at, refreshed_at). `dashboard_section_state` (league_id, section, decision DEFAULT 'refresh', steer, PK(league_id,section)). Also add a small slug helper (≥80-bit token) in `$lib/dashboard/slug.ts`.
   - **Acceptance:** fresh boot creates both tables (idempotent re-run is a no-op); `PRAGMA table_info` shows every column; the slug helper yields a ≥80-bit URL-safe token; vitest covers boot + slug entropy/shape; `npm run check` 0 errors.
 
-- [-] {agent: backend, id: overlap-v2} **Overlap v2 — Vote Together + Taste Twins** (spec §8; also the standalone backlog item). New `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → { voteTogether: PeerScore[], taste­Twins: PeerScore[] }` per member. Vote Together = within shared rounds only (omit zero-shared-round pairs, no fake low %); Taste Twins = fingerprint-similarity across all leagues (no penalty for no shared rounds). Export the slice type. Do NOT extend the v1 global-Jaccard `tasteOverlap`.
+- [x] {agent: backend, id: overlap-v2} **Overlap v2 — Vote Together + Taste Twins** (spec §8; also the standalone backlog item). New `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → { voteTogether: PeerScore[], taste­Twins: PeerScore[] }` per member. Vote Together = within shared rounds only (omit zero-shared-round pairs, no fake low %); Taste Twins = fingerprint-similarity across all leagues (no penalty for no shared rounds). Export the slice type. Do NOT extend the v1 global-Jaccard `tasteOverlap`.
   - **Acceptance:** a known co-voting pair scores high in Vote Together; a pair with zero shared rounds is ABSENT from Vote Together but can appear in Taste Twins; vitest covers both with fixture data; `npm run check` 0 errors.
 
 - [-] {agent: backend, id: gen-deterministic} **Deterministic generators — stats, tiers, KPI facts, moments, fan/hater relationships** (spec §7). New `ui/src/lib/dashboard/generators/deterministic.ts`: per-member `stat` (submitted/avg/round-wins) + `tier` (full/lite by an activity threshold — pick a simple defensible cutoff); league `kpis[]` (celebratory FACTS only — distinct winners, favorite year, longest pick; NEVER last-place/win-loss); `moments` (mostLoved/mostDivisive/biggestUpset by vote spread); and the deterministic `biggestFan`/`biggestHater` relationships (who most rewards / most withholds points). Pure SQL/compute; export slice types. (LLM blurbs/phrasing layer on in gen-narrative-llm.)
@@ -102,6 +102,21 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — overlap-v2 complete (1187409)
+- `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → Map<playerId, OverlapSlice>`
+- Exports: `PeerScoreSchema`, `PeerScore`, `OverlapSliceSchema`, `OverlapSlice`
+- **Vote Together**: mutual positive-vote % in shared rounds (both A→B and B→A > 0 pts in same round);
+  pairs with zero shared rounds omitted entirely — no fake low percentages
+- **Taste Twins**: weighted Jaccard over `taste_fingerprint` fields (artists ×3, genres ×2, rewards ×2,
+  punishes ×1, eras ×1); independent of shared-round participation; built from global (all-league) fingerprint
+- Replaced v1 global-Jaccard `tasteOverlap` in playerHistory.ts — did NOT extend it
+- Results sorted by pct descending; label buckets: "vote as a bloc" / "quiet alliance" / "occasional allies"
+  and "kindred ears" / "same wavelength" / "find common ground"
+- 20/20 vitest green (acceptance criteria: co-voting pair scores high; zero-shared pair absent from
+  voteTogether but present in tasteTwins with similar fingerprints); 439/439 full suite green;
+  0 svelte-check errors in owned files (2 pre-existing errors in deterministic.test.ts, other lane)
+- `[-]` → `[x]`
 
 ### 2026-06-14 — backend — gen-narrative-llm complete (9182bdf)
 - `ui/src/lib/dashboard/generators/narrative.ts`: 4 PredictionTasks on the sprint-28 harness
