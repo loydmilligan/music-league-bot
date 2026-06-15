@@ -2,12 +2,36 @@ import { getDb } from '$lib/db/client.js';
 import { getContentPendingCount } from '$lib/db/layout.js';
 import type { PageServerLoad } from './$types.js';
 
+export type ContentLeague = {
+  id: number;
+  slug: string;
+  name: string;
+  members: number;
+  bside: {
+    slug: string;
+    url: string;
+    season: number;
+    archivedCount: number;
+    lastUpdated: string;
+  } | null;
+  pending: {
+    roundId: number;
+    theme: string;
+    winnerSong: string;
+    winnerArtist: string;
+    submitter: string;
+    votes: number;
+    closedAt: string | null;
+  } | null;
+};
+
 export interface ContentPageData {
   pendingCount: number;
   latestDigestRoundId: number | null;
+  leagues: ContentLeague[];
 }
 
-export const load: PageServerLoad = async (): Promise<ContentPageData> => {
+export const load: PageServerLoad = async ({ fetch }): Promise<ContentPageData> => {
   const db = getDb();
 
   const pendingCount = getContentPendingCount(db);
@@ -21,17 +45,22 @@ export const load: PageServerLoad = async (): Promise<ContentPageData> => {
     )
     .get() as { round_id: number } | undefined;
 
+  let latestDigestRoundId: number | null = null;
   if (unfinalized) {
-    return { pendingCount, latestDigestRoundId: unfinalized.round_id };
+    latestDigestRoundId = unfinalized.round_id;
+  } else {
+    const latest = db
+      .prepare(
+        `SELECT r.id FROM rounds r
+         WHERE EXISTS (SELECT 1 FROM votes WHERE round_id = r.id)
+         ORDER BY r.id DESC LIMIT 1`,
+      )
+      .get() as { id: number } | undefined;
+    latestDigestRoundId = latest?.id ?? null;
   }
 
-  const latest = db
-    .prepare(
-      `SELECT r.id FROM rounds r
-       WHERE EXISTS (SELECT 1 FROM votes WHERE round_id = r.id)
-       ORDER BY r.id DESC LIMIT 1`,
-    )
-    .get() as { id: number } | undefined;
+  const res = await fetch('/api/content/leagues');
+  const leagues: ContentLeague[] = await res.json();
 
-  return { pendingCount, latestDigestRoundId: latest?.id ?? null };
+  return { pendingCount, latestDigestRoundId, leagues };
 };
