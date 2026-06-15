@@ -2,7 +2,7 @@
   // ── tastemaker-component · sprint-18 (viz) ────────────────────────────────
   // The discoverability v2 "Tastemaker leaderboard" — a per-player season taste
   // profile. Ported from the approved mockup
-  // `docs/planning/famjam-s3-concept-c-mobile.html`. Replaces the squashed v1.
+  // `docs/archive/planning/famjam-s3-concept-c-mobile.html`. Replaces the squashed v1.
   //
   // Per-player stacked bar across 4 RAW-obscurity buckets, ranked by a MEDIAN
   // discovery-percentile "Tastemaker score" (de-squashed, ~24–80 spread). Counts

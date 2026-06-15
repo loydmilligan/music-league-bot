@@ -3,7 +3,7 @@
   // Three tabs (Song search / Theme research / Player research) present here as
   // STUBS; their internals land in milestone phases 2–4. Tab selection is
   // deep-linkable via ?tab=songs|themes|players so each subscreen has its own URL.
-  // Full vision: docs/brainstorming/history-research-tool.md
+  // Full vision: docs/archive/brainstorming/history-research-tool.md
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import SongSearchTab from '$lib/components/SongSearchTab.svelte';

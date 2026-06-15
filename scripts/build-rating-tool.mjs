@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generate a single-file HTML rating tool from the league DB.
- * Output: theme-rating-tool.html in the repo root.
+ * Output: tools/theme-rating-tool.html.
  *
  * Bakes ALL rounds with their songs + vote totals into the HTML as a JSON
  * blob. The page lets you pick league → season → round, view the songs and
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 const DB = process.env.LEAGUE_DB ?? resolve(REPO_ROOT, 'data/league.db');
-const OUT = resolve(REPO_ROOT, 'theme-rating-tool.html');
+const OUT = resolve(REPO_ROOT, 'tools/theme-rating-tool.html');
 
 const db = new Database(DB, { readonly: true });
 
