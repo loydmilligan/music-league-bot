@@ -79,7 +79,7 @@ updated: 2026-06-15T04:45:00Z
 - [x] {agent: frontend, id: route-archive, depends: shell} **Digest Archive — `/{slug}/archive`** (handoff §4c; `ml-dashboard-archive.jsx`). Hero, then rounds grouped by season (newest first), each a card with round number, theme, winning song + submitter monogram, date, "New" tag on the most recent. Each card deep-links to the existing full digest artifact at `/{slug}/archive/{roundId}` — **reuse the existing digest render pipeline; do not rebuild it.**
   - **Acceptance:** Archive renders rounds grouped by season newest-first from the read_model; a card deep-links to the existing digest artifact (resolves, not 404); the most-recent round shows the "New" tag; verified hands-on at 412×892 + desktop; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: bside-buildable} **GATE FINDING — make the bside app reproducibly buildable.** `bside/package.json` has EMPTY dependencies/devDependencies, but the app imports svelte + vite + @sveltejs/vite-plugin-svelte — a clean `cd bside && npm install && npm run build` fails (ERR_MODULE_NOT_FOUND). The agent-built dist/ exists but is not reproducible. Fix: populate `bside/package.json` devDependencies to match ui/package.json versions (svelte ^5.55.2, vite ^8.0.7, @sveltejs/vite-plugin-svelte ^7.0.0, typescript ^6.0.2, svelte-check ^4.4.6) + any others the build needs; ensure `npm install && npm run build` is green from a clean node_modules; commit the fixed package.json + package-lock.json.
+- [x] {agent: frontend, id: bside-buildable} **GATE FINDING — make the bside app reproducibly buildable.** `bside/package.json` has EMPTY dependencies/devDependencies, but the app imports svelte + vite + @sveltejs/vite-plugin-svelte — a clean `cd bside && npm install && npm run build` fails (ERR_MODULE_NOT_FOUND). The agent-built dist/ exists but is not reproducible. Fix: populate `bside/package.json` devDependencies to match ui/package.json versions (svelte ^5.55.2, vite ^8.0.7, @sveltejs/vite-plugin-svelte ^7.0.0, typescript ^6.0.2, svelte-check ^4.4.6) + any others the build needs; ensure `npm install && npm run build` is green from a clean node_modules; commit the fixed package.json + package-lock.json.
   - **Acceptance:** `cd bside && rm -rf node_modules && npm install && npm run build` succeeds and writes dist/bside.js + dist/bside.css; `npm run check` (if defined) clean.
 
 - [ ] {agent: orc, id: gate-close, depends: host-pipeline,route-home,route-profile,route-archive,bside-buildable} **Gate — cross-check, ship, walk the live site, close.** Orc runs the gate: cross-check all lanes, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, re-publish a league, then **load the LIVE `digest.mattmariani.com/{slug}` at 412×892** and walk Home → a full profile → a lite profile → Archive (+ a deep-linked digest), fire a share card, and verify `noindex` + NO operator-app link + bad-slug 404. Panes reset, doc closed.
@@ -149,6 +149,13 @@ _None._
 - Deep-link: `entry.digestUrl` → `<a href>` card; null → non-linked `<div>` (graceful — fixture has all null; real data will have `/d/{roundSlug}/`)
 - `npm run check` 0 errors; `npm run build` ✓ 71.49 kB JS / 30.27 kB CSS
 - All 4 frontend tasks now `[x]` — gate-close is unblocked
+
+### 2026-06-15 — frontend — bside-buildable done (874fb77)
+- `bside/package.json` devDependencies populated: svelte ^5.55.2, vite ^8.0.7, @sveltejs/vite-plugin-svelte ^7.0.0, typescript ^6.0.2, svelte-check ^4.4.6
+- `bside/package-lock.json` committed
+- Verified clean: `rm -rf node_modules && npm install && npm run build` → dist/bside.js (71.54 kB) + dist/bside.css (30.27 kB) ✓
+- `npm run check` → 0 errors, 2 pre-existing a11y warnings (unchanged from shell task)
+- All 5 frontend tasks now `[x]` — gate-close dependency satisfied
 
 ### 2026-06-15 — docs — Sprint plan authored: the b-side public site (campaign sprint 2)
 - created sprint-32 coord-doc; `## Active Sprint Plan` body has 6 tasks
