@@ -3,9 +3,10 @@ project: music-league-bot
 sprint: sprint-31
 campaign: the-b-side
 title: the b-side — Read-model generator + foundation
-status: planned
+status: active
 created: 2026-06-14T00:00:00Z
-updated: 2026-06-14T00:00:00Z
+activated: 2026-06-14
+updated: 2026-06-14T17:00:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-31)
@@ -69,10 +70,10 @@ updated: 2026-06-14T00:00:00Z
 - [ ] {agent: backend, id: gen-deterministic} **Deterministic generators — stats, tiers, KPI facts, moments, fan/hater relationships** (spec §7). New `ui/src/lib/dashboard/generators/deterministic.ts`: per-member `stat` (submitted/avg/round-wins) + `tier` (full/lite by an activity threshold — pick a simple defensible cutoff); league `kpis[]` (celebratory FACTS only — distinct winners, favorite year, longest pick; NEVER last-place/win-loss); `moments` (mostLoved/mostDivisive/biggestUpset by vote spread); and the deterministic `biggestFan`/`biggestHater` relationships (who most rewards / most withholds points). Pure SQL/compute; export slice types. (LLM blurbs/phrasing layer on in gen-narrative-llm.)
   - **Acceptance:** stats/tier/kpis/moments/fan-hater compute from fixture gameplay data; KPIs contain NO win/loss-ladder field; a quiet member resolves to `tier:'lite'`; vitest covers each; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
+- [-] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
   - **Acceptance:** with `callOpenRouter` stubbed, generators return schema-valid superlatives/blurbs with accent in the allowed set; output zod rejects a brutal/ranking phrasing shape (e.g. a "lastPlace" field); prompts include the no-strife constraint (asserted in the message text); `npm run check` 0 errors; `npx vitest run` green.
 
-- [ ] {agent: backend, id: gen-profile-llm} **Profile LLM generators — spectrum + discovery playlist** (spec §7, decision §3.1). New `ui/src/lib/dashboard/generators/profile.ts`: PredictionTasks producing each member's **spectrum** (3 axes Polished↔Raw / Sunny↔Melancholy / Familiar↔Obscure, derived from the player's taste fingerprint + history — no audio data) and the personality-driven **discovery playlist** (named, a one-line "agenda" nudge, 3 tracks each with a "why"). Export slice types.
+- [-] {agent: backend, id: gen-profile-llm} **Profile LLM generators — spectrum + discovery playlist** (spec §7, decision §3.1). New `ui/src/lib/dashboard/generators/profile.ts`: PredictionTasks producing each member's **spectrum** (3 axes Polished↔Raw / Sunny↔Melancholy / Familiar↔Obscure, derived from the player's taste fingerprint + history — no audio data) and the personality-driven **discovery playlist** (named, a one-line "agenda" nudge, 3 tracks each with a "why"). Export slice types.
   - **Acceptance:** with `callOpenRouter` stubbed, spectrum returns 3 axis values in range and playlist returns name + agenda + 3 tracks-with-why; a `lite` member with a thin fingerprint still returns a coherent (possibly shorter) result; `npm run check` 0 errors; `npx vitest run` green.
 
 - [ ] {agent: backend, id: build-readmodel, depends: schema,overlap-v2,gen-deterministic,gen-narrative-llm,gen-profile-llm} **Read-model orchestrator** (spec §7). New `ui/src/lib/dashboard/buildReadModel.ts`: `buildReadModel(db, leagueId, opts) → ReadModel` — fetch/generate each member's taste fingerprint (reuse sprint-28; generate if missing), then assemble league meta + members[] (fingerprint, spectrum, superlatives, fan/hater, voteTogether/voteTwins, playlist, tier, stat) + reel[] + kpis[] + moments + archive[] by composing all the generator slices. Validate the assembled object against a `ReadModel` zod schema mirroring `ml-dashboard-data.jsx`. `lite`-tier members omit sections they lack (no empty blocks).
@@ -101,6 +102,13 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — orc — Sprint-31 ACTIVATED · gen-narrative-llm + gen-profile-llm dispatched (Wave 1)
+- status planned → active; dispatched the two longest-pole LLM generators in parallel —
+  gen-narrative-llm to backend (%55), gen-profile-llm to the frontend pane temp-flipped to a
+  2nd backend lane (%56). File-disjoint (each owns its generators/*.ts + slice type). Both `[-]`.
+- Remaining dependency-free generators (schema, overlap-v2, gen-deterministic) dispatch as lanes free.
+  build-readmodel waits on all 5; then publish-api; then gate.
 
 ### 2026-06-14 — docs — Sprint plan authored: the b-side read-model generator (campaign sprint 1)
 - created sprint-31 coord-doc; `## Active Sprint Plan` body has 8 tasks (all backend + orc gate; no UI)
