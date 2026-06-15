@@ -560,3 +560,18 @@ summary: >-
   existing Spotify/YTM resolution + the roadmap's audio-preview work so each track
   has a 30s preview or a one-tap open-in-app. The natural companion to
   bside-discovery-playlist-link.
+---
+id: bside-force-check-new-digests
+title: b-side — Manual "Check for New Digests" / Force Refresh
+stage: analyzed
+effort: small
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  An explicit operator affordance on the Content → Archive screen to force a
+  re-scan for finalized/regenerated digests and offer an update, rather than
+  relying only on the auto pending-flag. Companion to the freshness-aware
+  pending fix (shipped as a hotfix 2026-06-15) — the auto-detection now catches
+  digests finalized after publish, but a manual "check / force refresh" button
+  is a useful safety valve, especially during season backfill when re-generating
+  many already-archived rounds. Small frontend + a re-scan endpoint.

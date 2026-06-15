@@ -73,10 +73,16 @@ sprintPlan:
 id: the-b-side-polish
 title: the b-side — Polish & Depth
 kind: regular
-signedOff: false
-status: proposed
+signedOff: true
+status: planned
 followsFrom: the-b-side
-sprints: []
+sprints:
+  - sprint-34-bside-season-data-truth
+  - sprint-35-bside-superlatives-voice
+  - sprint-36-bside-visual-mobile
+  - sprint-37-bside-metrics-operator-qa
+  - sprint-38-bside-avatars
+  - sprint-39-bside-moments-playlist
 summary: >-
   Follow-on to the shipped `the-b-side` campaign — turns the owner UAT
   (wiki/.../sessions/testing/2026-06-15-the-b-side-campaign-review.md) plus orc
@@ -85,31 +91,63 @@ summary: >-
   shipped and is owner-ratified; nothing here is a release blocker. The proposed
   sprint shape below is a STARTING POINT for prioritization, not locked — sprint
   membership gets ratified before kickoff.
-proposedSprints:
-  - title: Polish-1 — Season & data truth (foundation)
-    rationale: >-
-      The load-bearing slice everything content-related depends on. Cards:
-      bside-season-round-truth, bside-season-lens, bside-read-model-provenance,
-      bside-degenerate-state-handling, bside-age-field-save-bug. Heavy overlap with
-      the existing `active-league-management` roadmap card — sequence them together.
-  - title: Polish-2 — Superlatives & voice
-    rationale: >-
-      The content engine. Cards: bside-superlatives-curation (count control +
-      generate-N-pick-M + adjective-variation), bside-superlative-visual-identity,
-      bside-semantic-accent-system, bside-voice-snark-tuning.
-  - title: Polish-3 — Visual & mobile
-    rationale: >-
-      Cards: bside-mobile-card-rows (fade/carousel), bside-member-grid-richness,
-      bside-share-card-og-meta, bside-returning-visitor-diff.
-  - title: Polish-4 — Metrics correctness & operator QA
-    rationale: >-
-      Cards: bside-fan-hater-overlap-normalization (averages), bside-real-audio-fingerprint,
-      bside-update-diff-preview, bside-content-lint.
-  - title: Polish-5 — Avatars (themed LLM batches)
-    rationale: >-
-      Stands alone (large). Card: bside-llm-avatars. Needs the per-player base
-      image/description groundwork.
-  - title: Polish-6 — Moments & the real playlist
-    rationale: >-
-      Cards: bside-moments-chat-mined (+ editor pass), bside-discovery-playlist-link,
-      bside-playlist-audio-integration.
+sprintPlan:
+  - sprint: sprint-34-bside-season-data-truth
+    title: Season & data truth (foundation)
+    goal: >-
+      Make the b-side's knowledge of seasons/rounds correct and explicit, and
+      robust to sparse data — the load-bearing slice everything content depends on.
+      Sequence with the existing `active-league-management` roadmap card.
+    cards:
+      - bside-season-round-truth
+      - bside-season-lens
+      - bside-read-model-provenance
+      - bside-degenerate-state-handling
+      - bside-age-field-save-bug
+      - bside-force-check-new-digests
+  - sprint: sprint-35-bside-superlatives-voice
+    title: Superlatives & voice
+    goal: >-
+      The content engine — fewer/better/curated superlatives with tone control,
+      meaningful color, and a tunable snark dial.
+    cards:
+      - bside-superlatives-curation
+      - bside-superlative-visual-identity
+      - bside-semantic-accent-system
+      - bside-voice-snark-tuning
+  - sprint: sprint-36-bside-visual-mobile
+    title: Visual & mobile polish
+    goal: >-
+      Fix the recurring mobile card-row UX, enrich the member grid, and strengthen
+      the share/reshare moment.
+    cards:
+      - bside-mobile-card-rows
+      - bside-member-grid-richness
+      - bside-share-card-og-meta
+      - bside-returning-visitor-diff
+  - sprint: sprint-37-bside-metrics-operator-qa
+    title: Metrics correctness & operator QA
+    goal: >-
+      Normalize the tenure-skewed metrics, move fingerprints to real audio, and
+      give the operator a safer update loop.
+    cards:
+      - bside-fan-hater-overlap-normalization
+      - bside-real-audio-fingerprint
+      - bside-update-diff-preview
+      - bside-content-lint
+  - sprint: sprint-38-bside-avatars
+    title: Themed LLM avatars
+    goal: >-
+      One-off and per-week theme-aligned LLM avatar batches. Stands alone (large);
+      needs the per-player base image/description groundwork.
+    cards:
+      - bside-llm-avatars
+  - sprint: sprint-39-bside-moments-playlist
+    title: Moments & the real playlist
+    goal: >-
+      Chat-mined moments with an editor pass, and turn the discovery playlist into
+      a real, playable, linkable playlist.
+    cards:
+      - bside-moments-chat-mined
+      - bside-discovery-playlist-link
+      - bside-playlist-audio-integration
