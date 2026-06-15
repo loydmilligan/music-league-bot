@@ -4,6 +4,36 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.1.0] — 2026-06-15
+
+Campaign **the b-side**, sprint 2 of 3 — the **public league site is live**. The
+read-model sprint-31 generates now has a face: a public, no-auth, read-only
+micro-site per league at `digest.mattmariani.com/{slug}`.
+
+### New surface (public, separate from the operator app)
+
+- **the b-side** — a standalone static site, one per league, served by the same
+  dumb caddy host as the digests (no app, no DB, no login, `noindex`; nothing on
+  it reaches the operator app). Three routes:
+  - **League Home** — hero, celebratory KPI ribbon, the superlative reel, the
+    member grid, season moments, latest-round teaser.
+  - **Player Profile** (the heart) — signature superlative, the Taste Fingerprint
+    (artist/genre/era chips + spectrum sliders + rewards/punishes), more
+    superlatives, Biggest Fan / Friendly Hater, "Your People" (overlap v2 — Vote
+    Together + Taste Twins), and a discovery playlist. Lite-tier members degrade
+    gracefully.
+  - **Digest Archive** — past rounds by season, each deep-linking to the existing
+    full digest artifact.
+- Every award has a **share card** — a screenshot-ready overlay with just the
+  award + league name, no URL, safe to drop in any chat.
+
+### Under the hood
+
+- Standalone `bside/` Svelte SPA (built once at deploy → `DIGESTS_DIR/_bside/`);
+  `publishSite` writes per-slug `index.html` + `read_model.json`; `Caddyfile.digest`
+  routes `/{slug}/*` with SPA fallback + `noindex`, bad slug → 404 (no enumeration).
+- Operator publish path unchanged: `POST /api/content/:leagueId/publish`.
+
 ## [1.0.9] — 2026-06-14
 
 Campaign **the b-side**, sprint 1 of 3 — the read-model generator. No user-facing
