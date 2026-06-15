@@ -1,0 +1,61 @@
+@import './colors_and_type.css';
+@import './dashboard-styles.css';
+
+/* ── Product overrides ────────────────────────────────────────────────────── */
+/* (the dashboard-styles.css was authored for the review frame; these
+    patches make it correct for the live static SPA with no phone bezel) */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--ink-0);
+  color: var(--fg-2);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Root shell wrapper */
+.bs-app {
+  position: relative;
+  min-height: 100vh;
+  background: var(--ink-0);
+}
+
+/* Overlay is fixed / fullscreen in the product (no phone bezel container) */
+.bs-overlay { position: fixed; }
+
+/* Loading / error states */
+.bs-loading,
+.bs-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--fg-quiet);
+}
+.bs-error { color: var(--ember); }
+
+/* ── b/s brand mark — chunky extruded (not flat italic) ─────────────────── */
+/* Use .bs-mark on any span/div showing the "b/s" or "the b/side" logotype.
+   The full 6-step --pulp-extrude from colors_and_type.css gives the
+   chunky dimensional treatment specified in the brief. */
+.bs-mark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--mash-pulp);
+  text-shadow: var(--pulp-extrude);
+  -webkit-text-stroke: 1.5px var(--mash-pulp-edge);
+  paint-order: stroke fill;
+}
+.bs-mark--lg { font-size: 30px; }
+.bs-mark--md { font-size: 20px; }
+.bs-mark--sm { font-size: 15px; }

@@ -1,0 +1,453 @@
+{
+  "league": {
+    "name": "Fam-Jam",
+    "slug": "fam-jam-a9f3",
+    "season": 3,
+    "round": 14,
+    "seasons": 3,
+    "memberCount": 12,
+    "updated": "May 18, 2026"
+  },
+  "members": [
+    {
+      "id": "marisol", "name": "Marisol", "initials": "MA",
+      "hue": "oklch(0.72 0.15 25)", "tier": "full",
+      "joined": "Founding member · S1",
+      "headline": "Sad bangers, 90s alt, and exactly one unforgivable pop song per season.",
+      "signatureArtists": [
+        { "name": "Mazzy Star", "star": true }, { "name": "The Cranberries" },
+        { "name": "Cocteau Twins" }, { "name": "Sharon Van Etten" },
+        { "name": "Slowdive" }, { "name": "Frente!" }
+      ],
+      "genres": ["dream pop", "90s alt-rock", "slowcore", "trip-hop"],
+      "eras": ["early 90s", "late 90s", "2010s revival"],
+      "rewards": ["a great cry in 4/4", "reverb you could swim in", "a woman who means it"],
+      "punishes": ["bro-country", "songs that explain themselves", "anything over 140 BPM at brunch"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 64 },
+        { "left": "Sunny", "right": "Melancholy", "value": 82 },
+        { "left": "Familiar", "right": "Obscure", "value": 58 }
+      ],
+      "signatureSuperlative": {
+        "award": "Patron Saint of the Slow Build",
+        "blurb": "Submitted the three longest intros of the season and made everyone wait. Worth it twice."
+      },
+      "superlatives": [
+        { "award": "Heart on Sleeve", "accent": "pulp", "blurb": "Wrote the longest submission notes in the league — average 47 words of feelings per song." },
+        { "award": "Mayor of 1994", "accent": "amber", "blurb": "More picks from 1994 than any other year. The mid-90s pay her rent." },
+        { "award": "The Tearjerker", "accent": "sky", "blurb": "Her picks made it into 6 different people's 'song that got me' notes." }
+      ],
+      "biggestFan": { "who": "Pop", "pts": 41, "line": "Gave her picks 41 points this season. He doesn't even like Slowdive. He likes Marisol." },
+      "biggestHater": { "who": "Sal", "pts": -2, "line": "Used his only downvote of S3 on her Cocteau Twins pick — then admitted it 'grew on him.' It always does." },
+      "voteTwins": [
+        { "who": "Nina", "pct": 88, "label": "kindred ears" },
+        { "who": "Junie", "pct": 74, "label": "two-thirds the same brain" },
+        { "who": "Theo", "pct": 61, "label": "agree when it's sad" }
+      ],
+      "voteTogether": [
+        { "who": "Nina", "pct": 79, "label": "vote as a bloc" },
+        { "who": "Rosa", "pct": 66, "label": "quiet alliance" },
+        { "who": "Pop", "pct": 52, "label": "he follows her lead" }
+      ],
+      "playlist": {
+        "name": "Songs Marisol Hasn't Found Yet",
+        "nudge": "Two of these would win the next round and she knows it.",
+        "tracks": [
+          { "title": "Glory Box", "artist": "Portishead", "why": "The trip-hop she keeps circling but never submits." },
+          { "title": "Teardrop", "artist": "Massive Attack", "why": "Reverb you could swim in. Her words, our pick." },
+          { "title": "Sea, Swallow Me", "artist": "Cocteau Twins", "why": "Deeper cut from a band she already loves. Free points." }
+        ]
+      },
+      "stat": { "submitted": 14, "avgPts": 9.1, "wins": 3, "bestRound": "R-9 · 'Songs that sound like winter'" }
+    },
+    {
+      "id": "pop", "name": "Pop", "initials": "PO",
+      "hue": "oklch(0.72 0.15 255)", "tier": "full",
+      "joined": "Founding member · S1",
+      "headline": "Classic rock with the confidence of a man who has never once been wrong about a song.",
+      "signatureArtists": [
+        { "name": "Tom Petty", "star": true }, { "name": "Creedence" },
+        { "name": "Steely Dan" }, { "name": "Warren Zevon" },
+        { "name": "The Band" }, { "name": "Little Feat" }
+      ],
+      "genres": ["classic rock", "yacht rock", "americana", "70s singer-songwriter"],
+      "eras": ["1971–1979", "early 80s", "the occasional 1965"],
+      "rewards": ["a guitar solo that earns it", "lyrics he can quote at dinner", "anything his kids pretended to hate at 16"],
+      "punishes": ["autotune", "songs shorter than 2:30", "'is this even music'"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 38 },
+        { "left": "Sunny", "right": "Melancholy", "value": 44 },
+        { "left": "Familiar", "right": "Obscure", "value": 24 }
+      ],
+      "signatureSuperlative": {
+        "award": "The Commissioner",
+        "blurb": "Founded the league, picks the most themes, and has finished outside the top 5 exactly zero times. Suspicious. Beloved."
+      },
+      "superlatives": [
+        { "award": "Dad-Rock Ambassador", "accent": "amber", "blurb": "Single-handedly responsible for 4 Tom Petty appearances across 3 seasons." },
+        { "award": "The Quotable", "accent": "moss", "blurb": "Most-screenshotted submission notes. Half wisdom, half threat." },
+        { "award": "Never Last", "accent": "sky", "blurb": "Has literally never finished a round in last place. Three full seasons." }
+      ],
+      "biggestFan": { "who": "Theo", "pts": 36, "line": "His son. Votes for Pop's picks even while texting 'this is so corny.' Points say otherwise." },
+      "biggestHater": { "who": "Junie", "pts": -3, "line": "The only person brave enough to downvote the Commissioner. Did it twice. Still invited to dinner." },
+      "voteTwins": [
+        { "who": "Rosa", "pct": 81, "label": "married, also musically" },
+        { "who": "Frankie", "pct": 69, "label": "the uncles agree" },
+        { "who": "Theo", "pct": 55, "label": "apple, tree, etc." }
+      ],
+      "voteTogether": [
+        { "who": "Rosa", "pct": 84, "label": "one household, one ballot" },
+        { "who": "Frankie", "pct": 62, "label": "old-guard bloc" },
+        { "who": "Gabe", "pct": 48, "label": "respects his elders" }
+      ],
+      "playlist": {
+        "name": "Pop, Expand Your Horizons (Gently)",
+        "nudge": "We are not asking you to like these. We are asking you to try.",
+        "tracks": [
+          { "title": "Harvest Moon", "artist": "Neil Young", "why": "Adjacent to everything you love, somehow never submitted." },
+          { "title": "Tuesday Heartbreak", "artist": "Stevie Wonder", "why": "Groove a yacht-rock dad can defend at any cookout." },
+          { "title": "Motion Sickness", "artist": "Phoebe Bridgers", "why": "Your kids will respect you. Take the risk." }
+        ]
+      },
+      "stat": { "submitted": 14, "avgPts": 11.3, "wins": 4, "bestRound": "R-12 · 'Cover that eclipses the original'" }
+    },
+    {
+      "id": "theo", "name": "Theo", "initials": "TH",
+      "hue": "oklch(0.72 0.15 150)", "tier": "full",
+      "joined": "Joined S1 · R3",
+      "headline": "Hyperpop, drill, and a sincere love for one (1) Phil Collins song he will defend to the grave.",
+      "signatureArtists": [
+        { "name": "100 gecs", "star": true }, { "name": "JPEGMAFIA" },
+        { "name": "Charli XCX" }, { "name": "Playboi Carti" },
+        { "name": "Jamie xx" }, { "name": "Phil Collins" }
+      ],
+      "genres": ["hyperpop", "drill", "UK garage", "experimental rap"],
+      "eras": ["2019–now", "2014 SoundCloud", "1981 (one song)"],
+      "rewards": ["a beat switch that ruins the room", "songs his family physically cannot parse", "irony with real feelings under it"],
+      "punishes": ["nostalgia for its own sake", "'they don't make 'em like they used to'", "a key change played straight"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 71 },
+        { "left": "Sunny", "right": "Melancholy", "value": 49 },
+        { "left": "Familiar", "right": "Obscure", "value": 86 }
+      ],
+      "signatureSuperlative": {
+        "award": "Most Likely to Clear the Room",
+        "blurb": "Holds the league record for the widest vote spread on a single song: four 5s and four downvotes. A true polarizer."
+      },
+      "superlatives": [
+        { "award": "The Obscurist", "accent": "sky", "blurb": "Lowest average artist popularity in the league. If you've heard of it, he's already over it." },
+        { "award": "Beat-Switch Evangelist", "accent": "pulp", "blurb": "Every winning pick had a tempo change. The family has learned to brace." },
+        { "award": "The Carti Defense", "accent": "amber", "blurb": "Defended a 41-second song for nine messages. Lost the round, won the argument." }
+      ],
+      "biggestFan": { "who": "Junie", "pts": 33, "line": "His cousin and only true believer. The hyperpop bloc is two people and they are loud." },
+      "biggestHater": { "who": "Pop", "pts": -1, "line": "His dad. Downvoted '100 gecs' with the comment 'I love you but no.' Framed in the group chat." },
+      "voteTwins": [
+        { "who": "Junie", "pct": 91, "label": "the youth caucus" },
+        { "who": "Gabe", "pct": 58, "label": "agree on the loud ones" },
+        { "who": "Marisol", "pct": 61, "label": "meet in the sad middle" }
+      ],
+      "voteTogether": [
+        { "who": "Junie", "pct": 88, "label": "ride or die" },
+        { "who": "Gabe", "pct": 44, "label": "occasional allies" },
+        { "who": "Cleo", "pct": 41, "label": "curious about each other" }
+      ],
+      "playlist": {
+        "name": "Theo, You're Predictable Now",
+        "nudge": "The whole point of you was being unpredictable. These will help.",
+        "tracks": [
+          { "title": "Cellophane", "artist": "FKA twigs", "why": "Raw and weird in a register you keep avoiding." },
+          { "title": "Nikes", "artist": "Frank Ocean", "why": "The sincerity-under-irony you reward in others." },
+          { "title": "Sue Me", "artist": "Sabrina Carpenter", "why": "Submit it ironically. Mean it secretly. We'll know." }
+        ]
+      },
+      "stat": { "submitted": 13, "avgPts": 7.8, "wins": 2, "bestRound": "R-6 · 'A song that shouldn't work'" }
+    },
+    {
+      "id": "junie", "name": "Junie", "initials": "JU",
+      "hue": "oklch(0.72 0.15 325)", "tier": "full",
+      "joined": "Joined S2 · R1",
+      "headline": "Pop maximalist who treats every round like the Eurovision final.",
+      "signatureArtists": [
+        { "name": "Robyn", "star": true }, { "name": "Carly Rae Jepsen" },
+        { "name": "Kylie Minogue" }, { "name": "Caroline Polachek" },
+        { "name": "ABBA" }, { "name": "Charli XCX" }
+      ],
+      "genres": ["maximal pop", "hi-NRG", "disco", "PC Music"],
+      "eras": ["2012 indie-pop", "1979 disco", "2023 pop renaissance"],
+      "rewards": ["a key change that feels illegal", "joy with no apology", "a chorus you can see"],
+      "punishes": ["sad-boy mumbling", "songs that are 'a vibe' and nothing else", "guitars used as a personality"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 22 },
+        { "left": "Sunny", "right": "Melancholy", "value": 18 },
+        { "left": "Familiar", "right": "Obscure", "value": 47 }
+      ],
+      "signatureSuperlative": {
+        "award": "Highest Joy-Per-Minute",
+        "blurb": "Her picks average more BPM and more major keys than anyone's. Statistically the happiest person in Fam-Jam."
+      },
+      "superlatives": [
+        { "award": "The Dancefloor Whip", "accent": "pulp", "blurb": "Single-handedly dragged the league average tempo up 14 BPM in two seasons." },
+        { "award": "Brave Downvoter", "accent": "ember", "blurb": "Used a downvote on the Commissioner himself. Twice. Sleeps fine." },
+        { "award": "Most Improved", "accent": "moss", "blurb": "Biggest standings jump season-over-season. Came to play in S3." }
+      ],
+      "biggestFan": { "who": "Theo", "pts": 31, "line": "Her cousin and co-conspirator. They have a two-person group chat just for pop drops." },
+      "biggestHater": { "who": "Frankie", "pts": -2, "line": "The uncle who calls it all 'noise.' She takes it as a compliment and gets louder." },
+      "voteTwins": [
+        { "who": "Theo", "pct": 91, "label": "the youth caucus" },
+        { "who": "Marisol", "pct": 74, "label": "two-thirds the same brain" },
+        { "who": "Cleo", "pct": 63, "label": "pop solidarity" }
+      ],
+      "voteTogether": [
+        { "who": "Theo", "pct": 88, "label": "ride or die" },
+        { "who": "Cleo", "pct": 57, "label": "growing alliance" },
+        { "who": "Nina", "pct": 49, "label": "agree on the bangers" }
+      ],
+      "playlist": {
+        "name": "Junie's Victory Lap",
+        "nudge": "You've already won. These are just for the encore.",
+        "tracks": [
+          { "title": "Padam Padam", "artist": "Kylie Minogue", "why": "Engineered in a lab for your exact dopamine receptors." },
+          { "title": "Pink Pony Club", "artist": "Chappell Roan", "why": "Joy with no apology. The whole brand." },
+          { "title": "Spinning", "artist": "No Rome, Charli XCX", "why": "The illegal key change you've been chasing." }
+        ]
+      },
+      "stat": { "submitted": 9, "avgPts": 8.4, "wins": 1, "bestRound": "R-11 · 'A song you'd play on the last day'" }
+    },
+    {
+      "id": "rosa", "name": "Rosa", "initials": "RO",
+      "hue": "oklch(0.72 0.15 70)", "tier": "full",
+      "joined": "Founding member · S1",
+      "headline": "Soul, gospel, and Motown — picks that feel inevitable the second they start.",
+      "signatureArtists": [
+        { "name": "Aretha Franklin", "star": true }, { "name": "Sam Cooke" },
+        { "name": "Bill Withers" }, { "name": "Mavis Staples" },
+        { "name": "Al Green" }, { "name": "Nina Simone" }
+      ],
+      "genres": ["soul", "gospel", "Motown", "70s R&B"],
+      "eras": ["1965–1974", "the deep gospel cuts", "a careful 2016"],
+      "rewards": ["a voice with nothing to hide behind", "a song that's also a prayer", "restraint"],
+      "punishes": ["showing off", "a runs contest", "loud as a substitute for big"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 52 },
+        { "left": "Sunny", "right": "Melancholy", "value": 55 },
+        { "left": "Familiar", "right": "Obscure", "value": 40 }
+      ],
+      "signatureSuperlative": {
+        "award": "The Closer",
+        "blurb": "Wins quietly. Three of her four round wins came from songs nobody discussed in chat at all. She just lands them."
+      },
+      "superlatives": [
+        { "award": "Lowest Variance", "accent": "moss", "blurb": "The most consistent scorer in the league. Never spikes, never craters. A metronome of taste." },
+        { "award": "The Standard", "accent": "amber", "blurb": "When the family argues about whether something 'counts,' they ask Rosa." }
+      ],
+      "biggestFan": { "who": "Pop", "pts": 38, "line": "Her husband. Two ballots, one household, a marriage measurable in points awarded." },
+      "biggestHater": { "who": "Theo", "pts": 0, "line": "Has never once downvoted her, but quietly withholds 5s out of teenage principle. She's noticed." },
+      "voteTwins": [
+        { "who": "Pop", "pct": 81, "label": "married, also musically" },
+        { "who": "Marisol", "pct": 66, "label": "the soulful axis" },
+        { "who": "Nina", "pct": 60, "label": "agree on grown-folks music" }
+      ],
+      "voteTogether": [
+        { "who": "Pop", "pct": 84, "label": "one household, one ballot" },
+        { "who": "Marisol", "pct": 66, "label": "quiet alliance" }
+      ],
+      "playlist": {
+        "name": "Rosa Already Knows, But Still",
+        "nudge": "You'll have heard two of these. The third is the one.",
+        "tracks": [
+          { "title": "I Forget to Be Your Lover", "artist": "William Bell", "why": "A deep soul cut even you might not have flagged." },
+          { "title": "Pressure", "artist": "Sault", "why": "Modern, but it's a prayer. Your exact wheelhouse, 2021 edition." },
+          { "title": "Make It Rain", "artist": "Foy Vance", "why": "Restraint, then release. You'll get it immediately." }
+        ]
+      },
+      "stat": { "submitted": 14, "avgPts": 10.6, "wins": 4, "bestRound": "R-2 · 'Best song with no chorus'" }
+    },
+    {
+      "id": "wes", "name": "Wes", "initials": "WE",
+      "hue": "oklch(0.72 0.15 285)", "tier": "full",
+      "joined": "Joined S1 · R7",
+      "headline": "Jazz, krautrock, and field recordings — votes with a compass only he can read.",
+      "signatureArtists": [
+        { "name": "Alice Coltrane", "star": true }, { "name": "Can" },
+        { "name": "Sun Ra" }, { "name": "Pharoah Sanders" },
+        { "name": "Broadcast" }, { "name": "Arthur Russell" }
+      ],
+      "genres": ["spiritual jazz", "krautrock", "ambient", "outsider folk"],
+      "eras": ["1971 cosmic", "late-70s NYC loft", "no-era drone"],
+      "rewards": ["a song with no obvious door in", "patience", "a groove that forgets to end"],
+      "punishes": ["a hook designed by committee", "songs in a hurry", "résumé music"],
+      "spectrum": [
+        { "left": "Polished", "right": "Raw", "value": 60 },
+        { "left": "Sunny", "right": "Melancholy", "value": 51 },
+        { "left": "Familiar", "right": "Obscure", "value": 94 }
+      ],
+      "signatureSuperlative": {
+        "award": "Least Predictable Ballot",
+        "blurb": "His votes correlate with literally no one's. The league's true independent — a one-man third party."
+      },
+      "superlatives": [
+        { "award": "The Deep End", "accent": "sky", "blurb": "Submitted the single most obscure track in three seasons. Spotify had 412 monthly listeners." },
+        { "award": "Patience Award", "accent": "moss", "blurb": "Average pick length: 6 minutes 40 seconds. He's not in a hurry and neither should you be." }
+      ],
+      "biggestFan": { "who": "Marisol", "pts": 22, "line": "The only one who reliably 'gets' his picks. A two-person avant-garde appreciation society." },
+      "biggestHater": { "who": "Junie", "pts": -1, "line": "Downvoted an 11-minute Sun Ra piece at the 6-minute mark. 'I gave it a real shot,' she lied." },
+      "voteTwins": [
+        { "who": "Marisol", "pct": 57, "label": "meet in the deep end" },
+        { "who": "Theo", "pct": 44, "label": "weird respects weird" }
+      ],
+      "voteTogether": [
+        { "who": "Marisol", "pct": 51, "label": "lonely alliance" },
+        { "who": "Rosa", "pct": 39, "label": "agree on the sacred ones" }
+      ],
+      "playlist": {
+        "name": "Wes, We Found Three You'll Tolerate",
+        "nudge": "This took our whole budget. Please submit at least one.",
+        "tracks": [
+          { "title": "Journey in Satchidananda", "artist": "Alice Coltrane", "why": "Somehow not yet submitted. Correct this." },
+          { "title": "Wandering Star", "artist": "Portishead", "why": "A door-in for the rest of the family, still strange enough for you." },
+          { "title": "This Is How You Smile", "artist": "Helado Negro", "why": "Patient, warm, no committee in sight." }
+        ]
+      },
+      "stat": { "submitted": 12, "avgPts": 6.2, "wins": 1, "bestRound": "R-8 · 'A song for 3am'" }
+    },
+    {
+      "id": "nina", "name": "Nina", "initials": "NI",
+      "hue": "oklch(0.72 0.15 195)", "tier": "lite",
+      "joined": "Joined S2 · R4",
+      "headline": "Indie folk and a soft spot for anyone with a banjo and a grievance.",
+      "signatureArtists": [
+        { "name": "Big Thief", "star": true }, { "name": "Adrianne Lenker" },
+        { "name": "Bon Iver" }, { "name": "Fleet Foxes" }
+      ],
+      "genres": ["indie folk", "chamber pop", "alt-country"],
+      "eras": ["2010s", "now"],
+      "signatureSuperlative": {
+        "award": "Most Likely to Make You Text Your Mom",
+        "blurb": "Her picks generated more 'this made me cry' reactions than anyone's."
+      },
+      "biggestFan": { "who": "Marisol", "pts": 27, "line": "Kindred ears. They've never disagreed about a sad song in two seasons." },
+      "stat": { "submitted": 10, "avgPts": 8.0, "wins": 1, "bestRound": "R-10 · 'Best song under 2 minutes'" }
+    },
+    {
+      "id": "gabe", "name": "Gabe", "initials": "GA",
+      "hue": "oklch(0.72 0.15 110)", "tier": "lite",
+      "joined": "Joined S2 · R2",
+      "headline": "Boom-bap purist slowly being radicalized by his cousin's drill picks.",
+      "signatureArtists": [
+        { "name": "A Tribe Called Quest", "star": true }, { "name": "MF DOOM" },
+        { "name": "Kendrick Lamar" }, { "name": "Little Brother" }
+      ],
+      "genres": ["boom-bap", "conscious rap", "neo-soul"],
+      "eras": ["1993", "2015"],
+      "signatureSuperlative": {
+        "award": "The Loyalist",
+        "blurb": "Votes most consistently with the league consensus — the heart of the room, every round."
+      },
+      "biggestFan": { "who": "Theo", "pts": 19, "line": "His cousin, slowly converting him to the loud stuff. It's working." },
+      "stat": { "submitted": 11, "avgPts": 7.5, "wins": 0, "bestRound": "R-13 · 'Best opener of an album'" }
+    },
+    {
+      "id": "cleo", "name": "Cleo", "initials": "CL",
+      "hue": "oklch(0.72 0.15 350)", "tier": "lite",
+      "joined": "Joined S3 · R1",
+      "headline": "R&B and pop with sniper aim — the newest member, already top-half.",
+      "signatureArtists": [
+        { "name": "SZA", "star": true }, { "name": "Solange" },
+        { "name": "Jorja Smith" }, { "name": "Sade" }
+      ],
+      "genres": ["contemporary R&B", "alt-pop", "neo-soul"],
+      "eras": ["now", "1984"],
+      "signatureSuperlative": {
+        "award": "Rookie of the Year",
+        "blurb": "Joined in S3 and finished top-half in her first five rounds. The family did not see her coming."
+      },
+      "biggestFan": { "who": "Junie", "pts": 18, "line": "Pulled her into the pop bloc immediately. A welcoming committee of one." },
+      "stat": { "submitted": 6, "avgPts": 8.8, "wins": 0, "bestRound": "R-14 · 'Songs that sound like a question'" }
+    },
+    {
+      "id": "frankie", "name": "Frankie", "initials": "FR",
+      "hue": "oklch(0.72 0.15 45)", "tier": "lite",
+      "joined": "Founding member · S1",
+      "headline": "Punk, garage, and a deep suspicion of any song that's 'too clean.'",
+      "signatureArtists": [
+        { "name": "The Stooges", "star": true }, { "name": "Wire" },
+        { "name": "Television" }, { "name": "X" }
+      ],
+      "genres": ["punk", "garage rock", "post-punk"],
+      "eras": ["1977", "1979", "a grudging 2004"],
+      "signatureSuperlative": {
+        "award": "The Loyal Opposition",
+        "blurb": "Disagrees with the youth caucus on principle, then quietly gives them points when they're right."
+      },
+      "biggestFan": { "who": "Pop", "pts": 24, "line": "Old-guard solidarity. The uncles vote as one weathered bloc." },
+      "stat": { "submitted": 14, "avgPts": 6.9, "wins": 1, "bestRound": "R-4 · 'A song that aged badly, beautifully'" }
+    },
+    {
+      "id": "dev", "name": "Dev", "initials": "DE",
+      "hue": "oklch(0.72 0.15 225)", "tier": "lite",
+      "joined": "Joined S2 · R6",
+      "headline": "House, techno, and ambient — the one who actually reads the BPM.",
+      "signatureArtists": [
+        { "name": "Four Tet", "star": true }, { "name": "Burial" },
+        { "name": "Floating Points" }, { "name": "Caribou" }
+      ],
+      "genres": ["house", "ambient techno", "UK bass"],
+      "eras": ["2010s", "1996 rave"],
+      "signatureSuperlative": {
+        "award": "The Architect",
+        "blurb": "Picks with the tightest internal logic — every submission feels engineered, never accidental."
+      },
+      "biggestFan": { "who": "Theo", "pts": 16, "line": "Respects the craft. The youth caucus has a soft spot for a well-built drop." },
+      "stat": { "submitted": 9, "avgPts": 7.1, "wins": 0, "bestRound": "R-7 · 'A song with no words'" }
+    },
+    {
+      "id": "sal", "name": "Sal", "initials": "SA",
+      "hue": "oklch(0.72 0.15 305)", "tier": "lite",
+      "joined": "Joined S1 · R5",
+      "headline": "Metal, prog, and a personal vendetta against songs under three minutes.",
+      "signatureArtists": [
+        { "name": "Tool", "star": true }, { "name": "King Crimson" },
+        { "name": "Mastodon" }, { "name": "Opeth" }
+      ],
+      "genres": ["prog rock", "metal", "math rock"],
+      "eras": ["1973", "2002", "now"],
+      "signatureSuperlative": {
+        "award": "The Downvote Hawk",
+        "blurb": "Most decisive use of the single downvote in the league. He knows exactly what he doesn't like, and tells you."
+      },
+      "biggestFan": { "who": "Frankie", "pts": 21, "line": "The loud-music uncles. They headbang in solidarity from across the country." },
+      "stat": { "submitted": 13, "avgPts": 6.4, "wins": 1, "bestRound": "R-5 · 'A song that earns its length'" }
+    }
+  ],
+  "reel": [
+    { "award": "Tastemaker of S3", "winner": "rosa",    "accent": "amber", "blurb": "Most picks that finished top-3. Quietly ran the season." },
+    { "award": "Most Improved",     "winner": "junie",   "accent": "moss",  "blurb": "Biggest standings jump. Came back a different player." },
+    { "award": "Deepest Cut",       "winner": "wes",     "accent": "sky",   "blurb": "Submitted a track with 412 monthly listeners. On purpose." },
+    { "award": "Heart on Sleeve",   "winner": "marisol", "accent": "pulp",  "blurb": "47 words of feelings per submission note, on average." },
+    { "award": "Rookie of the Year","winner": "cleo",    "accent": "ember", "blurb": "Top-half in her first five rounds, fresh out of S3 intro." },
+    { "award": "Most Likely to Clear the Room", "winner": "theo", "accent": "sky", "blurb": "Four 5s and four downvotes on one song. A true polarizer." }
+  ],
+  "kpis": [
+    { "value": "176",   "label": "songs submitted",         "sub": "across 14 rounds this season" },
+    { "value": "1,184", "label": "points awarded",          "sub": "the family is generous, mostly" },
+    { "value": "9",     "label": "different round winners", "sub": "the trophy gets around" },
+    { "value": "1994",  "label": "the league's favorite year", "sub": "31 picks and counting" },
+    { "value": "6:40",  "label": "longest pick of the season", "sub": "Wes, obviously" },
+    { "value": "41",    "label": "words / submission note", "sub": "Marisol skews this single-handedly" }
+  ],
+  "moments": {
+    "mostLoved":    { "title": "Wicked Game",                "artist": "Chris Isaak",     "submitter": "marisol", "round": 9,  "line": "The most universally adored pick of S3 — five 5s and not a single hater." },
+    "mostDivisive": { "title": "money machine",              "artist": "100 gecs",         "submitter": "theo",    "round": 6,  "line": "Split the family clean down the middle. Thanksgiving was tense. Worth it." },
+    "biggestUpset": { "title": "I Forget to Be Your Lover", "artist": "William Bell",     "submitter": "rosa",    "round": 2,  "line": "Zero chat buzz, then quietly won the whole round. Classic Rosa." }
+  },
+  "archive": [
+    { "n": 14, "season": 3, "theme": "Songs that sound like a question",     "winnerSong": "Wicked Game",              "winnerArtist": "Chris Isaak",   "submitter": "cleo",    "date": "May 18, 2026", "votes": 60, "hue": "oklch(0.72 0.15 195)", "digestUrl": null },
+    { "n": 13, "season": 3, "theme": "Best opener of an album",              "winnerSong": "Five Years",               "winnerArtist": "David Bowie",   "submitter": "gabe",    "date": "May 4, 2026",  "votes": 58, "hue": "oklch(0.72 0.15 110)", "digestUrl": null },
+    { "n": 12, "season": 3, "theme": "Cover that eclipses the original",     "winnerSong": "Hurt",                     "winnerArtist": "Johnny Cash",   "submitter": "pop",     "date": "Apr 20, 2026", "votes": 61, "hue": "oklch(0.72 0.15 255)", "digestUrl": null },
+    { "n": 11, "season": 3, "theme": "A song you'd play on the last day",    "winnerSong": "Last Goodbye",             "winnerArtist": "Jeff Buckley",  "submitter": "junie",   "date": "Apr 6, 2026",  "votes": 57, "hue": "oklch(0.72 0.15 325)", "digestUrl": null },
+    { "n": 10, "season": 3, "theme": "Best song under two minutes",          "winnerSong": "La La Love You",           "winnerArtist": "Pixies",        "submitter": "nina",    "date": "Mar 23, 2026", "votes": 55, "hue": "oklch(0.72 0.15 195)", "digestUrl": null },
+    { "n": 9,  "season": 3, "theme": "Songs that sound like winter",         "winnerSong": "Wicked Game",              "winnerArtist": "Chris Isaak",   "submitter": "marisol", "date": "Mar 9, 2026",  "votes": 59, "hue": "oklch(0.72 0.15 25)",  "digestUrl": null },
+    { "n": 8,  "season": 3, "theme": "A song for 3am",                       "winnerSong": "A Love Supreme, Pt. I",   "winnerArtist": "John Coltrane", "submitter": "wes",     "date": "Feb 23, 2026", "votes": 56, "hue": "oklch(0.72 0.15 285)", "digestUrl": null },
+    { "n": 7,  "season": 3, "theme": "A song with no words",                 "winnerSong": "Avril 14th",               "winnerArtist": "Aphex Twin",    "submitter": "dev",     "date": "Feb 9, 2026",  "votes": 54, "hue": "oklch(0.72 0.15 225)", "digestUrl": null }
+  ]
+}
