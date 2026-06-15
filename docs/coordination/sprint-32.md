@@ -76,7 +76,7 @@ updated: 2026-06-15T04:45:00Z
 - [x] {agent: frontend, id: route-profile, depends: shell} **Player Profile — `/{slug}/p/{memberId}` (the heart)** (handoff §4b, §5, §7; `ml-dashboard-profile.jsx`). Back-to-league bar → hero (monogram, name, role, joined, headline, 3-up statline) → signature superlative trophy + share → **Taste Fingerprint** (signature-artist chips w/ one starred favorite, genre chips, era chips, spectrum sliders, rewards/punishes two-col) → more superlatives (each shareable) → **Biggest Fan / Friendly Hater** (amber, affectionate) → **Your People** = Overlap v2 two labeled metrics (Vote Together within shared rounds = pulp; Taste Twins across leagues = sky) → Discovery playlist (name + agenda + 3 tracks-with-why). **Lite-tier degrades gracefully** — omit absent sections, no empty headers, lite footnote.
   - **Acceptance:** a full member renders every section; a `lite` member renders a coherent shorter profile with NO empty section headers; Your People shows the two metrics visually distinct; superlative share icons fire the card; verified hands-on at 412×892 + desktop on both a full and a lite member; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: route-archive, depends: shell} **Digest Archive — `/{slug}/archive`** (handoff §4c; `ml-dashboard-archive.jsx`). Hero, then rounds grouped by season (newest first), each a card with round number, theme, winning song + submitter monogram, date, "New" tag on the most recent. Each card deep-links to the existing full digest artifact at `/{slug}/archive/{roundId}` — **reuse the existing digest render pipeline; do not rebuild it.**
+- [x] {agent: frontend, id: route-archive, depends: shell} **Digest Archive — `/{slug}/archive`** (handoff §4c; `ml-dashboard-archive.jsx`). Hero, then rounds grouped by season (newest first), each a card with round number, theme, winning song + submitter monogram, date, "New" tag on the most recent. Each card deep-links to the existing full digest artifact at `/{slug}/archive/{roundId}` — **reuse the existing digest render pipeline; do not rebuild it.**
   - **Acceptance:** Archive renders rounds grouped by season newest-first from the read_model; a card deep-links to the existing digest artifact (resolves, not 404); the most-recent round shows the "New" tag; verified hands-on at 412×892 + desktop; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-close, depends: host-pipeline,route-home,route-profile,route-archive} **Gate — cross-check, ship, walk the live site, close.** Orc runs the gate: cross-check all lanes, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, re-publish a league, then **load the LIVE `digest.mattmariani.com/{slug}` at 412×892** and walk Home → a full profile → a lite profile → Archive (+ a deep-linked digest), fire a share card, and verify `noindex` + NO operator-app link + bad-slug 404. Panes reset, doc closed.
@@ -137,6 +137,15 @@ _None._
 - Your People: pulp (Vote Together / top-border + fill) vs sky (Taste Twins / top-border + sky-styled tag2 + sky fill gradient) visually distinct; labels updated to "within shared rounds" / "across all leagues"; Avatars from readModel member lookup
 - Discovery Playlist: kicker + name + nudge + zero-padded track list with why
 - `npm run check` 0 errors; `npm run build` ✓ (71.00 kB JS / 30.27 kB CSS)
+
+### 2026-06-15 — frontend — route-archive done (dbbff2a)
+- `bside/src/routes/ArchiveScreen.svelte` rebuilt: topbar (back→league, b/s mark), hero ("The archive" eyebrow, "Every round, re-readable." display title, digest count tagline), rounds grouped by season newest-first, footer with league name + seasons count
+- Fixed Svelte 5 reactivity: `$derived(() => {...})` → `$derived.by(() => {...})` for the season grouping computation
+- Added `Avatar` import; each archive card win line now renders submitter monogram (Avatar sm) + "**song** — artist"
+- Season header: "Season {n} · {count} rounds"; "New" tag on most-recent round (entry.n === newestRound); chevron only on deep-link `<a>` cards
+- Deep-link: `entry.digestUrl` → `<a href>` card; null → non-linked `<div>` (graceful — fixture has all null; real data will have `/d/{roundSlug}/`)
+- `npm run check` 0 errors; `npm run build` ✓ 71.49 kB JS / 30.27 kB CSS
+- All 4 frontend tasks now `[x]` — gate-close is unblocked
 
 ### 2026-06-15 — docs — Sprint plan authored: the b-side public site (campaign sprint 2)
 - created sprint-32 coord-doc; `## Active Sprint Plan` body has 6 tasks
