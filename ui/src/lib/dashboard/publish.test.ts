@@ -8,6 +8,12 @@ vi.mock('../digest/llm.js', () => ({
 	callOpenRouter: vi.fn(),
 }));
 
+// Prevent publish.ts from touching the real filesystem
+vi.mock('node:fs/promises', () => ({
+	mkdir: vi.fn().mockResolvedValue(undefined),
+	writeFile: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { callOpenRouter } from '../digest/llm.js';
 const mockCallOpenRouter = vi.mocked(callOpenRouter);
 
@@ -218,5 +224,38 @@ describe('publishSite', () => {
 
 	it('throws for a non-existent leagueId', async () => {
 		await expect(publishSite(db, 99999)).rejects.toThrow('not found');
+	});
+
+	it('writes read_model.json and index.html to DIGESTS_DIR/{slug}/', async () => {
+		const { writeFile, mkdir } = await import('node:fs/promises');
+		const mockWriteFile = vi.mocked(writeFile);
+		const mockMkdir = vi.mocked(mkdir);
+		mockWriteFile.mockClear();
+		mockMkdir.mockClear();
+
+		seedLeague();
+		const { slug } = await publishSite(db, leagueId);
+
+		expect(mockMkdir).toHaveBeenCalledWith(expect.stringContaining(slug), { recursive: true });
+
+		const calls = mockWriteFile.mock.calls;
+		const readModelCall = calls.find((c) => String(c[0]).endsWith('read_model.json'));
+		const indexCall = calls.find((c) => String(c[0]).endsWith('index.html'));
+
+		expect(readModelCall).toBeDefined();
+		expect(indexCall).toBeDefined();
+
+		// read_model.json content must match the DB read_model
+		const row = db
+			.prepare('SELECT read_model FROM dashboard_sites WHERE league_id = ?')
+			.get(leagueId) as { read_model: string };
+		expect(readModelCall![1]).toBe(row.read_model);
+
+		// index.html must reference the shared b-side bundle and embed the slug
+		const html = String(indexCall![1]);
+		expect(html).toContain('/_bside/bside.js');
+		expect(html).toContain('/_bside/bside.css');
+		expect(html).toContain(slug);
+		expect(html).toContain('noindex');
 	});
 });

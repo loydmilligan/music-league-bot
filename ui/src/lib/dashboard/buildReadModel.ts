@@ -129,6 +129,9 @@ export const ArchiveEntrySchema = z.object({
 	date: z.string(),
 	votes: z.number().int(),
 	hue: z.string(),
+	/** Public URL of the existing digest share artifact, if one has been rendered.
+	 *  The b-side archive route uses this to deep-link cards → real digest pages. */
+	digestUrl: z.string().nullable().optional(),
 });
 
 const LeagueMetaSchema = z.object({
@@ -248,6 +251,10 @@ function buildArchive(
 	db: Database.Database,
 	leagueId: number,
 ): z.infer<typeof ArchiveEntrySchema>[] {
+	const PUBLIC_DIGEST_BASE = (
+		process.env.PUBLIC_DIGEST_BASE_URL || 'https://digest.mattmariani.com'
+	).replace(/\/+$/, '');
+
 	// Per-round winner: submission with highest total points
 	const winnerRows = db
 		.prepare(
@@ -300,6 +307,18 @@ function buildArchive(
 		.all(leagueId) as { round_id: number; total_votes: number }[];
 	const votesByRound = new Map(voteCountRows.map((r) => [r.round_id, r.total_votes]));
 
+	// Digest share slugs — lets archive cards deep-link to existing digest artifacts
+	const digestShareRows = db
+		.prepare(
+			`SELECT ds.round_id, ds.slug
+         FROM digest_shares ds
+         JOIN rounds r ON r.id = ds.round_id
+         JOIN seasons se ON se.id = r.season_id
+         WHERE se.league_id = ?`,
+		)
+		.all(leagueId) as { round_id: number; slug: string }[];
+	const digestSlugByRound = new Map(digestShareRows.map((r) => [r.round_id, r.slug]));
+
 	// All rounds in order
 	const roundRows = db
 		.prepare(
@@ -317,6 +336,7 @@ function buildArchive(
 	return roundRows
 		.map((row, idx) => {
 			const winner = winnerByRound.get(row.round_id);
+			const digestSlug = digestSlugByRound.get(row.round_id);
 			return {
 				n: idx + 1,
 				season: row.season_number,
@@ -327,6 +347,7 @@ function buildArchive(
 				date: row.voting_deadline ?? '',
 				votes: votesByRound.get(row.round_id) ?? 0,
 				hue: winner?.player_id != null ? playerHue(winner.player_id) : 'oklch(0.72 0.15 0)',
+				digestUrl: digestSlug ? `${PUBLIC_DIGEST_BASE}/d/${digestSlug}` : null,
 			};
 		})
 		.reverse()

@@ -1,7 +1,22 @@
-# digest-static (sprint-20) — dumb static file server for the shared digests/
-# volume. Serves the self-contained folder-per-slug HTML digests at /d/<slug>/.
+# digest-static — dumb static file server for the shared digests/ volume.
+#
+# Serves two namespaces on digest.mattmariani.com:
+#
+#   /d/<roundSlug>/          — sprint-20 round digest html-share artifacts
+#   /_bside/                 — shared b-side SPA bundle (bside.js / bside.css)
+#                              Built by `cd ui/bside && npm run build`, output
+#                              copied to DIGESTS_DIR/_bside/ at deploy time.
+#   /<leagueSlug>/           — sprint-32 b-side league home (SPA shell)
+#   /<leagueSlug>/read_model.json — pre-computed read-model JSON (direct file)
+#   /<leagueSlug>/p/<id>     → SPA fallback to /<leagueSlug>/index.html
+#   /<leagueSlug>/archive    → SPA fallback to /<leagueSlug>/index.html
+#   /<leagueSlug>/archive/<roundId> → SPA fallback (SPA redirects to /d/<digestSlug>)
+#
+# Bad slug (no matching directory) → 404. No league enumeration: a slug that
+# has no on-disk directory returns 404 without revealing whether other slugs exist.
+#
 # No app, no DB, NO Cloudflare Access. Plain HTTP behind the public
-# digest.mattmariani.com Cloudflare tunnel (the user creates that tunnel).
+# digest.mattmariani.com Cloudflare tunnel.
 {
 	admin off
 	auto_https off
@@ -13,14 +28,40 @@
 
 	encode gzip zstd
 
-	# file_server serves <dir>/index.html for a trailing-slash directory
-	# request and 301s /d/<slug> -> /d/<slug>/. No directory browsing.
-	file_server
-
-	# Share artifacts are immutable-per-render; a short cache is fine and a
-	# re-export (same slug) overwrites in place so links stay fresh.
-	header /d/* Cache-Control "public, max-age=300"
-
 	# Don't advertise the server software.
 	header -Server
+
+	# ── Round digest html-share artifacts (sprint-20) ──────────────────────
+	# Immutable-per-render; a re-export overwrites in place so links stay fresh.
+	handle /d/* {
+		header Cache-Control "public, max-age=300"
+		file_server
+	}
+
+	# ── Shared b-side SPA bundle ────────────────────────────────────────────
+	# Built once at deploy; all league slugs boot from this shared bundle.
+	# The frontend `shell` task copies its Vite build output here.
+	handle /_bside/* {
+		file_server
+	}
+
+	# ── B-side league routes (SPA, slug = first URL segment) ───────────────
+	# League slugs are 22-char base64url strings minted by mintSlug() (16 bytes
+	# of entropy). Match ≥14 chars to avoid colliding with /d/, /_bside/, etc.
+	# SPA fallback: try the exact path first (serves read_model.json directly),
+	# then fall back to /<slug>/index.html so client-side routes resolve.
+	# Bad slug: /<slug>/index.html doesn't exist → try_files returns 404.
+	@league path_regexp league ^/([A-Za-z0-9_-]{14,})(/.*)?$
+	handle @league {
+		header X-Robots-Tag "noindex, nofollow"
+		try_files {path} {path}/ /{http.regexp.league.1}/index.html =404
+		file_server {
+			hide .* _*
+		}
+	}
+
+	# ── Everything else → 404 ──────────────────────────────────────────────
+	handle {
+		respond 404
+	}
 }
