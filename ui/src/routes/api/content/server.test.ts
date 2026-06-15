@@ -555,6 +555,105 @@ describe('POST /api/content/:leagueId/update', () => {
 			Array<{ name: string; pending: null }>;
 		expect(after.find((l) => l.name === 'Clears After Update')!.pending).toBeNull();
 	});
+
+	// (a) re-finalizing an existing archived round updates its entry IN PLACE — no prepend/renumber
+	it('re-archive: replaces existing entry in place, archive length + n values unchanged', async () => {
+		const id = insertLeague('re-archive-inplace', 'Re-Archive League');
+		const seasonId = insertSeason(id);
+		const r1 = insertRound(seasonId, 'First Round'); // older (lower id)
+		const r2 = insertRound(seasonId, 'Second Round'); // newer
+		// Both finalized before publish
+		insertFinalizedDraft(r1, '2026-06-01T10:00:00.000Z');
+		insertFinalizedDraft(r2, '2026-06-01T10:00:00.000Z');
+
+		const publishedAt = '2026-06-10T12:00:00.000Z';
+		// Archive: r2=n=2 (newest), r1=n=1 (oldest); both archived
+		insertSite(
+			id,
+			'rearch-slug',
+			minimalReadModel('rearch-slug', [archiveEntry(2), archiveEntry(1)]),
+			[r1, r2],
+			publishedAt,
+		);
+
+		// r1 re-finalized AFTER publish → pending
+		insertFinalizedDraft(r1, '2026-06-15T08:00:00.000Z');
+
+		const res = await POST_update(
+			mkEvt(id, {
+				decisions: { superlatives: 'hold', fingerprints: 'hold', stats: 'hold', moments: 'hold', overlap: 'hold' },
+				steer: {},
+				announce: 'silent',
+			}),
+		);
+		expect(res.status).toBe(200);
+
+		const siteRow = db
+			.prepare('SELECT archived_rounds, read_model, refreshed_at FROM dashboard_sites WHERE league_id = ?')
+			.get(id) as { archived_rounds: string; read_model: string; refreshed_at: string };
+
+		// (a) archive still has exactly 2 entries
+		const archive = (JSON.parse(siteRow.read_model) as { archive: Array<{ n: number }> }).archive;
+		expect(archive).toHaveLength(2);
+
+		// (a) n values are unchanged: [2, 1] — entry at index 0 is still n=2, not a freshly prepended n=3
+		const nValues = archive.map((e) => e.n).sort((a, b) => b - a);
+		expect(nValues).toEqual([2, 1]);
+
+		// (c) archived_rounds still [r1, r2] — no duplicate added
+		const archived: number[] = JSON.parse(siteRow.archived_rounds);
+		expect(archived).toHaveLength(2);
+		expect(archived).toContain(r1);
+		expect(archived).toContain(r2);
+
+		// (c) refreshed_at advanced beyond publishedAt
+		expect(new Date(siteRow.refreshed_at).getTime()).toBeGreaterThan(new Date(publishedAt).getTime());
+	});
+
+	// (b) a genuinely new round still prepends + renumbers
+	it('new round: prepends entry and increments n values', async () => {
+		const id = insertLeague('new-round-prepend', 'New Round League');
+		const seasonId = insertSeason(id);
+		const r1 = insertRound(seasonId, 'Old Round');
+		const r2 = insertRound(seasonId, 'New Round'); // not yet archived
+		insertFinalizedDraft(r1, '2026-06-01T10:00:00.000Z');
+		// r2 finalized after publish
+		insertFinalizedDraft(r2, '2026-06-15T08:00:00.000Z');
+
+		// Only r1 archived at publish
+		insertSite(
+			id,
+			'new-round-slug',
+			minimalReadModel('new-round-slug', [archiveEntry(1)]),
+			[r1],
+		);
+
+		const res = await POST_update(
+			mkEvt(id, {
+				decisions: { superlatives: 'hold', fingerprints: 'hold', stats: 'hold', moments: 'hold', overlap: 'hold' },
+				steer: {},
+				announce: 'silent',
+			}),
+		);
+		expect(res.status).toBe(200);
+
+		const siteRow = db
+			.prepare('SELECT archived_rounds, read_model FROM dashboard_sites WHERE league_id = ?')
+			.get(id) as { archived_rounds: string; read_model: string };
+
+		// (b) archive grows from 1 to 2 entries
+		const archive = (JSON.parse(siteRow.read_model) as { archive: Array<{ n: number }> }).archive;
+		expect(archive).toHaveLength(2);
+
+		// (b) n values renumbered: highest n = 2 (new round, newest), n=1 (old round)
+		const nValues = archive.map((e) => e.n).sort((a, b) => b - a);
+		expect(nValues).toEqual([2, 1]);
+
+		// (b) r2 added to archived_rounds
+		const archived: number[] = JSON.parse(siteRow.archived_rounds);
+		expect(archived).toHaveLength(2);
+		expect(archived).toContain(r2);
+	});
 });
 
 // ── POST /api/content/:leagueId/reshare ──────────────────────────────────────

@@ -165,27 +165,63 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		site.slug,
 	);
 
-	// Build new archive entry for the pending round
-	const newEntry = buildArchiveEntry(db, pendingRow.round_id, pendingRow.round_name, pendingRow.season_number, newModel.archive.length + 1);
+	// Build the fresh archive entry (n is a placeholder overridden below)
+	const newEntry = buildArchiveEntry(db, pendingRow.round_id, pendingRow.round_name, pendingRow.season_number, 0);
 
-	// Newest first: prepend new entry, re-number
-	const newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({
-		...e,
-		n: arr.length - i,
-	}));
+	const isReArchive = archivedRoundIds.includes(pendingRow.round_id);
+
+	let newArchive: z.infer<typeof ArchiveEntrySchema>[];
+	let newArchivedRoundIds: number[];
+	let newRoundCount: number;
+	let archiveEntryForReshare: z.infer<typeof ArchiveEntrySchema>;
+
+	if (isReArchive) {
+		// Round already in the b-side — replace its entry IN PLACE, preserving order and n values.
+		// Derive the existing n-value from the round's position in league-chronological order
+		// (the same ORDER BY season_number, r.id that buildArchive uses → n = position + 1).
+		const allRoundIds = (
+			db
+				.prepare(
+					`SELECT r.id FROM rounds r
+					 JOIN seasons se ON se.id = r.season_id
+					 WHERE se.league_id = ?
+					 ORDER BY se.season_number, r.id`,
+				)
+				.all(leagueId) as { id: number }[]
+		).map((r) => r.id);
+		const chronoIdx = allRoundIds.indexOf(pendingRow.round_id);
+		const existingN = chronoIdx >= 0 ? chronoIdx + 1 : null;
+
+		if (existingN !== null) {
+			const replacedEntry = { ...newEntry, n: existingN };
+			newArchive = newModel.archive.map((e) => (e.n === existingN ? replacedEntry : e));
+			archiveEntryForReshare = replacedEntry;
+		} else {
+			// Fallback: position unknown — prepend (shouldn't happen for a properly archived round)
+			newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
+			archiveEntryForReshare = newArchive[0];
+		}
+
+		newArchivedRoundIds = archivedRoundIds; // already present, no duplicate
+		newRoundCount = newModel.league.round; // archive size unchanged
+	} else {
+		// Genuinely new round: prepend + renumber newest-first
+		newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
+		archiveEntryForReshare = newArchive[0];
+		newArchivedRoundIds = [...archivedRoundIds, pendingRow.round_id];
+		newRoundCount = newModel.league.round + 1;
+	}
 
 	const finalModel: ReadModel = ReadModelSchema.parse({
 		...newModel,
 		archive: newArchive,
 		league: {
 			...newModel.league,
-			round: newModel.league.round + 1,
+			round: newRoundCount,
 			updated: new Date().toISOString(),
 		},
 	});
 
-	// Update archived_rounds (add the new round_id)
-	const newArchivedRoundIds = [...archivedRoundIds, pendingRow.round_id];
 	const now = new Date().toISOString();
 
 	db.prepare(
@@ -203,7 +239,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		pendingRow.round_id,
 		pendingRow.round_name,
 		announce,
-		newEntry,
+		archiveEntryForReshare,
 	);
 
 	return json({
