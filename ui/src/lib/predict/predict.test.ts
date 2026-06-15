@@ -1,7 +1,7 @@
 import { it, expect, describe, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { openLeagueDb } from '../db/client.js';
-import { runPrediction } from './predict.js';
+import { runPrediction, extractJson } from './predict.js';
 import type { PredictionTask } from './predict.js';
 import type Database from 'better-sqlite3';
 
@@ -154,5 +154,64 @@ describe('runPrediction — retry path', () => {
 
 		const count = (db.prepare('SELECT COUNT(*) as n FROM prediction_runs').get() as { n: number }).n;
 		expect(count).toBe(1);
+	});
+});
+
+describe('extractJson — robust JSON extraction', () => {
+	it('parses clean JSON', () => {
+		expect(extractJson('{"label":"indie","score":87}')).toEqual({ label: 'indie', score: 87 });
+	});
+
+	it('parses bare {...} (same as clean)', () => {
+		expect(extractJson('  {"label":"bare","score":1}  ')).toEqual({ label: 'bare', score: 1 });
+	});
+
+	it('parses fenced JSON (```json...```)', () => {
+		const fenced = '```json\n{"label":"fenced","score":42}\n```';
+		expect(extractJson(fenced)).toEqual({ label: 'fenced', score: 42 });
+	});
+
+	it('parses fenced JSON with trailing prose — the gate-finding scenario', () => {
+		const fencedWithProse =
+			'```json\n{"label":"prose","score":99}\n```\n**Reasoning:** some model explanation here.';
+		expect(extractJson(fencedWithProse)).toEqual({ label: 'prose', score: 99 });
+	});
+
+	it('returns null for non-JSON content', () => {
+		expect(extractJson('not json at all')).toBeNull();
+	});
+
+	it('returns null for empty string', () => {
+		expect(extractJson('')).toBeNull();
+	});
+});
+
+describe('runPrediction — fenced/prose-wrapped LLM responses', () => {
+	it('parses fenced + trailing-prose initial response correctly', async () => {
+		const fencedResponse =
+			'```json\n' + FIXTURE_JSON + '\n```\n**Reasoning:** model chose indie because shoegaze fits.';
+		mockCallOpenRouter.mockResolvedValueOnce({ content: fencedResponse, costUsd: 0.001 });
+
+		const { output } = await runPrediction(db, task, { playerId: 1, note: 'fenced response' });
+		expect(output).toEqual(FIXTURE_OUTPUT);
+	});
+
+	it('parses fenced + trailing-prose retry response correctly', async () => {
+		const badFirst = JSON.stringify({ wrong: 'shape' });
+		const fencedRetry =
+			'```json\n' + FIXTURE_JSON + '\n```\n**Reasoning:** corrected schema on retry.';
+		mockCallOpenRouter
+			.mockResolvedValueOnce({ content: badFirst, costUsd: 0.001 })
+			.mockResolvedValueOnce({ content: fencedRetry, costUsd: 0.001 });
+
+		const { output, meta } = await runPrediction(db, task, { playerId: 1, note: 'fenced retry' });
+		expect(output).toEqual(FIXTURE_OUTPUT);
+		expect(meta.costUsd).toBeCloseTo(0.002);
+	});
+
+	it('bare {...} response still parses', async () => {
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		const { output } = await runPrediction(db, task, { playerId: 1, note: 'bare json' });
+		expect(output).toEqual(FIXTURE_OUTPUT);
 	});
 });

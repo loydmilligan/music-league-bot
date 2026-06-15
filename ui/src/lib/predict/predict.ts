@@ -3,6 +3,33 @@ import { randomUUID } from 'node:crypto';
 import type { ZodType } from 'zod';
 import { callOpenRouter } from '../digest/llm.js';
 
+// Robustly extract the first JSON object from LLM output that may include
+// markdown code fences (```json...```) and/or trailing prose after the object.
+export function extractJson(content: string): unknown | null {
+	let text = content.trim();
+
+	// Strip ```json / ``` code fences if present
+	const fenced = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n```/);
+	if (fenced) text = fenced[1].trim();
+
+	// Find and parse the first balanced {...} object, ignoring trailing prose
+	const start = text.indexOf('{');
+	if (start === -1) return null;
+	let depth = 0, inString = false, escape = false;
+	for (let i = start; i < text.length; i++) {
+		const ch = text[i];
+		if (escape) { escape = false; continue; }
+		if (ch === '\\' && inString) { escape = true; continue; }
+		if (ch === '"') { inString = !inString; continue; }
+		if (inString) continue;
+		if (ch === '{') depth++;
+		else if (ch === '}' && --depth === 0) {
+			try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; }
+		}
+	}
+	return null;
+}
+
 // Structural alias — matches OpenRouterMessage in llm.ts without importing the private interface.
 type LLMMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -37,10 +64,8 @@ export async function runPrediction<TIn, TOut>(
 
 	const { content, costUsd } = await callOpenRouter(messages, { model: task.model, jsonMode: true });
 
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(content);
-	} catch {
+	const parsed = extractJson(content);
+	if (parsed === null) {
 		throw new Error(`runPrediction: LLM returned non-JSON: ${content.slice(0, 200)}`);
 	}
 
@@ -66,10 +91,8 @@ export async function runPrediction<TIn, TOut>(
 		});
 		totalCostUsd += retryCostUsd;
 
-		let retryParsed: unknown;
-		try {
-			retryParsed = JSON.parse(retryContent);
-		} catch {
+		const retryParsed = extractJson(retryContent);
+		if (retryParsed === null) {
 			throw new Error(`runPrediction: retry returned non-JSON: ${retryContent.slice(0, 200)}`);
 		}
 
