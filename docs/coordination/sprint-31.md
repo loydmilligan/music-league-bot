@@ -67,7 +67,7 @@ updated: 2026-06-14T17:00:00Z
 - [x] {agent: backend, id: overlap-v2} **Overlap v2 — Vote Together + Taste Twins** (spec §8; also the standalone backlog item). New `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → { voteTogether: PeerScore[], taste­Twins: PeerScore[] }` per member. Vote Together = within shared rounds only (omit zero-shared-round pairs, no fake low %); Taste Twins = fingerprint-similarity across all leagues (no penalty for no shared rounds). Export the slice type. Do NOT extend the v1 global-Jaccard `tasteOverlap`.
   - **Acceptance:** a known co-voting pair scores high in Vote Together; a pair with zero shared rounds is ABSENT from Vote Together but can appear in Taste Twins; vitest covers both with fixture data; `npm run check` 0 errors.
 
-- [-] {agent: backend, id: gen-deterministic} **Deterministic generators — stats, tiers, KPI facts, moments, fan/hater relationships** (spec §7). New `ui/src/lib/dashboard/generators/deterministic.ts`: per-member `stat` (submitted/avg/round-wins) + `tier` (full/lite by an activity threshold — pick a simple defensible cutoff); league `kpis[]` (celebratory FACTS only — distinct winners, favorite year, longest pick; NEVER last-place/win-loss); `moments` (mostLoved/mostDivisive/biggestUpset by vote spread); and the deterministic `biggestFan`/`biggestHater` relationships (who most rewards / most withholds points). Pure SQL/compute; export slice types. (LLM blurbs/phrasing layer on in gen-narrative-llm.)
+- [x] {agent: backend, id: gen-deterministic} **Deterministic generators — stats, tiers, KPI facts, moments, fan/hater relationships** (spec §7). New `ui/src/lib/dashboard/generators/deterministic.ts`: per-member `stat` (submitted/avg/round-wins) + `tier` (full/lite by an activity threshold — pick a simple defensible cutoff); league `kpis[]` (celebratory FACTS only — distinct winners, favorite year, longest pick; NEVER last-place/win-loss); `moments` (mostLoved/mostDivisive/biggestUpset by vote spread); and the deterministic `biggestFan`/`biggestHater` relationships (who most rewards / most withholds points). Pure SQL/compute; export slice types. (LLM blurbs/phrasing layer on in gen-narrative-llm.)
   - **Acceptance:** stats/tier/kpis/moments/fan-hater compute from fixture gameplay data; KPIs contain NO win/loss-ladder field; a quiet member resolves to `tier:'lite'`; vitest covers each; `npm run check` 0 errors.
 
 - [x] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
@@ -102,6 +102,22 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — gen-deterministic complete (9937aa5)
+- `ui/src/lib/dashboard/generators/deterministic.ts`: pure SQL/compute generator,
+  exports `MemberStat`, `MemberTier`, `KpiItem`, `MomentEntry`, `Moments`,
+  `RelationshipEntry`, `DeterministicMemberSlice`, `DeterministicLeagueSlice`, `buildDeterministicSlices`
+- **Tier cutoff**: `TIER_CUTOFF_RATIO = 0.5`; member is `full` if submitted ≥ max(3, round(totalRounds × 0.5)),
+  `lite` otherwise (quiet/new members always resolve to `lite`)
+- **KPIs**: songs submitted, points awarded, distinct round winners ("the trophy gets around"),
+  avg words/submission-note (when ≥3 comments exist); NO win/loss-ladder, no last-place language anywhere
+- **Moments**: mostLoved = highest total pts; mostDivisive = highest vote spread (MAX − MIN, ≥2 votes);
+  biggestUpset = round winner with smallest margin over 2nd place; returns `null` if no data
+- **Fan/hater**: vote-matrix SQL grouping `SUM(v.points)` by `(target_player_id, voter_player_id)`;
+  biggestFan = max pts received; biggestHater = min pts received, requires ≥2 shared rounds
+  (single-encounter noise excluded); self-vote exclusion enforced in SQL
+- 39/39 vitest green; 439/439 full suite green; 0 svelte-check errors
+- `[-]` → `[x]`
 
 ### 2026-06-14 — backend — overlap-v2 complete (1187409)
 - `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → Map<playerId, OverlapSlice>`
