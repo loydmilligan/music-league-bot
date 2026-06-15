@@ -4,7 +4,7 @@
 #
 #   /d/<roundSlug>/          — sprint-20 round digest html-share artifacts
 #   /_bside/                 — shared b-side SPA bundle (bside.js / bside.css)
-#                              Built by `cd ui/bside && npm run build`, output
+#                              Built by `cd bside && npm run build`, output
 #                              copied to DIGESTS_DIR/_bside/ at deploy time.
 #   /<leagueSlug>/           — sprint-32 b-side league home (SPA shell)
 #   /<leagueSlug>/read_model.json — pre-computed read-model JSON (direct file)
