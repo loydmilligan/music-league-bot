@@ -1,0 +1,106 @@
+---
+project: music-league-bot
+sprint: sprint-33
+campaign: the-b-side
+title: the b-side — Operator Content screen
+status: planned
+created: 2026-06-15T06:20:00Z
+updated: 2026-06-15T06:20:00Z
+---
+
+# music-league-bot — coordination doc (sprint-33)
+
+> **Campaign `the-b-side`, sprint 3 of 3 — the final one.** Gives the operator a
+> UI to publish + update each league's b-side, replacing the orc-curl path. The
+> sidebar's **Digest** item becomes **Content**, split into two tabs: **Digest**
+> (the existing generate→refine→finalize pipeline, unchanged) and **Archive**
+> (manage each league's b-side — first publish, or add a finalized round with a
+> per-section refresh/hold/lock update modal, always on the same slug, then a
+> reshare card). Claude Design's handoff `docs/design/content/`
+> (IMPLEMENTATION-PROMPT.md, the `.jsx` reference, `ml-content-styles.css`, the
+> `Music League Bot - Content Screen.html` 4-artboard target) is the spec — port
+> it. Schema (`dashboard_sites`, `dashboard_section_state`) + `publishSite` + the
+> read-model generator already exist (sprints 31/32).
+
+## Sprint Goals
+
+- Publish + update the b-side from the operator UI
+  Content tabs, the archive list, a refresh/hold/lock update modal, and a reshare card.
+
+## Agent Roster
+
+| Agent | Owns | Does not touch |
+|---|---|---|
+| backend | `/api/content/*` routes, the incremental update logic (`$lib/dashboard/*`), `$lib/db/*` | Svelte components, page routes |
+| frontend | the Content screen — Svelte components + routes (operator app), hands-on verification | DB, the update logic, API internals |
+| orc | sprint gate: cross-check, version + CHANGELOG, ratification card, deploy, prod walk, context resets | project code |
+
+## Working agreements (sprint-33)
+
+- **The handoff IS the spec.** `docs/design/content/IMPLEMENTATION-PROMPT.md` + `ml-content.jsx` +
+  `ml-content-styles.css` + the `Music League Bot - Content Screen.html` 4-artboard target. Port
+  `.jsx` → Svelte; lift `ml-content-styles.css` wholesale (Mash tokens only).
+- **Reuse, don't rebuild:** the Digest tab IS the existing digest pipeline (just wrapped in the new
+  tab chrome — don't rebuild it). `publishSite` (sprint-31) handles first publish; the update flow
+  reuses `buildReadModel` **section-wise** + persists per-section decisions in `dashboard_section_state`.
+- **Same slug, all season:** an archive update rewrites the read-model IN PLACE on the existing slug —
+  never mint a new slug on update (only on first publish or a deliberate rotation). Don't auto-refresh
+  `lock`ed sections; don't regenerate the whole archive every round (add the one entry, recompute only
+  `refresh` sections). Don't leak operator chrome (🔒/↻/✓ glyphs, the modal) into the public b-side.
+- The reshare "Send to WhatsApp" uses the **existing WhatsApp bridge** (don't add a new one).
+- Hands-on means hands-on: this is an **operator** screen → verify on the operator app
+  (`npm run dev`, 5173, NEVER 4444) primarily at desktop (1280) + a mobile pass; the gate walks the
+  live screen on `mlbot2.mattmariani.com` and the happy path (finalize → badge → update → published).
+- Mid-task context discipline: past ~60-70% context, write a handoff and request a reset from orc.
+- No prod deploy except by orc at the gate.
+
+## Active Sprint Plan
+
+<!-- Task syntax (parser contract):
+     - [ ] {agent: <roster>, id: <slug>, depends: <id,id>} Body
+       - **Acceptance:** verifiable check.
+     Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
+     `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
+
+- [ ] {agent: backend, id: content-api} **Content API — leagues, update-plan, update, reshare** (handoff §8, §9). Add to `/api/content/*` (following the existing `:leagueId/publish` route): `GET /api/content/leagues` (one row per league + b-side state — published?/slug, members, rounds archived, last updated, and the pending-update flag = a finalized digest whose round_id ∉ `dashboard_sites.archived_rounds`); `GET /api/content/:leagueId/update-plan` (the "add this round" entry + the recompute sections each with a concrete-change detail); `POST /api/content/:leagueId/update` (body `{decisions:{section:'refresh'|'hold'|'lock'}, steer, announce}` → recompute only `refresh` sections via `buildReadModel` section-wise, persist decisions in `dashboard_section_state`, rewrite `read_model` + add the round to `archived_rounds` IN PLACE on the same slug, re-write public artifacts); `POST /api/content/:leagueId/reshare` (body `{mode:'card'|'link'|'silent'}` → produce the announcement; `card`/`link` via the existing WhatsApp bridge / copy payload, `silent` no-op).
+  - **Acceptance:** `GET /api/content/leagues` returns the 4 leagues with correct state flags (Fam-Jam = published, pending flag accurate); `update` with `{superlatives:'lock'}` leaves that section unchanged on re-publish while `refresh` sections regenerate; `archived_rounds` gains the round; slug unchanged; `dashboard_section_state` persists `lock`; route tests green; `npm run check` 0 errors.
+
+- [ ] {agent: frontend, id: content-nav} **Sidebar Digest → Content + the two-tab chrome** (handoff §2, §3). Rename the sidebar `digest` item to **Content** (`/content`, keep a redirect from `/digest`), with a count badge (`.ml-nav-badge`) = number of leagues with a pending archive update. Add the Mash header-tab idiom (`.ct-tabs`/`.ct-tab`): **Digest** tab = the existing pipeline screen, UNCHANGED (just wrapped); **Archive** tab = the new surface (built in the next tasks) with a `.ct-count` badge. Lift `ml-content-styles.css`.
+  - **Acceptance:** sidebar shows "Content" with a pending-count badge; `/digest` redirects to `/content`; the Digest tab renders the existing pipeline unchanged; the Archive tab mounts (placeholder ok this task); verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
+
+- [ ] {agent: frontend, id: archive-list, depends: content-nav,content-api} **Archive tab — league list + first publish + reshare state** (handoff §4, §6, §7). The Archive tab league list (`.ct-league`, one row per league) with the three states — **update-ready** (pulp row, "N update ready" pill, "Update archive →"), **up-to-date** (moss "✓ up to date"), **not-published** (dashed row, "Publish b-side →"). Each row: emblem, name, season, the b-side URL w/ lock glyph, meta (members · rounds archived · last updated). First-publish action calls `POST /api/content/:leagueId/publish`. The published/reshare state (`.ct-published` banner + `.ct-reshare-card`) with `↗ Send to WhatsApp` / `⧉ Copy share card` / `⧉ Copy link`, honoring the Announce config. Data from `GET /api/content/leagues`.
+  - **Acceptance:** the list renders all 4 leagues in the correct state from the API; "Publish b-side →" on an unpublished league mints the slug + shows the published/reshare state; the reshare card shows the URL + actions; verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
+
+- [ ] {agent: frontend, id: update-modal, depends: archive-list} **Archive-update modal — refresh / hold / lock + steer** (handoff §5). The update modal (reuse the digest `.dg-modal` shell), opened from "Update archive →": header "Update b-side · {league}", the required "New archive entry" row + the recompute rows (superlatives, stats·KPIs, fingerprints, moments, overlap), each with the `.ct-seg` refresh/hold/lock control + a per-row note/detail; steerable rows expose "↻ steer this rewrite" (the quick-steer chips + free-text idiom); the config strip (Announce: card/link/silent + the locked same-slug line); footer cost estimate + "Generate update →" → `POST /api/content/:leagueId/update` → closes to the published/reshare state. Loads the plan from `GET /api/content/:leagueId/update-plan`.
+  - **Acceptance:** the modal opens with the add-entry + recompute rows from the update-plan; each row's refresh/hold/lock toggles; a steerable row opens the steer chips; "Generate update →" calls the update endpoint and flips to the published state; the same-slug line is shown locked; verified hands-on on dev at 1280; `npm run check` 0 errors.
+
+- [ ] {agent: orc, id: gate-close, depends: content-api,content-nav,archive-list,update-modal} **Gate — cross-check, ship, walk the operator flow, close.** Orc runs the gate: cross-check all lanes, `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, then walk the LIVE Content screen on `mlbot2.mattmariani.com`: the two tabs, the Archive list states, a first-publish (or an update on Fam-Jam) → published/reshare, and confirm the public b-side reflects the change on the same slug. Panes reset, doc closed. This **completes the campaign** — note the campaign close in the doc.
+  - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; the live Content screen works (tabs, archive states, publish/update → reshare, same-slug guarantee holds, public site reflects the update); 0 console errors; doc `status: closed`; campaign `the-b-side` complete.
+
+## Decision Log
+
+### 2026-06-15 — Campaign `the-b-side` sprint 3 = operator Content screen (owner)
+The final campaign sprint. Gives the operator a UI to publish/update the b-side (replacing orc
+curl). Schema + publishSite + read-model generator already exist (sprints 31/32); this adds the
+Content tabs, archive management, the refresh/hold/lock update flow, and reshare. Handoff:
+docs/design/content/. After this, a separate b-side content-polish sprint (backlog) tunes the
+generated content per owner's tweaks.
+
+## Ratification Log
+
+_(gate card lands here when it resolves)_
+
+## Blockers
+
+_None._
+
+## Activity Log
+
+### 2026-06-15 — docs — Sprint plan authored: the b-side operator Content screen (campaign sprint 3, final)
+- created sprint-33 coord-doc; `## Active Sprint Plan` body has 5 tasks
+- 1 backend (content-api) / 3 frontend (content-nav → archive-list → update-modal) / 1 orc gate
+- deps: archive-list ← content-nav + content-api; update-modal ← archive-list; gate ← all
+- content-api ∥ content-nav (parallel start); the operator-screen frontend tasks chain (same area)
+- UI spec = docs/design/content/ handoff; reuses dashboard_sites/section_state + buildReadModel (section-wise)
+- closes the campaign on gate; content-polish is a separate post-campaign sprint (backlog)
+- status `planned` — kickoff (first dispatch) is confirmation-gated; awaiting owner "go"
