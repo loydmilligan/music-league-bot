@@ -1,0 +1,457 @@
+/* Orc Tower — UI kit dark-mode chrome.
+   All variables come from ../../colors_and_type.css. Component classes are
+   prefixed `.ot-` to avoid clashes with the Mash component library. */
+
+.ot-app {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+}
+
+/* -- Sidebar ---------------------------------------------------------- */
+.ot-sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ot-side-head .t-eyebrow { color: var(--fg-quiet); }
+.ot-side-title {
+  margin: 4px 0 0;
+  font: 700 18px/1.2 var(--font-display);
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.ot-adopt { width: 100%; justify-content: center; }
+
+.ot-proj-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ot-proj {
+  padding: 9px 10px;
+  border-radius: var(--r-2);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ot-proj:hover { background: var(--surface-hover); }
+.ot-proj.is-active {
+  background: var(--mash-pulp-soft);
+  color: var(--mash-pulp);
+}
+.ot-proj-name { font-weight: 600; color: var(--fg); font-size: 14px; }
+.ot-proj.is-active .ot-proj-name { color: var(--mash-pulp); }
+.ot-proj-id {
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--fg-quiet);
+  margin-top: 2px;
+}
+
+.ot-cross-next {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ot-cross-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-muted);
+  font: 700 11px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 2px;
+}
+.ot-badge {
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  background: var(--mash-pulp-soft);
+  color: var(--mash-pulp);
+  border-radius: 8px;
+  font: 700 10px/16px var(--font-body);
+  text-align: center;
+}
+.ot-cross-row {
+  padding: 6px 8px;
+  border-radius: var(--r-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ot-cross-row:hover { background: var(--surface-hover); }
+.ot-cross-proj {
+  display: block;
+  font: 600 11px/1 var(--font-mono);
+  color: var(--sky);
+}
+.ot-cross-body {
+  display: block;
+  font: 400 12px/1.4 var(--font-body);
+  color: var(--fg-2);
+  margin-top: 2px;
+}
+
+.ot-side-system {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.ot-side-system-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font: 500 13px/1 var(--font-body);
+  color: var(--fg-muted);
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: var(--r-2);
+}
+.ot-side-system-btn:hover { background: var(--surface-hover); color: var(--fg); }
+
+/* -- Main ------------------------------------------------------------- */
+.ot-main {
+  padding: 32px 40px 64px;
+  max-width: 1080px;
+  width: 100%;
+}
+.ot-main-head { margin-bottom: 24px; }
+.ot-main-title {
+  margin: 4px 0 12px;
+  font: 700 32px/1.15 var(--font-display);
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.ot-main-sub {
+  margin: 0;
+  max-width: 64ch;
+  color: var(--fg-2);
+  line-height: 1.55;
+}
+
+/* -- Card base -------------------------------------------------------- */
+.ot-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-1);
+}
+.ot-card--accent-ok { border-left: 3px solid var(--moss); }
+.ot-card--accent-warn { border-left: 3px solid var(--amber); }
+.ot-card--accent-block { border-left: 3px solid var(--ember); }
+.ot-card--accent-info { border-left: 3px solid var(--sky); }
+.ot-card--accent-brand { border-left: 3px solid var(--mash-pulp); }
+
+.ot-card-head { margin-bottom: 12px; }
+.ot-card-title {
+  margin: 0 0 4px;
+  font: 600 17px/1.2 var(--font-body);
+  color: var(--fg);
+}
+.ot-card-sub {
+  margin: 0;
+  font: 400 13px/1.4 var(--font-body);
+  color: var(--fg-muted);
+}
+.ot-card-summary { margin: 8px 0 0; font-weight: 600; }
+.ot-card-summary--ok { color: var(--moss); }
+.ot-card-summary--warn { color: var(--amber); }
+.ot-card-summary--block { color: var(--ember); }
+
+/* -- Sprint header ---------------------------------------------------- */
+.ot-sprint {
+  border-left: 3px solid var(--mash-pulp);
+}
+.ot-sprint-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.ot-sprint-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.ot-chip {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  padding: 5px 9px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-2);
+}
+.ot-sprint-title {
+  margin: 4px 0 4px;
+  font: 700 26px/1.2 var(--font-display);
+  letter-spacing: -0.015em;
+  color: var(--fg);
+}
+.ot-sprint-sub {
+  margin: 0 0 16px;
+  color: var(--fg-muted);
+  font-size: 14px;
+}
+.ot-sprint-lane {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--moss);
+  border-radius: var(--r-3);
+  padding: 12px 14px;
+}
+.ot-task {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.ot-task-icon { color: var(--moss); font-size: 16px; }
+.ot-task-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font: 600 14px/1.2 var(--font-mono);
+}
+.ot-task-agent { color: var(--moss); }
+.ot-task-id { color: var(--fg); }
+.ot-task-desc { color: var(--fg-2); font-size: 13px; margin-top: 2px; }
+.ot-sprint-after {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+/* -- Tools list ------------------------------------------------------- */
+.ot-tools {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ot-tool {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.ot-tool--ok {
+  background: var(--moss-soft);
+  border-color: #1e4d33;
+}
+.ot-tool-check {
+  width: 24px; height: 24px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border: 1px solid var(--moss);
+  color: var(--moss); font: 700 12px/1 var(--font-body);
+}
+.ot-tool-row {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px;
+}
+.ot-tool-name { font: 700 14px/1 var(--font-mono); color: var(--fg); }
+.ot-tool-tier {
+  font: 600 10px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.ot-tool-status { margin: 0; font-size: 13px; color: var(--fg-2); }
+.ot-tool-purpose, .ot-tool-version {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.ot-tool-version { font-family: var(--font-mono); }
+
+/* -- Verifications ---------------------------------------------------- */
+.ot-verifs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.ot-verif {
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+.ot-verif--ok { border-left: 3px solid var(--moss); }
+.ot-verif--block { border-left: 3px solid var(--ember); }
+.ot-verif-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.ot-verif-name { font: 700 14px/1 var(--font-mono); color: var(--fg); }
+.ot-verif-status {
+  font: 600 10px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+}
+.ot-verif-status--ok { background: var(--moss-soft); color: var(--moss); border-color: #1e4d33; }
+.ot-verif-status--block { background: var(--ember-soft); color: var(--ember); border-color: #4a212c; }
+.ot-verif-exit { font: 500 11px/1 var(--font-mono); color: var(--fg-quiet); }
+.ot-verif-desc { margin: 4px 0; font-size: 13px; color: var(--fg-2); }
+.ot-verif-cmd {
+  display: block;
+  background: var(--ink-0);
+  color: var(--fg);
+  border-radius: var(--r-2);
+  padding: 6px 10px;
+  font: 500 12px/1.4 var(--font-mono);
+  margin: 6px 0;
+}
+.ot-verif-meta {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--fg-quiet);
+  margin: 0 0 8px;
+}
+.ot-verif-actions { display: flex; gap: 8px; }
+
+/* -- Agent panes ------------------------------------------------------ */
+.ot-agents { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ot-pane {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  padding: 12px 14px;
+}
+.ot-pane-head { display: flex; align-items: baseline; gap: 10px; }
+.ot-pane-name { font: 700 14px/1 var(--font-mono); color: var(--fg); }
+.ot-pane-role {
+  font: 600 10px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--sky-soft);
+  color: var(--sky);
+  border: 1px solid #1f3656;
+}
+.ot-pane-id { font: 500 11px/1.4 var(--font-mono); color: var(--fg-quiet); margin: 2px 0 8px; }
+.ot-pane-body {
+  background: var(--ink-0);
+  border: 1px solid var(--ink-4);
+  border-radius: var(--r-2);
+  padding: 8px 10px;
+  font: 500 11px/1.5 var(--font-mono);
+  color: #b3d8a3;     /* terminal green */
+  margin: 0;
+  overflow: hidden;
+}
+.ot-pane-line { white-space: pre; }
+.ot-pane-line:first-child { color: #79c0ff; }   /* highlighted line */
+.ot-pane-status {
+  margin: 8px 0 0;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--fg-quiet);
+}
+.ot-pane-quick {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  margin-top: 8px;
+}
+.ot-quick-key {
+  font: 500 11px/1 var(--font-mono);
+  padding: 3px 6px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--fg-2);
+}
+
+/* -- Project picker --------------------------------------------------- */
+.ot-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.ot-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.ot-picker-card:hover {
+  border-color: var(--mash-pulp);
+  box-shadow: var(--shadow-2);
+}
+.ot-picker-name { font: 600 16px/1.2 var(--font-body); color: var(--fg); }
+.ot-picker-id   { font: 500 12px/1 var(--font-mono); color: var(--fg-quiet); }
+.ot-picker-date { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
+.ot-picker-adopt {
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--r-4);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 16px 18px;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.ot-picker-adopt:hover { border-color: var(--mash-pulp); color: var(--mash-pulp); }
+.ot-picker-adopt-plus { font: 300 26px/1 var(--font-body); }
+
+/* -- Mash buttons (shared shorthand for this kit) --------------------- */
+.mash-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: var(--r-3);
+  border: 1px solid transparent;
+  font: 600 13px/1 var(--font-body);
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+.mash-btn:hover { filter: brightness(0.92); }
+.mash-btn:active { transform: translateY(1px); }
+.mash-btn--sm { padding: 6px 10px; font-size: 12px; border-radius: var(--r-2); }
+.mash-btn--primary {
+  background: var(--mash-pulp);
+  color: var(--bone);
+  border-color: var(--mash-pulp-deep);
+}
+.mash-btn--secondary {
+  background: var(--surface-2);
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+.mash-btn--ghost {
+  background: transparent;
+  color: var(--fg-muted);
+  border-color: var(--line);
+}
+
+/* -- Agents header row ------------------------------------------------ */
+.ot-agents-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 720px) {
+  .ot-app { grid-template-columns: 1fr; }
+  .ot-agents { grid-template-columns: 1fr; }
+}

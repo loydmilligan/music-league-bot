@@ -261,3 +261,26 @@ effort: small
 summary: Private song queue for the owner — URL drops in DM are appended to a
   running list; !mention process flushes the queue to a private Spotify
   playlist. No group noise.
+---
+id: the-b-side-league-dashboard
+title: the b-side — Shareable League Dashboard
+stage: planned
+effort: large
+summary: >-
+  Public, no-auth, read-only micro-site per league on digest.mattmariani.com —
+  the fan-facing flip side of the operator app. Digest archive, player profiles
+  (taste fingerprint + overlap v2 + yearbook superlatives + biggest fan /
+  friendly hater + discovery playlist), no-strife league KPIs, season moments.
+  Spotify Wrapped × yearbook tone, never a brutal leaderboard. Claude Design
+  delivered two full handoff packets — docs/design/dashboard/ (the public site)
+  and docs/design/content/ (the operator "Content" screen that publishes /
+  updates it). The ~80%-unbuilt read-model content generator is designed in
+  docs/superpowers/specs/2026-06-14-bside-campaign-design.md. Tracked as the
+  campaign `the-b-side`.
+notes: >-
+  Owner 2026-06-14: build as a campaign — sprint-31 read-model generator →
+  sprint-32 public site → sprint-33 operator Content screen — then the Universal
+  Share button as a separate capstone (own roadmap item). Locked decisions:
+  spectrum sliders derived from the LLM taste fingerprint (no audio data needed
+  for v1); static-generate the site on publish (same host model as digests);
+  overlap v2 (Vote Together + Taste Twins) built in sprint-31.
