@@ -3,9 +3,10 @@ project: music-league-bot
 sprint: sprint-33
 campaign: the-b-side
 title: the b-side — Operator Content screen
-status: planned
+status: active
 created: 2026-06-15T06:20:00Z
-updated: 2026-06-15T06:20:00Z
+activated: 2026-06-15
+updated: 2026-06-15T06:25:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-33)
@@ -62,10 +63,10 @@ updated: 2026-06-15T06:20:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: content-api} **Content API — leagues, update-plan, update, reshare** (handoff §8, §9). Add to `/api/content/*` (following the existing `:leagueId/publish` route): `GET /api/content/leagues` (one row per league + b-side state — published?/slug, members, rounds archived, last updated, and the pending-update flag = a finalized digest whose round_id ∉ `dashboard_sites.archived_rounds`); `GET /api/content/:leagueId/update-plan` (the "add this round" entry + the recompute sections each with a concrete-change detail); `POST /api/content/:leagueId/update` (body `{decisions:{section:'refresh'|'hold'|'lock'}, steer, announce}` → recompute only `refresh` sections via `buildReadModel` section-wise, persist decisions in `dashboard_section_state`, rewrite `read_model` + add the round to `archived_rounds` IN PLACE on the same slug, re-write public artifacts); `POST /api/content/:leagueId/reshare` (body `{mode:'card'|'link'|'silent'}` → produce the announcement; `card`/`link` via the existing WhatsApp bridge / copy payload, `silent` no-op).
+- [-] {agent: backend, id: content-api} **Content API — leagues, update-plan, update, reshare** (handoff §8, §9). Add to `/api/content/*` (following the existing `:leagueId/publish` route): `GET /api/content/leagues` (one row per league + b-side state — published?/slug, members, rounds archived, last updated, and the pending-update flag = a finalized digest whose round_id ∉ `dashboard_sites.archived_rounds`); `GET /api/content/:leagueId/update-plan` (the "add this round" entry + the recompute sections each with a concrete-change detail); `POST /api/content/:leagueId/update` (body `{decisions:{section:'refresh'|'hold'|'lock'}, steer, announce}` → recompute only `refresh` sections via `buildReadModel` section-wise, persist decisions in `dashboard_section_state`, rewrite `read_model` + add the round to `archived_rounds` IN PLACE on the same slug, re-write public artifacts); `POST /api/content/:leagueId/reshare` (body `{mode:'card'|'link'|'silent'}` → produce the announcement; `card`/`link` via the existing WhatsApp bridge / copy payload, `silent` no-op).
   - **Acceptance:** `GET /api/content/leagues` returns the 4 leagues with correct state flags (Fam-Jam = published, pending flag accurate); `update` with `{superlatives:'lock'}` leaves that section unchanged on re-publish while `refresh` sections regenerate; `archived_rounds` gains the round; slug unchanged; `dashboard_section_state` persists `lock`; route tests green; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: content-nav} **Sidebar Digest → Content + the two-tab chrome** (handoff §2, §3). Rename the sidebar `digest` item to **Content** (`/content`, keep a redirect from `/digest`), with a count badge (`.ml-nav-badge`) = number of leagues with a pending archive update. Add the Mash header-tab idiom (`.ct-tabs`/`.ct-tab`): **Digest** tab = the existing pipeline screen, UNCHANGED (just wrapped); **Archive** tab = the new surface (built in the next tasks) with a `.ct-count` badge. Lift `ml-content-styles.css`.
+- [-] {agent: frontend, id: content-nav} **Sidebar Digest → Content + the two-tab chrome** (handoff §2, §3). Rename the sidebar `digest` item to **Content** (`/content`, keep a redirect from `/digest`), with a count badge (`.ml-nav-badge`) = number of leagues with a pending archive update. Add the Mash header-tab idiom (`.ct-tabs`/`.ct-tab`): **Digest** tab = the existing pipeline screen, UNCHANGED (just wrapped); **Archive** tab = the new surface (built in the next tasks) with a `.ct-count` badge. Lift `ml-content-styles.css`.
   - **Acceptance:** sidebar shows "Content" with a pending-count badge; `/digest` redirects to `/content`; the Digest tab renders the existing pipeline unchanged; the Archive tab mounts (placeholder ok this task); verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: archive-list, depends: content-nav,content-api} **Archive tab — league list + first publish + reshare state** (handoff §4, §6, §7). The Archive tab league list (`.ct-league`, one row per league) with the three states — **update-ready** (pulp row, "N update ready" pill, "Update archive →"), **up-to-date** (moss "✓ up to date"), **not-published** (dashed row, "Publish b-side →"). Each row: emblem, name, season, the b-side URL w/ lock glyph, meta (members · rounds archived · last updated). First-publish action calls `POST /api/content/:leagueId/publish`. The published/reshare state (`.ct-published` banner + `.ct-reshare-card`) with `↗ Send to WhatsApp` / `⧉ Copy share card` / `⧉ Copy link`, honoring the Announce config. Data from `GET /api/content/leagues`.
@@ -95,6 +96,10 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — orc — Sprint-33 ACTIVATED · content-api + content-nav dispatched (Wave 1)
+- status planned → active; dispatched the two no-dep tasks in parallel — content-api to backend (%55), content-nav to frontend (%56). File-disjoint. Both `[-]`.
+- archive-list opens after content-nav + content-api; update-modal after archive-list; gate closes the CAMPAIGN.
 
 ### 2026-06-15 — docs — Sprint plan authored: the b-side operator Content screen (campaign sprint 3, final)
 - created sprint-33 coord-doc; `## Active Sprint Plan` body has 5 tasks
