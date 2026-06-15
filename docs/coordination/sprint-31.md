@@ -3,10 +3,11 @@ project: music-league-bot
 sprint: sprint-31
 campaign: the-b-side
 title: the b-side — Read-model generator + foundation
-status: active
+status: closed
 created: 2026-06-14T00:00:00Z
 activated: 2026-06-14
-updated: 2026-06-14T17:00:00Z
+closed: 2026-06-14
+updated: 2026-06-14T21:15:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-31)
@@ -85,7 +86,7 @@ updated: 2026-06-14T17:00:00Z
 - [x] {agent: backend, id: harness-json-robust} **GATE FINDING — harness tolerates fenced/prose-wrapped JSON.** The live publish eyeball crashed: `runPrediction` (`ui/src/lib/predict/predict.ts:42,71`) does a bare `JSON.parse(content)`, but the real model returned markdown-fenced JSON + trailing prose (`\`\`\`json {...} \`\`\` **Reasoning:** …`) despite `response_format: json_object`. This affects ALL prediction tasks (vote-probe, submission-predict, fingerprint, + the new generators) — stubbed tests fed clean JSON so it never surfaced. Fix: before `JSON.parse`, extract the JSON robustly — strip ` ```json `/` ``` ` fences and parse the first balanced `{…}` object, ignoring trailing prose. Apply to BOTH the initial parse and the retry parse. Keep the existing non-JSON error as the final fallback.
   - **Acceptance:** a new vitest feeds `runPrediction` a stubbed response that is fenced + has trailing prose (`\`\`\`json\\n{...}\\n\`\`\`\\n**Reasoning:** ...`) and it parses + validates correctly; a bare-`{...}` and a clean-JSON response still parse; `npm run check` 0 errors; `npx vitest run` green. Verified end-to-end by orc re-running `POST /api/content/2/publish` → 200 with a slug.
 
-- [ ] {agent: orc, id: gate-close, depends: publish-api,harness-json-robust} **Gate — cross-check, quality spot-check, close.** Orc runs the gate: cross-check all lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card. **Smoke = the read-model QUALITY spot-check (spec §12):** generate a real league's read-model on dev and eyeball superlatives / KPIs / fan-hater against the no-strife bar before sprint-32 consumes it (no public UI to deploy yet; the new tables + publish endpoint deploy low-risk). Panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: publish-api,harness-json-robust} **Gate — cross-check, quality spot-check, close.** Orc runs the gate: cross-check all lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card. **Smoke = the read-model QUALITY spot-check (spec §12):** generate a real league's read-model on dev and eyeball superlatives / KPIs / fan-hater against the no-strife bar before sprint-32 consumes it (no public UI to deploy yet; the new tables + publish endpoint deploy low-risk). Panes reset, doc closed.
   - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; a real league's generated read-model passes the no-strife eyeball (no leaderboard/last-place language; warm superlatives; friendly hater); doc `status: closed`.
 
 ## Decision Log
@@ -98,13 +99,34 @@ static-generate on publish (sprint-32); overlap v2 built here. No UI this sprint
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-14 — Sprint-31 RATIFIED (owner, verbal after the read-model quality eyeball)
+Orc generated Fam-Jam's read-model on prod (`POST /api/content/2/publish` → slug
+`8BFuCmH1YXBMqsqqT_YK6w`, persisted to `dashboard_sites`; nothing exposed publicly — no
+public route exists until sprint-32). Owner reviewed the generated superlatives / KPIs /
+friendly fan-hater and approved the no-strife voice ("close now — fix later"). Three data
+nits deferred to backlog (sprint-32 prep). Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — orc — GATE-CLOSE DONE · sprint-31 closed (campaign the-b-side, sprint 1/3)
+- Cross-check: all 8 worker tasks `[x]` (incl. the gate-finding fix), committed, tree clean;
+  `npm run check` 0 errors + `npx vitest run` 459/459 (was 336).
+- **Gate finding:** the live read-model publish eyeball (`POST /api/content/2/publish`) crashed
+  because `runPrediction` couldn't parse the model's real fenced+prose JSON — added + dispatched
+  `harness-json-robust` (commit `8fe8441`), which hardens JSON extraction for ALL prediction tasks.
+  Stubbed tests never caught it; the live eyeball did. Re-deployed, re-ran publish → success.
+- Version: 1.0.8 → 1.0.9; CHANGELOG `[1.0.9]`; committed `97164f2`. Deployed (tables + publish
+  endpoint, no UI) to generate against real data.
+- Quality eyeball (Fam-Jam, slug `8BFuCmH1YXBMqsqqT_YK6w`): no-strife scan clean (no
+  ladder/last-place language); KPIs celebratory; league superlatives warm + specific; the
+  friendly-hater lands as affectionate roast. Owner ratified the voice. 3 data nits (fan/hater
+  name+accent null, empty playlist agenda, moment round labels) → backlog as sprint-32 prep.
+- NOTE: publish only writes a private `dashboard_sites` DB row — nothing exposed on
+  digest.mattmariani.com (no public route until sprint-32). Panes reset; doc `status: closed`.
 
 ### 2026-06-14 — backend — schema complete (61303a7)
 - `ui/src/lib/db/client.ts`: two idempotent boot migrations — `dashboard_sites` (slug PK, league_id UNIQUE, season, read_model, archived_rounds DEFAULT '[]', is_live DEFAULT 1, published_at, refreshed_at) + `dashboard_section_state` (PK(league_id,section), decision DEFAULT 'refresh', steer nullable)

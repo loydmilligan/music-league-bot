@@ -305,6 +305,13 @@ Add a set of **dials** (like the current settings-screen weighting) — percenta
 3. **Theme fit** (least important — owner treats it mostly as binary "does it fit → can score it," occasionally a bit more weight for a perfect-example song).
 These feed the SAS / submission / H2H tools. **Naming help wanted on factor 1** ("Goodness" → Appeal? Crowd Appeal? Likeability?).
 
+## the b-side — sprint-31 read-model nits (fix in/before sprint-32) — S
+**Source:** sprint-31 gate eyeball (Fam-Jam, 2026-06-14). The read-model generates well and the no-strife voice is confirmed; three data-plumbing nits to fix when sprint-32 (the public site) builds the components that consume them:
+1. **biggestFan / biggestHater `name` + `accent` fields are null** — the generated prose `line` has the person's name baked in, but the structured `name`/`accent` fields (which the profile UI needs) aren't populated. Fix the generator to emit them.
+2. **Playlist `agenda` one-liner comes back empty** — the playlist `name` generates fine but the funny one-line "agenda" nudge is blank. Check the profile playlist task output mapping.
+3. **Moment round labels** show the theme string prefixed with "R" (e.g. `R🐜👖`) instead of a real round number. Map the round id/number, not the theme name.
+(Also seen: occasional minor LLM cross-reference slip in a moment blurb — low priority, re-gen smooths it.)
+
 ## War-table hygiene — backfill campaigns + roadmap accuracy (drafted 2026-06-14) — S — HIGH priority (after the b-side campaign + the share sprint)
 **Source:** owner, 2026-06-14. The orc-tower war table (`campaigns.md` + `roadmap.md`) has drifted: the `post-mvp-features` campaign is empty, and **sprints 25–30 are not in any campaign** (collision fixes s27, Producer S1 s28, Producer S2 s29, Player Research polish s30, plus s25/s26 foundation/inventory). Roadmap items shipped during those sprints (e.g. the Producer tools, the player-research polish PRs) aren't reflected as done/analyzed/planned accurately either.
 **Direction:** group sprints 25–30 into the right campaign card(s) in `campaigns.md` (a "Music League Producer" campaign for s28/s29 + the player-research line; decide where s25/s26/s27/s30 belong), mark shipped roadmap items appropriately, and reconcile `roadmap.md` stages against what actually shipped. Verify the war table renders the corrected campaigns via `GET /api/projects/music-league-bot/work`.
