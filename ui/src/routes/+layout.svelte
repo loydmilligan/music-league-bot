@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../app.css';
+  import '$lib/content/content.css';
   import { page } from '$app/state';
   import { fly, fade } from 'svelte/transition';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
@@ -22,13 +23,14 @@
   // (served at /d/<slug>/). Distinct from ?export=1 — interactivity stays ON.
   const isShare = $derived(Boolean((page.data as { share?: boolean } | undefined)?.share));
 
-  type NavItem = { href: string; label: string; glyph: string; count?: string };
+  type NavItem = { href: string; label: string; glyph: string; count?: string; badge?: number };
   const chatUnassignedCount = $derived(((page.data as { chatUnassignedCount?: number } | undefined)?.chatUnassignedCount ?? 0));
+  const contentPendingCount = $derived(((page.data as { contentPendingCount?: number } | undefined)?.contentPendingCount ?? 0));
   const navItems = $derived<NavItem[]>([
     { href: '/',          label: 'Active round',   glyph: '▸', count: 'r-14' },
     { href: '/shortlist', label: 'Shortlist',      glyph: '▸', count: '11' },
     { href: '/chat',      label: 'Chat watcher',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
-    { href: '/digest',    label: 'Digest preview', glyph: '▸', count: '3 new' },
+    { href: '/content',   label: 'Content',        glyph: '▸', badge: contentPendingCount > 0 ? contentPendingCount : undefined },
     { href: '/history',   label: 'History',        glyph: '▸' },
     { href: '/settings',  label: 'Settings',       glyph: '▸' },
     { href: '/setup',     label: 'Setup',          glyph: '▸' },
@@ -65,6 +67,8 @@
 
   function isCurrent(href: string): boolean {
     if (href === '/') return page.url.pathname === '/';
+    // Content nav item is active for both /content and /digest/* routes
+    if (href === '/content') return page.url.pathname.startsWith('/content') || page.url.pathname.startsWith('/digest');
     return page.url.pathname.startsWith(href);
   }
 
@@ -106,7 +110,9 @@
         >
           <span class="text-fg-faint text-xs flex-shrink-0" aria-hidden="true">{item.glyph}</span>
           <span class="flex-1 truncate">{item.label}</span>
-          {#if item.count}
+          {#if item.badge}
+            <span class="ml-nav-badge">{item.badge}</span>
+          {:else if item.count}
             <StatusChip label={item.count} tone="muted" />
           {/if}
         </a>

@@ -1,0 +1,37 @@
+import { getDb } from '$lib/db/client.js';
+import { getContentPendingCount } from '$lib/db/layout.js';
+import type { PageServerLoad } from './$types.js';
+
+export interface ContentPageData {
+  pendingCount: number;
+  latestDigestRoundId: number | null;
+}
+
+export const load: PageServerLoad = async (): Promise<ContentPageData> => {
+  const db = getDb();
+
+  const pendingCount = getContentPendingCount(db);
+
+  // Most recent digest round — used for the Digest tab link
+  const unfinalized = db
+    .prepare(
+      `SELECT round_id FROM digest_drafts
+       WHERE finalized_at IS NULL
+       ORDER BY generated_at DESC LIMIT 1`,
+    )
+    .get() as { round_id: number } | undefined;
+
+  if (unfinalized) {
+    return { pendingCount, latestDigestRoundId: unfinalized.round_id };
+  }
+
+  const latest = db
+    .prepare(
+      `SELECT r.id FROM rounds r
+       WHERE EXISTS (SELECT 1 FROM votes WHERE round_id = r.id)
+       ORDER BY r.id DESC LIMIT 1`,
+    )
+    .get() as { id: number } | undefined;
+
+  return { pendingCount, latestDigestRoundId: latest?.id ?? null };
+};

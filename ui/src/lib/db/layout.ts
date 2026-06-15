@@ -164,6 +164,27 @@ export interface WatcherDiagnostics {
   lastPollAt: string | null;
 }
 
+/**
+ * Count of leagues that have a published b-side AND at least one finalized
+ * digest draft that hasn't been added to the archive yet.
+ * Used for the Content nav badge.
+ */
+export function getContentPendingCount(db: Database.Database): number {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS cnt
+    FROM dashboard_sites ds
+    WHERE (
+      SELECT COUNT(*)
+      FROM digest_drafts dd
+      JOIN rounds r ON r.id = dd.round_id
+      JOIN seasons s ON s.id = r.season_id
+      WHERE s.league_id = ds.league_id
+        AND dd.finalized_at IS NOT NULL
+    ) > json_array_length(ds.archived_rounds)
+  `).get() as { cnt: number };
+  return row.cnt;
+}
+
 export function getWatcherDiagnostics(
   db: Database.Database,
   dbFilePath: string,

@@ -1,5 +1,6 @@
 <script lang="ts">
   import '$lib/digest/digest.css';
+  import '$lib/content/content.css';
   import { invalidateAll } from '$app/navigation';
   import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
@@ -20,6 +21,8 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import type { PageData } from './$types.js';
+
+  const archivePendingCount = $derived(((page.data as { contentPendingCount?: number } | undefined)?.contentPendingCount ?? 0));
   import type { RoundIndexEntry } from './+page.server.js';
 
   let { data }: { data: PageData } = $props();
@@ -765,6 +768,23 @@
 <svelte:head>
   <title>Digest preview · r-{data.roundId}</title>
 </svelte:head>
+
+<!-- Content tab chrome — Digest tab active; Archive links back to /content -->
+<div class="ct-tabrow" style="margin-bottom: 16px;">
+  <div class="ct-tabs">
+    <a href="/digest/{data.roundId}" class="ct-tab is-on">
+      <span class="ct-tab-glyph">✉</span>
+      Digest
+    </a>
+    <a href="/content" class="ct-tab">
+      <span class="ct-tab-glyph">≣</span>
+      Archive
+      {#if archivePendingCount > 0}
+        <span class="ct-count">{archivePendingCount}</span>
+      {/if}
+    </a>
+  </div>
+</div>
 
 <div class="dg-page-head">
   <p style="font: 700 10px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-muted); margin: 0 0 4px;">
