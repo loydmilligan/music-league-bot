@@ -61,7 +61,7 @@ updated: 2026-06-14T17:00:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: schema} **Schema — `dashboard_sites` + `dashboard_section_state`** (spec §6). Two new tables via idempotent boot migrations in `ui/src/lib/db/client.ts` (house pattern). `dashboard_sites` (slug PK unguessable ≥80-bit, league_id UNIQUE, season, read_model TEXT, archived_rounds TEXT DEFAULT '[]', is_live, published_at, refreshed_at). `dashboard_section_state` (league_id, section, decision DEFAULT 'refresh', steer, PK(league_id,section)). Also add a small slug helper (≥80-bit token) in `$lib/dashboard/slug.ts`.
+- [x] {agent: backend, id: schema} **Schema — `dashboard_sites` + `dashboard_section_state`** (spec §6). Two new tables via idempotent boot migrations in `ui/src/lib/db/client.ts` (house pattern). `dashboard_sites` (slug PK unguessable ≥80-bit, league_id UNIQUE, season, read_model TEXT, archived_rounds TEXT DEFAULT '[]', is_live, published_at, refreshed_at). `dashboard_section_state` (league_id, section, decision DEFAULT 'refresh', steer, PK(league_id,section)). Also add a small slug helper (≥80-bit token) in `$lib/dashboard/slug.ts`.
   - **Acceptance:** fresh boot creates both tables (idempotent re-run is a no-op); `PRAGMA table_info` shows every column; the slug helper yields a ≥80-bit URL-safe token; vitest covers boot + slug entropy/shape; `npm run check` 0 errors.
 
 - [x] {agent: backend, id: overlap-v2} **Overlap v2 — Vote Together + Taste Twins** (spec §8; also the standalone backlog item). New `ui/src/lib/dashboard/generators/overlap.ts`: `buildOverlap(db, leagueId) → { voteTogether: PeerScore[], taste­Twins: PeerScore[] }` per member. Vote Together = within shared rounds only (omit zero-shared-round pairs, no fake low %); Taste Twins = fingerprint-similarity across all leagues (no penalty for no shared rounds). Export the slice type. Do NOT extend the v1 global-Jaccard `tasteOverlap`.
@@ -102,6 +102,14 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — schema complete (61303a7)
+- `ui/src/lib/db/client.ts`: two idempotent boot migrations — `dashboard_sites` (slug PK, league_id UNIQUE, season, read_model, archived_rounds DEFAULT '[]', is_live DEFAULT 1, published_at, refreshed_at) + `dashboard_section_state` (PK(league_id,section), decision DEFAULT 'refresh', steer nullable)
+- `ui/src/lib/dashboard/slug.ts`: `mintSlug()` — `randomBytes(16).toString('base64url')` = 128-bit URL-safe token (≥80-bit requirement)
+- `ui/src/lib/db/client.test.ts`: added dashboard_sites + dashboard_section_state column coverage tests
+- `ui/src/lib/dashboard/slug.test.ts`: URL-safe pattern, length ≥14 chars (84 bits), uniqueness
+- 7/7 vitest green; 0 svelte-check errors; fresh boot creates both tables; idempotent re-run is a no-op
+- `[-]` → `[x]`
 
 ### 2026-06-14 — backend — gen-deterministic complete (9937aa5)
 - `ui/src/lib/dashboard/generators/deterministic.ts`: pure SQL/compute generator,
