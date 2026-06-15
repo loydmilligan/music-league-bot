@@ -69,7 +69,7 @@ updated: 2026-06-15T06:25:00Z
 - [x] {agent: frontend, id: content-nav} **Sidebar Digest → Content + the two-tab chrome** (handoff §2, §3). Rename the sidebar `digest` item to **Content** (`/content`, keep a redirect from `/digest`), with a count badge (`.ml-nav-badge`) = number of leagues with a pending archive update. Add the Mash header-tab idiom (`.ct-tabs`/`.ct-tab`): **Digest** tab = the existing pipeline screen, UNCHANGED (just wrapped); **Archive** tab = the new surface (built in the next tasks) with a `.ct-count` badge. Lift `ml-content-styles.css`.
   - **Acceptance:** sidebar shows "Content" with a pending-count badge; `/digest` redirects to `/content`; the Digest tab renders the existing pipeline unchanged; the Archive tab mounts (placeholder ok this task); verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: archive-list, depends: content-nav,content-api} **Archive tab — league list + first publish + reshare state** (handoff §4, §6, §7). The Archive tab league list (`.ct-league`, one row per league) with the three states — **update-ready** (pulp row, "N update ready" pill, "Update archive →"), **up-to-date** (moss "✓ up to date"), **not-published** (dashed row, "Publish b-side →"). Each row: emblem, name, season, the b-side URL w/ lock glyph, meta (members · rounds archived · last updated). First-publish action calls `POST /api/content/:leagueId/publish`. The published/reshare state (`.ct-published` banner + `.ct-reshare-card`) with `↗ Send to WhatsApp` / `⧉ Copy share card` / `⧉ Copy link`, honoring the Announce config. Data from `GET /api/content/leagues`.
+- [x] {agent: frontend, id: archive-list, depends: content-nav,content-api} **Archive tab — league list + first publish + reshare state** (handoff §4, §6, §7). The Archive tab league list (`.ct-league`, one row per league) with the three states — **update-ready** (pulp row, "N update ready" pill, "Update archive →"), **up-to-date** (moss "✓ up to date"), **not-published** (dashed row, "Publish b-side →"). Each row: emblem, name, season, the b-side URL w/ lock glyph, meta (members · rounds archived · last updated). First-publish action calls `POST /api/content/:leagueId/publish`. The published/reshare state (`.ct-published` banner + `.ct-reshare-card`) with `↗ Send to WhatsApp` / `⧉ Copy share card` / `⧉ Copy link`, honoring the Announce config. Data from `GET /api/content/leagues`.
   - **Acceptance:** the list renders all 4 leagues in the correct state from the API; "Publish b-side →" on an unpublished league mints the slug + shows the published/reshare state; the reshare card shows the URL + actions; verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
 
 - [ ] {agent: frontend, id: update-modal, depends: archive-list} **Archive-update modal — refresh / hold / lock + steer** (handoff §5). The update modal (reuse the digest `.dg-modal` shell), opened from "Update archive →": header "Update b-side · {league}", the required "New archive entry" row + the recompute rows (superlatives, stats·KPIs, fingerprints, moments, overlap), each with the `.ct-seg` refresh/hold/lock control + a per-row note/detail; steerable rows expose "↻ steer this rewrite" (the quick-steer chips + free-text idiom); the config strip (Announce: card/link/silent + the locked same-slug line); footer cost estimate + "Generate update →" → `POST /api/content/:leagueId/update` → closes to the published/reshare state. Loads the plan from `GET /api/content/:leagueId/update-plan`.
@@ -109,6 +109,19 @@ _None._
 ### 2026-06-15 — orc — Sprint-33 ACTIVATED · content-api + content-nav dispatched (Wave 1)
 - status planned → active; dispatched the two no-dep tasks in parallel — content-api to backend (%55), content-nav to frontend (%56). File-disjoint. Both `[-]`.
 - archive-list opens after content-nav + content-api; update-modal after archive-list; gate closes the CAMPAIGN.
+
+### 2026-06-15 — frontend — archive-list complete (da5fb67)
+- Page server loads leagues via internal fetch to GET /api/content/leagues
+- ContentLeague type exported from +page.server.ts; data.leagues flows into $state
+- League rows: 3 states (update-ready/up-to-date/not-published) with emblem, name,
+  season pill, b-side URL + lock glyph, meta (members · rounds archived · last updated)
+- Emblem colors: 4-color oklch palette by index (no hardcoded hex)
+- First-publish: POST /publish → POST /reshare → flips Archive tab to ct-published banner
+  + ct-reshare-card (round, theme, blurb, URL); ↗ Send to WhatsApp via wa.me deep link;
+  ⧉ Copy share card / ⧉ Copy link via navigator.clipboard
+- "Update archive →" wired as stub function for update-modal task
+- 0 typecheck errors; verified at 192.168.4.217:5178 (4 leagues, correct states:
+  Fam-Jam=update-ready, 3 others=not-published); mobile pass checked
 
 ### 2026-06-15 — frontend — content-nav complete (d13d412)
 - Sidebar Digest→Content (/content), .ml-nav-badge = getContentPendingCount from layout server
