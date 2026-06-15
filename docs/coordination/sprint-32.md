@@ -3,9 +3,10 @@ project: music-league-bot
 sprint: sprint-32
 campaign: the-b-side
 title: the b-side — Public site (Home / Profile / Archive)
-status: planned
+status: active
 created: 2026-06-15T00:00:00Z
-updated: 2026-06-15T00:00:00Z
+activated: 2026-06-15
+updated: 2026-06-15T04:45:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-32)
@@ -63,10 +64,10 @@ updated: 2026-06-15T00:00:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: host-pipeline} **Static-gen + host the b-side under digest.mattmariani.com** (handoff §2, §9; campaign decision). Extend `publishSite` (`ui/src/lib/dashboard/publish.ts`) so publishing a league ALSO writes the public artifact: `DIGESTS_DIR/{slug}/read_model.json` (the persisted read-model) plus a slug `index.html` that boots the shared b-side SPA bundle for that slug. Configure `digest-static` (caddy) to serve `digest.mattmariani.com/{slug}/*` with SPA fallback to the slug index and `noindex, nofollow` headers; a bad slug → generic 404 (no league enumeration). The operator app must NOT serve these routes on its own domain. Document the build/serve wiring (where the SPA bundle is built + copied).
+- [-] {agent: backend, id: host-pipeline} **Static-gen + host the b-side under digest.mattmariani.com** (handoff §2, §9; campaign decision). Extend `publishSite` (`ui/src/lib/dashboard/publish.ts`) so publishing a league ALSO writes the public artifact: `DIGESTS_DIR/{slug}/read_model.json` (the persisted read-model) plus a slug `index.html` that boots the shared b-side SPA bundle for that slug. Configure `digest-static` (caddy) to serve `digest.mattmariani.com/{slug}/*` with SPA fallback to the slug index and `noindex, nofollow` headers; a bad slug → generic 404 (no league enumeration). The operator app must NOT serve these routes on its own domain. Document the build/serve wiring (where the SPA bundle is built + copied).
   - **Acceptance:** after `POST /api/content/2/publish`, `DIGESTS_DIR/{slug}/read_model.json` exists and matches the DB read_model; caddy serves `/{slug}/` (200, SPA shell) and `/{slug}/read_model.json` (200, JSON) with `X-Robots-Tag: noindex`; a random bad slug → 404; nothing under the slug links to or reaches the operator app; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: shell} **b-side app shell — brand, atoms, router, share card, CSS** (handoff §0, §8; `ml-dashboard-shell.jsx`). Build the standalone b-side Svelte app: the `b/s` brand mark, shared atoms (Avatar/monogram with one oklch lightness+chroma varying only hue, icon set, the `pulp|amber|sky|moss|ember` accent map), the **client router** for the 3 routes (`/{slug}`, `/{slug}/p/{memberId}`, `/{slug}/archive`), read-model loading (fetch the co-located `read_model.json` by slug), and the **shareable-card overlay** (tap a share icon → screenshot-ready card carrying ONLY award + league name, no URL/login). Lift `ml-dashboard-styles.css` wholesale into the app. Strip ALL review scaffolding (bezel, rail, flip pills, mock urlbar).
+- [-] {agent: frontend, id: shell} **b-side app shell — brand, atoms, router, share card, CSS** (handoff §0, §8; `ml-dashboard-shell.jsx`). Build the standalone b-side Svelte app: the `b/s` brand mark, shared atoms (Avatar/monogram with one oklch lightness+chroma varying only hue, icon set, the `pulp|amber|sky|moss|ember` accent map), the **client router** for the 3 routes (`/{slug}`, `/{slug}/p/{memberId}`, `/{slug}/archive`), read-model loading (fetch the co-located `read_model.json` by slug), and the **shareable-card overlay** (tap a share icon → screenshot-ready card carrying ONLY award + league name, no URL/login). Lift `ml-dashboard-styles.css` wholesale into the app. Strip ALL review scaffolding (bezel, rail, flip pills, mock urlbar).
   - **Acceptance:** the shell builds as a standalone static bundle; routing resolves the 3 paths client-side; the share-card overlay opens and shows award + league only (no app URL); `b/s` mark uses the chunky extruded recipe (not flat italic); `npm run check` 0 errors; verified hands-on at 412×892 + desktop against a real read_model.json.
 
 - [ ] {agent: frontend, id: route-home, depends: shell} **League Home — `/{slug}`** (handoff §4a; `ml-dashboard-home.jsx`). Masthead (b/s + share-the-league icon) → hero (league name display type, tagline, "Updated {date}" pill from `refreshed_at`) → KPI ribbon (horizontal scroll, celebratory facts) → superlative reel (award cards, each opens the winner's profile + has its own share icon) → the family (2-up member grid → profiles) → moments of the season → latest-round teaser → footer.
@@ -98,6 +99,10 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — orc — Sprint-32 ACTIVATED · host-pipeline + shell dispatched (Wave 1)
+- status planned → active; dispatched the two no-dep tasks in parallel — host-pipeline to backend (%55), shell to frontend (%56). File-disjoint (backend = publish.ts + caddy; frontend = the b-side Svelte app). Both `[-]`.
+- the 3 routes (home/profile/archive) open once shell lands; gate needs host-pipeline + all 3 routes.
 
 ### 2026-06-15 — docs — Sprint plan authored: the b-side public site (campaign sprint 2)
 - created sprint-32 coord-doc; `## Active Sprint Plan` body has 6 tasks
