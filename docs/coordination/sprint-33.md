@@ -3,7 +3,7 @@ project: music-league-bot
 sprint: sprint-33
 campaign: the-b-side
 title: the b-side — Operator Content screen
-status: active
+status: closed
 created: 2026-06-15T06:20:00Z
 activated: 2026-06-15
 updated: 2026-06-15T06:25:00Z
@@ -75,7 +75,7 @@ updated: 2026-06-15T06:25:00Z
 - [x] {agent: frontend, id: update-modal, depends: archive-list} **Archive-update modal — refresh / hold / lock + steer** (handoff §5). The update modal (reuse the digest `.dg-modal` shell), opened from "Update archive →": header "Update b-side · {league}", the required "New archive entry" row + the recompute rows (superlatives, stats·KPIs, fingerprints, moments, overlap), each with the `.ct-seg` refresh/hold/lock control + a per-row note/detail; steerable rows expose "↻ steer this rewrite" (the quick-steer chips + free-text idiom); the config strip (Announce: card/link/silent + the locked same-slug line); footer cost estimate + "Generate update →" → `POST /api/content/:leagueId/update` → closes to the published/reshare state. Loads the plan from `GET /api/content/:leagueId/update-plan`.
   - **Acceptance:** the modal opens with the add-entry + recompute rows from the update-plan; each row's refresh/hold/lock toggles; a steerable row opens the steer chips; "Generate update →" calls the update endpoint and flips to the published state; the same-slug line is shown locked; verified hands-on on dev at 1280; `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-close, depends: content-api,content-nav,archive-list,update-modal} **Gate — cross-check, ship, walk the operator flow, close.** Orc runs the gate: cross-check all lanes, `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, then walk the LIVE Content screen on `mlbot2.mattmariani.com`: the two tabs, the Archive list states, a first-publish (or an update on Fam-Jam) → published/reshare, and confirm the public b-side reflects the change on the same slug. Panes reset, doc closed. This **completes the campaign** — note the campaign close in the doc.
+- [x] {agent: orc, id: gate-close, depends: content-api,content-nav,archive-list,update-modal} **Gate — cross-check, ship, walk the operator flow, close.** Orc runs the gate: cross-check all lanes, `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, then walk the LIVE Content screen on `mlbot2.mattmariani.com`: the two tabs, the Archive list states, a first-publish (or an update on Fam-Jam) → published/reshare, and confirm the public b-side reflects the change on the same slug. Panes reset, doc closed. This **completes the campaign** — note the campaign close in the doc.
   - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; the live Content screen works (tabs, archive states, publish/update → reshare, same-slug guarantee holds, public site reflects the update); 0 console errors; doc `status: closed`; campaign `the-b-side` complete.
 
 ## Decision Log
@@ -89,13 +89,33 @@ generated content per owner's tweaks.
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-15 — Campaign `the-b-side` RATIFIED + closed (owner)
+- Owner ran a full segment-by-segment UAT of the public site + operator screen
+  (`wiki/Projects/music-league-bot/sessions/testing/2026-06-15-the-b-side-campaign-review.md`).
+  Verdict: **overall `ship`, `ratify`**. All 20 segments rated; the three "content off"
+  ratings (moments, latest-round teaser, voice) explicitly flagged as **non-blocking polish**,
+  not release blockers.
+- Gate verification: `npm run check` 0 errors, `npx vitest run` 485/485, live walk on
+  mlbot2.mattmariani.com (tabs, 4-league archive states, update modal w/ live plan, Digest
+  tab unchanged), 0 console errors. Shipped v1.1.1 (CHANGELOG updated, deployed).
+- Campaign `the-b-side` (sprints 31→32→33) is **complete**. Follow-on: a dedicated
+  **the-b-side-polish** campaign captures all UAT polish notes (see roadmap.md).
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — orc — GATE CLOSED · campaign `the-b-side` complete
+- Cross-check: all 4 worker tasks `[x]`. Verification: `npm run check` 0 errors,
+  `npx vitest run` 485/485 (50 files). v1.1.1 + CHANGELOG + repo hygiene committed (00204ab);
+  `bot-ui` rebuilt + deployed; prod serving v1.1.1 on :3002.
+- Live walk on mlbot2.mattmariani.com/content: Content nav + two tabs, Archive list 4-league
+  states (Fam-Jam published "1 update ready"; HJ/SB/NP not-published), update modal loaded the
+  live update-plan with refresh/hold/lock + steer, Digest tab unchanged. 0 console errors.
+- Owner UAT ratified (`ship`/`ratify`) — see Ratification Log. Polish notes routed to the new
+  `the-b-side-polish` campaign + roadmap cards. Sprint status → closed.
 
 ### 2026-06-15 — frontend — update-modal complete (7840280)
 - UpdateModal.svelte: fetches GET /api/content/:leagueId/update-plan on open

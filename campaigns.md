@@ -35,7 +35,10 @@ sprints: []
 id: the-b-side
 title: the b-side — Shareable League Dashboard
 kind: regular
-signedOff: false
+signedOff: true
+status: complete
+completed: 2026-06-15
+followOn: the-b-side-polish
 roadmapItem: the-b-side-league-dashboard
 sprints:
   - sprint-31
@@ -66,3 +69,47 @@ sprintPlan:
     goal: >-
       Digest → Content tabs, the archive list, the refresh/hold/lock update
       modal, and the reshare card.
+---
+id: the-b-side-polish
+title: the b-side — Polish & Depth
+kind: regular
+signedOff: false
+status: proposed
+followsFrom: the-b-side
+sprints: []
+summary: >-
+  Follow-on to the shipped `the-b-side` campaign — turns the owner UAT
+  (wiki/.../sessions/testing/2026-06-15-the-b-side-campaign-review.md) plus orc
+  proposals into depth and polish. 20 roadmap cards tagged `campaign:
+  the-b-side-polish` (12 `source: owner-uat`, 8 `source: orc-proposal`). The b-side
+  shipped and is owner-ratified; nothing here is a release blocker. The proposed
+  sprint shape below is a STARTING POINT for prioritization, not locked — sprint
+  membership gets ratified before kickoff.
+proposedSprints:
+  - title: Polish-1 — Season & data truth (foundation)
+    rationale: >-
+      The load-bearing slice everything content-related depends on. Cards:
+      bside-season-round-truth, bside-season-lens, bside-read-model-provenance,
+      bside-degenerate-state-handling, bside-age-field-save-bug. Heavy overlap with
+      the existing `active-league-management` roadmap card — sequence them together.
+  - title: Polish-2 — Superlatives & voice
+    rationale: >-
+      The content engine. Cards: bside-superlatives-curation (count control +
+      generate-N-pick-M + adjective-variation), bside-superlative-visual-identity,
+      bside-semantic-accent-system, bside-voice-snark-tuning.
+  - title: Polish-3 — Visual & mobile
+    rationale: >-
+      Cards: bside-mobile-card-rows (fade/carousel), bside-member-grid-richness,
+      bside-share-card-og-meta, bside-returning-visitor-diff.
+  - title: Polish-4 — Metrics correctness & operator QA
+    rationale: >-
+      Cards: bside-fan-hater-overlap-normalization (averages), bside-real-audio-fingerprint,
+      bside-update-diff-preview, bside-content-lint.
+  - title: Polish-5 — Avatars (themed LLM batches)
+    rationale: >-
+      Stands alone (large). Card: bside-llm-avatars. Needs the per-player base
+      image/description groundwork.
+  - title: Polish-6 — Moments & the real playlist
+    rationale: >-
+      Cards: bside-moments-chat-mined (+ editor pass), bside-discovery-playlist-link,
+      bside-playlist-audio-integration.

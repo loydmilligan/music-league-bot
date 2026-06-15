@@ -264,8 +264,9 @@ summary: Private song queue for the owner — URL drops in DM are appended to a
 ---
 id: the-b-side-league-dashboard
 title: the b-side — Shareable League Dashboard
-stage: planned
+stage: shipped
 effort: large
+shipped: 2026-06-15 (campaign the-b-side, sprints 31→32→33; v1.1.1; owner-ratified)
 summary: >-
   Public, no-auth, read-only micro-site per league on digest.mattmariani.com —
   the fan-facing flip side of the operator app. Digest archive, player profiles
@@ -284,3 +285,278 @@ notes: >-
   spectrum sliders derived from the LLM taste fingerprint (no audio data needed
   for v1); static-generate the site on publish (same host model as digests);
   overlap v2 (Vote Together + Taste Twins) built in sprint-31.
+---
+id: bside-season-round-truth
+title: b-side — Season & Round Truth (current / prev / next)
+stage: analyzed
+effort: large
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  The recurring sitewide problem, felt sharply on the b-side: the app can't
+  reliably answer "for league X, season Y — what are the rounds, in what order,
+  and which is current / previous / next?" Surfaces as the Latest-round teaser
+  showing an empty winner / 0 votes. The b-side read-model and archive must KNOW
+  this with certainty and feed it to the generators. Heavy overlap with the
+  existing `active-league-management` card (jobs B1–B4 season-status + getNextRound
+  + active-round derivation, B9 season management, F9 explicit next-round pin) —
+  treat this as the b-side-facing slice that consumes that foundation. Owner calls
+  this the load-bearing fix everything else depends on.
+---
+id: bside-season-lens
+title: b-side — Season Lens (current-season vs all-time)
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Make "which seasons does this b-side cover" an explicit, labeled product choice
+  rather than an accident. The archive currently says "season" but often means ALL
+  seasons. Let the operator pick the lens at publish/update — current-season recap
+  vs all-time league history — and label the site + archive accordingly ("Fam-Jam ·
+  Season 4" vs "Fam-Jam · all-time"). All-seasons input is fine (esp. at season
+  start, the sensible default) — this just makes it deliberate and splits the data
+  cleanly per section. Builds on bside-season-round-truth.
+---
+id: bside-superlatives-curation
+title: b-side — Superlative Curation & Snark Control
+stage: analyzed
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Fewer, better, operator-curated superlatives. (1) Configurable count on the
+  landing page (2..#players, default 2–3) — too many dilutes each, and every player
+  already gets one on their profile. (2) Only ~2 in each player profile. (3) A
+  generate-N-pick-M flow: the LLM proposes several (e.g. 10), operator picks which
+  to include, or lets the LLM choose. (4) An adjective-variation engine — once a
+  player qualifies for an award (e.g. ">25% of picks from the 90s"), generate ~5
+  variations from a pool of ~30 tone adjectives (snarky / praising / goofy /
+  disbelieving / bored), operator picks the keeper. Rename the "Yearbook awards"
+  label to "Superlatives".
+---
+id: bside-superlative-visual-identity
+title: b-side — Superlative Card Visual Identity
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  The award cards look a touch amateur. (1) Replace the clip-art trophy icon with
+  something better (TBD). (2) Give the card colors MEANING instead of random —
+  e.g. superlative categories (maybe only known internally), each with a top-level
+  color, and the generator picks a tint of that family, never repeating a tint on
+  the same b-side. Pairs with bside-semantic-accent-system.
+---
+id: bside-llm-avatars
+title: b-side — LLM-Generated (Themed) Player Avatars
+stage: idea
+effort: large
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Supersedes/expands the existing "add avatars" intent. Beyond static uploads: (1)
+  one-off LLM avatar-batch generation for a league's players on demand; (2) at
+  archive-update time, an operator prompt that regenerates ALL players' avatars —
+  ideally auto-themed to that round's theme (spooky theme → spooky versions of each
+  player). Needs a per-player base: an uploaded photo or an LLM-generated "plain"
+  generic-style version to theme from. Makes the member grid far more visual.
+---
+id: bside-member-grid-richness
+title: b-side — Richer Member Grid Cards
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Make "The Family" grid more visual and information-dense: more concise per-member
+  text, a more stylized name treatment, and encoded badges — current-season rank,
+  genre/music-taste badges, milestones. Complements bside-llm-avatars.
+---
+id: bside-mobile-card-rows
+title: b-side — Mobile Card-Row UX (fade / carousel)
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Recurring mobile issue on the horizontally-scrolling rows (the "Season so far"
+  KPI ribbon, the superlatives reel): cards cut off at the right edge and the
+  cutoff reads as unintentional until you discover the scroll. Horizontal scroll on
+  desktop also feels sketchy. Options to evaluate: a right-edge fade so the cutoff
+  reads as "more →" on purpose, or a proper mobile carousel. Owner wants orc's input
+  on the right pattern.
+---
+id: bside-moments-chat-mined
+title: b-side — Moments from Chat + Editor Pass
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Upgrade "Moments of the season" content. (1) Mine the league's WhatsApp/group
+  chat for genuinely interesting or controversial things tied to specific picks /
+  voting — owner can paste a season's chat to mine. (2) Fix the repeat-info bug
+  (Biggest Upset re-using the Most-Loved song). (3) Add an "editor" LLM pass that
+  reviews and punches up content with directives (funnier, nicer, or "build so-and-so
+  up, she's had a rough week"). Voice-aware (see bside-voice-snark-tuning).
+---
+id: bside-voice-snark-tuning
+title: b-side — Voice / Snark Tuning (loosen no-strife)
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  The hard no-strife constraint may be too strict — owner notes the snarky,
+  slightly-mean jokes are some of the funniest parts of the digests. Make tone a
+  dial rather than a single floor: configurable snark/edge levels per section or
+  per generation, with guardrails (punch-up not punch-down, opt-out per player).
+  Connects to the superlative adjective engine and the moments editor pass.
+---
+id: bside-fan-hater-overlap-normalization
+title: b-side — Fan/Hater & Overlap Normalization (averages)
+stage: analyzed
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Fix tenure skew in Biggest Fan / Friendly Hater and "Your People". Use AVERAGE
+  votes per shared round, not raw totals — newer players (e.g. Sarah) win/lose these
+  spuriously just from fewer rounds. Use the setup-screen player relationships (the
+  vote-matrix data) and player age where relevant. Vote Together has the same
+  totals-vs-averages problem (may already be a backlog item — reconcile). Optional:
+  a funny LLM-generated art piece for the award.
+---
+id: bside-real-audio-fingerprint
+title: b-side — Real-Audio Taste Fingerprint Sliders
+stage: analyzed
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Replace the LLM-derived spectrum sliders (Polished↔Raw, Sunny↔Melancholy,
+  Familiar↔Obscure) with values from REAL audio features (Spotify audio-features or
+  an equivalent) aggregated over a player's picks. v1 deliberately used LLM
+  estimates with no audio data; owner wants the real signal "asap".
+---
+id: bside-discovery-playlist-link
+title: b-side — Real, Linkable Discovery Playlist
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Turn the per-player discovery playlist from a text list into an actual playlist
+  with a shareable link (Spotify, ideally multi-platform via the existing Songlink
+  path). Owner: "one of the BEST features we have" if real + playable. Reuses the
+  YTM/Spotify resolution roadmap work; pairs with bside-playlist-audio-integration.
+---
+id: bside-age-field-save-bug
+title: b-side — Bug: setup-screen age field not saving
+stage: analyzed
+effort: small
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Spotted during UAT — the player Age field on the setup screen does not persist.
+  Needed by fan/hater + other places that should use age. Straight bugfix
+  (likely a missing save/PATCH wire on the age input).
+---
+id: bside-update-diff-preview
+title: b-side — Per-Section Update Diff Preview
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  In the operator update modal, show a before/after preview for each section the
+  operator chose to refresh, with accept/reject per section, before committing the
+  in-place rewrite. Tightens the refresh/hold/lock loop — the operator sees exactly
+  what changes and can keep the old copy on a per-section basis with confidence.
+---
+id: bside-content-lint
+title: b-side — Pre-Publish Content Lint
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  A pre-publish QA pass that flags likely content problems before a b-side goes
+  live — exactly the class of nits this UAT surfaced: duplicate moment songs, empty
+  winner / 0-vote rows, a superlative referencing a lite-tier member, blurbs over a
+  length budget, repeated card colors, missing avatar/description. Surfaces as a
+  checklist in the Content screen; can gate or just warn.
+---
+id: bside-degenerate-state-handling
+title: b-side — Graceful Empty / Sparse States
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Robust handling for sparse/degenerate data so sections hide or show a tasteful
+  placeholder instead of "—" or an empty winner: a just-closed round with no votes
+  (the Latest-round teaser), lite-only leagues, 0-member leagues (Nostalgia Pit), a
+  brand-new season, archive rounds with no winnerSong. Directly cleans up the H5 /
+  archive "—" nits from UAT.
+---
+id: bside-read-model-provenance
+title: b-side — Read-Model Provenance & Freshness
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Make it obvious (to viewers and the operator) what each b-side reflects and how
+  current it is — "generated from rounds X–Y · updated <date>", and a small per-section
+  "as of round N". Builds trust on the public side and is a debugging aid for the
+  season-scoping work (bside-season-round-truth / bside-season-lens).
+---
+id: bside-returning-visitor-diff
+title: b-side — "What's New This Round" Banner
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  When a b-side updates, show returning visitors what changed this round — the new
+  archive entry, any new/changed award, a new moment — as a dismissible banner.
+  Increases reshare pull ("come see what's new") and gives the same-slug update a
+  visible payoff.
+---
+id: bside-share-card-og-meta
+title: b-side — Share-Card Polish + OG/Unfurl Meta
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Make the unguessable link unfurl nicely when dropped in a chat — Open Graph /
+  Twitter meta tags so it previews with a clean card (league name + tagline, no HQ
+  leak, still noindex), plus a polish pass on the per-award share-card overlays.
+  Strengthens the core "drop it in the family chat" moment.
+---
+id: bside-semantic-accent-system
+title: b-side — Site-Wide Semantic Accent System
+stage: idea
+effort: small
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Generalizes the owner's "give colors meaning" idea (bside-superlative-visual-identity)
+  across the whole site: a small semantic palette (e.g. discovery=teal,
+  consistency=gold, divisiveness=ember) used consistently on superlatives, moments,
+  and fingerprint chips so color carries information rather than decoration.
+---
+id: bside-playlist-audio-integration
+title: b-side — Playlist + Inline Audio Previews
+stage: idea
+effort: medium
+campaign: the-b-side-polish
+source: orc-proposal
+summary: >-
+  Make the discovery playlist (and archive picks) playable inline — tie into the
+  existing Spotify/YTM resolution + the roadmap's audio-preview work so each track
+  has a 30s preview or a one-tap open-in-app. The natural companion to
+  bside-discovery-playlist-link.
