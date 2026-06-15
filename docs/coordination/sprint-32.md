@@ -64,7 +64,7 @@ updated: 2026-06-15T04:45:00Z
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [-] {agent: backend, id: host-pipeline} **Static-gen + host the b-side under digest.mattmariani.com** (handoff §2, §9; campaign decision). Extend `publishSite` (`ui/src/lib/dashboard/publish.ts`) so publishing a league ALSO writes the public artifact: `DIGESTS_DIR/{slug}/read_model.json` (the persisted read-model) plus a slug `index.html` that boots the shared b-side SPA bundle for that slug. Configure `digest-static` (caddy) to serve `digest.mattmariani.com/{slug}/*` with SPA fallback to the slug index and `noindex, nofollow` headers; a bad slug → generic 404 (no league enumeration). The operator app must NOT serve these routes on its own domain. Document the build/serve wiring (where the SPA bundle is built + copied).
+- [x] {agent: backend, id: host-pipeline} **Static-gen + host the b-side under digest.mattmariani.com** (handoff §2, §9; campaign decision). Extend `publishSite` (`ui/src/lib/dashboard/publish.ts`) so publishing a league ALSO writes the public artifact: `DIGESTS_DIR/{slug}/read_model.json` (the persisted read-model) plus a slug `index.html` that boots the shared b-side SPA bundle for that slug. Configure `digest-static` (caddy) to serve `digest.mattmariani.com/{slug}/*` with SPA fallback to the slug index and `noindex, nofollow` headers; a bad slug → generic 404 (no league enumeration). The operator app must NOT serve these routes on its own domain. Document the build/serve wiring (where the SPA bundle is built + copied).
   - **Acceptance:** after `POST /api/content/2/publish`, `DIGESTS_DIR/{slug}/read_model.json` exists and matches the DB read_model; caddy serves `/{slug}/` (200, SPA shell) and `/{slug}/read_model.json` (200, JSON) with `X-Robots-Tag: noindex`; a random bad slug → 404; nothing under the slug links to or reaches the operator app; `npm run check` 0 errors.
 
 - [-] {agent: frontend, id: shell} **b-side app shell — brand, atoms, router, share card, CSS** (handoff §0, §8; `ml-dashboard-shell.jsx`). Build the standalone b-side Svelte app: the `b/s` brand mark, shared atoms (Avatar/monogram with one oklch lightness+chroma varying only hue, icon set, the `pulp|amber|sky|moss|ember` accent map), the **client router** for the 3 routes (`/{slug}`, `/{slug}/p/{memberId}`, `/{slug}/archive`), read-model loading (fetch the co-located `read_model.json` by slug), and the **shareable-card overlay** (tap a share icon → screenshot-ready card carrying ONLY award + league name, no URL/login). Lift `ml-dashboard-styles.css` wholesale into the app. Strip ALL review scaffolding (bezel, rail, flip pills, mock urlbar).
@@ -99,6 +99,13 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — backend — host-pipeline done (edb8e7c)
+- `publishSite` writes `DIGESTS_DIR/{slug}/read_model.json` + `index.html` (SPA shell) after every DB write; fs mocked in tests
+- `Caddyfile.digest` gains b-side routes: `/_bside/*` (shared bundle), `@league` regexp (≥14-char slug) with `try_files` SPA fallback + `X-Robots-Tag: noindex, nofollow`; bad slug → 404; `/d/*` digest routes unchanged
+- `ArchiveEntrySchema` adds optional `digestUrl` so archive cards can deep-link to existing `/d/{roundSlug}/` digest artifacts
+- `npm run check` 0 errors; 114/114 tests pass
+- **Bundle wiring (for frontend `shell` task):** build b-side Vite app with stable output names `bside.js` + `bside.css`; copy to `DIGESTS_DIR/_bside/` at deploy time. SPA reads league slug from `document.body.dataset.leagueSlug` (set in the per-slug `index.html`).
 
 ### 2026-06-15 — orc — Sprint-32 ACTIVATED · host-pipeline + shell dispatched (Wave 1)
 - status planned → active; dispatched the two no-dep tasks in parallel — host-pipeline to backend (%55), shell to frontend (%56). File-disjoint (backend = publish.ts + caddy; frontend = the b-side Svelte app). Both `[-]`.
