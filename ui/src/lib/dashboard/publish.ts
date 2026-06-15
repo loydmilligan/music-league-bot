@@ -12,6 +12,20 @@ interface DashboardSiteRow {
 	slug: string;
 }
 
+// Returns all round IDs for a league (for archived_rounds tracking).
+function getRoundIdsForLeague(db: Database.Database, leagueId: number): number[] {
+	return (
+		db
+			.prepare(
+				`SELECT r.id FROM rounds r
+			 JOIN seasons se ON se.id = r.season_id
+			 WHERE se.league_id = ?
+			 ORDER BY r.id`,
+			)
+			.all(leagueId) as { id: number }[]
+	).map((r) => r.id);
+}
+
 export async function publishSite(
 	db: Database.Database,
 	leagueId: number,
@@ -28,6 +42,8 @@ export async function publishSite(
 	const slug = existing?.slug ?? mintSlug();
 
 	const readModel = await buildReadModel(db, leagueId, { slug });
+	// archived_rounds is an array of round IDs (numbers) that are in the archive
+	const archivedRoundIds = getRoundIdsForLeague(db, leagueId);
 	const now = new Date().toISOString();
 
 	if (existing) {
@@ -37,7 +53,7 @@ export async function publishSite(
 			 WHERE league_id = ?`,
 		).run(
 			JSON.stringify(readModel),
-			JSON.stringify(readModel.archive),
+			JSON.stringify(archivedRoundIds),
 			readModel.league.season,
 			now,
 			leagueId,
@@ -52,7 +68,7 @@ export async function publishSite(
 			leagueId,
 			readModel.league.season,
 			JSON.stringify(readModel),
-			JSON.stringify(readModel.archive),
+			JSON.stringify(archivedRoundIds),
 			now,
 			now,
 		);
@@ -81,7 +97,7 @@ export async function publishSite(
 // cache busting is handled by serving read_model.json with ETag/refreshed_at).
 // Build command: `cd ui/bside && npm run build` → dist/ → copy to DIGESTS_DIR/_bside/
 
-async function writePublicArtifacts(slug: string, readModel: ReadModel): Promise<void> {
+export async function writePublicArtifacts(slug: string, readModel: ReadModel): Promise<void> {
 	const dir = join(DIGESTS_DIR, slug);
 	await mkdir(dir, { recursive: true });
 	await Promise.all([
