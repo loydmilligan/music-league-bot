@@ -36,6 +36,7 @@ interface SiteRow {
 	season: number;
 	archived_rounds: string;
 	read_model: string;
+	refreshed_at: string;
 }
 
 interface MemberRow {
@@ -97,29 +98,41 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	if (!league) throw error(404, `league ${leagueId} not found`);
 
 	const site = db
-		.prepare('SELECT slug, season, archived_rounds, read_model FROM dashboard_sites WHERE league_id = ?')
+		.prepare('SELECT slug, season, archived_rounds, read_model, refreshed_at FROM dashboard_sites WHERE league_id = ?')
 		.get(leagueId) as SiteRow | undefined;
 	if (!site) throw error(404, `league ${leagueId} has no published b-side`);
 
 	const archivedRoundIds: number[] = JSON.parse(site.archived_rounds);
 	const currentModel = JSON.parse(site.read_model) as ReadModel;
+	const refreshedAt = new Date(site.refreshed_at);
 
-	// Find pending round
-	const pendingRow = db
+	// Find the most-recent pending round: not yet in archived_rounds, OR re-finalized
+	// after the site's last build (freshness-aware so re-finalized rounds surface correctly).
+	const allFinalizedRows = db
 		.prepare(
-			`SELECT dd.round_id, r.name AS round_name, r.voting_deadline, se.season_number
+			`SELECT dd.round_id, r.name AS round_name, r.voting_deadline, se.season_number,
+			        MAX(dd.finalized_at) AS finalized_at
 			 FROM digest_drafts dd
 			 JOIN rounds r ON r.id = dd.round_id
 			 JOIN seasons se ON se.id = r.season_id
 			 WHERE se.league_id = ? AND dd.finalized_at IS NOT NULL
-			 ORDER BY dd.round_id DESC
-			 LIMIT 1`,
+			 GROUP BY dd.round_id, r.name, r.voting_deadline, se.season_number
+			 ORDER BY MAX(dd.finalized_at) DESC`,
 		)
-		.get(leagueId) as
-		| { round_id: number; round_name: string; voting_deadline: string | null; season_number: number }
-		| undefined;
+		.all(leagueId) as Array<{
+		round_id: number;
+		round_name: string;
+		voting_deadline: string | null;
+		season_number: number;
+		finalized_at: string;
+	}>;
 
-	if (!pendingRow || archivedRoundIds.includes(pendingRow.round_id)) {
+	const pendingRow = allFinalizedRows.find((row) => {
+		const finalizedAt = new Date(row.finalized_at);
+		return !archivedRoundIds.includes(row.round_id) || finalizedAt > refreshedAt;
+	});
+
+	if (!pendingRow) {
 		throw error(409, 'no pending update for this league');
 	}
 

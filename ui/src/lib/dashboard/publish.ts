@@ -12,14 +12,16 @@ interface DashboardSiteRow {
 	slug: string;
 }
 
-// Returns all round IDs for a league (for archived_rounds tracking).
-function getRoundIdsForLeague(db: Database.Database, leagueId: number): number[] {
+// Returns round IDs that have a FINALIZED digest — these are what actually land in the b-side.
+// Only these rounds belong in archived_rounds; un-finalized rounds are not baked into the site.
+function getArchivedRoundIdsForLeague(db: Database.Database, leagueId: number): number[] {
 	return (
 		db
 			.prepare(
-				`SELECT r.id FROM rounds r
+				`SELECT DISTINCT r.id FROM rounds r
 			 JOIN seasons se ON se.id = r.season_id
-			 WHERE se.league_id = ?
+			 JOIN digest_drafts dd ON dd.round_id = r.id
+			 WHERE se.league_id = ? AND dd.finalized_at IS NOT NULL
 			 ORDER BY r.id`,
 			)
 			.all(leagueId) as { id: number }[]
@@ -43,7 +45,7 @@ export async function publishSite(
 
 	const readModel = await buildReadModel(db, leagueId, { slug });
 	// archived_rounds is an array of round IDs (numbers) that are in the archive
-	const archivedRoundIds = getRoundIdsForLeague(db, leagueId);
+	const archivedRoundIds = getArchivedRoundIdsForLeague(db, leagueId);
 	const now = new Date().toISOString();
 
 	if (existing) {

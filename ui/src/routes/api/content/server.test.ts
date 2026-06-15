@@ -61,6 +61,30 @@ vi.mock('$lib/predict/tasks/tasteFingerprint.js', async (orig) => {
 	};
 });
 
+// Preserve schemas; stub only the async read-model builder (used by publishSite in test d).
+vi.mock('$lib/dashboard/buildReadModel.js', async (orig) => {
+	const actual = await orig<typeof import('$lib/dashboard/buildReadModel.js')>();
+	return {
+		...actual,
+		buildReadModel: vi.fn().mockResolvedValue({
+			league: {
+				name: 'Test',
+				slug: 'test-slug',
+				season: 1,
+				round: 1,
+				seasons: 1,
+				memberCount: 0,
+				updated: '2026-01-01T00:00:00Z',
+			},
+			members: [],
+			reel: [],
+			kpis: [{ value: '0', label: 'songs submitted', sub: 'test' }],
+			moments: null,
+			archive: [],
+		}),
+	};
+});
+
 // Route handlers — loaded lazily so mocks are in place first.
 let GET_leagues: typeof import('./leagues/+server.js').GET;
 let GET_updatePlan: typeof import('./[leagueId]/update-plan/+server.js').GET;
@@ -118,10 +142,10 @@ function insertRound(seasonId: number, name: string): number {
 	return (db.prepare('SELECT last_insert_rowid() AS id').get() as { id: number }).id;
 }
 
-function insertFinalizedDraft(roundId: number): void {
+function insertFinalizedDraft(roundId: number, finalizedAt = '2026-01-15T00:00:00Z'): void {
 	db.prepare(
-		"INSERT INTO digest_drafts (id, round_id, finalized_at, rel_context, prep_checks) VALUES (?, ?, '2026-01-15T00:00:00Z', '{}', '{}')",
-	).run(`draft-${roundId}-${Math.random()}`, roundId);
+		'INSERT INTO digest_drafts (id, round_id, finalized_at, rel_context, prep_checks) VALUES (?, ?, ?, ?, ?)',
+	).run(`draft-${roundId}-${Math.random()}`, roundId, finalizedAt, '{}', '{}');
 }
 
 function insertSite(
@@ -129,8 +153,9 @@ function insertSite(
 	slug: string,
 	readModel: object,
 	archivedRounds: number[],
+	refreshedAt?: string,
 ): void {
-	const now = new Date().toISOString();
+	const now = refreshedAt ?? new Date().toISOString();
 	db.prepare(
 		`INSERT INTO dashboard_sites
 		 (slug, league_id, season, read_model, archived_rounds, is_live, published_at, refreshed_at)
@@ -246,6 +271,63 @@ describe('GET /api/content/leagues', () => {
 		const body = (await res.json()) as Array<{ name: string; pending: null }>;
 		const league = body.find((l) => l.name === 'All Archived');
 		expect(league!.pending).toBeNull();
+	});
+
+	// (b) round re-finalized AFTER refreshed_at → pending even though it's in archived_rounds
+	it('returns pending when a round is re-finalized after the site was last built', async () => {
+		const id = insertLeague('re-finalized', 'Re-Finalized League');
+		const seasonId = insertSeason(id);
+		const round = insertRound(seasonId, 'New Shit');
+		const publishedAt = '2026-06-15T18:07:42.583Z';
+		// Round was in archived_rounds at publish time
+		insertSite(id, 're-fin-slug', minimalReadModel('re-fin-slug', [archiveEntry(1)]), [round], publishedAt);
+		// Then re-finalized AFTER publish
+		insertFinalizedDraft(round, '2026-06-15T18:48:17.000Z');
+
+		const res = await GET_leagues(mkEvt());
+		const body = (await res.json()) as Array<{ name: string; pending: { roundId: number } | null }>;
+		const league = body.find((l) => l.name === 'Re-Finalized League');
+		expect(league!.pending).not.toBeNull();
+		expect(league!.pending!.roundId).toBe(round);
+	});
+
+	// (b) sanity: round finalized BEFORE refreshed_at and already archived → not pending
+	it('returns pending=null when archived round finalized_at is before refreshed_at', async () => {
+		const id = insertLeague('stale-fin', 'Stale Fin League');
+		const seasonId = insertSeason(id);
+		const round = insertRound(seasonId, 'Old Round');
+		insertFinalizedDraft(round, '2026-06-01T10:00:00.000Z');
+		// refreshed_at is AFTER finalized_at; round is archived
+		insertSite(id, 'stale-fin-slug', minimalReadModel('stale-fin-slug', [archiveEntry(1)]), [round], '2026-06-15T18:07:42.583Z');
+
+		const res = await GET_leagues(mkEvt());
+		const body = (await res.json()) as Array<{ name: string; pending: null }>;
+		const league = body.find((l) => l.name === 'Stale Fin League');
+		expect(league!.pending).toBeNull();
+	});
+});
+
+// ── publishSite — archived_rounds only includes finalized rounds (test d) ─────
+
+describe('publishSite — archived_rounds seeds', () => {
+	it('archives only rounds that have a finalized digest, not all rounds', async () => {
+		const { publishSite } = await import('$lib/dashboard/publish.js');
+
+		const id = insertLeague('pub-test', 'Pub Test League');
+		const seasonId = insertSeason(id);
+		const finalizedRound = insertRound(seasonId, 'Round 1');
+		const unfinalizedRound = insertRound(seasonId, 'Round 2'); // no digest_draft
+		insertFinalizedDraft(finalizedRound);
+		// unfinalizedRound has no finalized draft
+
+		await publishSite(db, id);
+
+		const row = db
+			.prepare('SELECT archived_rounds FROM dashboard_sites WHERE league_id = ?')
+			.get(id) as { archived_rounds: string };
+		const archived: number[] = JSON.parse(row.archived_rounds);
+		expect(archived).toContain(finalizedRound);
+		expect(archived).not.toContain(unfinalizedRound);
 	});
 });
 
@@ -442,6 +524,36 @@ describe('POST /api/content/:leagueId/update', () => {
 		await expect(
 			POST_update(mkEvt(id, { decisions: {}, steer: {}, announce: 'card' })),
 		).rejects.toMatchObject({ status: 404 });
+	});
+
+	// (c) after update, refreshed_at advances → re-finalized round is no longer pending
+	it('clears pending after update: refreshed_at > finalized_at, round in archived_rounds', async () => {
+		const id = insertLeague('clears-after-update', 'Clears After Update');
+		const seasonId = insertSeason(id);
+		const round = insertRound(seasonId, 'Clearable Round');
+		const publishedAt = '2026-06-15T18:07:42.583Z';
+		// Round was archived at publish but then re-finalized after publish
+		insertSite(id, 'clear-slug', minimalReadModel('clear-slug', [archiveEntry(1)]), [round], publishedAt);
+		insertFinalizedDraft(round, '2026-06-15T18:48:17.000Z');
+
+		// Confirm it starts as pending in the leagues list
+		const before = (await (await GET_leagues({} as Parameters<typeof GET_leagues>[0])).json()) as
+			Array<{ name: string; pending: { roundId: number } | null }>;
+		expect(before.find((l) => l.name === 'Clears After Update')!.pending).not.toBeNull();
+
+		// Perform the update
+		await POST_update(
+			mkEvt(id, {
+				decisions: { superlatives: 'hold', fingerprints: 'hold', stats: 'hold', moments: 'hold', overlap: 'hold' },
+				steer: {},
+				announce: 'silent',
+			}),
+		);
+
+		// After update, refreshed_at is now > finalized_at and round remains in archived_rounds
+		const after = (await (await GET_leagues({} as Parameters<typeof GET_leagues>[0])).json()) as
+			Array<{ name: string; pending: null }>;
+		expect(after.find((l) => l.name === 'Clears After Update')!.pending).toBeNull();
 	});
 });
 

@@ -68,16 +68,17 @@ export const GET: RequestHandler = async () => {
 		.all() as (SiteRow & { league_id: number })[];
 	const siteMap = new Map(sites.map((s) => [s.league_id, s]));
 
-	// All finalized draft round_ids, keyed by league_id
-	// A finalized draft exists when finalized_at IS NOT NULL on the latest draft for that round
+	// All finalized draft round_ids — use MAX(finalized_at) per round to get the latest
+	// re-finalization time (a round can be re-finalized after the site was last built).
 	const finalizedRows = db
 		.prepare(
 			`SELECT se.league_id, dd.round_id, r.name AS round_name, r.voting_deadline,
-			        dd.finalized_at
+			        MAX(dd.finalized_at) AS finalized_at
 			 FROM digest_drafts dd
 			 JOIN rounds r ON r.id = dd.round_id
 			 JOIN seasons se ON se.id = r.season_id
 			 WHERE dd.finalized_at IS NOT NULL
+			 GROUP BY se.league_id, dd.round_id, r.name, r.voting_deadline
 			 ORDER BY se.league_id, dd.round_id`,
 		)
 		.all() as {
@@ -88,25 +89,36 @@ export const GET: RequestHandler = async () => {
 		finalized_at: string;
 	}[];
 
-	// For each league, find the most-recent finalized round not yet in archived_rounds
+	// For each league, find the most-recent pending round.
+	// A round is PENDING if: it's not in archived_rounds (new), OR its finalized_at is
+	// newer than the site's refreshed_at (re-finalized after the last build).
 	const pendingByLeague = new Map<
 		number,
-		{ roundId: number; roundName: string; closedAt: string | null }
+		{ roundId: number; roundName: string; closedAt: string | null; finalizedAt: string }
 	>();
 	for (const row of finalizedRows) {
 		const site = siteMap.get(row.league_id);
-		if (!site) continue; // not published yet — will be checked separately
+		if (!site) continue; // not published yet
 		const archived: number[] = JSON.parse(site.archived_rounds);
-		if (!archived.includes(row.round_id)) {
-			// Only keep most recent pending (highest round_id)
-			const existing = pendingByLeague.get(row.league_id);
-			if (!existing || row.round_id > existing.roundId) {
-				pendingByLeague.set(row.league_id, {
-					roundId: row.round_id,
-					roundName: row.round_name,
-					closedAt: row.voting_deadline,
-				});
-			}
+		const finalizedAt = new Date(row.finalized_at);
+		const refreshedAt = new Date(site.refreshed_at);
+		const isPending = !archived.includes(row.round_id) || finalizedAt > refreshedAt;
+		if (!isPending) continue;
+
+		// Keep most-recent pending by finalized_at; fall back to round_id on ties
+		const existing = pendingByLeague.get(row.league_id);
+		const existingFinalizedAt = existing ? new Date(existing.finalizedAt) : null;
+		if (
+			!existing ||
+			finalizedAt > existingFinalizedAt! ||
+			(finalizedAt.getTime() === existingFinalizedAt!.getTime() && row.round_id > existing.roundId)
+		) {
+			pendingByLeague.set(row.league_id, {
+				roundId: row.round_id,
+				roundName: row.round_name,
+				closedAt: row.voting_deadline,
+				finalizedAt: row.finalized_at,
+			});
 		}
 	}
 
