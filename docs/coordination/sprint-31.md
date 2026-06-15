@@ -70,7 +70,7 @@ updated: 2026-06-14T17:00:00Z
 - [ ] {agent: backend, id: gen-deterministic} **Deterministic generators — stats, tiers, KPI facts, moments, fan/hater relationships** (spec §7). New `ui/src/lib/dashboard/generators/deterministic.ts`: per-member `stat` (submitted/avg/round-wins) + `tier` (full/lite by an activity threshold — pick a simple defensible cutoff); league `kpis[]` (celebratory FACTS only — distinct winners, favorite year, longest pick; NEVER last-place/win-loss); `moments` (mostLoved/mostDivisive/biggestUpset by vote spread); and the deterministic `biggestFan`/`biggestHater` relationships (who most rewards / most withholds points). Pure SQL/compute; export slice types. (LLM blurbs/phrasing layer on in gen-narrative-llm.)
   - **Acceptance:** stats/tier/kpis/moments/fan-hater compute from fixture gameplay data; KPIs contain NO win/loss-ladder field; a quiet member resolves to `tier:'lite'`; vitest covers each; `npm run check` 0 errors.
 
-- [-] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
+- [x] {agent: backend, id: gen-narrative-llm} **Narrative LLM generators — superlatives, KPI/moment phrasing, fan/hater blurbs** (spec §7, §9). New `ui/src/lib/dashboard/generators/narrative.ts`: PredictionTasks on the harness producing per-player + league-reel **superlatives** (warm yearbook awards, each `{award, accent, blurb}` with accent ∈ pulp|amber|sky|moss|ember), the celebratory **phrasing** for KPIs/moments, and the **friendly** fan/hater blurbs (hater = amber, affectionate). The no-strife contract (spec §9) is a hard prompt constraint. Export slice types.
   - **Acceptance:** with `callOpenRouter` stubbed, generators return schema-valid superlatives/blurbs with accent in the allowed set; output zod rejects a brutal/ranking phrasing shape (e.g. a "lastPlace" field); prompts include the no-strife constraint (asserted in the message text); `npm run check` 0 errors; `npx vitest run` green.
 
 - [x] {agent: backend, id: gen-profile-llm} **Profile LLM generators — spectrum + discovery playlist** (spec §7, decision §3.1). New `ui/src/lib/dashboard/generators/profile.ts`: PredictionTasks producing each member's **spectrum** (3 axes Polished↔Raw / Sunny↔Melancholy / Familiar↔Obscure, derived from the player's taste fingerprint + history — no audio data) and the personality-driven **discovery playlist** (named, a one-line "agenda" nudge, 3 tracks each with a "why"). Export slice types.
@@ -102,6 +102,19 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — backend — gen-narrative-llm complete (9182bdf)
+- `ui/src/lib/dashboard/generators/narrative.ts`: 4 PredictionTasks on the sprint-28 harness
+  (`narrative-player-superlatives`, `narrative-fan-hater-blurbs`, `narrative-league-reel`, `narrative-moment-lines`)
+- Exports: `SuperlativeItem` / `SuperlativeItemSchema`, `SignatureSuperlative`, `FanHaterBlurbOutput` /
+  `FanHaterBlurbOutputSchema`, `ReelItem` / `ReelItemSchema`, `MomentLinesOutput` / `MomentLinesOutputSchema`,
+  `NarrativePlayerSlice`, `NarrativeLeagueSlice`, `narrativeTasks`, `NO_STRIFE_CONSTRAINT`, `ACCENT_VALUES`
+- `NO_STRIFE_CONSTRAINT` exported constant embedded verbatim in every system prompt; tests assert its presence
+- All zod output schemas use `.strict()` — extra fields like `lastPlace`, `rank`, `losses`, `standings`,
+  `position` are rejected at parse time (no-strife contract enforcement at the schema layer)
+- Accent values restricted to `pulp|amber|sky|moss|ember` via `z.enum`; hater framing is friendly/affectionate
+- `callOpenRouter` stubbed in 40 tests; 40/40 vitest green; 400/400 full suite green; 0 svelte-check errors
+- `[-]` → `[x]`
 
 ### 2026-06-14 — backend — gen-profile-llm complete (2a5749b)
 - `ui/src/lib/dashboard/generators/profile.ts`: two PredictionTasks (`profile-spectrum`, `profile-playlist`) on the sprint-28 harness; `generateProfile(db, playerId)` runs both in parallel, logs to `prediction_runs`
