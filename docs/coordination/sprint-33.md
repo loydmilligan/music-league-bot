@@ -72,7 +72,7 @@ updated: 2026-06-15T06:25:00Z
 - [x] {agent: frontend, id: archive-list, depends: content-nav,content-api} **Archive tab — league list + first publish + reshare state** (handoff §4, §6, §7). The Archive tab league list (`.ct-league`, one row per league) with the three states — **update-ready** (pulp row, "N update ready" pill, "Update archive →"), **up-to-date** (moss "✓ up to date"), **not-published** (dashed row, "Publish b-side →"). Each row: emblem, name, season, the b-side URL w/ lock glyph, meta (members · rounds archived · last updated). First-publish action calls `POST /api/content/:leagueId/publish`. The published/reshare state (`.ct-published` banner + `.ct-reshare-card`) with `↗ Send to WhatsApp` / `⧉ Copy share card` / `⧉ Copy link`, honoring the Announce config. Data from `GET /api/content/leagues`.
   - **Acceptance:** the list renders all 4 leagues in the correct state from the API; "Publish b-side →" on an unpublished league mints the slug + shows the published/reshare state; the reshare card shows the URL + actions; verified hands-on on dev at 1280 + mobile; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: update-modal, depends: archive-list} **Archive-update modal — refresh / hold / lock + steer** (handoff §5). The update modal (reuse the digest `.dg-modal` shell), opened from "Update archive →": header "Update b-side · {league}", the required "New archive entry" row + the recompute rows (superlatives, stats·KPIs, fingerprints, moments, overlap), each with the `.ct-seg` refresh/hold/lock control + a per-row note/detail; steerable rows expose "↻ steer this rewrite" (the quick-steer chips + free-text idiom); the config strip (Announce: card/link/silent + the locked same-slug line); footer cost estimate + "Generate update →" → `POST /api/content/:leagueId/update` → closes to the published/reshare state. Loads the plan from `GET /api/content/:leagueId/update-plan`.
+- [x] {agent: frontend, id: update-modal, depends: archive-list} **Archive-update modal — refresh / hold / lock + steer** (handoff §5). The update modal (reuse the digest `.dg-modal` shell), opened from "Update archive →": header "Update b-side · {league}", the required "New archive entry" row + the recompute rows (superlatives, stats·KPIs, fingerprints, moments, overlap), each with the `.ct-seg` refresh/hold/lock control + a per-row note/detail; steerable rows expose "↻ steer this rewrite" (the quick-steer chips + free-text idiom); the config strip (Announce: card/link/silent + the locked same-slug line); footer cost estimate + "Generate update →" → `POST /api/content/:leagueId/update` → closes to the published/reshare state. Loads the plan from `GET /api/content/:leagueId/update-plan`.
   - **Acceptance:** the modal opens with the add-entry + recompute rows from the update-plan; each row's refresh/hold/lock toggles; a steerable row opens the steer chips; "Generate update →" calls the update endpoint and flips to the published state; the same-slug line is shown locked; verified hands-on on dev at 1280; `npm run check` 0 errors.
 
 - [ ] {agent: orc, id: gate-close, depends: content-api,content-nav,archive-list,update-modal} **Gate — cross-check, ship, walk the operator flow, close.** Orc runs the gate: cross-check all lanes, `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, build + deploy, then walk the LIVE Content screen on `mlbot2.mattmariani.com`: the two tabs, the Archive list states, a first-publish (or an update on Fam-Jam) → published/reshare, and confirm the public b-side reflects the change on the same slug. Panes reset, doc closed. This **completes the campaign** — note the campaign close in the doc.
@@ -96,6 +96,21 @@ _(gate card lands here when it resolves)_
 _None._
 
 ## Activity Log
+
+### 2026-06-15 — frontend — update-modal complete (7840280)
+- UpdateModal.svelte: fetches GET /api/content/:leagueId/update-plan on open
+- Renders "New archive entry" add row + 5 recompute rows (superlatives, stats·KPIs,
+  fingerprints, moments, overlap) each with .ct-seg refresh/hold/lock segmented control
+- Steerable rows (superlatives, fingerprints, moments) expose inline steer panel:
+  ARCHIVE_STEER_CHIPS + free-text textarea, activated by "↻ steer this rewrite" button
+- Config strip: Announce card/link/silent + locked 🔒 same-slug line (never editable)
+- Footer: N-sections-refresh cost estimate + Generate update → button
+- Generate POSTs /api/content/:leagueId/update; on success calls onPublished → flips
+  archive-list to ct-published banner + ct-reshare-card
+- +page.svelte: openUpdateStub replaced with openUpdate + handlePublished;
+  UpdateModal mounted on updateLeague state
+- 0 typecheck errors; verified hands-on at 192.168.4.217:5179 (modal opens, rows correct,
+  refresh/hold/lock toggles, steer chips expand, slug locked, Generate → published state)
 
 ### 2026-06-15 — backend — content-api complete (702b974)
 - GET /api/content/leagues: all leagues + bside state + pending flag (finalized digest ∉ archived_rounds)
