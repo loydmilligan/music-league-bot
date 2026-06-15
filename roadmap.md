@@ -575,3 +575,38 @@ summary: >-
   digests finalized after publish, but a manual "check / force refresh" button
   is a useful safety valve, especially during season backfill when re-generating
   many already-archived rounds. Small frontend + a re-scan endpoint.
+---
+id: bside-digest-context-channel
+title: b-side — Digest → Read-Model Context Channel
+stage: analyzed
+effort: large
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  Today the b-side read-model derives ENTIRELY from structured vote/submission data
+  — it never reads digest narrative (verified), so the context an operator crafts
+  during digest generation cannot shape the b-side. Owner's design: have digest
+  generation emit a structured, NON-PUBLISHED per-round "archive context" payload —
+  round dynamics, notable pick/vote events, operator steer/intent, and a "what came
+  before" summary (the digest gen may already build some of this) — stored alongside
+  the digest but never shown in the published digest. The read-model generators
+  (superlatives, moments, fan/hater blurbs) then consume it as additional input.
+  This is the bridge that lets operator/digest context flow into the b-side and the
+  enabler for bside-temporal-aware-generation and richer bside-moments-chat-mined.
+  Cross-cuts the digest pipeline + the read-model generators.
+---
+id: bside-temporal-aware-generation
+title: b-side — Sequence-Aware (Temporal) Generation
+stage: idea
+effort: large
+campaign: the-b-side-polish
+source: owner-uat
+summary: >-
+  The read-model currently treats the season as an unordered bag — generators get
+  whole-season aggregates with no round sequence (verified) — so the b-side can't
+  distinguish a round-1 "still learning the game" downvote from a later revenge
+  downvote (owner's example). Make generation sequence-aware by consuming the ordered
+  per-round context from bside-digest-context-channel (each round's note inherently
+  carries "what came before"), so superlatives / moments / fan-hater can reason about
+  WHEN something happened and how the season evolved. Depends on
+  bside-digest-context-channel.

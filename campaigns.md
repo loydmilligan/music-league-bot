@@ -143,11 +143,17 @@ sprintPlan:
     cards:
       - bside-llm-avatars
   - sprint: sprint-39-bside-moments-playlist
-    title: Moments & the real playlist
+    title: Content depth — context channel, moments & the real playlist
     goal: >-
-      Chat-mined moments with an editor pass, and turn the discovery playlist into
-      a real, playable, linkable playlist.
+      The content-depth slice. Stand up the digest→read-model context channel
+      (the non-published per-round "archive context" payload), then use it for
+      chat-mined moments with an editor pass; turn the discovery playlist into a
+      real, playable, linkable playlist. NOTE: now content-heavy with two large
+      cards — likely splits when planned (the context channel may earn its own
+      sprint; temporal generation is an idea-stage follow-on that depends on it).
     cards:
+      - bside-digest-context-channel
       - bside-moments-chat-mined
+      - bside-temporal-aware-generation
       - bside-discovery-playlist-link
       - bside-playlist-audio-integration
