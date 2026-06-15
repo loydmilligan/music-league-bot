@@ -111,7 +111,7 @@ _None._
 - status planned → active; dispatched the two no-dep tasks in parallel — host-pipeline to backend (%55), shell to frontend (%56). File-disjoint (backend = publish.ts + caddy; frontend = the b-side Svelte app). Both `[-]`.
 - the 3 routes (home/profile/archive) open once shell lands; gate needs host-pipeline + all 3 routes.
 
-### 2026-06-15 — frontend — shell done (COMMIT_HASH)
+### 2026-06-15 — frontend — shell done (f058372)
 - Standalone Svelte 5 SPA at `bside/` — brand, atoms, router, share card, lifted CSS
 - `b/s` mark: `.bs-mark` class uses full `--pulp-extrude` (6-step, chunky) + `-webkit-text-stroke`; not flat italic
 - Shared atoms: `Avatar.svelte` (oklch hue, size sm/md/lg), `ShareOverlay.svelte` (award + league only, no URL)
