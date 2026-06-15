@@ -275,6 +275,34 @@ export function openLeagueDb(path?: string): Database.Database {
 			);
 		`);
 	}
+	// sprint-31 b-side read-model: public dashboard slug → read-model snapshot.
+	// slug is the ≥80-bit unguessable URL token minted on first publish.
+	if (!tableNames.includes('dashboard_sites')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS dashboard_sites (
+				slug TEXT PRIMARY KEY,
+				league_id INTEGER NOT NULL UNIQUE,
+				season INTEGER NOT NULL,
+				read_model TEXT NOT NULL,
+				archived_rounds TEXT NOT NULL DEFAULT '[]',
+				is_live INTEGER NOT NULL DEFAULT 1,
+				published_at TEXT NOT NULL,
+				refreshed_at TEXT NOT NULL
+			);
+		`);
+	}
+	// sprint-31 b-side: per-section LLM steering state for the operator UI.
+	if (!tableNames.includes('dashboard_section_state')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS dashboard_section_state (
+				league_id INTEGER NOT NULL,
+				section TEXT NOT NULL,
+				decision TEXT NOT NULL DEFAULT 'refresh',
+				steer TEXT,
+				PRIMARY KEY (league_id, section)
+			);
+		`);
+	}
 	return db;
 }
 
