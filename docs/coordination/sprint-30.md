@@ -2,10 +2,11 @@
 project: music-league-bot
 sprint: sprint-30
 title: Player Research Polish — collapsible UX, league themes, LLM caching
-status: active
+status: closed
 created: 2026-06-14T00:00:00Z
 activated: 2026-06-14
-updated: 2026-06-14T00:10:00Z
+closed: 2026-06-14
+updated: 2026-06-14T16:30:00Z
 ---
 
 # music-league-bot — coordination doc (sprint-30)
@@ -67,7 +68,7 @@ updated: 2026-06-14T00:10:00Z
 - [x] {agent: frontend, id: cache-affordances, depends: theme-picker,predict-cache} **PR-4 (UI) — provenance stamp + Regenerate on the prediction panels.** Now that the API returns cache + provenance (predict-cache), surface it on the Vote Probe and Submission Predictor panels in `PlayerResearchTab.svelte`: show a "generated {date} · {model} · ${cost}" stamp on a returned result (mirror the Taste Fingerprint stamp already in the file), and a **Regenerate** button that re-requests with `forceRegen:true`. On first open of a player+theme that has a cached result, show the cached result with its stamp rather than forcing a fresh call.
   - **Acceptance:** a returned vote-probe / submission result shows the provenance stamp; Regenerate triggers a fresh call (new stamp/date); re-opening a previously-run player+theme shows the cached result instantly with its stamp; verified hands-on on dev at desktop + 412×892 (noted in Activity Log); `npm run check` 0 errors.
 
-- [ ] {agent: orc, id: gate-close, depends: cache-affordances} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, one cached prod deploy, a 412×892 prod smoke (panel collapsed-by-default + songs-last; pick a league-scoped theme; run a prediction then re-open it → served from cache with provenance stamp), panes reset, doc closed.
+- [x] {agent: orc, id: gate-close, depends: cache-affordances} **Gate — cross-check, ship, close.** Orc runs the gate: cross-check both lanes' acceptance, independent `npm run check` + `npx vitest run`, version bump + CHANGELOG, ratification card, one cached prod deploy, a 412×892 prod smoke (panel collapsed-by-default + songs-last; pick a league-scoped theme; run a prediction then re-open it → served from cache with provenance stamp), panes reset, doc closed.
   - **Acceptance:** all worker tasks `[x]`; 0 typecheck errors + vitest green; v-bump + CHANGELOG committed; ratification card emitted + ratified; prod smoke passes (collapse + songs-last + league themes + cache-hit-with-stamp) with 0 console errors; doc `status: closed`.
 
 ## Decision Log
@@ -81,13 +82,31 @@ and runs in parallel with the frontend chain.
 
 ## Ratification Log
 
-_(gate card lands here when it resolves)_
+### 2026-06-14 — Sprint-30 RATIFIED (owner, verbal after hands-on prod testing)
+Orc deployed v1.0.8 to prod (`mlbot2.mattmariani.com`) ahead of the formal card so the
+owner could test first. Owner tested the polished Player Research tab (collapsed-by-default,
+songs-last, league-scoped themes, cached predictions w/ provenance) and approved ("looks
+good … we are good to close"). Sprint closed.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-14 — orc — GATE-CLOSE DONE · sprint-30 closed, v1.0.8 shipped
+- Cross-check: all 5 worker tasks `[x]`, committed, tree clean; orc ran `npm run check`
+  (0 errors) + `npx vitest run` (344/344, was 336).
+- Version: `ui/package.json` 1.0.7 → 1.0.8; CHANGELOG `[1.0.8]`; committed `611e5e5`.
+- Prod deploy (cached `docker compose build bot-ui && up -d`) ahead of formal ratification
+  so the owner could test; clean boot, prod serves `mash co. · v1.0.8`.
+- Smoke = owner's own hands-on test on prod ("looks good"). Ratified verbally (see
+  Ratification Log).
+- Orchestration: predict-cache (backend) ran parallel with the frontend chain
+  (layout-polish → theme-picker → cache-affordances, all serial on PlayerResearchTab.svelte);
+  one mid-task commit nudge (layout-polish stalled at verification uncommitted) — added an
+  explicit "commit+tick before ending turn" instruction to later dispatches, which held.
+  Panes reset; doc `status: closed`.
 
 ### 2026-06-14 — backend — predict-cache DONE (726bd2f)
 - Cache lookup added to `runVoteProbe` (key: player_id+song.title+song.artist+theme.name) and `runSubmissionPredict` (key: player_id+theme.name) via SQLite `json_extract` on `prediction_runs.input_json`.
