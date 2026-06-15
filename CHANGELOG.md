@@ -4,6 +4,28 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.0.9] — 2026-06-14
+
+Campaign **the b-side**, sprint 1 of 3 — the read-model generator. No user-facing
+UI yet (the public site is sprint 2, the operator screen sprint 3); this builds the
+offline engine that produces each league's shareable-dashboard content.
+
+### Under the hood
+
+- **`dashboard_sites` + `dashboard_section_state` tables** — one published site per
+  league (unguessable ≥80-bit slug, JSON read-model snapshot, archived-rounds list)
+  and the per-section refresh/hold/lock state.
+- **Read-model generator** (`$lib/dashboard`) — assembles a league's full read-model
+  on the sprint-28 prediction harness: **overlap v2** (Vote Together within shared
+  rounds + Taste Twins across leagues, replacing the misleading global-Jaccard
+  overlap), deterministic stats/tiers/KPI-facts/season-moments/fan-hater
+  relationships, LLM superlatives + celebratory phrasing + friendly fan/hater
+  blurbs (no-strife contract — never a leaderboard), and per-player spectrum +
+  discovery playlist derived from the taste fingerprint.
+- **`POST /api/content/:leagueId/publish`** — mints the slug, builds + persists the
+  read-model in place on the same slug.
+- Tests: 459 green (was 336).
+
 ## [1.0.8] — 2026-06-14
 
 Polish pass on the Player Research tab — making the tools the last two sprints
