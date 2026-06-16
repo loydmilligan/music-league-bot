@@ -744,14 +744,16 @@ summary: >-
   Action Center is the surface. Full card schema + design captured in the vault note
   round-phase-and-action-center-spec.md.
 notes: >-
-  Phase-stored half builds ON active-league-management's round model (overlap —
-  sequence them together). Action-Center half is net-new. Parallels orc-tower's own
+  Sequencing RATIFIED: build phase-first STANDALONE (not bundled into
+  active-league-management) — the rounds.phase column is additive; this card
+  de-scopes the active-round-truth piece + the activeRound/lifecycle rewrite from
+  active-league-management. Action-Center half is net-new. Parallels orc-tower's own
   operator-surfaces-control-affordances card (orc-tower mailbox notification center)
   but is mlbot-specific. RATIFIED (2026-06-15): author YAML / JSON runtime; v1
   schema cut as-proposed; instance persistence = HYBRID (YAML template files +
   SQLite cards table); End-Voting auto-prefills next deadline; escalation
-  confirmed; read/snooze/complete confirmed. STILL OPEN: Web Push phasing
-  (v1 vs phase-2) + sequencing vs active-league-management.
+  confirmed; read/snooze/complete confirmed; Web Push = v2. Fully ratified —
+  ready for sprint composition.
 jobs:
   - "Schema: add rounds.phase column (not-started|submission|voting|complete) + migration; backfill from current deadline-derived phase."
   - "Phase transitions: End Submission / End Voting buttons + API. End-Submission modal = editable end-timestamp + Accelerated (keep voting deadline) vs Speedy (shift +N days, prefill N=3). End-Voting completes the round + can prefill next round's submission deadline."
@@ -760,8 +762,7 @@ jobs:
   - "Action Center persistence (HYBRID, ratified): templates as YAML files; live instances in a SQLite cards table (hot cols status/severity/scope/dedupe_key + JSON payload). Emit = upsert on dedupe_key. v1 resolver closes cards REACTIVELY by scope+type when a digest finalizes+archives (no predicate engine) and applies escalation steps by fired_at age."
   - "Action Center UI: landing-page notification/todo panel rendering cards + bundles (variants, severity sort, read/snooze/complete/dismiss, checkbox/checklist, actions). No in-frontend bundle builder — bundles are data-authored."
   - "Content-loop trigger: End-Voting emits a content-todo card (generate digest -> update archive -> share) scoped to the round; auto-resolves when the digest is finalized + archived. End-Voting auto-prefills next round's submission deadline (ratified) — must guard the duplicate-round trap."
-  - "[phase-2] Web Push: mlbot is already an HTTPS PWA — add service worker + VAPID keys + per-device push-subscription store + server sender; emit (and escalation repush) fires a Web Push that deep-links to the mobile action. Ships AFTER the in-app Action Center."
+  - "[v2] Web Push: mlbot is already an HTTPS PWA — add service worker + VAPID keys + per-device push-subscription store + server sender; emit (and escalation repush) fires a Web Push that deep-links to the mobile action. Deferred to v2 (after the in-app Action Center)."
 gaps:
-  - "Relationship to active-league-management needs a sequencing decision (build together vs phase-model-first)."
   - "Duplicate-round trap: auto-prefilling the next submission deadline must not recreate the manual-vs-import two-row split."
-  - "Web Push phasing (v1 vs phase-2) + VAPID/subscription storage still to confirm with owner."
+  - "Coordination: keep the rounds.phase migration compatible with active-league-management's planned FK migration (this card de-scopes the active-round-truth piece from it)."
