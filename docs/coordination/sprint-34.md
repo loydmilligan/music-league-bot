@@ -3,8 +3,9 @@ project: music-league-bot
 sprint: sprint-34
 roadmapItem: round-phase-model-and-action-center
 title: Round phase becomes operator-controlled
-status: planned
+status: active
 created: 2026-06-16T05:52:13Z
+activated: 2026-06-16
 updated: 2026-06-16T05:52:13Z
 ---
 
