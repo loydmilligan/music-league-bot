@@ -773,9 +773,12 @@ gaps:
 ---
 id: digest-round-aware-context
 title: Digest — Round-Aware Cross-Round Context (ghost fix)
-stage: planned
+stage: shipped
 effort: medium
 source: owner (2026-06-16)
+shipped: 2026-06-16
+shippedIn: sprint-35
+followUp: "Optional: scrub old contaminated rel-context snapshots. Not required — bundle-cite-only prompt discipline already overrides dirty snapshots (verified on R3 regen)."
 summary: >-
   Fix the digest's cross-round accuracy bug (the "ghost"): regenerating an old
   round's digest cites FUTURE-round songs/people as "last round" (e.g. an R3
