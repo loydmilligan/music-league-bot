@@ -4,6 +4,31 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.3.0] — 2026-06-16
+
+**sprint-35 — digest stops citing future rounds (the "ghost" fix).** Regenerating
+an old round's digest no longer miscites later-round songs/people as "last round."
+An R3 digest used to cite R5's "Cottonfield Blues" and "Johnny Lang"; it doesn't
+anymore.
+
+### Digest accuracy
+
+- **Deterministic cross-round bundle** — generation now builds a per-round factual
+  record (top-3 / bottom-1 / winner per round), scoped to `round_number <= current`
+  and correctly ordered, and the prompt is instructed to cite cross-round facts
+  **only** from that bundle — never invented, never forward.
+- **Round-scoped relationship context** — regenerating a round reuses that round's
+  saved context snapshot instead of the live, forward-accumulated league blob, so
+  later-round narrative can't leak backward.
+- Cross-round "ghost" callbacks are kept (they're fun when right) but are now
+  bundle-cited only.
+
+### Under the hood
+
+- `RoundData.bundle` + the cross-round-record prompt block in `llm.ts`;
+  `gatherRoundData()` accepts a `relContextOverride` so regen passes the draft's
+  snapshot. 18 new tests incl. the R3-ghost regression (533 total green).
+
 ## [1.2.0] — 2026-06-16
 
 **sprint-34 — round phase becomes operator-controlled.** Round phase
