@@ -453,7 +453,7 @@ summary: >-
   YTM/Spotify resolution roadmap work; pairs with bside-playlist-audio-integration.
 ---
 id: bside-age-field-save-bug
-title: b-side — Bug: setup-screen age field not saving
+title: "b-side — Bug: setup-screen age field not saving"
 stage: analyzed
 effort: small
 campaign: the-b-side-polish
@@ -723,3 +723,42 @@ summary: >-
   on the round-134 digest just shared to the group, the archive link was dead.
   Audit when/whether to show it and ensure it never renders dead (gate on the league
   being published + a valid archive slug).
+---
+id: round-phase-model-and-action-center
+title: Round Phase Model + Operator Action Center
+stage: planned
+effort: large
+source: owner (2026-06-15)
+summary: >-
+  Two-ended feature. (1) Make round PHASE an explicit STORED field on rounds
+  (not-started | submission | voting | complete), advanced by "End Submission" /
+  "End Voting" buttons; demote deadlines to informational + soft pre-fills; stop
+  prep-checks hard-blocking on deadlines. Replaces today's fragile deadline+clock
+  derivation (lifecycle.ts getRoundPhasesForSeason) which walks rounds by id order
+  and silently flips a round to "archive" the instant its voting deadline passes —
+  exactly when the content loop should begin. (2) Add an operator ACTION CENTER on
+  the mlbot landing page: a notification/todo panel rendered from data-authored
+  cards (YAML templates -> JSON runtime instances) that can stand alone or roll up
+  into bundles. The "End Voting" button becomes a trigger that emits a content-todo
+  card (generate digest -> update archive -> share card). Phase model is the trigger;
+  Action Center is the surface. Full card schema + design captured in the vault note
+  round-phase-and-action-center-spec.md.
+notes: >-
+  Phase-stored half builds ON active-league-management's round model (overlap —
+  sequence them together). Action-Center half is net-new. Parallels orc-tower's own
+  operator-surfaces-control-affordances card (orc-tower mailbox notification center)
+  but is mlbot-specific. Card authoring format decided: author in YAML, store +
+  transport as JSON, one conversion seam. Owner still to rate the v1 property cut +
+  the 2 open design Qs in the vault note before this is sprint-composed.
+jobs:
+  - "Schema: add rounds.phase column (not-started|submission|voting|complete) + migration; backfill from current deadline-derived phase."
+  - "Phase transitions: End Submission / End Voting buttons + API. End-Submission modal = editable end-timestamp + Accelerated (keep voting deadline) vs Speedy (shift +N days, prefill N=3). End-Voting completes the round + can prefill next round's submission deadline."
+  - "Make phase the source of truth: rewrite activeRound/lifecycle to read stored phase; keep deadline derivation only as fallback/suggestion; deadlines become informational; prep-checks no longer hard-block on deadlines."
+  - "Action Center data model: implement the card/bundle schema (identity/type/trigger/style/content/features/state); YAML templates + JSON runtime instances + loader/validator + a cards store with dedup + auto-resolve."
+  - "Action Center UI: landing-page notification/todo panel rendering cards + bundles (variants, severity sort, snooze, dismiss, checkbox/checklist, actions). No in-frontend bundle builder — bundles are data-authored."
+  - "Content-loop trigger: End-Voting emits a content-todo card (generate digest -> update archive -> share) scoped to the round; auto-resolves when the digest is finalized + archived."
+gaps:
+  - "v1 property cut for the card schema not yet ratified (owner to rate in vault note)."
+  - "Open Q: does End-Voting auto-prefill the next round's submission deadline, and how does that interact with the duplicate-round trap?"
+  - "Relationship to active-league-management needs a sequencing decision (build together vs phase-model-first)."
+  - "Card store persistence + dedup/auto-resolve semantics (dedupeKey, live condition predicate) need detailing."
