@@ -33,6 +33,18 @@ export interface DigestSectionRow {
   regen_count: number;
 }
 
+// Deterministic per-round facts for cross-round citations (sprint-35 bundle).
+// One entry per round with round_number <= current, ordered by round_number.
+export interface RoundBundleEntry {
+  round_number: number;
+  name: string;
+  top3: { song: string; submitter: string | null; points: number }[];
+  bottom1: { song: string; submitter: string | null; points: number } | null;
+  winner: string | null;
+  isCurrent: boolean;
+  isPrev: boolean;
+}
+
 export interface RoundData {
   round: { id: number; name: string; description: string | null };
   league: { id: number; name: string };
@@ -42,6 +54,9 @@ export interface RoundData {
   // round as already-happened.
   roundSequence: { number: number; total: number };
   priorRounds: { number: number; name: string }[];
+  // Deterministic cross-round factual bundle (sprint-35). Covers all rounds
+  // with round_number <= current; single source of cross-round citations.
+  bundle: RoundBundleEntry[];
   submissions: { artist: string; title: string; album: string | null; submitter: string | null; comment: string | null; vote_total: number; spotifyUri: string; albumArtUrl: string | null }[];
   votes: { voter: string; song: string; points: number; comment: string | null }[];
   chatMentions: { sender: string; raw_message: string; captured_at: string }[];
@@ -101,6 +116,63 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     .slice(0, seqIdx)
     .map((r, i) => ({ number: r.round_number ?? i + 1, name: r.name }));
 
+  // Build deterministic per-round factual bundle (sprint-35 bundle task).
+  // Query all submissions + votes for the season; filter to rounds <= current.
+  const currentRoundNumber = roundSequence.number;
+  const prevRoundId = seqIdx > 0 ? seasonRounds[seqIdx - 1].id : null;
+
+  const bundleRows = db
+    .prepare(
+      `SELECT r.id AS round_id, r.round_number, r.name AS round_name,
+              m.title AS song, c.name AS submitter,
+              COALESCE(SUM(v.points), 0) AS vote_total
+       FROM rounds r
+       JOIN ml_submissions m ON m.round_id = r.id
+       LEFT JOIN competitors c ON c.id = m.competitor_id
+       LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
+       WHERE r.season_id = ?
+       GROUP BY r.id, m.id
+       ORDER BY r.round_number IS NULL, r.round_number, vote_total DESC`,
+    )
+    .all(round.season_id) as {
+      round_id: number;
+      round_number: number | null;
+      round_name: string;
+      song: string;
+      submitter: string | null;
+      vote_total: number;
+    }[];
+
+  const roundSongsMap = new Map<
+    number,
+    { round_number: number; round_name: string; songs: { song: string; submitter: string | null; points: number }[] }
+  >();
+  for (const row of bundleRows) {
+    const rn = row.round_number ?? 0;
+    if (rn > currentRoundNumber) continue;
+    if (!roundSongsMap.has(row.round_id)) {
+      roundSongsMap.set(row.round_id, { round_number: rn, round_name: row.round_name, songs: [] });
+    }
+    roundSongsMap.get(row.round_id)!.songs.push({ song: row.song, submitter: row.submitter, points: Number(row.vote_total) });
+  }
+
+  const bundle: RoundBundleEntry[] = Array.from(roundSongsMap.entries())
+    .sort(([, a], [, b]) => a.round_number - b.round_number)
+    .map(([rid, data]) => {
+      const sorted = [...data.songs].sort((a, b) => b.points - a.points);
+      const top3 = sorted.slice(0, 3);
+      const bottom1 = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+      return {
+        round_number: data.round_number,
+        name: data.round_name,
+        top3,
+        bottom1,
+        winner: top3[0]?.submitter ?? null,
+        isCurrent: rid === roundId,
+        isPrev: rid === prevRoundId,
+      };
+    });
+
   const subRows = db
     .prepare(
       `SELECT m.artists AS artists, m.title, m.album, m.spotify_uri, m.comment, m.album_art_url,
@@ -153,6 +225,7 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     league: { id: round.league_id, name: round.league_name },
     roundSequence,
     priorRounds,
+    bundle,
     submissions: subRows.map(s => ({
       artist: s.artists,
       title: s.title,

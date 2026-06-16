@@ -6,10 +6,15 @@ import {
   enrichPodiumArt,
   type RoundData,
   type GenParams,
+  type RoundBundleEntry,
 } from './llm.js';
 
 function sub(title: string, art: string | null, vote: number): RoundData['submissions'][number] {
   return { artist: 'X', title, album: null, submitter: 's', comment: null, vote_total: vote, spotifyUri: `spotify:track:${title}`, albumArtUrl: art };
+}
+
+function mkBundleEntry(round_number: number, name: string, opts: Partial<RoundBundleEntry> = {}): RoundBundleEntry {
+  return { round_number, name, top3: [], bottom1: null, winner: null, isCurrent: false, isPrev: false, ...opts };
 }
 
 function mkData(over: Partial<RoundData> = {}): RoundData {
@@ -20,6 +25,11 @@ function mkData(over: Partial<RoundData> = {}): RoundData {
     priorRounds: [
       { number: 1, name: 'Your Permanent Record' },
       { number: 2, name: 'Must be love on the brain' },
+    ],
+    bundle: [
+      mkBundleEntry(1, 'Your Permanent Record', { isPrev: false }),
+      mkBundleEntry(2, 'Must be love on the brain', { isPrev: true }),
+      mkBundleEntry(3, 'Department of Education', { isCurrent: true }),
     ],
     submissions: [
       { artist: 'A', title: 's1', album: null, submitter: 'Sasha', comment: null, vote_total: 9, spotifyUri: 'spotify:track:s1', albumArtUrl: null },
