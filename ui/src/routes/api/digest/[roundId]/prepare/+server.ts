@@ -40,11 +40,8 @@ function runChecks(db: Database.Database, roundId: number): CheckResult[] {
 
   const roundSrc = `export.zip · ${round.name}`;
 
-  // 1. Round metadata — has theme + both deadlines
-  const meta_ok =
-    !!round.description &&
-    !!round.submission_deadline &&
-    !!round.voting_deadline;
+  // 1. Round metadata — has theme (deadlines are informational, not gating).
+  const meta_ok = !!round.description;
 
   // 2. Submissions
   const subRow = db

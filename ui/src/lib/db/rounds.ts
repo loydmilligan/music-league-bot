@@ -9,11 +9,24 @@ function baseRow(r: any): Omit<Round, 'phase'> {
     tag: r.tag ?? null, themeSubmittedBy: r.theme_submitted_by ?? null, roundNumber: r.round_number ?? null };
 }
 
+/**
+ * Map the stored `rounds.phase` TEXT value (sprint-34) to the lifecycle RoundPhase
+ * type used throughout the app. The stored domain uses 'complete'/'not-started'
+ * while the lifecycle type uses 'archive'/'upcoming'.
+ */
+export function storedToRoundPhase(stored: string): RoundPhase {
+  if (stored === 'complete') return 'archive';
+  if (stored === 'not-started') return 'upcoming';
+  return stored as RoundPhase;  // 'submission' | 'voting' pass through unchanged
+}
+
 function row(r: any): Round {
   // Per-round fallback for callers without season context (one-off API).
   // Use sparingly — see lifecycle.ts deprecation note on getRoundPhase.
   const base = baseRow(r);
-  return { ...base, phase: getRoundPhase(base) };
+  // Prefer stored phase; only fall back to deadline derivation when null.
+  const phase: RoundPhase = r.phase ? storedToRoundPhase(r.phase) : getRoundPhase(base);
+  return { ...base, phase };
 }
 
 function rowWithPhase(r: any, phase: RoundPhase): Round {
@@ -63,10 +76,15 @@ export function upsertRoundWithDeadlines(db: Database.Database, seasonId: number
 export function getRoundsForSeason(db: Database.Database, seasonId: number): Round[] {
   const raw = db.prepare('SELECT * FROM rounds WHERE season_id=? ORDER BY id').all(seasonId) as any[];
   const bases = raw.map(baseRow);
-  const phases = getRoundPhasesForSeason(
+  // Derive fallback phases (season-aware sequential logic) for null-phase rows.
+  // Run over ALL rounds to preserve ordering semantics, then override where stored phase exists.
+  const derivedPhases = getRoundPhasesForSeason(
     bases.map(b => ({ id: b.id, submissionDeadline: b.submissionDeadline, votingDeadline: b.votingDeadline })),
   );
-  return bases.map(b => ({ ...b, phase: phases.get(b.id) ?? 'upcoming' }));
+  return raw.map((r, i) => {
+    const phase: RoundPhase = r.phase ? storedToRoundPhase(r.phase) : (derivedPhases.get(bases[i].id) ?? 'upcoming');
+    return { ...bases[i], phase };
+  });
 }
 
 export function getRoundById(db: Database.Database, id: number): Round | null {

@@ -66,7 +66,7 @@ Buttons advance the round; deadlines stop deciding what's active.
 - [x] {agent: backend, id: phase-api, depends: phase-schema} **Phase-transition endpoints.** `POST /api/rounds/:id/end-submission` (body `{endTimestamp, mode:'accelerated'|'speedy', speedyDays}` → set `phase=voting`; `speedy` shifts `voting_deadline` to end+`speedyDays`, `accelerated` leaves it). `POST /api/rounds/:id/end-voting` (→ `phase=complete`; returns a suggested next-round `submission_deadline` prefill). Guard illegal transitions.
   - **Acceptance:** end-submission flips `submission→voting` and (speedy, days=3) sets `voting_deadline = end+3d`; end-voting flips `voting→complete` and returns the prefill; ending voting from `submission` is rejected (4xx); route tests green; `npm run check` 0.
 
-- [ ] {agent: backend, id: phase-truth, depends: phase-schema} **Make stored phase authoritative.** Rewrite `activeRound.ts` / `activeRoundDerive.ts` / `lifecycle.ts` callers to read `rounds.phase`; keep deadline derivation only as a fallback when `phase` is null. Stop prep-checks hard-blocking on missing/auto-filled deadlines.
+- [x] {agent: backend, id: phase-truth, depends: phase-schema} **Make stored phase authoritative.** Rewrite `activeRound.ts` / `activeRoundDerive.ts` / `lifecycle.ts` callers to read `rounds.phase`; keep deadline derivation only as a fallback when `phase` is null. Stop prep-checks hard-blocking on missing/auto-filled deadlines.
   - **Acceptance:** the active round for `second-best` resolves from stored phase (a round with a *past* `voting_deadline` but `phase=voting` stays active — the clock no longer flips it); `getRoundPhase`/derive used only when `phase` is null; prep-checks pass with a blank deadline; `npx vitest run` green for the lifecycle/activeRound suites.
 
 - [x] {agent: frontend, id: phase-ui, depends: phase-api} **Phase buttons + modals on the active-round surface.** An **End Submission Phase** button → modal (editable end-timestamp + Accelerated vs Speedy, prefill N=3 days) posting to `/api/rounds/:id/end-submission`; an **End Voting Phase** button → modal that completes the round and shows the next-round submission-deadline prefill. Render deadlines as informational, not gating.
@@ -117,6 +117,13 @@ _None._
 - 3 backend / 1 frontend / 1 orc gate
 - deps: `phase-api` + `phase-truth` parallel after `phase-schema`; `phase-ui` after `phase-api`; gate after all four
 - scoped to the phase model only; Action Center deferred to sprint-35, Web Push to v2
+
+### 2026-06-16 — backend — phase-truth: stored phase made authoritative
+- `rounds.ts` — `getRoundsForSeason`: runs deadline derivation over all rows as fallback, then overrides with `storedToRoundPhase(r.phase)` for any row where `phase` is non-null; null-phase rows still use season-aware sequential derivation
+- `layout.ts` — `getAllAdoptedLeagues`: added `phase` to round SELECT; after `getRoundPhasesForSeason` call, overrides `phaseById` entries from stored phase via `storedToRoundPhase`; imported `storedToRoundPhase` from `rounds.ts`
+- `prepChecks.ts` + `prepare/+server.ts` — `meta_ok` now checks only `!!round.description`; deadlines no longer gate the check (informational only)
+- 8 new phase-truth tests in `rounds.phase-truth.test.ts`: stored-voting/submission override past deadlines; null-phase falls back to derivation; active-round modal + rail paths both honour stored phase; manual pin on stored-voting round (past deadline) is honoured; prep-checks pass with blank deadline and fail only on missing description
+- `npm run check`: 0 errors. `npx vitest run`: 515/515 green.
 
 ### 2026-06-16 — frontend — phase-ui: phase buttons + modals on active-round surface
 - `ActiveRounds.svelte`: "End Submission Phase" button on `submission` cards → modal with editable end-timestamp, Speedy (default N=3 days) / Accelerated mode toggle, posts `{endTimestamp, mode, speedyDays}` to `POST /api/rounds/:id/end-submission`, reloads on success (phase pill flips to VOTING)

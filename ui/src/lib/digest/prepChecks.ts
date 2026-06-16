@@ -46,8 +46,7 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
 
   const roundSrc = `export.zip · ${round.name}`;
 
-  const meta_ok =
-    !!round.description && !!round.submission_deadline && !!round.voting_deadline;
+  const meta_ok = !!round.description;
 
   const subs_count = (db
     .prepare('SELECT COUNT(*) AS n FROM ml_submissions WHERE round_id = ?')

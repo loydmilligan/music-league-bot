@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import type Database from 'better-sqlite3';
 import { getRoundPhasesForSeason, seasonIsActive, type RoundPhase } from '../lifecycle.js';
 import { pickActiveRound } from './activeRoundDerive.js';
+import { storedToRoundPhase } from './rounds.js';
 
 export type LeagueRailStatus = 'active' | 'voting' | 'open' | 'idle';
 
@@ -27,6 +28,7 @@ interface RoundDbRow {
   submission_deadline: string | null;
   voting_deadline: string | null;
   created_at: string;
+  phase: string | null;
 }
 
 /**
@@ -75,7 +77,7 @@ export function getAllAdoptedLeagues(db: Database.Database, now = Date.now()): L
   `).all() as { slug: string; name: string; active_round_id: number | null; active_season_id: number | null }[];
 
   const roundsStmt = db.prepare(`
-    SELECT id, name, submission_deadline, voting_deadline, created_at
+    SELECT id, name, submission_deadline, voting_deadline, created_at, phase
     FROM rounds WHERE season_id = ?
     ORDER BY id ASC
   `);
@@ -93,6 +95,10 @@ export function getAllAdoptedLeagues(db: Database.Database, now = Date.now()): L
       })),
       now,
     );
+    // Stored phase overrides deadline derivation — the clock no longer flips phases.
+    for (const round of rounds) {
+      if (round.phase) phaseById.set(round.id, storedToRoundPhase(round.phase));
+    }
     const phased = rounds.map(round => ({ ...round, phase: phaseById.get(round.id) ?? 'upcoming' as RoundPhase }));
     // The season is "active" in DB terms because status='active'; the rail
     // status reflects whether any round is actually open right now.
