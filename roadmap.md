@@ -683,3 +683,30 @@ summary: >-
   content accuracy. Live example: jac, Second Best R4 (REO Speedwagon) failed to
   submit votes. Needs: detect non-submission, zero the player, and void votes for
   them in scoring. Verify against Music League's exact rule first.
+---
+id: digest-consensus-field-robustness
+title: Digest — Consensus section field-name robustness
+stage: analyzed
+effort: small
+source: owner (hit live 2026-06-15)
+summary: >-
+  The digest LLM sometimes emits consensus items as {submission, agreement} but the
+  renderer (DigestSection.svelte consensusHeadline/consensusNote) only reads
+  {title/song/point/statement} + {note/detail/body}. On a mismatch every item is
+  empty and the section dumps the RAW JSON object onto the published page (hit live
+  on round 134's digest, slug 7RrFR_pukBsyfxL7). Fix both ends: (a) make the renderer
+  tolerant — accept submission→headline, agreement→note, and NEVER dump raw JSON
+  (graceful fallback); (b) pin the field names in the digest prompt/schema so the LLM
+  emits {song, note} consistently. Part of the structured-output reliability work.
+---
+id: digest-exclude-section-button-bug
+title: Digest — "exclude from final digest" button doesn't persist
+stage: analyzed
+effort: small
+source: owner (hit live 2026-06-15)
+summary: >-
+  The per-section "exclude from final digest" control did not set the section state
+  to 'excluded' — round 134's consensus section stayed state='default' despite the
+  click, so the operator could not remove a broken section without DB access. Repro +
+  fix the exclude action (PATCH digest_sections.state) and confirm excluded sections
+  are dropped from draft/finalize/export and the published HTML.
