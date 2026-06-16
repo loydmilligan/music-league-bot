@@ -4,6 +4,38 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.2.0] — 2026-06-16
+
+**sprint-34 — round phase becomes operator-controlled.** Round phase
+(`not-started / submission / voting / complete`) is now an explicit **stored
+field advanced by buttons**, instead of being derived from deadlines vs. the
+clock. This fixes rounds silently dropping out of the "active" slot the moment a
+voting deadline passed — exactly when their digest needs generating.
+
+### Operator app
+
+- **Phase controls on the active-round surface** — an **End Submission Phase**
+  button (modal: editable end-timestamp + **Accelerated** vs **Speedy**, default
+  +3 days) and an **End Voting Phase** button (completes the round, pre-fills the
+  next round's submission deadline). Deadlines now render as **informational**,
+  not gating.
+
+### Under the hood
+
+- **Stored `rounds.phase` column** + migration with a full backfill from the
+  previous deadline-derived phase (no row left null).
+- **Phase-transition endpoints** — `POST /api/rounds/:id/end-submission`
+  (accelerated|speedy) and `POST /api/rounds/:id/end-voting` (completes +
+  next-deadline prefill), with illegal-transition guards.
+- **Stored phase is authoritative** — active-round resolution and the lifecycle
+  derivation now read `rounds.phase`; deadline derivation survives only as a
+  fallback when phase is null. Prep-checks no longer hard-block on missing or
+  auto-filled deadlines.
+- De-scopes the active-round-truth piece from `active-league-management`.
+
+_The operator Action Center (notification/todo center) is the on-deck sprint-35;
+Web Push is v2._
+
 ## [1.1.1] — 2026-06-15
 
 Campaign **the b-side**, sprint 3 of 3 (final) — the **operator Content screen**.
