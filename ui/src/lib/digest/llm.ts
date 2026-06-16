@@ -83,15 +83,23 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     | undefined;
   if (!round) throw new Error(`round not found: ${roundId}`);
 
-  // Round chronology within the season (ordered by id == submission order).
+  // Round chronology within the season — ordered by round_number (the real round
+  // order), falling back to id for any round missing a number. Ordering by id
+  // mis-sequenced rounds imported AFTER manually-created later-round placeholders
+  // (e.g. a freshly-imported round 7 sorting after empty rounds 8-10).
   const seasonRounds = db
-    .prepare('SELECT id, name FROM rounds WHERE season_id = ? ORDER BY id')
-    .all(round.season_id) as { id: number; name: string }[];
+    .prepare(
+      'SELECT id, name, round_number FROM rounds WHERE season_id = ? ORDER BY round_number IS NULL, round_number, id',
+    )
+    .all(round.season_id) as { id: number; name: string; round_number: number | null }[];
   const seqIdx = seasonRounds.findIndex((r) => r.id === roundId); // 0-based
-  const roundSequence = { number: seqIdx + 1, total: seasonRounds.length };
+  const roundSequence = {
+    number: seasonRounds[seqIdx]?.round_number ?? seqIdx + 1,
+    total: seasonRounds.length,
+  };
   const priorRounds = seasonRounds
     .slice(0, seqIdx)
-    .map((r, i) => ({ number: i + 1, name: r.name }));
+    .map((r, i) => ({ number: r.round_number ?? i + 1, name: r.name }));
 
   const subRows = db
     .prepare(
