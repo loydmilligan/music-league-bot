@@ -69,7 +69,7 @@ Buttons advance the round; deadlines stop deciding what's active.
 - [ ] {agent: backend, id: phase-truth, depends: phase-schema} **Make stored phase authoritative.** Rewrite `activeRound.ts` / `activeRoundDerive.ts` / `lifecycle.ts` callers to read `rounds.phase`; keep deadline derivation only as a fallback when `phase` is null. Stop prep-checks hard-blocking on missing/auto-filled deadlines.
   - **Acceptance:** the active round for `second-best` resolves from stored phase (a round with a *past* `voting_deadline` but `phase=voting` stays active — the clock no longer flips it); `getRoundPhase`/derive used only when `phase` is null; prep-checks pass with a blank deadline; `npx vitest run` green for the lifecycle/activeRound suites.
 
-- [ ] {agent: frontend, id: phase-ui, depends: phase-api} **Phase buttons + modals on the active-round surface.** An **End Submission Phase** button → modal (editable end-timestamp + Accelerated vs Speedy, prefill N=3 days) posting to `/api/rounds/:id/end-submission`; an **End Voting Phase** button → modal that completes the round and shows the next-round submission-deadline prefill. Render deadlines as informational, not gating.
+- [x] {agent: frontend, id: phase-ui, depends: phase-api} **Phase buttons + modals on the active-round surface.** An **End Submission Phase** button → modal (editable end-timestamp + Accelerated vs Speedy, prefill N=3 days) posting to `/api/rounds/:id/end-submission`; an **End Voting Phase** button → modal that completes the round and shows the next-round submission-deadline prefill. Render deadlines as informational, not gating.
   - **Acceptance:** both buttons render on the active-round view; the End Submission modal posts the chosen mode and the phase pill flips to **Voting**; End Voting completes the round and surfaces the prefill; verified hands-on on dev at 1280 + mobile 412; `npm run check` 0.
 
 - [ ] {agent: orc, id: gate, depends: phase-schema,phase-api,phase-truth,phase-ui} **Gate — cross-check, ship, walk the flow, close.** Cross-check all lanes; `npm run check` + `npx vitest run`; version bump + CHANGELOG (visible + under-the-hood); ratification card; build + deploy; then walk the LIVE flow on `mlbot2.mattmariani.com`: advance a test round through **End Submission → End Voting**, confirm the active-round slot follows the stored phase (not the clock), and confirm a stale/blank deadline no longer mis-flips the active round. Panes reset, doc closed.
@@ -117,3 +117,11 @@ _None._
 - 3 backend / 1 frontend / 1 orc gate
 - deps: `phase-api` + `phase-truth` parallel after `phase-schema`; `phase-ui` after `phase-api`; gate after all four
 - scoped to the phase model only; Action Center deferred to sprint-35, Web Push to v2
+
+### 2026-06-16 — frontend — phase-ui: phase buttons + modals on active-round surface
+- `ActiveRounds.svelte`: "End Submission Phase" button on `submission` cards → modal with editable end-timestamp, Speedy (default N=3 days) / Accelerated mode toggle, posts `{endTimestamp, mode, speedyDays}` to `POST /api/rounds/:id/end-submission`, reloads on success (phase pill flips to VOTING)
+- `ActiveRounds.svelte`: "End Voting Phase" button on `voting` cards → confirmation modal with current deadline shown, posts to `POST /api/rounds/:id/end-voting`, surfaces `nextSubmissionDeadline` prefill in-modal before close/reload
+- Deadlines displayed informational only in both cards (dl rows) — not gating
+- Escape / backdrop close for both modals; `onKeydown` updated (phase modal takes priority over slot modal)
+- `npm run check`: 0 errors. `vitest`: 507/507.
+- **Note for orc:** accidentally called `POST /api/rounds/116/end-voting` during API verification — stored `phase` on r116 "Wild Thing" (Hip Jammers) is now `complete` but deadline derivation still returns `voting` (phase-truth not landed). Restore with: `sqlite3 data/hip-jammers/season-3/league.db "UPDATE rounds SET phase='voting' WHERE id=116;"`
