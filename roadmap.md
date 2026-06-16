@@ -610,3 +610,61 @@ summary: >-
   carries "what came before"), so superlatives / moments / fan-hater can reason about
   WHEN something happened and how the season evolved. Depends on
   bside-digest-context-channel.
+---
+id: openrouter-model-management
+title: OpenRouter Model Management (table + lookup + default)
+stage: planned
+effort: medium
+spike: model-cost-infra
+source: owner
+priority: urgent
+summary: >-
+  Replace the scattered env-var model config (OPENROUTER_DIGEST_MODEL,
+  OPENROUTER_PREDICT_MODEL, hardcoded defaults) with a backend model table. Paste an
+  OpenRouter model id (copied from openrouter.ai) → look it up via the OpenRouter
+  models API (GET /api/v1/models) → store + verify capabilities (context length,
+  prompt/completion pricing, modality, tool/JSON support) so we never set a model
+  that lacks what a call needs. Set ONE model as the default for all calls. Settings
+  UI to be mocked by Claude Design. Immediate stopgap already applied 2026-06-15:
+  switched digest + predict to anthropic/claude-haiku-4.5 to stop ~$0.18/digest
+  spend during testing (restore to Sonnet for maintenance-mode runs).
+---
+id: per-section-model-selection
+title: Per-Section Model Selection
+stage: idea
+effort: medium
+spike: model-cost-infra
+source: owner
+summary: >-
+  Build on openrouter-model-management: let each content section (digest sections,
+  b-side read-model sections) optionally pin its own model, falling back to the
+  global default. So we can run cheap models for boilerplate sections and a high-end
+  model only where it matters. Depends on openrouter-model-management.
+---
+id: openrouter-cost-tracking
+title: OpenRouter Cost Tracking (per-call ledger)
+stage: planned
+effort: medium
+spike: model-cost-infra
+source: owner
+priority: urgent
+summary: >-
+  Record every OpenRouter call to a ledger: model, prompt/completion tokens, cost
+  (from the OpenRouter usage/cost in the response), purpose (digest vs archive/b-side
+  + which section), league/round, timestamp. The data layer behind the debug cost
+  dashboard. Owner can't afford blind spend during testing — this makes spend visible.
+---
+id: settings-debug-mode-cost-dashboard
+title: Settings Debug Mode + Cost Dashboard
+stage: planned
+effort: medium
+spike: model-cost-infra
+source: owner
+priority: urgent
+summary: >-
+  A debug-mode toggle on the Settings page that reveals debug-only UI. First widget:
+  today's total OpenRouter cost split by digest vs archive, a drilldown listing the
+  individual calls (what each was for), and a 2-week chart — stacked bar per day made
+  of digest calls + archive calls in two base colors, with each individual call a
+  different shade of its base color and a hover tooltip naming the section per shade.
+  Depends on openrouter-cost-tracking; Claude Design to mock the UI.
