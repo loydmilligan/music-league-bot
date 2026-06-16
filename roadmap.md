@@ -710,3 +710,16 @@ summary: >-
   click, so the operator could not remove a broken section without DB access. Repro +
   fix the exclude action (PATCH digest_sections.state) and confirm excluded sections
   are dropped from draft/finalize/export and the published HTML.
+---
+id: digest-archive-link-review
+title: Digest → b-side archive link (review + dead-link bug)
+stage: idea
+effort: small
+source: owner (2026-06-15)
+summary: >-
+  The published digest page (digest.mattmariani.com/d/<slug>) links out to the
+  league's b-side archive. Two things: (a) decide whether we even WANT that link on
+  a shared digest (owner unsure — "leave it for now"); (b) it can be a DEAD link —
+  on the round-134 digest just shared to the group, the archive link was dead.
+  Audit when/whether to show it and ensure it never renders dead (gate on the league
+  being published + a valid archive slug).
