@@ -747,18 +747,21 @@ notes: >-
   Phase-stored half builds ON active-league-management's round model (overlap —
   sequence them together). Action-Center half is net-new. Parallels orc-tower's own
   operator-surfaces-control-affordances card (orc-tower mailbox notification center)
-  but is mlbot-specific. Card authoring format decided: author in YAML, store +
-  transport as JSON, one conversion seam. Owner still to rate the v1 property cut +
-  the 2 open design Qs in the vault note before this is sprint-composed.
+  but is mlbot-specific. RATIFIED (2026-06-15): author YAML / JSON runtime; v1
+  schema cut as-proposed; instance persistence = HYBRID (YAML template files +
+  SQLite cards table); End-Voting auto-prefills next deadline; escalation
+  confirmed; read/snooze/complete confirmed. STILL OPEN: Web Push phasing
+  (v1 vs phase-2) + sequencing vs active-league-management.
 jobs:
   - "Schema: add rounds.phase column (not-started|submission|voting|complete) + migration; backfill from current deadline-derived phase."
   - "Phase transitions: End Submission / End Voting buttons + API. End-Submission modal = editable end-timestamp + Accelerated (keep voting deadline) vs Speedy (shift +N days, prefill N=3). End-Voting completes the round + can prefill next round's submission deadline."
   - "Make phase the source of truth: rewrite activeRound/lifecycle to read stored phase; keep deadline derivation only as fallback/suggestion; deadlines become informational; prep-checks no longer hard-block on deadlines."
-  - "Action Center data model: implement the card/bundle schema (identity/type/trigger/style/content/features/state); YAML templates + JSON runtime instances + loader/validator + a cards store with dedup + auto-resolve."
-  - "Action Center UI: landing-page notification/todo panel rendering cards + bundles (variants, severity sort, snooze, dismiss, checkbox/checklist, actions). No in-frontend bundle builder — bundles are data-authored."
-  - "Content-loop trigger: End-Voting emits a content-todo card (generate digest -> update archive -> share) scoped to the round; auto-resolves when the digest is finalized + archived."
+  - "Action Center data model: implement the card/bundle schema (identity/type/trigger/style/content/features/state + escalation + push); author as YAML template files, validate via loader."
+  - "Action Center persistence (HYBRID, ratified): templates as YAML files; live instances in a SQLite cards table (hot cols status/severity/scope/dedupe_key + JSON payload). Emit = upsert on dedupe_key. v1 resolver closes cards REACTIVELY by scope+type when a digest finalizes+archives (no predicate engine) and applies escalation steps by fired_at age."
+  - "Action Center UI: landing-page notification/todo panel rendering cards + bundles (variants, severity sort, read/snooze/complete/dismiss, checkbox/checklist, actions). No in-frontend bundle builder — bundles are data-authored."
+  - "Content-loop trigger: End-Voting emits a content-todo card (generate digest -> update archive -> share) scoped to the round; auto-resolves when the digest is finalized + archived. End-Voting auto-prefills next round's submission deadline (ratified) — must guard the duplicate-round trap."
+  - "[phase-2] Web Push: mlbot is already an HTTPS PWA — add service worker + VAPID keys + per-device push-subscription store + server sender; emit (and escalation repush) fires a Web Push that deep-links to the mobile action. Ships AFTER the in-app Action Center."
 gaps:
-  - "v1 property cut for the card schema not yet ratified (owner to rate in vault note)."
-  - "Open Q: does End-Voting auto-prefill the next round's submission deadline, and how does that interact with the duplicate-round trap?"
   - "Relationship to active-league-management needs a sequencing decision (build together vs phase-model-first)."
-  - "Card store persistence + dedup/auto-resolve semantics (dedupeKey, live condition predicate) need detailing."
+  - "Duplicate-round trap: auto-prefilling the next submission deadline must not recreate the manual-vs-import two-row split."
+  - "Web Push phasing (v1 vs phase-2) + VAPID/subscription storage still to confirm with owner."
