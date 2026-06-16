@@ -23,7 +23,8 @@ export const SCHEMA = `
     ml_round_id TEXT UNIQUE NOT NULL, name TEXT NOT NULL, description TEXT,
     spotify_playlist_url TEXT, submission_deadline TEXT, voting_deadline TEXT,
     theme_chooser_id INTEGER REFERENCES competitors(id),
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    phase TEXT CHECK(phase IN ('not-started', 'submission', 'voting', 'complete'))
   );
   CREATE TABLE IF NOT EXISTS competitors (
     id INTEGER PRIMARY KEY, ml_competitor_id TEXT UNIQUE NOT NULL, name TEXT NOT NULL

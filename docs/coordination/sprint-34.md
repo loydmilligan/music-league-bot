@@ -60,7 +60,7 @@ Buttons advance the round; deadlines stop deciding what's active.
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      `agent:` must match the Agent Roster. `depends:` is one comma-separated key. -->
 
-- [ ] {agent: backend, id: phase-schema} **Add the stored `rounds.phase` column + backfill.** Add `phase TEXT` to `rounds` (`not-started | submission | voting | complete`) via a migration, and backfill every existing row from the current deadline-derived phase (`getRoundPhasesForSeason`, mapping its `archive` → `complete`). No row may be left null.
+- [x] {agent: backend, id: phase-schema} **Add the stored `rounds.phase` column + backfill.** Add `phase TEXT` to `rounds` (`not-started | submission | voting | complete`) via a migration, and backfill every existing row from the current deadline-derived phase (`getRoundPhasesForSeason`, mapping its `archive` → `complete`). No row may be left null.
   - **Acceptance:** migration runs clean; `SELECT phase, count(*) FROM rounds GROUP BY phase` shows zero nulls; second-best r7 (id 134) backfills to `complete` and r8 (id 131) to `submission`, matching today's derivation; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: phase-api, depends: phase-schema} **Phase-transition endpoints.** `POST /api/rounds/:id/end-submission` (body `{endTimestamp, mode:'accelerated'|'speedy', speedyDays}` → set `phase=voting`; `speedy` shifts `voting_deadline` to end+`speedyDays`, `accelerated` leaves it). `POST /api/rounds/:id/end-voting` (→ `phase=complete`; returns a suggested next-round `submission_deadline` prefill). Guard illegal transitions.
@@ -99,6 +99,11 @@ _Pending — gate task emits the sprint-close ratification card._
 _None._
 
 ## Activity Log
+
+### 2026-06-16 — backend — phase-schema: add rounds.phase column + full backfill
+- Added `phase TEXT CHECK(phase IN ('not-started','submission','voting','complete'))` to `rounds` in both `schema.ts` (fresh DBs) and `client.ts` migration (existing DBs)
+- Backfill imports `getRoundPhasesForSeason` from lifecycle.ts; runs per-season in a single transaction, mapping `archive`→`complete` and `upcoming`→`not-started`
+- Verified on live DB: 0 null phases; r7 id=134 → `complete`, r8 id=131 → `submission`; `npm run check` 0 errors
 
 ### 2026-06-16 — docs — Sprint plan refresh: round phase becomes operator-controlled
 - created sprint-34 coord-doc; wrote `## Active Sprint Plan` with 5 tasks (phase-first slice of `round-phase-model-and-action-center`)

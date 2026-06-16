@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { SCHEMA, DEFAULT_SETTINGS } from './schema.js';
 import { seedThemeTags } from './themeTags.js';
+import { getRoundPhasesForSeason } from '../lifecycle.js';
 
 let _db: Database.Database | null = null;
 
@@ -302,6 +303,36 @@ export function openLeagueDb(path?: string): Database.Database {
 				PRIMARY KEY (league_id, section)
 			);
 		`);
+	}
+	// sprint-34 phase-schema: stored operator-controlled phase column on rounds.
+	// Backfill every existing row from deadline-derived phase (getRoundPhasesForSeason),
+	// mapping lifecycle's 'archive'→'complete' and 'upcoming'→'not-started'.
+	// No row may be left null — the backfill runs in a single transaction.
+	const roundsCols5 = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
+	if (roundsCols5.length && !roundsCols5.some(c => c.name === 'phase')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN phase TEXT CHECK(phase IN ('not-started', 'submission', 'voting', 'complete'))");
+		type RoundRow = { id: number; season_id: number; submission_deadline: string | null; voting_deadline: string | null };
+		const allRounds = db.prepare(
+			"SELECT id, season_id, submission_deadline, voting_deadline FROM rounds"
+		).all() as RoundRow[];
+		const bySeason = new Map<number, RoundRow[]>();
+		for (const r of allRounds) {
+			if (!bySeason.has(r.season_id)) bySeason.set(r.season_id, []);
+			bySeason.get(r.season_id)!.push(r);
+		}
+		const updatePhase = db.prepare("UPDATE rounds SET phase = ? WHERE id = ?");
+		const now = Date.now();
+		db.transaction(() => {
+			for (const [, rounds] of bySeason) {
+				const phaseMap = getRoundPhasesForSeason(rounds, now);
+				for (const [id, phase] of phaseMap) {
+					const stored =
+						phase === 'archive' ? 'complete' :
+						phase === 'upcoming' ? 'not-started' : phase;
+					updatePhase.run(stored, id);
+				}
+			}
+		})();
 	}
 	return db;
 }
