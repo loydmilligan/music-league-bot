@@ -3,8 +3,9 @@ project: music-league-bot
 sprint: sprint-35
 roadmapItem: digest-round-aware-context
 title: Stop the digest citing future rounds
-status: planned
+status: active
 created: 2026-06-16T07:09:20Z
+activated: 2026-06-16
 updated: 2026-06-16T07:09:20Z
 ---
 
