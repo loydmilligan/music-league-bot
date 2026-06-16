@@ -752,8 +752,12 @@ notes: >-
   but is mlbot-specific. RATIFIED (2026-06-15): author YAML / JSON runtime; v1
   schema cut as-proposed; instance persistence = HYBRID (YAML template files +
   SQLite cards table); End-Voting auto-prefills next deadline; escalation
-  confirmed; read/snooze/complete confirmed; Web Push = v2. Fully ratified —
-  ready for sprint composition.
+  confirmed; read/snooze/complete confirmed; Web Push = v2. Fully ratified.
+  PROGRESS: the PHASE-MODEL half SHIPPED in sprint-34 (v1.2.0, 2026-06-16) —
+  stored rounds.phase + End Submission/End Voting buttons + stored-phase-
+  authoritative active-round resolution + deadlines demoted. REMAINING: the
+  Action Center half (cards table + reactive resolver + escalation + landing-
+  page panel + End-Voting→digest-todo trigger) → on-deck sprint-35.
 jobs:
   - "Schema: add rounds.phase column (not-started|submission|voting|complete) + migration; backfill from current deadline-derived phase."
   - "Phase transitions: End Submission / End Voting buttons + API. End-Submission modal = editable end-timestamp + Accelerated (keep voting deadline) vs Speedy (shift +N days, prefill N=3). End-Voting completes the round + can prefill next round's submission deadline."
