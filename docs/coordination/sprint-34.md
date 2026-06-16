@@ -63,7 +63,7 @@ Buttons advance the round; deadlines stop deciding what's active.
 - [x] {agent: backend, id: phase-schema} **Add the stored `rounds.phase` column + backfill.** Add `phase TEXT` to `rounds` (`not-started | submission | voting | complete`) via a migration, and backfill every existing row from the current deadline-derived phase (`getRoundPhasesForSeason`, mapping its `archive` → `complete`). No row may be left null.
   - **Acceptance:** migration runs clean; `SELECT phase, count(*) FROM rounds GROUP BY phase` shows zero nulls; second-best r7 (id 134) backfills to `complete` and r8 (id 131) to `submission`, matching today's derivation; `npm run check` 0 errors.
 
-- [ ] {agent: backend, id: phase-api, depends: phase-schema} **Phase-transition endpoints.** `POST /api/rounds/:id/end-submission` (body `{endTimestamp, mode:'accelerated'|'speedy', speedyDays}` → set `phase=voting`; `speedy` shifts `voting_deadline` to end+`speedyDays`, `accelerated` leaves it). `POST /api/rounds/:id/end-voting` (→ `phase=complete`; returns a suggested next-round `submission_deadline` prefill). Guard illegal transitions.
+- [x] {agent: backend, id: phase-api, depends: phase-schema} **Phase-transition endpoints.** `POST /api/rounds/:id/end-submission` (body `{endTimestamp, mode:'accelerated'|'speedy', speedyDays}` → set `phase=voting`; `speedy` shifts `voting_deadline` to end+`speedyDays`, `accelerated` leaves it). `POST /api/rounds/:id/end-voting` (→ `phase=complete`; returns a suggested next-round `submission_deadline` prefill). Guard illegal transitions.
   - **Acceptance:** end-submission flips `submission→voting` and (speedy, days=3) sets `voting_deadline = end+3d`; end-voting flips `voting→complete` and returns the prefill; ending voting from `submission` is rejected (4xx); route tests green; `npm run check` 0.
 
 - [ ] {agent: backend, id: phase-truth, depends: phase-schema} **Make stored phase authoritative.** Rewrite `activeRound.ts` / `activeRoundDerive.ts` / `lifecycle.ts` callers to read `rounds.phase`; keep deadline derivation only as a fallback when `phase` is null. Stop prep-checks hard-blocking on missing/auto-filled deadlines.
@@ -99,6 +99,13 @@ _Pending — gate task emits the sprint-close ratification card._
 _None._
 
 ## Activity Log
+
+### 2026-06-16 — backend — phase-api: end-submission + end-voting endpoints
+- Added `StoredPhase`, `getRoundStoredPhase`, `endSubmissionPhase`, `endVotingPhase` helpers to `rounds.ts`
+- `POST /api/rounds/:id/end-submission`: body `{endTimestamp, mode, speedyDays?}` → `submission→voting`; speedy mode shifts `voting_deadline` to `end+speedyDays`; accelerated leaves it unchanged
+- `POST /api/rounds/:id/end-voting`: `voting→complete`; returns `nextSubmissionDeadline` prefill from next round in season
+- Both guard illegal transitions (422) and unknown rounds (404)
+- 16 new tests in `rounds.phase.test.ts`; 507/507 suite green; `npm run check` 0 errors
 
 ### 2026-06-16 — backend — phase-schema: add rounds.phase column + full backfill
 - Added `phase TEXT CHECK(phase IN ('not-started','submission','voting','complete'))` to `rounds` in both `schema.ts` (fresh DBs) and `client.ts` migration (existing DBs)

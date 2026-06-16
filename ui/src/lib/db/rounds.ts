@@ -242,3 +242,76 @@ function clearNextRoundDeadlineOverrides(db: Database.Database, roundId: number)
            OR next_round_vote_deadline_override IS NOT NULL)
   `).run(predecessor.id);
 }
+
+// ── Phase transitions ───────────────────────────────────────────────────────
+
+export type StoredPhase = 'not-started' | 'submission' | 'voting' | 'complete';
+
+function phaseError(status: number, message: string): Error {
+  return Object.assign(new Error(message), { status });
+}
+
+/** Read the stored phase column directly (bypasses deadline derivation). */
+export function getRoundStoredPhase(db: Database.Database, id: number): StoredPhase | null {
+  const row = db.prepare('SELECT phase FROM rounds WHERE id=?').get(id) as { phase: StoredPhase | null } | undefined;
+  if (!row) return null;
+  return row.phase;
+}
+
+export interface EndSubmissionOptions {
+  endTimestamp: string;
+  mode: 'accelerated' | 'speedy';
+  speedyDays?: number;
+}
+
+/**
+ * Transition a round from submission → voting.
+ * Speedy mode shifts voting_deadline to endTimestamp + speedyDays.
+ * Accelerated mode leaves voting_deadline unchanged.
+ * Throws with .status 404/422 on bad input.
+ */
+export function endSubmissionPhase(
+  db: Database.Database,
+  id: number,
+  opts: EndSubmissionOptions,
+): { votingDeadline: string | null } {
+  const phase = getRoundStoredPhase(db, id);
+  if (phase === null) throw phaseError(404, `round not found: ${id}`);
+  if (phase !== 'submission') throw phaseError(422, `illegal transition: ${phase}→voting`);
+
+  if (opts.mode === 'speedy') {
+    const endMs = Date.parse(opts.endTimestamp);
+    if (!Number.isFinite(endMs)) throw phaseError(400, 'invalid endTimestamp');
+    const days = typeof opts.speedyDays === 'number' ? opts.speedyDays : 3;
+    const newDeadline = new Date(endMs + days * 86_400_000).toISOString();
+    db.prepare("UPDATE rounds SET phase='voting', voting_deadline=? WHERE id=?").run(newDeadline, id);
+    return { votingDeadline: newDeadline };
+  } else {
+    db.prepare("UPDATE rounds SET phase='voting' WHERE id=?").run(id);
+    const row = db.prepare('SELECT voting_deadline FROM rounds WHERE id=?').get(id) as { voting_deadline: string | null } | undefined;
+    return { votingDeadline: row?.voting_deadline ?? null };
+  }
+}
+
+/**
+ * Transition a round from voting → complete.
+ * Returns the next round's submission_deadline as a suggested prefill (null if no next round).
+ * Throws with .status 404/422 on bad input.
+ */
+export function endVotingPhase(
+  db: Database.Database,
+  id: number,
+): { nextSubmissionDeadline: string | null } {
+  const phase = getRoundStoredPhase(db, id);
+  if (phase === null) throw phaseError(404, `round not found: ${id}`);
+  if (phase !== 'voting') throw phaseError(422, `illegal transition: ${phase}→complete`);
+
+  db.prepare("UPDATE rounds SET phase='complete' WHERE id=?").run(id);
+
+  const cur = db.prepare('SELECT season_id FROM rounds WHERE id=?').get(id) as { season_id: number } | undefined;
+  if (!cur) return { nextSubmissionDeadline: null };
+  const next = db.prepare(
+    'SELECT submission_deadline FROM rounds WHERE season_id=? AND id>? ORDER BY id LIMIT 1',
+  ).get(cur.season_id, id) as { submission_deadline: string | null } | undefined;
+  return { nextSubmissionDeadline: next?.submission_deadline ?? null };
+}
