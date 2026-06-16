@@ -668,3 +668,18 @@ summary: >-
   of digest calls + archive calls in two base colors, with each individual call a
   different shade of its base color and a hover tooltip naming the section per shade.
   Depends on openrouter-cost-tracking; Claude Design to mock the UI.
+---
+id: vote-forfeiture-rule
+title: Model the "failed to submit votes" forfeiture rule
+stage: analyzed
+effort: medium
+source: owner-uat (RCA-confirmed 2026-06-15)
+summary: >-
+  Music League rule: if a player fails to submit their votes for a round, they get
+  0 pts that round AND the votes cast FOR them are wasted/forfeited. RCA confirmed
+  the app does NOT model this — standings.ts LEFT JOINs votes, so a non-submitting
+  player's song still accumulates votes normally; no penalty, no forfeiture, no
+  wasted-vote tracking anywhere. Affects standings, top/bottom, fan/hater, and digest
+  content accuracy. Live example: jac, Second Best R4 (REO Speedwagon) failed to
+  submit votes. Needs: detect non-submission, zero the player, and void votes for
+  them in scoring. Verify against Music League's exact rule first.
