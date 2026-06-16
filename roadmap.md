@@ -770,3 +770,46 @@ jobs:
 gaps:
   - "Duplicate-round trap: auto-prefilling the next submission deadline must not recreate the manual-vs-import two-row split."
   - "Coordination: keep the rounds.phase migration compatible with active-league-management's planned FK migration (this card de-scopes the active-round-truth piece from it)."
+---
+id: digest-round-aware-context
+title: Digest — Round-Aware Cross-Round Context (ghost fix)
+stage: planned
+effort: medium
+source: owner (2026-06-16)
+summary: >-
+  Fix the digest's cross-round accuracy bug (the "ghost"): regenerating an old
+  round's digest cites FUTURE-round songs/people as "last round" (e.g. an R3
+  digest cited R5's "Cottonfield Blues" + "Johnny Lang"). RCA RESOLVED — the
+  deterministic chronology is already correct (priorRounds is slice(0,seqIdx)
+  ordered by round_number; a chronology block already forbids forward refs); the
+  SOLE leak is the league-level relationship_contexts blob (PRIMARY KEY league_id,
+  one forward-accumulated row) injected raw at llm.ts:168/424. Regenerating R3
+  after R6 reads the post-R6 blob, so future narrative is right there to miscite.
+  Approach C (hybrid, owner-ratified 2026-06-16): (1) build a DETERMINISTIC
+  per-round factual bundle that owns ALL cross-round citations — per prior round
+  {round_number, name, top3 (song·submitter·pts), bottom1, winner}, scoped to the
+  season and ordered, prev/current flagged; (2) KEEP the narrative blob but scope
+  it to <= current round (snapshot per round / key by round_number, never the live
+  latest); (3) tighten the prompt so every cross-round reference cites the bundle
+  only — ghosts kept but bundle-cite-only, forward refs forbidden. Foundation for
+  the b-side cards (bside-digest-context-channel / bside-temporal-aware-generation).
+notes: >-
+  Owner quality bar for first-share content: <=1-2 minor errors, 0 major, >=2
+  compelling sections. Verify by REGENERATING the R3 "villain" section (Second
+  Best, season 8) and confirming no future-round (R4-R6) attributions. Narrative
+  read-model context CHANNEL (the accumulating distilled-threads layer) stays the
+  separate bside-digest-context-channel card; this card only scopes the existing
+  blob + adds the factual bundle. Entity/round-numbering cleanup (r-111 global ids)
+  tracked in parallel via bside-season-round-truth / active-league-management.
+  Quality-gate auto-lint deferred (quality_gate=later). Design: vault brainstorm
+  2026-06-15-digest-cross-round-context-bundle.md (RCA + decisions captured).
+jobs:
+  - "Deterministic cross-round bundle: build a per-round factual bundle in llm.ts generation — for each round with round_number <= current, {round_number, name, top3 (song·submitter·points), bottom1, winner}, ordered, prev/current flagged. Replaces the thin priorRounds {number,name} as the cross-round fact source."
+  - "Scope the narrative blob to <= current round: stop feeding the live league relationship_contexts blob into an old round's (re)generation. Read the round-scoped version instead (per-round snapshot via digest_drafts.rel_context, and/or key/filter narrative to rounds <= current). First-gen still uses current; regen of round N uses the N-era context."
+  - "Prompt tightening: every cross-round reference must cite the bundle; forbid forward references and invented callbacks; keep the ghost/callback voice but bundle-cite-only. Update the chronology + relationship-context prompt sections in llm.ts."
+  - "Tests: unit-cover the bundle scoping (round N bundle contains only rounds <= N), the rel-context scoping (regen of an early round does NOT see later-round narrative), and a regression for the R3-cites-R5 ghost."
+  - "Verification artifact: regenerate the R3 villain section (Second Best s8) and produce a before/after for owner review against the quality bar (no R4-R6 attributions)."
+gaps:
+  - "Decide the exact rel-context scoping mechanism in-build: per-round snapshot (digest_drafts.rel_context already exists) vs keying relationship_contexts by (league, round_number). Snapshot is smaller; keyed is cleaner for regen-correctness."
+  - "Backfill/regeneration: existing per-league blobs are already future-contaminated — regenerating old rounds needs the scoped path to avoid re-poisoning; may need a one-time reset or per-round reconstruction."
+  - "The narrative threads/continuity layer (recurring jokes carried forward) is only minimally touched here; the full accumulating channel is bside-digest-context-channel."
