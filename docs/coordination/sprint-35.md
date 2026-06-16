@@ -3,10 +3,10 @@ project: music-league-bot
 sprint: sprint-35
 roadmapItem: digest-round-aware-context
 title: Stop the digest citing future rounds
-status: active
+status: closed
 created: 2026-06-16T07:09:20Z
 activated: 2026-06-16
-updated: 2026-06-16T07:09:20Z
+updated: 2026-06-16T21:15:30Z
 ---
 
 # music-league-bot — coordination doc (sprint-35)
@@ -73,7 +73,7 @@ Regenerated digests cite only what came before — no ghosts.
 - [x] {agent: backend, id: tests, depends: bundle,prompt-cite,relctx-scope} **Tests + ghost regression.** Unit-cover: bundle scoping (round-N bundle contains only rounds ≤ N), rel-context scoping (regen of an early round excludes later-round narrative), and a regression pinning the R3-cites-R5 ghost (asserting no future-round attribution surfaces given R3 inputs).
   - **Acceptance:** new tests green; full `vitest run` green; the R3-ghost regression fails against the old code path and passes against the new; `npm run check` 0.
 
-- [ ] {agent: orc, id: gate, depends: bundle,prompt-cite,relctx-scope,tests} **Gate — verify content, ship, close.** Cross-check lanes; `npm run check` + full `vitest run`; **regenerate the R3 "villain" section (Second Best s8) on dev and surface a before/after to the owner** for ratification against the quality bar (no R4–R6 attributions; ≤1–2 minor / 0 major / ≥2 compelling). **Only on owner sign-off:** version bump + CHANGELOG, deploy, then close. If the owner flags remaining ghosts, file the gap and keep the doc open.
+- [x] {agent: orc, id: gate, depends: bundle,prompt-cite,relctx-scope,tests} **Gate — verify content, ship, close.** Cross-check lanes; `npm run check` + full `vitest run`; **regenerate the R3 "villain" section (Second Best s8) on dev and surface a before/after to the owner** for ratification against the quality bar (no R4–R6 attributions; ≤1–2 minor / 0 major / ≥2 compelling). **Only on owner sign-off:** version bump + CHANGELOG, deploy, then close. If the owner flags remaining ghosts, file the gap and keep the doc open.
   - **Acceptance:** 0 typecheck errors + vitest green; before/after of the R3 section delivered to owner; owner ratifies content quality; v-bump + CHANGELOG committed; deployed + v live on `mlbot2.mattmariani.com`; doc `status: closed`.
 
 ## Decision Log
@@ -87,13 +87,29 @@ card; this sprint scopes the existing blob + adds the factual bundle.
 
 ## Ratification Log
 
-_Pending — gate surfaces the regenerated R3 section for owner content sign-off._
+### 2026-06-16 — owner signed off the regenerated R3 section → "ship it"
+Gate regenerated the R3 villain section (Second Best s8) on dev. Independent scan +
+owner review: **0 future-round ghosts** (no "Cottonfield Blues" / "Johnny Lang" /
+forward "last round" / "ghost of Round N"), current-round facts correct, 0 major /
+~2 minor (submitter name dropped in the editorial pivot; "four voters" phrasing),
+genuinely compelling — clears the quality bar. Notable: R3's stored rel-context
+snapshot was *still* contaminated, but the bundle-cite-only prompt discipline
+overrode it — so the fix holds without a snapshot scrub (logged as optional
+follow-up). Owner ratified → shipped v1.3.0.
 
 ## Blockers
 
 _None._
 
 ## Activity Log
+
+### 2026-06-16 — orc — gate: shipped v1.3.0 + closed sprint-35
+- cross-checked all 4 lanes committed (bundle d586ee2, prompt-cite 701d88e, relctx-scope b66ddaf, tests 2a41934); tree clean
+- `npm run check` 0 errors; full `vitest run` 533/533 green
+- backend regenerated the R3 villain section on dev → owner content sign-off (0 ghosts, clears the bar)
+- v1.3.0 + CHANGELOG committed (cd8bb1b); deployed via `docker compose up -d --build bot-ui`; footer `v1.3.0` + `/api/content/leagues` 200 verified on :3002
+- optional follow-up filed: old rel-context snapshots remain contaminated (prompt discipline covers it) — a snapshot scrub is nice-to-have, not required
+- doc `status: closed`
 
 ### 2026-06-16 — backend — tests task complete
 - New `bundle-scope.test.ts` (6 tests): bundle contains only rounds ≤ N, ordered, isCurrent/isPrev flags correct, top3/winner from votes, future-round songs absent
