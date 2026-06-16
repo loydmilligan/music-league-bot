@@ -24,7 +24,7 @@
   // it once the restructured content lands).
   import type { VisualComponentProps } from './variants.js';
 
-  export type ChatMoment = { label?: string; detail?: string };
+  export type ChatMoment = { label?: string; detail?: string; description?: string };
   export type ChatContent = { summary?: string; moments?: ChatMoment[] };
 </script>
 
@@ -41,7 +41,11 @@
   const summary = $derived(c.summary?.trim() ?? '');
   const moments = $derived(
     Array.isArray(c.moments)
-      ? c.moments.filter((m): m is ChatMoment => !!m && (!!m.label || !!m.detail))
+      ? c.moments
+          // Tolerate the LLM emitting a moment's body under `description` (the
+          // renderer reads `detail`) — normalize before filtering.
+          .map((m) => ({ ...m, detail: m?.detail ?? m?.description }) as ChatMoment)
+          .filter((m): m is ChatMoment => !!m && (!!m.label || !!m.detail))
       : [],
   );
 

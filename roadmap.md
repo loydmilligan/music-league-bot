@@ -816,3 +816,40 @@ gaps:
   - "Decide the exact rel-context scoping mechanism in-build: per-round snapshot (digest_drafts.rel_context already exists) vs keying relationship_contexts by (league, round_number). Snapshot is smaller; keyed is cleaner for regen-correctness."
   - "Backfill/regeneration: existing per-league blobs are already future-contaminated — regenerating old rounds needs the scoped path to avoid re-poisoning; may need a one-time reset or per-round reconstruction."
   - "The narrative threads/continuity layer (recurring jokes carried forward) is only minimally touched here; the full accumulating channel is bside-digest-context-channel."
+---
+id: digest-consensus-note-field
+title: "Digest bug: consensus section drops the note (only song shows)"
+stage: analyzed
+effort: small
+source: owner (2026-06-16)
+summary: >-
+  The consensus ("Locked In") section renders only each item's song headline —
+  the per-item explanation text is dropped. Recurs every digest (seen on r-119
+  and the prior digest). Root cause: the LLM emits consensus items as
+  {song, agreement}, but consensusNote() in
+  ui/src/lib/digest/DigestSection.svelte (~line 155) only reads
+  x.note ?? x.detail ?? x.body — never x.agreement — so the note resolves to ''
+  and nothing renders below the song. consensusHeadline() reads x.song fine,
+  hence "only the song data displays." Inline-edit shows the text because the
+  raw content_json does carry the agreement field; it just never reaches render.
+notes: >-
+  One-line fix: add x.agreement to the consensusNote() fallback chain in
+  DigestSection.svelte (consider also pinning the consensus item shape in the
+  prompt / SECTION_DESCRIPTIONS so the key is stable across drafts). Interim
+  (ratified by owner 2026-06-16): finalize the r-119 digest as-is; orc patches
+  the exported HTML by hand (as done for the previous digest). Verify by
+  finalizing a digest with a consensus section and confirming the note renders
+  in both the in-app view and the export.
+  SECOND INSTANCE (same class): chat-section "moments" render title-only when the
+  LLM emits a moment's body under "description" instead of "detail" — ChatMoments
+  reads only "detail" (seen on r-119 "The Digest App Premieres" moment, hand-fixed
+  in the draft content_json). Broaden the fix: make BOTH consensusNote() and the
+  chat ChatMoments renderer tolerant of field-name variation (detail/description/
+  note/body/agreement), and/or pin the item shapes in the prompt.
+  RESOLVED (code) 2026-06-16 — IMPLEMENTED + UI-verified against a prod build:
+  consensusNote() now falls back to x.agreement (DigestSection.svelte); ChatMoments
+  normalizes detail ?? description; SectionInlineEditor generalized to edit ALL
+  top-level string fields (title/summary/…) AND array fields (items/moments/…) —
+  which also fixes chat-section inline edit. svelte-check 0 errors, 35 digest tests
+  pass. Pending the next orc-gated prod deploy to go live; the already-published
+  r-119 share HTML was hand-patched separately so no re-export is needed for it.

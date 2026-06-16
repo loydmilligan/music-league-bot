@@ -142,6 +142,7 @@
     note?: string;
     detail?: string;
     body?: string;
+    agreement?: string;
     supporters?: unknown;
   };
   function consensusHeadline(x: ConsensusItem): string {
@@ -153,7 +154,7 @@
     return '';
   }
   function consensusNote(x: ConsensusItem): string {
-    return x.note ?? x.detail ?? x.body ?? '';
+    return x.note ?? x.detail ?? x.body ?? x.agreement ?? '';
   }
   function isConsensus(x: unknown): x is ConsensusItem {
     return typeof x === 'object' && x !== null;

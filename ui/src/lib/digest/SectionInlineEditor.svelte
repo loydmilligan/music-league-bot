@@ -1,9 +1,11 @@
 <script lang="ts">
   // Non-LLM inline editor (sprint-14 inline-edit-fix). Edits a section's
   // content in place — no LLM call — and emits the rebuilt content object.
-  // Generic over content shape: string fields → text inputs, number fields →
-  // number inputs, other types preserved untouched. Handles title/body and an
-  // items[] of strings or flat objects (podium, quotes, consensus, …).
+  // Generic over content shape: EVERY top-level string field (title, summary,
+  // body, …) becomes a text field and EVERY top-level array field (items,
+  // moments, …) becomes an editable list. Other types are preserved untouched.
+  // This is what lets the chat section ({title, summary, moments[]}) be edited,
+  // not just title/body/items.
   import type { SectionKind } from './llm.js';
 
   type Props = {
@@ -14,14 +16,8 @@
   };
   let { kind, content, onSave, onCancel }: Props = $props();
 
-  type Content = { title?: unknown; body?: unknown; items?: unknown[]; [k: string]: unknown };
-
-  // Deep-ish clone of the starting content into local editable state.
+  type Content = Record<string, unknown>;
   const src = (content ?? {}) as Content;
-  let title = $state(typeof src.title === 'string' ? src.title : '');
-  let hasTitle = $state(typeof src.title === 'string');
-  let body = $state(typeof src.body === 'string' ? src.body : '');
-  let hasBody = $state(typeof src.body === 'string');
 
   // Items: keep originals so we can preserve non-edited fields/types on save.
   type ItemEntry =
@@ -41,8 +37,22 @@
     return { type: 'other', original: item };
   }
 
-  let items = $state<ItemEntry[]>(Array.isArray(src.items) ? src.items.map(toEntry) : []);
-  const hasItems = $derived(Array.isArray(src.items));
+  // One ordered list of editable fields — preserves the content's original key
+  // order (title before items before body, etc.). `title` stays single-line;
+  // every other string field is prose → textarea.
+  type Field =
+    | { kind: 'string'; key: string; value: string; multiline: boolean }
+    | { kind: 'array'; key: string; entries: ItemEntry[] };
+
+  let fields = $state<Field[]>(
+    Object.entries(src).flatMap(([key, v]): Field[] => {
+      if (typeof v === 'string') return [{ kind: 'string', key, value: v, multiline: key !== 'title' }];
+      if (Array.isArray(v)) return [{ kind: 'array', key, entries: v.map(toEntry) }];
+      return [];
+    }),
+  );
+
+  const hasEditable = $derived(fields.length > 0);
 
   function rebuildItem(entry: ItemEntry): unknown {
     if (entry.type === 'string') return entry.value;
@@ -56,10 +66,12 @@
   }
 
   function save() {
+    // Start from the original so non-editable fields/types survive untouched.
     const out: Content = { ...src };
-    if (hasTitle) out.title = title;
-    if (hasBody) out.body = body;
-    if (hasItems) out.items = items.map(rebuildItem);
+    for (const f of fields) {
+      if (f.kind === 'string') out[f.key] = f.value;
+      else out[f.key] = f.entries.map(rebuildItem);
+    }
     onSave(out);
   }
 
@@ -72,49 +84,46 @@
 <div class="dg-inline-editor" role="form" aria-label="Edit section inline" onkeydown={handleKey}>
   <div class="dg-ie-tag">✎ editing inline · no llm · {kind}</div>
 
-  {#if hasTitle}
-    <label class="dg-ie-field">
-      <span class="dg-ie-label">title</span>
-      <input class="dg-ie-input" bind:value={title} />
-    </label>
-  {/if}
+  {#each fields as field (field.key)}
+    {#if field.kind === 'string'}
+      <label class="dg-ie-field">
+        <span class="dg-ie-label">{field.key}</span>
+        {#if field.multiline}
+          <textarea class="dg-ie-textarea" bind:value={field.value}></textarea>
+        {:else}
+          <input class="dg-ie-input" bind:value={field.value} />
+        {/if}
+      </label>
+    {:else}
+      <div class="dg-ie-items">
+        <span class="dg-ie-label">{field.key}</span>
+        {#each field.entries as item, i (i)}
+          <div class="dg-ie-item">
+            {#if item.type === 'string'}
+              <input class="dg-ie-input" bind:value={item.value} />
+            {:else if item.type === 'object'}
+              <div class="dg-ie-objfields">
+                {#each item.fields as f (f.key)}
+                  <label class="dg-ie-field">
+                    <span class="dg-ie-sublabel">{f.key}</span>
+                    {#if f.kind === 'number'}
+                      <input class="dg-ie-input" type="number" bind:value={f.value} />
+                    {:else}
+                      <input class="dg-ie-input" bind:value={f.value} />
+                    {/if}
+                  </label>
+                {/each}
+              </div>
+            {:else}
+              <p class="dg-ie-readonly">(non-text item preserved as-is)</p>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/each}
 
-  {#if hasItems}
-    <div class="dg-ie-items">
-      <span class="dg-ie-label">items</span>
-      {#each items as item, i (i)}
-        <div class="dg-ie-item">
-          {#if item.type === 'string'}
-            <input class="dg-ie-input" bind:value={item.value} />
-          {:else if item.type === 'object'}
-            <div class="dg-ie-objfields">
-              {#each item.fields as f (f.key)}
-                <label class="dg-ie-field">
-                  <span class="dg-ie-sublabel">{f.key}</span>
-                  {#if f.kind === 'number'}
-                    <input class="dg-ie-input" type="number" bind:value={f.value} />
-                  {:else}
-                    <input class="dg-ie-input" bind:value={f.value} />
-                  {/if}
-                </label>
-              {/each}
-            </div>
-          {:else}
-            <p class="dg-ie-readonly">(non-text item preserved as-is)</p>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  {#if hasBody}
-    <label class="dg-ie-field">
-      <span class="dg-ie-label">body</span>
-      <textarea class="dg-ie-textarea" bind:value={body}></textarea>
-    </label>
-  {/if}
-
-  {#if !hasTitle && !hasItems && !hasBody}
+  {#if !hasEditable}
     <p class="dg-ie-readonly">This section has no editable text fields.</p>
   {/if}
 
