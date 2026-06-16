@@ -434,7 +434,12 @@ Never hedge. Never disclaim. Never apologize.
 3. When a song lists MULTIPLE artists, always refer to it by the FIRST listed artist only. Do not invent collaborations or name secondary artists unless the editorial point genuinely requires it.
 
 # Chronology — respect round order:
-You are told the current round's sequence number in the season and the rounds that came before it. Only rounds BEFORE the current one have happened. "Last round" means the immediately preceding round by sequence — never a later one. Never reference events from rounds that come after the current round.
+You are given a verified Cross-round record listing every prior round with actual outcomes (winner, top songs, least-loved song). This record is THE ONLY permitted source for cross-round factual claims:
+1. All callbacks, "last round" references, and recurring storylines must cite only songs, submitters, and outcomes that appear in the Cross-round record.
+2. Do not name songs, submitters, or outcomes from other rounds unless they appear in the record.
+3. "Last round" means the immediately preceding round in the record — never a later one.
+4. Never reference rounds not in the record (i.e., rounds that come after the current one).
+The Relationship context section that follows provides personality and tone — it is NOT a source of cross-round facts.
 
 You output ONE JSON object with this exact shape:
 
@@ -480,22 +485,47 @@ export function buildUserPrompt(
   parts.push(`# Round\n${data.round.name}${data.round.description ? ` — ${data.round.description}` : ''}`);
   parts.push(`League: ${data.league.name}`);
 
-  // Chronology block — anchor "last round" and forbid forward references.
+  // Chronology + cross-round factual bundle (sprint-35 prompt-cite).
+  // The bundle is the single source of cross-round facts; relContext is personality only.
   const seq = data.roundSequence;
-  parts.push(
-    `\n# Round chronology\nThis is round ${seq.number} of ${seq.total} in the season.`,
-  );
-  if (data.priorRounds.length) {
-    parts.push('Rounds that have already happened (in order):');
-    for (const pr of data.priorRounds) parts.push(`- Round ${pr.number}: ${pr.name}`);
-    const last = data.priorRounds[data.priorRounds.length - 1];
-    parts.push(`"Last round" = Round ${last.number}: ${last.name}. Do not reference any round after round ${seq.number}.`);
+  const priorBundle = data.bundle.filter(e => !e.isCurrent);
+  parts.push(`\n# Round chronology\nThis is round ${seq.number} of ${seq.total} in the season.`);
+
+  if (priorBundle.length) {
+    parts.push(
+      '\n## Cross-round record — THE ONLY SOURCE of cross-round facts\n' +
+      'Every prior round is listed with verified outcomes. ' +
+      'All callbacks, "last round" references, and recurring storylines MUST cite only what appears here. ' +
+      'Do not name songs, submitters, or outcomes from rounds not in this record.',
+    );
+    for (const e of priorBundle) {
+      const tag = e.isPrev ? ' [last round]' : '';
+      const topLine = e.top3.length
+        ? e.top3.map(s => `${s.submitter ? `${s.submitter}: ` : ''}"${s.song}" (${s.points} pts)`).join(', ')
+        : '—';
+      const botLine = e.bottom1
+        ? `${e.bottom1.submitter ? `${e.bottom1.submitter}: ` : ''}"${e.bottom1.song}" (${e.bottom1.points} pts)`
+        : '—';
+      parts.push(
+        `Round ${e.round_number}: ${e.name}${tag}\n` +
+        `  Winner: ${e.winner ?? '—'}\n` +
+        `  Top 3: ${topLine}\n` +
+        `  Least-loved: ${botLine}`,
+      );
+    }
+    const last = priorBundle[priorBundle.length - 1];
+    parts.push(`"Last round" = Round ${last.round_number}: ${last.name}. Do not reference any round after round ${seq.number}.`);
   } else {
     parts.push('This is the FIRST round of the season — there is no "last round" to reference.');
   }
 
   if (data.relContext.trim()) {
-    parts.push(`\n# Relationship context (people, history, recurring jokes)\n${data.relContext.trim()}`);
+    parts.push(
+      `\n# Relationship context (people, personality, recurring jokes)\n` +
+      `NOTE: This is personality and tone context only — NOT a source of cross-round facts.\n` +
+      `For cross-round facts (who won what, which song placed where), use the Cross-round record above.\n` +
+      data.relContext.trim(),
+    );
   }
 
   parts.push(`\n# Submissions (${data.submissions.length}) — sorted by vote_total desc`);

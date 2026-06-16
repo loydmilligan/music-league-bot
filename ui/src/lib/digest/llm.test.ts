@@ -68,8 +68,23 @@ describe('user prompt — chronology', () => {
     expect(p).toMatch(/Do not reference any round after round 3/);
   });
   it('notes a first round has no prior round', () => {
-    const p = buildUserPrompt(mkData({ roundSequence: { number: 1, total: 5 }, priorRounds: [] }));
+    const p = buildUserPrompt(mkData({
+      roundSequence: { number: 1, total: 5 },
+      priorRounds: [],
+      bundle: [mkBundleEntry(1, 'Department of Education', { isCurrent: true })],
+    }));
     expect(p).toMatch(/FIRST round of the season/);
+  });
+  it('presents the cross-round record as the only fact source', () => {
+    const p = buildUserPrompt(mkData());
+    expect(p).toMatch(/Cross-round record/);
+    expect(p).toMatch(/ONLY SOURCE of cross-round facts/);
+  });
+  it('flags relContext as personality context, not cross-round facts', () => {
+    const p = buildUserPrompt(mkData({ relContext: 'Alice loves 80s bangers' }));
+    expect(p).toMatch(/personality and tone context only/i);
+    expect(p).toMatch(/NOT a source of cross-round facts/i);
+    expect(p).toMatch(/Alice loves 80s bangers/);
   });
 });
 
