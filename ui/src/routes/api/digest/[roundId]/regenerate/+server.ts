@@ -38,7 +38,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const chips = Array.isArray(body.chips) ? body.chips : [];
   const instructions = typeof body.instructions === 'string' ? body.instructions : '';
 
-  const data = gatherRoundData(db, roundId);
+  // Use the draft's rel_context snapshot so regen of an old round never injects
+  // narrative from rounds that came after it (sprint-35 relctx-scope).
+  const data = gatherRoundData(db, roundId, { relContextOverride: draft.rel_context });
 
   // sprint-21: keep recap mode on whole-draft regen (inherited from the draft).
   const recapEnabled = !!(draft as { recap_enabled?: number }).recap_enabled;

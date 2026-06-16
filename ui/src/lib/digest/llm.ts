@@ -84,7 +84,11 @@ export interface GenParams {
   recap?: RecapParams;
 }
 
-export function gatherRoundData(db: Database.Database, roundId: number): RoundData {
+export function gatherRoundData(
+  db: Database.Database,
+  roundId: number,
+  opts?: { relContextOverride?: string },
+): RoundData {
   const round = db
     .prepare(
       `SELECT r.id, r.name, r.description, r.season_id, s.league_id, l.name AS league_name
@@ -216,9 +220,11 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     )
     .all(roundId) as { sender: string; raw_message: string; captured_at: string }[];
 
-  const relRow = db
-    .prepare('SELECT text FROM relationship_contexts WHERE league_id = ?')
-    .get(round.league_id) as { text: string } | undefined;
+  // For regen of an existing round, callers pass the era-correct snapshot via
+  // relContextOverride (sprint-35 relctx-scope). First-gen uses the live blob.
+  const resolvedRelContext = opts?.relContextOverride !== undefined
+    ? opts.relContextOverride
+    : (db.prepare('SELECT text FROM relationship_contexts WHERE league_id = ?').get(round.league_id) as { text: string } | undefined)?.text ?? '';
 
   return {
     round: { id: round.id, name: round.name, description: round.description },
@@ -238,7 +244,7 @@ export function gatherRoundData(db: Database.Database, roundId: number): RoundDa
     })),
     votes: voteRows.map(v => ({ voter: v.voter, song: v.song, points: v.points, comment: v.comment })),
     chatMentions: chatRows,
-    relContext: relRow?.text ?? '',
+    relContext: resolvedRelContext,
   };
 }
 

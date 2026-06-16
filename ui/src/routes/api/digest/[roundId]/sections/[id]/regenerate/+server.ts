@@ -22,12 +22,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const db = getDb();
   const section = db
     .prepare(
-      `SELECT s.*, d.recap_enabled AS recap_enabled, d.recap_final AS recap_final
+      `SELECT s.*, d.recap_enabled AS recap_enabled, d.recap_final AS recap_final,
+              d.rel_context AS draft_rel_context
        FROM digest_sections s
        JOIN digest_drafts d ON d.id = s.draft_id
        WHERE s.id = ? AND d.round_id = ?`,
     )
-    .get(sectionId, roundId) as (DigestSectionRow & { recap_enabled: number; recap_final: number }) | undefined;
+    .get(sectionId, roundId) as (DigestSectionRow & { recap_enabled: number; recap_final: number; draft_rel_context: string }) | undefined;
   if (!section) throw error(404, `section not found: ${sectionId}`);
   if (section.state === 'locked') throw error(400, 'section is locked');
   if (section.state === 'excluded') throw error(400, 'section is excluded');
@@ -36,7 +37,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const chips = Array.isArray(body.chips) ? body.chips : [];
   const instructions = typeof body.instructions === 'string' ? body.instructions : '';
 
-  const data = gatherRoundData(db, roundId);
+  // Use the draft's rel_context snapshot so regen of an old round never injects
+  // narrative from rounds that came after it (sprint-35 relctx-scope).
+  const data = gatherRoundData(db, roundId, { relContextOverride: section.draft_rel_context });
   const priorContent = JSON.parse(section.content_json);
 
   // sprint-21: regen a recap-mode section with its season slice + recap framing,
