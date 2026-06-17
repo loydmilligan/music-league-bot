@@ -1,5 +1,5 @@
 ---
-status: active
+status: closed
 campaign: bside-season-awareness
 sprint: S1
 created: 2026-06-16
@@ -37,39 +37,39 @@ Two file-disjoint lanes: a lean digest→read-model context channel, and the sea
 ## Active Sprint Plan
 
 <!-- Task syntax (parser contract):
-     - [ ] {agent: <roster>, id: <slug>, depends: <id,id>} Body
+     - [x] {agent: <roster>, id: <slug>, depends: <id,id>} Body
        - **Acceptance:** verifiable check.
      Status marks: [ ] pending · [-] in-progress · [x] done · [!] blocked.
      Full step-by-step code lives in the plan doc; tasks below mirror its Task numbers. -->
 
-- [ ] {agent: backend, id: channel-schema} **Plan Task 1 — `archive_context` column.** Add nullable `archive_context TEXT` to `digest_drafts` (schema.ts) + additive ALTER-TABLE migration in client.ts (follow the `phase`-column pattern).
+- [x] {agent: backend, id: channel-schema} **Plan Task 1 — `archive_context` column.** Add nullable `archive_context TEXT` to `digest_drafts` (schema.ts) + additive ALTER-TABLE migration in client.ts (follow the `phase`-column pattern).
   - **Acceptance:** existing `vitest run src/lib/digest` green (migration idempotent on `:memory:` DBs); committed path-scoped.
 
-- [ ] {agent: backend, id: channel-capture, depends: channel-schema} **Plan Task 2 — capture + reader.** Create `$lib/digest/archiveContext.ts` (`buildArchiveContext` + `getArchiveContext`), wire `buildArchiveContext` into `writeDraft` in `llm.ts`.
+- [x] {agent: backend, id: channel-capture, depends: channel-schema} **Plan Task 2 — capture + reader.** Create `$lib/digest/archiveContext.ts` (`buildArchiveContext` + `getArchiveContext`), wire `buildArchiveContext` into `writeDraft` in `llm.ts`.
   - **Acceptance:** `vitest run src/lib/digest/archiveContext.test.ts` green (3 tests); digest suite still green; committed path-scoped.
 
-- [ ] {agent: frontend, id: timeline} **Plan Task 3 — season timeline assembler.** Create `$lib/dashboard/seasonTimeline.ts` + test (per-round standings via `computeStandings`, per-round tastemaker via `getDiscoverability`, vote pairs). Export `getActiveSeasonId` from `activeRound.ts` if needed (additive).
+- [x] {agent: frontend, id: timeline} **Plan Task 3 — season timeline assembler.** Create `$lib/dashboard/seasonTimeline.ts` + test (per-round standings via `computeStandings`, per-round tastemaker via `getDiscoverability`, vote pairs). Export `getActiveSeasonId` from `activeRound.ts` if needed (additive).
   - **Acceptance:** `vitest run src/lib/dashboard/seasonTimeline.test.ts` green (2 tests); committed path-scoped.
 
-- [ ] {agent: frontend, id: signals-movers, depends: timeline} **Plan Task 4 — signals types + movers.** Create `$lib/dashboard/seasonSignals.ts` + test (bigMover / faller).
+- [x] {agent: frontend, id: signals-movers, depends: timeline} **Plan Task 4 — signals types + movers.** Create `$lib/dashboard/seasonSignals.ts` + test (bigMover / faller).
   - **Acceptance:** `vitest run src/lib/dashboard/seasonSignals.test.ts` green (movers); committed.
 
-- [ ] {agent: frontend, id: signals-streaks, depends: signals-movers} **Plan Task 5 — streaks.**
+- [x] {agent: frontend, id: signals-streaks, depends: signals-movers} **Plan Task 5 — streaks.**
   - **Acceptance:** streaks tests green; committed.
 
-- [ ] {agent: frontend, id: signals-discovery, depends: signals-streaks} **Plan Task 6 — discovery shifts.**
+- [x] {agent: frontend, id: signals-discovery, depends: signals-streaks} **Plan Task 6 — discovery shifts.**
   - **Acceptance:** discoveryShifts tests green; committed.
 
-- [ ] {agent: frontend, id: signals-rivalries, depends: signals-discovery} **Plan Task 7 — reciprocal-downvote rivalries** (spot-trading deferred to S2 if needed — log it, don't silently drop).
+- [x] {agent: frontend, id: signals-rivalries, depends: signals-discovery} **Plan Task 7 — reciprocal-downvote rivalries** (spot-trading deferred to S2 if needed — log it, don't silently drop).
   - **Acceptance:** rivalries tests green; committed.
 
-- [ ] {agent: frontend, id: signals-tension, depends: signals-rivalries} **Plan Task 8 — upcoming tension + `computeSeasonSignalsForLeague` DB entry point.**
+- [x] {agent: frontend, id: signals-tension, depends: signals-rivalries} **Plan Task 8 — upcoming tension + `computeSeasonSignalsForLeague` DB entry point.**
   - **Acceptance:** full `seasonSignals.test.ts` green; committed.
 
-- [ ] {agent: frontend, id: signals-integration, depends: signals-tension} **Plan Task 9 — DB-backed integration test.** `seasonSignals.integration.test.ts`.
+- [x] {agent: frontend, id: signals-integration, depends: signals-tension} **Plan Task 9 — DB-backed integration test.** `seasonSignals.integration.test.ts`.
   - **Acceptance:** integration test green; committed.
 
-- [ ] {agent: orc, id: gate, depends: channel-capture,signals-integration} **Gate.** Cross-check both lanes committed (tree clean, path-scoped); run the single full `npm run check` (0 errors) + `vitest run` (all green); report per-lane; mark S1 done. No deploy (no user-facing surface).
+- [x] {agent: orc, id: gate, depends: channel-capture,signals-integration} **Gate.** Cross-check both lanes committed (tree clean, path-scoped); run the single full `npm run check` (0 errors) + `vitest run` (all green); report per-lane; mark S1 done. No deploy (no user-facing surface).
   - **Acceptance:** 0 typecheck errors; full vitest green; both lanes' commits listed; doc → `status: closed`; S2 readiness noted.
 
 ## Decision Log
@@ -112,3 +112,10 @@ _None._
 - T8 `36261c1`: upcoming tension + `computeSeasonSignalsForLeague` DB entry point + test; 7 tests green.
 - T9 `309de56`: DB-backed integration test (`seasonSignals.integration.test.ts`); full dashboard suite 124/124 green.
 - Lane B files: `dashboard/seasonTimeline.ts`, `dashboard/seasonTimeline.test.ts`, `dashboard/seasonSignals.ts`, `dashboard/seasonSignals.test.ts`, `dashboard/seasonSignals.integration.test.ts` only. No schema/client/digest touches.
+
+### 2026-06-16 — orc — GATE passed · S1 closed
+- Both lanes committed on a clean tree, path-scoped + in-lane (Lane A: 734ded8, c684924 = db + digest only; Lane B: 9b48ac7, f19e763, f3a9b6c, f9c075a, 385ea0e, 36261c1, 309de56 = dashboard/ only).
+- Full `npm run check`: **0 errors** (814 files). Full `vitest run`: **546/546 green** (59 files).
+- Deliverable: `computeSeasonSignalsForLeague(db, leagueId)` (movers/streaks/discovery-shifts/reciprocal-downvote rivalries/upcoming tension) + the lean `digest_drafts.archive_context` channel. UI-free, LLM-free, fully unit-tested.
+- No deploy (no user-facing surface). **S2 readiness:** narration task + read-model `seasonUpdate` wiring + the below-standings UI section + snark dial can now build on this backbone.
+- S2 carry-overs (logged, not dropped): spot-trading rivalry detection (deferred from T7), chat-barb signal (LLM-assisted), punching-bag guard (history-dependent).
