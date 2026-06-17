@@ -290,7 +290,8 @@ id: bside-season-round-truth
 title: b-side — Season & Round Truth (current / prev / next)
 stage: analyzed
 effort: large
-campaign: the-b-side-polish
+campaign: bside-season-awareness
+sprint: S1
 source: owner-uat
 summary: >-
   The recurring sitewide problem, felt sharply on the b-side: the app can't
@@ -307,7 +308,7 @@ id: bside-season-lens
 title: b-side — Season Lens (current-season vs all-time)
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Make "which seasons does this b-side cover" an explicit, labeled product choice
@@ -322,7 +323,7 @@ id: bside-superlatives-curation
 title: b-side — Superlative Curation & Snark Control
 stage: analyzed
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Fewer, better, operator-curated superlatives. (1) Configurable count on the
@@ -339,7 +340,7 @@ id: bside-superlative-visual-identity
 title: b-side — Superlative Card Visual Identity
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   The award cards look a touch amateur. (1) Replace the clip-art trophy icon with
@@ -352,7 +353,7 @@ id: bside-llm-avatars
 title: b-side — LLM-Generated (Themed) Player Avatars
 stage: idea
 effort: large
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Supersedes/expands the existing "add avatars" intent. Beyond static uploads: (1)
@@ -366,7 +367,7 @@ id: bside-member-grid-richness
 title: b-side — Richer Member Grid Cards
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Make "The Family" grid more visual and information-dense: more concise per-member
@@ -377,7 +378,7 @@ id: bside-mobile-card-rows
 title: b-side — Mobile Card-Row UX (fade / carousel)
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Recurring mobile issue on the horizontally-scrolling rows (the "Season so far"
@@ -391,7 +392,7 @@ id: bside-moments-chat-mined
 title: b-side — Moments from Chat + Editor Pass
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Upgrade "Moments of the season" content. (1) Mine the league's WhatsApp/group
@@ -405,7 +406,7 @@ id: bside-voice-snark-tuning
 title: b-side — Voice / Snark Tuning (loosen no-strife)
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   The hard no-strife constraint may be too strict — owner notes the snarky,
@@ -418,7 +419,7 @@ id: bside-fan-hater-overlap-normalization
 title: b-side — Fan/Hater & Overlap Normalization (averages)
 stage: analyzed
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Fix tenure skew in Biggest Fan / Friendly Hater and "Your People". Use AVERAGE
@@ -432,7 +433,7 @@ id: bside-real-audio-fingerprint
 title: b-side — Real-Audio Taste Fingerprint Sliders
 stage: analyzed
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Replace the LLM-derived spectrum sliders (Polished↔Raw, Sunny↔Melancholy,
@@ -444,7 +445,7 @@ id: bside-discovery-playlist-link
 title: b-side — Real, Linkable Discovery Playlist
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Turn the per-player discovery playlist from a text list into an actual playlist
@@ -456,7 +457,7 @@ id: bside-age-field-save-bug
 title: "b-side — Bug: setup-screen age field not saving"
 stage: analyzed
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   Spotted during UAT — the player Age field on the setup screen does not persist.
@@ -467,7 +468,7 @@ id: bside-update-diff-preview
 title: b-side — Per-Section Update Diff Preview
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   In the operator update modal, show a before/after preview for each section the
@@ -479,7 +480,7 @@ id: bside-content-lint
 title: b-side — Pre-Publish Content Lint
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   A pre-publish QA pass that flags likely content problems before a b-side goes
@@ -492,7 +493,7 @@ id: bside-degenerate-state-handling
 title: b-side — Graceful Empty / Sparse States
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Robust handling for sparse/degenerate data so sections hide or show a tasteful
@@ -505,7 +506,7 @@ id: bside-read-model-provenance
 title: b-side — Read-Model Provenance & Freshness
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Make it obvious (to viewers and the operator) what each b-side reflects and how
@@ -515,9 +516,10 @@ summary: >-
 ---
 id: bside-returning-visitor-diff
 title: b-side — "What's New This Round" Banner
-stage: idea
+stage: planned
 effort: small
-campaign: the-b-side-polish
+campaign: bside-season-awareness
+sprint: S2
 source: orc-proposal
 summary: >-
   When a b-side updates, show returning visitors what changed this round — the new
@@ -529,7 +531,7 @@ id: bside-share-card-og-meta
 title: b-side — Share-Card Polish + OG/Unfurl Meta
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Make the unguessable link unfurl nicely when dropped in a chat — Open Graph /
@@ -541,7 +543,7 @@ id: bside-semantic-accent-system
 title: b-side — Site-Wide Semantic Accent System
 stage: idea
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Generalizes the owner's "give colors meaning" idea (bside-superlative-visual-identity)
@@ -553,7 +555,7 @@ id: bside-playlist-audio-integration
 title: b-side — Playlist + Inline Audio Previews
 stage: idea
 effort: medium
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: orc-proposal
 summary: >-
   Make the discovery playlist (and archive picks) playable inline — tie into the
@@ -565,7 +567,7 @@ id: bside-force-check-new-digests
 title: b-side — Manual "Check for New Digests" / Force Refresh
 stage: analyzed
 effort: small
-campaign: the-b-side-polish
+theme: the-b-side-polish
 source: owner-uat
 summary: >-
   An explicit operator affordance on the Content → Archive screen to force a
@@ -580,7 +582,8 @@ id: bside-digest-context-channel
 title: b-side — Digest → Read-Model Context Channel
 stage: analyzed
 effort: large
-campaign: the-b-side-polish
+campaign: bside-season-awareness
+sprint: S1
 source: owner-uat
 summary: >-
   Today the b-side read-model derives ENTIRELY from structured vote/submission data
@@ -597,9 +600,10 @@ summary: >-
 ---
 id: bside-temporal-aware-generation
 title: b-side — Sequence-Aware (Temporal) Generation
-stage: idea
+stage: planned
 effort: large
-campaign: the-b-side-polish
+campaign: bside-season-awareness
+sprint: S2
 source: owner-uat
 summary: >-
   The read-model currently treats the season as an unordered bag — generators get
@@ -853,3 +857,26 @@ notes: >-
   which also fixes chat-section inline edit. svelte-check 0 errors, 35 digest tests
   pass. Pending the next orc-gated prod deploy to go live; the already-published
   r-119 share HTML was hand-patched separately so no re-export is needed for it.
+---
+id: bside-season-update-section
+title: b-side — Season-Update section (season pulse)
+stage: analyzed
+effort: medium
+campaign: bside-season-awareness
+sprint: S2
+source: owner (2026-06-16)
+summary: >-
+  New regenerated-wholesale "season pulse" block on the b-side, placed BELOW the
+  standings: an editorial read of what stands out about the season as of the latest
+  digest — surging/falling players (standings deltas + multi-week streaks),
+  discovery-behavior shifts (tastemaker obscure<->radio drift), rivalries (reciprocal
+  downvotes — deterministic in our data — spot-trading, chat barbs), and the tension
+  into the next round. A deterministic season-signals engine computes the facts in
+  code; the LLM only narrates them (no hallucinated movement). Voice: funny/fact-based
+  strife, never cruel; safe targets (Matt/Mara/Jordan); punching-bag guard; operator
+  snark dial (default medium); forward-look may name artists but NOT songs. Regenerates
+  on every b-side update; stores the narrative + a SeasonSignals snapshot. Capstone of
+  the bside-season-awareness campaign (S2); consumes the S1 temporal read-model +
+  season-signals engine + lean digest channel. Folds in bside-returning-visitor-diff
+  ("what's new") as the section lede. Design:
+  docs/superpowers/specs/2026-06-16-bside-season-awareness-design.md.
