@@ -26,6 +26,8 @@ export interface SeasonSignals {
   discoveryShifts: DiscoveryShiftSignal[];
   rivalries: RivalrySignal[];
   upcomingTension: UpcomingTension | null;
+  /** Players negatively spotlit this update (faller + rivalry participants). Used to suppress repeat pile-on in narration. */
+  punchingBagGuard: string[];
 }
 
 export interface SeasonSignalsOpts {
@@ -135,6 +137,54 @@ function computeRivalries(t: SeasonTimeline): RivalrySignal[] {
       detail: `traded downvotes across ${allRounds.length} round(s)`,
     });
   }
+
+  // Spot-trading: pairs who flip rank order (A above B → B above A) across ≥2 round boundaries.
+  const ranksByPlayer = new Map<string, Map<number, number>>(); // player → roundNumber → rank
+  for (const snap of t.standingsByRound) {
+    for (const s of snap.standings) {
+      if (!ranksByPlayer.has(s.name)) ranksByPlayer.set(s.name, new Map());
+      ranksByPlayer.get(s.name)!.set(snap.roundNumber, s.rank);
+    }
+  }
+  const players = [...ranksByPlayer.keys()];
+  const seenST = new Set<string>();
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const a = players[i], b = players[j];
+      const ranksA = ranksByPlayer.get(a)!;
+      const ranksB = ranksByPlayer.get(b)!;
+      const sharedRounds = t.standingsByRound
+        .map(s => s.roundNumber)
+        .filter(rn => ranksA.has(rn) && ranksB.has(rn))
+        .sort((x, y) => x - y);
+      if (sharedRounds.length < 2) continue;
+      let swaps = 0;
+      const swapRounds: number[] = [];
+      for (let k = 1; k < sharedRounds.length; k++) {
+        const rPrev = sharedRounds[k - 1];
+        const rCurr = sharedRounds[k];
+        const aWasBefore = ranksA.get(rPrev)! < ranksB.get(rPrev)!; // lower rank = better
+        const aIsBefore  = ranksA.get(rCurr)! < ranksB.get(rCurr)!;
+        if (aWasBefore !== aIsBefore) {
+          swaps++;
+          if (!swapRounds.includes(rPrev)) swapRounds.push(rPrev);
+          swapRounds.push(rCurr);
+        }
+      }
+      if (swaps < 2) continue;
+      const key = pairKey(a, b);
+      if (seenST.has(key)) continue;
+      seenST.add(key);
+      const uniqueSwapRounds = [...new Set(swapRounds)].sort((x, y) => x - y);
+      out.push({
+        kind: 'spot-trading',
+        players: [a, b].sort() as [string, string],
+        rounds: uniqueSwapRounds,
+        detail: `swapped standings position ${swaps} time(s)`,
+      });
+    }
+  }
+
   return out;
 }
 
@@ -153,13 +203,17 @@ function computeUpcomingTension(
 export function computeSeasonSignals(t: SeasonTimeline, opts: SeasonSignalsOpts = {}): SeasonSignals {
   const latest = t.standingsByRound[t.standingsByRound.length - 1];
   const { bigMover, faller } = computeMovers(t);
+  const rivalries = computeRivalries(t);
+  const rivalryPlayers = [...new Set(rivalries.flatMap(r => r.players))];
+  const punchingBagGuard = [...new Set([...(faller ? [faller.player] : []), ...rivalryPlayers])];
   return {
     asOfRound: latest ? { roundNumber: latest.roundNumber, name: latest.name } : null,
     bigMover, faller,
     streaks: computeStreaks(t),
     discoveryShifts: computeDiscoveryShifts(t),
-    rivalries: computeRivalries(t),
+    rivalries,
     upcomingTension: computeUpcomingTension(t, opts.nextRound ?? null),
+    punchingBagGuard,
   };
 }
 

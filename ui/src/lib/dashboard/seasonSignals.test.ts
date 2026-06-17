@@ -111,6 +111,56 @@ describe('rivalries', () => {
     expect([...r!.players].sort()).toEqual(['A', 'B']);
     expect(r!.rounds.sort()).toEqual([1, 2]);
   });
+
+  it('detects a spot-trading pair (A>B then B>A then A>B = 2 swaps)', () => {
+    const t = timeline([
+      snap(1, 'R1', [['A', 1, 0, 9, 9, null], ['B', 2, 0, 5, 5, null]]),
+      snap(2, 'R2', [['B', 1, 5, 9, 14, 2], ['A', 2, 9, 1, 10, 1]]),
+      snap(3, 'R3', [['A', 1, 10, 9, 19, 2], ['B', 2, 14, 1, 15, 1]]),
+    ]);
+    const r = computeSeasonSignals(t).rivalries.find(x => x.kind === 'spot-trading');
+    expect(r).toBeTruthy();
+    expect([...r!.players].sort()).toEqual(['A', 'B']);
+  });
+
+  it('does not flag spot-trading with only one swap', () => {
+    const t = timeline([
+      snap(1, 'R1', [['A', 1, 0, 9, 9, null], ['B', 2, 0, 5, 5, null]]),
+      snap(2, 'R2', [['B', 1, 5, 9, 14, 2], ['A', 2, 9, 1, 10, 1]]),
+    ]);
+    expect(computeSeasonSignals(t).rivalries.filter(r => r.kind === 'spot-trading')).toHaveLength(0);
+  });
+});
+
+describe('punchingBagGuard', () => {
+  it('includes the faller in punchingBagGuard', () => {
+    const t = timeline([
+      snap(1, 'R1', [['A', 1, 0, 9, 9, null], ['B', 2, 0, 5, 5, null]]),
+      snap(2, 'R2', [['B', 1, 5, 9, 14, 2], ['A', 2, 9, 0, 9, 1]]),
+    ]);
+    expect(computeSeasonSignals(t).punchingBagGuard).toContain('A');
+  });
+
+  it('includes rivalry participants in punchingBagGuard', () => {
+    const t: SeasonTimeline = {
+      leagueId: 1, seasonId: 1,
+      rounds: [{ roundId: 1, roundNumber: 1, name: 'R1' }, { roundId: 2, roundNumber: 2, name: 'R2' }],
+      standingsByRound: [snap(1, 'R1', [['A', 1, 0, 5, 5, null]])],
+      tastemakerByRound: new Map(),
+      votePairs: [
+        { voterId: 1, voterName: 'A', targetId: 2, targetName: 'B', roundId: 1, roundNumber: 1, points: -1, song: 'b1' },
+        { voterId: 2, voterName: 'B', targetId: 1, targetName: 'A', roundId: 2, roundNumber: 2, points: -1, song: 'a2' },
+      ],
+    };
+    const guard = computeSeasonSignals(t).punchingBagGuard;
+    expect(guard).toContain('A');
+    expect(guard).toContain('B');
+  });
+
+  it('returns empty punchingBagGuard when no faller and no rivalries', () => {
+    const t = timeline([snap(1, 'R1', [['A', 1, 0, 5, 5, null]])]);
+    expect(computeSeasonSignals(t).punchingBagGuard).toEqual([]);
+  });
 });
 
 describe('upcomingTension', () => {
