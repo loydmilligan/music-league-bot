@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
+import { buildArchiveContext } from './archiveContext.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -705,10 +706,11 @@ export function writeDraft(
   const recapFinal = genParams?.recap?.final === false ? 0 : 1;
 
   const tx = db.transaction(() => {
+    const archiveContext = JSON.stringify(buildArchiveContext(genParams, output));
     db.prepare(
-      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal);
+      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final, archive_context)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal, archiveContext);
 
     // Only persist enabled + content-available sections; position is dense.
     // Recap mode: chat depends on pasted text only (no season chat-mentions).
