@@ -89,3 +89,26 @@ describe('discoveryShifts', () => {
     expect(shift?.direction).toBe('went-safe');
   });
 });
+
+function tlWithPairs(pairs: import('./seasonTimeline.js').VotePair[]): import('./seasonTimeline.js').SeasonTimeline {
+  return {
+    leagueId: 1, seasonId: 1,
+    rounds: [{ roundId: 1, roundNumber: 1, name: 'R1' }, { roundId: 2, roundNumber: 2, name: 'R2' }],
+    standingsByRound: [snap(1, 'R1', [['A', 1, 0, 5, 5, null]])],
+    tastemakerByRound: new Map(), votePairs: pairs,
+  };
+}
+
+describe('rivalries', () => {
+  it('detects a reciprocal downvote pair', () => {
+    const sig = computeSeasonSignals(tlWithPairs([
+      { voterId: 1, voterName: 'A', targetId: 2, targetName: 'B', roundId: 1, roundNumber: 1, points: -1, song: 'b1' },
+      { voterId: 2, voterName: 'B', targetId: 1, targetName: 'A', roundId: 2, roundNumber: 2, points: -1, song: 'a2' },
+      { voterId: 3, voterName: 'C', targetId: 1, targetName: 'A', roundId: 1, roundNumber: 1, points: 3, song: 'a1' },
+    ]));
+    const r = sig.rivalries.find(x => x.kind === 'reciprocal-downvote');
+    expect(r).toBeTruthy();
+    expect([...r!.players].sort()).toEqual(['A', 'B']);
+    expect(r!.rounds.sort()).toEqual([1, 2]);
+  });
+});
