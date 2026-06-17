@@ -116,6 +116,42 @@ showing how many are overridden), a compact table with inline selects, or progre
 from Q2/Q3 are the *decision aid* a user consults before pinning here — note any natural link (e.g. a
 "compare models for this section" affordance) if it's cheap.
 
+### Q6 — (backend / data design, not a mockup) Future-proof the ledger schema
+One extra question, more backend than UI — answer in writing, no mockup. The sprint-1 ledger
+(`llm_cost_log`) is the data spine for everything cost-related, and we know what's coming next: we
+eventually want a **quality metric** feeding an **evaluator + content-improvement engine** — score
+generated content, learn which prompts / models / sections produce the best output, and close that loop
+back into generation. Knowing that's on the horizon:
+
+**Review our planned ledger and suggest any schema / design changes worth including NOW that would make
+that future quality + evaluation work meaningfully easier — without over-building v1.** We'd rather add
+a cheap column or an id/foreign-key today than do a painful backfill later; equally, tell us what to
+*not* add yet (YAGNI).
+
+Planned `llm_cost_log` — one row per OpenRouter call:
+```
+id, created_at, model, prompt_tokens, completion_tokens, total_tokens,
+cost_usd, latency_ms, category ('digest' | 'archive' | 'predict'),
+label   (e.g. 'digest:podium', 'archive:season-update', 'predict:vote-probe'),
+league_id, round_id
+```
+Instrumentation: a single `callOpenRouter` writes the row, given `meta = { category, label, leagueId?,
+roundId? }`. Today the row records the **cost/usage of a call** but does NOT link to the generated
+artifact, the prompt, or any outcome. React to these (and raise your own):
+- Should each row carry a stable **call/run id** and/or a link to the **artifact it produced** (the
+  digest draft id, the b-side section, the `prediction_runs` row) so a future quality score can be joined
+  back to the exact generation?
+- Is **`label` as a free string** enough, or do we want structured columns (e.g. `surface` + `section` +
+  `task_id`) so we can group/evaluate by section cleanly later?
+- Should we capture a **prompt / version identifier** (or prompt hash) so quality can be attributed to a
+  prompt revision, not just a model?
+- Anything about **storing or pointing at the output** (or a content hash) so an evaluator has something
+  to score without re-deriving it?
+- Where should a future **quality score** live — extra nullable columns here, or a separate `llm_eval`
+  table keyed by call id? Recommend the shape.
+
+Deliver a written recommendation: a revised schema sketch + a short "add now / defer" list with reasons.
+
 ---
 
 ## 5. Our thinking on the KPIs + the quality problem (please push back)
@@ -143,7 +179,10 @@ set or a smarter quality proxy would make the comparison/score visuals more usef
 
 ## 6. Deliverable
 
-For Q1–Q3, Q5 (and optional Q4), 2–3 Mash Co HTML mockups each, with a one-line rationale + trade-off per
-option, sized for 412px and desktop, using the ledger data shapes in §2 (mock data is fine). The owner
-selects per question; the Q1–Q4 winners feed the **sprint-40** dashboard build and the Q5 winner feeds
-the **sprint-41** per-section panel.
+For the **UI questions (Q1–Q3, Q5, and optional Q4)**: 2–3 Mash Co HTML mockups each, with a one-line
+rationale + trade-off per option, sized for 412px and desktop, using the ledger data shapes in §2 (mock
+data is fine). The owner selects per question; the Q1–Q4 winners feed the **sprint-40** dashboard build
+and the Q5 winner feeds the **sprint-41** per-section panel.
+
+For the **backend question (Q6)**: a written recommendation — a revised `llm_cost_log` schema sketch plus
+an "add now / defer" list with reasons. This may adjust the **sprint-39** ledger before it's built.
