@@ -40,8 +40,17 @@ export const DELETE: RequestHandler = async ({ params }) => {
   if (isNaN(id)) throw error(400, 'invalid id');
 
   const db = getDb();
-  const deleted = deleteModel(db, id);
-  if (!deleted) throw error(404, 'not found');
+  const row = getModelById(db, id);
+  if (!row) throw error(404, 'not found');
+
+  deleteModel(db, id);
+
+  // Clear any bucket selection (predict/digest) that pointed at this model, so
+  // resolution falls back to env → hardcoded instead of resolving to a model
+  // that's no longer in the roster (sprint-38 UAT finding: orphaned override).
+  db.prepare(
+    "DELETE FROM settings WHERE key IN ('predict_model', 'digest_model') AND value = ?"
+  ).run(row.model_id);
 
   return new Response(null, { status: 204 });
 };

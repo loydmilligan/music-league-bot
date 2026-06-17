@@ -4,6 +4,25 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.5.1] — 2026-06-17
+
+**sprint-38 follow-up — Models & AI UAT fixes.** Three fixes from the post-deploy
+UAT pass, all in the new Models & AI surface.
+
+### Fixes
+
+- **Removing a model now clears its bucket override.** Deleting a saved model that was
+  the active Predict or Digest selection used to leave a dangling DB override — the
+  resolver kept returning a model no longer in the roster, and the "DB override active"
+  banner showed on an empty roster. Delete now nulls any bucket setting pointing at the
+  removed model, so resolution falls back to env → hardcoded.
+- **Model lookup retries on cold-start.** The first (uncached) fetch of OpenRouter's
+  model catalog occasionally returned a transient `408`; the lookup now retries
+  (bounded, with backoff) and bounds each attempt with a timeout, so the first lookup
+  after a deploy no longer fails.
+- **`/setup` redirects to `/settings/setup`.** Added a redirect shim so old bookmarks
+  to the pre-sprint-38 Setup path land on Music League Setup instead of a 404.
+
 ## [1.5.0] — 2026-06-17
 
 **sprint-38 — AI Model Management.** Settings is now tabbed, and a new **Models &

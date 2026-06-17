@@ -17,6 +17,11 @@ interface OpenRouterModel {
   architecture?: { modality?: string };
 }
 
+const FETCH_TIMEOUT_MS = 25_000;
+const MAX_ATTEMPTS = 3;
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
   const now = Date.now();
   if (_cache && now - _cache.fetchedAt < CACHE_TTL_MS) return _cache.data;
@@ -25,12 +30,40 @@ async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-  const res = await fetch(OPENROUTER_MODELS_URL, { headers });
-  if (!res.ok) throw new Error(`OpenRouter models fetch failed: ${res.status}`);
-  const body = (await res.json()) as { data?: OpenRouterModel[] };
-  const data = body.data ?? [];
-  _cache = { data, fetchedAt: now };
-  return data;
+  // The uncached fetch of OpenRouter's full model list can be slow and occasionally
+  // returns a transient 408 on the first cold call (sprint-38 UAT finding). Retry a
+  // few times with backoff, and bound each attempt with an explicit timeout so a hung
+  // request can't stall the handler indefinitely.
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(OPENROUTER_MODELS_URL, { headers, signal: controller.signal });
+      if (!res.ok) {
+        if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_ATTEMPTS) {
+          lastErr = new Error(`OpenRouter models fetch failed: ${res.status}`);
+          await sleep(attempt * 500);
+          continue;
+        }
+        throw new Error(`OpenRouter models fetch failed: ${res.status}`);
+      }
+      const body = (await res.json()) as { data?: OpenRouterModel[] };
+      const data = body.data ?? [];
+      _cache = { data, fetchedAt: Date.now() };
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(attempt * 500);
+        continue;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 function orModelToDraft(m: OpenRouterModel): Partial<AiModelInsert> {
