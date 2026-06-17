@@ -1,8 +1,9 @@
 ---
-status: active
+status: closed
 campaign: bside-season-awareness
 sprint: S2
 created: 2026-06-16
+closed: 2026-06-16
 ---
 
 # music-league-bot — coordination doc (sprint-37)
@@ -57,7 +58,7 @@ Ship the Season-Update "season pulse" on the public b-side — an LLM narration 
 - [x] {agent: frontend, id: snark-control} **Plan Task B2 — operator snark-dial control.** 3-way Gentle/Medium/Spicy control in `UpdateModal.svelte` calling `PATCH /api/content/:leagueId/snark`, defaulting to current level.
   - **Acceptance:** `cd ui && npm run check` 0 errors in the changed file; committed. ✓ (prior session)
 
-- [ ] {agent: orc, id: gate, depends: readmodel-wire,bside-section,snark-control} **Gate.** Cross-check path-scoped; `ui` `npm run check` (0) + `vitest run` (green); `bside` `npm run build`; **owner content-review** (regen a real b-side on dev, screenshot 412 + desktop, ratify against the voice mandate); on sign-off: v-bump + CHANGELOG + deploy + assert live; close.
+- [x] {agent: orc, id: gate, depends: readmodel-wire,bside-section,snark-control} **Gate.** Cross-check path-scoped; `ui` `npm run check` (0) + `vitest run` (green); `bside` `npm run build`; **owner content-review** (regen a real b-side on dev, screenshot 412 + desktop, ratify against the voice mandate); on sign-off: v-bump + CHANGELOG + deploy + assert live; close.
   - **Acceptance:** checks green both targets; owner ratifies content; deployed + live; doc `status: closed`.
 
 ## Decision Log
@@ -67,7 +68,8 @@ Card `dr-20a49cf7`. S2 as two file-disjoint lanes against pinned contracts (the 
 
 ## Ratification Log
 
-_Pending: owner content-review of the generated Season-Update (voice mandate) at the gate, before deploy._
+### 2026-06-16 — owner ratified the Season-Update voice (medium snark)
+Sample generated against **Second Best** (id 3, real data: 10 rounds / 447 votes; LLM cost $0.0067, medium snark), rendered in the bside ("THE PULSE" section after the KPI ribbon) and screenshotted at 412 + desktop. Owner: voice clears the mandate — Matt fair game, others fact-based, "musical chairs" rivalry framing funny-not-cruel. Sign-off → ship.
 
 ## Blockers
 
@@ -116,3 +118,11 @@ _None._
 - Owner picked **Second Best** (id 3) as the voice-mandate sample league.
 - Backend (%55, idle/Sonnet) dispatched to generate a REAL Season-Update at MEDIUM snark on dev (5173) via the seasonUpdateTask + read-model path; report verbatim {title, body}; no deploy/commit. Generation in flight.
 - Next: on finish → screenshot bside Season-Update section 412 + desktop → owner ratifies voice → v-bump + CHANGELOG + deploy + assert live → close.
+
+### 2026-06-16 — orc — GATE CLOSED, v1.4.0 shipped
+- Owner ratified the medium-snark Season-Update voice (Second Best sample, rendered 412 + desktop).
+- Release: `ui/package.json` 1.3.0 → **1.4.0**; CHANGELOG `[1.4.0]` entry ("The Living Season"); commit `2b737d8`.
+- Deploy: `docker compose build bot-ui && up -d --force-recreate` — container recreated, healthy on :3002.
+- **Assert live:** operator app footer renders `mash co. · v1.4.0` (verified in browser) — fresh code, not stale. Feature/capability LIVE.
+- **Scope note (honest):** deploy shipped the CODE + snark dial. It did NOT publish a real Season-Update to Second Best's PUBLIC b-side — the dev sample was for voice review only; the prod digest read_model is unchanged. Publishing a real one = regenerate Second Best's digest in prod via the (now-shipped) snark dial — a separate, owner-gated content action, not part of this code gate. Left for the owner / next round's digest flow.
+- sprint-37 (S2 / "The Living Season" capstone) **CLOSED**. Campaign `bside-season-awareness` complete.
