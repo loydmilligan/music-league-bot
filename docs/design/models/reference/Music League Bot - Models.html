@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>music-league-bot — Models & AI · Mash Co. (handoff reference)</title>
+
+  <!-- Self-contained: all paths point to sibling files in this reference/ folder -->
+  <link rel="stylesheet" href="./colors_and_type.css">
+  <link rel="stylesheet" href="./orc-tower-styles.css">
+  <link rel="stylesheet" href="./ml-styles.css">
+  <link rel="stylesheet" href="./ml-models.css">
+  <meta name="theme-color" content="#07090c">
+
+  <style>
+    html, body { background: #f0eee9; margin: 0; padding: 0; }
+    [data-dc-artboard-id] .ml-app { width: 100%; height: 100%; }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="./design-canvas.jsx"></script>
+  <script type="text/babel" src="./ml-data.jsx"></script>
+  <script type="text/babel" src="./ml-shared.jsx"></script>
+  <script type="text/babel" src="./ml-models.jsx"></script>
+
+  <script type="text/babel">
+    function App() {
+      return (
+        <DesignCanvas
+          title="music-league-bot · Models & AI"
+          subtitle="The OpenRouter key + model manager, ported in spirit from music-league-strategist. Paste an OpenRouter id, look it up to auto-fill its spec, save it once — then every AI task picks only from the models that qualify for it. The first artboard is fully interactive: look up a real id (try anthropic/claude-opus-4 or deepseek/deepseek-r1), star, remove, reassign — the task lists re-filter live."
+        >
+          <DCSection
+            id="models"
+            title="Models & AI · main view"
+            subtitle="Key + default → saved roster → add-by-lookup → task assignments. Interactive: paste an id and press Look up; toggle a saved model's stars; watch the 'N of 6 qualify' counts move."
+          >
+            <DCArtboard id="models-main" label="Key · roster · task assignments" width={1280} height={1560}>
+              <ModelsScreen />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection
+            id="lookup"
+            title="Add a model · lookup resolved"
+            subtitle="The paste → look up → auto-fill moment. Spec, context window, pricing → cost tier, and capabilities all arrive pre-filled and editable. Capabilities are toggle chips so you can correct a bad auto-detect before saving."
+          >
+            <DCArtboard id="models-lookup" label="Resolved draft ready to save (google/gemini-2.5-pro)" width={1280} height={1620}>
+              <ModelsScreen demoQuery="google/gemini-2.5-pro" />
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
