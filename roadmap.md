@@ -635,15 +635,36 @@ summary: >-
 ---
 id: per-section-model-selection
 title: Per-Section Model Selection
-stage: idea
+stage: planned
 effort: medium
 spike: model-cost-infra
 source: owner
+campaign: openrouter-cost-management
+sprint: sprint-41-per-section-models
 summary: >-
   Build on openrouter-model-management: let each content section (digest sections,
   b-side read-model sections) optionally pin its own model, falling back to the
   global default. So we can run cheap models for boilerplate sections and a high-end
   model only where it matters. Depends on openrouter-model-management.
+---
+id: models-cost-tier-display-bug
+title: Models cost-tier display bug (every model shows one dollar sign)
+stage: planned
+effort: small
+spike: model-cost-infra
+source: owner-uat
+campaign: openrouter-cost-management
+sprint: sprint-39-cost-ledger
+summary: >-
+  In the Models and AI roster, every model's cost tier renders as a single
+  dollar sign regardless of price, so an expensive model (Opus, Sonnet) looks
+  the same as a cheap one. Root cause: tierFromPricing in ui/src/lib/models/
+  qualify.ts compares against per-million-token thresholds (1 and 10 USD) but is
+  passed the raw per-token decimals stored in the DB (e.g. 0.000003), so the
+  average is always below the lowest threshold. Fix by converting per-token to
+  per-million at the call sites (multiply by 1e6) in qualify.ts and the two
+  ModelsScreen render spots; the same units bug affects the "$X/M in" price
+  label. Carryover from sprint-38; bundled into the cost ledger sprint.
 ---
 id: openrouter-cost-tracking
 title: OpenRouter Cost Tracking (per-call ledger)
@@ -652,6 +673,8 @@ effort: medium
 spike: model-cost-infra
 source: owner
 priority: urgent
+campaign: openrouter-cost-management
+sprint: sprint-39-cost-ledger
 summary: >-
   Record every OpenRouter call to a ledger: model, prompt/completion tokens, cost
   (from the OpenRouter usage/cost in the response), purpose (digest vs archive/b-side
@@ -665,6 +688,8 @@ effort: medium
 spike: model-cost-infra
 source: owner
 priority: urgent
+campaign: openrouter-cost-management
+sprint: sprint-40-cost-dashboard
 summary: >-
   A debug-mode toggle on the Settings page that reveals debug-only UI. First widget:
   today's total OpenRouter cost split by digest vs archive, a drilldown listing the

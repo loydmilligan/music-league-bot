@@ -157,3 +157,79 @@ sprintPlan:
       - bside-temporal-aware-generation
       - bside-discovery-playlist-link
       - bside-playlist-audio-integration
+---
+id: ai-model-management
+title: AI Model Management
+kind: regular
+signedOff: true
+status: complete
+completed: 2026-06-17
+followOn: openrouter-cost-management
+roadmapItem: openrouter-model-management
+sprints:
+  - sprint-38-ai-model-management
+summary: >-
+  Shipped v1.5.1. The Models & AI settings tab — OpenRouter key (masked,
+  server-side), a saved-model roster (paste id, look up against the OpenRouter
+  catalog, edit caps/cost/FREE), and two DB-backed model variables (Predict,
+  Digest) with a DB-first resolver (db setting then env then hardcoded) wired at
+  the generation sites. Settings became tabbed (App Settings, Music League Setup,
+  Models and AI); Setup moved under Settings with the deadline tools. Realized the
+  openrouter-model-management roadmap card. Follow-on cost work lives in the
+  openrouter-cost-management campaign.
+---
+id: openrouter-cost-management
+title: OpenRouter and LLM Cost Management
+kind: regular
+signedOff: false
+followsFrom: ai-model-management
+spike: model-cost-infra
+sprints:
+  - sprint-39-cost-ledger
+  - sprint-40-cost-dashboard
+  - sprint-41-per-section-models
+summary: >-
+  Continuation of ai-model-management. Make LLM spend visible, managed, and
+  optimizable so we can test cheaply and flip to a high-end model only for weekly
+  maintenance runs. From the model-cost-infra spike (a single Sonnet digest regen
+  cost about 0.19 USD). Three sprints, sequenced: a per-call cost ledger (the data
+  layer), then a debug-mode cost dashboard that visualizes it, then per-section
+  model selection so cheap models run boilerplate and high-end models run only
+  where it matters. Sprint membership and the proposed shape below are a starting
+  point, ratified before each kickoff.
+sprintPlan:
+  - sprint: sprint-39-cost-ledger
+    title: Cost tracking ledger plus cost-tier display fix
+    goal: >-
+      The data foundation. Record every OpenRouter call to a ledger (model,
+      prompt and completion tokens, cost from the response usage, purpose of
+      digest vs archive vs prediction and which section, league and round,
+      timestamp) by hooking the shared callOpenRouter path and the prediction
+      runner, and surfacing token counts that callOpenRouter currently drops.
+      Bundle the small cost-tier display bug fix (all models show one dollar sign
+      because per-token prices are compared against per-million thresholds).
+    cards:
+      - openrouter-cost-tracking
+      - models-cost-tier-display-bug
+  - sprint: sprint-40-cost-dashboard
+    title: Debug mode plus cost dashboard
+    goal: >-
+      Depends on the sprint-39 ledger. A debug-mode toggle on Settings that
+      reveals debug-only UI, whose first widget is the cost dashboard, today's
+      total spend split by digest vs archive, a drilldown of individual calls,
+      and a two-week chart of one stacked bar per day made of digest and archive
+      calls in two base colors, each call a different shade with a hover tooltip
+      naming the section. Includes a design pass for the chart.
+    cards:
+      - settings-debug-mode-cost-dashboard
+  - sprint: sprint-41-per-section-models
+    title: Per-section model selection
+    goal: >-
+      Independent, builds on the shipped sprint-38 resolver. Let each content
+      section (digest sections, b-side read-model sections) optionally pin its
+      own model, falling back to the global Predict or Digest default, so cheap
+      models run boilerplate and high-end models run only where they matter. Also
+      migrate the prediction tasks that still read a static env model at module
+      load over to the DB-first resolver.
+    cards:
+      - per-section-model-selection
