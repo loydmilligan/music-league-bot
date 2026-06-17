@@ -35,6 +35,7 @@ llm_cost_log (
   completion_tokens INTEGER NOT NULL DEFAULT 0,
   total_tokens     INTEGER NOT NULL DEFAULT 0,
   cost_usd         REAL    NOT NULL DEFAULT 0,
+  latency_ms       INTEGER NOT NULL DEFAULT 0,  -- wall-clock of the callOpenRouter fetch (KPI #2: time-to-generate)
   category         TEXT    NOT NULL,   -- 'digest' | 'archive' | 'predict'
   label            TEXT    NOT NULL,   -- e.g. 'digest:full', 'predict:vote-probe'
   league_id        INTEGER,
@@ -51,6 +52,7 @@ export interface LLMResult {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  latencyMs: number;   // callOpenRouter times its own fetch (Date.now() around the request)
 }
 ```
 
@@ -76,8 +78,12 @@ GET /api/cost/daily?days=N          (default 14, oldest-first, zero-fill gaps)
   → [{ date: string, digest: number, archive: number, predict: number }]
 
 GET /api/cost/calls?date=YYYY-MM-DD (default today, newest-first, cap 500)
-  → [{ ts, model, category, label, cost_usd, prompt_tokens, completion_tokens }]
+  → [{ ts, model, category, label, cost_usd, latency_ms, prompt_tokens, completion_tokens }]
 ```
+> **latency_ms** is captured by `callOpenRouter` (wall-clock around the fetch) and logged on
+> every row. It is the second real KPI (alongside cost) for the sprint-40 model-comparison
+> visuals; quality is a future signal, not captured here. The aggregation endpoints may add
+> avg-latency-per-(model,label) views in sprint-40 without a schema change.
 
 **5. Cost-tier contract (Lane B, sprint-38 surfaces):**
 `tierFromPricing(inPerM, outPerM)` expects per-million-token values. `ai_models.price_in`/`price_out` are stored per-token. All three call sites must multiply by `1e6` before passing.
@@ -98,7 +104,7 @@ GET /api/cost/calls?date=YYYY-MM-DD (default today, newest-first, cap 500)
 
 - [ ] {agent: backend, id: a1-schema} **`llm_cost_log` table.** Append `CREATE TABLE IF NOT EXISTS llm_cost_log (…)` to the `SCHEMA` const in `ui/src/lib/db/schema.ts` per the pinned contract. **Acceptance:** table auto-applies on boot (like `ai_models`); idempotent; schema test green.
 
-- [ ] {agent: backend, id: a2-llmresult, depends: a1-schema} **Extend `LLMResult` + `callOpenRouter`.** Add `promptTokens`/`completionTokens`/`totalTokens` to `LLMResult`; read from `json.usage.prompt_tokens`/`completion_tokens`/`total_tokens`. Add `LLMCallMeta` type and optional `meta` arg to `callOpenRouter`; implement `logLlmCall` (try/catch INSERT into `llm_cost_log`). When `meta` is absent the function is a no-op extension. **Acceptance:** `llm.test.ts` + new unit test for `logLlmCall`; `meta`-absent path unchanged; `npm run check` 0 errors.
+- [ ] {agent: backend, id: a2-llmresult, depends: a1-schema} **Extend `LLMResult` + `callOpenRouter`.** Add `promptTokens`/`completionTokens`/`totalTokens`/`latencyMs` to `LLMResult`; read tokens from `json.usage.prompt_tokens`/`completion_tokens`/`total_tokens`; capture `latencyMs` by timing the fetch (`Date.now()` around the request). Add `LLMCallMeta` type and optional `meta` arg to `callOpenRouter`; implement `logLlmCall` (try/catch INSERT into `llm_cost_log`, including `latency_ms`). When `meta` is absent the function is a no-op extension. **Acceptance:** `llm.test.ts` + new unit test for `logLlmCall` (asserts latency_ms persisted); `meta`-absent path unchanged; `npm run check` 0 errors.
 
 - [ ] {agent: backend, id: a3-digest-sites, depends: a2-llmresult} **Thread `meta` through digest call sites.** In `llm.ts`: thread `meta` through `generateDraft()` (`category: 'digest'`, `label: 'digest:full'`, leagueId + roundId from args) and `regenerateOneSection()` (`category: 'digest'`, `label: 'digest:<kind>'`, roundId from args; derive leagueId from round). **Acceptance:** each function writes a `llm_cost_log` row on a real or mock callOpenRouter call; existing digest tests still green.
 

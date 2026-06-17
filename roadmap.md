@@ -647,6 +647,23 @@ summary: >-
   global default. So we can run cheap models for boilerplate sections and a high-end
   model only where it matters. Depends on openrouter-model-management.
 ---
+id: model-quality-signal
+title: Model quality signal (implicit regen and edit, optional rating)
+stage: idea
+effort: medium
+spike: model-cost-infra
+source: orc-proposal
+summary: >-
+  Capture a quality KPI for LLM outputs so model comparison can weigh quality
+  alongside cost and latency. Not built today; cost-management v1 ships with cost
+  and latency only. Preferred cheap path: derive an implicit signal from data we
+  already capture (regeneration count plus section edit or exclude before finalize,
+  where low regen equals good), optionally plus a manual owner thumbs or stars per
+  generated section. LLM-as-judge is a later opt-in (adds spend, uncertain
+  reliability). Also consider reliability (JSON-mode and parse success plus retry
+  rate) as a free automatic companion metric. Fills the third KPI slot in the
+  per-model-per-task comparison and the weighted value score.
+---
 id: models-cost-tier-display-bug
 title: Models cost-tier display bug (every model shows one dollar sign)
 stage: planned
