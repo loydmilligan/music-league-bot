@@ -21,7 +21,9 @@ import {
 	LiteMemberSchema,
 } from '$lib/dashboard/buildReadModel.js';
 import type { ReadModel, FullMember, LiteMember, Member } from '$lib/dashboard/buildReadModel.js';
-import { writePublicArtifacts } from '$lib/dashboard/publish.js';
+import { writePublicArtifacts, getSnarkLevel } from '$lib/dashboard/publish.js';
+import { seasonUpdateTask } from '$lib/dashboard/generators/seasonUpdate.js';
+import { computeSeasonSignalsForLeague } from '$lib/dashboard/seasonSignals.js';
 import { z } from 'zod';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
@@ -563,6 +565,23 @@ async function buildUpdatedReadModel(
 		)
 		.get(leagueId) as { latestSeason: number; totalRounds: number; seasonCount: number };
 
+	// Season-update narration — regenerate on every update, suppress prior subjects.
+	let seasonUpdate: { title: string; body: string } | null = null;
+	const signals = computeSeasonSignalsForLeague(db, leagueId);
+	if (signals.asOfRound && (signals.bigMover || signals.faller || signals.streaks.length > 0)) {
+		const priorSubjects = currentModel.seasonUpdate
+			? [...signals.punchingBagGuard]
+			: [];
+		const r = await runPrediction(db, seasonUpdateTask, {
+			leagueName,
+			season: `S${leagueMeta.latestSeason}`,
+			snarkLevel: getSnarkLevel(db, leagueId),
+			signals,
+			recentSubjects: priorSubjects,
+		});
+		seasonUpdate = r.output;
+	}
+
 	return ReadModelSchema.parse({
 		league: {
 			name: leagueName,
@@ -578,6 +597,7 @@ async function buildUpdatedReadModel(
 		kpis,
 		moments,
 		archive: currentModel.archive, // archive updated by caller
+		seasonUpdate,
 	});
 }
 

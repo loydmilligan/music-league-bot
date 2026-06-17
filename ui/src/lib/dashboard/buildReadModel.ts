@@ -15,6 +15,9 @@ import {
 	leagueReelTask,
 	momentLinesTask,
 } from './generators/narrative.js';
+import { seasonUpdateTask } from './generators/seasonUpdate.js';
+import { computeSeasonSignalsForLeague } from './seasonSignals.js';
+import { getSnarkLevel } from './publish.js';
 import type {
 	NarrativeFingerprintInput,
 	PlayerSuperlativesOutput,
@@ -151,6 +154,7 @@ export const ReadModelSchema = z.object({
 	kpis: z.array(KpiItemSchema),
 	moments: MomentsWithLinesSchema.nullable(),
 	archive: z.array(ArchiveEntrySchema),
+	seasonUpdate: z.object({ title: z.string(), body: z.string() }).nullable().optional(),
 });
 export type ReadModel = z.infer<typeof ReadModelSchema>;
 
@@ -546,6 +550,20 @@ export async function buildReadModel(
 	// 11. Archive (deterministic — past rounds + winners)
 	const archive = buildArchive(db, leagueId);
 
+	// 11b. Season-update narration (LLM — only when there are signals to narrate)
+	let seasonUpdate: { title: string; body: string } | null = null;
+	const signals = computeSeasonSignalsForLeague(db, leagueId);
+	if (signals.asOfRound && (signals.bigMover || signals.faller || signals.streaks.length > 0)) {
+		const r = await runPrediction(db, seasonUpdateTask, {
+			leagueName: leagueRow.name,
+			season: `S${leagueMeta.latestSeason}`,
+			snarkLevel: getSnarkLevel(db, leagueId),
+			signals,
+			recentSubjects: [],
+		});
+		seasonUpdate = r.output;
+	}
+
 	// 12. Assemble members
 	const members: Member[] = memberRows
 		.map((m): Member | null => {
@@ -648,6 +666,7 @@ export async function buildReadModel(
 		kpis: detLeague.kpis,
 		moments,
 		archive,
+		seasonUpdate,
 	};
 
 	return ReadModelSchema.parse(readModel);

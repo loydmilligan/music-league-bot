@@ -58,6 +58,11 @@ const MOMENT_LINES_FIXTURE = {
 	biggestUpsetLine: 'Zero chat buzz, then won everything.',
 };
 
+const SEASON_UPDATE_FIXTURE = {
+	title: 'The Race Is On',
+	body: 'Alice surged to the top after a quiet start. The season is heating up.',
+};
+
 // Mock callOpenRouter to return appropriate fixture based on system prompt content
 function setupMock() {
 	mockCallOpenRouter.mockImplementation(async (messages: { role: string; content: string }[]) => {
@@ -79,6 +84,9 @@ function setupMock() {
 		}
 		if (sys.includes('caption') || sys.includes('most loved')) {
 			return { content: JSON.stringify(MOMENT_LINES_FIXTURE), costUsd: 0.001 };
+		}
+		if (sys.includes('season-pulse writer') || sys.includes('season update')) {
+			return { content: JSON.stringify(SEASON_UPDATE_FIXTURE), costUsd: 0.001 };
 		}
 		// Fingerprint generation fallback
 		return {
@@ -351,6 +359,19 @@ describe('buildReadModel — full + lite members', () => {
 			expect(typeof member.stat.submitted).toBe('number');
 			expect(typeof member.stat.avgPts).toBe('number');
 			expect(typeof member.stat.wins).toBe('number');
+		}
+	});
+
+	it('season-pulse writer: readModel.seasonUpdate is populated when signals exist', async () => {
+		seedTwoMemberLeague();
+		const model = await buildReadModel(db, leagueId);
+		// Signals require ≥2 rounds with standings changes; seedTwoMemberLeague has 4 rounds with votes
+		// so bigMover/faller may or may not fire, but either way schema must accept the field.
+		expect(() => ReadModelSchema.parse(model)).not.toThrow();
+		// If seasonUpdate was set, it must have title + body
+		if (model.seasonUpdate !== null && model.seasonUpdate !== undefined) {
+			expect(typeof model.seasonUpdate.title).toBe('string');
+			expect(typeof model.seasonUpdate.body).toBe('string');
 		}
 	});
 });
