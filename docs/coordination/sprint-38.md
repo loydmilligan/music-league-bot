@@ -92,3 +92,17 @@ _None._
 - v1 design ratified; handoff dropped into `docs/design/models/`.
 - 3 file-disjoint lanes (backend / Models-UI / Settings-restructure); 3rd agent pane launched in the current window.
 - Next: dispatch all 3 lanes (Sonnet); hold for finish hooks; gate incl. owner UAT before deploy.
+
+### 2026-06-17 — settings (Lane C) — c1-tabs complete · 11a20cd
+- `SettingsTabs` component: 3-tab row (App Settings / Music League Setup / Models & AI) mirroring `.ct-tabrow`/`.ct-tab`/`is-on` from content.css.
+- `/settings` renamed "App Settings"; deadline sections stripped; `SettingsTabs` inserted below header.
+- `/settings/+page.server.ts`: dropped `activeRounds` load + `updateDeadline` action.
+- `/settings/models/+page.svelte`: thin shell importing `ModelsScreen` from `$lib/models/ModelsScreen.svelte` (Lane B delivered simultaneously).
+- `+layout.svelte`: removed standalone Setup rail entry; `/settings` active for all sub-routes via `startsWith`.
+
+### 2026-06-17 — settings (Lane C) — c2-move complete · 89acb17
+- `/setup` relocated to `/settings/setup` as "Music League Setup"; old `routes/setup/` deleted.
+- Merged Auto-fill deadlines + Round deadlines sections (with server data + `updateDeadline` action) from App Settings into Music League Setup.
+- `/settings/setup/+page.server.ts`: carries full setup load + `allLeagues` + `activeRounds` + `updateDeadline` action.
+- `SettingsTabs` added to new setup page; breadcrumb + h1 updated to "Music League Setup".
+- `npm run check` 0 Lane-C errors (4 pre-existing errors in Lane A's `narrative.test.ts`; 0 ENOENT after svelte-kit sync).
