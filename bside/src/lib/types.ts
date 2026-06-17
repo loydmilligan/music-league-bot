@@ -67,6 +67,7 @@ export interface ReadModel {
 	kpis: KpiItem[];
 	moments: Moments | null;
 	archive: ArchiveEntry[];
+	seasonUpdate: { title: string; body: string } | null;
 }
 
 export interface SharePayload {

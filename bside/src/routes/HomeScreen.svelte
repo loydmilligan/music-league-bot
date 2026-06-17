@@ -80,6 +80,19 @@
 		</div>
 	</section>
 
+	<!-- Season-Update pulse — narrated season signals, null when season is too thin -->
+	{#if readModel.seasonUpdate}
+		<section class="bs-sec">
+			<div class="bs-eyebrow bs-acc-sky"><span class="bs-acc-dot"></span>The pulse</div>
+			<h2 class="bs-sec-title">{readModel.seasonUpdate.title}</h2>
+			<div class="bs-pulse-body">
+				{#each readModel.seasonUpdate.body.split('\n\n') as para}
+					<p>{para}</p>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
 	<!-- Superlative reel -->
 	<section class="bs-sec">
 		<div class="bs-eyebrow bs-acc-amber"><span class="bs-acc-dot"></span>Yearbook awards</div>
