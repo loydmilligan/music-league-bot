@@ -39,7 +39,8 @@ export type PredictionTask<TIn, TOut> = {
 	id: string;
 	inputSchema: ZodType<TIn>;
 	buildMessages: (input: TIn) => LLMMessage[];
-	model: string;
+	/** Static model id string, or a DB-first resolver `(db) => modelFor(bucket, db)`. */
+	model: string | ((db: Database.Database) => string);
 	params?: Record<string, unknown>;
 	outputSchema: ZodType<TOut>;
 	scorer?: (prediction: TOut, actual: unknown) => Score;
@@ -59,10 +60,11 @@ export async function runPrediction<TIn, TOut>(
 ): Promise<{ output: TOut; meta: PredictionMeta }> {
 	task.inputSchema.parse(input);
 
+	const model = typeof task.model === 'function' ? task.model(db) : task.model;
 	const messages = task.buildMessages(input);
 	const startMs = Date.now();
 
-	const { content, costUsd } = await callOpenRouter(messages, { model: task.model, jsonMode: true });
+	const { content, costUsd } = await callOpenRouter(messages, { model, jsonMode: true });
 
 	const parsed = extractJson(content);
 	if (parsed === null) {
@@ -86,7 +88,7 @@ export async function runPrediction<TIn, TOut>(
 			},
 		];
 		const { content: retryContent, costUsd: retryCostUsd } = await callOpenRouter(retryMessages, {
-			model: task.model,
+			model,
 			jsonMode: true,
 		});
 		totalCostUsd += retryCostUsd;
@@ -100,7 +102,7 @@ export async function runPrediction<TIn, TOut>(
 	}
 
 	const latencyMs = Date.now() - startMs;
-	const meta: PredictionMeta = { model: task.model, costUsd: totalCostUsd, latencyMs };
+	const meta: PredictionMeta = { model, costUsd: totalCostUsd, latencyMs };
 
 	const runId = randomUUID();
 	const now = new Date().toISOString();
@@ -114,7 +116,7 @@ export async function runPrediction<TIn, TOut>(
 		opts?.roundId ?? null,
 		JSON.stringify(input),
 		JSON.stringify(output),
-		task.model,
+		model,
 		meta.costUsd,
 		meta.latencyMs,
 		now,

@@ -4,6 +4,7 @@ import type { PlayerContext } from '../../predict/playerContext.js';
 import { buildPlayerContext } from '../../predict/playerContext.js';
 import type { PredictionTask } from '../../predict/predict.js';
 import { runPrediction } from '../../predict/predict.js';
+import { modelFor } from '../../digest/modelFor.js';
 
 // ── Slice types ────────────────────────────────────────────────────────────────
 // Exported so build-readmodel can compose them without knowing this file's internals.
@@ -186,13 +187,11 @@ Output a JSON object with EXACTLY this shape:
 
 // ── Task definitions ───────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = process.env.OPENROUTER_PREDICT_MODEL ?? 'anthropic/claude-sonnet-4-5';
-
 export const spectrumTask: PredictionTask<PlayerContext, SpectrumLLMOutput> = {
 	id: 'profile-spectrum',
 	inputSchema: PlayerContextSchema,
 	buildMessages: buildSpectrumMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: SpectrumLLMOutputSchema,
 };
 
@@ -200,7 +199,7 @@ export const playlistTask: PredictionTask<PlayerContext, PlaylistSlice> = {
 	id: 'profile-playlist',
 	inputSchema: PlayerContextSchema,
 	buildMessages: buildPlaylistMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: PlaylistSliceSchema,
 };
 

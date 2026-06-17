@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
+import { modelFor } from './modelFor.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -598,13 +599,14 @@ interface DraftLLMOutput {
   costUsd: number;
 }
 
-export async function generateDraft(data: RoundData, genParams?: GenParams, season?: SeasonData): Promise<DraftLLMOutput> {
+export async function generateDraft(data: RoundData, genParams?: GenParams, season?: SeasonData, db?: Database.Database): Promise<DraftLLMOutput> {
+  const model = db ? modelFor('digest', db) : undefined;
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, undefined, genParams, season) },
     ],
-    { jsonMode: true },
+    { jsonMode: true, model },
   );
   const parsed = JSON.parse(raw) as DraftLLMOutput;
   if (!parsed.sections) throw new Error('LLM response missing "sections"');
@@ -625,13 +627,15 @@ export async function regenerateOneSection(
   instructions: string,
   genParams?: GenParams,
   season?: SeasonData,
+  db?: Database.Database,
 ): Promise<{ section: unknown; costUsd: number }> {
+  const model = db ? modelFor('digest', db) : undefined;
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }, genParams, season) },
     ],
-    { jsonMode: true },
+    { jsonMode: true, model },
   );
   const parsed = JSON.parse(raw) as { section?: unknown };
   if (parsed.section === undefined) throw new Error('LLM response missing "section"');

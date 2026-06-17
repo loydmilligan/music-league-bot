@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { PredictionTask } from '../../predict/predict.js';
 import type { SeasonSignals } from '../seasonSignals.js';
+import { modelFor } from '../../digest/modelFor.js';
 
 export const SeasonUpdateInputSchema = z.object({
 	leagueName: z.string(),
@@ -39,6 +40,6 @@ export const seasonUpdateTask: PredictionTask<SeasonUpdateInput, SeasonUpdateOut
 	id: 'season-update',
 	inputSchema: SeasonUpdateInputSchema,
 	buildMessages: buildSeasonUpdateMessages,
-	model: process.env.OPENROUTER_DIGEST_MODEL ?? 'anthropic/claude-sonnet-4-5',
+	model: (db) => modelFor('digest', db),
 	outputSchema: SeasonUpdateOutputSchema,
 };

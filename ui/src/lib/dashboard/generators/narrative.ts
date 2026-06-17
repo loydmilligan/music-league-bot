@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PredictionTask } from '../../predict/predict.js';
+import { modelFor } from '../../digest/modelFor.js';
 
 // ── Accent colors (restricted set per spec §7, §9) ────────────────────────────
 
@@ -111,8 +112,6 @@ Season stats: ${stat.submitted} songs submitted · ${stat.avgPts.toFixed(1)} avg
 	];
 }
 
-const DEFAULT_MODEL = process.env.OPENROUTER_PREDICT_MODEL ?? 'anthropic/claude-sonnet-4-5';
-
 export const playerSuperlativesTask: PredictionTask<
 	PlayerSuperlativesInput,
 	PlayerSuperlativesOutput
@@ -120,7 +119,7 @@ export const playerSuperlativesTask: PredictionTask<
 	id: 'narrative-player-superlatives',
 	inputSchema: PlayerSuperlativesInputSchema,
 	buildMessages: buildPlayerSuperlativesMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: PlayerSuperlativesOutputSchema,
 };
 
@@ -186,7 +185,7 @@ export const fanHaterBlurbTask: PredictionTask<FanHaterBlurbInput, FanHaterBlurb
 	id: 'narrative-fan-hater-blurbs',
 	inputSchema: FanHaterBlurbInputSchema,
 	buildMessages: buildFanHaterBlurbMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: FanHaterBlurbOutputSchema,
 };
 
@@ -265,7 +264,7 @@ export const leagueReelTask: PredictionTask<LeagueReelInput, LeagueReelOutput> =
 	id: 'narrative-league-reel',
 	inputSchema: LeagueReelInputSchema,
 	buildMessages: buildLeagueReelMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: LeagueReelOutputSchema,
 };
 
@@ -345,7 +344,7 @@ export const momentLinesTask: PredictionTask<MomentLinesInput, MomentLinesOutput
 	id: 'narrative-moment-lines',
 	inputSchema: MomentLinesInputSchema,
 	buildMessages: buildMomentLinesMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelFor('predict', db),
 	outputSchema: MomentLinesOutputSchema,
 };
 
