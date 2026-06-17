@@ -1,8 +1,10 @@
 ---
-status: active
+status: shipped
 campaign: ai-model-management
 sprint: sprint-38
+version: v1.5.0
 created: 2026-06-17
+shipped: 2026-06-17
 ---
 
 # music-league-bot — coordination doc (sprint-38)
@@ -64,7 +66,7 @@ BucketState = { key, selected, envValue, hardcoded, resolved, requires, recommen
 - [x] {agent: frontend, id: b2-screen, depends: b1-css} **Models & AI screen** (Svelte 5). Three cards: connection (masked key + status pill), saved-models roster (lookup → editable draft → save; caps glyphs, cost-tier derive+override, FREE badge, star/favorite, edit/remove), **Model Variables** (2 selects = roster filtered to qualifying; tooltip = requires·usedBy·recommend; 3 read-only fields from BucketState; warn-on-override). `qualify.ts` = CAP_ORDER + effCost + qualifies(). **Acceptance:** `npm run check` 0 errors; matches reference artboards; qualify filters live.
 - [x] {agent: settings, id: c1-tabs} **SettingsTabs + App Settings.** Shared tab-row (mirror Content `.ct-tabrow`/`is-on`) across App Settings / Music League Setup / Models & AI; rename `/settings` header → **App Settings**; `/settings/models/+page.svelte` shell importing `ModelsScreen`; `+layout.svelte` — remove standalone Setup rail entry, Settings active for all sub-routes. **Acceptance:** tabs navigate; nav correct; `npm run check` clean.
 - [x] {agent: settings, id: c2-move, depends: c1-tabs} **Move Setup + deadlines.** Relocate `/setup` → `/settings/setup` (route + `+page.server.ts` + fix inbound links) as "Music League Setup"; move **Auto-fill deadlines** + **Round deadlines** (and their server data/actions) out of App Settings into Music League Setup. **Acceptance:** setup works at new path; deadline tools functional under Setup; no dead `/setup` links.
-- [ ] {agent: orc, id: gate, depends: a2-roster-api,a3-settings-api,a4-resolver,b2-screen,c2-move} **Gate.** Cross-check path-scoped; `ui npm run check` (0) + `vitest run` (green); **owner UAT** (add a model via lookup; set predict+digest selects incl. an unqualified-warn; confirm the 3 fallback fields; tabs + Setup move; screenshots 412 + desktop); on sign-off → v-bump + CHANGELOG + deploy (cached, orc-gated → :3002) + assert live; close.
+- [x] {agent: orc, id: gate, depends: a2-roster-api,a3-settings-api,a4-resolver,b2-screen,c2-move} **Gate.** Cross-check path-scoped; `ui npm run check` (0) + `vitest run` (green); **owner UAT** (add a model via lookup; set predict+digest selects incl. an unqualified-warn; confirm the 3 fallback fields; tabs + Setup move; screenshots 412 + desktop); on sign-off → v-bump + CHANGELOG + deploy (cached, orc-gated → :3002) + assert live; close.
 
 ## v1 scope guardrails
 
@@ -80,7 +82,17 @@ Tab = "App Settings"; deadline sections move to Music League Setup; keep the two
 
 ## Ratification Log
 
-_Pending: owner UAT of the Models & AI tab + Settings restructure at the gate, before deploy._
+### 2026-06-17 — deploy-first authorized; orc UAT pre-pass = PASS; owner sign-off pending
+Owner directed deploy-straight-to-prod with UAT *after* deploy. **Shipped v1.5.0**
+(cached `docker compose build bot-ui && up -d --force-recreate`); `ai_models` migration
+auto-applied on boot; all 4 routes 200. Orc drove the live prod UI + API end-to-end:
+tabs/nav, Setup move + deadline tools, OpenRouter connection card, lookup→draft→save,
+roster render/edit/remove, qualify filter (live 1→0), DB-first resolution, override
+banner, mobile 412 — **all PASS**. 3 minor non-blocking findings logged (orphaned
+bucket override on remove [bug]; lookup cold-start 408; `/setup` 404 no shim). Prod
+reset to baseline (empty roster, no overrides) after the pre-pass.
+**UAT note:** `~/.config/taw/wiki/Projects/music-league-bot/tests/2026-06-17-sprint-38-ai-model-management-uat.md`.
+**Remaining ratification:** owner re-pass + sign-off (esp. S2.4 save-key with a real key).
 
 ## Blockers
 
@@ -118,4 +130,12 @@ _None._
 - First real cross-lane check (lanes only ran scoped checks). `vitest run` 602/602 green; `npm run check` had 4 errors — NOT pre-existing: a4's `PredictionTask.model` union broke `narrative.test.ts`, which passed `task.model` straight into `callOpenRouter` (wants `string`). Verified production (`predict.ts:63`) already resolves the union correctly → test-only type issue.
 - Orc gate-reconciliation: added a `taskModel()` resolver helper in the test (mirrors `runPrediction`), 4 call sites updated. `npm run check` → **0 errors**; full `vitest run` → **602/602**. Committed `960b390`.
 - Process note (review queue): a4's "existing tests still green" acceptance was verified at the vitest layer only; svelte-check would have caught it. Scoped acceptance should include `npm run check` when a shared type is widened.
-- Next: version bump + CHANGELOG → cached orc-gated deploy → :3002 → assert live → post-deploy UAT approval run.
+
+### 2026-06-17 — orc — SHIPPED v1.5.0 + post-deploy UAT pre-pass
+- Bumped `ui/package.json` → 1.5.0; CHANGELOG entry (`04499b6`); `/setup` note corrected (`c5cde62`).
+- Deploy: cached `docker compose build bot-ui && up -d --force-recreate bot-ui` → :3002. Container booted clean; `ai_models`+`settings` tables present in prod DB; routes `/`, `/settings`, `/settings/models`, `/settings/setup` all 200; footer = v1.5.0.
+- Post-deploy UAT pre-pass (live prod UI + API): every feature PASS — see Ratification Log. 8 screenshots (412 + desktop) in the UAT note's vault attachments.
+- 3 minor findings filed (none blocking): orphaned bucket override on model-remove (FB); lookup cold-start 408; `/setup` 404 no redirect shim.
+- Prod reset to baseline post-pass (roster empty, `predict_model`/`digest_model` cleared → resolves to env haiku-4.5).
+- **Local is 11 ahead of origin/master — at push threshold; surfaced to owner.**
+- Sprint status → `shipped`. Remaining: owner UAT sign-off (the note's widgets), then any follow-up cards.
