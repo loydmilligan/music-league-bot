@@ -31,6 +31,13 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
+// narrative tasks now carry a DB-first model resolver `(db) => modelFor(bucket, db)`
+// (sprint-38 a4). The stubbed callOpenRouter ignores model, so resolve the union to
+// a placeholder for type-correctness — mirroring runPrediction's resolve in predict.ts.
+function taskModel(m: typeof playerSuperlativesTask.model): string {
+	return typeof m === 'function' ? 'test-model' : m;
+}
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const FIXTURE_FINGERPRINT = {
@@ -374,7 +381,7 @@ describe('playerSuperlativesTask — stubbed LLM returns valid output', () => {
 		const messages = playerSuperlativesTask.buildMessages(FIXTURE_PLAYER_INPUT);
 		expect(messages.length).toBeGreaterThan(0);
 
-		const { content } = await callOpenRouter(messages, { model: playerSuperlativesTask.model, jsonMode: true });
+		const { content } = await callOpenRouter(messages, { model: taskModel(playerSuperlativesTask.model), jsonMode: true });
 		const parsed = JSON.parse(content);
 		const result = PlayerSuperlativesOutputSchema.parse(parsed);
 
@@ -396,7 +403,7 @@ describe('fanHaterBlurbTask — stubbed LLM returns valid output', () => {
 		});
 
 		const messages = fanHaterBlurbTask.buildMessages(FIXTURE_FAN_HATER_INPUT);
-		const { content } = await callOpenRouter(messages, { model: fanHaterBlurbTask.model, jsonMode: true });
+		const { content } = await callOpenRouter(messages, { model: taskModel(fanHaterBlurbTask.model), jsonMode: true });
 		const result = FanHaterBlurbOutputSchema.parse(JSON.parse(content));
 
 		expect(result.fanLine.length).toBeGreaterThan(0);
@@ -412,7 +419,7 @@ describe('leagueReelTask — stubbed LLM returns valid output', () => {
 		});
 
 		const messages = leagueReelTask.buildMessages(FIXTURE_REEL_INPUT);
-		const { content } = await callOpenRouter(messages, { model: leagueReelTask.model, jsonMode: true });
+		const { content } = await callOpenRouter(messages, { model: taskModel(leagueReelTask.model), jsonMode: true });
 		const result = LeagueReelOutputSchema.parse(JSON.parse(content));
 
 		expect(result.reel.length).toBeGreaterThanOrEqual(3);
@@ -430,7 +437,7 @@ describe('momentLinesTask — stubbed LLM returns valid output', () => {
 		});
 
 		const messages = momentLinesTask.buildMessages(FIXTURE_MOMENT_INPUT);
-		const { content } = await callOpenRouter(messages, { model: momentLinesTask.model, jsonMode: true });
+		const { content } = await callOpenRouter(messages, { model: taskModel(momentLinesTask.model), jsonMode: true });
 		const result = MomentLinesOutputSchema.parse(JSON.parse(content));
 
 		expect(result.mostLovedLine.length).toBeGreaterThan(0);
