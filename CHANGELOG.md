@@ -31,7 +31,8 @@ existing env/hardcoded values kept as visible fallbacks.
   **Models & AI**.
 - **Setup moved under Settings** — the old `/setup` page is now **Music League Setup**,
   and the **Auto-fill deadlines** + **Round deadlines** tools moved there from App
-  Settings. Old `/setup` links redirect.
+  Settings. All inbound links repointed to `/settings/setup` (the bare `/setup`
+  route is removed — no redirect shim).
 
 ### Under the hood
 
