@@ -26,7 +26,11 @@ Three sprints:
 3. **Per-section model selection** — pin a model per content section (cheap for boilerplate, premium
    where it matters). The dashboard's comparison visuals (Q2/Q3 below) are what will *inform* these picks.
 
-**The design work lives in sprint 2 (the dashboard).** Everything else is backend/plumbing.
+**Design scope across the campaign** (this brief covers the whole campaign in one handoff):
+- **Sprint 1 (ledger):** no design — backend/data only, plus a one-line fix to existing display logic.
+- **Sprint 2 (dashboard):** the bulk of the work — **Q1–Q4** below.
+- **Sprint 3 (per-section model selection):** one screen question — **Q5** below (a new panel on the
+  existing Models & AI screen). Q2/Q3's comparison visuals directly inform these per-section picks.
 
 ---
 
@@ -98,6 +102,20 @@ composite axis? a small radar per model?). 2–3 options. Keep it honest with on
 and the comparison/score views — compose into one debug dashboard? A tabbed panel, an accordion, a single
 scroll? Light suggestion only.)*
 
+### Q5 — Per-section model-selection panel (sprint 3)
+Sprint 3 adds the ability to **pin a model per content section**, as a new panel on the existing
+**Models & AI** screen (below the current Model Variables card). There are **~16 pinnable sections** in
+two groups: **digest** (6: podium, villain, flow, consensus, quotes, chat) and **predict/archive** (10:
+the narrative + profile + season-update + submission-predict + vote-probe + taste-fingerprint tasks).
+Each section gets a model select that **defaults to "use the bucket default"** and is **filtered to
+qualifying models** (same capability filter as Model Variables). The risk: 16 rows of selects is a lot,
+especially at **412px**. Propose 2–3 layouts that stay scannable and make "most sections use the default,
+a few are pinned" obvious at a glance — e.g. grouped accordion by bucket (collapsed by default, a badge
+showing how many are overridden), a compact table with inline selects, or progressive disclosure
+("Advanced: per-section overrides"). Match the Models & AI card styling. The comparison/value visuals
+from Q2/Q3 are the *decision aid* a user consults before pinning here — note any natural link (e.g. a
+"compare models for this section" affordance) if it's cheap.
+
 ---
 
 ## 5. Our thinking on the KPIs + the quality problem (please push back)
@@ -125,6 +143,7 @@ set or a smarter quality proxy would make the comparison/score visuals more usef
 
 ## 6. Deliverable
 
-For Q1–Q3 (and optional Q4), 2–3 Mash Co HTML mockups each, with a one-line rationale + trade-off per
+For Q1–Q3, Q5 (and optional Q4), 2–3 Mash Co HTML mockups each, with a one-line rationale + trade-off per
 option, sized for 412px and desktop, using the ledger data shapes in §2 (mock data is fine). The owner
-selects per question; the winners feed the sprint-40 dashboard build and the sprint-41 per-section picks.
+selects per question; the Q1–Q4 winners feed the **sprint-40** dashboard build and the Q5 winner feeds
+the **sprint-41** per-section panel.
