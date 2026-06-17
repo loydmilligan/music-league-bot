@@ -29,8 +29,27 @@ sprints:
 id: post-mvp-features
 title: Post-MVP Features
 kind: regular
-signedOff: false
-sprints: []
+signedOff: true
+status: complete
+sprints:
+  - sprint-25
+  - sprint-26
+  - sprint-27
+  - sprint-28
+  - sprint-29
+  - sprint-30
+  - sprint-34
+  - sprint-35
+summary: >-
+  The standalone post-MVP sprints that shipped before work moved into named themed
+  campaigns. sprint-25 live round import + active-round picker (active-league-management,
+  v1.0.1-v1.0.4); sprint-26 the stocktaking/inventory audit; sprint-27 collision fixes
+  FB-1..5 (v1.0.5); sprint-28 player prediction tools (dossier + harness + SAS);
+  sprint-29 submission predictor (producer sprint 2); sprint-30 player research polish
+  (collapsible UX, league themes, LLM caching); sprint-34 phase-first round-phase
+  operator model (v1.2.0); sprint-35 digest round-aware cross-round context, the ghost
+  fix (v1.3.0). All closed and shipped. New themed work opens its own campaign rather
+  than landing here.
 ---
 id: the-b-side
 title: the b-side — Shareable League Dashboard
@@ -76,13 +95,14 @@ kind: regular
 signedOff: true
 status: planned
 followsFrom: the-b-side
-sprints:
-  - sprint-34-bside-season-data-truth
-  - sprint-35-bside-superlatives-voice
-  - sprint-36-bside-visual-mobile
-  - sprint-37-bside-metrics-operator-qa
-  - sprint-38-bside-avatars
-  - sprint-39-bside-moments-playlist
+sprints: []
+note: >-
+  NOT STARTED — sprints[] is intentionally empty. No b-side-polish sprint has executed
+  yet: the sprint-34..39 slots were taken by higher-priority work (round-phase, the
+  digest ghost fix, season-awareness, AI model management, cost management). The
+  sprintPlan below is a PROPOSED grouping of the 20 `campaign: the-b-side-polish`
+  roadmap cards — NOT executed sprints. Its `bsp-*` labels are placeholders; real sprint
+  numbers (>= 42) get assigned at kickoff and added to sprints[] then.
 summary: >-
   Follow-on to the shipped `the-b-side` campaign — turns the owner UAT
   (wiki/.../sessions/testing/2026-06-15-the-b-side-campaign-review.md) plus orc
@@ -92,7 +112,7 @@ summary: >-
   sprint shape below is a STARTING POINT for prioritization, not locked — sprint
   membership gets ratified before kickoff.
 sprintPlan:
-  - sprint: sprint-34-bside-season-data-truth
+  - sprint: bsp-season-data-truth
     title: Season & data truth (foundation)
     goal: >-
       Make the b-side's knowledge of seasons/rounds correct and explicit, and
@@ -105,7 +125,7 @@ sprintPlan:
       - bside-degenerate-state-handling
       - bside-age-field-save-bug
       - bside-force-check-new-digests
-  - sprint: sprint-35-bside-superlatives-voice
+  - sprint: bsp-superlatives-voice
     title: Superlatives & voice
     goal: >-
       The content engine — fewer/better/curated superlatives with tone control,
@@ -115,7 +135,7 @@ sprintPlan:
       - bside-superlative-visual-identity
       - bside-semantic-accent-system
       - bside-voice-snark-tuning
-  - sprint: sprint-36-bside-visual-mobile
+  - sprint: bsp-visual-mobile
     title: Visual & mobile polish
     goal: >-
       Fix the recurring mobile card-row UX, enrich the member grid, and strengthen
@@ -125,7 +145,7 @@ sprintPlan:
       - bside-member-grid-richness
       - bside-share-card-og-meta
       - bside-returning-visitor-diff
-  - sprint: sprint-37-bside-metrics-operator-qa
+  - sprint: bsp-metrics-operator-qa
     title: Metrics correctness & operator QA
     goal: >-
       Normalize the tenure-skewed metrics, move fingerprints to real audio, and
@@ -135,14 +155,14 @@ sprintPlan:
       - bside-real-audio-fingerprint
       - bside-update-diff-preview
       - bside-content-lint
-  - sprint: sprint-38-bside-avatars
+  - sprint: bsp-avatars
     title: Themed LLM avatars
     goal: >-
       One-off and per-week theme-aligned LLM avatar batches. Stands alone (large);
       needs the per-player base image/description groundwork.
     cards:
       - bside-llm-avatars
-  - sprint: sprint-39-bside-moments-playlist
+  - sprint: bsp-moments-playlist
     title: Content depth — context channel, moments & the real playlist
     goal: >-
       The content-depth slice. Stand up the digest→read-model context channel
@@ -157,6 +177,22 @@ sprintPlan:
       - bside-temporal-aware-generation
       - bside-discovery-playlist-link
       - bside-playlist-audio-integration
+---
+id: bside-season-awareness
+title: the b-side — Season Awareness
+kind: regular
+signedOff: true
+status: complete
+completed: 2026-06-16
+followsFrom: the-b-side
+sprints:
+  - sprint-36
+  - sprint-37
+summary: >-
+  Made the b-side season-aware; shipped in v1.4.0. sprint-36 built the season/round
+  data backbone (S1); sprint-37 shipped the narrated Season Update section ("The
+  Pulse") on the public home (S2). Both coord-docs carry `campaign: bside-season-awareness`
+  but the campaign was missing from the war table until the 2026-06-17 reconciliation.
 ---
 id: ai-model-management
 title: AI Model Management

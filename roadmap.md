@@ -44,7 +44,9 @@ summary: Render the songs in the History Theme research and Player research tabs
 ---
 id: active-league-management
 title: League/Season/Round/Player Model Foundation
-stage: planned
+stage: shipped
+shippedIn: sprint-25 (v1.0.1-v1.0.4)
+shippedNote: "Core model + FK/history migration + setup UI shipped. The round-phase piece was de-scoped to round-phase-model-and-action-center."
 effort: large
 summary: "Make the app's knowledge of leagues, seasons, rounds, and players
   accurate and explicit — the foundation most roadmap features depend on. Fixes
@@ -582,9 +584,9 @@ id: bside-digest-context-channel
 title: b-side — Digest → Read-Model Context Channel
 stage: analyzed
 effort: large
-campaign: bside-season-awareness
-sprint: S1
+campaign: the-b-side-polish
 source: owner-uat
+shippedNote: "A LEAN precursor (basic archive_context capture) shipped in sprint-36; the full structured per-round payload described here remains unbuilt."
 summary: >-
   Today the b-side read-model derives ENTIRELY from structured vote/submission data
   — it never reads digest narrative (verified), so the context an operator crafts
@@ -617,11 +619,12 @@ summary: >-
 ---
 id: openrouter-model-management
 title: OpenRouter Model Management (table + lookup + default)
-stage: planned
+stage: shipped
+shippedIn: sprint-38-ai-model-management (v1.5.0/v1.5.1)
 effort: medium
 spike: model-cost-infra
 source: owner
-priority: urgent
+campaign: ai-model-management
 summary: >-
   Replace the scattered env-var model config (OPENROUTER_DIGEST_MODEL,
   OPENROUTER_PREDICT_MODEL, hardcoded defaults) with a backend model table. Paste an
@@ -732,7 +735,9 @@ summary: >-
 ---
 id: digest-consensus-field-robustness
 title: Digest — Consensus section field-name robustness
-stage: analyzed
+stage: shipped
+shippedIn: consolidated into digest-consensus-note-field (resolved 2026-06-16)
+consolidatedInto: digest-consensus-note-field
 effort: small
 source: owner (hit live 2026-06-15)
 summary: >-
@@ -773,6 +778,7 @@ summary: >-
 id: round-phase-model-and-action-center
 title: Round Phase Model + Operator Action Center
 stage: planned
+shippedNote: "PHASE-MODEL half SHIPPED in sprint-34 (v1.2.0). This card now tracks the REMAINING half — the operator Action Center."
 effort: large
 source: owner (2026-06-15)
 summary: >-
@@ -865,7 +871,8 @@ gaps:
 ---
 id: digest-consensus-note-field
 title: "Digest bug: consensus section drops the note (only song shows)"
-stage: analyzed
+stage: shipped
+shippedIn: "code RESOLVED 2026-06-16 (DigestSection.svelte consensusNote + ChatMoments + SectionInlineEditor; 35 tests pass); deployed in the next prod build"
 effort: small
 source: owner (2026-06-16)
 summary: >-
