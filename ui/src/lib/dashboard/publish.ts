@@ -12,6 +12,14 @@ interface DashboardSiteRow {
 	slug: string;
 }
 
+// Returns the operator snark_level (0=gentle, 1=medium, 2=spicy) for a league's dashboard site.
+export function getSnarkLevel(db: Database.Database, leagueId: number): number {
+	const row = db
+		.prepare('SELECT snark_level FROM dashboard_sites WHERE league_id = ?')
+		.get(leagueId) as { snark_level: number } | undefined;
+	return row?.snark_level ?? 1;
+}
+
 // Returns round IDs that have a FINALIZED digest — these are what actually land in the b-side.
 // Only these rounds belong in archived_rounds; un-finalized rounds are not baked into the site.
 function getArchivedRoundIdsForLeague(db: Database.Database, leagueId: number): number[] {

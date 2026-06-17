@@ -292,9 +292,15 @@ export function openLeagueDb(path?: string): Database.Database {
 				archived_rounds TEXT NOT NULL DEFAULT '[]',
 				is_live INTEGER NOT NULL DEFAULT 1,
 				published_at TEXT NOT NULL,
-				refreshed_at TEXT NOT NULL
+				refreshed_at TEXT NOT NULL,
+				snark_level INTEGER NOT NULL DEFAULT 1
 			);
 		`);
+	}
+	// sprint-37 S2: snark dial on dashboard_sites (additive migration for existing rows).
+	const dsCols = db.prepare("PRAGMA table_info(dashboard_sites)").all() as { name: string }[];
+	if (dsCols.length && !dsCols.some(c => c.name === 'snark_level')) {
+		db.exec("ALTER TABLE dashboard_sites ADD COLUMN snark_level INTEGER NOT NULL DEFAULT 1");
 	}
 	// sprint-31 b-side: per-section LLM steering state for the operator UI.
 	if (!tableNames.includes('dashboard_section_state')) {
