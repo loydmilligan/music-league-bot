@@ -2,7 +2,7 @@
 status: shipped
 campaign: ai-model-management
 sprint: sprint-38
-version: v1.5.0
+version: v1.5.1
 created: 2026-06-17
 shipped: 2026-06-17
 ---
@@ -139,3 +139,9 @@ _None._
 - Prod reset to baseline post-pass (roster empty, `predict_model`/`digest_model` cleared → resolves to env haiku-4.5).
 - **Local is 11 ahead of origin/master — at push threshold; surfaced to owner.**
 - Sprint status → `shipped`. Remaining: owner UAT sign-off (the note's widgets), then any follow-up cards.
+
+### 2026-06-17 — orc — v1.5.1: all 3 UAT findings fixed + INCIDENT note
+- **Fixes** (`bcc0933`): (1) DELETE `/api/models/:id` clears `predict_model`/`digest_model` when they point at the removed model (the orphaned-override bug); (2) `/api/models/lookup` retries transient 408/429/5xx with backoff + 25s per-attempt timeout; (3) new `/setup` → `/settings/setup` 308 redirect shim. +4 route tests. Gate: `npm run check` 0 errors, `vitest` 606/606.
+- Deployed v1.5.1 (cached build + force-recreate). Footer v1.5.1; routes 200; clean boot.
+- Verified on prod: `/setup`→308; cold-start lookup `found:true` (no 408); delete-clears-override e2e (predict reset to env haiku after deleting its model).
+- **INCIDENT:** during the API verification I discovered the **owner had begun configuring Models & AI live on prod** (real OpenRouter key saved + 6-model roster + `digest_model=minimax/minimax-m3`). My verify sequence (POST temp model → PUT predict → DELETE) ran against live config and **may have cleared an owner `predict_model` selection** (key + roster + digest all intact; temp model removed cleanly). No post-change backup exists. Heads-up sent to owner inbox; **stopped all prod mutation.** Lesson logged to review queue: re-check live prod state before running mutating verification against a shipped surface.
