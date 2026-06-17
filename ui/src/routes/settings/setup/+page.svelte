@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
   import { invalidateAll } from '$app/navigation';
+  import { enhance } from '$app/forms';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
+  import SettingsTabs from '$lib/components/SettingsTabs.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -54,14 +56,11 @@
     await invalidateAll();
   }
 
-  // Active-round selector per league: local shadow state so the select feels
-  // instant. We sync back to server on change.
   let selectedRound = $state<Record<number, number | ''>>(
     Object.fromEntries(data.leagues.map(l => [l.id, l.activeRoundId ?? ''])),
   );
 
   $effect(() => {
-    // Re-sync from server data when invalidateAll() fires.
     for (const l of data.leagues) {
       selectedRound[l.id] = l.activeRoundId ?? '';
     }
@@ -79,7 +78,6 @@
   }
 
   // ---- players section -----------------------------------------------------
-  // Add-player form state
   let newName = $state('');
   let addingPlayer = $state(false);
 
@@ -94,7 +92,6 @@
     await invalidateAll();
   }
 
-  // Inline edit state: which row is expanded
   let editingId = $state<number | null>(null);
   let editName = $state('');
   let editAge = $state<string>('');
@@ -104,7 +101,6 @@
     editingId = player.id;
     editName = player.name;
     editAge = player.age != null ? String(player.age) : '';
-    // reset identity/relationship subforms
     newIdentityType = $state.snapshot(newIdentityType) === newIdentityType ? newIdentityType : 'whatsapp';
     newIdentityId = '';
     newIdentityLeague = '';
@@ -134,7 +130,6 @@
     await invalidateAll();
   }
 
-  // Season membership per player: toggling adds/removes the player from a season.
   let membershipSaving = $state<Record<string, boolean>>({});
 
   async function toggleMembership(player: Player, seasonId: number) {
@@ -265,10 +260,8 @@
   }
 
   // ---- rounds section ------------------------------------------------------
-  // Track which leagues have their rounds expanded.
   let roundsExpanded = $state<Record<number, boolean>>({});
 
-  // Add-round form per league.
   type AddRoundForm = { name: string; subDeadline: string; voteDeadline: string; setActive: boolean; saving: boolean };
   let addRoundForms = $state<Record<number, AddRoundForm>>({});
 
@@ -300,7 +293,6 @@
     roundsExpanded = { ...roundsExpanded, [leagueId]: !roundsExpanded[leagueId] };
   }
 
-  // Local round edit state: keyed by round id.
   type RoundEditState = {
     roundNumber: string;
     name: string;
@@ -331,9 +323,97 @@
   function getRoundEditById(roundId: number): RoundEditState {
     return roundEdits[roundId] ?? { roundNumber: '', name: '', tag: '', submittedBy: '', saving: false };
   }
+
+  // ---- Auto-fill deadlines ------------------------------------------------
+  type LeagueRow = { slug: string; name: string };
+  type ActiveRoundRow = { leagueName: string; seasonNumber: number };
+  const allLeagues = $derived(data.allLeagues as LeagueRow[]);
+
+  const seasonsByLeagueSlug = $derived.by(() => {
+    const map = new Map<string, number[]>();
+    for (const r of (data.activeRounds as ActiveRoundRow[])) {
+      const league = allLeagues.find((l: LeagueRow) => l.name === r.leagueName);
+      if (!league) continue;
+      const list = map.get(league.slug) ?? [];
+      if (!list.includes(r.seasonNumber)) list.push(r.seasonNumber);
+      map.set(league.slug, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a - b);
+    return map;
+  });
+
+  const firstLeagueWithSeasons = $derived(
+    allLeagues.find((l) => (seasonsByLeagueSlug.get(l.slug)?.length ?? 0) > 0)?.slug ??
+      allLeagues[0]?.slug ??
+      ''
+  );
+
+  let afLeague = $state('');
+  let afSeason = $state<number | ''>('');
+  let afDaysToSubmit = $state(4);
+  let afDaysToVote = $state(3);
+  let afStartDate = $state(new Date().toISOString().slice(0, 10));
+  let afStatus = $state<{ tone: 'health' | 'warn'; label: string } | null>(null);
+  let afSubmitting = $state(false);
+
+  let deadlinesOpen = $state(false);
+
+  const afSeasonOptions = $derived(seasonsByLeagueSlug.get(afLeague) ?? []);
+
+  $effect(() => {
+    if (!afLeague && firstLeagueWithSeasons) afLeague = firstLeagueWithSeasons;
+  });
+  $effect(() => {
+    const opts = afSeasonOptions;
+    if (opts.length === 0) {
+      afSeason = '';
+    } else if (typeof afSeason !== 'number' || !opts.includes(afSeason)) {
+      afSeason = opts[0];
+    }
+  });
+
+  async function autoFillDeadlines() {
+    if (!afLeague || afSeason === '' || afSubmitting) return;
+    afSubmitting = true;
+    afStatus = null;
+    try {
+      const res = await fetch('/api/deadlines/auto-fill', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          league: afLeague,
+          season: afSeason,
+          daysToSubmit: afDaysToSubmit,
+          daysToVote: afDaysToVote,
+          startDate: afStartDate
+        })
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        afStatus = {
+          tone: 'warn',
+          label: (err?.error ?? `HTTP ${res.status}`).toString().toUpperCase()
+        };
+        return;
+      }
+      const body = (await res.json()) as { updated: number };
+      afStatus = {
+        tone: 'health',
+        label: `AUTO-FILLED · ${body.updated} ROUND${body.updated === 1 ? '' : 'S'}`
+      };
+      await invalidateAll();
+    } catch (e) {
+      afStatus = {
+        tone: 'warn',
+        label: (e instanceof Error ? e.message : 'NETWORK ERROR').toUpperCase()
+      };
+    } finally {
+      afSubmitting = false;
+    }
+  }
 </script>
 
-<svelte:head><title>Setup · music-league-bot</title></svelte:head>
+<svelte:head><title>Music League Setup · music-league-bot</title></svelte:head>
 
 <!-- Banner -->
 {#if banner}
@@ -345,13 +425,17 @@
 <!-- Page header -->
 <div class="mb-8">
   <div class="text-fg-faint font-mono text-xs tracking-widest uppercase mb-3">
-    music-league-bot · setup
+    music-league-bot · /settings/setup
   </div>
-  <h1 class="text-4xl font-bold text-fg mb-3">Setup</h1>
+  <h1 class="text-4xl font-bold text-fg mb-3">Music League Setup</h1>
   <p class="text-fg-muted max-w-2xl">
     Manage leagues, seasons, active rounds, players, and round metadata.
   </p>
 </div>
+
+<SettingsTabs />
+
+<div class="mt-6">
 
 <!-- ======== LEAGUES & SEASONS ======== -->
 <section class="mb-10">
@@ -493,7 +577,6 @@
                   {#each leagueRounds as round (round.id)}
                     {@const edit = getRoundEdit(round)}
                     <tr class="border-t border-border-muted hover:bg-surface-hover">
-                      <!-- Round number -->
                       <td class="px-4 py-1.5">
                         <input
                           type="number"
@@ -510,7 +593,6 @@
                           class="w-14 bg-bg-elevated border border-border-muted rounded px-1.5 py-1 text-sm text-fg focus:border-accent focus:outline-none text-center"
                         />
                       </td>
-                      <!-- Theme name -->
                       <td class="px-4 py-1.5">
                         <input
                           type="text"
@@ -527,16 +609,13 @@
                           class="w-full min-w-[140px] bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                         />
                       </td>
-                      <!-- Season -->
                       <td class="px-4 py-1.5 font-mono text-xs text-fg-muted">S{round.seasonNumber}</td>
-                      <!-- Status chip -->
                       <td class="px-4 py-1.5">
                         <StatusChip
                           label={round.phase === 'submission' ? 'OPEN' : round.phase === 'voting' ? 'VOTING' : round.phase === 'archive' ? 'DONE' : 'UPCOMING'}
                           tone={round.phase === 'submission' ? 'health' : round.phase === 'voting' ? 'warn' : 'muted'}
                         />
                       </td>
-                      <!-- Tag -->
                       <td class="px-4 py-1.5">
                         <input
                           type="text"
@@ -550,7 +629,6 @@
                           class="w-full bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                         />
                       </td>
-                      <!-- Submitted by -->
                       <td class="px-4 py-1.5">
                         <select
                           value={edit.submittedBy}
@@ -781,7 +859,6 @@
       <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint px-4 py-2.5 border-b border-border-muted">
         Linked competitors ({linkedCompetitors.length})
       </div>
-      <!-- Desktop table -->
       <div class="hidden md:block overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -821,7 +898,6 @@
           </tbody>
         </table>
       </div>
-      <!-- Mobile cards -->
       <div class="md:hidden divide-y divide-border-muted">
         {#each linkedCompetitors as comp (comp.id)}
           <div class="px-4 py-3 flex flex-col gap-2">
@@ -857,7 +933,7 @@
 </section>
 
 <!-- ======== PLAYERS ======== -->
-<section>
+<section class="mb-10">
   <header class="mb-4">
     <SectionLabel>Players</SectionLabel>
     <h2 class="text-2xl font-bold text-fg mt-1">Player roster</h2>
@@ -891,14 +967,12 @@
     </div>
   </div>
 
-  <!-- Player list -->
   {#if data.players.length === 0}
     <p class="text-fg-dim text-sm italic">No players yet. Add one above.</p>
   {:else}
     <div class="flex flex-col gap-3">
       {#each data.players as player (player.id)}
         <div class="bg-surface border border-border-muted rounded-xl overflow-hidden">
-          <!-- Player header row -->
           <div class="flex items-center gap-3 px-5 py-3">
             <div class="flex-1 min-w-0">
               <div class="font-semibold text-fg">{player.name}</div>
@@ -906,7 +980,6 @@
                 <div class="font-mono text-[10px] text-fg-faint mt-0.5">Age {player.age}</div>
               {/if}
             </div>
-            <!-- Identity chips -->
             <div class="flex flex-wrap gap-1 min-w-0">
               {#each player.identities as ident (ident.id)}
                 <span
@@ -929,7 +1002,6 @@
           {#if editingId === player.id}
             <div class="border-t border-border-muted px-5 py-4 flex flex-col gap-5">
 
-              <!-- Name + Age row -->
               <div>
                 <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Basic info</div>
                 <div class="flex flex-wrap gap-3 items-end">
@@ -962,7 +1034,6 @@
                 </div>
               </div>
 
-              <!-- Season memberships -->
               <div>
                 <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Season memberships</div>
                 <div class="flex flex-wrap gap-1">
@@ -984,7 +1055,6 @@
                 </div>
               </div>
 
-              <!-- Identities -->
               <div>
                 <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Identities</div>
                 {#if player.identities.length > 0}
@@ -1004,7 +1074,7 @@
                           disabled={deletingIdentity[ident.id]}
                           class="font-mono text-[10px] text-fg-dim hover:text-warn transition-colors disabled:opacity-50"
                         >
-                          ✕
+                          ×
                         </button>
                       </div>
                     {/each}
@@ -1068,7 +1138,6 @@
                 {/if}
               </div>
 
-              <!-- Relationships -->
               <div>
                 <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2">Relationships</div>
                 {#if player.relationships.length > 0}
@@ -1085,14 +1154,13 @@
                           disabled={deletingRel[rel.id]}
                           class="font-mono text-[10px] text-fg-dim hover:text-warn transition-colors disabled:opacity-50"
                         >
-                          ✕
+                          ×
                         </button>
                       </div>
                     {/each}
                   </div>
                 {/if}
 
-                <!-- Add relationship form -->
                 <div class="flex flex-wrap gap-2 items-end">
                   <select
                     bind:value={newRelatedPlayer}
@@ -1138,3 +1206,175 @@
     </div>
   {/if}
 </section>
+
+<!-- ======== AUTO-FILL DEADLINES ======== -->
+<section class="bg-surface border border-border-muted rounded-xl p-6 mb-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Auto-fill</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Bulk-set deadlines for a season</h2>
+    </div>
+    {#if afStatus}
+      <StatusChip label={afStatus.label} tone={afStatus.tone} />
+    {/if}
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Picks the first round's start = <span class="font-mono text-fg">start date</span>, then chains
+    <span class="font-mono text-fg">+ days-to-submit</span> →
+    <span class="font-mono text-fg">+ days-to-vote</span> through every round in the season (zero buffer).
+  </p>
+
+  <div class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-league">League</label>
+      <select
+        id="af-league"
+        bind:value={afLeague}
+        disabled={allLeagues.length === 0}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+      >
+        {#each allLeagues as l (l.slug)}
+          <option value={l.slug}>{l.name}</option>
+        {/each}
+      </select>
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-season">Season</label>
+      <select
+        id="af-season"
+        bind:value={afSeason}
+        disabled={afSeasonOptions.length === 0}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+      >
+        {#if afSeasonOptions.length === 0}
+          <option value="">no active</option>
+        {:else}
+          {#each afSeasonOptions as n (n)}
+            <option value={n}>Season {n}</option>
+          {/each}
+        {/if}
+      </select>
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-submit">Days to submit</label>
+      <input
+        id="af-submit"
+        type="number"
+        min="1"
+        max="60"
+        bind:value={afDaysToSubmit}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-vote">Days to vote</label>
+      <input
+        id="af-vote"
+        type="number"
+        min="1"
+        max="60"
+        bind:value={afDaysToVote}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <div>
+      <label class="block font-mono text-[11px] tracking-widest uppercase text-fg-faint mb-1.5" for="af-start">Start date</label>
+      <input
+        id="af-start"
+        type="date"
+        bind:value={afStartDate}
+        class="bg-bg-elevated border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+      />
+    </div>
+    <button
+      type="button"
+      onclick={autoFillDeadlines}
+      disabled={!afLeague || afSeason === '' || afSubmitting}
+      class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+    >
+      {afSubmitting ? 'Filling…' : 'Auto-fill deadlines'}
+    </button>
+  </div>
+</section>
+
+<!-- ======== ROUND DEADLINES ======== -->
+<details
+  bind:open={deadlinesOpen}
+  class="group bg-surface border border-border-muted rounded-xl [&>summary::-webkit-details-marker]:hidden"
+>
+  <summary
+    class="cursor-pointer list-none flex items-center justify-between gap-3 p-6 hover:bg-surface-hover transition-colors rounded-xl"
+  >
+    <div class="flex items-center gap-3 min-w-0">
+      <span
+        class="inline-block text-accent text-sm font-mono transition-transform duration-150 shrink-0"
+        style:transform={deadlinesOpen ? 'rotate(90deg)' : 'rotate(0)'}
+        aria-hidden="true"
+      >
+        ▸
+      </span>
+      <SectionLabel>
+        Round deadlines · {deadlinesOpen ? 'click to collapse' : 'click to expand'}
+      </SectionLabel>
+    </div>
+    <span class="font-mono text-[11px] tracking-widest uppercase text-fg-dim shrink-0">
+      {data.activeRounds.length} active
+    </span>
+  </summary>
+  <div class="px-6 pb-6 pt-0">
+    <p class="text-xs text-fg-dim mb-5">
+      Submission and voting deadlines for active rounds. Drives the
+      <span class="font-mono text-fg">SUBMISSIONS · 3D 14H</span> countdown chips on the home screen.
+    </p>
+
+    {#if data.activeRounds.length}
+      <div class="flex flex-col gap-2">
+        {#each data.activeRounds as r (r.id)}
+          <form
+            method="POST"
+            action="?/updateDeadline"
+            use:enhance
+            class="flex flex-wrap items-center gap-3 text-sm bg-bg-elevated border border-border-muted rounded-md px-3 py-2"
+          >
+            <input type="hidden" name="roundId" value={r.id} />
+            <span class="text-fg w-56 truncate">
+              <span class="text-fg-dim">{r.leagueName} S{r.seasonNumber}</span>
+              <span class="text-fg-faint"> · </span>
+              {r.name}
+            </span>
+            <div class="flex items-center gap-2">
+              <label class="font-mono text-[10px] tracking-widest uppercase text-accent" for="sub-{r.id}">Submit by</label>
+              <input
+                id="sub-{r.id}"
+                type="datetime-local"
+                name="submissionDeadline"
+                value={r.submissionDeadline?.slice(0, 16) ?? ''}
+                class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="font-mono text-[10px] tracking-widest uppercase text-health" for="vote-{r.id}">Vote by</label>
+              <input
+                id="vote-{r.id}"
+                type="datetime-local"
+                name="votingDeadline"
+                value={r.votingDeadline?.slice(0, 16) ?? ''}
+                class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
+            >
+              Save
+            </button>
+          </form>
+        {/each}
+      </div>
+    {:else}
+      <p class="text-fg-dim text-sm">No active rounds found.</p>
+    {/if}
+  </div>
+</details>
+
+</div><!-- /mt-6 wrapper -->
