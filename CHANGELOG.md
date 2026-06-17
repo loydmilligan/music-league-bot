@@ -4,6 +4,46 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.5.0] — 2026-06-17
+
+**sprint-38 — AI Model Management.** Settings is now tabbed, and a new **Models &
+AI** tab puts model choice in the operator's hands instead of in env vars. Bring
+your own OpenRouter key, build a roster of saved models by pasting an id, and pick
+which model drives predictions vs. digests — all from the UI, DB-backed, with the
+existing env/hardcoded values kept as visible fallbacks.
+
+### Models & AI (new Settings tab)
+
+- **OpenRouter connection** — paste your OpenRouter key (stored server-side, masked,
+  never echoed back) with a live status pill.
+- **Saved-model roster** — paste a model id → server looks it up against OpenRouter's
+  catalog → editable record with capability glyphs (reason / stream / vision / tools /
+  JSON), context length, cost tier (auto-derived, override-able), a **FREE** badge, and
+  favorites. Dedupes on model id; estimates when the catalog has no price.
+- **Model Variables** — two selects, **Predict** and **Digest**, populated from the
+  roster filtered to models that *qualify* (e.g. JSON-mode capable). Each shows the
+  resolved value plus three read-only fallback fields (predict env / digest env /
+  hardcoded default), with a warning if you pick an unqualified model.
+
+### Settings restructure
+
+- Settings is now a tabbed surface: **App Settings**, **Music League Setup**, and
+  **Models & AI**.
+- **Setup moved under Settings** — the old `/setup` page is now **Music League Setup**,
+  and the **Auto-fill deadlines** + **Round deadlines** tools moved there from App
+  Settings. Old `/setup` links redirect.
+
+### Under the hood
+
+- New `ai_models` table + `openrouter_key` / `predict_model` / `digest_model` settings.
+- `/api/models` CRUD + `/api/models/lookup` (server proxy → OpenRouter `/models`, ~1h
+  cache), `/api/settings/openrouter-key`, `/api/model-vars`.
+- **DB-first model resolver** — `modelFor(bucket, db) = dbSetting ?? env ?? hardcoded`,
+  wired at the 4 generation sites (narrative ×4, digest, dashboard). Generator functions
+  and task→bucket mapping unchanged; only the model source moved.
+- Qualify enforcement is UI-side for v1; server-side validation and per-task model
+  routing are deferred.
+
 ## [1.4.0] — 2026-06-16
 
 **sprint-37 — "The Living Season": the b-side gets a season recap.** The public
