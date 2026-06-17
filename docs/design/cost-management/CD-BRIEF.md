@@ -186,3 +186,89 @@ and the Q5 winner feeds the **sprint-41** per-section panel.
 
 For the **backend question (Q6)**: a written recommendation — a revised `llm_cost_log` schema sketch plus
 an "add now / defer" list with reasons. This may adjust the **sprint-39** ledger before it's built.
+
+---
+
+## 7. Mock-data appendix (real-ish anchors)
+
+Use these so the mockups feel like our actual system. All figures are realistic, not measured —
+internally consistent (cost ≈ tokens × price), good enough to anchor visuals.
+
+### Models actually in rotation (roster + env defaults), per-1M-token pricing
+| Model | in / out ($/1M) | tier | role |
+|---|---|---|---|
+| `anthropic/claude-opus-4.8` | 15 / 75 | `$$$` | premium, rare maintenance runs |
+| `anthropic/claude-sonnet-4.6` | 3 / 15 | `$$` | high-end content |
+| `anthropic/claude-haiku-4.5` | 1 / 5 | `$` | current digest+predict default (env) |
+| `deepseek/deepseek-v4-pro` | 0.40 / 1.20 | `$` | cheap experiment |
+| `minimax/minimax-m3` | 0.30 / 1.10 | `$` | current digest selection (DB) |
+| `google/gemini-3.5-flash` | 0.15 / 0.60 | `$` | cheapest paid, very fast |
+| `meta-llama/llama-3.3-70b:free` | 0 / 0 | `FREE` | free-tier, weaker/variable |
+
+### Per-call ranges by purpose (cost / latency / tokens)
+| label (purpose) | $/call (cheap → premium model) | latency | prompt→completion tokens |
+|---|---|---|---|
+| `digest:full` (whole draft) | $0.006 → $0.60 (Haiku ≈ $0.05, Sonnet ≈ $0.17, Opus ≈ $0.58) | 3–30 s | 8k–15k → 1.5k–3k |
+| `digest:<section>` regen (podium/villain/flow/consensus/quotes/chat) | $0.002 → $0.15 | 2–14 s | 3k–6k → 300–900 |
+| `archive:season-update` | $0.004 → $0.20 | 3–20 s | 4k–9k → 600–1.5k |
+| `archive:narrative-*` / `profile-*` | $0.003 → $0.18 | 3–18 s | 4k–8k → 500–1.4k |
+| `archive:rel-context` | $0.001 → $0.04 | 2–9 s | 1.5k–4k → 200–600 |
+| `predict:vote-probe` / `submission-predict` / `taste-fingerprint` | $0.001 → $0.05 | 1.5–12 s | 1k–4k → 150–600 |
+
+Latency by model (rough): Opus 12–30 s · Sonnet 8–20 s · Haiku 3–9 s · DeepSeek/MiniMax 4–12 s · Gemini Flash 1.5–5 s · Llama-free 5–15 s (variable).
+
+### 14-day daily series (for the 2-week stacked-bar chart) — `$ digest / archive / predict / total · #calls`
+```
+D-13  0.00 / 0.00 / 0.00 / 0.00 ·  0    (quiet)
+D-12  0.12 / 0.04 / 0.01 / 0.17 ·  7
+D-11  1.85 / 0.62 / 0.14 / 2.61 · 54    (heavy testing)
+D-10  0.94 / 0.30 / 0.08 / 1.32 · 31
+D-9   0.05 / 0.02 / 0.00 / 0.07 ·  4
+D-8   0.00 / 0.00 / 0.00 / 0.00 ·  0    (quiet)
+D-7   2.10 / 0.48 / 0.11 / 2.69 · 60    (heavy)
+D-6   0.40 / 1.05 / 0.05 / 1.50 · 28    (archive-heavy: b-side regen day)
+D-5   0.18 / 0.06 / 0.02 / 0.26 ·  9
+D-4   0.77 / 0.22 / 0.13 / 1.12 · 33
+D-3   0.03 / 0.01 / 0.01 / 0.05 ·  3
+D-2   1.42 / 0.55 / 0.09 / 2.06 · 44
+D-1   0.21 / 0.34 / 0.04 / 0.59 · 16
+D-0   0.66 / 0.19 / 0.06 / 0.91 · 22    (today)
+```
+≈ $13.85 over 14 days, ~311 calls. Note the variety the chart must handle: zero days, light maintenance days, heavy testing spikes, and one archive-dominant day.
+
+### Sample "today" drilldown (a slice of D-0's 22 calls — for the today-split + drilldown)
+```
+09:02  digest:full              claude-sonnet-4.6     $0.164   14.2s   11800→2410
+09:06  digest:podium            claude-haiku-4.5      $0.021    4.1s    4200→ 520
+09:07  digest:flow              claude-haiku-4.5      $0.026    4.8s    4600→ 680
+09:31  archive:season-update    minimax/minimax-m3    $0.007    9.1s    6100→ 940
+10:05  predict:vote-probe       gemini-3.5-flash      $0.0009   2.3s    2200→ 240
+10:06  predict:vote-probe       gemini-3.5-flash      $0.0010   2.1s    2350→ 260
+11:14  digest:full              claude-opus-4.8       $0.560   23.7s   12400→2550   (a "make it sing" run)
+11:40  archive:narrative-league-reel  claude-haiku-4.5  $0.018  5.6s   5200→ 760
+13:22  predict:submission-predict      llama-3.3-70b:free $0.00  8.9s   1800→ 410
+14:50  digest:consensus         deepseek/deepseek-v4-pro  $0.004 7.2s  3900→ 480
+15:03  archive:rel-context      claude-haiku-4.5      $0.009    3.4s    2600→ 350
+16:18  digest:chat              minimax/minimax-m3    $0.003    6.0s    3700→ 430
+```
+
+### Per-(model × task) aggregate (for Q2 comparison + Q3 value score) — `avg $ / avg latency / n`
+Task = `digest:full`:
+```
+claude-opus-4.8     $0.58  · 22.4s · n=3      (premium, slow)
+claude-sonnet-4.6   $0.17  · 14.1s · n=18
+claude-haiku-4.5    $0.055 ·  6.2s · n=41     (current default)
+minimax/minimax-m3  $0.012 ·  9.8s · n=12
+gemini-3.5-flash    $0.008 ·  3.1s · n=7      (cheapest+fastest)
+llama-3.3-70b:free  $0.00  · 11.5s · n=2      (free, variable)
+```
+Task = `predict:vote-probe`:
+```
+claude-haiku-4.5    $0.014 ·  5.1s · n=22
+gemini-3.5-flash    $0.0009·  2.3s · n=63     (the workhorse here)
+deepseek-v4-pro     $0.006 ·  6.8s · n=9
+```
+This cost-vs-latency spread (Opus dear+slow, Flash cheap+fast, Haiku in between) is the trade-off the
+comparison/value visuals exist to surface. **Quality is unknown** — leave its column/axis empty (the
+3rd-KPI slot).
+
