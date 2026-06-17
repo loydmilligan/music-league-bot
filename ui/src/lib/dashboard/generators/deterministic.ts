@@ -112,17 +112,19 @@ export function buildDeterministicSlices(
 	members: Map<number, DeterministicMemberSlice>;
 	league: DeterministicLeagueSlice;
 } {
-	// 1. Completed rounds in the league (matches archive basis)
+	// 1. All rounds — name-lookup map must include every round so moments
+	//    (and any round-id → display-name resolution) never fall back to the id.
+	//    Completed-only count is derived separately for tier cutoff + KPI sub.
 	const rounds = db
-		.prepare<[number], RoundRow>(
-			`SELECT r.id, r.name
+		.prepare<[number], RoundRow & { phase: string | null }>(
+			`SELECT r.id, r.name, r.phase
        FROM rounds r
        JOIN seasons s ON s.id = r.season_id
-       WHERE s.league_id = ? AND r.phase = 'complete'`,
+       WHERE s.league_id = ?`,
 		)
 		.all(leagueId);
 
-	const totalRounds = rounds.length;
+	const totalRounds = rounds.filter((r) => r.phase === 'complete').length;
 
 	const roundNames = new Map<number, string>();
 	for (const r of rounds) roundNames.set(r.id, r.name);
