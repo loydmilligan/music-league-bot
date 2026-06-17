@@ -62,6 +62,7 @@
   let steerChips = $state<Record<string, string[]>>({});
   let steerText = $state<Record<string, string>>({});
   let announce = $state<'card' | 'link' | 'silent'>('card');
+  let snarkLevel = $state<0 | 1 | 2>(1);
   let generating = $state(false);
   let generateErr = $state<string | null>(null);
 
@@ -105,6 +106,15 @@
 
   function setSteerText(id: string, val: string) {
     steerText = { ...steerText, [id]: val };
+  }
+
+  async function setSnarkLevel(level: 0 | 1 | 2) {
+    snarkLevel = level;
+    await fetch(`/api/content/${league.id}/snark`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level }),
+    });
   }
 
   function handleScrim(e: MouseEvent) {
@@ -243,6 +253,17 @@
         </div>
 
         <div class="ct-config">
+          <span class="ct-config-lbl">Season pulse</span>
+          <div class="ct-seg">
+            {#each [[0, 'Gentle'], [1, 'Medium'], [2, 'Spicy']] as [v, l] (v)}
+              <button
+                type="button"
+                data-v={v === 1 ? 'refresh' : ''}
+                class={snarkLevel === v ? 'is-on' : ''}
+                onclick={() => setSnarkLevel(v as 0 | 1 | 2)}
+              >{l}</button>
+            {/each}
+          </div>
           <span class="ct-config-lbl">Announce</span>
           <div class="ct-seg">
             {#each [['card', 'share card'], ['link', 'link only'], ['silent', 'silent']] as [v, l] (v)}
