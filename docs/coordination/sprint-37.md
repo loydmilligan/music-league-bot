@@ -106,3 +106,13 @@ _None._
 - Commits path-scoped + in-lane (dc04eda = bside types+HomeScreen; 2c40586 = content/UpdateModal; no dashboard/db/api touches).
 - bside SPA `npm run build` clean. B2 ui-typecheck deferred to the gate. Lane B accepted pending gate.
 - Holding for Lane A (backend, A1-A4).
+
+### 2026-06-16 — orc — GATE technical checks PASSED (content review pending)
+- Both lanes path-scoped + in-lane on a clean tree (Lane A: 47a40e0/6bdb59b/999c605/6d9cf9a; Lane B: dc04eda/2c40586).
+- ui `npm run check`: 0 errors (819 files). Full `vitest run`: 570/570 green (61 files). bside `npm run build`: clean.
+- REMAINING: owner content-review of a real generated Season-Update (voice mandate) → then deploy. NOT closed yet.
+
+### 2026-06-16 — orc — content-review generation dispatched (post-context-reset)
+- Owner picked **Second Best** (id 3) as the voice-mandate sample league.
+- Backend (%55, idle/Sonnet) dispatched to generate a REAL Season-Update at MEDIUM snark on dev (5173) via the seasonUpdateTask + read-model path; report verbatim {title, body}; no deploy/commit. Generation in flight.
+- Next: on finish → screenshot bside Season-Update section 412 + desktop → owner ratifies voice → v-bump + CHANGELOG + deploy + assert live → close.
