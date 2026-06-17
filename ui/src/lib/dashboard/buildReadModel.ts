@@ -323,13 +323,13 @@ function buildArchive(
 		.all(leagueId) as { round_id: number; slug: string }[];
 	const digestSlugByRound = new Map(digestShareRows.map((r) => [r.round_id, r.slug]));
 
-	// All rounds in order
+	// Completed rounds only — submission/not-started rounds have no result to archive
 	const roundRows = db
 		.prepare(
 			`SELECT r.id AS round_id, r.name AS round_name, se.season_number, r.voting_deadline
          FROM rounds r
          JOIN seasons se ON se.id = r.season_id
-         WHERE se.league_id = ?
+         WHERE se.league_id = ? AND r.phase = 'complete'
          ORDER BY se.season_number, r.id`,
 		)
 		.all(leagueId) as ArchiveRoundRow[];

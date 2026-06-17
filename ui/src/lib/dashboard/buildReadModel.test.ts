@@ -123,10 +123,10 @@ beforeEach(() => {
 	seasonId = (db.prepare('SELECT last_insert_rowid() AS id').get() as { id: number }).id;
 });
 
-function addRound(name: string): number {
+function addRound(name: string, phase: string = 'complete'): number {
 	db.prepare(
-		"INSERT INTO rounds (season_id, ml_round_id, name, created_at, voting_deadline) VALUES (?, ?, ?, '2026-01-01', '2026-01-07')",
-	).run(seasonId, `ml-${name}-${Math.random()}`, name);
+		"INSERT INTO rounds (season_id, ml_round_id, name, created_at, voting_deadline, phase) VALUES (?, ?, ?, '2026-01-01', '2026-01-07', ?)",
+	).run(seasonId, `ml-${name}-${Math.random()}`, name, phase);
 	return (db.prepare('SELECT last_insert_rowid() AS id').get() as { id: number }).id;
 }
 
@@ -373,5 +373,27 @@ describe('buildReadModel — full + lite members', () => {
 			expect(typeof model.seasonUpdate.title).toBe('string');
 			expect(typeof model.seasonUpdate.body).toBe('string');
 		}
+	});
+
+	it('archive excludes incomplete rounds; keeps complete rounds that have no digest share', async () => {
+		seedTwoMemberLeague(); // 4 complete rounds, no digest shares
+
+		// Add incomplete rounds that must NOT appear in the archive
+		addRound('Upcoming Theme', 'submission');
+		addRound('Far Future Theme', 'not-started');
+
+		const model = await buildReadModel(db, leagueId);
+
+		// Only the 4 complete rounds belong in the archive
+		expect(model.archive).toHaveLength(4);
+
+		// Incomplete rounds are absent
+		const themes = model.archive.map((e) => e.theme);
+		expect(themes).not.toContain('Upcoming Theme');
+		expect(themes).not.toContain('Far Future Theme');
+
+		// Complete rounds with no digest share (digestUrl = null) are kept —
+		// a missing share link does not disqualify a complete round.
+		expect(model.archive.every((e) => e.digestUrl === null)).toBe(true);
 	});
 });
