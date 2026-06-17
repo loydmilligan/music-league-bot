@@ -277,6 +277,30 @@ export const SCHEMA = `
   );
   -- reverse lookup (which rounds share a tag) — the similarity-engine path.
   CREATE INDEX IF NOT EXISTS idx_round_theme_tags_tag ON round_theme_tags(tag_id);
+  -- sprint-38 ai-model-management: user-curated model roster + two bucket settings.
+  -- model_id is the OpenRouter id string (provider/model-name). Caps are stored as
+  -- 0/1 integers so SQLite handles them; is_free and cost_override let the UI
+  -- compute a cost tier badge without hitting the API on every render.
+  CREATE TABLE IF NOT EXISTS ai_models (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_id    TEXT NOT NULL UNIQUE,
+    nickname    TEXT,
+    description TEXT,
+    model_type  TEXT,
+    context_len INTEGER,
+    price_in    REAL,
+    price_out   REAL,
+    is_free     INTEGER NOT NULL DEFAULT 0,
+    cost_override REAL,
+    cap_reason  INTEGER NOT NULL DEFAULT 0,
+    cap_stream  INTEGER NOT NULL DEFAULT 0,
+    cap_vision  INTEGER NOT NULL DEFAULT 0,
+    cap_tools   INTEGER NOT NULL DEFAULT 0,
+    cap_json    INTEGER NOT NULL DEFAULT 0,
+    favorite    INTEGER NOT NULL DEFAULT 0,
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
