@@ -60,3 +60,32 @@ describe('streaks', () => {
     expect(surge?.rounds).toBe(2);
   });
 });
+
+import type { TastemakerPayload } from '../db/discoverability.js';
+
+function tm(season: string, players: Array<[string, number]>): TastemakerPayload {
+  return {
+    scope: 'season', season,
+    players: players.map(([name, tastemakerScore], i) => ({
+      name, rank: i + 1, prevRank: null, tastemakerScore, avgPoints: 0, submissionCount: 1,
+      buckets: { radioHit: 0, recognizable: 0, curiousCut: 0, rabbitHole: 0 }, songs: [],
+    })),
+  };
+}
+
+describe('discoveryShifts', () => {
+  it('flags a usually-obscure player going radio-safe', () => {
+    const base: import('./seasonTimeline.js').SeasonTimeline = {
+      leagueId: 1, seasonId: 1,
+      rounds: [{ roundId: 1, roundNumber: 1, name: 'R1' }, { roundId: 2, roundNumber: 2, name: 'R2' }],
+      standingsByRound: [snap(1, 'R1', [['A', 1, 0, 5, 5, null]]), snap(2, 'R2', [['A', 1, 5, 5, 10, 1]])],
+      tastemakerByRound: new Map([
+        [1, tm('S', [['A', 80]])],   // baseline obscure
+        [2, tm('S', [['A', 30]])],   // recent mainstream
+      ]),
+      votePairs: [],
+    };
+    const shift = computeSeasonSignals(base).discoveryShifts.find(s => s.player === 'A');
+    expect(shift?.direction).toBe('went-safe');
+  });
+});
