@@ -4,6 +4,39 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.4.0] — 2026-06-16
+
+**sprint-37 — "The Living Season": the b-side gets a season recap.** The public
+b-side home now opens (right under the by-the-numbers ribbon) with a narrated
+**Season Update** — a snark-tunable recap of where the season stands: who's
+running away with it, where the real midfield drama is, who's trading places. It
+reads from real season signals, not vibes.
+
+### The b-side
+
+- **Season Update section ("The Pulse")** — a `{title, body}` recap rendered after
+  the KPI ribbon on the public home, guarded so leagues without a generated update
+  simply don't show it. Sky accent, pulse-body paragraphs.
+- Backed by real, season-wide signals — including a new **spot-trading rivalry**
+  detector (who keeps swapping standings places with whom) and a **punching-bag
+  guard** so the same person isn't ribbed every single round.
+
+### Operator app
+
+- **Snark dial (Gentle / Medium / Spicy)** in the Update modal — sets the voice of
+  the generated Season Update per league, defaulting to the league's current level.
+
+### Under the hood
+
+- `snark_level` column (additive migration) + `getSnarkLevel()` +
+  `PATCH /api/content/:leagueId/snark`.
+- `seasonUpdateTask` + `buildSeasonUpdateMessages` with the voice mandate and
+  guardrails baked into the prompt; `SeasonUpdateOutputSchema` for `{title, body}`.
+- `ReadModelSchema.seasonUpdate` wired into both `buildReadModel` and
+  `buildUpdatedReadModel` (punching-bag guard fed in as recent subjects).
+- 570/570 tests green (new snark-route, carry-over-signals, seasonUpdateTask, and
+  read-model-wiring suites).
+
 ## [1.3.0] — 2026-06-16
 
 **sprint-35 — digest stops citing future rounds (the "ghost" fix).** Regenerating
