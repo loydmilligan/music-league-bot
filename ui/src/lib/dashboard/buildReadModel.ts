@@ -375,9 +375,9 @@ export async function buildReadModel(
 	const leagueMeta = db
 		.prepare(
 			`SELECT
-         COUNT(DISTINCT se.id)         AS seasonCount,
-         COALESCE(MAX(se.season_number), 1) AS latestSeason,
-         COUNT(r.id)                   AS totalRounds
+         COUNT(DISTINCT se.id)                              AS seasonCount,
+         COALESCE(MAX(se.season_number), 1)                AS latestSeason,
+         COUNT(CASE WHEN r.phase = 'complete' THEN 1 END)  AS totalRounds
        FROM seasons se
        LEFT JOIN rounds r ON r.season_id = se.id
        WHERE se.league_id = ?`,

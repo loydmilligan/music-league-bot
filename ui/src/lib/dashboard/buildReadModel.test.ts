@@ -375,6 +375,24 @@ describe('buildReadModel — full + lite members', () => {
 		}
 	});
 
+	it('league.round and songs-submitted KPI count only completed rounds', async () => {
+		seedTwoMemberLeague(); // 4 complete rounds
+
+		// Add incomplete rounds that must NOT inflate the counts
+		addRound('Upcoming Theme', 'submission');
+		addRound('Far Future Theme', 'not-started');
+
+		const model = await buildReadModel(db, leagueId);
+
+		// league.round must reflect completed rounds only
+		expect(model.league.round).toBe(4);
+
+		// "songs submitted" KPI sub must say "across 4 rounds", not 6
+		const songKpi = model.kpis.find((k) => k.label === 'songs submitted');
+		expect(songKpi).toBeDefined();
+		expect(songKpi!.sub).toBe('across 4 rounds');
+	});
+
 	it('archive excludes incomplete rounds; keeps complete rounds that have no digest share', async () => {
 		seedTwoMemberLeague(); // 4 complete rounds, no digest shares
 

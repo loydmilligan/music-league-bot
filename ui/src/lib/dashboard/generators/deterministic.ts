@@ -112,13 +112,13 @@ export function buildDeterministicSlices(
 	members: Map<number, DeterministicMemberSlice>;
 	league: DeterministicLeagueSlice;
 } {
-	// 1. All rounds in the league
+	// 1. Completed rounds in the league (matches archive basis)
 	const rounds = db
 		.prepare<[number], RoundRow>(
 			`SELECT r.id, r.name
        FROM rounds r
        JOIN seasons s ON s.id = r.season_id
-       WHERE s.league_id = ?`,
+       WHERE s.league_id = ? AND r.phase = 'complete'`,
 		)
 		.all(leagueId);
 
