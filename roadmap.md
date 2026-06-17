@@ -860,11 +860,14 @@ notes: >-
 ---
 id: bside-season-update-section
 title: b-side — Season-Update section (season pulse)
-stage: analyzed
+stage: shipped
 effort: medium
 campaign: bside-season-awareness
 sprint: S2
 source: owner (2026-06-16)
+shipped: 2026-06-16
+shippedIn: sprint-37 (v1.4.0)
+followUp: "Capability live; no real Season-Update is on a public prod b-side yet (dev sample was for voice review only). Publishing one = regenerate a league's digest in prod via the shipped snark dial — owner-gated content action, natural at the next round's digest flow."
 summary: >-
   New regenerated-wholesale "season pulse" block on the b-side, placed BELOW the
   standings: an editorial read of what stands out about the season as of the latest
