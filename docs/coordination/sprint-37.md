@@ -39,23 +39,23 @@ Ship the Season-Update "season pulse" on the public b-side — an LLM narration 
 
 <!-- - [ ] {agent: <roster>, id: <slug>, depends: <id,id>} Body / **Acceptance:** check. Full code in the plan doc. -->
 
-- [ ] {agent: backend, id: snark-storage} **Plan Task A1 — `snark_level` column + snark API.** Add `snark_level INTEGER NOT NULL DEFAULT 1` to `dashboard_sites` (+ migration), a `getSnarkLevel` reader, and `PATCH /api/content/[leagueId]/snark`.
-  - **Acceptance:** snark route test green (persist + validate level ∈ {0,1,2}); committed path-scoped.
+- [x] {agent: backend, id: snark-storage} **Plan Task A1 — `snark_level` column + snark API.** Add `snark_level INTEGER NOT NULL DEFAULT 1` to `dashboard_sites` (+ migration), a `getSnarkLevel` reader, and `PATCH /api/content/[leagueId]/snark`.
+  - **Acceptance:** snark route test green (persist + validate level ∈ {0,1,2}); committed path-scoped. ✓ commit 47a40e0
 
-- [ ] {agent: backend, id: signals-carryover} **Plan Task A2 — carry-over signals.** Add `spot-trading` rivalry + `punchingBagGuard` to `seasonSignals.ts`.
-  - **Acceptance:** new signal tests green; committed.
+- [x] {agent: backend, id: signals-carryover} **Plan Task A2 — carry-over signals.** Add `spot-trading` rivalry + `punchingBagGuard` to `seasonSignals.ts`.
+  - **Acceptance:** new signal tests green; committed. ✓ commit 6bdb59b
 
-- [ ] {agent: backend, id: narration-task, depends: snark-storage} **Plan Task A3 — `seasonUpdateTask`.** Create `generators/seasonUpdate.ts` (input/output schemas, `buildSeasonUpdateMessages` with voice + guardrails, the PredictionTask).
-  - **Acceptance:** buildMessages test asserts facts + snark level + guardrails (artists-ok-songs-forbidden, safe targets, punching-bag); output schema parses `{title,body}`; committed.
+- [x] {agent: backend, id: narration-task, depends: snark-storage} **Plan Task A3 — `seasonUpdateTask`.** Create `generators/seasonUpdate.ts` (input/output schemas, `buildSeasonUpdateMessages` with voice + guardrails, the PredictionTask).
+  - **Acceptance:** buildMessages test asserts facts + snark level + guardrails (artists-ok-songs-forbidden, safe targets, punching-bag); output schema parses `{title,body}`; committed. ✓ commit 999c605
 
-- [ ] {agent: backend, id: readmodel-wire, depends: narration-task,signals-carryover} **Plan Task A4 — wire into BOTH read-model paths.** Add `seasonUpdate` to `ReadModelSchema`; populate in `buildReadModel` AND `buildUpdatedReadModel` (regenerate-on-update); pass signals + snark level.
-  - **Acceptance:** `buildReadModel` test mock extended (`season-pulse writer` branch) asserts `readModel.seasonUpdate` populated; `vitest run src/lib/dashboard` green; committed.
+- [x] {agent: backend, id: readmodel-wire, depends: narration-task,signals-carryover} **Plan Task A4 — wire into BOTH read-model paths.** Add `seasonUpdate` to `ReadModelSchema`; populate in `buildReadModel` AND `buildUpdatedReadModel` (regenerate-on-update); pass signals + snark level.
+  - **Acceptance:** `buildReadModel` test mock extended (`season-pulse writer` branch) asserts `readModel.seasonUpdate` populated; `vitest run src/lib/dashboard` green; committed. ✓ commit 6d9cf9a
 
-- [ ] {agent: frontend, id: bside-section} **Plan Task B1 — bside type + HomeScreen section.** Add `seasonUpdate` to `bside/src/lib/types.ts`; render the section (guarded) right after the KPI ribbon in `HomeScreen.svelte` using existing `bs-sec`/`bs-eyebrow` classes.
-  - **Acceptance:** `cd bside && npm run build` succeeds; committed path-scoped.
+- [x] {agent: frontend, id: bside-section} **Plan Task B1 — bside type + HomeScreen section.** Add `seasonUpdate` to `bside/src/lib/types.ts`; render the section (guarded) right after the KPI ribbon in `HomeScreen.svelte` using existing `bs-sec`/`bs-eyebrow` classes.
+  - **Acceptance:** `cd bside && npm run build` succeeds; committed path-scoped. ✓ (prior session)
 
-- [ ] {agent: frontend, id: snark-control} **Plan Task B2 — operator snark-dial control.** 3-way Gentle/Medium/Spicy control in `UpdateModal.svelte` calling `PATCH /api/content/:leagueId/snark`, defaulting to current level.
-  - **Acceptance:** `cd ui && npm run check` 0 errors in the changed file; committed.
+- [x] {agent: frontend, id: snark-control} **Plan Task B2 — operator snark-dial control.** 3-way Gentle/Medium/Spicy control in `UpdateModal.svelte` calling `PATCH /api/content/:leagueId/snark`, defaulting to current level.
+  - **Acceptance:** `cd ui && npm run check` 0 errors in the changed file; committed. ✓ (prior session)
 
 - [ ] {agent: orc, id: gate, depends: readmodel-wire,bside-section,snark-control} **Gate.** Cross-check path-scoped; `ui` `npm run check` (0) + `vitest run` (green); `bside` `npm run build`; **owner content-review** (regen a real b-side on dev, screenshot 412 + desktop, ratify against the voice mandate); on sign-off: v-bump + CHANGELOG + deploy + assert live; close.
   - **Acceptance:** checks green both targets; owner ratifies content; deployed + live; doc `status: closed`.
@@ -75,6 +75,14 @@ _None._
 
 ## Activity Log
 
+### 2026-06-16 — backend — Lane A complete (Tasks A1–A4)
+- A1: `snark_level` column + additive migration + `getSnarkLevel` + PATCH snark route + 6-case test (47a40e0)
+- A2: spot-trading rivalry signal + `punchingBagGuard[]` + 5 new signal tests (6bdb59b)
+- A3: `seasonUpdateTask` PredictionTask + `buildSeasonUpdateMessages` with voice/guardrails + 12 tests (999c605)
+- A4: `ReadModelSchema.seasonUpdate` + wired into `buildReadModel` + `buildUpdatedReadModel` (punching-bag guard as recentSubjects) + test mock branch (6d9cf9a)
+- All tests green: 142 dashboard tests, 28 content route tests.
+- **Gate ready for orc:** both lanes complete; awaiting `ui npm run check` + `vitest run` + `bside npm run build` + owner content-review.
+
 ### 2026-06-16 — orc — sprint-37 (S2) kicked off
 - S1 (sprint-36) closed; backbone (`computeSeasonSignalsForLeague` + `archive_context`) live in-repo.
 - S2 plan `f4a373d`; decomposition ratified (card `dr-20a49cf7`, parallel-2; placement = after KPI ribbon).
@@ -93,3 +101,8 @@ _None._
 - B1 `dc04eda`: `seasonUpdate: {title,body}|null` added to `bside/types.ts` ReadModel; Season-Update section rendered in HomeScreen.svelte after KPI ribbon (guarded on null, `bs-acc-sky` accent, `bs-pulse-body` paragraphs); `cd bside && npm run build` ✓.
 - B2 `2c40586`: 3-way Gentle/Medium/Spicy snark-dial in UpdateModal.svelte (snarkLevel state defaults 1, PATCHes `/api/content/:leagueId/snark` on change); `ui` svelte-check 0 errors.
 - Lane B files: `bside/src/lib/types.ts`, `bside/src/routes/HomeScreen.svelte`, `ui/src/lib/content/UpdateModal.svelte` only. No dashboard/db/api touches.
+
+### 2026-06-16 — orc — Lane B reviewed ✓
+- Commits path-scoped + in-lane (dc04eda = bside types+HomeScreen; 2c40586 = content/UpdateModal; no dashboard/db/api touches).
+- bside SPA `npm run build` clean. B2 ui-typecheck deferred to the gate. Lane B accepted pending gate.
+- Holding for Lane A (backend, A1-A4).
