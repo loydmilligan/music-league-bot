@@ -33,7 +33,6 @@
     { href: '/content',   label: 'Content',        glyph: '▸', badge: contentPendingCount > 0 ? contentPendingCount : undefined },
     { href: '/history',   label: 'History',        glyph: '▸' },
     { href: '/settings',  label: 'Settings',       glyph: '▸' },
-    { href: '/setup',     label: 'Setup',          glyph: '▸' },
   ]);
 
   // Opportunistically pull active-leagues data from the home page's loader when
