@@ -112,3 +112,15 @@ describe('rivalries', () => {
     expect(r!.rounds.sort()).toEqual([1, 2]);
   });
 });
+
+describe('upcomingTension', () => {
+  it('lists top contenders with gap to leader', () => {
+    const t = timeline([
+      snap(1, 'R1', [['A', 1, 0, 9, 20, 1], ['B', 2, 0, 9, 18, 2], ['C', 3, 0, 9, 5, 3]]),
+    ]);
+    const sig = computeSeasonSignals(t, { nextRound: { roundNumber: 2, name: 'Pick Me Up' } });
+    expect(sig.upcomingTension?.contenders[0]).toEqual({ player: 'A', total: 20, gapToLeader: 0 });
+    expect(sig.upcomingTension?.contenders[1].gapToLeader).toBe(2);
+    expect(sig.upcomingTension?.nextRound?.name).toBe('Pick Me Up');
+  });
+});
