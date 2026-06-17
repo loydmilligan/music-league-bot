@@ -883,3 +883,27 @@ summary: >-
   season-signals engine + lean digest channel. Folds in bside-returning-visitor-diff
   ("what's new") as the section lede. Design:
   docs/superpowers/specs/2026-06-16-bside-season-awareness-design.md.
+---
+id: bside-public-deploy-cdn-bundle-stale
+title: "b-side public deploy: stale CDN bundle (no purge / no versioning)"
+stage: analyzed
+effort: small
+source: orc (2026-06-17)
+summary: >-
+  The public b-side (digest.mattmariani.com, Cloudflare in front of the
+  digest-static Caddy) serves a SHARED, fixed-name SPA bundle at
+  /_bside/bside.js + bside.css with a 4h Cloudflare edge cache (cache-control
+  max-age=14400, cf-cache-status HIT). The publish/deploy step copies a freshly
+  built bundle into digests/_bside/ but does NOTHING to bust the CDN, so any
+  bside CODE change (e.g. the v1.4.0 Season-Update HomeScreen section) is
+  invisible to the public until the 4h cache expires — even though the origin
+  (local Caddy :8088) and the per-slug index.html + read_model.json (both
+  cf-cache-status DYNAMIC / uncached) are already correct. Surfaced 2026-06-17
+  when the v1.4.0 deploy rebuilt the bot-ui operator container but the public
+  bside bundle stayed at the Jun-15 build behind the cache. Fix options: (a)
+  content-hash the bundle filename (bside.[hash].js) in bside/vite.config so each
+  build is a new URL — index.html already regenerates per publish so it would
+  reference the new name, sidestepping the cache entirely (preferred, durable);
+  or (b) add a Cloudflare cache-purge call (API token + zone id) to the deploy
+  step for /_bside/*. Also: the v1.4.0 "deploy" runbook should include rebuilding
+  + shipping the public bside bundle, not just the bot-ui container.
