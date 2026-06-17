@@ -160,7 +160,8 @@ export const SCHEMA = `
     -- scope) and whether it's a FINAL recap (champion/past tense) vs mid-season
     -- ("so far, through R{N}"). Read by regen + the data-section framing.
     recap_enabled     INTEGER NOT NULL DEFAULT 0,
-    recap_final       INTEGER NOT NULL DEFAULT 1
+    recap_final       INTEGER NOT NULL DEFAULT 1,
+    archive_context TEXT                        -- S1: lean digest->read-model channel (JSON), non-published
   );
   CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);
   CREATE TABLE IF NOT EXISTS digest_sections (

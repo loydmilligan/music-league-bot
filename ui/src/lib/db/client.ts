@@ -74,6 +74,10 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'recap_final')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN recap_final INTEGER NOT NULL DEFAULT 1");
 	}
+	const draftCols = db.prepare("PRAGMA table_info(digest_drafts)").all() as { name: string }[];
+	if (draftCols.length && !draftCols.some(c => c.name === 'archive_context')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN archive_context TEXT");
+	}
 	// sprint-25 next-round-edit: persist exclude flag + theme/deadline overrides on the draft.
 	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_excluded')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_excluded INTEGER NOT NULL DEFAULT 0");
