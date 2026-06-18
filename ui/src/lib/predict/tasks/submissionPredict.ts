@@ -4,6 +4,7 @@ import type { PlayerContext } from '../playerContext.js';
 import { buildPlayerContext } from '../playerContext.js';
 import { runPrediction } from '../predict.js';
 import type { PredictionTask, PredictionMeta } from '../predict.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 // ── Theme input ────────────────────────────────────────────────────────────────
 
@@ -175,9 +176,6 @@ CRITICAL:
 
 // ── Task definition ────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL =
-	process.env.OPENROUTER_PREDICT_MODEL ?? 'anthropic/claude-sonnet-4-5';
-
 export const submissionPredictTask: PredictionTask<
 	SubmissionPredictInput,
 	SubmissionPredictOutput
@@ -185,7 +183,7 @@ export const submissionPredictTask: PredictionTask<
 	id: 'submission-predict',
 	inputSchema: SubmissionPredictInputSchema,
 	buildMessages: buildSubmissionPredictMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelForSection('submission-predict', db),
 	outputSchema: SubmissionPredictOutputSchema,
 };
 

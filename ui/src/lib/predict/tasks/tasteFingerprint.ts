@@ -4,6 +4,7 @@ import type { PlayerContext } from '../playerContext.js';
 import { buildPlayerContext } from '../playerContext.js';
 import { runPrediction } from '../predict.js';
 import type { PredictionTask, PredictionMeta } from '../predict.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 // ── Output schema ──────────────────────────────────────────────────────────────
 
@@ -104,14 +105,11 @@ Output a JSON object with EXACTLY these fields:
 
 // ── Task definition ────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL =
-	process.env.OPENROUTER_PREDICT_MODEL ?? 'anthropic/claude-sonnet-4-5';
-
 export const tasteFingerprintTask: PredictionTask<PlayerContext, FingerprintOutput> = {
 	id: 'taste-fingerprint',
 	inputSchema: PlayerContextSchema,
 	buildMessages: buildFingerprintMessages,
-	model: DEFAULT_MODEL,
+	model: (db) => modelForSection('taste-fingerprint', db),
 	outputSchema: FingerprintOutputSchema,
 };
 

@@ -1,6 +1,7 @@
 import { it, expect, describe, vi, beforeEach } from 'vitest';
 import { openLeagueDb } from '../../db/client.js';
 import { generateFingerprint, FingerprintOutputSchema, tasteFingerprintTask } from './tasteFingerprint.js';
+import { HARDCODED_MODEL } from '../../digest/modelFor.js';
 import type Database from 'better-sqlite3';
 
 vi.mock('../../digest/llm.js', () => ({
@@ -42,7 +43,7 @@ describe('generateFingerprint — happy path', () => {
 		const { fingerprint, meta } = await generateFingerprint(db, playerId);
 
 		expect(fingerprint).toEqual(FIXTURE_FINGERPRINT);
-		expect(meta.model).toBe(tasteFingerprintTask.model);
+		expect(meta.model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(meta.costUsd).toBe(0.005);
 		expect(meta.latencyMs).toBeGreaterThanOrEqual(0);
 	});
@@ -79,7 +80,7 @@ describe('generateFingerprint — happy path', () => {
 			fingerprint_model: string;
 			fingerprint_cost_usd: number;
 		};
-		expect(row.fingerprint_model).toBe(tasteFingerprintTask.model);
+		expect(row.fingerprint_model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(row.fingerprint_cost_usd).toBeCloseTo(0.003);
 	});
 
@@ -223,5 +224,36 @@ describe('generateFingerprint — edge cases', () => {
 
 		const { fingerprint } = await generateFingerprint(db, playerId);
 		expect(fingerprint.confidence).toBe('low');
+	});
+});
+
+// ── a4-migrate: DB routing proof ───────────────────────────────────────────────
+
+describe('tasteFingerprintTask — DB-first model routing (a4-migrate)', () => {
+	it('task.model is a function (DB-first resolver, not a static env string)', () => {
+		expect(typeof tasteFingerprintTask.model).toBe('function');
+	});
+
+	it('task.model(db) returns bucket predict_model when set in DB', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		const resolved = (tasteFingerprintTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('openai/gpt-4o-mini');
+		db.prepare("DELETE FROM settings WHERE key = 'predict_model'").run();
+	});
+
+	it('task.model(db) returns section pin over bucket predict_model', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('digest_model_taste-fingerprint', 'meta-llama/llama-3.1-405b')").run();
+		const resolved = (tasteFingerprintTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('meta-llama/llama-3.1-405b');
+		db.prepare("DELETE FROM settings WHERE key IN ('predict_model', 'digest_model_taste-fingerprint')").run();
+	});
+
+	it('task.model(db) falls back to HARDCODED_MODEL when neither pin nor bucket is set', () => {
+		const origPredict = process.env.OPENROUTER_PREDICT_MODEL;
+		delete process.env.OPENROUTER_PREDICT_MODEL;
+		const resolved = (tasteFingerprintTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe(HARDCODED_MODEL);
+		if (origPredict !== undefined) process.env.OPENROUTER_PREDICT_MODEL = origPredict;
 	});
 });

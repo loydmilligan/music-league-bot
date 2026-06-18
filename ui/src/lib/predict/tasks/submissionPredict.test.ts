@@ -5,6 +5,7 @@ import {
 	SubmissionPredictOutputSchema,
 	submissionPredictTask,
 } from './submissionPredict.js';
+import { HARDCODED_MODEL } from '../../digest/modelFor.js';
 import type Database from 'better-sqlite3';
 
 vi.mock('../../digest/llm.js', () => ({
@@ -73,7 +74,7 @@ describe('runSubmissionPredict — happy path', () => {
 		expect(output.profile).toEqual(FIXTURE_OUTPUT.profile);
 		expect(output.candidates).toHaveLength(4);
 		expect(output.prediction.title).toBe('Pictures of You');
-		expect(meta.model).toBe(submissionPredictTask.model);
+		expect(meta.model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(meta.costUsd).toBe(0.012);
 		expect(meta.latencyMs).toBeGreaterThanOrEqual(0);
 	});
@@ -106,7 +107,7 @@ describe('runSubmissionPredict — happy path', () => {
 			cost_usd: number;
 			latency_ms: number;
 		};
-		expect(run.model).toBe(submissionPredictTask.model);
+		expect(run.model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(run.cost_usd).toBeCloseTo(0.015);
 		expect(run.latency_ms).toBeGreaterThanOrEqual(0);
 	});
@@ -241,5 +242,36 @@ describe('SubmissionPredictOutputSchema — validation', () => {
 	it('accepts an empty similar_past_picks array', () => {
 		const noPrior = { ...FIXTURE_OUTPUT, prediction: { ...FIXTURE_OUTPUT.prediction, similar_past_picks: [] } };
 		expect(() => SubmissionPredictOutputSchema.parse(noPrior)).not.toThrow();
+	});
+});
+
+// ── a4-migrate: DB routing proof ───────────────────────────────────────────────
+
+describe('submissionPredictTask — DB-first model routing (a4-migrate)', () => {
+	it('task.model is a function (DB-first resolver, not a static env string)', () => {
+		expect(typeof submissionPredictTask.model).toBe('function');
+	});
+
+	it('task.model(db) returns bucket predict_model when set in DB', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		const resolved = (submissionPredictTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('openai/gpt-4o-mini');
+		db.prepare("DELETE FROM settings WHERE key = 'predict_model'").run();
+	});
+
+	it('task.model(db) returns section pin over bucket predict_model', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('digest_model_submission-predict', 'meta-llama/llama-3.1-405b')").run();
+		const resolved = (submissionPredictTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('meta-llama/llama-3.1-405b');
+		db.prepare("DELETE FROM settings WHERE key IN ('predict_model', 'digest_model_submission-predict')").run();
+	});
+
+	it('task.model(db) falls back to HARDCODED_MODEL when neither pin nor bucket is set', () => {
+		const origPredict = process.env.OPENROUTER_PREDICT_MODEL;
+		delete process.env.OPENROUTER_PREDICT_MODEL;
+		const resolved = (submissionPredictTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe(HARDCODED_MODEL);
+		if (origPredict !== undefined) process.env.OPENROUTER_PREDICT_MODEL = origPredict;
 	});
 });

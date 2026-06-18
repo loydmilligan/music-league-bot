@@ -4,6 +4,7 @@ import type { PlayerContext } from '../playerContext.js';
 import { buildPlayerContext } from '../playerContext.js';
 import { runPrediction } from '../predict.js';
 import type { PredictionTask, PredictionMeta } from '../predict.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 // ── Song + theme inputs (bundled with PlayerContext into the full task input) ──
 
@@ -143,13 +144,11 @@ Output a JSON object with EXACTLY these fields:
 
 // ── Task definition ────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = process.env.OPENROUTER_PREDICT_MODEL ?? 'anthropic/claude-sonnet-4-5';
-
 export const voteProbeTask: PredictionTask<VoteProbeInput, VoteProbeOutput> = {
   id: 'vote-probe',
   inputSchema: VoteProbeInputSchema,
   buildMessages: buildVoteProbeMessages,
-  model: DEFAULT_MODEL,
+  model: (db) => modelForSection('vote-probe', db),
   outputSchema: VoteProbeOutputSchema,
 };
 

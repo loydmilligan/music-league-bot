@@ -1,6 +1,7 @@
 import { it, expect, describe, vi, beforeEach } from 'vitest';
 import { openLeagueDb } from '../../db/client.js';
 import { runVoteProbe, VoteProbeOutputSchema, voteProbeTask } from './voteProbe.js';
+import { HARDCODED_MODEL } from '../../digest/modelFor.js';
 import type Database from 'better-sqlite3';
 
 vi.mock('../../digest/llm.js', () => ({
@@ -43,7 +44,7 @@ describe('runVoteProbe — happy path', () => {
 		const { output, meta } = await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
 		expect(output).toEqual(FIXTURE_OUTPUT);
-		expect(meta.model).toBe(voteProbeTask.model);
+		expect(meta.model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(meta.costUsd).toBe(0.007);
 		expect(meta.latencyMs).toBeGreaterThanOrEqual(0);
 	});
@@ -85,7 +86,7 @@ describe('runVoteProbe — happy path', () => {
 			cost_usd: number;
 			latency_ms: number;
 		};
-		expect(run.model).toBe(voteProbeTask.model);
+		expect(run.model).toBe(HARDCODED_MODEL); // task.model is now a fn; resolved = hardcoded (no DB pin in test)
 		expect(run.cost_usd).toBeCloseTo(0.009);
 		expect(run.latency_ms).toBeGreaterThanOrEqual(0);
 	});
@@ -160,5 +161,36 @@ describe('VoteProbeOutputSchema — validation', () => {
 	it('signals must be an array', () => {
 		const bad = { ...FIXTURE_OUTPUT, signals: 'not-an-array' };
 		expect(() => VoteProbeOutputSchema.parse(bad)).toThrow();
+	});
+});
+
+// ── a4-migrate: DB routing proof ───────────────────────────────────────────────
+
+describe('voteProbeTask — DB-first model routing (a4-migrate)', () => {
+	it('task.model is a function (DB-first resolver, not a static env string)', () => {
+		expect(typeof voteProbeTask.model).toBe('function');
+	});
+
+	it('task.model(db) returns bucket predict_model when set in DB', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		const resolved = (voteProbeTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('openai/gpt-4o-mini');
+		db.prepare("DELETE FROM settings WHERE key = 'predict_model'").run();
+	});
+
+	it('task.model(db) returns section pin over bucket predict_model', () => {
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('predict_model', 'openai/gpt-4o-mini')").run();
+		db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('digest_model_vote-probe', 'meta-llama/llama-3.1-405b')").run();
+		const resolved = (voteProbeTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe('meta-llama/llama-3.1-405b');
+		db.prepare("DELETE FROM settings WHERE key IN ('predict_model', 'digest_model_vote-probe')").run();
+	});
+
+	it('task.model(db) falls back to HARDCODED_MODEL when neither pin nor bucket is set', () => {
+		const origPredict = process.env.OPENROUTER_PREDICT_MODEL;
+		delete process.env.OPENROUTER_PREDICT_MODEL;
+		const resolved = (voteProbeTask.model as (db: import('better-sqlite3').Database) => string)(db);
+		expect(resolved).toBe(HARDCODED_MODEL);
+		if (origPredict !== undefined) process.env.OPENROUTER_PREDICT_MODEL = origPredict;
 	});
 });
