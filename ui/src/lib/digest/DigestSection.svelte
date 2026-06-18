@@ -29,6 +29,10 @@
     label: string;
     sectionState: SectionState;
     content: unknown;
+    /** digest_sections.id — required to POST delight signals. */
+    sectionId: string;
+    /** round id from the route — required to POST delight signals. */
+    roundId: number;
     /** Requested layout variant for this section (DB/modal choice or client override). */
     variant?: SectionVariant;
     /** Visual-only side payload (e.g. Standings payload) forwarded to the visual slot. */
@@ -48,6 +52,8 @@
     label,
     sectionState,
     content,
+    sectionId,
+    roundId,
     variant = 'textual',
     visualData,
     visualComponent,
@@ -61,6 +67,79 @@
 
   // Inline (non-LLM) edit mode, toggled by the kebab "Edit inline" action.
   let editing = $state(false);
+
+  // -------- Delight control (sprint-42 b1-delight-control) ----------
+  // Three states: idle → open (modal) → marked (transient success badge).
+  type DelightPhase = 'idle' | 'open' | 'saving' | 'marked' | 'error';
+  let delightPhase = $state<DelightPhase>('idle');
+  let delightNote = $state('');
+  let delightPickIdx = $state(0);
+  let delightError = $state('');
+
+  // Extract sentence-level spans from the section's body text for the span-picker.
+  // Falls back to the whole body as a single span when there are no sentence breaks.
+  const delightSpans = $derived.by<string[]>(() => {
+    const body = (content as { body?: string } | null)?.body?.trim() ?? '';
+    if (!body) return [];
+    // Split on sentence-ending punctuation followed by a space or end-of-string.
+    const raw = body.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) ?? [];
+    const spans = raw.map((s) => s.trim()).filter(Boolean);
+    return spans.length ? spans : [body];
+  });
+
+  // Only show the ▲ button on sections that have rendered AI content (non-empty body)
+  // and are not excluded or regenerating.
+  const showDelightBtn = $derived(
+    sectionState !== 'excluded' &&
+    sectionState !== 'regenerating' &&
+    delightSpans.length > 0,
+  );
+
+  function openDelight(e: MouseEvent) {
+    e.stopPropagation();
+    delightPickIdx = 0;
+    delightNote = '';
+    delightError = '';
+    delightPhase = 'open';
+  }
+  function closeDelight() {
+    delightPhase = 'idle';
+  }
+  function handleDelightScrimClick() {
+    if (delightPhase === 'open') closeDelight();
+  }
+
+  async function saveDelight() {
+    if (delightPhase !== 'open') return;
+    const span = delightSpans[delightPickIdx] ?? '';
+    if (!span) { delightError = 'Pick a span first.'; return; }
+    delightPhase = 'saving';
+    delightError = '';
+    try {
+      const res = await fetch(`/api/digest/${roundId}/delight`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sectionId,
+          span,
+          subsection: kind,
+          note: delightNote.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`delight POST failed (${res.status}) ${txt.slice(0, 120)}`);
+      }
+      delightPhase = 'marked';
+      // Badge is transient — fade back to idle after 4 s.
+      setTimeout(() => {
+        if (delightPhase === 'marked') delightPhase = 'idle';
+      }, 4000);
+    } catch (err) {
+      delightError = err instanceof Error ? err.message : String(err);
+      delightPhase = 'open'; // roll back so user can retry / dismiss
+    }
+  }
 
   // Effective variant: a visual-incapable kind collapses any visual request to
   // textual. The visual slot uses the registered component, else the placeholder.
@@ -163,6 +242,71 @@
 
 <svelte:document onclick={handleDocClick} />
 
+{#if delightPhase === 'open' || delightPhase === 'saving'}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="dg-delight-scrim"
+    onclick={handleDelightScrimClick}
+    role="dialog"
+    aria-modal="true"
+    aria-label="Mark a standout"
+    tabindex="-1"
+  >
+    <div
+      class="dg-delight-modal"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.key === 'Escape' && closeDelight()}
+      role="presentation"
+    >
+      <div class="dg-delight-grab" aria-hidden="true"></div>
+      <div class="dg-delight-head">
+        <div class="dg-delight-ttl">✦ Mark a standout</div>
+        <div class="dg-delight-sub">{label} · pick the exact line that earned it.</div>
+      </div>
+      <div class="dg-delight-body">
+        <div class="dg-delight-sect">
+          <span class="dg-delight-k">The standout line</span>
+          <div class="dg-spanpick" role="listbox" aria-label="Select a standout span">
+            {#each delightSpans as span, i (i)}
+              <span
+                class="dg-spanopt"
+                class:is-pick={i === delightPickIdx}
+                onclick={() => (delightPickIdx = i)}
+                onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (delightPickIdx = i)}
+                role="option"
+                aria-selected={i === delightPickIdx}
+                tabindex="0"
+              >{span} </span>
+            {/each}
+          </div>
+        </div>
+        <div class="dg-delight-sect">
+          <span class="dg-delight-k">Why it is good <span class="dg-delight-opt">· optional</span></span>
+          <textarea
+            class="dg-delight-note"
+            rows="2"
+            placeholder="e.g. 'ran the table' — vivid, specific, not generic AI phrasing"
+            bind:value={delightNote}
+            disabled={delightPhase === 'saving'}
+          ></textarea>
+        </div>
+        {#if delightError}
+          <div class="dg-delight-err" role="alert">{delightError}</div>
+        {/if}
+      </div>
+      <div class="dg-delight-foot">
+        <button type="button" class="dg-delight-cancel" onclick={closeDelight} disabled={delightPhase === 'saving'}>
+          Cancel
+        </button>
+        <button type="button" class="dg-delight-save" onclick={saveDelight} disabled={delightPhase === 'saving'}>
+          {delightPhase === 'saving' ? '…' : '✦ Save signal'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <div class={wrapClass} data-section-kind={kind}>
   {#if sectionState === 'excluded'}
     <div class="dg-excluded-banner">⊘ excluded from final · {label}</div>
@@ -197,6 +341,23 @@
       aria-pressed={sectionState === 'locked'}
       disabled={sectionState === 'regenerating'}
     >{sectionState === 'locked' ? '🔒' : '🔓'}</button>
+    {#if showDelightBtn}
+      <span class="dg-sa-divider" data-export-hide="1"></span>
+      <button
+        type="button"
+        class="dg-sa-btn dg-delight-btn"
+        class:is-marked={delightPhase === 'marked'}
+        onclick={openDelight}
+        title="Mark a standout · log a delight signal"
+        data-export-hide="1"
+      >
+        {#if delightPhase === 'marked'}
+          <span class="dg-delight-star">✦</span><span class="dg-delight-label">marked</span>
+        {:else}
+          ▲
+        {/if}
+      </button>
+    {/if}
     {#if canVisual}
       <span class="dg-sa-divider"></span>
       <div class="dg-variant-switch" role="group" aria-label="Layout variant" data-export-hide="1">
@@ -428,4 +589,194 @@
     font: 400 12.5px/1.5 var(--font-body);
     color: var(--fg-2);
   }
+
+  /* -------- Delight ▲ button ---------- */
+  .dg-delight-btn {
+    font: 600 13px/1 var(--font-mono);
+    color: var(--fg-muted);
+    transition: color var(--dur-fast) var(--ease-out);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dg-delight-btn:hover:not(:disabled) {
+    color: var(--amber);
+  }
+  .dg-delight-btn.is-marked {
+    color: var(--amber);
+  }
+  .dg-delight-star {
+    font-size: 11px;
+  }
+  .dg-delight-label {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* -------- Delight modal (bottom-sheet style) ---------- */
+  .dg-delight-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 9, 12, 0.72);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 0 env(safe-area-inset-bottom, 0);
+  }
+  .dg-delight-modal {
+    background: var(--surface-2);
+    border: 1px solid var(--line-strong);
+    border-bottom: none;
+    border-radius: var(--r-6) var(--r-6) 0 0;
+    width: 100%;
+    max-width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .dg-delight-grab {
+    width: 40px;
+    height: 4px;
+    background: var(--line-strong);
+    border-radius: var(--r-full);
+    margin: 12px auto 0;
+    flex-shrink: 0;
+  }
+  .dg-delight-head {
+    padding: 14px 18px 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .dg-delight-ttl {
+    font: 700 15px/1.2 var(--font-body);
+    color: var(--fg);
+    letter-spacing: -0.01em;
+  }
+  .dg-delight-sub {
+    font: 400 12px/1.4 var(--font-body);
+    color: var(--fg-muted);
+    margin-top: 3px;
+  }
+  .dg-delight-body {
+    overflow-y: auto;
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .dg-delight-sect {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .dg-delight-k {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .dg-delight-opt {
+    color: var(--fg-quiet);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+  .dg-spanpick {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    padding: 10px 12px;
+    line-height: 1.7;
+    font: 400 13px/1.7 var(--font-body);
+    color: var(--fg-2);
+    cursor: pointer;
+  }
+  .dg-spanopt {
+    border-radius: var(--r-1);
+    padding: 1px 2px;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+    cursor: pointer;
+  }
+  .dg-spanopt:hover {
+    background: var(--amber-soft);
+    color: var(--fg);
+  }
+  .dg-spanopt.is-pick {
+    background: var(--amber-soft);
+    color: var(--amber);
+    outline: 1px solid var(--amber);
+    outline-offset: 1px;
+  }
+  .dg-delight-note {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    color: var(--fg);
+    font: 400 13px/1.5 var(--font-body);
+    padding: 9px 12px;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .dg-delight-note:focus {
+    outline: none;
+    border-color: var(--amber);
+  }
+  .dg-delight-note:disabled {
+    opacity: 0.6;
+  }
+  .dg-delight-err {
+    font: 500 12px/1.4 var(--font-mono);
+    color: var(--ember);
+    background: var(--ember-soft);
+    border: 1px solid var(--ember);
+    border-radius: var(--r-2);
+    padding: 8px 10px;
+  }
+  .dg-delight-foot {
+    display: flex;
+    gap: 8px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+    background: var(--surface-2);
+  }
+  .dg-delight-cancel {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-3);
+    color: var(--fg-muted);
+    cursor: pointer;
+    padding: 9px 16px;
+    font: 600 13px/1 var(--font-body);
+    flex: 1;
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .dg-delight-cancel:hover:not(:disabled) {
+    color: var(--fg);
+    border-color: var(--line-strong);
+  }
+  .dg-delight-cancel:disabled { cursor: default; opacity: 0.5; }
+  .dg-delight-save {
+    background: var(--amber-soft);
+    border: 1px solid var(--amber);
+    border-radius: var(--r-3);
+    color: var(--amber);
+    cursor: pointer;
+    padding: 9px 20px;
+    font: 700 13px/1 var(--font-body);
+    flex: 2;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .dg-delight-save:hover:not(:disabled) {
+    background: var(--amber);
+    color: var(--ink-0);
+  }
+  .dg-delight-save:disabled { cursor: default; opacity: 0.6; }
 </style>

@@ -1005,6 +1005,8 @@
         label={SECTION_LABELS[kindOrFallback(section.kind)]}
         sectionState={sectionStates[section.id] ?? 'default'}
         content={section.content}
+        sectionId={section.id}
+        roundId={data.roundId}
         variant={effectiveSectionVariant(section.kind, section.id, section.variant)}
         visualComponent={VISUAL_COMPONENTS[kindOrFallback(section.kind)]}
         onToggleExcluded={() => toggleExcluded(section.id)}
