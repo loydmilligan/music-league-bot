@@ -86,9 +86,9 @@ Lane B builds against the mock at `lib/debug/costApi.mock.ts`; `costApi.ts` swap
 
 ## Active Sprint Plan
 
-- [ ] {agent: backend, id: a1-debug-setting} **`debug_mode` settings key + API.** Add `debug_mode` key to settings table (default 'false'); `GET /api/settings/debug-mode → { enabled: boolean }`; `PUT /api/settings/debug-mode` body `{ enabled: boolean }`. **Acceptance:** key persists across requests; GET returns `false` before any PUT; route tests for get + set.
+- [x] {agent: backend, id: a1-debug-setting} **`debug_mode` settings key + API.** Add `debug_mode` key to settings table (default 'false'); `GET /api/settings/debug-mode → { enabled: boolean }`; `PUT /api/settings/debug-mode` body `{ enabled: boolean }`. **Acceptance:** key persists across requests; GET returns `false` before any PUT; route tests for get + set.
 
-- [ ] {agent: backend, id: a2-cost-endpoints, depends: a1-debug-setting} **Cost aggregation endpoints (sprint-39 fallback).** If sprint-39 endpoints are not yet merged: implement `/api/cost/summary`, `/api/cost/daily`, `/api/cost/calls` reading from `llm_cost_log` (sprint-39 schema). If sprint-39 is already merged: verify the three endpoints match the pinned contract shapes and add a smoke test. **Acceptance:** all three endpoints return contract-shaped JSON; empty ledger returns zeros / empty arrays (no 500); route tests green.
+- [x] {agent: backend, id: a2-cost-endpoints, depends: a1-debug-setting} **Cost aggregation endpoints (sprint-39 fallback).** If sprint-39 endpoints are not yet merged: implement `/api/cost/summary`, `/api/cost/daily`, `/api/cost/calls` reading from `llm_cost_log` (sprint-39 schema). If sprint-39 is already merged: verify the three endpoints match the pinned contract shapes and add a smoke test. **Acceptance:** all three endpoints return contract-shaped JSON; empty ledger returns zeros / empty arrays (no 500); route tests green.
 
 - [ ] {agent: frontend, id: b0-design-mock} **Static HTML mock.** Single self-contained HTML file at `docs/design/debug/cost-dashboard-mock.html`: debug tab in the tab row, "Debug mode" toggle card on App Settings, the three dashboard widgets (summary card, drilldown table stub, 2-week chart using inline CSS bars). Demonstrates the color/shade/tooltip concept. **Acceptance:** file opens in browser; owner reviews and says "looks right"; no Svelte required.
 
@@ -126,6 +126,11 @@ _(none yet)_
 - ~~sprint-39-cost-ledger must land before gate~~ — RESOLVED 2026-06-18: sprint-39 shipped v1.6.0; endpoints live over the `llm_calls` view.
 
 ## Activity Log
+
+### 2026-06-18 — backend — a1 + a2 complete
+- a1-debug-setting: created `ui/src/routes/api/settings/debug-mode/+server.ts` (GET/PUT, mirrors openrouter-key pattern); scoped test `debug-mode.test.ts` (9 tests pass); commit 359e4e2.
+- a2-cost-endpoints (verify-only): confirmed `/api/cost/summary`, `/api/cost/daily`, `/api/cost/calls` are live from sprint-39; all three match pinned contract shapes; `calls` endpoint returns `latency_ms`; existing `cost.test.ts` smoke suite (14 tests) confirmed green. No new files needed.
+- `npm run check`: 0 errors (48 pre-existing warnings unchanged).
 
 ### 2026-06-17 — orc — sprint-40 coord-doc + spec authored
 - Spec written to `~/.config/taw/wiki/Projects/music-league-bot/sprint-40-cost-dashboard-spec.md`.
