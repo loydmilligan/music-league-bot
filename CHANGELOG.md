@@ -4,6 +4,42 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.6.0] — 2026-06-18
+
+**sprint-39 — OpenRouter cost ledger + passive usability capture.** The data
+foundation for the openrouter-cost-management campaign: every LLM call is now
+recorded per-call with cost, latency, tokens, and the impossible-to-backfill
+attribution/usability fields. No user-facing UI yet (the dashboard is sprint-40);
+this is the write-only spine plus one bundled display fix.
+
+### Added
+
+- **Per-call cost ledger (`llm_cost_log`).** New table recording model, prompt/
+  completion/total tokens, USD cost, wall-clock latency, category (digest/archive/
+  predict), and a fine-grained label for every digest-path OpenRouter call.
+- **Federated with the existing `prediction_runs` ledger.** Predict and b-side
+  calls already logged cost+latency there; sprint-39 extends that table with the
+  cost-attribution + passive-capture columns rather than double-logging. A
+  `llm_calls` UNION view presents both as one stream.
+- **Passive usability/quality capture (can't-backfill).** `run_id`, artifact
+  linkage, `prompt_version`, `output_hash` (sha256, not the text), `retry_count`,
+  the `params` blob, and a technical `outcome` default (truncation / schema-fail →
+  `unusable`) are captured at generation time. Side tables `llm_health_event` and
+  `llm_delight` created (populated in the follow-on usability sprint).
+- **`callOpenRouter` now surfaces tokens + latency** (previously discarded) and
+  accepts a `meta` object that drives the ledger write (`logLlmCall`, fire-and-forget).
+- **Cost read API** — `GET /api/cost/summary`, `/api/cost/daily`, `/api/cost/calls`
+  over the `llm_calls` view, for the sprint-40 dashboard.
+
+### Fixed
+
+- **Cost-tier badges now reflect real pricing.** `tierFromPricing` compares
+  per-million-token thresholds, but `ai_models` stores per-token prices — every
+  model wrongly showed `$`. Corrected at all three call sites (Opus → `$$$`,
+  Sonnet → `$$`, Haiku → `$`); the roster draft bar price label now shows per-million rates.
+- **`proposeRelContextUpdate`** no longer drops the call's cost or ignores the
+  DB-selected model; it resolves via `modelFor('digest')` and logs to the ledger.
+
 ## [1.5.1] — 2026-06-17
 
 **sprint-38 follow-up — Models & AI UAT fixes.** Three fixes from the post-deploy
