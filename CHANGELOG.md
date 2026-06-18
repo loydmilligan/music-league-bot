@@ -4,6 +4,40 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.7.0] — 2026-06-18
+
+**sprint-41 — Per-section model selection.** Each content section can now be
+pinned to its own model, so cheap models run boilerplate and a premium model runs
+only where it matters. Independent of the cost ledger; builds on the sprint-38
+resolver. (Shipped ahead of the cost dashboard, which is gated on design — so this
+took v1.7.0 and the dashboard will take v1.8.0.)
+
+### Added
+
+- **`modelForSection(section, db)` resolver** layered over the two-bucket
+  `modelFor` — fallback chain `digest_model_<section>` setting → bucket default →
+  env → hardcoded. 16 pinnable sections (6 digest kinds + 10 dashboard/predict tasks).
+- **Per-section overrides card** on the Models & AI screen: two accordion groups
+  (Digest sections / Dashboard & predict tasks), each row a qualifying-models select
+  with a "(use default)" sentinel and an "N overridden" badge; 412px-friendly.
+- **`GET`/`PUT /api/model-vars/sections`** mirroring the existing model-vars pattern
+  (PUT with null clears a pin; 400 on unknown section).
+
+### Changed
+
+- **The 3 prediction tasks (submission-predict, vote-probe, taste-fingerprint) now
+  honor the DB model setting.** They previously read a static `OPENROUTER_PREDICT_MODEL`
+  env var at module load and ignored the in-app Predict selection; they now resolve
+  through `modelForSection`/`modelFor` like every other task.
+
+### Known limitation
+
+- Per-section pins take effect on **per-section regeneration** and on the
+  b-side/prediction tasks (each is its own model call). The **initial full digest
+  draft** is a single multi-section call and still uses the Digest bucket default;
+  honoring per-section models on first generation would require splitting that call
+  (out of scope for v1).
+
 ## [1.6.0] — 2026-06-18
 
 **sprint-39 — OpenRouter cost ledger + passive usability capture.** The data
