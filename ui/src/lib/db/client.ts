@@ -303,6 +303,31 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (draftColsFinal.length && !draftColsFinal.some(c => c.name === 'run_id')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN run_id TEXT");
 	}
+	// sprint-39 federation: cost-attribution + passive capture columns on prediction_runs.
+	// predict/archive calls federate here (do NOT write llm_cost_log rows for these).
+	const predRunCols = db.prepare("PRAGMA table_info(prediction_runs)").all() as { name: string }[];
+	if (predRunCols.length) {
+		const addIfMissing = (col: string, def: string) => {
+			if (!predRunCols.some(c => c.name === col)) db.exec(`ALTER TABLE prediction_runs ADD COLUMN ${col} ${def}`);
+		};
+		// cost-attribution
+		addIfMissing('prompt_tokens',     'INTEGER NOT NULL DEFAULT 0');
+		addIfMissing('completion_tokens', 'INTEGER NOT NULL DEFAULT 0');
+		addIfMissing('total_tokens',      'INTEGER NOT NULL DEFAULT 0');
+		addIfMissing('category',          'TEXT');
+		addIfMissing('label',             'TEXT');
+		// passive capture (same set as llm_cost_log, minus digest-only edit_distance/regen_changed)
+		addIfMissing('run_id',               'TEXT');
+		addIfMissing('artifact_type',        'TEXT');
+		addIfMissing('artifact_id',          'TEXT');
+		addIfMissing('prompt_version',       'TEXT');
+		addIfMissing('output_hash',          'TEXT');
+		addIfMissing('outcome',              'TEXT');
+		addIfMissing('recovery_cost',        'REAL');
+		addIfMissing('retry_count',          'INTEGER NOT NULL DEFAULT 0');
+		addIfMissing('params',               'TEXT');
+		addIfMissing('params_schema_version', 'INTEGER');
+	}
 	// sprint-37 S2: snark dial on dashboard_sites (additive migration for existing rows).
 	const dsCols = db.prepare("PRAGMA table_info(dashboard_sites)").all() as { name: string }[];
 	if (dsCols.length && !dsCols.some(c => c.name === 'snark_level')) {

@@ -350,7 +350,7 @@ async function buildUpdatedReadModel(
 					db,
 					playerSuperlativesTask,
 					{ playerName: m.name, leagueName, fingerprint: fpNarr, stat: det.stat },
-					{ playerId: m.player_id },
+					{ playerId: m.player_id, category: 'archive' },
 				);
 				signatureSuperlative = result.output.signatureSuperlative;
 				superlatives = result.output.superlatives;
@@ -392,7 +392,7 @@ async function buildUpdatedReadModel(
 							biggestFan: det.biggestFan,
 							biggestHater: det.biggestHater,
 						},
-						{ playerId: m.player_id },
+						{ playerId: m.player_id, category: 'archive' },
 					);
 					fanHaterResult = result.output;
 				} else if (currentMember) {
@@ -426,7 +426,7 @@ async function buildUpdatedReadModel(
 				leagueName,
 				season: leagueMeta.latestSeason,
 				members: fullMembersForReel,
-			});
+			}, { category: 'archive' });
 			reel = reelResult.output.reel;
 		} else {
 			reel = currentModel.reel;
@@ -443,7 +443,7 @@ async function buildUpdatedReadModel(
 			mostLoved: detLeague.moments.mostLoved,
 			mostDivisive: detLeague.moments.mostDivisive,
 			biggestUpset: detLeague.moments.biggestUpset,
-		});
+		}, { category: 'archive' });
 		const lines = linesResult.output;
 		moments = {
 			mostLoved: { ...detLeague.moments.mostLoved, line: lines.mostLovedLine },
@@ -578,7 +578,7 @@ async function buildUpdatedReadModel(
 			snarkLevel: getSnarkLevel(db, leagueId),
 			signals,
 			recentSubjects: priorSubjects,
-		});
+		}, { category: 'archive' });
 		seasonUpdate = r.output;
 	}
 

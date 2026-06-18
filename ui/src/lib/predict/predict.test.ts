@@ -215,3 +215,54 @@ describe('runPrediction — fenced/prose-wrapped LLM responses', () => {
 		expect(output).toEqual(FIXTURE_OUTPUT);
 	});
 });
+
+describe('runPrediction — sprint-39 federation columns', () => {
+	it('populates category, label, tokens, output_hash, params in prediction_runs', async () => {
+		mockCallOpenRouter.mockResolvedValueOnce({
+			content: FIXTURE_JSON, costUsd: 0.002,
+			promptTokens: 80, completionTokens: 40, totalTokens: 120, latencyMs: 0,
+		});
+
+		await runPrediction(db, task, { playerId: 1, note: 'column test' }, { category: 'archive' });
+
+		const row = db.prepare('SELECT * FROM prediction_runs').get() as Record<string, unknown>;
+		expect(row.category).toBe('archive');
+		expect(row.label).toBe(`archive:${task.id}`);
+		expect(row.prompt_tokens).toBe(80);
+		expect(row.completion_tokens).toBe(40);
+		expect(row.total_tokens).toBe(120);
+		expect(typeof row.output_hash).toBe('string');
+		expect((row.output_hash as string).length).toBe(64); // sha256 hex
+		expect(typeof row.params).toBe('string');
+		expect(JSON.parse(row.params as string).response_format).toEqual({ type: 'json_object' });
+		expect(row.params_schema_version).toBe(1);
+		expect(row.retry_count).toBe(0);
+		expect(row.artifact_type).toBe('bside_section');
+	});
+
+	it('defaults category to predict when not provided', async () => {
+		mockCallOpenRouter.mockResolvedValueOnce({
+			content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
+		});
+
+		await runPrediction(db, task, { playerId: 1, note: 'default category' });
+
+		const row = db.prepare('SELECT category, label, artifact_type FROM prediction_runs').get() as Record<string, string>;
+		expect(row.category).toBe('predict');
+		expect(row.label).toBe(`predict:${task.id}`);
+		expect(row.artifact_type).toBe('prediction_run');
+	});
+
+	it('writes outcome=unusable on double schema-miss and still throws', async () => {
+		mockCallOpenRouter
+			.mockResolvedValueOnce({ content: JSON.stringify({ bad: 1 }), costUsd: 0.001, promptTokens: 10, completionTokens: 5, totalTokens: 15, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify({ also_bad: true }), costUsd: 0.001, promptTokens: 10, completionTokens: 5, totalTokens: 15, latencyMs: 0 });
+
+		await expect(runPrediction(db, task, { playerId: 1, note: 'double fail' })).rejects.toThrow();
+
+		const row = db.prepare('SELECT outcome, retry_count FROM prediction_runs').get() as Record<string, unknown>;
+		expect(row).toBeTruthy();
+		expect(row.outcome).toBe('unusable');
+		expect(row.retry_count).toBe(1);
+	});
+});

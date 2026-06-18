@@ -217,8 +217,8 @@ export async function generateProfile(
 	const ctx = buildPlayerContext(db, playerId);
 
 	const [spectrumResult, playlistResult] = await Promise.all([
-		runPrediction(db, spectrumTask, ctx, { playerId }),
-		runPrediction(db, playlistTask, ctx, { playerId }),
+		runPrediction(db, spectrumTask, ctx, { playerId, category: 'archive' }),
+		runPrediction(db, playlistTask, ctx, { playerId, category: 'archive' }),
 	]);
 
 	const llm = spectrumResult.output;

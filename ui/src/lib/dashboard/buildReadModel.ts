@@ -472,7 +472,7 @@ export async function buildReadModel(
 				db,
 				playerSuperlativesTask,
 				{ playerName: m.name, leagueName: leagueRow.name, fingerprint: fpNarr, stat: det.stat },
-				{ playerId: m.player_id },
+				{ playerId: m.player_id, category: 'archive' },
 			);
 
 			// Profile (spectrum + playlist) and fan/hater blurbs in parallel — full members only
@@ -488,7 +488,7 @@ export async function buildReadModel(
 								biggestFan: det.biggestFan,
 								biggestHater: det.biggestHater,
 							},
-							{ playerId: m.player_id },
+							{ playerId: m.player_id, category: 'archive' },
 						)
 					: Promise.resolve(null),
 			]);
@@ -526,7 +526,7 @@ export async function buildReadModel(
 			leagueName: leagueRow.name,
 			season: leagueMeta.latestSeason,
 			members: fullMembersForReel,
-		});
+		}, { category: 'archive' });
 		reelItems = reelResult.output.reel;
 	}
 
@@ -538,7 +538,7 @@ export async function buildReadModel(
 			mostLoved: detLeague.moments.mostLoved,
 			mostDivisive: detLeague.moments.mostDivisive,
 			biggestUpset: detLeague.moments.biggestUpset,
-		});
+		}, { category: 'archive' });
 		const lines = linesResult.output;
 		moments = {
 			mostLoved: { ...detLeague.moments.mostLoved, line: lines.mostLovedLine },
@@ -560,7 +560,7 @@ export async function buildReadModel(
 			snarkLevel: getSnarkLevel(db, leagueId),
 			signals,
 			recentSubjects: [],
-		});
+		}, { category: 'archive' });
 		seasonUpdate = r.output;
 	}
 
