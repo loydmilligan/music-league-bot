@@ -1,10 +1,13 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.9.0
 campaign: openrouter-cost-management
 sprint: sprint-42-usability-capture
 version: v1.9.0
 created: 2026-06-18
 ---
+
+> **Shipped v1.9.0 (2026-06-18).** Backend (Lane A): `ebe81be` setLlmOutcome+editDistance+finalizeOutcomes+health, `8c7c130` edit→salvaged, `1605394` regen→rejected, `29cd7be` finalize→passed, `9361c38` delight route, `a2ba20e` predict rowId (OQ-1), `8baafe0` archive→rejected. Frontend (Lane B): `49a2a50` ▲ delight control. Gate fix corrected the delight POST URL (frontend pointed at `/delight`; backend route is `/sections/[id]/delight`) — caught at integration. Gate: 0 errors, 716 tests green. All outcome writes are fire-and-forget (never break the host action). `regen_changed` stubbed `none` (CG-1); evaluator deferred to stage 3. Completes the openrouter-cost-management campaign.
 
 # music-league-bot — coordination doc (sprint-42-usability-capture)
 

@@ -706,7 +706,8 @@ summary: >-
 ---
 id: llm-usability-delight-capture
 title: LLM Usability and Delight Event Capture
-stage: planned
+stage: shipped
+shippedIn: v1.9.0
 effort: medium
 spike: model-cost-infra
 source: owner
