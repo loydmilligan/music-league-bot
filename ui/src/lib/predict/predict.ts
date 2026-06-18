@@ -50,6 +50,8 @@ export type PredictionMeta = {
 	model: string;
 	costUsd: number;
 	latencyMs: number;
+	/** OQ-1: the prediction_runs row id for this call (for direct UPDATE by caller). */
+	rowId: string;
 };
 
 export async function runPrediction<TIn, TOut>(
@@ -154,7 +156,6 @@ export async function runPrediction<TIn, TOut>(
 	}
 
 	const latencyMs = Date.now() - startMs;
-	const meta: PredictionMeta = { model, costUsd: totalCostUsd, latencyMs };
 
 	// sprint-39: passive capture fields
 	const outputHash = createHash('sha256').update(finalContent).digest('hex');
@@ -162,6 +163,9 @@ export async function runPrediction<TIn, TOut>(
 	const label = `${category}:${task.id}`;
 	const runRowId = randomUUID();
 	const now = new Date().toISOString();
+
+	// OQ-1: include runRowId in meta so callers can UPDATE prediction_runs by id
+	const meta: PredictionMeta = { model, costUsd: totalCostUsd, latencyMs, rowId: runRowId };
 
 	// Build params blob from task.params (temperature, etc.) + response_format from jsonMode
 	const params: Record<string, unknown> = { response_format: { type: 'json_object' } };

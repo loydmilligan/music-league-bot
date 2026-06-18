@@ -212,7 +212,7 @@ export async function runVoteProbe(
       const output = VoteProbeOutputSchema.parse(JSON.parse(cached.output_json));
       return {
         output,
-        meta: { model: cached.model, costUsd: cached.cost_usd, latencyMs: cached.latency_ms },
+        meta: { model: cached.model, costUsd: cached.cost_usd, latencyMs: cached.latency_ms, rowId: '' },
         cacheHit: true,
         generatedAt: cached.created_at,
       };
