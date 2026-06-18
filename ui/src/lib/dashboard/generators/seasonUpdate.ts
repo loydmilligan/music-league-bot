@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { PredictionTask } from '../../predict/predict.js';
 import type { SeasonSignals } from '../seasonSignals.js';
-import { modelFor } from '../../digest/modelFor.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 export const SeasonUpdateInputSchema = z.object({
 	leagueName: z.string(),
@@ -40,6 +40,6 @@ export const seasonUpdateTask: PredictionTask<SeasonUpdateInput, SeasonUpdateOut
 	id: 'season-update',
 	inputSchema: SeasonUpdateInputSchema,
 	buildMessages: buildSeasonUpdateMessages,
-	model: (db) => modelFor('digest', db),
+	model: (db) => modelForSection('season-update', db),
 	outputSchema: SeasonUpdateOutputSchema,
 };

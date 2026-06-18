@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { randomUUID, createHash } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
-import { modelFor } from './modelFor.js';
+import { modelFor, modelForSection } from './modelFor.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -761,7 +761,7 @@ export async function regenerateOneSection(
   db?: Database.Database,
   sectionMeta?: { sectionId: string; runId: string },
 ): Promise<{ section: unknown; costUsd: number }> {
-  const model = db ? modelFor('digest', db) : undefined;
+  const model = db ? modelForSection(kind, db) : undefined;
 
   // Derive leagueId from round when available
   const leagueId = db

@@ -4,7 +4,7 @@ import type { PlayerContext } from '../../predict/playerContext.js';
 import { buildPlayerContext } from '../../predict/playerContext.js';
 import type { PredictionTask } from '../../predict/predict.js';
 import { runPrediction } from '../../predict/predict.js';
-import { modelFor } from '../../digest/modelFor.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 // ── Slice types ────────────────────────────────────────────────────────────────
 // Exported so build-readmodel can compose them without knowing this file's internals.
@@ -191,7 +191,7 @@ export const spectrumTask: PredictionTask<PlayerContext, SpectrumLLMOutput> = {
 	id: 'profile-spectrum',
 	inputSchema: PlayerContextSchema,
 	buildMessages: buildSpectrumMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('profile-spectrum', db),
 	outputSchema: SpectrumLLMOutputSchema,
 };
 
@@ -199,7 +199,7 @@ export const playlistTask: PredictionTask<PlayerContext, PlaylistSlice> = {
 	id: 'profile-playlist',
 	inputSchema: PlayerContextSchema,
 	buildMessages: buildPlaylistMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('profile-playlist', db),
 	outputSchema: PlaylistSliceSchema,
 };
 

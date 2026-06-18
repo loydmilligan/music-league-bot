@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { PredictionTask } from '../../predict/predict.js';
-import { modelFor } from '../../digest/modelFor.js';
+import { modelForSection } from '../../digest/modelFor.js';
 
 // ── Accent colors (restricted set per spec §7, §9) ────────────────────────────
 
@@ -119,7 +119,7 @@ export const playerSuperlativesTask: PredictionTask<
 	id: 'narrative-player-superlatives',
 	inputSchema: PlayerSuperlativesInputSchema,
 	buildMessages: buildPlayerSuperlativesMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('narrative-player-superlatives', db),
 	outputSchema: PlayerSuperlativesOutputSchema,
 };
 
@@ -185,7 +185,7 @@ export const fanHaterBlurbTask: PredictionTask<FanHaterBlurbInput, FanHaterBlurb
 	id: 'narrative-fan-hater-blurbs',
 	inputSchema: FanHaterBlurbInputSchema,
 	buildMessages: buildFanHaterBlurbMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('narrative-fan-hater-blurbs', db),
 	outputSchema: FanHaterBlurbOutputSchema,
 };
 
@@ -264,7 +264,7 @@ export const leagueReelTask: PredictionTask<LeagueReelInput, LeagueReelOutput> =
 	id: 'narrative-league-reel',
 	inputSchema: LeagueReelInputSchema,
 	buildMessages: buildLeagueReelMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('narrative-league-reel', db),
 	outputSchema: LeagueReelOutputSchema,
 };
 
@@ -344,7 +344,7 @@ export const momentLinesTask: PredictionTask<MomentLinesInput, MomentLinesOutput
 	id: 'narrative-moment-lines',
 	inputSchema: MomentLinesInputSchema,
 	buildMessages: buildMomentLinesMessages,
-	model: (db) => modelFor('predict', db),
+	model: (db) => modelForSection('narrative-moment-lines', db),
 	outputSchema: MomentLinesOutputSchema,
 };
 
