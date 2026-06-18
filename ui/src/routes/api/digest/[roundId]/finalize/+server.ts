@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
-import { getActiveDraftForRound, getSectionsForDraft } from '$lib/digest/llm.js';
+import { getActiveDraftForRound, getSectionsForDraft, finalizeOutcomes } from '$lib/digest/llm.js';
 import { runDigestExport, isExportFormat, type DigestExportFormat } from '$lib/digest/export.js';
 import {
   getLeagueIdForRound,
@@ -48,6 +48,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const finalizedAt = draft.finalized_at ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   if (firstFinalize) {
     db.prepare('UPDATE digest_drafts SET finalized_at = ? WHERE id = ?').run(finalizedAt, draft.id);
+    // a4: stamp all null-outcome section rows as passed on first finalize
+    finalizeOutcomes(db, draft.id);
   }
 
   // Rel-context update — failure-isolated. The PNG export is the primary product; if the
