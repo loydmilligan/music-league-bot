@@ -1,5 +1,6 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.8.0
 campaign: openrouter-cost-management
 sprint: sprint-40-cost-dashboard
 version: v1.8.0
@@ -92,9 +93,9 @@ Lane B builds against the mock at `lib/debug/costApi.mock.ts`; `costApi.ts` swap
 
 - [ ] {agent: frontend, id: b0-design-mock} **Static HTML mock.** Single self-contained HTML file at `docs/design/debug/cost-dashboard-mock.html`: debug tab in the tab row, "Debug mode" toggle card on App Settings, the three dashboard widgets (summary card, drilldown table stub, 2-week chart using inline CSS bars). Demonstrates the color/shade/tooltip concept. **Acceptance:** file opens in browser; owner reviews and says "looks right"; no Svelte required.
 
-- [ ] {agent: frontend, id: b1-tab-and-toggle, depends: b0-design-mock} **Debug tab + toggle wiring.** Add `{ href: '/settings/debug', label: 'Debug', glyph: '⚙' }` to `SettingsTabs.svelte` tabs array; update `isOn` guard so `/settings` does not activate for `/settings/debug`. Add "Debug mode" toggle card to `/settings/+page.svelte` (labeled checkbox + description text); wire to `GET/PUT /api/settings/debug-mode` via a small `$state` reactive fetch (mock until a2 lands). `/settings/debug/+page.svelte` + `+page.server.ts` scaffolded (empty shell with placeholder "Debug mode is off" when not enabled). **Acceptance:** tab renders at 412 + desktop; toggle saves and reloads state; `npm run check` 0 errors.
+- [x] {agent: frontend, id: b1-tab-and-toggle, depends: b0-design-mock} **Debug tab + toggle wiring.** Add `{ href: '/settings/debug', label: 'Debug', glyph: '⚙' }` to `SettingsTabs.svelte` tabs array; update `isOn` guard so `/settings` does not activate for `/settings/debug`. Add "Debug mode" toggle card to `/settings/+page.svelte` (labeled checkbox + description text); wire to `GET/PUT /api/settings/debug-mode` via a small `$state` reactive fetch (mock until a2 lands). `/settings/debug/+page.svelte` + `+page.server.ts` scaffolded (empty shell with placeholder "Debug mode is off" when not enabled). **Acceptance:** tab renders at 412 + desktop; toggle saves and reloads state; `npm run check` 0 errors.
 
-- [ ] {agent: frontend, id: b2-widgets, depends: b1-tab-and-toggle} **Dashboard widgets.** `lib/debug/costApi.ts` (real endpoint calls + the mock swap); `CostSummaryCard.svelte` (today's totals by category, empty state); `CostCallDrilldown.svelte` (table: time / category / label / model / tokens / cost; sorted newest-first; mobile collapses model column); `CostBarChart.svelte` (2-week vertical stacked-bar, CSS-bar, token colors + opacity shading, hover tooltip per segment, date labels, max-scale, empty states). Wire all three into `/settings/debug/+page.svelte`. **Acceptance:** all three widgets render with mock data; empty states render correctly; `npm run check` 0 errors; scoped component tests for CostBarChart scale + empty branch.
+- [x] {agent: frontend, id: b2-widgets, depends: b1-tab-and-toggle} **Dashboard widgets.** `lib/debug/costApi.ts` (real endpoint calls + the mock swap); `CostSummaryCard.svelte` (today's totals by category, empty state); `CostCallDrilldown.svelte` (table: time / category / label / model / tokens / cost; sorted newest-first; mobile collapses model column); `CostBarChart.svelte` (2-week vertical stacked-bar, CSS-bar, token colors + opacity shading, hover tooltip per segment, date labels, max-scale, empty states). Wire all three into `/settings/debug/+page.svelte`. **Acceptance:** all three widgets render with mock data; empty states render correctly; `npm run check` 0 errors; scoped component tests for CostBarChart scale + empty branch.
 
 - [ ] {agent: frontend, id: b3-integration, depends: b2-widgets} **Sprint-39 integration + polish.** Swap `costApi.mock.ts` for real endpoint calls once a2 is confirmed green; remove `[MOCK DATA]` badge. Verify tooltip positioning at 412px; verify bar chart at min-width. Add Vitest route test for `debug-mode` toggle (mock fetch). **Acceptance:** widgets render against real API (or sprint-39's merged endpoints); `npm run check` 0; `vitest run` green.
 
@@ -127,10 +128,24 @@ _(none yet)_
 
 ## Activity Log
 
+### 2026-06-18 — frontend — b1 + b2 shipped
+- b1-tab-and-toggle (commit e24b0dd): SettingsTabs gets Debug tab (⚙ /settings/debug); isOn guard fixed so /settings exact no longer activates on /settings/debug; debug-mode toggle card added to /settings/+page.svelte wired to GET/PUT /api/settings/debug-mode; /settings/debug scaffold with server loader and placeholder/dashboard shell.
+- b2-widgets (commit e66694e): Full lib/debug/ suite — costApi.ts, CostSummaryCard.svelte, CostCallDrilldown.svelte, CostBarChart.svelte, CostScatter.svelte, ValueScoreDock.svelte, costDashboard.test.ts. All widgets composed into /settings/debug/+page.svelte. npm run check 0 errors; vitest 687 tests green.
+- Token decision: predict color = --sky (--ember conflicts with error/block semantic per coord-doc note; --sky available and not semantically loaded).
+- b3-integration is the remaining gate task (smoke against real API, deploy).
+
 ### 2026-06-18 — backend — a1 + a2 complete
 - a1-debug-setting: created `ui/src/routes/api/settings/debug-mode/+server.ts` (GET/PUT, mirrors openrouter-key pattern); scoped test `debug-mode.test.ts` (9 tests pass); commit 359e4e2.
 - a2-cost-endpoints (verify-only): confirmed `/api/cost/summary`, `/api/cost/daily`, `/api/cost/calls` are live from sprint-39; all three match pinned contract shapes; `calls` endpoint returns `latency_ms`; existing `cost.test.ts` smoke suite (14 tests) confirmed green. No new files needed.
 - `npm run check`: 0 errors (48 pre-existing warnings unchanged).
+
+### 2026-06-18 — orc — sprint-40 SHIPPED v1.8.0
+- Built from the CD handoff prototype (React→Svelte, CSS lifted). 2 Sonnet lanes. Backend: `359e4e2` debug_mode key + GET/PUT API, `3a411f3` verified the live sprint-39 cost endpoints. Frontend: `e24b0dd` Debug tab + toggle, `e66694e` widgets (CostSummaryCard, CostCallDrilldown, CostBarChart, CostScatter, ValueScoreDock).
+- Gate: `npm run check` 875 files 0 errors; `vitest run` 687/687; commits path-scoped, no overlap.
+- Release `…` v1.8.0 + CHANGELOG. Deployed (docker compose build+force-recreate). **Screenshot-verified** desktop 1280 + 412 at `/settings/debug`: tab wired, 14-day chart renders REAL federated data (predict-heavy history via the llm_calls view, peak ~$3.78), empty states correct, footer v1.8.0.
+- Token sub: predict category `--ember`→`--sky` (ember carries error semantic). Scatter/value-score read real call data, not the prototype's mock fixtures.
+- NOTE: left `debug_mode` ON in prod so the owner can view the dashboard; toggle off in App Settings if undesired.
+- Mobile Triage/Health flows from the prototype are NOT in this sprint's scope (no campaign sprint owns them yet) — future if wanted.
 
 ### 2026-06-17 — orc — sprint-40 coord-doc + spec authored
 - Spec written to `~/.config/taw/wiki/Projects/music-league-bot/sprint-40-cost-dashboard-spec.md`.

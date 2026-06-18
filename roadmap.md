@@ -726,7 +726,8 @@ summary: >-
 ---
 id: settings-debug-mode-cost-dashboard
 title: Settings Debug Mode + Cost Dashboard
-stage: planned
+stage: shipped
+shippedIn: v1.8.0
 effort: medium
 spike: model-cost-infra
 source: owner
