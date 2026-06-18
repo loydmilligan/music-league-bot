@@ -58,8 +58,12 @@
     return sorted.filter((m) => qualifies(m, req));
   }
 
+  // price_in/price_out are stored per-token; tierFromPricing expects per-million.
   function costTierOf(m: Model): string | null {
-    return m.cost_override ?? tierFromPricing(m.price_in, m.price_out);
+    return m.cost_override ?? tierFromPricing(
+      m.price_in != null ? m.price_in * 1e6 : null,
+      m.price_out != null ? m.price_out * 1e6 : null,
+    );
   }
 
   function tierNum(m: Model): number {
@@ -455,9 +459,9 @@
             {#if draft.is_free}
               <span class="mlm-resolved-tag"><b>free tier</b></span>
             {:else if draft.price_in != null}
-              {@const tier = tierFromPricing(draft.price_in, draft.price_out)}
+              {@const tier = tierFromPricing(draft.price_in * 1e6, draft.price_out != null ? draft.price_out * 1e6 : null)}
               <span class="mlm-resolved-tag">
-                ${draft.price_in}/M in · ${draft.price_out}/M out{tier ? ` → ` : ''}{#if tier}<b>{tier}</b>{/if}
+                ${(draft.price_in * 1e6).toFixed(2)}/M in · ${draft.price_out != null ? (draft.price_out * 1e6).toFixed(2) : '?'}/M out{tier ? ` → ` : ''}{#if tier}<b>{tier}</b>{/if}
               </span>
             {/if}
             {#if draft.fabricated}

@@ -2,6 +2,9 @@ import { it, expect, describe } from 'vitest';
 import { tierFromPricing, effCost, qualifies, abbrOf, CAP_ORDER } from './qualify.js';
 import type { Model } from './qualify.js';
 
+// price_in / price_out are stored per-token in the DB (not per-million).
+// Use realistic per-token values in makeModel so effCost tests stay accurate
+// after the 1e6 conversion fix.
 function makeModel(overrides: Partial<Model> = {}): Model {
   return {
     id: 'test-id',
@@ -10,8 +13,9 @@ function makeModel(overrides: Partial<Model> = {}): Model {
     description: '',
     model_type: 'general',
     context_len: 128000,
-    price_in: 2.5,
-    price_out: 10,
+    // GPT-4o: ~$2.5/M in, ~$10/M out → per-token equivalents
+    price_in: 0.0000025,
+    price_out: 0.00001,
     is_free: 0,
     cost_override: null,
     cap_reason: 0,
@@ -38,10 +42,24 @@ describe('effCost', () => {
     expect(effCost(makeModel({ is_free: 1, price_in: 0, price_out: 0 }))).toBe(0);
   });
   it('respects cost_override over pricing', () => {
-    expect(effCost(makeModel({ cost_override: '$', price_in: 15, price_out: 75 }))).toBe(1);
+    // price_in/price_out are per-token; override wins regardless
+    expect(effCost(makeModel({ cost_override: '$', price_in: 0.000015, price_out: 0.000075 }))).toBe(1);
   });
-  it('derives from pricing when no override', () => {
-    expect(effCost(makeModel({ price_in: 2.5, price_out: 10 }))).toBe(2);
+  it('derives from pricing when no override (per-token input)', () => {
+    // 0.0000025 * 1e6 = 2.5/M in, 0.00001 * 1e6 = 10/M out → avg 6.25 → $$
+    expect(effCost(makeModel({ price_in: 0.0000025, price_out: 0.00001 }))).toBe(2);
+  });
+  it('Opus-class pricing (per-token) yields $$$ (3)', () => {
+    // $15/M in, $75/M out → avg $45/M → $$$
+    expect(effCost(makeModel({ price_in: 0.000015, price_out: 0.000075 }))).toBe(3);
+  });
+  it('Sonnet-class pricing (per-token) yields $$ (2)', () => {
+    // $3/M in, $15/M out → avg $9/M → $$
+    expect(effCost(makeModel({ price_in: 0.000003, price_out: 0.000015 }))).toBe(2);
+  });
+  it('Haiku-class pricing (per-token) yields $ (1)', () => {
+    // Haiku 3: $0.25/M in, $1.25/M out → avg $0.75/M → $
+    expect(effCost(makeModel({ price_in: 0.00000025, price_out: 0.00000125 }))).toBe(1);
   });
 });
 
@@ -56,7 +74,8 @@ describe('qualifies', () => {
     expect(qualifies(makeModel({ cap_json: 1 }), { json: true })).toBe(true);
   });
   it('fails when cost exceeds maxCost', () => {
-    expect(qualifies(makeModel({ price_in: 15, price_out: 75 }), { maxCost: 2 })).toBe(false);
+    // $15/M in, $75/M out (per-token) → effCost 3 ($$$) → fails maxCost: 2
+    expect(qualifies(makeModel({ price_in: 0.000015, price_out: 0.000075 }), { maxCost: 2 })).toBe(false);
   });
   it('free model passes any maxCost', () => {
     expect(qualifies(makeModel({ is_free: 1, price_in: 0, price_out: 0 }), { maxCost: 1 })).toBe(true);

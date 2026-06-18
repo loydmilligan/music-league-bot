@@ -58,9 +58,13 @@ export function tierFromPricing(inPerM: number | null, outPerM: number | null): 
 }
 
 // Effective cost as 0–3 integer (0 = free, 1 = $, 2 = $$, 3 = $$$).
+// price_in/price_out are stored per-token; tierFromPricing expects per-million.
 export function effCost(m: Model): number {
   if (m.is_free) return 0;
-  const tier = m.cost_override ?? tierFromPricing(m.price_in, m.price_out);
+  const tier = m.cost_override ?? tierFromPricing(
+    m.price_in != null ? m.price_in * 1e6 : null,
+    m.price_out != null ? m.price_out * 1e6 : null,
+  );
   const map: Record<string, number> = { '$': 1, '$$': 2, '$$$': 3 };
   return map[tier ?? ''] ?? 3;
 }
