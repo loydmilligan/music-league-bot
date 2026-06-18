@@ -15,6 +15,7 @@
     { href: '/settings',        label: 'App Settings',        glyph: '≡' },
     { href: '/settings/setup',  label: 'Music League Setup',  glyph: '◎' },
     { href: '/settings/models', label: 'Models & AI',         glyph: '∴' },
+    { href: '/settings/debug',  label: 'Debug',               glyph: '⚙' },
   ] as const;
 </script>
 

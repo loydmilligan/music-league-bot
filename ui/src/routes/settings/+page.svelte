@@ -7,6 +7,47 @@
 
   let { data } = $props<{ data: PageData }>();
 
+  // Debug mode toggle — fetches current state on mount, PUTs on change
+  let debugEnabled = $state(false);
+  let debugLoading = $state(false);
+
+  async function loadDebugMode() {
+    try {
+      const r = await fetch('/api/settings/debug-mode');
+      if (r.ok) {
+        const body = await r.json() as { enabled: boolean };
+        debugEnabled = body.enabled;
+      }
+    } catch {
+      // silently ignore — toggle stays false
+    }
+  }
+
+  async function toggleDebugMode() {
+    debugLoading = true;
+    try {
+      const r = await fetch('/api/settings/debug-mode', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: debugEnabled }),
+      });
+      if (r.ok) {
+        const body = await r.json() as { enabled: boolean };
+        debugEnabled = body.enabled;
+      }
+    } catch {
+      // rollback on error
+      debugEnabled = !debugEnabled;
+    } finally {
+      debugLoading = false;
+    }
+  }
+
+  // Load on mount
+  $effect(() => {
+    loadDebugMode();
+  });
+
   let w = $state({ ...data.settings });
   let wTotal = $derived(
     w.weightDiscovery + w.weightThemeFit + w.weightPersonal + w.weightNostalgia
@@ -419,3 +460,34 @@
 </section>
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
+
+<!-- Debug mode toggle card -->
+<section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Developer</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Debug mode</h2>
+    </div>
+    {#if debugEnabled}
+      <StatusChip label="ENABLED" tone="warn" />
+    {:else}
+      <StatusChip label="OFF" tone="muted" />
+    {/if}
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    Enables the <a href="/settings/debug" class="text-accent hover:text-accent-strong underline decoration-dotted underline-offset-4 transition-colors">Debug tab</a>
+    with a live cost dashboard — today's LLM spend by category, call drilldown, 14-day stacked bar chart, and model value rankings.
+  </p>
+  <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+    <input
+      type="checkbox"
+      bind:checked={debugEnabled}
+      onchange={toggleDebugMode}
+      disabled={debugLoading}
+      class="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
+    />
+    <span class="font-mono text-[11px] tracking-widest uppercase text-fg-muted">
+      {debugEnabled ? 'Debug mode on — visit /settings/debug' : 'Enable debug mode'}
+    </span>
+  </label>
+</section>
