@@ -352,9 +352,15 @@ async function buildUpdatedReadModel(
 					{ playerName: m.name, leagueName, fingerprint: fpNarr, stat: det.stat },
 					{ playerId: m.player_id, category: 'archive' },
 				);
+				// a7: stamp prior row rejected (new row is result.meta.rowId)
+				stampPredictionOutcome(db, playerSuperlativesTask.id, 'rejected', {
+					playerId: m.player_id, excludeRowId: result.meta.rowId,
+				});
 				signatureSuperlative = result.output.signatureSuperlative;
 				superlatives = result.output.superlatives;
 			} else {
+				// a7: hold/lock — stamp most-recent prior row passed
+				stampPredictionOutcome(db, playerSuperlativesTask.id, 'passed', { playerId: m.player_id });
 				signatureSuperlative = currentMember?.signatureSuperlative ?? {
 					award: 'League Member',
 					blurb: 'A valued member of the league.',
@@ -394,6 +400,10 @@ async function buildUpdatedReadModel(
 						},
 						{ playerId: m.player_id, category: 'archive' },
 					);
+					// a7: stamp prior fan/hater row rejected
+					stampPredictionOutcome(db, fanHaterBlurbTask.id, 'rejected', {
+						playerId: m.player_id, excludeRowId: result.meta.rowId,
+					});
 					fanHaterResult = result.output;
 				} else if (currentMember) {
 					const fan = currentMember.biggestFan;
@@ -427,6 +437,8 @@ async function buildUpdatedReadModel(
 				season: leagueMeta.latestSeason,
 				members: fullMembersForReel,
 			}, { category: 'archive' });
+			// a7: stamp prior reel row rejected (no playerId for league-level tasks)
+			stampPredictionOutcome(db, leagueReelTask.id, 'rejected', { excludeRowId: reelResult.meta.rowId });
 			reel = reelResult.output.reel;
 		} else {
 			reel = currentModel.reel;
@@ -444,6 +456,8 @@ async function buildUpdatedReadModel(
 			mostDivisive: detLeague.moments.mostDivisive,
 			biggestUpset: detLeague.moments.biggestUpset,
 		}, { category: 'archive' });
+		// a7: stamp prior moments row rejected
+		stampPredictionOutcome(db, momentLinesTask.id, 'rejected', { excludeRowId: linesResult.meta.rowId });
 		const lines = linesResult.output;
 		moments = {
 			mostLoved: { ...detLeague.moments.mostLoved, line: lines.mostLovedLine },
@@ -579,6 +593,8 @@ async function buildUpdatedReadModel(
 			signals,
 			recentSubjects: priorSubjects,
 		}, { category: 'archive' });
+		// a7: stamp prior season-update row rejected
+		stampPredictionOutcome(db, seasonUpdateTask.id, 'rejected', { excludeRowId: r.meta.rowId });
 		seasonUpdate = r.output;
 	}
 
@@ -712,6 +728,41 @@ function buildArchiveEntry(
 			: 'oklch(0.72 0.15 0)',
 		digestUrl: digestShare ? `${PUBLIC_DIGEST_BASE_URL}/d/${digestShare.slug}` : null,
 	};
+}
+
+/**
+ * a7: fire-and-forget outcome stamp on a prediction_runs row.
+ * For 'refresh' sections: stamp the PRIOR row (before the new rowId) rejected.
+ * For 'hold'/'lock' sections: stamp the most-recent existing row passed.
+ * Never throws — ledger write failures must not abort the archive update.
+ */
+function stampPredictionOutcome(
+	db: import('better-sqlite3').Database,
+	taskId: string,
+	outcome: 'rejected' | 'passed',
+	opts: { playerId?: number; excludeRowId?: string },
+): void {
+	try {
+		const RECOVERY_COST: Record<string, number> = { passed: 0.0, rejected: 0.9 };
+		const recoveryCost = RECOVERY_COST[outcome] ?? 0.0;
+		// Find the most-recent row for this task, optionally excluding the just-inserted row
+		const playerClause = opts.playerId != null ? 'AND player_id = ?' : 'AND player_id IS NULL';
+		const excludeClause = opts.excludeRowId ? 'AND id != ?' : '';
+		const rowArgs: unknown[] = [taskId];
+		if (opts.playerId != null) rowArgs.push(opts.playerId);
+		if (opts.excludeRowId) rowArgs.push(opts.excludeRowId);
+		const row = db
+			.prepare(
+				`SELECT id FROM prediction_runs
+				 WHERE task_id = ? ${playerClause} ${excludeClause}
+				 ORDER BY created_at DESC LIMIT 1`,
+			)
+			.get(...rowArgs) as { id: string } | undefined;
+		if (!row) return; // no prior row to stamp
+		db.prepare(
+			`UPDATE prediction_runs SET outcome = ?, recovery_cost = ? WHERE id = ?`,
+		).run(outcome, recoveryCost, row.id);
+	} catch { /* fire-and-forget */ }
 }
 
 function buildResharePayload(
