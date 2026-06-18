@@ -1,10 +1,16 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.7.0
 campaign: openrouter-cost-management
 sprint: sprint-41-per-section-models
-version: v1.8.0
+version: v1.7.0
 created: 2026-06-17
 ---
+
+> **Shipped v1.7.0 (2026-06-18), ahead of sprint-40** (which is gated on CD design),
+> so this took v1.7.0 and the cost dashboard will take v1.8.0. Known limitation: per-section
+> pins apply to per-section regens + b-side/predict tasks (each its own call); the initial
+> full digest draft is one multi-section call and uses the Digest bucket default.
 
 # music-league-bot — coordination doc (sprint-41-per-section-models)
 
@@ -114,6 +120,13 @@ The 3 static-env predict tasks (`submissionPredict`, `voteProbe`, `tasteFingerpr
 _None._
 
 ## Activity Log
+
+### 2026-06-18 — orc — sprint-41 SHIPPED v1.7.0
+- Dispatched 2 Sonnet lane agents. Lane A: `aa3b28a` modelForSection+SECTION_BUCKET_MAP, `80127de` sections API, `00f4271` wire generators, `9589008` migrate 3 predict tasks to DB-first (the ratified fix). Lane B: `3386657` per-section overrides card (accordion, 412-friendly).
+- Gate (orc-run): `npm run check` 861 files 0 errors; `vitest run` 669/669; commits path-scoped, no cross-lane overlap.
+- Release `4d76037` v1.7.0 + CHANGELOG. Deployed (docker compose build+force-recreate). Footer v1.7.0; `/api/model-vars/sections` returns 16 keys (podium→minimax/minimax-m3). Read-only verify only.
+- **Accepted deviation:** `generateDraft` (full multi-section draft = one call) stays on the Digest bucket default; per-section pins apply to `regenerateOneSection` + the per-call b-side/predict tasks. Honoring per-section on initial draft = split the call (out of scope). Logged as a known limitation in CHANGELOG.
+- season-update bucket resolved to `'digest'` (matches prior wiring).
 
 ### 2026-06-18 — backend — Lane A (a1–a4) complete
 - **a1-resolver** (aa3b28a): `modelForSection` + `SECTION_BUCKET_MAP` added to `modelFor.ts`. 16-key map, season-update confirmed digest bucket (was already `modelFor('digest', db)` in `seasonUpdate.ts`). 12 tests green.

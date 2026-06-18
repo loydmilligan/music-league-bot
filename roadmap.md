@@ -638,7 +638,8 @@ summary: >-
 ---
 id: per-section-model-selection
 title: Per-Section Model Selection
-stage: planned
+stage: shipped
+shippedIn: v1.7.0
 effort: medium
 spike: model-cost-infra
 source: owner
