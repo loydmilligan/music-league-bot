@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { callOpenRouter } from './llm.js';
-import type { DigestSectionRow } from './llm.js';
+import type { DigestSectionRow, LLMCallMeta } from './llm.js';
+import { modelFor } from './modelFor.js';
 
 export interface RelContextView {
   leagueId: number;
@@ -121,6 +122,9 @@ export async function proposeRelContextUpdate(
   previousContext: string,
   sections: DigestSectionRow[],
   roundName: string,
+  db: Database.Database,
+  leagueId?: number,
+  roundId?: number,
 ): Promise<string> {
   const userPrompt = [
     `# Current relationship context`,
@@ -130,12 +134,22 @@ export async function proposeRelContextUpdate(
     sectionsToMarkdown(sections),
   ].join('\n');
 
+  const model = modelFor('digest', db);
+
+  const meta: LLMCallMeta = {
+    category: 'archive',
+    label: 'archive:rel-context',
+    db,
+    leagueId,
+    roundId,
+  };
+
   const { content: raw } = await callOpenRouter(
     [
       { role: 'system', content: buildRelContextSystemPrompt() },
       { role: 'user', content: userPrompt },
     ],
-    { jsonMode: true },
+    { jsonMode: true, model, meta },
   );
   const parsed = JSON.parse(raw) as { updated_context?: unknown };
   if (typeof parsed.updated_context !== 'string') {

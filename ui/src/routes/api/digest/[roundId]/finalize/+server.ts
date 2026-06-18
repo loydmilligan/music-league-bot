@@ -61,7 +61,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
     } else {
       const current = readRelContext(db, leagueId);
       const sections = getSectionsForDraft(db, draft.id);
-      const proposed = await proposeRelContextUpdate(current.context, sections, round.name);
+      const proposed = await proposeRelContextUpdate(current.context, sections, round.name, db, leagueId, roundId);
       const updated = upsertRelContext(db, leagueId, proposed, roundId);
       relContext = {
         leagueId,
