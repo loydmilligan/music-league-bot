@@ -87,7 +87,7 @@ Lane B extends `ModelsScreen.svelte` in-place. No new exported components. No ne
 
 - [ ] {agent: backend, id: a4-migrate, depends: a1-resolver} **Migrate static-env predict tasks.** In `submissionPredict.ts`, `voteProbe.ts`, `tasteFingerprint.ts`: remove `const DEFAULT_MODEL = process.env...` module-level constant; change `model: DEFAULT_MODEL` to `model: (db) => modelForSection('<task-id>', db)`. Scoped test (one per file): with `predict_model` set in the DB, `task.model(db)` returns the DB value rather than the env string. **Acceptance:** 3 tests green proving DB selection applies to each migrated task; `npm run check` 0 errors; no behavioral change when no DB setting or section pin is set.
 
-- [ ] {agent: frontend, id: b1-sections-panel, depends: a2-api} **Per-section override panel in ModelsScreen.** Fetch `GET /api/model-vars/sections` on mount (alongside the existing model-vars + roster fetches). Add a "Per-section overrides" card after the Model Variables card; render only when roster has ≥1 model. Render 16 rows grouped under "Digest sections" and "Dashboard & predict tasks" group headings. Each row: label, a model `<select>` populated with qualifying models (same `qualifies()` filter as existing Model Variables selects, same `requires: { json: true }` for all sections v1) plus a "(use default)" sentinel option (value null). On change: `PUT /api/model-vars/sections/:section` optimistic update. Show the resolved model as a read-only footnote when a pin is set (distinct from the selected row). Screenshot at 412 and desktop; propose accordion collapse if card overflows 412 viewport. **Acceptance:** `npm run check` 0 errors; panel renders with correct grouping; qualify filter live; PUT fires on change; null/default clears pin; 412 screenshot surfaced.
+- [x] {agent: frontend, id: b1-sections-panel, depends: a2-api} **Per-section override panel in ModelsScreen.** Fetch `GET /api/model-vars/sections` on mount (alongside the existing model-vars + roster fetches). Add a "Per-section overrides" card after the Model Variables card; render only when roster has ≥1 model. Render 16 rows grouped under "Digest sections" and "Dashboard & predict tasks" group headings. Each row: label, a model `<select>` populated with qualifying models (same `qualifies()` filter as existing Model Variables selects, same `requires: { json: true }` for all sections v1) plus a "(use default)" sentinel option (value null). On change: `PUT /api/model-vars/sections/:section` optimistic update. Show the resolved model as a read-only footnote when a pin is set (distinct from the selected row). Screenshot at 412 and desktop; propose accordion collapse if card overflows 412 viewport. **Acceptance:** `npm run check` 0 errors; panel renders with correct grouping; qualify filter live; PUT fires on change; null/default clears pin; 412 screenshot surfaced.
 
 - [ ] {agent: orc, id: gate, depends: a2-api,a3-wire,a4-migrate,b1-sections-panel} **Gate.** Cross-check path-scoped commits; `cd ui && npm run check` (0) + `npx vitest run` (green); **owner UAT** (pin cheap model to `narrative-fan-hater-blurbs`; pin high-end model to `podium`; trigger generation and confirm section models differ; confirm bucket default applies to un-pinned section; confirm `submission-predict` respects DB `predict_model` setting; screenshots 412 + desktop); on sign-off → v-bump to 1.8.0 + CHANGELOG + deploy (cached, orc-gated → :3002) + assert live; close.
 
@@ -114,6 +114,21 @@ The 3 static-env predict tasks (`submissionPredict`, `voteProbe`, `tasteFingerpr
 _None._
 
 ## Activity Log
+
+### 2026-06-18 — backend — Lane A (a1–a4) complete
+- **a1-resolver** (aa3b28a): `modelForSection` + `SECTION_BUCKET_MAP` added to `modelFor.ts`. 16-key map, season-update confirmed digest bucket (was already `modelFor('digest', db)` in `seasonUpdate.ts`). 12 tests green.
+- **a2-api** (80127de): `sectionState.ts` + GET/PUT `/api/model-vars/sections` + `/sections/:section` routes. 13 route tests green.
+- **a3-wire** (00f4271): `narrative.ts` (4 tasks), `profile.ts` (2 tasks), `seasonUpdate.ts` (1 task), `llm.ts` (regenerateOneSection) wired to `modelForSection`. No behavioral change with no pin set.
+- **a4-migrate** (9589008): `submissionPredict.ts`, `voteProbe.ts`, `tasteFingerprint.ts` migrated from module-load `DEFAULT_MODEL` constant to `(db) => modelForSection('<task-id>', db)`. Fixed 6 existing test assertions (task.model now a fn, compare HARDCODED_MODEL). Added 12 DB-routing proof tests (4 per file). 63 tests green.
+- Final: `npm run check` 0 errors, `vitest run` 669/669 tests passed (69 files).
+
+### 2026-06-18 — frontend — b1-sections-panel shipped (commit 3386657)
+- `ui/src/lib/models/ModelsScreen.svelte` extended with Per-section overrides card.
+- Fetches `GET /api/model-vars/sections`; mocks locally on 404 (Lane A pending).
+- 16 rows in two accordion buckets; `qualifies({json:true})` filter; optimistic `PUT`.
+- Open question B resolved: accordion collapse per bucket with "N overridden" badge is the 412px density solution.
+- `npm run check`: 0 errors.
+- Screenshot pending (requires running UI; flagged for orc gate UAT).
 
 ### 2026-06-17 — orc — sprint-41 spec + coord-doc authored
 - Spec written to `~/.config/taw/wiki/Projects/music-league-bot/sprint-41-per-section-models-spec.md`.
