@@ -301,6 +301,59 @@ export const SCHEMA = `
     sort_order  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
   );
+  -- sprint-39 cost ledger: per-call LLM cost log for the DIGEST path only.
+  -- predict/archive calls federate via prediction_runs (contract #6).
+  -- Append-only; no deletes. Passive usability fields set at generation time;
+  -- human-action outcome fields (edit_distance, regen_changed) populated by
+  -- the follow-on usability-capture sprint.
+  CREATE TABLE IF NOT EXISTS llm_cost_log (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    model                TEXT    NOT NULL,
+    prompt_tokens        INTEGER NOT NULL DEFAULT 0,
+    completion_tokens    INTEGER NOT NULL DEFAULT 0,
+    total_tokens         INTEGER NOT NULL DEFAULT 0,
+    cost_usd             REAL    NOT NULL DEFAULT 0,
+    latency_ms           INTEGER NOT NULL DEFAULT 0,
+    category             TEXT    NOT NULL,
+    label                TEXT    NOT NULL,
+    -- join keys (can't-backfill: tie a call to the exact generation it produced)
+    run_id               TEXT,
+    artifact_type        TEXT,
+    artifact_id          TEXT,
+    prompt_version       TEXT,
+    output_hash          TEXT,
+    -- usability: passive fields set now; human-action outcomes finalized later
+    outcome              TEXT,
+    recovery_cost        REAL,
+    retry_count          INTEGER NOT NULL DEFAULT 0,
+    edit_distance        REAL,
+    regen_changed        TEXT,
+    -- params capture
+    params               TEXT,
+    params_schema_version INTEGER,
+    league_id            INTEGER,
+    round_id             INTEGER
+  );
+  -- sprint-39 side tables: created now, populated by the follow-on usability sprint.
+  -- llm_health_event: quarantined availability/config axis (NOT quality).
+  CREATE TABLE IF NOT EXISTS llm_health_event (
+    id           TEXT PRIMARY KEY,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    cost_log_id  TEXT,
+    error_class  TEXT,
+    model        TEXT,
+    detail       TEXT
+  );
+  -- llm_delight: sparse human thumbs-up on a standout line.
+  CREATE TABLE IF NOT EXISTS llm_delight (
+    id           TEXT PRIMARY KEY,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    cost_log_id  TEXT,
+    span         TEXT,
+    subsection   TEXT,
+    note         TEXT
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
