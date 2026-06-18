@@ -42,7 +42,7 @@ beforeEach(() => {
 
 describe('runPrediction — happy path', () => {
 	it('validates input schema and returns structured output', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.001 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output, meta } = await runPrediction(db, task, { playerId: 1, note: 'loves shoegaze' });
 
@@ -53,7 +53,7 @@ describe('runPrediction — happy path', () => {
 	});
 
 	it('inserts one prediction_runs row with model + cost + latency', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.002 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.002, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runPrediction(db, task, { playerId: 2, note: 'loves jazz' }, { playerId: 2 });
 
@@ -72,7 +72,7 @@ describe('runPrediction — happy path', () => {
 	});
 
 	it('row id is a UUID string', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runPrediction(db, task, { playerId: 3, note: 'test' });
 
@@ -81,7 +81,7 @@ describe('runPrediction — happy path', () => {
 	});
 
 	it('player_id and round_id are null when opts omitted', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runPrediction(db, task, { playerId: 1, note: 'test' });
 
@@ -108,8 +108,8 @@ describe('runPrediction — retry path', () => {
 	it('retries once on schema-invalid first response and succeeds', async () => {
 		const badJson = JSON.stringify({ wrong: 'shape' });
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: badJson, costUsd: 0.001 })
-			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.001 });
+			.mockResolvedValueOnce({ content: badJson, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output, meta } = await runPrediction(db, task, { playerId: 1, note: 'retry test' });
 
@@ -120,8 +120,8 @@ describe('runPrediction — retry path', () => {
 
 	it('retry row accumulates cost from both calls', async () => {
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify({ wrong: true }), costUsd: 0.003 })
-			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.002 });
+			.mockResolvedValueOnce({ content: JSON.stringify({ wrong: true }), costUsd: 0.003, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.002, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runPrediction(db, task, { playerId: 1, note: 'cost accumulation' });
 
@@ -131,14 +131,14 @@ describe('runPrediction — retry path', () => {
 
 	it('throws if retry also produces schema-invalid output', async () => {
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify({ bad: 1 }), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify({ also_bad: true }), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify({ bad: 1 }), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify({ also_bad: true }), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await expect(runPrediction(db, task, { playerId: 1, note: 'double fail' })).rejects.toThrow();
 	});
 
 	it('throws on non-JSON LLM response', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: 'not json at all', costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: 'not json at all', costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await expect(runPrediction(db, task, { playerId: 1, note: 'non-json' })).rejects.toThrow(
 			/non-JSON/,
@@ -147,8 +147,8 @@ describe('runPrediction — retry path', () => {
 
 	it('only one row is written even after a successful retry', async () => {
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify({ wrong: true }), costUsd: 0 })
-			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify({ wrong: true }), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runPrediction(db, task, { playerId: 1, note: 'one row' });
 
@@ -190,7 +190,7 @@ describe('runPrediction — fenced/prose-wrapped LLM responses', () => {
 	it('parses fenced + trailing-prose initial response correctly', async () => {
 		const fencedResponse =
 			'```json\n' + FIXTURE_JSON + '\n```\n**Reasoning:** model chose indie because shoegaze fits.';
-		mockCallOpenRouter.mockResolvedValueOnce({ content: fencedResponse, costUsd: 0.001 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: fencedResponse, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runPrediction(db, task, { playerId: 1, note: 'fenced response' });
 		expect(output).toEqual(FIXTURE_OUTPUT);
@@ -201,8 +201,8 @@ describe('runPrediction — fenced/prose-wrapped LLM responses', () => {
 		const fencedRetry =
 			'```json\n' + FIXTURE_JSON + '\n```\n**Reasoning:** corrected schema on retry.';
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: badFirst, costUsd: 0.001 })
-			.mockResolvedValueOnce({ content: fencedRetry, costUsd: 0.001 });
+			.mockResolvedValueOnce({ content: badFirst, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: fencedRetry, costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output, meta } = await runPrediction(db, task, { playerId: 1, note: 'fenced retry' });
 		expect(output).toEqual(FIXTURE_OUTPUT);
@@ -210,7 +210,7 @@ describe('runPrediction — fenced/prose-wrapped LLM responses', () => {
 	});
 
 	it('bare {...} response still parses', async () => {
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		const { output } = await runPrediction(db, task, { playerId: 1, note: 'bare json' });
 		expect(output).toEqual(FIXTURE_OUTPUT);
 	});

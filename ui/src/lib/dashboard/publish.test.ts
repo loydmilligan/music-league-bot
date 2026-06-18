@@ -20,7 +20,7 @@ const mockCallOpenRouter = vi.mocked(callOpenRouter);
 // ── LLM fixtures (mirrors buildReadModel.test.ts) ───────────────────────────
 
 function setupMock() {
-	mockCallOpenRouter.mockImplementation(async (messages: { role: string; content: string }[]) => {
+	mockCallOpenRouter.mockImplementation(async (messages: Parameters<typeof mockCallOpenRouter>[0]) => {
 		const sys = (messages[0]?.content ?? '').toLowerCase();
 		if (sys.includes('yearbook writer')) {
 			return {
@@ -29,6 +29,7 @@ function setupMock() {
 					signatureSuperlative: { award: 'Heart on Sleeve', blurb: 'Every pick tells a story.' },
 				}),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		if (sys.includes('0–100') || sys.includes('0-100') || sys.includes('polished_vs_raw')) {
@@ -39,6 +40,7 @@ function setupMock() {
 					familiar_vs_obscure: 55,
 				}),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		if (sys.includes('discovery playlist') || sys.includes('personalised')) {
@@ -49,6 +51,7 @@ function setupMock() {
 					tracks: [{ title: 'Song', artist: 'Artist', why: 'Great pick.' }],
 				}),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		if (sys.includes('biggest fan') || sys.includes('friendly hater')) {
@@ -58,12 +61,14 @@ function setupMock() {
 					haterLine: 'Lovingly withholds points.',
 				}),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		if (sys.includes('yearbook editor') || sys.includes('reel')) {
 			return {
 				content: JSON.stringify({ reel: [] }),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		if (sys.includes('caption') || sys.includes('most loved')) {
@@ -74,6 +79,7 @@ function setupMock() {
 					biggestUpsetLine: 'Won everything.',
 				}),
 				costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 			};
 		}
 		return {
@@ -87,6 +93,7 @@ function setupMock() {
 				confidence: 'low',
 			}),
 			costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		};
 	});
 }

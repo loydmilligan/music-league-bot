@@ -55,6 +55,7 @@ describe('POST /api/players/:playerId/fingerprint', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_FINGERPRINT),
 			costUsd: 0.006,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		const res = await POST(postEvt(id));
@@ -71,6 +72,7 @@ describe('POST /api/players/:playerId/fingerprint', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_FINGERPRINT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		await POST(postEvt(id));
@@ -86,6 +88,7 @@ describe('POST /api/players/:playerId/fingerprint', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_FINGERPRINT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		await POST(postEvt(id));

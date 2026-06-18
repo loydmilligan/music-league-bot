@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
 import { modelFor } from './modelFor.js';
@@ -259,9 +259,94 @@ export interface LLMResult {
   content: string;
   /** USD cost of this call, from OpenRouter's usage accounting (0 if unavailable). */
   costUsd: number;
+  /** Prompt token count from OpenRouter usage (0 if unavailable). */
+  promptTokens: number;
+  /** Completion token count from OpenRouter usage (0 if unavailable). */
+  completionTokens: number;
+  /** Total token count from OpenRouter usage (0 if unavailable). */
+  totalTokens: number;
+  /** Wall-clock latency of the callOpenRouter fetch in ms. */
+  latencyMs: number;
 }
 
-export async function callOpenRouter(messages: OpenRouterMessage[], opts: { model?: string; jsonMode?: boolean } = {}): Promise<LLMResult> {
+/**
+ * Metadata passed by the caller to enable per-call cost ledger logging.
+ * When absent, callOpenRouter behaves as before (no-op extension).
+ */
+export type LLMCallMeta = {
+  category: 'digest' | 'archive' | 'predict';
+  label: string;
+  db: Database.Database;
+  leagueId?: number;
+  roundId?: number;
+  // passive capture (caller supplies what it knows; wrapper derives the rest)
+  runId?: string;
+  artifactType?: string;
+  artifactId?: string;
+  promptVersion?: string;
+};
+
+/**
+ * Log one LLM call to llm_cost_log. Fire-and-forget: wraps in try/catch so a
+ * ledger write failure never aborts the LLM call path.
+ */
+export function logLlmCall(
+  result: LLMResult,
+  requestBody: Record<string, unknown>,
+  meta: LLMCallMeta,
+  retryCount = 0,
+  outcome: string | null = null,
+): void {
+  try {
+    const outputHash = createHash('sha256').update(result.content).digest('hex');
+    // Capture the params blob (temperature, top_p, max_tokens, seed, response_format).
+    const params: Record<string, unknown> = {};
+    for (const key of ['temperature', 'top_p', 'max_tokens', 'seed', 'response_format'] as const) {
+      if (key in requestBody) params[key] = requestBody[key];
+    }
+
+    meta.db.prepare(`
+      INSERT INTO llm_cost_log (
+        model, prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms,
+        category, label, run_id, artifact_type, artifact_id, prompt_version,
+        output_hash, outcome, retry_count, params, params_schema_version,
+        league_id, round_id
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?
+      )
+    `).run(
+      String(requestBody.model ?? ''),
+      result.promptTokens,
+      result.completionTokens,
+      result.totalTokens,
+      result.costUsd,
+      result.latencyMs,
+      meta.category,
+      meta.label,
+      meta.runId ?? null,
+      meta.artifactType ?? null,
+      meta.artifactId ?? null,
+      meta.promptVersion ?? null,
+      outputHash,
+      outcome,
+      retryCount,
+      Object.keys(params).length > 0 ? JSON.stringify(params) : null,
+      Object.keys(params).length > 0 ? 1 : null,
+      meta.leagueId ?? null,
+      meta.roundId ?? null,
+    );
+  } catch {
+    // ledger write failure must never abort the LLM call
+  }
+}
+
+export async function callOpenRouter(
+  messages: OpenRouterMessage[],
+  opts: { model?: string; jsonMode?: boolean; meta?: LLMCallMeta } = {},
+): Promise<LLMResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
@@ -273,6 +358,7 @@ export async function callOpenRouter(messages: OpenRouterMessage[], opts: { mode
   // call's USD `cost`.
   body.usage = { include: true };
 
+  const startMs = Date.now();
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
     headers: {
@@ -283,20 +369,36 @@ export async function callOpenRouter(messages: OpenRouterMessage[], opts: { mode
     },
     body: JSON.stringify(body),
   });
+  const latencyMs = Date.now() - startMs;
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 500)}`);
   }
   const json = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-    usage?: { cost?: number };
+    choices?: { message?: { content?: string }; finish_reason?: string }[];
+    usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
   const content = json.choices?.[0]?.message?.content;
   if (!content) throw new Error('OpenRouter returned no content');
   const costUsd = typeof json.usage?.cost === 'number' ? json.usage.cost : 0;
+  const promptTokens = typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0;
+  const completionTokens = typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0;
+  const totalTokens = typeof json.usage?.total_tokens === 'number' ? json.usage.total_tokens : 0;
   const fenced = content.match(/^\s*```(?:json)?\s*\n([\s\S]*?)\n```\s*$/);
-  return { content: fenced ? fenced[1] : content, costUsd };
+  const finalContent = fenced ? fenced[1] : content;
+
+  const result: LLMResult = { content: finalContent, costUsd, promptTokens, completionTokens, totalTokens, latencyMs };
+
+  // Log to ledger if meta is provided (no-op when absent)
+  if (opts.meta) {
+    const finishReason = json.choices?.[0]?.finish_reason;
+    // Technical outcome default: finish_reason length/content_filter → 'unusable'; else null
+    const outcome = (finishReason === 'length' || finishReason === 'content_filter') ? 'unusable' : null;
+    logLlmCall(result, body, opts.meta, 0, outcome);
+  }
+
+  return result;
 }
 
 const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {

@@ -37,7 +37,7 @@ beforeEach(() => {
 describe('generateFingerprint — happy path', () => {
 	it('returns the parsed fingerprint and meta', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.005 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.005, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { fingerprint, meta } = await generateFingerprint(db, playerId);
 
@@ -49,7 +49,7 @@ describe('generateFingerprint — happy path', () => {
 
 	it('creates a player_profiles row if none exists', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 
@@ -59,7 +59,7 @@ describe('generateFingerprint — happy path', () => {
 
 	it('persists taste_fingerprint as JSON string', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 
@@ -71,7 +71,7 @@ describe('generateFingerprint — happy path', () => {
 
 	it('persists fingerprint_model matching task model', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.003 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.003, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 
@@ -85,7 +85,7 @@ describe('generateFingerprint — happy path', () => {
 
 	it('persists fingerprint_generated_at as an ISO timestamp', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 
@@ -97,7 +97,7 @@ describe('generateFingerprint — happy path', () => {
 
 	it('also writes one prediction_runs row', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 
@@ -123,7 +123,7 @@ describe('generateFingerprint — manual/auto separation', () => {
 			JSON.stringify(['indie', 'post-punk']),
 		);
 
-		mockCallOpenRouter.mockResolvedValue({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValue({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		// First generation
 		await generateFingerprint(db, playerId);
@@ -147,7 +147,7 @@ describe('generateFingerprint — manual/auto separation', () => {
 			originalTags,
 		);
 
-		mockCallOpenRouter.mockResolvedValue({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValue({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 		await generateFingerprint(db, playerId);
@@ -171,8 +171,8 @@ describe('generateFingerprint — manual/auto separation', () => {
 		const secondFingerprint = { ...FIXTURE_FINGERPRINT, summary: 'Second run' };
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(firstFingerprint), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(secondFingerprint), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(firstFingerprint), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(secondFingerprint), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateFingerprint(db, playerId);
 		await generateFingerprint(db, playerId);
@@ -219,7 +219,7 @@ describe('generateFingerprint — edge cases', () => {
 	it('works for a player with no submission or voting history', async () => {
 		const playerId = seedPlayer(db, 'EmptyPlayer');
 		const lowConfidenceOutput = { ...FIXTURE_FINGERPRINT, confidence: 'low' as const };
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConfidenceOutput), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConfidenceOutput), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { fingerprint } = await generateFingerprint(db, playerId);
 		expect(fingerprint.confidence).toBe('low');

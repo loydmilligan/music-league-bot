@@ -66,7 +66,7 @@ beforeEach(() => {
 describe('runSubmissionPredict — happy path', () => {
 	it('returns the parsed three-part output and meta', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.012 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output, meta } = await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 
@@ -80,7 +80,7 @@ describe('runSubmissionPredict — happy path', () => {
 
 	it('writes one prediction_runs row with task_id = submission-predict', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 
@@ -97,7 +97,7 @@ describe('runSubmissionPredict — happy path', () => {
 
 	it('prediction_runs row carries model + cost + latency', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.015 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.015, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 
@@ -113,7 +113,7 @@ describe('runSubmissionPredict — happy path', () => {
 
 	it('passes roundId to prediction_runs when provided', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME, roundId: 7 });
 
@@ -123,7 +123,7 @@ describe('runSubmissionPredict — happy path', () => {
 
 	it('round_id is NULL when not provided', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 
@@ -134,7 +134,7 @@ describe('runSubmissionPredict — happy path', () => {
 	it('works for a player with no submission or voting history', async () => {
 		const playerId = seedPlayer(db, 'EmptyPlayer');
 		const lowConf = { ...FIXTURE_OUTPUT, prediction: { ...FIXTURE_OUTPUT.prediction, confidence: 'low' as const } };
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConf), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConf), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 		expect(output.prediction.confidence).toBe('low');
@@ -146,7 +146,7 @@ describe('runSubmissionPredict — happy path', () => {
 			...FIXTURE_OUTPUT,
 			prediction: { ...FIXTURE_OUTPUT.prediction, similar_past_picks: [] },
 		};
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(noPrior), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(noPrior), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 		expect(output.prediction.similar_past_picks).toEqual([]);
@@ -154,7 +154,7 @@ describe('runSubmissionPredict — happy path', () => {
 
 	it('does not include spotify_url when omitted by LLM', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 		expect(output.prediction.spotify_url).toBeUndefined();
@@ -169,7 +169,7 @@ describe('runSubmissionPredict — happy path', () => {
 				spotify_url: 'https://open.spotify.com/track/abc123',
 			},
 		};
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(withUrl), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(withUrl), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runSubmissionPredict(db, playerId, { theme: FIXTURE_THEME });
 		expect(output.prediction.spotify_url).toBe('https://open.spotify.com/track/abc123');

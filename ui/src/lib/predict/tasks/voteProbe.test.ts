@@ -38,7 +38,7 @@ beforeEach(() => {
 describe('runVoteProbe — happy path', () => {
 	it('returns the parsed SAS output and meta', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.007 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output, meta } = await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
@@ -50,7 +50,7 @@ describe('runVoteProbe — happy path', () => {
 
 	it('reasoning is non-empty', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
@@ -59,7 +59,7 @@ describe('runVoteProbe — happy path', () => {
 
 	it('writes one prediction_runs row with task_id = vote-probe', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
@@ -76,7 +76,7 @@ describe('runVoteProbe — happy path', () => {
 
 	it('prediction_runs row carries model + cost + latency', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.009 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0.009, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
@@ -92,7 +92,7 @@ describe('runVoteProbe — happy path', () => {
 
 	it('passes roundId to prediction_runs when provided', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME, roundId: 42 });
 
@@ -102,7 +102,7 @@ describe('runVoteProbe — happy path', () => {
 
 	it('round_id is NULL when not provided', async () => {
 		const playerId = seedPlayer(db);
-		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: FIXTURE_JSON, costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 
@@ -113,7 +113,7 @@ describe('runVoteProbe — happy path', () => {
 	it('works for a player with no submission or voting history', async () => {
 		const playerId = seedPlayer(db, 'EmptyPlayer');
 		const lowConfidence = { ...FIXTURE_OUTPUT, confidence: 'low' as const, upvote_likelihood: 45 };
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConfidence), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(lowConfidence), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { output } = await runVoteProbe(db, playerId, { song: FIXTURE_SONG, theme: FIXTURE_THEME });
 		expect(output.confidence).toBe('low');

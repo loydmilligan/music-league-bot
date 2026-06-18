@@ -375,6 +375,7 @@ describe('playerSuperlativesTask — stubbed LLM returns valid output', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_SUPERLATIVES_OUTPUT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		// Simulate what runPrediction does: call buildMessages then callOpenRouter
@@ -400,6 +401,7 @@ describe('fanHaterBlurbTask — stubbed LLM returns valid output', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_FAN_HATER_OUTPUT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		const messages = fanHaterBlurbTask.buildMessages(FIXTURE_FAN_HATER_INPUT);
@@ -416,6 +418,7 @@ describe('leagueReelTask — stubbed LLM returns valid output', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_REEL_OUTPUT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		const messages = leagueReelTask.buildMessages(FIXTURE_REEL_INPUT);
@@ -434,6 +437,7 @@ describe('momentLinesTask — stubbed LLM returns valid output', () => {
 		mockCallOpenRouter.mockResolvedValueOnce({
 			content: JSON.stringify(FIXTURE_MOMENT_OUTPUT),
 			costUsd: 0,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		});
 
 		const messages = momentLinesTask.buildMessages(FIXTURE_MOMENT_INPUT);

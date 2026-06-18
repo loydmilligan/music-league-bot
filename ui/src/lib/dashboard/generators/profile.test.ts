@@ -73,8 +73,8 @@ describe('generateProfile — happy path', () => {
 		seedFingerprint(db, playerId);
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0.002 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0.003 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0.002, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0.003, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const result = await generateProfile(db, playerId);
 
@@ -92,8 +92,8 @@ describe('generateProfile — happy path', () => {
 		seedFingerprint(db, playerId);
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { spectrum } = await generateProfile(db, playerId);
 
@@ -106,8 +106,8 @@ describe('generateProfile — happy path', () => {
 		const playerId = seedPlayer(db);
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { spectrum } = await generateProfile(db, playerId);
 
@@ -120,8 +120,8 @@ describe('generateProfile — happy path', () => {
 		const playerId = seedPlayer(db);
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const { playlist } = await generateProfile(db, playerId);
 
@@ -142,8 +142,8 @@ describe('generateProfile — happy path', () => {
 		const playerId = seedPlayer(db);
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_SPECTRUM), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_PLAYLIST), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await generateProfile(db, playerId);
 
@@ -173,8 +173,8 @@ describe('generateProfile — lite member with thin fingerprint', () => {
 		};
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(thinSpectrum), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(thinPlaylist), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(thinSpectrum), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(thinPlaylist), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const result = await generateProfile(db, playerId);
 
@@ -204,8 +204,8 @@ describe('generateProfile — lite member with thin fingerprint', () => {
 		};
 
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(thinSpectrum), costUsd: 0 })
-			.mockResolvedValueOnce({ content: JSON.stringify(singleTrackPlaylist), costUsd: 0 });
+			.mockResolvedValueOnce({ content: JSON.stringify(thinSpectrum), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(singleTrackPlaylist), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const result = await generateProfile(db, playerId);
 		expect(() => ProfileSliceSchema.parse(result)).not.toThrow();

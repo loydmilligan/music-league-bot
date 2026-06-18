@@ -57,7 +57,7 @@ const VALID_BODY = {
 describe('POST /api/players/:playerId/vote-probe', () => {
 	it('returns 200 with the SAS output', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const res = await POST(postEvt(id, VALID_BODY));
 		expect(res.status).toBe(200);
@@ -71,7 +71,7 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 
 	it('writes one prediction_runs row with task_id = vote-probe', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await POST(postEvt(id, VALID_BODY));
 
@@ -87,7 +87,7 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 
 	it('includes model and cost_usd in response', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.009 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.009, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const res = await POST(postEvt(id, VALID_BODY));
 		const body = await res.json();
@@ -98,7 +98,7 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 
 	it('passes spotify_url when provided', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const bodyWithUrl = {
 			song: { title: 'Blue Monday', artist: 'New Order', spotify_url: 'https://open.spotify.com/track/abc' },
@@ -162,7 +162,7 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 
 	it('response includes generated_at and cache_hit fields', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		const res = await POST(postEvt(id, VALID_BODY));
 		const body = await res.json();
@@ -173,7 +173,7 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 
 	it('second identical POST returns cached result without a new LLM call', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		// First call — hits LLM, writes prediction_runs row
 		await POST(postEvt(id, VALID_BODY));
@@ -190,8 +190,8 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 	it('forceRegen:true bypasses cache and calls LLM again', async () => {
 		const id = mkPlayer();
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		// First call — hits LLM
 		await POST(postEvt(id, VALID_BODY));
@@ -206,8 +206,8 @@ describe('POST /api/players/:playerId/vote-probe', () => {
 	it('different song skips cache and calls LLM', async () => {
 		const id = mkPlayer();
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007 })
-			.mockResolvedValueOnce({ content: JSON.stringify({ ...FIXTURE_OUTPUT, upvote_likelihood: 50 }), costUsd: 0.007 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_OUTPUT), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify({ ...FIXTURE_OUTPUT, upvote_likelihood: 50 }), costUsd: 0.007, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 
 		await POST(postEvt(id, VALID_BODY));
 		const res2 = await POST(postEvt(id, {

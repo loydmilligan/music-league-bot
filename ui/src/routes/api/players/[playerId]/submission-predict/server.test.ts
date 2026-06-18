@@ -92,7 +92,7 @@ const VALID_BODY = {
 describe('POST /api/players/:playerId/submission-predict', () => {
 	it('returns 200 with the three-part enriched result', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -109,7 +109,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('merges Spotify fields into resolved candidates', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -127,7 +127,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('merges Spotify url + art into the prediction when resolved', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -144,7 +144,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 	it('prediction carries no spotify_url when unresolved', async () => {
 		const id = mkPlayer();
 		const unresolvedPrediction = [{ title: 'Pictures of You', artist: 'The Cure', resolved: false }];
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(unresolvedPrediction);
@@ -156,7 +156,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('calls validateTracks twice — once for candidates, once for prediction', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -173,7 +173,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('writes one prediction_runs row with task_id = submission-predict', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -192,7 +192,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('includes model and cost_usd in response', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.014 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.014, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -254,7 +254,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('response includes generated_at and cache_hit fields', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -268,7 +268,7 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 
 	it('second identical POST returns cached result without a new LLM call', async () => {
 		const id = mkPlayer();
-		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 });
+		mockCallOpenRouter.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION)
@@ -291,8 +291,8 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 	it('forceRegen:true bypasses cache and calls LLM again', async () => {
 		const id = mkPlayer();
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES).mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES).mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);
@@ -310,8 +310,8 @@ describe('POST /api/players/:playerId/submission-predict', () => {
 	it('different theme skips cache and calls LLM', async () => {
 		const id = mkPlayer();
 		mockCallOpenRouter
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 })
-			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012 });
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 })
+			.mockResolvedValueOnce({ content: JSON.stringify(FIXTURE_LLM_OUTPUT), costUsd: 0.012, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 });
 		mockValidateTracks
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES).mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION)
 			.mockResolvedValueOnce(FIXTURE_VALIDATED_CANDIDATES).mockResolvedValueOnce(FIXTURE_VALIDATED_PREDICTION);

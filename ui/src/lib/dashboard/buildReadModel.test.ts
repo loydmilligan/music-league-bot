@@ -65,28 +65,28 @@ const SEASON_UPDATE_FIXTURE = {
 
 // Mock callOpenRouter to return appropriate fixture based on system prompt content
 function setupMock() {
-	mockCallOpenRouter.mockImplementation(async (messages: { role: string; content: string }[]) => {
+	mockCallOpenRouter.mockImplementation(async (messages: Parameters<typeof mockCallOpenRouter>[0]) => {
 		const sys = (messages[0]?.content ?? '').toLowerCase();
 		if (sys.includes('yearbook writer')) {
-			return { content: JSON.stringify(SUPERLATIVES_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(SUPERLATIVES_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('0–100') || sys.includes('0-100') || sys.includes('polished_vs_raw')) {
-			return { content: JSON.stringify(SPECTRUM_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(SPECTRUM_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('discovery playlist') || sys.includes('personalised')) {
-			return { content: JSON.stringify(PLAYLIST_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(PLAYLIST_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('biggest fan') || sys.includes('friendly hater')) {
-			return { content: JSON.stringify(FAN_HATER_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(FAN_HATER_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('yearbook editor') || sys.includes('reel')) {
-			return { content: JSON.stringify(REEL_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(REEL_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('caption') || sys.includes('most loved')) {
-			return { content: JSON.stringify(MOMENT_LINES_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(MOMENT_LINES_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		if (sys.includes('season-pulse writer') || sys.includes('season update')) {
-			return { content: JSON.stringify(SEASON_UPDATE_FIXTURE), costUsd: 0.001 };
+			return { content: JSON.stringify(SEASON_UPDATE_FIXTURE), costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0 };
 		}
 		// Fingerprint generation fallback
 		return {
@@ -100,6 +100,7 @@ function setupMock() {
 				confidence: 'low',
 			}),
 			costUsd: 0.001,
+			promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
 		};
 	});
 }
