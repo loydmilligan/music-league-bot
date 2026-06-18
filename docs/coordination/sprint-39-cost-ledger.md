@@ -1,5 +1,6 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.6.0
 campaign: openrouter-cost-management
 sprint: sprint-39-cost-ledger
 version: v1.6.0
@@ -208,6 +209,12 @@ Owner: "let's include them." Passive usability/params/join-key capture folded in
 _None._
 
 ## Activity Log
+
+### 2026-06-18 — orc — sprint-39 SHIPPED v1.6.0
+- Dispatched 2 file-disjoint Sonnet lane agents. Backend (a1–a6): `1f857f7` schema (llm_cost_log + health/delight side tables), `685a42a` LLMResult+tokens/latency+LLMCallMeta+logLlmCall, `68db673` digest sites, `c2f44d2` relContext fix, `ea1e184` predict/archive federation into prediction_runs, `6f8c18a` llm_calls view + /api/cost/{summary,daily,calls}. Frontend (b1): `3b545f2` tier ×1e6 fix.
+- Gate (orc-run, independent): `npm run check` 854 files 0 errors; `vitest run` 636/636 pass; commits path-scoped, no cross-lane overlap.
+- Release `b96fdf4` v1.6.0 + CHANGELOG. Deployed via `docker compose build bot-ui && up -d --force-recreate` on 192.168.4.217. Footer asserts v1.6.0.
+- Read-only prod verify: `/api/cost/daily` surfaces real historical predict spend via the federated `llm_calls` view (06-16 $0.245, 06-17 $0.361); digest/archive zero (accrue from new calls). No mutating verification on the live surface.
 
 ### 2026-06-17 — orc — sprint-39-cost-ledger planned
 - Campaign context from spike + sprint-38 handoff ingested.

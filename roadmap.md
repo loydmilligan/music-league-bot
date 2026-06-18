@@ -669,7 +669,8 @@ summary: >-
 ---
 id: models-cost-tier-display-bug
 title: Models cost-tier display bug (every model shows one dollar sign)
-stage: planned
+stage: shipped
+shippedIn: v1.6.0
 effort: small
 spike: model-cost-infra
 source: owner-uat
@@ -688,7 +689,8 @@ summary: >-
 ---
 id: openrouter-cost-tracking
 title: OpenRouter Cost Tracking (per-call ledger)
-stage: planned
+stage: shipped
+shippedIn: v1.6.0
 effort: medium
 spike: model-cost-infra
 source: owner
