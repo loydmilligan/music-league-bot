@@ -375,6 +375,15 @@ export async function callOpenRouter(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    // a6: fire-and-forget health event on provider HTTP error
+    if (opts.meta?.db) {
+      try {
+        opts.meta.db.prepare(
+          `INSERT INTO llm_health_event (id, cost_log_id, error_class, model, detail)
+           VALUES (?, ?, ?, ?, ?)`,
+        ).run(randomUUID(), null, 'provider_error', model, text.slice(0, 500));
+      } catch { /* fire-and-forget */ }
+    }
     throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 500)}`);
   }
   const json = (await res.json()) as {
@@ -382,7 +391,18 @@ export async function callOpenRouter(
     usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
   const content = json.choices?.[0]?.message?.content;
-  if (!content) throw new Error('OpenRouter returned no content');
+  if (!content) {
+    // a6: fire-and-forget health event on capability/parse failure (200 but no content)
+    if (opts.meta?.db) {
+      try {
+        opts.meta.db.prepare(
+          `INSERT INTO llm_health_event (id, cost_log_id, error_class, model, detail)
+           VALUES (?, ?, ?, ?, ?)`,
+        ).run(randomUUID(), null, 'capability_mismatch', model, 'OpenRouter returned 200 but content was missing');
+      } catch { /* fire-and-forget */ }
+    }
+    throw new Error('OpenRouter returned no content');
+  }
   const costUsd = typeof json.usage?.cost === 'number' ? json.usage.cost : 0;
   const promptTokens = typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0;
   const completionTokens = typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0;
@@ -917,4 +937,97 @@ export function replaceSectionContent(
 
 export function incrementWholeRegenCount(db: Database.Database, draftId: string): void {
   db.prepare('UPDATE digest_drafts SET whole_regen_count = whole_regen_count + 1 WHERE id = ?').run(draftId);
+}
+
+// ---- sprint-42: outcome helpers ----
+
+/** Maps outcome label to recovery_cost value (pinned in coord-doc). */
+export const RECOVERY_COST: Record<string, number> = {
+  passed: 0.0,
+  healed: 0.1,
+  salvaged: 0.4,
+  rejected: 0.9,
+  unusable: 1.0,
+};
+
+/**
+ * Fire-and-forget UPDATE on llm_cost_log for the most-recent row matching
+ * artifact_id (and optionally artifact_type). Sets outcome, recovery_cost
+ * (derived from map), and optionally edit_distance / regen_changed.
+ * A failed write must NEVER propagate to caller.
+ */
+export function setLlmOutcome(opts: {
+  db: Database.Database;
+  artifactId: string;
+  artifactType?: string;
+  outcome: 'passed' | 'healed' | 'salvaged' | 'rejected' | 'unusable';
+  editDistance?: number;
+  regenChanged?: string;
+}): void {
+  try {
+    const recoveryCost = RECOVERY_COST[opts.outcome] ?? 0.0;
+    const sets: string[] = ['outcome = ?', 'recovery_cost = ?'];
+    const args: unknown[] = [opts.outcome, recoveryCost];
+    if (opts.editDistance !== undefined) {
+      sets.push('edit_distance = ?');
+      args.push(opts.editDistance);
+    }
+    if (opts.regenChanged !== undefined) {
+      sets.push('regen_changed = ?');
+      args.push(opts.regenChanged);
+    }
+    // Use subquery to target the most-recent row (ORDER BY LIMIT on UPDATE
+    // is a compile-time option in SQLite; subquery is always safe).
+    const subWhere = opts.artifactType
+      ? `artifact_id = ? AND artifact_type = ?`
+      : `artifact_id = ?`;
+    const subArgs: unknown[] = opts.artifactType
+      ? [opts.artifactId, opts.artifactType]
+      : [opts.artifactId];
+    opts.db
+      .prepare(
+        `UPDATE llm_cost_log SET ${sets.join(', ')}
+         WHERE id = (
+           SELECT id FROM llm_cost_log WHERE ${subWhere} ORDER BY id DESC LIMIT 1
+         )`,
+      )
+      .run(...args, ...subArgs);
+  } catch {
+    // fire-and-forget: ledger write failure must never propagate
+  }
+}
+
+/**
+ * Compute a rough 0..1 edit-distance ratio between two content objects.
+ * Serializes both to JSON strings then uses a char-position match proxy.
+ */
+export function editDistanceRatio(original: unknown, edited: unknown): number {
+  const a = JSON.stringify(original) ?? '';
+  const b = JSON.stringify(edited) ?? '';
+  if (!a.length && !b.length) return 0;
+  const longer = Math.max(a.length, b.length);
+  const common = [...a].filter((ch, i) => b[i] === ch).length;
+  return Math.max(0, Math.min(1, 1 - common / longer));
+}
+
+/**
+ * Stamp all null-outcome llm_cost_log rows for sections in the given draft
+ * as 'passed'. Called after first-finalize. Fire-and-forget per section.
+ */
+export function finalizeOutcomes(db: Database.Database, draftId: string): void {
+  try {
+    const sections = db
+      .prepare('SELECT id FROM digest_sections WHERE draft_id = ?')
+      .all(draftId) as { id: string }[];
+    for (const section of sections) {
+      setLlmOutcome({
+        db,
+        artifactId: section.id,
+        artifactType: 'digest_section',
+        outcome: 'passed',
+      });
+    }
+  } catch {
+    // fire-and-forget: finalize outcome stamping must never abort the finalize action
+  }
 }
