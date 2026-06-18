@@ -52,9 +52,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
   // Parallel LLM calls (writes happen sequentially after — better-sqlite3
   // transactions are synchronous and a single shared DB connection serializes
   // them anyway).
+  const runId = draft.run_id ?? undefined;
   const results = await Promise.allSettled(
     regenerable.map(s =>
-      regenerateOneSection(data, s.kind as SectionKind, JSON.parse(s.content_json), chips, instructions, genParams, season),
+      regenerateOneSection(
+        data, s.kind as SectionKind, JSON.parse(s.content_json), chips, instructions, genParams, season,
+        db, runId ? { sectionId: s.id, runId } : undefined,
+      ),
     ),
   );
 

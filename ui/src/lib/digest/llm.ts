@@ -22,6 +22,8 @@ export interface DigestDraftRow {
   /** sprint-21: generated in season-recap mode (1) and FINAL (1) vs mid (0). */
   recap_enabled: number;
   recap_final: number;
+  /** sprint-39: groups all LLM calls for one generation (draft + its regens). */
+  run_id: string | null;
 }
 
 export interface DigestSectionRow {
@@ -695,20 +697,45 @@ export function buildUserPrompt(
   return parts.join('\n');
 }
 
+// Stable prompt version id for the current digest generation prompt.
+// Bump this string whenever the system/user prompt template changes materially.
+const DIGEST_PROMPT_VERSION = 'digest-v1';
+
 interface DraftLLMOutput {
   sections: Record<SectionKind, unknown>;
   /** Accumulated USD cost of the generation call (sprint-15 cost-capture). */
   costUsd: number;
+  /** sprint-39: pre-minted draft id so the cost log row can reference it. */
+  draftId?: string;
+  /** sprint-39: per-generation run uuid so regens can be grouped. */
+  runId?: string;
 }
 
 export async function generateDraft(data: RoundData, genParams?: GenParams, season?: SeasonData, db?: Database.Database): Promise<DraftLLMOutput> {
   const model = db ? modelFor('digest', db) : undefined;
+
+  // Pre-mint ids so the cost log row references them before writeDraft is called.
+  const draftId = `draft-${data.round.id}-${randomUUID().slice(0, 8)}`;
+  const runId = randomUUID();
+
+  const meta: LLMCallMeta | undefined = db ? {
+    category: 'digest',
+    label: 'digest:full',
+    db,
+    leagueId: data.league.id,
+    roundId: data.round.id,
+    runId,
+    artifactType: 'digest_draft',
+    artifactId: draftId,
+    promptVersion: DIGEST_PROMPT_VERSION,
+  } : undefined;
+
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, undefined, genParams, season) },
     ],
-    { jsonMode: true, model },
+    { jsonMode: true, model, meta },
   );
   const parsed = JSON.parse(raw) as DraftLLMOutput;
   if (!parsed.sections) throw new Error('LLM response missing "sections"');
@@ -718,6 +745,8 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
     }
   }
   parsed.costUsd = costUsd;
+  parsed.draftId = draftId;
+  parsed.runId = runId;
   return parsed;
 }
 
@@ -730,14 +759,33 @@ export async function regenerateOneSection(
   genParams?: GenParams,
   season?: SeasonData,
   db?: Database.Database,
+  sectionMeta?: { sectionId: string; runId: string },
 ): Promise<{ section: unknown; costUsd: number }> {
   const model = db ? modelFor('digest', db) : undefined;
+
+  // Derive leagueId from round when available
+  const leagueId = db
+    ? (db.prepare(`SELECT s.league_id FROM rounds r JOIN seasons s ON s.id = r.season_id WHERE r.id = ?`).get(data.round.id) as { league_id: number } | undefined)?.league_id
+    : undefined;
+
+  const meta: LLMCallMeta | undefined = (db && sectionMeta) ? {
+    category: 'digest',
+    label: `digest:${kind}`,
+    db,
+    leagueId,
+    roundId: data.round.id,
+    runId: sectionMeta.runId,
+    artifactType: 'digest_section',
+    artifactId: sectionMeta.sectionId,
+    promptVersion: DIGEST_PROMPT_VERSION,
+  } : undefined;
+
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }, genParams, season) },
     ],
-    { jsonMode: true, model },
+    { jsonMode: true, model, meta },
   );
   const parsed = JSON.parse(raw) as { section?: unknown };
   if (parsed.section === undefined) throw new Error('LLM response missing "section"');
@@ -800,7 +848,9 @@ export function writeDraft(
   prepChecks: unknown,
   genParams?: GenParams,
 ): { draft: DigestDraftRow; sections: DigestSectionRow[] } {
-  const draftId = `draft-${roundId}-${randomUUID().slice(0, 8)}`;
+  // Use pre-minted draftId from generateDraft (sprint-39 cost log linkage), or
+  // mint a new one if this is a recovery path that bypasses generateDraft.
+  const draftId = output.draftId ?? `draft-${roundId}-${randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const variantByKind = new Map((genParams?.sections ?? []).map((s) => [s.id, s.variant]));
 
@@ -814,9 +864,9 @@ export function writeDraft(
   const tx = db.transaction(() => {
     const archiveContext = JSON.stringify(buildArchiveContext(genParams, output));
     db.prepare(
-      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final, archive_context)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal, archiveContext);
+      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final, archive_context, run_id)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal, archiveContext, output.runId ?? null);
 
     // Only persist enabled + content-available sections; position is dense.
     // Recap mode: chat depends on pasted text only (no season chat-mentions).

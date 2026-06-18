@@ -297,6 +297,12 @@ export function openLeagueDb(path?: string): Database.Database {
 			);
 		`);
 	}
+	// sprint-39 cost ledger: run_id on digest_drafts so regen calls can group under
+	// the same run as the original draft generation.
+	const draftColsFinal = db.prepare("PRAGMA table_info(digest_drafts)").all() as { name: string }[];
+	if (draftColsFinal.length && !draftColsFinal.some(c => c.name === 'run_id')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN run_id TEXT");
+	}
 	// sprint-37 S2: snark dial on dashboard_sites (additive migration for existing rows).
 	const dsCols = db.prepare("PRAGMA table_info(dashboard_sites)").all() as { name: string }[];
 	if (dsCols.length && !dsCols.some(c => c.name === 'snark_level')) {

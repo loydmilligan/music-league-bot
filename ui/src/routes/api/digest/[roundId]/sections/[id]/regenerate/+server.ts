@@ -50,6 +50,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
     : undefined;
   const season = recapEnabled ? gatherSeasonData(db, roundId) : undefined;
 
+  // Retrieve the draft's run_id so this regen groups under the same generation run.
+  const draftRow = db.prepare('SELECT run_id FROM digest_drafts WHERE id = ?').get(section.draft_id) as { run_id: string | null } | undefined;
+  const runId = draftRow?.run_id ?? undefined;
+
   let newContent: unknown;
   let costUsd = 0;
   try {
@@ -61,6 +65,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       instructions,
       genParams,
       season,
+      db,
+      runId ? { sectionId, runId } : undefined,
     );
     newContent = res.section;
     costUsd = res.costUsd;
