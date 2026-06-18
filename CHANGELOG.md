@@ -4,6 +4,29 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.8.0] — 2026-06-18
+
+**sprint-40 — Debug mode + cost dashboard.** The cost ledger from v1.6.0 now has
+a face: a debug-mode toggle reveals a "Cost & routing" dashboard built from the CD
+handoff prototype. No charting library — all CSS/token visuals.
+
+### Added
+
+- **Debug-mode toggle** (App Settings) wired to a `debug_mode` DB key, plus a new
+  **Debug** tab → `/settings/debug` (shows a placeholder when debug mode is off).
+- **Cost dashboard widgets** (translated from the CD prototype, reading the live
+  `/api/cost/*` endpoints):
+  - **Today's spend summary** — digest / archive / predict split + total.
+  - **Call drilldown** — every call with time, category, label, model, tokens, cost,
+    latency; newest-first; mobile collapses the model/latency columns.
+  - **2-week stacked bar chart** — one bar per day, category base colors with
+    per-call opacity shading and hover tooltips (CSS bars, like StandingsChart).
+  - **Cost × latency scatter** — one point per model, for "which model where".
+  - **Weighted value-score dock** — live cost/latency sliders re-rank models
+    (lower-is-better normalization); a third quality axis is stubbed for the future.
+- Predict category uses the `--sky` token (not `--ember`, which carries an
+  error/blocking semantic) to avoid implying prediction spend is "bad".
+
 ## [1.7.0] — 2026-06-18
 
 **sprint-41 — Per-section model selection.** Each content section can now be
