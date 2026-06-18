@@ -2,7 +2,7 @@
 status: planned
 campaign: openrouter-cost-management
 sprint: sprint-40-cost-dashboard
-version: v1.7.0
+version: v1.8.0
 created: 2026-06-17
 depends_on: sprint-39-cost-ledger
 ---
@@ -13,6 +13,23 @@ depends_on: sprint-39-cost-ledger
 > Spec: `~/.config/taw/wiki/Projects/music-league-bot/sprint-40-cost-dashboard-spec.md`.
 > Depends on sprint-39 (`sprint-39-cost-ledger`) for the `llm_cost_log` table + three read endpoints; builds to contract with local mocks if sprint-39 is not yet merged.
 > Realizes roadmap card `settings-debug-mode-cost-dashboard`.
+
+> **AMENDED 2026-06-18 (build-from-prototype; sprint-39 landed):**
+> - sprint-39 shipped v1.6.0 — `/api/cost/{summary,daily,calls}` are **LIVE** over the `llm_calls`
+>   view. So `a2-cost-endpoints` is **verify-and-smoke only**, not a fallback build; the `calls`
+>   endpoint also returns `latency_ms` (a 2nd KPI), not just cost.
+> - **The design is the CD handoff prototype**, not a from-scratch mock. Translate the desktop
+>   "Cost & routing" view (React→Svelte) from
+>   `docs/design/cost-management/_unzip/cost-handoff/reference/cost-dashboard/`: `cost-author.jsx`
+>   (task→model layout + decision-dock shell), `cost-q1.jsx` (stacked-bar category colors),
+>   `cost-q2.jsx` (cost×latency scatter), `cost-q3.jsx` (weighted value-score sliders),
+>   `cost-data2.jsx` (`recommend()` + `SURFACE_STAKES` engines). **Lift the `cost-*.css` wholesale**
+>   (Mash Co tokens only). `b0-design-mock` becomes "study the prototype" — do NOT invent a new mock.
+> - **SCOPE EXPANDED** to the full prototype dashboard: beyond today's-split + drilldown + 2-week
+>   chart, also build the **cost×latency scatter (Q2)** and the **weighted value-score decision dock
+>   (Q3, live sliders, lower-is-better normalization)**. Quality axis stays an empty slot (future).
+> - Version target → **v1.8.0** (sprint-41 took v1.7.0, shipping ahead of this).
+> - A thin first-gen styling may later be restyled by CD's in-flight whole-site alignment pass — acceptable.
 
 ## Sprint Goals
 
@@ -81,7 +98,7 @@ Lane B builds against the mock at `lib/debug/costApi.mock.ts`; `costApi.ts` swap
 
 - [ ] {agent: frontend, id: b3-integration, depends: b2-widgets} **Sprint-39 integration + polish.** Swap `costApi.mock.ts` for real endpoint calls once a2 is confirmed green; remove `[MOCK DATA]` badge. Verify tooltip positioning at 412px; verify bar chart at min-width. Add Vitest route test for `debug-mode` toggle (mock fetch). **Acceptance:** widgets render against real API (or sprint-39's merged endpoints); `npm run check` 0; `vitest run` green.
 
-- [ ] {agent: orc, id: gate, depends: a2-cost-endpoints,b3-integration} **Gate.** Cross-check path-scoped commits; `cd ui && npm run check` (0) + `npx vitest run` (green); **owner UAT**: toggle debug ON (App Settings); visit /settings/debug; confirm today's cost split renders (or "(no calls today)"); drilldown table lists calls with labels; 2-week chart shows bars + hover tooltips; toggle debug OFF → placeholder; screenshots 412 + desktop 1280. On sign-off: v-bump to 1.7.0 + CHANGELOG + cached deploy to :3002 + assert live; sprint status → shipped; close.
+- [ ] {agent: orc, id: gate, depends: a2-cost-endpoints,b3-integration} **Gate.** Cross-check path-scoped commits; `cd ui && npm run check` (0) + `npx vitest run` (green); **owner UAT**: toggle debug ON (App Settings); visit /settings/debug; confirm today's cost split renders (or "(no calls today)"); drilldown table lists calls with labels; 2-week chart shows bars + hover tooltips; toggle debug OFF → placeholder; screenshots 412 + desktop 1280. On sign-off: v-bump to 1.8.0 + CHANGELOG + cached deploy to :3002 + assert live; sprint status → shipped; close.
 
 ## v1 scope guardrails
 
@@ -106,7 +123,7 @@ _(none yet)_
 
 ## Blockers
 
-- sprint-39-cost-ledger must land before gate (or mocks must be swapped at b3-integration). Track sprint-39 status; flag to owner if it slips past sprint-40 start.
+- ~~sprint-39-cost-ledger must land before gate~~ — RESOLVED 2026-06-18: sprint-39 shipped v1.6.0; endpoints live over the `llm_calls` view.
 
 ## Activity Log
 
