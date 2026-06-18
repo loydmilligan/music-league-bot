@@ -4,6 +4,34 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.9.0] — 2026-06-18
+
+**sprint-42 — Usability & delight capture.** Completes the openrouter-cost-management
+campaign: the third KPI (usability) and its positive counterweight (delight) now
+accrue from normal use — no rating UI, no AI judge. The columns shipped empty in
+v1.6.0; this populates them from real actions.
+
+### Added
+
+- **Outcome capture on every digest section** (fire-and-forget — a failed write
+  never interrupts the action): inline-edit → `salvaged` + `edit_distance`;
+  regenerate → prior output `rejected`; finalize untouched → `passed`. b-side
+  refresh/steer → `rejected` on the prediction row.
+- **Delight ▲ control** on each digest section (pre-finalize): mark a standout
+  line; writes an `llm_delight` row linked to the generating call. Hidden from
+  exported PNG/PDF.
+- **Health events** — provider/availability/capability failures log to
+  `llm_health_event`, kept quarantined out of the usability score.
+- Prediction runs now return their ledger `rowId` so outcomes attach cleanly.
+
+### Notes
+
+- Digest reaches the full ladder (passed → salvaged → rejected → unusable);
+  prediction & b-side reach passed/rejected/unusable only (no salvage rung —
+  those outputs aren't human-edited).
+- `regen_changed` discrimination (params vs model on a reject) is stubbed `none`
+  in v1; the evaluator / quality score itself remains a future stage.
+
 ## [1.8.0] — 2026-06-18
 
 **sprint-40 — Debug mode + cost dashboard.** The cost ledger from v1.6.0 now has
