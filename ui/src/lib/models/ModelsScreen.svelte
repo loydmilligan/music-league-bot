@@ -7,6 +7,64 @@
     type Model, type BucketState, type BucketReq,
   } from './qualify.js';
 
+  // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
+  type SectionState = {
+    key: string;              // "digest_model_<section>"
+    section: string;          // e.g. "podium"
+    label: string;            // human-readable display label
+    bucket: 'predict' | 'digest';
+    selected: string | null;  // DB-saved model_id; null = use default
+    resolved: string;         // effective model: section pin ?? bucket ?? env ?? hardcoded
+    requires: BucketReq;      // { json: true } for all sections in v1
+  };
+
+  // Ordered 16 section keys grouped by bucket (for mock fallback + grouping)
+  const DIGEST_SECTION_KEYS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
+  const PREDICT_SECTION_KEYS = [
+    'narrative-player-superlatives', 'narrative-fan-hater-blurbs',
+    'narrative-league-reel', 'narrative-moment-lines',
+    'profile-spectrum', 'profile-playlist', 'season-update',
+    'submission-predict', 'vote-probe', 'taste-fingerprint',
+  ] as const;
+
+  const SECTION_LABELS: Record<string, string> = {
+    podium: 'Podium recap',
+    villain: 'Villain section',
+    flow: 'Flow commentary',
+    consensus: 'Consensus picks',
+    quotes: 'Notable quotes',
+    chat: 'Chat highlights',
+    'narrative-player-superlatives': 'Player superlatives',
+    'narrative-fan-hater-blurbs': 'Fan / hater blurbs',
+    'narrative-league-reel': 'League reel',
+    'narrative-moment-lines': 'Moment lines',
+    'profile-spectrum': 'Taste spectrum',
+    'profile-playlist': 'Profile playlist',
+    'season-update': 'Season update',
+    'submission-predict': 'Submission predict',
+    'vote-probe': 'Vote probe',
+    'taste-fingerprint': 'Taste fingerprint',
+  };
+
+  function makeMockSection(section: string, bucket: 'predict' | 'digest'): SectionState {
+    return {
+      key: `digest_model_${section}`,
+      section,
+      label: SECTION_LABELS[section] ?? section,
+      bucket,
+      selected: null,
+      resolved: '',
+      requires: { json: true },
+    };
+  }
+
+  function buildMockSections(): Record<string, SectionState> {
+    const out: Record<string, SectionState> = {};
+    for (const s of DIGEST_SECTION_KEYS) out[s] = makeMockSection(s, 'digest');
+    for (const s of PREDICT_SECTION_KEYS) out[s] = makeMockSection(s, 'predict');
+    return out;
+  }
+
   // Draft superset — fields populated before saving to the roster.
   type Draft = {
     id: string | null;
@@ -28,6 +86,13 @@
   };
 
   // ---- state ----------------------------------------------------------------
+  let sectionsData = $state<Record<string, SectionState>>({});
+  let sectionsLoaded = $state(false);
+  let sectionsMocked = $state(false);
+  // accordion open state per bucket key (true = expanded)
+  let digestOpen = $state(true);
+  let predictOpen = $state(true);
+
   let models = $state<Model[]>([]);
   let keyConfigured = $state(false);
   let keyVal = $state('');
@@ -53,6 +118,21 @@
 
   // ---- derived --------------------------------------------------------------
   const sorted = $derived([...models].sort((a, b) => b.favorite - a.favorite));
+
+  // Per-section derived — sections grouped and sorted per spec
+  const digestSections = $derived(
+    DIGEST_SECTION_KEYS
+      .map((k) => sectionsData[k])
+      .filter(Boolean)
+  );
+  const predictSections = $derived(
+    PREDICT_SECTION_KEYS
+      .map((k) => sectionsData[k])
+      .filter(Boolean)
+  );
+
+  const digestOverrideCount = $derived(digestSections.filter((s) => s.selected != null).length);
+  const predictOverrideCount = $derived(predictSections.filter((s) => s.selected != null).length);
 
   function qualifying(req: BucketReq): Model[] {
     return sorted.filter((m) => qualifies(m, req));
@@ -101,10 +181,32 @@
     } catch { /* backend not ready */ }
   }
 
+  async function loadSections() {
+    try {
+      const r = await fetch('/api/model-vars/sections');
+      if (r.ok) {
+        sectionsData = await r.json();
+        sectionsLoaded = true;
+        sectionsMocked = false;
+      } else if (r.status === 404) {
+        // Lane A endpoint not yet shipped — use local mock so UI renders
+        sectionsData = buildMockSections();
+        sectionsLoaded = true;
+        sectionsMocked = true;
+      }
+    } catch {
+      // Backend not ready — mock so panel still renders
+      sectionsData = buildMockSections();
+      sectionsLoaded = true;
+      sectionsMocked = true;
+    }
+  }
+
   onMount(() => {
     loadModels();
     loadKeyStatus();
     loadModelVars();
+    loadSections();
   });
 
   // ---- key management -------------------------------------------------------
@@ -253,6 +355,34 @@
 
   function bucketWarn(b: BucketState): boolean {
     return !!b.selected && !!b.envValue && b.selected !== b.envValue;
+  }
+
+  // ---- per-section select ---------------------------------------------------
+  async function setSectionModel(section: string, modelId: string | null) {
+    // Optimistic update
+    const prev = sectionsData[section];
+    if (!prev) return;
+    sectionsData = {
+      ...sectionsData,
+      [section]: { ...prev, selected: modelId },
+    };
+    try {
+      const r = await fetch(`/api/model-vars/sections/${encodeURIComponent(section)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_id: modelId }),
+      });
+      if (r.ok) {
+        const updated: SectionState = await r.json();
+        sectionsData = { ...sectionsData, [section]: updated };
+      } else {
+        // Rollback optimistic update on error
+        sectionsData = { ...sectionsData, [section]: prev };
+      }
+    } catch {
+      // Rollback optimistic update on network error
+      sectionsData = { ...sectionsData, [section]: prev };
+    }
   }
 
   function toggleDraftCap(c: (typeof CAP_ORDER)[number]) {
@@ -614,6 +744,129 @@
     </div>
   </article>
 
+  <!-- ===== Per-section overrides card ===== -->
+  {#if sectionsLoaded && models.length >= 1}
+    <article class="ml-card mlm-sections-card">
+      <header class="ml-card-head">
+        <div>
+          <h3 class="ml-card-title">Per-section overrides</h3>
+          <p class="ml-card-sub">
+            Pin a specific model to each AI task. A pinned section ignores the bucket default.
+            "(use default)" clears the pin and falls back to the Predict or Digest bucket.
+          </p>
+        </div>
+        {#if sectionsMocked}
+          <span class="mlm-status mlm-status--need">
+            <span class="mlm-status-dot"></span>API pending
+          </span>
+        {/if}
+      </header>
+
+      {#if sectionsMocked}
+        <p style="margin:0;font:500 11.5px/1.45 var(--font-mono);color:var(--amber);">
+          &#9888; Sections API not yet available — panel rendered from local mock.
+          Selects are non-functional until Lane A ships the endpoint.
+        </p>
+      {/if}
+
+      <!-- Digest sections bucket -->
+      <div class="mlm-section-group">
+        <button
+          class="mlm-section-group-head"
+          onclick={() => (digestOpen = !digestOpen)}
+          aria-expanded={digestOpen}
+        >
+          <span class="mlm-section-group-label">Digest sections</span>
+          <span class="mlm-section-group-badge" style="display:flex;align-items:center;gap:8px;">
+            {#if digestOverrideCount > 0}
+              <span class="ml-chip ml-chip--pulp">{digestOverrideCount} overridden</span>
+            {/if}
+            <span class="mlm-section-chevron" class:is-open={digestOpen}>&#8250;</span>
+          </span>
+        </button>
+
+        {#if digestOpen}
+          <div class="mlm-section-rows">
+            {#each digestSections as s (s.section)}
+              {@const eligible = qualifying(s.requires)}
+              {@const pinSet = s.selected != null}
+              <div class="mlm-section-row">
+                <span class="mlm-section-label">{s.label}</span>
+                <select
+                  class="mlm-select mlm-section-select"
+                  value={s.selected ?? '__default__'}
+                  onchange={(e) => {
+                    const v = (e.target as HTMLSelectElement).value;
+                    setSectionModel(s.section, v === '__default__' ? null : v);
+                  }}
+                  disabled={sectionsMocked}
+                >
+                  <option value="__default__">(use default)</option>
+                  {#each eligible as m (m.id)}
+                    <option value={m.model_id}>{m.nickname}</option>
+                  {/each}
+                </select>
+                {#if pinSet}
+                  <span class="mlm-section-resolved">
+                    &#10140; {s.resolved || s.selected}
+                  </span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Dashboard & predict tasks bucket -->
+      <div class="mlm-section-group">
+        <button
+          class="mlm-section-group-head"
+          onclick={() => (predictOpen = !predictOpen)}
+          aria-expanded={predictOpen}
+        >
+          <span class="mlm-section-group-label">Dashboard &amp; predict tasks</span>
+          <span class="mlm-section-group-badge" style="display:flex;align-items:center;gap:8px;">
+            {#if predictOverrideCount > 0}
+              <span class="ml-chip ml-chip--pulp">{predictOverrideCount} overridden</span>
+            {/if}
+            <span class="mlm-section-chevron" class:is-open={predictOpen}>&#8250;</span>
+          </span>
+        </button>
+
+        {#if predictOpen}
+          <div class="mlm-section-rows">
+            {#each predictSections as s (s.section)}
+              {@const eligible = qualifying(s.requires)}
+              {@const pinSet = s.selected != null}
+              <div class="mlm-section-row">
+                <span class="mlm-section-label">{s.label}</span>
+                <select
+                  class="mlm-select mlm-section-select"
+                  value={s.selected ?? '__default__'}
+                  onchange={(e) => {
+                    const v = (e.target as HTMLSelectElement).value;
+                    setSectionModel(s.section, v === '__default__' ? null : v);
+                  }}
+                  disabled={sectionsMocked}
+                >
+                  <option value="__default__">(use default)</option>
+                  {#each eligible as m (m.id)}
+                    <option value={m.model_id}>{m.nickname}</option>
+                  {/each}
+                </select>
+                {#if pinSet}
+                  <span class="mlm-section-resolved">
+                    &#10140; {s.resolved || s.selected}
+                  </span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </article>
+  {/if}
+
 </div>
 
 <style>
@@ -621,5 +874,112 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
+  }
+
+  /* ===== per-section overrides card ======================================= */
+  .mlm-sections-card { border-left: 3px solid var(--amber); }
+
+  .mlm-section-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    overflow: hidden;
+  }
+
+  .mlm-section-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .mlm-section-group-head:hover { background: var(--surface-hover); }
+
+  .mlm-section-group-label {
+    font: 700 11px/1 var(--font-body);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .mlm-section-group-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .mlm-section-chevron {
+    font: 600 16px/1 var(--font-body);
+    color: var(--fg-quiet);
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .mlm-section-chevron.is-open { transform: rotate(270deg); }
+
+  .mlm-section-rows {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--line);
+  }
+
+  .mlm-section-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.2fr) minmax(0, 2fr);
+    gap: 10px;
+    align-items: start;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--line);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .mlm-section-row:last-child { border-bottom: none; }
+  .mlm-section-row:hover { background: var(--surface-hover); }
+
+  .mlm-section-label {
+    font: 500 12px/1.35 var(--font-body);
+    color: var(--fg-muted);
+    padding-top: 10px; /* align vertically with select */
+    min-width: 0;
+  }
+
+  .mlm-section-select {
+    /* Use the existing .mlm-select base; just constrain height */
+    min-width: 0;
+  }
+
+  .mlm-section-resolved {
+    grid-column: 2;
+    font: 500 10.5px/1.3 var(--font-mono);
+    color: var(--fg-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 2px;
+  }
+
+  /* On very narrow viewports (412px), collapse both group headings
+     so the page doesn't blow out, and let the user expand each.
+     The accordion is the density solution for open question B.
+  */
+  @media (max-width: 480px) {
+    .mlm-section-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .mlm-section-label {
+      padding-top: 0;
+    }
+    .mlm-section-resolved {
+      grid-column: 1;
+    }
   }
 </style>
