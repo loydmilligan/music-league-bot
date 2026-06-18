@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
+import { setLlmOutcome, editDistanceRatio } from '$lib/digest/llm.js';
 
 function loadSection(db: ReturnType<typeof getDb>, roundId: number, sectionId: string) {
   return db
@@ -34,6 +35,9 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   const sets: string[] = [];
   const args: unknown[] = [];
 
+  // Capture prior content for edit_distance before the UPDATE (a2)
+  const priorContentJson = section.content_json as string | undefined;
+
   if ('content' in body && body.content !== undefined) {
     // Accept the rebuilt content object; store as JSON and stamp edited_at.
     sets.push('content_json = ?', "edited_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')");
@@ -64,6 +68,22 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 
   args.push(sectionId);
   db.prepare(`UPDATE digest_sections SET ${sets.join(', ')} WHERE id = ?`).run(...args);
+
+  // a2: after a content edit, stamp salvaged + edit_distance on the ledger row
+  if ('content' in body && body.content !== undefined) {
+    let distance = 0;
+    try {
+      const prior = priorContentJson ? JSON.parse(priorContentJson) : {};
+      distance = editDistanceRatio(prior, body.content);
+    } catch { /* fallback to 0 */ }
+    setLlmOutcome({
+      db,
+      artifactId: sectionId,
+      artifactType: 'digest_section',
+      outcome: 'salvaged',
+      editDistance: distance,
+    });
+  }
 
   const updated = loadSection(db, roundId, sectionId);
   return json({ ok: true, sectionId, section: updated });
