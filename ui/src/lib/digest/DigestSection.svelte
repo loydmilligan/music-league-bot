@@ -116,7 +116,7 @@
     delightPhase = 'saving';
     delightError = '';
     try {
-      const res = await fetch(`/api/digest/${roundId}/delight`, {
+      const res = await fetch(`/api/digest/${roundId}/sections/${sectionId}/delight`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
