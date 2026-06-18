@@ -222,6 +222,7 @@ followsFrom: ai-model-management
 spike: model-cost-infra
 sprints:
   - sprint-39-cost-ledger
+  - sprint-42-usability-capture
   - sprint-40-cost-dashboard
   - sprint-41-per-section-models
 summary: >-
@@ -247,6 +248,24 @@ sprintPlan:
     cards:
       - openrouter-cost-tracking
       - models-cost-tier-display-bug
+  - sprint: sprint-42-usability-capture
+    title: Usability and delight event capture
+    goal: >-
+      Executes after sprint-39 (which lays the schema plus the passive,
+      can't-backfill fields) and before sprint-40 surfaces it. Wire the
+      human-action outcome finalizers into controls that already exist, plus one
+      new control, so the third KPI (usability) and its positive counterweight
+      (delight) accrue from real use with no rating UI and no AI judge. Digest
+      inline-edit marks an output salvaged with an edit-distance magnitude;
+      regenerate or skip marks the prior output rejected; finalizing untouched
+      marks it passed; a new thumbs-up control on a standout line writes a
+      delight row; availability and capability failures write quarantined health
+      events kept out of the usability score. Digest reaches the full ladder;
+      prediction and b-side reach passed, rejected, or unusable only (no salvage
+      rung). The schema and passive capture already shipped in sprint-39; this is
+      the UI-side instrumentation half.
+    cards:
+      - llm-usability-delight-capture
   - sprint: sprint-40-cost-dashboard
     title: Debug mode plus cost dashboard
     goal: >-

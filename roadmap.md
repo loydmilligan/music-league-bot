@@ -701,6 +701,26 @@ summary: >-
   + which section), league/round, timestamp. The data layer behind the debug cost
   dashboard. Owner can't afford blind spend during testing — this makes spend visible.
 ---
+id: llm-usability-delight-capture
+title: LLM Usability and Delight Event Capture
+stage: planned
+effort: medium
+spike: model-cost-infra
+source: owner
+priority: high
+campaign: openrouter-cost-management
+sprint: sprint-42-usability-capture
+summary: >-
+  The UI-side half of the third KPI. Sprint-39 lays the schema and the passive,
+  can't-backfill fields; this captures the human-action outcomes from controls that
+  already exist plus one new control: digest inline-edit (salvaged + edit distance),
+  regenerate/skip (rejected), finalize untouched (passed), a thumbs-up on a standout
+  line (delight), and quarantined availability/capability failures (health events,
+  kept out of the usability score). Digest reaches the full passed-salvaged-rejected-
+  unusable ladder; prediction and b-side reach passed/rejected/unusable only. No
+  evaluator and no AI judge — that is a later stage. Runs after sprint-39, before the
+  sprint-40 dashboard surfaces any of it.
+---
 id: settings-debug-mode-cost-dashboard
 title: Settings Debug Mode + Cost Dashboard
 stage: planned

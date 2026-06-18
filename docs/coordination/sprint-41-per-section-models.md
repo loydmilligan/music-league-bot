@@ -106,7 +106,8 @@ Lane B extends `ModelsScreen.svelte` in-place. No new exported components. No ne
 
 ## Ratification Log
 
-_None yet._
+### 2026-06-18 — predict-task DB routing ratified (owner)
+The 3 static-env predict tasks (`submissionPredict`, `voteProbe`, `tasteFingerprint`) WILL be migrated from the module-load `process.env.OPENROUTER_PREDICT_MODEL` constant to DB-first routing via `modelForSection` — task `a4-migrate`, confirmed by owner ("fix them"). This resolves the open flag raised in the CD cost-routing handoff (`SCHEMA.md` §6): per-section pinning (Q5) assumed those tasks were DB-routable; they are not today, and `a4-migrate` makes them so. The scope-out alternative (leave them static, exclude from pinning) was **rejected** — pinning must work uniformly across all 16 sections.
 
 ## Blockers
 
