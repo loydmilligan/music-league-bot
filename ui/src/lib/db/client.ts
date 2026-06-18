@@ -113,6 +113,28 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (leagueCols.length && !leagueCols.some(c => c.name === 'active_round_id')) {
 		db.exec("ALTER TABLE leagues ADD COLUMN active_round_id INTEGER REFERENCES rounds(id)");
 	}
+	// sprint-39 llm_calls view: UNION over llm_cost_log (digest) + prediction_runs (predict/archive).
+	// All /api/cost/* endpoints query this view, never either base table directly.
+	// DROP + CREATE each boot to pick up column additions without a migration step.
+	db.exec(`
+		DROP VIEW IF EXISTS llm_calls;
+		CREATE VIEW llm_calls AS
+			SELECT
+				created_at, model, category, label, cost_usd, latency_ms,
+				prompt_tokens, completion_tokens
+			FROM llm_cost_log
+		UNION ALL
+			SELECT
+				created_at, model,
+				COALESCE(category, 'predict') AS category,
+				COALESCE(label, 'predict:unknown') AS label,
+				cost_usd, latency_ms,
+				COALESCE(prompt_tokens, 0) AS prompt_tokens,
+				COALESCE(completion_tokens, 0) AS completion_tokens
+			FROM prediction_runs
+			WHERE cost_usd IS NOT NULL
+	`);
+
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	// sprint-22 theme-tags: seed the category taxonomy + starter vocabulary
