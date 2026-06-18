@@ -7,6 +7,7 @@ import {
   replaceSectionContent,
   enrichPodiumArt,
   addDraftCost,
+  setLlmOutcome,
   type DigestSectionRow,
   type GenParams,
   type SectionKind,
@@ -79,5 +80,16 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   const updated = replaceSectionContent(db, section, newContent, chips, instructions);
   addDraftCost(db, section.draft_id, costUsd);
+
+  // a3: stamp the PRIOR section ledger row as rejected after regen succeeds
+  // TODO stage-3: discriminate params/model changes (OQ/CG-1)
+  setLlmOutcome({
+    db,
+    artifactId: sectionId,
+    artifactType: 'digest_section',
+    outcome: 'rejected',
+    regenChanged: 'none',
+  });
+
   return json({ section: updated });
 };
