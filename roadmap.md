@@ -981,3 +981,76 @@ summary: >-
   or (b) add a Cloudflare cache-purge call (API token + zone id) to the deploy
   step for /_bside/*. Also: the v1.4.0 "deploy" runbook should include rebuilding
   + shipping the public bside bundle, not just the bot-ui container.
+---
+id: generation-pipeline-core
+title: Generation Pipeline (core)
+stage: shipped
+shippedIn: v1.10.0
+effort: large
+source: owner
+campaign: generation-pipeline
+sprint: sprint-43-pipeline-core
+summary: >-
+  Replaced the single hard-coded digest call with a configurable pipeline (EPs,
+  skips, merge, prior-EP context). Per-section model pins now bind on the initial
+  draft; regression-guarded so a no-skip single-model pipeline equals the prior call.
+---
+id: pipeline-covers-ab-review
+title: Pipeline Covers and A/B Review
+stage: shipped
+shippedIn: v1.11.0
+effort: medium
+source: owner
+campaign: generation-pipeline
+sprint: sprint-44-covers-ab-review
+summary: >-
+  Covers (re-run a section later on a better model with prior context) + a cover A/B
+  review surface in the digest flow + an llm_preference table logging each pick as a
+  head-to-head model-preference signal. Default pipeline covers Flow on Sonnet.
+---
+id: pipeline-config-ui
+title: Pipeline Config UI
+stage: planned
+effort: medium
+source: owner
+priority: high
+campaign: generation-pipeline
+sprint: sprint-45-pipeline-config-ui
+summary: >-
+  A UI to view and edit the shared generation pipeline without touching code or the
+  DB — section order, per-section model, skip placement, and covers — writing the same
+  pipeline_config the resolver reads. Owner explicitly needs to use the pipeline without
+  coding. Per-league profiles remain a later extension.
+---
+id: pipeline-recoup-budgeting
+title: "Pipeline Recoup: per-Release budgeting"
+stage: idea
+effort: large
+source: design
+campaign: generation-pipeline
+summary: >-
+  v2. A per-Release spend budget evaluated at each skip (a natural checkpoint): pick the
+  best model the remaining budget affords for the next EP. Open decisions: reserve rule,
+  re-plan on overrun, per-league vs global. Depends on the v1 pipeline.
+---
+id: per-league-pipeline-profiles
+title: Per-League Pipeline Profiles
+stage: idea
+effort: medium
+source: design
+campaign: generation-pipeline
+summary: >-
+  v2. Saved pipelines (Thrifty / Balanced / Showcase) assignable per league. A profile is
+  a saved pipeline, so this is additive once the config UI exists. Subsumes the earlier
+  model-to-section profiles idea.
+---
+id: pipeline-feature-duets
+title: "Pipeline Feature: duet sections"
+stage: idea
+effort: large
+source: design
+campaign: generation-pipeline
+summary: >-
+  Explore. A second model co-appearing in one section (a duet), vs Cover which just picks
+  the better single take. Needs a content-format decision + proof it beats Cover. Parked
+  until a concrete creative use justifies it.

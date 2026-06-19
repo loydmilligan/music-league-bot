@@ -1,5 +1,6 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.11.0
 campaign: generation-pipeline
 sprint: sprint-44-covers-ab-review
 version: v1.11.0

@@ -288,3 +288,53 @@ sprintPlan:
       load over to the DB-first resolver.
     cards:
       - per-section-model-selection
+---
+id: generation-pipeline
+title: Generation Pipeline
+kind: regular
+signedOff: false
+followsFrom: openrouter-cost-management
+sprints:
+  - sprint-43-pipeline-core
+  - sprint-44-covers-ab-review
+summary: >-
+  Closes the production gap found after sprint-41: per-section model pins did
+  nothing on a fresh digest because the draft was a single hard-coded call. A
+  Release (digest/archive) now runs as a configurable pipeline — ordered tracks
+  (sections) split into EPs at skips, same-model tracks merged into one call,
+  later EPs reading earlier output as context — so pins bind on the initial draft
+  with coherence kept where it matters (the one-skip default puts factual sections
+  first, voice sections after). Covers re-run a section later on a better model;
+  the A/B review pick is logged as a clean head-to-head model-preference signal
+  for the cost campaign's quality work. From the CD pipeline handoff
+  (docs/design/per-section-gen/). v1 shipped v1.10.0 + v1.11.0. v2 deferred:
+  recoup budgeting, per-league profiles, feature/duets (see roadmap).
+sprintPlan:
+  - sprint: sprint-43-pipeline-core
+    title: Pipeline core
+    goal: >-
+      Backend. Pipeline config + resolvePipeline (EP split at skips, group-by-model
+      merge, prior-EP context) + rewire generateDraft + generalize the merge prompt +
+      the one-skip default. Regression-guarded: a no-skip single-model pipeline reduces
+      to exactly the prior single call. Closes the per-section-pins-on-initial-draft gap.
+    cards:
+      - generation-pipeline-core
+  - sprint: sprint-44-covers-ab-review
+    title: Covers plus A/B review
+    goal: >-
+      Auto-fire covers (re-run a section later on a better model with prior context),
+      persist both takes, a cover A/B review surface in the digest flow, and log each
+      pick to a new llm_preference table as a head-to-head quality signal. Default
+      pipeline covers Flow on Sonnet.
+    cards:
+      - pipeline-covers-ab-review
+  - sprint: sprint-45-pipeline-config-ui
+    title: Pipeline config UI
+    goal: >-
+      Pull forward from v2 (owner needs to use the pipeline without coding). A UI to
+      view and edit the shared pipeline — section order, per-section model, skip
+      placement, and covers — instead of editing DEFAULT_PIPELINE/the settings row by
+      hand. Writes the same pipeline_config the resolver already reads. Per-league
+      profiles remain a later extension.
+    cards:
+      - pipeline-config-ui
