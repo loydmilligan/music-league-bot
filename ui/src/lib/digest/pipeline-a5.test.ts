@@ -95,6 +95,7 @@ beforeEach(() => {
 describe('generateDraft — per-section pins honored on initial draft (a5)', () => {
   it('villain pinned to premium-model: EP1 call uses premium-model for villain', async () => {
     // Arrange: villain pinned to premium; all others use base-model.
+    // sprint-44: DEFAULT_PIPELINE now has a flow cover → EP2 (cover call) added.
     const db = makeDb({ digest_model_villain: 'premium-model' }, 'base-model');
 
     // EP0: quotes, consensus, podium (no chat since no chatMentions)
@@ -103,11 +104,13 @@ describe('generateDraft — per-section pins honored on initial draft (a5)', () 
     // villain is pinned to premium-model, flow uses base-model → 2 groups in EP1
     fetchResponses.push(makeFetchResponse(['villain']));
     fetchResponses.push(makeFetchResponse(['flow']));
+    // EP2: flow cover (uses DEFAULT_PIPELINE cover model: anthropic/claude-sonnet-4-5)
+    fetchResponses.push(makeFetchResponse(['flow']));
 
     const result = await generateDraft(mkData(), undefined, undefined, db);
 
-    // Expect 3 fetch calls: EP0 (1 group), EP1 (2 groups: villain + flow split by model).
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    // Expect 4 fetch calls: EP0 (1 group), EP1 (2 groups: villain + flow split), EP2 (cover).
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
 
     // EP0 call (fetch[0]): model should be 'base-model'.
     const ep0Body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
@@ -130,32 +133,46 @@ describe('generateDraft — per-section pins honored on initial draft (a5)', () 
     const ep1FlowUserMsg = ep1FlowBody.messages.find((m: { role: string }) => m.role === 'user');
     expect(ep1FlowUserMsg?.content).toMatch(/flow/);
 
+    // EP2 cover call (fetch[3]): model must be the DEFAULT_PIPELINE cover model.
+    const ep2CoverBody = JSON.parse(fetchSpy.mock.calls[3][1]!.body as string);
+    expect(ep2CoverBody.model).toBe('anthropic/claude-sonnet-4-5');
+
     // All sections present in result.
     expect(result.sections['villain']).toBeDefined();
     expect(result.sections['flow']).toBeDefined();
     expect(result.sections['podium']).toBeDefined();
+    // Cover output present.
+    expect(result._covers?.['flow']).toBeDefined();
   });
 
-  it('no pins: all sections use base-model → DEFAULT_PIPELINE produces 2 fetch calls (one per EP)', async () => {
+  it('no pins: all sections use base-model → DEFAULT_PIPELINE produces 3 fetch calls (EP0 + EP1 + flow cover)', async () => {
+    // sprint-44: DEFAULT_PIPELINE flow cover adds a 3rd call.
     const db = makeDb({}, 'base-model');
 
     // EP0: quotes, consensus, podium
     fetchResponses.push(makeFetchResponse(['quotes', 'consensus', 'podium']));
     // EP1: villain, flow — same model → merged into 1 group
     fetchResponses.push(makeFetchResponse(['villain', 'flow']));
+    // EP2: flow cover (claude-sonnet-4-5 from DEFAULT_PIPELINE)
+    fetchResponses.push(makeFetchResponse(['flow']));
 
     await generateDraft(mkData(), undefined, undefined, db);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
 
     const ep0Body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(ep0Body.model).toBe('base-model');
 
     const ep1Body = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
     expect(ep1Body.model).toBe('base-model');
+
+    // EP2 cover call uses the cover model from DEFAULT_PIPELINE.
+    const ep2Body = JSON.parse(fetchSpy.mock.calls[2][1]!.body as string);
+    expect(ep2Body.model).toBe('anthropic/claude-sonnet-4-5');
   });
 
-  it('villain AND flow both pinned to same premium-model → EP1 still 1 group (merged)', async () => {
+  it('villain AND flow both pinned to same premium-model → EP1 still 1 group (merged); cover fires in EP2', async () => {
+    // sprint-44: flow cover always fires in EP2 regardless of EP1 grouping.
     const db = makeDb({
       digest_model_villain: 'premium-model',
       digest_model_flow: 'premium-model',
@@ -165,11 +182,13 @@ describe('generateDraft — per-section pins honored on initial draft (a5)', () 
     fetchResponses.push(makeFetchResponse(['quotes', 'consensus', 'podium']));
     // EP1: villain + flow merged into 1 group (same premium model)
     fetchResponses.push(makeFetchResponse(['villain', 'flow']));
+    // EP2: flow cover (claude-sonnet-4-5 from DEFAULT_PIPELINE)
+    fetchResponses.push(makeFetchResponse(['flow']));
 
     await generateDraft(mkData(), undefined, undefined, db);
 
-    // Only 2 fetch calls: EP0 + EP1 merged.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // 3 fetch calls: EP0 + EP1 merged + EP2 cover.
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
 
     const ep1Body = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
     expect(ep1Body.model).toBe('premium-model');
@@ -178,7 +197,8 @@ describe('generateDraft — per-section pins honored on initial draft (a5)', () 
     expect(ep1UserMsg?.content).toMatch(/flow/);
   });
 
-  it('villain pinned to different model than flow → EP1 splits into 2 groups (2 calls)', async () => {
+  it('villain pinned to different model than flow → EP1 splits into 2 groups (2 calls); cover fires in EP2', async () => {
+    // sprint-44: adds EP2 cover call.
     const db = makeDb({
       digest_model_villain: 'premium-villain-model',
       digest_model_flow: 'premium-flow-model',
@@ -190,15 +210,21 @@ describe('generateDraft — per-section pins honored on initial draft (a5)', () 
     fetchResponses.push(makeFetchResponse(['villain']));
     // EP1 flow
     fetchResponses.push(makeFetchResponse(['flow']));
+    // EP2: flow cover
+    fetchResponses.push(makeFetchResponse(['flow']));
 
     await generateDraft(mkData(), undefined, undefined, db);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
 
     const ep1VillainBody = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
     expect(ep1VillainBody.model).toBe('premium-villain-model');
 
     const ep1FlowBody = JSON.parse(fetchSpy.mock.calls[2][1]!.body as string);
     expect(ep1FlowBody.model).toBe('premium-flow-model');
+
+    // EP2 cover uses DEFAULT_PIPELINE cover model.
+    const ep2Body = JSON.parse(fetchSpy.mock.calls[3][1]!.body as string);
+    expect(ep2Body.model).toBe('anthropic/claude-sonnet-4-5');
   });
 });

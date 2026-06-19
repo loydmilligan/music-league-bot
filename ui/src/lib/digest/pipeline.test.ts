@@ -96,12 +96,16 @@ describe('resolvePipeline — two-model no-skip pipeline', () => {
 });
 
 describe('resolvePipeline — one-skip pipeline (DEFAULT_PIPELINE shape)', () => {
-  it('skipAfter chat → EP0 = [quotes,consensus,podium,chat], EP1 = [villain,flow]', () => {
+  it('skipAfter chat → EP0 = [quotes,consensus,podium,chat], EP1 = [villain,flow]; sprint-44: EP2 = flow cover', () => {
+    // sprint-44: DEFAULT_PIPELINE has a flow cover → resolvePipeline returns 3 EPs.
     const db = makeUniformDb('base-model');
     const eps = resolvePipeline(DEFAULT_PIPELINE, ALL_ACTIVE, db);
-    expect(eps).toHaveLength(2);
+    expect(eps).toHaveLength(3);
     expect(eps[0].groups[0].sections).toEqual(['quotes', 'consensus', 'podium', 'chat']);
     expect(eps[1].groups[0].sections).toEqual(['villain', 'flow']);
+    expect(eps[2].covers).toHaveLength(1);
+    expect(eps[2].covers[0].of).toBe('flow');
+    expect(eps[2].groups).toHaveLength(0);
   });
 
   it('EP0 and EP1 each have exactly 1 group when all sections use the same model', () => {
@@ -178,10 +182,14 @@ describe('resolvePipeline — activeSections filter', () => {
     const db = makeUniformDb('base-model');
     // chat is not in activeSections — the skip still fires at the chat position in order
     // so podium (last before chat in order) ends EP0, villain+flow are in EP1.
+    // sprint-44: DEFAULT_PIPELINE now has a flow cover → EP2 is the cover EP.
     const active: SectionKind[] = ['quotes', 'consensus', 'podium', 'villain', 'flow'];
     const eps = resolvePipeline(DEFAULT_PIPELINE, active, db);
-    expect(eps).toHaveLength(2);
+    // EP0 + EP1 (villain/flow) + EP2 (flow cover) = 3
+    expect(eps).toHaveLength(3);
     expect(eps[0].groups[0].sections).toEqual(['quotes', 'consensus', 'podium']);
     expect(eps[1].groups[0].sections).toEqual(['villain', 'flow']);
+    expect(eps[2].covers).toHaveLength(1);
+    expect(eps[2].covers[0].of).toBe('flow');
   });
 });

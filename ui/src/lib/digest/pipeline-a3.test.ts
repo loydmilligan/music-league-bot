@@ -132,17 +132,20 @@ describe('generateDraft — regression guard (Contract 5)', () => {
 });
 
 describe('generateDraft — one-skip pipeline (DEFAULT_PIPELINE)', () => {
-  it('DEFAULT_PIPELINE with 5 active sections (no chat) → exactly 2 fetch calls', async () => {
+  it('DEFAULT_PIPELINE with 5 active sections (no chat) → exactly 3 fetch calls (EP0 + EP1 + flow cover)', async () => {
+    // sprint-44: DEFAULT_PIPELINE now has a flow cover → 3 calls: EP0, EP1, EP2 cover.
     const db = makeDbWithPipeline(JSON.stringify(DEFAULT_PIPELINE));
 
     // EP0: quotes, consensus, podium (chat not active; skip after chat position still fires)
     fetchResponses.push(makeFetchResponse(['quotes', 'consensus', 'podium']));
-    // EP1: villain, flow
+    // EP1: villain, flow (merged since same model)
     fetchResponses.push(makeFetchResponse(['villain', 'flow']));
+    // EP2: flow cover call
+    fetchResponses.push(makeFetchResponse(['flow']));
 
     const result = await generateDraft(mkData(), undefined, undefined, db);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
 
     // EP0 call: user message requests only EP0 sections.
     const ep0Body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
@@ -164,31 +167,37 @@ describe('generateDraft — one-skip pipeline (DEFAULT_PIPELINE)', () => {
     const ep1Context = JSON.parse(ep1AssistantMsg?.content ?? '{}');
     expect(ep1Context.sections).toBeDefined();
 
-    // EP1 user message requests only villain and flow.
+    // EP1 user message requests villain and flow.
     const ep1UserMsg = ep1Body.messages.find((m: { role: string }) => m.role === 'user');
     expect(ep1UserMsg?.content).toMatch(/Write 2 sections/);
 
-    // Total cost is sum of both EP calls.
-    expect(result.costUsd).toBeCloseTo(0.02);
+    // EP2 (flow cover): assistant context message must be present.
+    const ep2Body = JSON.parse(fetchSpy.mock.calls[2][1]!.body as string);
+    const ep2AssistantMsg = ep2Body.messages.find((m: { role: string }) => m.role === 'assistant');
+    expect(ep2AssistantMsg).toBeDefined();
+
+    // Total cost is sum of all 3 EP calls.
+    expect(result.costUsd).toBeCloseTo(0.03);
     // All sections present in result.
     expect(result.sections['quotes']).toBeDefined();
     expect(result.sections['podium']).toBeDefined();
     expect(result.sections['villain']).toBeDefined();
     expect(result.sections['flow']).toBeDefined();
+    // Cover output must be in result._covers.
+    expect(result._covers?.['flow']).toBeDefined();
   });
 
-  it('EP0 and EP1 use correct label meta: digest:ep0:... and digest:ep1:...', async () => {
+  it('EP0 and EP1 use correct label meta: digest:ep0:... and digest:ep1:...; flow cover fires in EP2', async () => {
+    // sprint-44: DEFAULT_PIPELINE now produces 3 calls (EP0, EP1, flow cover EP2).
     const db = makeDbWithPipeline(JSON.stringify(DEFAULT_PIPELINE));
 
     fetchResponses.push(makeFetchResponse(['quotes', 'consensus', 'podium']));
     fetchResponses.push(makeFetchResponse(['villain', 'flow']));
+    fetchResponses.push(makeFetchResponse(['flow'])); // cover
 
     await generateDraft(mkData(), undefined, undefined, db);
 
-    // The model in the request body is set by callOpenRouter.
-    // Label goes into llm_cost_log via logLlmCall — we verify via the DB mock's run call,
-    // which is harder. Instead, verify EP separation by fetch count.
-    // Label verification is covered by the DB insert (logLlmCall); here just verify call count.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // 3 fetch calls: EP0 group, EP1 group, EP2 cover.
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
