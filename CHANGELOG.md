@@ -4,6 +4,27 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.11.0] — 2026-06-18
+
+**sprint-44 — Covers + A/B review.** Completes generation-pipeline v1. A section
+can be "covered" — re-run later on a better model with the rest of the draft as
+context — and the digest review lets you pick between the two takes.
+
+### Added
+
+- **Covers**: the default pipeline now covers the **Flow** section on
+  `claude-sonnet-4-5`, generated in a trailing phase that reads the rest of the
+  draft. Both the original and the cover take are persisted.
+  ⚠️ This means every digest now fires **one extra (Sonnet) call** for the Flow
+  cover — intentional (premium where it matters), but a real per-digest cost.
+  Null the default pipeline's `covers` to turn it off.
+- **Cover A/B review** in the digest flow: any covered section shows Original vs
+  Cover side-by-side (each with model · cost · latency), defaulting to the cover,
+  with the original always one unpenalized click away. Hidden from exports.
+- **`llm_preference` table**: each pick is logged as a clean head-to-head
+  model-preference signal (original vs cover, which won) — the event-based quality
+  data the cost campaign wanted, with no rating UI or judge.
+
 ## [1.10.0] — 2026-06-18
 
 **sprint-43 — Generation pipeline (core).** Fixes the production gap where
