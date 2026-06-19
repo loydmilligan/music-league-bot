@@ -355,6 +355,23 @@ export const SCHEMA = `
     subsection   TEXT,
     note         TEXT
   );
+  -- sprint-44 cover A/B preference signal: head-to-head model quality data.
+  -- One row per pick; most-recent row per (regen_id) is canonical.
+  -- Append-only — never delete or upsert. Used by the cost campaign quality work.
+  CREATE TABLE IF NOT EXISTS llm_preference (
+    id                    TEXT PRIMARY KEY,
+    created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    section               TEXT NOT NULL,
+    round_id              INTEGER REFERENCES rounds(id),
+    original_model        TEXT NOT NULL,
+    cover_model           TEXT NOT NULL,
+    original_cost_log_id  INTEGER,
+    cover_cost_log_id     INTEGER,
+    regen_id              TEXT REFERENCES digest_regenerations(id),
+    picked                TEXT NOT NULL CHECK(picked IN ('original','cover')),
+    picked_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_llm_preference_round ON llm_preference(round_id, section);
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
