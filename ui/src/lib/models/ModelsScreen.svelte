@@ -6,6 +6,8 @@
     abbrOf, providerOf,
     type Model, type BucketState, type BucketReq,
   } from './qualify.js';
+  import { DEFAULT_PIPELINE, type Pipeline, type Cover, type SectionKind } from '../digest/pipeline.js';
+  import { solveClientEPs, type ClientEP } from './pipelineSolver.js';
 
   // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
   type SectionState = {
@@ -92,6 +94,13 @@
   // accordion open state per bucket key (true = expanded)
   let digestOpen = $state(true);
   let predictOpen = $state(true);
+
+  // ---- pipeline tab state --------------------------------------------------
+  let activeTab = $state<'models' | 'pipeline'>('models');
+  let pipelineMode = $state<'edit' | 'preview'>('edit');
+  let workingCopy = $state<Pipeline>(structuredClone(DEFAULT_PIPELINE));
+  let pipelineSaving = $state(false);
+  let pipelineSaved = $state(false);
 
   let models = $state<Model[]>([]);
   let keyConfigured = $state(false);
@@ -207,6 +216,7 @@
     loadKeyStatus();
     loadModelVars();
     loadSections();
+    loadPipeline();
   });
 
   // ---- key management -------------------------------------------------------
@@ -391,6 +401,154 @@
     const cur = draft[key] as number;
     draft = { ...draft, [key]: cur ? 0 : 1 };
   }
+
+  // ---- pipeline API -------------------------------------------------------
+  async function loadPipeline() {
+    try {
+      const r = await fetch('/api/settings/pipeline-config');
+      if (r.ok) {
+        const d = await r.json();
+        workingCopy = d.pipeline;
+      }
+    } catch { /* backend not ready */ }
+  }
+
+  async function savePipeline() {
+    pipelineSaving = true;
+    pipelineSaved = false;
+    try {
+      const r = await fetch('/api/settings/pipeline-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline: workingCopy }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        workingCopy = d.pipeline;
+        pipelineSaved = true;
+        setTimeout(() => { pipelineSaved = false; }, 2000);
+      }
+    } finally {
+      pipelineSaving = false;
+    }
+  }
+
+  async function resetPipeline() {
+    pipelineSaving = true;
+    try {
+      const r = await fetch('/api/settings/pipeline-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline: DEFAULT_PIPELINE }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        workingCopy = d.pipeline;
+      }
+    } finally {
+      pipelineSaving = false;
+    }
+  }
+
+  // ---- pipeline editor mutations ------------------------------------------
+  function moveSection(idx: number, dir: -1 | 1) {
+    const newOrder = [...workingCopy.order];
+    const swap = idx + dir;
+    [newOrder[idx], newOrder[swap]] = [newOrder[swap], newOrder[idx]];
+    workingCopy = { ...workingCopy, order: newOrder };
+  }
+
+  function setSectionPipelineModel(sec: string, modelId: string) {
+    const newModels = { ...(workingCopy.models as Record<string, string>) };
+    if (modelId === '__default__') {
+      delete newModels[sec];
+    } else {
+      newModels[sec] = modelId;
+    }
+    workingCopy = { ...workingCopy, models: newModels as typeof workingCopy.models };
+  }
+
+  function toggleSkip(sec: string) {
+    const newSkip = { ...(workingCopy.skipAfter as Record<string, true>) };
+    if (newSkip[sec]) {
+      delete newSkip[sec];
+    } else {
+      newSkip[sec] = true;
+    }
+    workingCopy = { ...workingCopy, skipAfter: newSkip as typeof workingCopy.skipAfter };
+  }
+
+  function addCover(sec: string) {
+    const defaultCoverModel = qualifying({ json: true })[0]?.model_id ?? '';
+    workingCopy = {
+      ...workingCopy,
+      covers: [...workingCopy.covers, { of: sec as SectionKind, model: defaultCoverModel }],
+    };
+  }
+
+  function removeCover(sec: string) {
+    workingCopy = {
+      ...workingCopy,
+      covers: workingCopy.covers.filter((c) => c.of !== sec),
+    };
+  }
+
+  function setCoverModel(sec: string, modelId: string) {
+    workingCopy = {
+      ...workingCopy,
+      covers: workingCopy.covers.map((c) => (c.of === sec ? { ...c, model: modelId } : c)),
+    };
+  }
+
+  // ---- pipeline derived values -------------------------------------------
+  const clientEPs: ClientEP[] = $derived(
+    solveClientEPs(workingCopy, workingCopy.order, digestBucket.resolved ?? digestBucket.hardcoded),
+  );
+
+  const mergeMap = $derived((() => {
+    const map = new Map<string, { inGroup: boolean; isFirst: boolean; groupSize: number }>();
+    for (const ep of clientEPs) {
+      for (const group of ep.groups) {
+        for (let i = 0; i < group.sections.length; i++) {
+          map.set(group.sections[i], {
+            inGroup: group.sections.length > 1,
+            isFirst: i === 0,
+            groupSize: group.sections.length,
+          });
+        }
+      }
+    }
+    return map;
+  })());
+
+  const callCount = $derived(
+    clientEPs.reduce((n, ep) => n + ep.groups.length + ep.covers.length, 0),
+  );
+
+  const costBand = $derived((() => {
+    const eligible = qualifying({ json: true });
+    const modelMap = new Map(eligible.map((m) => [m.model_id, m]));
+    let hasExpensive = false;
+    let allCheap = true;
+    let anyResolved = false;
+    for (const ep of clientEPs) {
+      for (const group of ep.groups) {
+        const m = modelMap.get(group.model);
+        if (m) {
+          anyResolved = true;
+          const t = tierNum(m);
+          if (t >= 3) hasExpensive = true;
+          if (t !== 1) allCheap = false;
+        } else {
+          allCheap = false;
+        }
+      }
+    }
+    if (!anyResolved) return '';
+    if (hasExpensive) return '$$$';
+    if (allCheap) return '$';
+    return '$$';
+  })());
 </script>
 
 <div class="mlm-screen">
@@ -404,6 +562,23 @@
     </p>
   </header>
 
+  <!-- ===== In-page tab strip ===== -->
+  <div class="mlm-tab-strip" role="tablist">
+    <button
+      role="tab"
+      class="mlm-tab {activeTab === 'models' ? 'is-active' : ''}"
+      aria-selected={activeTab === 'models'}
+      onclick={() => (activeTab = 'models')}
+    >Models</button>
+    <button
+      role="tab"
+      class="mlm-tab {activeTab === 'pipeline' ? 'is-active' : ''}"
+      aria-selected={activeTab === 'pipeline'}
+      onclick={() => (activeTab = 'pipeline')}
+    >Pipeline</button>
+  </div>
+
+{#if activeTab === 'models'}
   <!-- ===== OpenRouter connection card ===== -->
   <article class="ml-card">
     <header class="ml-card-head">
@@ -744,30 +919,20 @@
     </div>
   </article>
 
-  <!-- ===== Per-section overrides card ===== -->
+  <!-- ===== Per-section overrides card (Q3: read-only mirror) ===== -->
   {#if sectionsLoaded && models.length >= 1}
     <article class="ml-card mlm-sections-card">
       <header class="ml-card-head">
         <div>
           <h3 class="ml-card-title">Per-section overrides</h3>
           <p class="ml-card-sub">
-            Pin a specific model to each AI task. A pinned section ignores the bucket default.
-            "(use default)" clears the pin and falls back to the Predict or Digest bucket.
+            Per-section models are now set in the Pipeline tab. These values show the currently effective model per section.
+          </p>
+          <p style="margin:4px 0 0;font:400 13px/1.45 var(--font-body);">
+            <button class="mlm-link-btn" onclick={() => (activeTab = 'pipeline')}>Go to Pipeline tab</button>
           </p>
         </div>
-        {#if sectionsMocked}
-          <span class="mlm-status mlm-status--need">
-            <span class="mlm-status-dot"></span>API pending
-          </span>
-        {/if}
       </header>
-
-      {#if sectionsMocked}
-        <p style="margin:0;font:500 11.5px/1.45 var(--font-mono);color:var(--amber);">
-          &#9888; Sections API not yet available — panel rendered from local mock.
-          Selects are non-functional until Lane A ships the endpoint.
-        </p>
-      {/if}
 
       <!-- Digest sections bucket -->
       <div class="mlm-section-group">
@@ -778,9 +943,6 @@
         >
           <span class="mlm-section-group-label">Digest sections</span>
           <span class="mlm-section-group-badge" style="display:flex;align-items:center;gap:8px;">
-            {#if digestOverrideCount > 0}
-              <span class="ml-chip ml-chip--pulp">{digestOverrideCount} overridden</span>
-            {/if}
             <span class="mlm-section-chevron" class:is-open={digestOpen}>&#8250;</span>
           </span>
         </button>
@@ -795,11 +957,7 @@
                 <select
                   class="mlm-select mlm-section-select"
                   value={s.selected ?? '__default__'}
-                  onchange={(e) => {
-                    const v = (e.target as HTMLSelectElement).value;
-                    setSectionModel(s.section, v === '__default__' ? null : v);
-                  }}
-                  disabled={sectionsMocked}
+                  disabled
                 >
                   <option value="__default__">(use default)</option>
                   {#each eligible as m (m.id)}
@@ -826,9 +984,6 @@
         >
           <span class="mlm-section-group-label">Dashboard &amp; predict tasks</span>
           <span class="mlm-section-group-badge" style="display:flex;align-items:center;gap:8px;">
-            {#if predictOverrideCount > 0}
-              <span class="ml-chip ml-chip--pulp">{predictOverrideCount} overridden</span>
-            {/if}
             <span class="mlm-section-chevron" class:is-open={predictOpen}>&#8250;</span>
           </span>
         </button>
@@ -843,11 +998,7 @@
                 <select
                   class="mlm-select mlm-section-select"
                   value={s.selected ?? '__default__'}
-                  onchange={(e) => {
-                    const v = (e.target as HTMLSelectElement).value;
-                    setSectionModel(s.section, v === '__default__' ? null : v);
-                  }}
-                  disabled={sectionsMocked}
+                  disabled
                 >
                   <option value="__default__">(use default)</option>
                   {#each eligible as m (m.id)}
@@ -866,6 +1017,196 @@
       </div>
     </article>
   {/if}
+
+{/if}
+
+{#if activeTab === 'pipeline'}
+  <div class="mlm-pipeline">
+
+    <!-- Edit / Preview sub-tabs -->
+    <div class="mlm-sub-tabs" role="tablist">
+      <button
+        role="tab"
+        class="mlm-sub-tab {pipelineMode === 'edit' ? 'is-active' : ''}"
+        aria-selected={pipelineMode === 'edit'}
+        onclick={() => (pipelineMode = 'edit')}
+      >Edit</button>
+      <button
+        role="tab"
+        class="mlm-sub-tab {pipelineMode === 'preview' ? 'is-active' : ''}"
+        aria-selected={pipelineMode === 'preview'}
+        onclick={() => (pipelineMode = 'preview')}
+      >Preview</button>
+    </div>
+
+    {#if pipelineMode === 'edit'}
+      <!-- Two-pane (Option C): editor left, run preview right on desktop -->
+      <div class="mlm-pipeline-panes">
+
+        <!-- Left: flat track list editor (Option A) -->
+        <div class="mlm-track-list">
+          {#each workingCopy.order as sec, idx (sec)}
+            {@const mi = mergeMap.get(sec)}
+            {@const hasCover = workingCopy.covers.some((c) => c.of === sec)}
+            {@const coverEntry = workingCopy.covers.find((c) => c.of === sec)}
+            {@const hasSkip = !!(workingCopy.skipAfter as Record<string, boolean>)[sec]}
+            {@const eligible = qualifying({ json: true })}
+
+            <div class="mlm-track-item {mi?.inGroup ? 'has-rail' : ''}">
+              <div class="mlm-track-row">
+                <!-- reorder -->
+                <div class="mlm-reorder-btns">
+                  <button
+                    class="ml-icon-btn mlm-reorder-btn"
+                    disabled={idx === 0}
+                    onclick={() => moveSection(idx, -1)}
+                    title="Move up"
+                  >▲</button>
+                  <button
+                    class="ml-icon-btn mlm-reorder-btn"
+                    disabled={idx === workingCopy.order.length - 1}
+                    onclick={() => moveSection(idx, 1)}
+                    title="Move down"
+                  >▼</button>
+                </div>
+
+                <!-- section label + merge badge -->
+                <div class="mlm-track-name-col">
+                  <span class="mlm-track-label">{SECTION_LABELS[sec] ?? sec}</span>
+                  {#if mi?.isFirst && (mi?.groupSize ?? 1) > 1}
+                    <span class="mlm-merge-badge">merge x{mi.groupSize}</span>
+                  {/if}
+                </div>
+
+                <!-- per-section model select -->
+                <select
+                  class="mlm-select mlm-track-model"
+                  value={(workingCopy.models as Record<string, string>)[sec] ?? '__default__'}
+                  onchange={(e) => setSectionPipelineModel(sec, (e.target as HTMLSelectElement).value)}
+                >
+                  <option value="__default__">Use default · {digestBucket.resolved ?? digestBucket.hardcoded}</option>
+                  {#each eligible as m (m.id)}
+                    <option value={m.model_id}>{m.nickname}</option>
+                  {/each}
+                </select>
+
+                <!-- skip toggle -->
+                <button
+                  class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
+                  onclick={() => toggleSkip(sec)}
+                  title={hasSkip ? 'Remove skip after this section' : 'Add skip after this section'}
+                >{hasSkip ? '- skip' : '+ skip'}</button>
+              </div>
+
+              <!-- cover sub-row (dashed, indented) -->
+              {#if hasCover && coverEntry}
+                <div class="mlm-cover-row">
+                  <span class="mlm-cover-glyph">&#10551;</span>
+                  <span class="mlm-cover-label">cover of {SECTION_LABELS[sec] ?? sec}</span>
+                  <select
+                    class="mlm-select mlm-cover-model"
+                    value={coverEntry.model}
+                    onchange={(e) => setCoverModel(sec, (e.target as HTMLSelectElement).value)}
+                  >
+                    {#each eligible as m (m.id)}
+                      <option value={m.model_id}>{m.nickname}</option>
+                    {/each}
+                  </select>
+                  <button class="ml-icon-btn" onclick={() => removeCover(sec)} title="Remove cover">×</button>
+                </div>
+              {:else}
+                <div class="mlm-cover-add-row">
+                  <button class="mlm-cover-add" onclick={() => addCover(sec)}>+ cover</button>
+                  <span class="mlm-cover-hint">produces two takes you'll pick between</span>
+                </div>
+              {/if}
+
+              <!-- skip divider (shown after track row when skipAfter is set) -->
+              {#if hasSkip}
+                <div class="mlm-skip-div">── skip ──</div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+
+        <!-- Right: run preview EP timeline (desktop only via CSS) -->
+        <div class="mlm-run-preview">
+          <div class="mlm-preview-head">Run preview</div>
+          {#each clientEPs as ep, i}
+            {#if i > 0}
+              <div class="mlm-preview-skip">── skip ──</div>
+            {/if}
+            <div class="mlm-preview-ep">
+              <div class="mlm-preview-ep-label">EP {i}</div>
+              {#each ep.groups as g}
+                <div class="mlm-preview-group">
+                  <span class="mlm-preview-model">{g.model.split('/')[1] ?? g.model}</span>
+                  <span class="mlm-preview-secs">{g.sections.map((s) => SECTION_LABELS[s] ?? s).join(', ')}</span>
+                </div>
+              {/each}
+              {#each ep.covers as cv}
+                <div class="mlm-preview-cover-row">
+                  <span class="mlm-cover-glyph">&#10551;</span>
+                  <span>{SECTION_LABELS[cv.of] ?? cv.of} cover</span>
+                </div>
+              {/each}
+            </div>
+          {/each}
+        </div>
+
+      </div>
+
+    {:else}
+      <!-- Preview mode: Option B EP cards -->
+      <div class="mlm-ep-cards">
+        {#each clientEPs as ep, i}
+          {#if i > 0}
+            <div class="mlm-skip-div">── skip ──</div>
+          {/if}
+          <div class="mlm-ep-card">
+            <div class="mlm-ep-card-label">EP {i}</div>
+            {#each ep.groups as g}
+              <div class="mlm-ep-group">
+                <span class="mlm-preview-model">{g.model.split('/')[1] ?? g.model}</span>
+                <div class="mlm-ep-group-chips">
+                  {#each g.sections as s}
+                    <span class="ml-chip">{SECTION_LABELS[s] ?? s}</span>
+                  {/each}
+                </div>
+              </div>
+            {/each}
+            {#each ep.covers as cv}
+              <div class="mlm-preview-cover-row">
+                <span class="mlm-cover-glyph">&#10551;</span>
+                <span>{SECTION_LABELS[cv.of] ?? cv.of} cover · {cv.model.split('/')[1] ?? cv.model}</span>
+              </div>
+            {/each}
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Pipeline footer: cost band + save/reset -->
+    <div class="mlm-pipeline-footer">
+      <div class="mlm-cost-band">
+        approx {callCount} calls{costBand ? ' · ' + costBand : ''}
+      </div>
+      <div class="ml-btn-row">
+        <button
+          class="mash-btn mash-btn--primary"
+          onclick={savePipeline}
+          disabled={pipelineSaving}
+        >{pipelineSaving ? 'Saving...' : pipelineSaved ? 'Saved ✓' : 'Save'}</button>
+        <button
+          class="mash-btn mash-btn--ghost"
+          onclick={resetPipeline}
+          disabled={pipelineSaving}
+        >Reset to default</button>
+      </div>
+    </div>
+
+  </div>
+{/if}
 
 </div>
 
@@ -981,5 +1322,415 @@
     .mlm-section-resolved {
       grid-column: 1;
     }
+  }
+
+  /* ===== in-page tab strip ================================================ */
+  .mlm-tab-strip {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0;
+  }
+
+  .mlm-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    background: none;
+    font: 600 13px/1 var(--font-body);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out);
+    border-radius: var(--r-2) var(--r-2) 0 0;
+  }
+  .mlm-tab:hover { color: var(--fg); }
+  .mlm-tab.is-active {
+    color: var(--fg);
+    border-bottom-color: var(--mash-pulp);
+  }
+
+  /* ===== pipeline tab ===================================================== */
+  .mlm-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .mlm-sub-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .mlm-sub-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    background: var(--surface-2);
+    font: 600 11.5px/1 var(--font-body);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .mlm-sub-tab:hover { color: var(--fg); background: var(--surface-hover); }
+  .mlm-sub-tab.is-active {
+    background: var(--mash-pulp-soft);
+    border-color: var(--mash-pulp-edge);
+    color: var(--mash-pulp);
+  }
+
+  /* ===== two-pane layout (Option C) ======================================= */
+  .mlm-pipeline-panes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 640px) {
+    .mlm-pipeline-panes {
+      grid-template-columns: 1fr 280px;
+      align-items: start;
+    }
+  }
+
+  /* ===== flat track list editor (Option A) ================================ */
+  .mlm-track-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .mlm-track-item {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--line);
+  }
+  .mlm-track-item:last-child { border-bottom: none; }
+  .mlm-track-item.has-rail { border-left: 3px solid var(--mash-pulp); }
+
+  .mlm-track-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .mlm-track-row:hover { background: var(--surface-hover); }
+
+  @media (max-width: 480px) {
+    .mlm-track-row {
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+    }
+    .mlm-track-model,
+    .mlm-skip-toggle {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .mlm-reorder-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mlm-reorder-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+    padding: 0;
+  }
+
+  .mlm-track-name-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .mlm-track-label {
+    font: 500 13px/1.3 var(--font-body);
+    color: var(--fg);
+  }
+
+  .mlm-merge-badge {
+    display: inline-flex;
+    align-self: flex-start;
+    font: 700 9px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    color: var(--mash-pulp);
+    background: var(--mash-pulp-soft);
+    border: 1px solid var(--mash-pulp-edge);
+    border-radius: var(--r-1);
+    padding: 2px 5px;
+    white-space: nowrap;
+  }
+
+  .mlm-track-model {
+    font-size: 12px;
+    padding: 7px 28px 7px 9px;
+    min-width: 0;
+  }
+
+  .mlm-skip-toggle {
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    padding: 5px 9px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .mlm-skip-toggle:hover { color: var(--fg); border-color: var(--fg-muted); }
+  .mlm-skip-toggle.is-active {
+    background: var(--amber-soft);
+    border-color: #4d3f1c;
+    color: var(--amber);
+  }
+
+  /* cover sub-row — dashed, indented */
+  .mlm-cover-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 14px 7px 22px;
+    border-top: 1px dashed var(--line-strong);
+    background: var(--ink-0);
+  }
+  @media (max-width: 480px) {
+    .mlm-cover-row {
+      grid-template-columns: auto 1fr auto;
+    }
+    .mlm-cover-label { display: none; }
+  }
+
+  .mlm-cover-glyph {
+    font: 600 13px/1 var(--font-mono);
+    color: var(--fg-quiet);
+  }
+
+  .mlm-cover-label {
+    font: 500 11px/1.3 var(--font-mono);
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+
+  .mlm-cover-model {
+    font-size: 12px;
+    padding: 6px 26px 6px 8px;
+    min-width: 0;
+  }
+
+  /* add-cover affordance row */
+  .mlm-cover-add-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 14px 5px 22px;
+    border-top: 1px solid var(--line);
+    background: var(--ink-0);
+  }
+
+  .mlm-cover-add {
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--r-1);
+    background: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .mlm-cover-add:hover { color: var(--fg); border-color: var(--fg-muted); }
+
+  .mlm-cover-hint {
+    margin: 0;
+    font: 400 10.5px/1.3 var(--font-mono);
+    color: var(--fg-quiet);
+    font-style: italic;
+  }
+
+  /* skip divider row */
+  .mlm-skip-div {
+    padding: 5px 14px;
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    background: var(--amber-soft);
+    border-top: 1px solid #4d3f1c;
+    text-align: center;
+  }
+
+  /* ===== run preview (right pane on desktop) ============================== */
+  .mlm-run-preview {
+    display: none; /* hidden on mobile — footer band takes over */
+    flex-direction: column;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    padding: 14px;
+    background: var(--surface);
+  }
+  @media (min-width: 640px) {
+    .mlm-run-preview { display: flex; }
+  }
+
+  .mlm-preview-head {
+    font: 700 10px/1 var(--font-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 4px;
+  }
+
+  .mlm-preview-ep {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    background: var(--surface-2);
+  }
+
+  .mlm-preview-ep-label {
+    font: 700 9px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+    margin-bottom: 4px;
+  }
+
+  .mlm-preview-skip {
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    text-align: center;
+    padding: 3px 0;
+  }
+
+  .mlm-preview-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .mlm-preview-group:last-of-type { border-bottom: none; }
+
+  .mlm-preview-model {
+    font: 700 10.5px/1 var(--font-mono);
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mlm-preview-secs {
+    font: 400 10px/1.3 var(--font-mono);
+    color: var(--fg-muted);
+  }
+
+  .mlm-preview-cover-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font: 500 10.5px/1.3 var(--font-mono);
+    color: var(--fg-muted);
+    border-top: 1px dashed var(--line-strong);
+    margin-top: 2px;
+  }
+
+  /* ===== EP cards (Option B preview) ===================================== */
+  .mlm-ep-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mlm-ep-card {
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    padding: 14px 16px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mlm-ep-card-label {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .mlm-ep-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mlm-ep-group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  /* ===== pipeline footer (save + cost band) =============================== */
+  .mlm-pipeline-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 0 4px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Sticky on mobile — appears above Save buttons */
+  @media (max-width: 639px) {
+    .mlm-pipeline-footer {
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+      padding: 12px 0;
+      z-index: 10;
+      box-shadow: 0 -4px 16px color-mix(in srgb, var(--ink-9) 20%, transparent);
+    }
+  }
+
+  .mlm-cost-band {
+    font: 700 12px/1 var(--font-mono);
+    letter-spacing: 0.02em;
+    color: var(--fg-muted);
+  }
+
+  /* ===== Q3 per-section read-only link ==================================== */
+  .mlm-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font: 600 13px/1.45 var(--font-body);
+    color: var(--mash-pulp);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .mlm-link-btn:hover { opacity: 0.8; }
+
+  .mlm-section-select[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 </style>
