@@ -407,3 +407,15 @@ _No open ratification items. No blockers at sprint start._
   and models page structure to pin the in-page tab placement decision, confirmed
   `qualifying()` helper reuse path. Noted four reality deltas from `IMPLEMENTATION.md`
   assumptions (see Decision Log). Sprint ready for parallel lane start.
+
+- **2026-06-19** — Lane B complete. Two commits:
+  - `e57508d` feat(B.solver): client EP solver (`pipelineSolver.ts`) + parity
+    test (`pipeline-parity.test.ts`); 4/4 parity cases pass (DEFAULT_PIPELINE,
+    extra skip, per-section override, cover).
+  - `a12d063` feat(B.1-B.8): full pipeline-config UI in `ModelsScreen.svelte`;
+    tab strip, flat track list editor (reorder/model/skip/covers), merge-rail,
+    run preview (desktop two-pane, mobile sticky footer), Edit/Preview toggle,
+    Q3 read-only per-section mirror with Pipeline-tab link. `npm run check` 0
+    errors. Screenshots taken at 412px (mobile sticky footer, single-column
+    track rows) and 1280px (two-pane with Run preview pane). Awaiting orc
+    wave-gate deploy.
