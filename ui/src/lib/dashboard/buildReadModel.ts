@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { buildDeterministicSlices } from './generators/deterministic.js';
 import { buildOverlap } from './generators/overlap.js';
-import { generateProfile, SpectrumSliceSchema, PlaylistSliceSchema } from './generators/profile.js';
+import { SpectrumSliceSchema, PlaylistSliceSchema, spectrumTask, playlistTask } from './generators/profile.js';
 import type { ProfileSlice } from './generators/profile.js';
 import {
 	ACCENT_VALUES,
@@ -26,6 +26,14 @@ import type {
 import { generateFingerprint } from '../predict/tasks/tasteFingerprint.js';
 import type { FingerprintOutput } from '../predict/tasks/tasteFingerprint.js';
 import { runPrediction } from '../predict/predict.js';
+import type { PredictionTask } from '../predict/predict.js';
+import { buildPlayerContext } from '../predict/playerContext.js';
+import {
+	ARCHIVE_DEFAULT_PIPELINE,
+	ARCHIVE_TASK_KINDS,
+	resolvePipeline,
+} from '../digest/pipeline.js';
+import type { Pipeline } from '../digest/pipeline.js';
 
 // ── Zod schemas (mirror ml-dashboard-data.jsx fixture shape) ───────────────────
 
@@ -358,6 +366,32 @@ function buildArchive(
 		.map((entry, i) => ({ ...entry, n: totalRounds - i }));
 }
 
+// ── Pipeline helpers ────────────────────────────────────────────────────────────
+
+/** Clone a PredictionTask with a different model (used for pipeline model overrides). */
+function withModel<TIn, TOut>(
+	task: PredictionTask<TIn, TOut>,
+	model: string,
+): PredictionTask<TIn, TOut> {
+	return { ...task, model };
+}
+
+/** Load the archive pipeline from settings; fall back to ARCHIVE_DEFAULT_PIPELINE. */
+function loadArchivePipeline(db: Database.Database): Pipeline {
+	const row = db
+		.prepare("SELECT value FROM settings WHERE key = 'pipeline_config_archive'")
+		.get() as { value: string } | undefined;
+	if (!row?.value) return ARCHIVE_DEFAULT_PIPELINE;
+	try {
+		const parsed = JSON.parse(row.value) as unknown;
+		if (
+			parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+			(parsed as Record<string, unknown>).releaseKind === 'archive'
+		) return parsed as Pipeline;
+	} catch { /* fall through */ }
+	return ARCHIVE_DEFAULT_PIPELINE;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 export async function buildReadModel(
@@ -458,111 +492,179 @@ export async function buildReadModel(
 		if (!bestRoundMap.has(row.player_id)) bestRoundMap.set(row.player_id, row.round_name);
 	}
 
-	// 8. LLM per-member — run all members in parallel
-	const memberLlmResults = await Promise.all(
-		memberRows.map(async (m) => {
-			const det = detMembers.get(m.player_id);
-			if (!det) return null;
+	// 8-11b. Archive pipeline — LLM tasks.
+	// Load the stored archive pipeline (falls back to ARCHIVE_DEFAULT_PIPELINE on error).
+	const archivePipeline = loadArchivePipeline(db);
+	const eps = resolvePipeline(archivePipeline, [...ARCHIVE_TASK_KINDS], db);
 
-			const fp = fingerprints.get(m.player_id) ?? DEFAULT_FP;
-			const fpNarr = fp as NarrativeFingerprintInput;
-
-			// Superlatives (all members — both full and lite get signatureSuperlative)
-			const superlativesResult = await runPrediction(
-				db,
-				playerSuperlativesTask,
-				{ playerName: m.name, leagueName: leagueRow.name, fingerprint: fpNarr, stat: det.stat },
-				{ playerId: m.player_id, category: 'archive' },
-			);
-
-			// Profile (spectrum + playlist) and fan/hater blurbs in parallel — full members only
-			const [profile, fanHaterResult] = await Promise.all([
-				det.tier === 'full' ? generateProfile(db, m.player_id) : Promise.resolve(null),
-				det.biggestFan && det.biggestHater
-					? runPrediction(
-							db,
-							fanHaterBlurbTask,
-							{
-								playerName: m.name,
-								leagueName: leagueRow.name,
-								biggestFan: det.biggestFan,
-								biggestHater: det.biggestHater,
-							},
-							{ playerId: m.player_id, category: 'archive' },
-						)
-					: Promise.resolve(null),
-			]);
-
-			const llmData: MemberLlmData = {
-				signatureSuperlative: superlativesResult.output.signatureSuperlative,
-				superlatives: superlativesResult.output.superlatives,
-				profile,
-				fanHater: fanHaterResult?.output ?? null,
-			};
-			return { playerId: m.player_id, llmData };
-		}),
-	);
-
-	const memberLlmMap = new Map<number, MemberLlmData>(
-		memberLlmResults
-			.filter((r): r is NonNullable<typeof r> => r !== null)
-			.map((r) => [r.playerId, r.llmData]),
-	);
-
-	// 9. League reel (LLM — league-wide superlatives)
+	// Pre-compute inputs shared across tasks.
 	const fullMembersForReel = memberRows
-		.filter(
-			(m) => detMembers.get(m.player_id)?.tier === 'full' && fingerprints.has(m.player_id),
-		)
+		.filter((m) => detMembers.get(m.player_id)?.tier === 'full' && fingerprints.has(m.player_id))
 		.map((m) => ({
 			name: m.name,
 			fingerprint: fingerprints.get(m.player_id)! as NarrativeFingerprintInput,
 			stat: detMembers.get(m.player_id)!.stat,
 		}));
+	const signals = computeSeasonSignalsForLeague(db, leagueId);
 
+	// Per-task result holders (populated by dispatchers below).
+	const memberSuperlativesMap = new Map<number, PlayerSuperlativesOutput>();
+	const memberFanHaterMap = new Map<number, FanHaterBlurbOutput>();
+	const memberSpectrumMap = new Map<number, z.infer<typeof SpectrumSliceSchema>>();
+	const memberPlaylistMap = new Map<number, z.infer<typeof PlaylistSliceSchema>>();
 	let reelItems: z.infer<typeof ReelItemSchema>[] = [];
-	if (fullMembersForReel.length >= 2) {
-		const reelResult = await runPrediction(db, leagueReelTask, {
-			leagueName: leagueRow.name,
-			season: leagueMeta.latestSeason,
-			members: fullMembersForReel,
-		}, { category: 'archive' });
-		reelItems = reelResult.output.reel;
+	let moments: z.infer<typeof MomentsWithLinesSchema> | null = null;
+	let seasonUpdate: { title: string; body: string } | null = null;
+
+	// Dispatch table: each archive task ID → async runner using the EP-resolved model.
+	// Per-member tasks loop over all members in parallel; league-wide tasks run once.
+	const makeDispatch = (taskId: string, resolvedModel: string): (() => Promise<void>) => {
+		switch (taskId) {
+			case 'narrative-player-superlatives':
+				return async () => {
+					await Promise.all(memberRows.map(async (m) => {
+						const det = detMembers.get(m.player_id);
+						if (!det) return;
+						const fp = fingerprints.get(m.player_id) ?? DEFAULT_FP;
+						const result = await runPrediction(
+							db,
+							withModel(playerSuperlativesTask, resolvedModel),
+							{ playerName: m.name, leagueName: leagueRow.name, fingerprint: fp as NarrativeFingerprintInput, stat: det.stat },
+							{ playerId: m.player_id, category: 'archive' },
+						);
+						memberSuperlativesMap.set(m.player_id, result.output);
+					}));
+				};
+			case 'narrative-fan-hater-blurbs':
+				return async () => {
+					await Promise.all(memberRows.map(async (m) => {
+						const det = detMembers.get(m.player_id);
+						if (!det?.biggestFan || !det.biggestHater) return;
+						const result = await runPrediction(
+							db,
+							withModel(fanHaterBlurbTask, resolvedModel),
+							{ playerName: m.name, leagueName: leagueRow.name, biggestFan: det.biggestFan, biggestHater: det.biggestHater },
+							{ playerId: m.player_id, category: 'archive' },
+						);
+						memberFanHaterMap.set(m.player_id, result.output);
+					}));
+				};
+			case 'narrative-league-reel':
+				return async () => {
+					if (fullMembersForReel.length < 2) return;
+					const result = await runPrediction(
+						db,
+						withModel(leagueReelTask, resolvedModel),
+						{ leagueName: leagueRow.name, season: leagueMeta.latestSeason, members: fullMembersForReel },
+						{ category: 'archive' },
+					);
+					reelItems = result.output.reel;
+				};
+			case 'narrative-moment-lines':
+				return async () => {
+					if (!detLeague.moments) return;
+					const result = await runPrediction(
+						db,
+						withModel(momentLinesTask, resolvedModel),
+						{
+							leagueName: leagueRow.name,
+							mostLoved: detLeague.moments.mostLoved,
+							mostDivisive: detLeague.moments.mostDivisive,
+							biggestUpset: detLeague.moments.biggestUpset,
+						},
+						{ category: 'archive' },
+					);
+					const lines = result.output;
+					moments = {
+						mostLoved: { ...detLeague.moments.mostLoved, line: lines.mostLovedLine },
+						mostDivisive: { ...detLeague.moments.mostDivisive, line: lines.mostDivisiveLine },
+						biggestUpset: { ...detLeague.moments.biggestUpset, line: lines.biggestUpsetLine },
+					};
+				};
+			case 'profile-spectrum':
+				return async () => {
+					await Promise.all(memberRows.map(async (m) => {
+						if (detMembers.get(m.player_id)?.tier !== 'full') return;
+						const ctx = buildPlayerContext(db, m.player_id);
+						const result = await runPrediction(
+							db,
+							withModel(spectrumTask, resolvedModel),
+							ctx,
+							{ playerId: m.player_id, category: 'archive' },
+						);
+						const llm = result.output;
+						memberSpectrumMap.set(m.player_id, [
+							{ left: 'Polished', right: 'Raw', value: llm.polished_vs_raw },
+							{ left: 'Sunny', right: 'Melancholy', value: llm.sunny_vs_melancholy },
+							{ left: 'Familiar', right: 'Obscure', value: llm.familiar_vs_obscure },
+						]);
+					}));
+				};
+			case 'profile-playlist':
+				return async () => {
+					await Promise.all(memberRows.map(async (m) => {
+						if (detMembers.get(m.player_id)?.tier !== 'full') return;
+						const ctx = buildPlayerContext(db, m.player_id);
+						const result = await runPrediction(
+							db,
+							withModel(playlistTask, resolvedModel),
+							ctx,
+							{ playerId: m.player_id, category: 'archive' },
+						);
+						memberPlaylistMap.set(m.player_id, result.output);
+					}));
+				};
+			case 'season-update':
+				return async () => {
+					if (!signals.asOfRound || (!signals.bigMover && !signals.faller && signals.streaks.length === 0)) return;
+					const r = await runPrediction(
+						db,
+						withModel(seasonUpdateTask, resolvedModel),
+						{
+							leagueName: leagueRow.name,
+							season: `S${leagueMeta.latestSeason}`,
+							snarkLevel: getSnarkLevel(db, leagueId),
+							signals,
+							recentSubjects: [],
+						},
+						{ category: 'archive' },
+					);
+					seasonUpdate = r.output;
+				};
+			default:
+				return async () => { /* unknown task id — skip silently */ };
+		}
+	};
+
+	// Execute EPs in order; all tracks within an EP run in parallel.
+	// Covers in each EP fire after the EP's tracks (using the cover model override).
+	for (const ep of eps) {
+		await Promise.all(
+			ep.groups.map(({ model, sections }) => makeDispatch(sections[0], model)())
+		);
+		await Promise.all(ep.covers.map(cover => makeDispatch(cover.of, cover.model)()));
 	}
 
-	// 10. Moment lines (LLM — one celebratory caption per moment)
-	let moments: z.infer<typeof MomentsWithLinesSchema> | null = null;
-	if (detLeague.moments) {
-		const linesResult = await runPrediction(db, momentLinesTask, {
-			leagueName: leagueRow.name,
-			mostLoved: detLeague.moments.mostLoved,
-			mostDivisive: detLeague.moments.mostDivisive,
-			biggestUpset: detLeague.moments.biggestUpset,
-		}, { category: 'archive' });
-		const lines = linesResult.output;
-		moments = {
-			mostLoved: { ...detLeague.moments.mostLoved, line: lines.mostLovedLine },
-			mostDivisive: { ...detLeague.moments.mostDivisive, line: lines.mostDivisiveLine },
-			biggestUpset: { ...detLeague.moments.biggestUpset, line: lines.biggestUpsetLine },
-		};
+	// Consolidate per-task result maps into MemberLlmData (one entry per member).
+	const memberLlmMap = new Map<number, MemberLlmData>();
+	for (const m of memberRows) {
+		const det = detMembers.get(m.player_id);
+		if (!det) continue;
+		const supr = memberSuperlativesMap.get(m.player_id);
+		if (!supr) continue; // superlatives didn't fire for this member — skip
+		const spectrum = memberSpectrumMap.get(m.player_id);
+		const playlist = memberPlaylistMap.get(m.player_id);
+		const profile: ProfileSlice | null = spectrum && playlist ? { spectrum, playlist } : null;
+		memberLlmMap.set(m.player_id, {
+			signatureSuperlative: supr.signatureSuperlative,
+			superlatives: supr.superlatives,
+			profile,
+			fanHater: memberFanHaterMap.get(m.player_id) ?? null,
+		});
 	}
 
 	// 11. Archive (deterministic — past rounds + winners)
 	const archive = buildArchive(db, leagueId);
-
-	// 11b. Season-update narration (LLM — only when there are signals to narrate)
-	let seasonUpdate: { title: string; body: string } | null = null;
-	const signals = computeSeasonSignalsForLeague(db, leagueId);
-	if (signals.asOfRound && (signals.bigMover || signals.faller || signals.streaks.length > 0)) {
-		const r = await runPrediction(db, seasonUpdateTask, {
-			leagueName: leagueRow.name,
-			season: `S${leagueMeta.latestSeason}`,
-			snarkLevel: getSnarkLevel(db, leagueId),
-			signals,
-			recentSubjects: [],
-		}, { category: 'archive' });
-		seasonUpdate = r.output;
-	}
 
 	// 12. Assemble members
 	const members: Member[] = memberRows
