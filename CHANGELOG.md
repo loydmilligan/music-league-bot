@@ -4,6 +4,33 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.10.0] — 2026-06-18
+
+**sprint-43 — Generation pipeline (core).** Fixes the production gap where
+per-section model pins did nothing on a fresh digest. The digest draft is now
+produced by a configurable **pipeline** instead of one hard-coded call, so
+per-section pins finally bind on the initial draft.
+
+### Added / Changed
+
+- **`generateDraft` now runs a pipeline**: sections are grouped into EPs split at
+  **skips**; same-model sections in an EP **merge** into one call; later EPs receive
+  earlier output as context (assistant-turn). Per-section pins (`modelForSection`)
+  bind here — that's the gap closed.
+- **One-skip default pipeline**: the factual/extractive sections (quotes, consensus,
+  podium, chat) generate together first; then a skip; then the voice sections
+  (villain, flow) generate reading the whole draft — coherence kept where it matters.
+- **Regression-guarded**: a no-skip single-model pipeline reduces to *exactly* the
+  prior single call (same cost/latency/output) — verified by an explicit test.
+- **Merge prompt** generalized so a call can request any subset of sections.
+- Groundwork for covers (sprint-44): a `cover_kind` column on `digest_regenerations`.
+
+### Note
+
+- A fresh digest now makes one call per model-group/EP instead of one call total.
+  With no pins set it's still effectively one merged factual call + the voice EP;
+  with pins it routes each pinned section to its model.
+
 ## [1.9.0] — 2026-06-18
 
 **sprint-42 — Usability & delight capture.** Completes the openrouter-cost-management
