@@ -855,6 +855,9 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
 
     // Fire covers for this EP (covers defined in ep.covers fire using prior context).
     for (const cover of ep.covers) {
+      // sprint-44: use the section id (${draftId}-${cover.of}) as artifactId so the
+      // GET /cover endpoint can find original + cover rows via artifact_id = sectionId.
+      const coverSectionId = `${draftId}-${cover.of}`;
       const coverMeta: LLMCallMeta | undefined = db ? {
         category: 'digest',
         label: `digest:cover:${cover.of}`,
@@ -862,8 +865,8 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
         leagueId,
         roundId: data.round.id,
         runId,
-        artifactType: 'digest_draft',
-        artifactId: draftId,
+        artifactType: 'digest_section',
+        artifactId: coverSectionId,
         promptVersion: DIGEST_PROMPT_VERSION,
       } : undefined;
 
@@ -1192,6 +1195,52 @@ export function editDistanceRatio(original: unknown, edited: unknown): number {
   const longer = Math.max(a.length, b.length);
   const common = [...a].filter((ch, i) => b[i] === ch).length;
   return Math.max(0, Math.min(1, 1 - common / longer));
+}
+
+/**
+ * sprint-44 a3: Write a cover-pick preference row to llm_preference.
+ *
+ * Fire-and-forget: a failed INSERT must never propagate to the caller.
+ * Returns the new llm_preference.id, or '' on failure (fire-and-forget).
+ * The pick is append-only; most-recent row per regen_id is canonical.
+ */
+export function writeCoverPick(
+  db: Database.Database,
+  opts: {
+    sectionId: string;
+    section: SectionKind;
+    roundId: number;
+    regenId: string;
+    picked: 'original' | 'cover';
+    originalModel: string;
+    coverModel: string;
+    originalCostLogId?: number;
+    coverCostLogId?: number;
+  },
+): string {
+  try {
+    const id = `pref-${randomUUID().slice(0, 12)}`;
+    db.prepare(`
+      INSERT INTO llm_preference
+        (id, section, round_id, original_model, cover_model,
+         original_cost_log_id, cover_cost_log_id, regen_id, picked)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      opts.section,
+      opts.roundId,
+      opts.originalModel,
+      opts.coverModel,
+      opts.originalCostLogId ?? null,
+      opts.coverCostLogId ?? null,
+      opts.regenId,
+      opts.picked,
+    );
+    return id;
+  } catch {
+    // fire-and-forget: preference write failure must never propagate
+    return '';
+  }
 }
 
 /**

@@ -63,14 +63,19 @@ export type EP = {
  * models: {} — all sections resolve through modelForSection → per-section DB pin
  *              → bucket default. This is what closes the production gap: per-section
  *              pins flow through on the first draft.
- * covers: [] — no covers in the default; user configures via future settings UI.
+ *
+ * covers: one cover of the `flow` section (the high-dependency voice section) on
+ * claude-sonnet-4-5. This fires as a trailing EP2 with full accumulated context.
+ * Cost note: every fresh digest now fires ONE extra LLM call for the flow cover.
+ * The original flow output is retained as the default; the cover is offered for
+ * A/B review in the digest UI (sprint-44). Intentional premium-where-it-matters.
  */
 export const DEFAULT_PIPELINE: Pipeline = {
   releaseKind: 'digest',
   order: ['quotes', 'consensus', 'podium', 'chat', 'villain', 'flow'],
   models: {},
   skipAfter: { chat: true },
-  covers: [],
+  covers: [{ of: 'flow', model: 'anthropic/claude-sonnet-4-5' }],
 };
 
 /**
