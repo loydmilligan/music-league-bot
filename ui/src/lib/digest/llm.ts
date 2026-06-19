@@ -818,7 +818,7 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
 
     // Run each model group in this EP.
     for (const group of ep.groups) {
-      const groupSections = group.sections;
+      const groupSections = group.sections as SectionKind[];
       const meta: LLMCallMeta | undefined = db ? {
         category: 'digest',
         label: `digest:ep${epIdx}:${groupSections.join('+')}`,
@@ -875,9 +875,10 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
         role: 'assistant',
         content: JSON.stringify({ sections: accumulatedSections }),
       };
+      const coverSectionKind = cover.of as SectionKind;
       const coverMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-        { role: 'system', content: buildSystemPrompt([cover.of]) },
-        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [cover.of]) },
+        { role: 'system', content: buildSystemPrompt([coverSectionKind]) },
+        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [coverSectionKind]) },
         coverContextMsg,
       ];
 
@@ -889,8 +890,8 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
       totalCostUsd += coverCost;
 
       const coverParsed = JSON.parse(coverRaw) as { sections?: Partial<Record<SectionKind, unknown>> };
-      if (coverParsed.sections?.[cover.of] !== undefined) {
-        accumulatedCovers[cover.of] = coverParsed.sections[cover.of];
+      if (coverParsed.sections?.[coverSectionKind] !== undefined) {
+        accumulatedCovers[coverSectionKind] = coverParsed.sections[coverSectionKind];
       }
     }
   }

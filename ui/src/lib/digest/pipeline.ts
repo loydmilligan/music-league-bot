@@ -1,15 +1,16 @@
 /**
  * sprint-43: Generation pipeline v1.
+ * sprint-46: Extended to 'archive' releaseKind with no-merge resolver mode.
  *
  * A Pipeline is config, not code-per-release. It declares the run order for
- * digest sections, optional per-section model overrides, skip boundaries that
+ * sections/tasks, optional per-section model overrides, skip boundaries that
  * create EP boundaries, and covers (re-run of a track in a later EP).
  *
  * Vocabulary (from DESIGN-RATIONALE):
  *   EP     - one parallel phase: the tracks between two skips.
- *   Track  - a section to generate.
+ *   Track  - a section (digest) or task (archive) to generate.
  *   Skip   - a serialization barrier; everything after reads prior-EP output.
- *   Merge  - adjacent same-model tracks are collapsed into one callOpenRouter.
+ *   Merge  - adjacent same-model tracks collapse into one callOpenRouter (digest only).
  *   Cover  - a track placed in a later EP on a different model, using prior context.
  */
 
@@ -21,40 +22,43 @@ import type { SectionKind } from './llm.js';
 export type { SectionKind };
 
 export type Track = {
-  section: SectionKind;
+  section: string;
   /** Explicit model override; absent = modelForSection(section, db). */
   model?: string;
 };
 
 export type Cover = {
   /** Which track to re-run. */
-  of: SectionKind;
+  of: string;
   /** Cover model — MUST be specified. */
   model: string;
 };
 
 export type Pipeline = {
-  releaseKind: 'digest';
-  /** Run order. Must include all active sections. */
-  order: SectionKind[];
-  /** Per-section model overrides. Empty object = all sections use DB pins / bucket default. */
-  models: Partial<Record<SectionKind, string>>;
-  /** A skip sits AFTER this section. */
-  skipAfter: Partial<Record<SectionKind, true>>;
+  releaseKind: 'digest' | 'archive';
+  /** Run order. For digest: SectionKind ids. For archive: task ids. */
+  order: string[];
+  /** Per-track model overrides. Empty object = all tracks use DB pins / bucket default. */
+  models: Partial<Record<string, string>>;
+  /** A skip sits AFTER this track. */
+  skipAfter: Partial<Record<string, true>>;
   /** Covers to fire in subsequent EPs. */
   covers: Cover[];
 };
 
 /** One parallel phase (tracks between two skips). */
 export type EP = {
-  /** Merged groups within this EP: one callOpenRouter per group. */
-  groups: { model: string; sections: SectionKind[] }[];
+  /**
+   * Groups within this EP. Digest: merged by model (one callOpenRouter per group).
+   * Archive: each track is its own group of one (no merge).
+   */
+  groups: { model: string; sections: string[] }[];
   /** Covers firing in this EP (after their original has completed). */
   covers: Cover[];
 };
 
 /**
- * The conservative v1 default pipeline.
+ * The conservative v1 default digest pipeline.
  *
  * One skip: EP0 = factual/extractive tracks (quotes, consensus, podium, chat) merged
  * on the per-section-resolved model. EP1 = voice tracks (villain, flow) reading the
@@ -79,20 +83,54 @@ export const DEFAULT_PIPELINE: Pipeline = {
 };
 
 /**
+ * The b-side archive task ids (verified against buildReadModel.ts runPrediction calls).
+ * taste-fingerprint is an input, not a published b-side track — excluded.
+ */
+export const ARCHIVE_TASK_KINDS = [
+  'narrative-player-superlatives',
+  'narrative-fan-hater-blurbs',
+  'narrative-league-reel',
+  'narrative-moment-lines',
+  'profile-spectrum',
+  'profile-playlist',
+  'season-update',
+] as const;
+export type ArchiveTaskKind = (typeof ARCHIVE_TASK_KINDS)[number];
+
+/**
+ * Conservative default archive pipeline.
+ *
+ * No skips (all tasks in one EP — parallel), no covers, no model overrides.
+ * Degenerate guarantee: this pipeline with resolvePipeline reproduces today's
+ * buildReadModel behavior — same runPrediction calls, same task ids (contract #5).
+ */
+export const ARCHIVE_DEFAULT_PIPELINE: Pipeline = {
+  releaseKind: 'archive',
+  order: [...ARCHIVE_TASK_KINDS],
+  models: {},
+  skipAfter: {},
+  covers: [],
+};
+
+/**
  * Resolve a Pipeline into an ordered EP array.
  *
- * @param pipeline   - The pipeline config.
- * @param activeSections - Sections that are currently active (chat may be excluded
- *   if no chat data; disabled sections already removed by the caller).
- * @param db         - League DB; used to resolve per-section models when the
+ * @param pipeline       - The pipeline config.
+ * @param activeSections - Sections/tasks that are currently active.
+ *   For digest: active SectionKind ids. For archive: active task ids.
+ * @param db             - League DB; used to resolve per-section models when the
  *   pipeline's `models` map has no explicit override.
  * @returns Ordered EP array; empty EPs are elided.
  *
- * Degenerate case guarantee:
- *   A pipeline with skipAfter = {}, covers = [], and all active sections resolving
- *   to the same model returns exactly:
+ * Digest degenerate case guarantee:
+ *   A digest pipeline with skipAfter = {}, covers = [], and all active sections
+ *   resolving to the same model returns exactly:
  *     [{ groups: [{ model, sections: allActive }], covers: [] }]
  *   — one EP, one group, one callOpenRouter.
+ *
+ * Archive mode:
+ *   Each track is ALWAYS its own group (no merge), regardless of model.
+ *   Skips still create EP boundaries; covers still fire in trailing EPs.
  *
  * Edge case (OQ-2): if a skipAfter anchor section is not in activeSections (e.g.
  *   chat is disabled), the skip effectively fires after the last section in
@@ -102,20 +140,20 @@ export const DEFAULT_PIPELINE: Pipeline = {
  */
 export function resolvePipeline(
   pipeline: Pipeline,
-  activeSections: SectionKind[],
+  activeSections: string[],
   db: Database.Database,
 ): EP[] {
   const activeSet = new Set(activeSections);
 
   // Resolve model for each section: pipeline.models override → modelForSection fallback.
-  const resolveModel = (section: SectionKind): string =>
+  const resolveModel = (section: string): string =>
     pipeline.models[section] ?? modelForSection(section, db);
 
   // Split pipeline.order into EP buckets at skipAfter boundaries.
   // When a skipAfter anchor is not in activeSections, the boundary fires at the
   // last active section whose position in pipeline.order precedes the anchor.
-  const epBuckets: SectionKind[][] = [];
-  let currentBucket: SectionKind[] = [];
+  const epBuckets: string[][] = [];
+  let currentBucket: string[] = [];
 
   for (const section of pipeline.order) {
     // Only collect active sections.
@@ -162,25 +200,31 @@ export function resolvePipeline(
     ? Math.max(epBuckets.length, ...Array.from(coversByEp.keys()).map(k => k + 1))
     : epBuckets.length;
 
-  // Build EP objects: group tracks by resolved model within each bucket.
+  // Build EP objects.
   const eps: EP[] = [];
   for (let i = 0; i < totalEps; i++) {
     const bucket = epBuckets[i] ?? [];
     const covers = coversByEp.get(i) ?? [];
 
-    // Group sections by resolved model, preserving order within each group.
-    const modelOrder: string[] = [];
-    const groupMap = new Map<string, SectionKind[]>();
-    for (const section of bucket) {
-      const model = resolveModel(section);
-      if (!groupMap.has(model)) {
-        groupMap.set(model, []);
-        modelOrder.push(model);
-      }
-      groupMap.get(model)!.push(section);
-    }
+    let groups: { model: string; sections: string[] }[];
 
-    const groups = modelOrder.map(model => ({ model, sections: groupMap.get(model)! }));
+    if (pipeline.releaseKind === 'archive') {
+      // Archive mode: each track is its own group — no merge, ever.
+      groups = bucket.map(section => ({ model: resolveModel(section), sections: [section] }));
+    } else {
+      // Digest mode: group tracks by resolved model, preserving order within each group.
+      const modelOrder: string[] = [];
+      const groupMap = new Map<string, string[]>();
+      for (const section of bucket) {
+        const model = resolveModel(section);
+        if (!groupMap.has(model)) {
+          groupMap.set(model, []);
+          modelOrder.push(model);
+        }
+        groupMap.get(model)!.push(section);
+      }
+      groups = modelOrder.map(model => ({ model, sections: groupMap.get(model)! }));
+    }
 
     // Elide empty EPs that have no groups and no covers.
     if (groups.length === 0 && covers.length === 0) continue;
