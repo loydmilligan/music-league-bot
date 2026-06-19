@@ -123,3 +123,9 @@ _None at start._
 ## Activity Log
 ### 2026-06-19 — orc — coord-doc authored
 Authored by orc (not a subagent) grounded in buildReadModel.ts. Dispatching to panes %55 (backend) + %56 (frontend) via warren.
+
+### 2026-06-19 — Lane B — b1+b2 complete (738043f)
+Digest/archive switcher (segmented control) in Pipeline tab; archive view with no merge-rail + skips + covers + per-task model; pipelineSolver archive no-merge mode; 8 parity tests all green. Zero new type errors introduced (9 pre-existing in llm.ts from Lane A's pipeline.ts changes).
+
+### 2026-06-19 — Lane A — a3 complete (a8a7e12)
+Rewired buildReadModel to load archive pipeline from settings (falls back to ARCHIVE_DEFAULT_PIPELINE), run tracks in EP order (parallel within each EP), dispatch all 7 task kinds via a switch table, and write seasonUpdate to the read model. Sacred regression guard (5 tests) passes: degenerate archive pipeline dispatches all 7 ARCHIVE_TASK_KINDS with zero regressions in the full 803-test suite. `npm run check` 0 errors.
