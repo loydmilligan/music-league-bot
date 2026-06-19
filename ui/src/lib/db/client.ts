@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { SCHEMA, DEFAULT_SETTINGS } from './schema.js';
 import { seedThemeTags } from './themeTags.js';
 import { getRoundPhasesForSeason } from '../lifecycle.js';
-import { DEFAULT_PIPELINE } from '../digest/pipeline.js';
+import { DEFAULT_PIPELINE, ARCHIVE_DEFAULT_PIPELINE } from '../digest/pipeline.js';
 
 let _db: Database.Database | null = null;
 
@@ -140,6 +140,8 @@ export function openLeagueDb(path?: string): Database.Database {
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	// sprint-43 pipeline: seed the default pipeline config on first boot.
 	upsert.run('pipeline_config', JSON.stringify(DEFAULT_PIPELINE));
+	// sprint-46 archive pipeline: seed the archive pipeline config on first boot.
+	upsert.run('pipeline_config_archive', JSON.stringify(ARCHIVE_DEFAULT_PIPELINE));
 	// sprint-22 theme-tags: seed the category taxonomy + starter vocabulary
 	// (idempotent INSERT OR IGNORE — safe to run every boot).
 	seedThemeTags(db);
