@@ -4,6 +4,26 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.13.0] — 2026-06-19
+
+**sprint-46 — Archive pipeline.** The generation pipeline now drives **b-side
+archive** generation too, not just the digest — configurable from the same Pipeline
+tab via a digest/archive switcher.
+
+### Added
+
+- **`buildReadModel` runs an archive pipeline.** The b-side read-model is now produced
+  through the pipeline (ordered tasks, skip = context handoff, covers, per-task model)
+  instead of a fixed sequence. Guarded by a regression test: a no-skip/no-cover archive
+  pipeline reproduces today's b-side generation exactly.
+- **No merge for archive** (by design): the b-side tasks (narrative ×4, profile ×2,
+  season-update) are heterogeneous calls that can't combine, so each track is always its
+  own call. Skips and covers still apply; tasks in a phase still run in parallel.
+- **Digest/archive switcher** on the Pipeline tab. The archive view drops the merge-rail
+  (each track shows "1 call") but keeps skips, covers, and per-track model.
+- **Per-kind config API** — `GET/PUT /api/settings/pipeline-config?kind=digest|archive`;
+  the archive pipeline persists to its own `pipeline_config_archive` key.
+
 ## [1.12.0] — 2026-06-18
 
 **sprint-45 — Pipeline config UI.** The generation pipeline is now editable without
