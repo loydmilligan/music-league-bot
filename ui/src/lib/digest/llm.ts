@@ -3,6 +3,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
 import { modelFor, modelForSection } from './modelFor.js';
+import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -752,6 +753,13 @@ const DIGEST_PROMPT_VERSION = 'digest-v1';
 
 interface DraftLLMOutput {
   sections: Record<SectionKind, unknown>;
+  /**
+   * sprint-43 a3/a4: cover outputs keyed by section.
+   * The `sections` map always holds the original (first-EP) output even when a
+   * cover exists. sprint-44 frontend queries `digest_regenerations` with
+   * `cover_kind = 'pipeline_cover'` to get the cover for A/B review.
+   */
+  _covers?: Partial<Record<SectionKind, unknown>>;
   /** Accumulated USD cost of the generation call (sprint-15 cost-capture). */
   costUsd: number;
   /** sprint-39: pre-minted draft id so the cost log row can reference it. */
@@ -761,42 +769,146 @@ interface DraftLLMOutput {
 }
 
 export async function generateDraft(data: RoundData, genParams?: GenParams, season?: SeasonData, db?: Database.Database): Promise<DraftLLMOutput> {
-  const model = db ? modelFor('digest', db) : undefined;
-
-  // Pre-mint ids so the cost log row references them before writeDraft is called.
+  // Pre-mint ids so cost log rows reference them before writeDraft is called.
   const draftId = `draft-${data.round.id}-${randomUUID().slice(0, 8)}`;
   const runId = randomUUID();
 
-  const meta: LLMCallMeta | undefined = db ? {
-    category: 'digest',
-    label: 'digest:full',
-    db,
-    leagueId: data.league.id,
-    roundId: data.round.id,
-    runId,
-    artifactType: 'digest_draft',
-    artifactId: draftId,
-    promptVersion: DIGEST_PROMPT_VERSION,
-  } : undefined;
-
-  const { content: raw, costUsd } = await callOpenRouter(
-    [
-      { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(data, undefined, genParams, season) },
-    ],
-    { jsonMode: true, model, meta },
-  );
-  const parsed = JSON.parse(raw) as DraftLLMOutput;
-  if (!parsed.sections) throw new Error('LLM response missing "sections"');
-  for (const k of SECTION_KINDS) {
-    if (!(k in parsed.sections)) {
-      parsed.sections[k] = { title: k, body: '', items: [] };
+  // ---- sprint-43 a3: pipeline-driven generation ----
+  // Load pipeline config from settings (fall back to DEFAULT_PIPELINE).
+  let pipeline: Pipeline = DEFAULT_PIPELINE;
+  if (db) {
+    const cfgRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('pipeline_config') as { value: string } | undefined;
+    if (cfgRow?.value) {
+      try {
+        pipeline = JSON.parse(cfgRow.value) as Pipeline;
+      } catch {
+        pipeline = DEFAULT_PIPELINE;
+      }
     }
   }
-  parsed.costUsd = costUsd;
-  parsed.draftId = draftId;
-  parsed.runId = runId;
-  return parsed;
+
+  // Determine the active section list (same logic as before; chat excluded when no data).
+  const activeKinds = activeKindsForDraft(data, genParams);
+
+  // When db is available, resolve the pipeline into EP array.
+  // When db is absent (test/legacy path), fall back to a single degenerate EP
+  // matching today's behavior (one call, all sections, bucket-default model).
+  const eps = db
+    ? resolvePipeline(pipeline, activeKinds, db)
+    : [{ groups: [{ model: process.env.OPENROUTER_DIGEST_MODEL ?? DEFAULT_MODEL, sections: activeKinds }], covers: [] }];
+
+  // Accumulate outputs across all EP calls.
+  const accumulatedSections: Partial<Record<SectionKind, unknown>> = {};
+  const accumulatedCovers: Partial<Record<SectionKind, unknown>> = {};
+  let totalCostUsd = 0;
+
+  // leagueId needed for cost log; derive once.
+  const leagueId = data.league.id;
+
+  for (let epIdx = 0; epIdx < eps.length; epIdx++) {
+    const ep = eps[epIdx];
+
+    // Build prior-EP context as a synthetic assistant message, injected when
+    // this is not the first EP and prior sections have been accumulated.
+    // OQ-1 resolution: assistant-turn injection (cleaner for JSON-mode calls).
+    const priorContextMsg: { role: 'assistant'; content: string } | null =
+      epIdx > 0 && Object.keys(accumulatedSections).length > 0
+        ? { role: 'assistant', content: JSON.stringify({ sections: accumulatedSections }) }
+        : null;
+
+    // Run each model group in this EP.
+    for (const group of ep.groups) {
+      const groupSections = group.sections;
+      const meta: LLMCallMeta | undefined = db ? {
+        category: 'digest',
+        label: `digest:ep${epIdx}:${groupSections.join('+')}`,
+        db,
+        leagueId,
+        roundId: data.round.id,
+        runId,
+        artifactType: 'digest_draft',
+        artifactId: draftId,
+        promptVersion: DIGEST_PROMPT_VERSION,
+      } : undefined;
+
+      const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+        { role: 'system', content: buildSystemPrompt(groupSections) },
+        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, groupSections) },
+      ];
+      if (priorContextMsg) messages.push(priorContextMsg);
+
+      const { content: raw, costUsd } = await callOpenRouter(messages, {
+        jsonMode: true,
+        model: group.model,
+        meta,
+      });
+      totalCostUsd += costUsd;
+
+      const parsed = JSON.parse(raw) as { sections?: Partial<Record<SectionKind, unknown>> };
+      if (!parsed.sections) throw new Error(`LLM response for EP${epIdx} group ${groupSections.join('+')} missing "sections"`);
+      for (const k of groupSections) {
+        if (k in parsed.sections) {
+          accumulatedSections[k] = parsed.sections[k];
+        }
+      }
+    }
+
+    // Fire covers for this EP (covers defined in ep.covers fire using prior context).
+    for (const cover of ep.covers) {
+      const coverMeta: LLMCallMeta | undefined = db ? {
+        category: 'digest',
+        label: `digest:cover:${cover.of}`,
+        db,
+        leagueId,
+        roundId: data.round.id,
+        runId,
+        artifactType: 'digest_draft',
+        artifactId: draftId,
+        promptVersion: DIGEST_PROMPT_VERSION,
+      } : undefined;
+
+      // Cover prompt: the single section only, with full accumulated-so-far context.
+      const coverContextMsg: { role: 'assistant'; content: string } = {
+        role: 'assistant',
+        content: JSON.stringify({ sections: accumulatedSections }),
+      };
+      const coverMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+        { role: 'system', content: buildSystemPrompt([cover.of]) },
+        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [cover.of]) },
+        coverContextMsg,
+      ];
+
+      const { content: coverRaw, costUsd: coverCost } = await callOpenRouter(coverMessages, {
+        jsonMode: true,
+        model: cover.model,
+        meta: coverMeta,
+      });
+      totalCostUsd += coverCost;
+
+      const coverParsed = JSON.parse(coverRaw) as { sections?: Partial<Record<SectionKind, unknown>> };
+      if (coverParsed.sections?.[cover.of] !== undefined) {
+        accumulatedCovers[cover.of] = coverParsed.sections[cover.of];
+      }
+    }
+  }
+
+  // Fill in any missing section kinds with empty defaults (defensive).
+  for (const k of activeKinds) {
+    if (!(k in accumulatedSections)) {
+      accumulatedSections[k] = { title: k, body: '', items: [] };
+    }
+  }
+
+  const result: DraftLLMOutput = {
+    sections: accumulatedSections as Record<SectionKind, unknown>,
+    costUsd: totalCostUsd,
+    draftId,
+    runId,
+  };
+  if (Object.keys(accumulatedCovers).length > 0) {
+    result._covers = accumulatedCovers;
+  }
+  return result;
 }
 
 export async function regenerateOneSection(
