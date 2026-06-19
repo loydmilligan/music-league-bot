@@ -555,7 +555,27 @@ export function activeKindsForRecap(genParams?: GenParams): SectionKind[] {
   });
 }
 
-export function buildSystemPrompt(): string {
+// Per-section JSON schema snippets for the system prompt.
+// sprint-43 a2: parameterized so a subset-section call gets only the relevant keys.
+const SECTION_SCHEMA: Record<SectionKind, string> = {
+  podium:    `"podium":    { "title": string, "items": [...], "body": string }`,
+  villain:   `"villain":   { "title": string, "body": string }`,
+  flow:      `"flow":      { "title": string, "body": string }`,
+  consensus: `"consensus": { "title": string, "items": [...] }`,
+  quotes:    `"quotes":    { "title": string, "items": [{"voter": string, "quote": string}] }`,
+  chat:      `"chat":      { "title": string, "summary": string, "moments": [{"label": string, "detail": string}] }`,
+};
+
+/**
+ * Build the system prompt.
+ *
+ * sprint-43 a2: accepts an optional `sections` list. When provided, the JSON
+ * schema in the system prompt is limited to only those sections. When absent,
+ * the full 6-section schema is used (existing behavior, no regression).
+ */
+export function buildSystemPrompt(sections?: SectionKind[]): string {
+  const schemaKinds = sections ?? (SECTION_KINDS as readonly SectionKind[]);
+  const schemaLines = schemaKinds.map(k => `    ${SECTION_SCHEMA[k]}`).join(',\n');
   return `You are the editorial voice of "Music League Bot" — a private music-league digest writer.
 Write in a sharp, dry, slightly literary tone. Be specific: use real song titles, real voter names, real numbers.
 Never hedge. Never disclaim. Never apologize.
@@ -577,12 +597,7 @@ You output ONE JSON object with this exact shape:
 
 {
   "sections": {
-    "podium":    { "title": string, "items": [...], "body": string },
-    "villain":   { "title": string, "body": string },
-    "flow":      { "title": string, "body": string },
-    "consensus": { "title": string, "items": [...] },
-    "quotes":    { "title": string, "items": [{"voter": string, "quote": string}] },
-    "chat":      { "title": string, "summary": string, "moments": [{"label": string, "detail": string}] }
+${schemaLines}
   }
 }
 
@@ -603,11 +618,23 @@ export function activeKindsForDraft(data: RoundData, genParams?: GenParams): Sec
   });
 }
 
+/**
+ * Build the user prompt.
+ *
+ * sprint-43 a2: accepts an optional `sections` override. When provided, only
+ * those sections are requested in the "Write N sections" block and the JSON
+ * schema in the response instructions is limited to that subset. When absent,
+ * uses activeKindsForDraft (existing behavior — no regression).
+ *
+ * This is the general merge case: a single-section call (steer.kind) and the
+ * all-sections draft are both special cases of this parameterized form.
+ */
 export function buildUserPrompt(
   data: RoundData,
   steer?: { chips: string[]; instructions: string; kind?: SectionKind; currentContent?: unknown },
   genParams?: GenParams,
   season?: SeasonData,
+  sections?: SectionKind[],
 ): string {
   // sprint-21: recap mode swaps the entire prompt body to season slices.
   if (genParams?.recap?.enabled && season) {
@@ -702,7 +729,9 @@ export function buildUserPrompt(
     }
     parts.push(`\nReturn JSON: { "section": { ...content for "${steer.kind}"... } }`);
   } else {
-    const activeKinds = activeKindsForDraft(data, genParams);
+    // sprint-43 a2: use the caller-supplied sections list when provided;
+    // fall back to activeKindsForDraft for backward-compatible behavior.
+    const activeKinds = sections ?? activeKindsForDraft(data, genParams);
     const paramByKind = new Map((genParams?.sections ?? []).map((s) => [s.id, s]));
     parts.push(`\n# Write ${activeKinds.length} sections`);
     for (const k of activeKinds) {
