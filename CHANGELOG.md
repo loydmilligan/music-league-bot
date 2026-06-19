@@ -4,6 +4,31 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+## [1.12.0] — 2026-06-18
+
+**sprint-45 — Pipeline config UI.** The generation pipeline is now editable without
+touching code: a new **Pipeline** tab on the Models & AI screen.
+
+### Added
+
+- **Pipeline tab** (`/settings/models`, in-page) to view and edit `pipeline_config`:
+  reorder sections, set a per-section model (or "use default"), insert `── skip ──`
+  dividers (EP boundaries), and add/remove covers — Save writes the config, Reset
+  restores the default.
+- **Merge-rail** shows (display-only) which adjacent same-model sections collapse
+  into one call — it reflects the resolver, never a control that could contradict it.
+- **Run preview** — call count + relative cost band (sticky footer on mobile, an
+  EP→skip→cover timeline on desktop), driven by a client EP solver that is
+  **parity-tested against the real `resolvePipeline`** so it can't drift.
+- **`GET`/`PUT /api/settings/pipeline-config`** to read/write the config.
+
+### Changed
+
+- **Per-section models are now set in the Pipeline tab.** The sprint-41 per-section
+  overrides panel becomes a read-only mirror (shows the effective model, links to the
+  Pipeline tab) — one place to set a section's model. No data migration: "use default"
+  writes no override, so existing config keeps working.
+
 ## [1.11.0] — 2026-06-18
 
 **sprint-44 — Covers + A/B review.** Completes generation-pipeline v1. A section
