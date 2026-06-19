@@ -1,5 +1,6 @@
 ---
-status: planned
+status: shipped
+shippedIn: v1.12.0
 campaign: generation-pipeline
 sprint: sprint-45-pipeline-config-ui
 version: v1.12.0

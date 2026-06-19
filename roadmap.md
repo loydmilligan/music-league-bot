@@ -1010,7 +1010,8 @@ summary: >-
 ---
 id: pipeline-config-ui
 title: Pipeline Config UI
-stage: planned
+stage: shipped
+shippedIn: v1.12.0
 effort: medium
 source: owner
 priority: high
