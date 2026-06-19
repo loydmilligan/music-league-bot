@@ -400,6 +400,13 @@ export function openLeagueDb(path?: string): Database.Database {
 			}
 		})();
 	}
+	// sprint-43 a4: cover_kind column on digest_regenerations distinguishes automatic
+	// pipeline covers (cover_kind = 'pipeline_cover') from user-triggered regens (NULL).
+	// Sprint-44 frontend queries: SELECT ... WHERE cover_kind = 'pipeline_cover'.
+	const regenCols = db.prepare("PRAGMA table_info(digest_regenerations)").all() as { name: string }[];
+	if (regenCols.length && !regenCols.some(c => c.name === 'cover_kind')) {
+		db.exec("ALTER TABLE digest_regenerations ADD COLUMN cover_kind TEXT");
+	}
 	return db;
 }
 

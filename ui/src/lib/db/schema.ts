@@ -186,7 +186,8 @@ export const SCHEMA = `
     chips              TEXT NOT NULL,
     instructions       TEXT NOT NULL,
     prior_content_json TEXT NOT NULL,
-    new_content_json   TEXT NOT NULL
+    new_content_json   TEXT NOT NULL,
+    cover_kind         TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_digest_regenerations_section ON digest_regenerations(section_id, ran_at);
   -- sprint-20 html-share: stable, unguessable slug per round for the public

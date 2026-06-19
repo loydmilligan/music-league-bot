@@ -1048,6 +1048,49 @@ export function writeDraft(
   return { draft, sections };
 }
 
+/**
+ * sprint-43 a4: Persist pipeline cover outputs as digest_regenerations rows.
+ *
+ * For each cover in output._covers:
+ *   - section_id: `${draftId}-${sectionKind}` (matches digest_sections.id format)
+ *   - prior_content_json: the original section output (from output.sections)
+ *   - new_content_json: the cover output
+ *   - cover_kind: 'pipeline_cover'
+ *
+ * Called by the write path after writeDraft has inserted the base sections.
+ * Sprint-44 frontend queries WHERE cover_kind = 'pipeline_cover' to surface
+ * both takes for A/B review.
+ */
+export function writePipelineCovers(
+  db: Database.Database,
+  draftId: string,
+  output: DraftLLMOutput,
+): void {
+  if (!output._covers || Object.keys(output._covers).length === 0) return;
+  const covers = output._covers;
+  const tx = db.transaction(() => {
+    for (const [section, coverContent] of Object.entries(covers) as [SectionKind, unknown][]) {
+      const sectionId = `${draftId}-${section}`;
+      const priorContent = output.sections[section] ?? {};
+      const regenId = `regen-${randomUUID().slice(0, 12)}`;
+      db.prepare(
+        `INSERT INTO digest_regenerations
+           (id, section_id, chips, instructions, prior_content_json, new_content_json, cover_kind)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        regenId,
+        sectionId,
+        '[]',
+        'pipeline cover',
+        JSON.stringify(priorContent),
+        JSON.stringify(coverContent ?? {}),
+        'pipeline_cover',
+      );
+    }
+  });
+  tx();
+}
+
 export function replaceSectionContent(
   db: Database.Database,
   section: DigestSectionRow,
