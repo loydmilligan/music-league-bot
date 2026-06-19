@@ -7,7 +7,7 @@
     type Model, type BucketState, type BucketReq,
   } from './qualify.js';
   import { DEFAULT_PIPELINE, type Pipeline, type Cover, type SectionKind } from '../digest/pipeline.js';
-  import { solveClientEPs, type ClientEP } from './pipelineSolver.js';
+  import { solveClientEPs, type ClientEP, type ArchivePipelineInput } from './pipelineSolver.js';
 
   // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
   type SectionState = {
@@ -46,6 +46,23 @@
     'submission-predict': 'Submission predict',
     'vote-probe': 'Vote probe',
     'taste-fingerprint': 'Taste fingerprint',
+  };
+
+  // ---- archive track constants (sprint-46 b1) --------------------------------
+  // These are the b-side LLM task ids confirmed against buildReadModel.ts (coord §2).
+  // taste-fingerprint is an input task, not a published b-side section — excluded.
+  const ARCHIVE_TRACK_KEYS = [
+    'narrative-player-superlatives', 'narrative-fan-hater-blurbs',
+    'narrative-league-reel', 'narrative-moment-lines',
+    'profile-spectrum', 'profile-playlist', 'season-update',
+  ] as const;
+
+  const ARCHIVE_PIPELINE_FALLBACK: ArchivePipelineInput = {
+    releaseKind: 'archive',
+    order: [...ARCHIVE_TRACK_KEYS],
+    models: {},
+    skipAfter: {},
+    covers: [],
   };
 
   function makeMockSection(section: string, bucket: 'predict' | 'digest'): SectionState {
@@ -98,7 +115,9 @@
   // ---- pipeline tab state --------------------------------------------------
   let activeTab = $state<'models' | 'pipeline'>('models');
   let pipelineMode = $state<'edit' | 'preview'>('edit');
+  let pipelineKind = $state<'digest' | 'archive'>('digest');
   let workingCopy = $state<Pipeline>(structuredClone(DEFAULT_PIPELINE));
+  let archiveWorkingCopy = $state<ArchivePipelineInput>(structuredClone(ARCHIVE_PIPELINE_FALLBACK));
   let pipelineSaving = $state(false);
   let pipelineSaved = $state(false);
 
@@ -404,11 +423,24 @@
 
   // ---- pipeline API -------------------------------------------------------
   async function loadPipeline() {
+    // Digest config (backward-compatible: no ?kind= param for the existing endpoint).
     try {
       const r = await fetch('/api/settings/pipeline-config');
       if (r.ok) {
         const d = await r.json();
         workingCopy = d.pipeline;
+      }
+    } catch { /* backend not ready */ }
+
+    // Archive config — build to contract (Lane A adds ?kind=archive support).
+    // If the endpoint returns a non-archive response (old backend), keep fallback.
+    try {
+      const r = await fetch('/api/settings/pipeline-config?kind=archive');
+      if (r.ok) {
+        const d = await r.json();
+        if (d.pipeline?.releaseKind === 'archive') {
+          archiveWorkingCopy = d.pipeline as ArchivePipelineInput;
+        }
       }
     } catch { /* backend not ready */ }
   }
@@ -417,16 +449,33 @@
     pipelineSaving = true;
     pipelineSaved = false;
     try {
-      const r = await fetch('/api/settings/pipeline-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pipeline: workingCopy }),
-      });
-      if (r.ok) {
-        const d = await r.json();
-        workingCopy = d.pipeline;
-        pipelineSaved = true;
-        setTimeout(() => { pipelineSaved = false; }, 2000);
+      if (pipelineKind === 'digest') {
+        const r = await fetch('/api/settings/pipeline-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline: workingCopy }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          workingCopy = d.pipeline;
+          pipelineSaved = true;
+          setTimeout(() => { pipelineSaved = false; }, 2000);
+        }
+      } else {
+        // Archive save — build to contract (Lane A's ?kind=archive PUT).
+        const r = await fetch('/api/settings/pipeline-config?kind=archive', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline: archiveWorkingCopy }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.pipeline?.releaseKind === 'archive') {
+            archiveWorkingCopy = d.pipeline as ArchivePipelineInput;
+          }
+          pipelineSaved = true;
+          setTimeout(() => { pipelineSaved = false; }, 2000);
+        }
       }
     } finally {
       pipelineSaving = false;
@@ -436,14 +485,18 @@
   async function resetPipeline() {
     pipelineSaving = true;
     try {
-      const r = await fetch('/api/settings/pipeline-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pipeline: DEFAULT_PIPELINE }),
-      });
-      if (r.ok) {
-        const d = await r.json();
-        workingCopy = d.pipeline;
+      if (pipelineKind === 'digest') {
+        const r = await fetch('/api/settings/pipeline-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline: DEFAULT_PIPELINE }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          workingCopy = d.pipeline;
+        }
+      } else {
+        archiveWorkingCopy = structuredClone(ARCHIVE_PIPELINE_FALLBACK);
       }
     } finally {
       pipelineSaving = false;
@@ -452,52 +505,100 @@
 
   // ---- pipeline editor mutations ------------------------------------------
   function moveSection(idx: number, dir: -1 | 1) {
-    const newOrder = [...workingCopy.order];
-    const swap = idx + dir;
-    [newOrder[idx], newOrder[swap]] = [newOrder[swap], newOrder[idx]];
-    workingCopy = { ...workingCopy, order: newOrder };
+    if (pipelineKind === 'digest') {
+      const newOrder = [...workingCopy.order];
+      const swap = idx + dir;
+      [newOrder[idx], newOrder[swap]] = [newOrder[swap], newOrder[idx]];
+      workingCopy = { ...workingCopy, order: newOrder };
+    } else {
+      const newOrder = [...archiveWorkingCopy.order];
+      const swap = idx + dir;
+      [newOrder[idx], newOrder[swap]] = [newOrder[swap], newOrder[idx]];
+      archiveWorkingCopy = { ...archiveWorkingCopy, order: newOrder };
+    }
   }
 
   function setSectionPipelineModel(sec: string, modelId: string) {
-    const newModels = { ...(workingCopy.models as Record<string, string>) };
-    if (modelId === '__default__') {
-      delete newModels[sec];
+    if (pipelineKind === 'digest') {
+      const newModels = { ...(workingCopy.models as Record<string, string>) };
+      if (modelId === '__default__') {
+        delete newModels[sec];
+      } else {
+        newModels[sec] = modelId;
+      }
+      workingCopy = { ...workingCopy, models: newModels as typeof workingCopy.models };
     } else {
-      newModels[sec] = modelId;
+      const newModels = { ...archiveWorkingCopy.models };
+      if (modelId === '__default__') {
+        delete newModels[sec];
+      } else {
+        newModels[sec] = modelId;
+      }
+      archiveWorkingCopy = { ...archiveWorkingCopy, models: newModels };
     }
-    workingCopy = { ...workingCopy, models: newModels as typeof workingCopy.models };
   }
 
   function toggleSkip(sec: string) {
-    const newSkip = { ...(workingCopy.skipAfter as Record<string, true>) };
-    if (newSkip[sec]) {
-      delete newSkip[sec];
+    if (pipelineKind === 'digest') {
+      const newSkip = { ...(workingCopy.skipAfter as Record<string, true>) };
+      if (newSkip[sec]) {
+        delete newSkip[sec];
+      } else {
+        newSkip[sec] = true;
+      }
+      workingCopy = { ...workingCopy, skipAfter: newSkip as typeof workingCopy.skipAfter };
     } else {
-      newSkip[sec] = true;
+      const newSkip = { ...archiveWorkingCopy.skipAfter };
+      if (newSkip[sec]) {
+        delete newSkip[sec];
+      } else {
+        newSkip[sec] = true;
+      }
+      archiveWorkingCopy = { ...archiveWorkingCopy, skipAfter: newSkip };
     }
-    workingCopy = { ...workingCopy, skipAfter: newSkip as typeof workingCopy.skipAfter };
   }
 
   function addCover(sec: string) {
     const defaultCoverModel = qualifying({ json: true })[0]?.model_id ?? '';
-    workingCopy = {
-      ...workingCopy,
-      covers: [...workingCopy.covers, { of: sec as SectionKind, model: defaultCoverModel }],
-    };
+    if (pipelineKind === 'digest') {
+      workingCopy = {
+        ...workingCopy,
+        covers: [...workingCopy.covers, { of: sec as SectionKind, model: defaultCoverModel }],
+      };
+    } else {
+      archiveWorkingCopy = {
+        ...archiveWorkingCopy,
+        covers: [...archiveWorkingCopy.covers, { of: sec, model: defaultCoverModel }],
+      };
+    }
   }
 
   function removeCover(sec: string) {
-    workingCopy = {
-      ...workingCopy,
-      covers: workingCopy.covers.filter((c) => c.of !== sec),
-    };
+    if (pipelineKind === 'digest') {
+      workingCopy = {
+        ...workingCopy,
+        covers: workingCopy.covers.filter((c) => c.of !== sec),
+      };
+    } else {
+      archiveWorkingCopy = {
+        ...archiveWorkingCopy,
+        covers: archiveWorkingCopy.covers.filter((c) => c.of !== sec),
+      };
+    }
   }
 
   function setCoverModel(sec: string, modelId: string) {
-    workingCopy = {
-      ...workingCopy,
-      covers: workingCopy.covers.map((c) => (c.of === sec ? { ...c, model: modelId } : c)),
-    };
+    if (pipelineKind === 'digest') {
+      workingCopy = {
+        ...workingCopy,
+        covers: workingCopy.covers.map((c) => (c.of === sec ? { ...c, model: modelId } : c)),
+      };
+    } else {
+      archiveWorkingCopy = {
+        ...archiveWorkingCopy,
+        covers: archiveWorkingCopy.covers.map((c) => (c.of === sec ? { ...c, model: modelId } : c)),
+      };
+    }
   }
 
   // ---- pipeline derived values -------------------------------------------
@@ -505,7 +606,15 @@
     solveClientEPs(workingCopy, workingCopy.order, digestBucket.resolved ?? digestBucket.hardcoded),
   );
 
+  const archiveClientEPs: ClientEP[] = $derived(
+    solveClientEPs(archiveWorkingCopy, archiveWorkingCopy.order, digestBucket.resolved ?? digestBucket.hardcoded),
+  );
+
+  // Active EPs based on current pipelineKind.
+  const activeEPs: ClientEP[] = $derived(pipelineKind === 'digest' ? clientEPs : archiveClientEPs);
+
   const mergeMap = $derived((() => {
+    // Merge map is only relevant for digest mode (archive never merges).
     const map = new Map<string, { inGroup: boolean; isFirst: boolean; groupSize: number }>();
     for (const ep of clientEPs) {
       for (const group of ep.groups) {
@@ -522,7 +631,7 @@
   })());
 
   const callCount = $derived(
-    clientEPs.reduce((n, ep) => n + ep.groups.length + ep.covers.length, 0),
+    activeEPs.reduce((n, ep) => n + ep.groups.length + ep.covers.length, 0),
   );
 
   const costBand = $derived((() => {
@@ -531,7 +640,7 @@
     let hasExpensive = false;
     let allCheap = true;
     let anyResolved = false;
-    for (const ep of clientEPs) {
+    for (const ep of activeEPs) {
       for (const group of ep.groups) {
         const m = modelMap.get(group.model);
         if (m) {
@@ -1023,6 +1132,27 @@
 {#if activeTab === 'pipeline'}
   <div class="mlm-pipeline">
 
+    <!-- Digest / Archive kind switcher (sprint-46 b1) -->
+    <div class="mlm-kind-switcher" role="group" aria-label="Pipeline kind">
+      <button
+        class="mlm-kind-btn {pipelineKind === 'digest' ? 'is-active' : ''}"
+        onclick={() => (pipelineKind = 'digest')}
+        aria-pressed={pipelineKind === 'digest'}
+      >Digest</button>
+      <button
+        class="mlm-kind-btn {pipelineKind === 'archive' ? 'is-active' : ''}"
+        onclick={() => (pipelineKind = 'archive')}
+        aria-pressed={pipelineKind === 'archive'}
+      >Archive</button>
+    </div>
+
+    {#if pipelineKind === 'archive'}
+      <p class="mlm-archive-note">
+        Archive = b-side generation. Each task runs as its own call — no merge.
+        Skips, covers, and per-task model overrides still apply.
+      </p>
+    {/if}
+
     <!-- Edit / Preview sub-tabs -->
     <div class="mlm-sub-tabs" role="tablist">
       <button
@@ -1043,96 +1173,169 @@
       <!-- Two-pane (Option C): editor left, run preview right on desktop -->
       <div class="mlm-pipeline-panes">
 
-        <!-- Left: flat track list editor (Option A) -->
+        <!-- Left: flat track list editor -->
         <div class="mlm-track-list">
-          {#each workingCopy.order as sec, idx (sec)}
-            {@const mi = mergeMap.get(sec)}
-            {@const hasCover = workingCopy.covers.some((c) => c.of === sec)}
-            {@const coverEntry = workingCopy.covers.find((c) => c.of === sec)}
-            {@const hasSkip = !!(workingCopy.skipAfter as Record<string, boolean>)[sec]}
-            {@const eligible = qualifying({ json: true })}
+          {#if pipelineKind === 'digest'}
+            <!-- Digest track list (merge-rail applies) -->
+            {#each workingCopy.order as sec, idx (sec)}
+              {@const mi = mergeMap.get(sec)}
+              {@const hasCover = workingCopy.covers.some((c) => c.of === sec)}
+              {@const coverEntry = workingCopy.covers.find((c) => c.of === sec)}
+              {@const hasSkip = !!(workingCopy.skipAfter as Record<string, boolean>)[sec]}
+              {@const eligible = qualifying({ json: true })}
 
-            <div class="mlm-track-item {mi?.inGroup ? 'has-rail' : ''}">
-              <div class="mlm-track-row">
-                <!-- reorder -->
-                <div class="mlm-reorder-btns">
-                  <button
-                    class="ml-icon-btn mlm-reorder-btn"
-                    disabled={idx === 0}
-                    onclick={() => moveSection(idx, -1)}
-                    title="Move up"
-                  >▲</button>
-                  <button
-                    class="ml-icon-btn mlm-reorder-btn"
-                    disabled={idx === workingCopy.order.length - 1}
-                    onclick={() => moveSection(idx, 1)}
-                    title="Move down"
-                  >▼</button>
-                </div>
+              <div class="mlm-track-item {mi?.inGroup ? 'has-rail' : ''}">
+                <div class="mlm-track-row">
+                  <div class="mlm-reorder-btns">
+                    <button
+                      class="ml-icon-btn mlm-reorder-btn"
+                      disabled={idx === 0}
+                      onclick={() => moveSection(idx, -1)}
+                      title="Move up"
+                    >▲</button>
+                    <button
+                      class="ml-icon-btn mlm-reorder-btn"
+                      disabled={idx === workingCopy.order.length - 1}
+                      onclick={() => moveSection(idx, 1)}
+                      title="Move down"
+                    >▼</button>
+                  </div>
 
-                <!-- section label + merge badge -->
-                <div class="mlm-track-name-col">
-                  <span class="mlm-track-label">{SECTION_LABELS[sec] ?? sec}</span>
-                  {#if mi?.isFirst && (mi?.groupSize ?? 1) > 1}
-                    <span class="mlm-merge-badge">merge x{mi.groupSize}</span>
-                  {/if}
-                </div>
+                  <div class="mlm-track-name-col">
+                    <span class="mlm-track-label">{SECTION_LABELS[sec] ?? sec}</span>
+                    {#if mi?.isFirst && (mi?.groupSize ?? 1) > 1}
+                      <span class="mlm-merge-badge">merge x{mi.groupSize}</span>
+                    {/if}
+                  </div>
 
-                <!-- per-section model select -->
-                <select
-                  class="mlm-select mlm-track-model"
-                  value={(workingCopy.models as Record<string, string>)[sec] ?? '__default__'}
-                  onchange={(e) => setSectionPipelineModel(sec, (e.target as HTMLSelectElement).value)}
-                >
-                  <option value="__default__">Use default · {digestBucket.resolved ?? digestBucket.hardcoded}</option>
-                  {#each eligible as m (m.id)}
-                    <option value={m.model_id}>{m.nickname}</option>
-                  {/each}
-                </select>
-
-                <!-- skip toggle -->
-                <button
-                  class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
-                  onclick={() => toggleSkip(sec)}
-                  title={hasSkip ? 'Remove skip after this section' : 'Add skip after this section'}
-                >{hasSkip ? '- skip' : '+ skip'}</button>
-              </div>
-
-              <!-- cover sub-row (dashed, indented) -->
-              {#if hasCover && coverEntry}
-                <div class="mlm-cover-row">
-                  <span class="mlm-cover-glyph">&#10551;</span>
-                  <span class="mlm-cover-label">cover of {SECTION_LABELS[sec] ?? sec}</span>
                   <select
-                    class="mlm-select mlm-cover-model"
-                    value={coverEntry.model}
-                    onchange={(e) => setCoverModel(sec, (e.target as HTMLSelectElement).value)}
+                    class="mlm-select mlm-track-model"
+                    value={(workingCopy.models as Record<string, string>)[sec] ?? '__default__'}
+                    onchange={(e) => setSectionPipelineModel(sec, (e.target as HTMLSelectElement).value)}
                   >
+                    <option value="__default__">Use default · {digestBucket.resolved ?? digestBucket.hardcoded}</option>
                     {#each eligible as m (m.id)}
                       <option value={m.model_id}>{m.nickname}</option>
                     {/each}
                   </select>
-                  <button class="ml-icon-btn" onclick={() => removeCover(sec)} title="Remove cover">×</button>
-                </div>
-              {:else}
-                <div class="mlm-cover-add-row">
-                  <button class="mlm-cover-add" onclick={() => addCover(sec)}>+ cover</button>
-                  <span class="mlm-cover-hint">produces two takes you'll pick between</span>
-                </div>
-              {/if}
 
-              <!-- skip divider (shown after track row when skipAfter is set) -->
-              {#if hasSkip}
-                <div class="mlm-skip-div">── skip ──</div>
-              {/if}
-            </div>
-          {/each}
+                  <button
+                    class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
+                    onclick={() => toggleSkip(sec)}
+                    title={hasSkip ? 'Remove skip after this section' : 'Add skip after this section'}
+                  >{hasSkip ? '- skip' : '+ skip'}</button>
+                </div>
+
+                {#if hasCover && coverEntry}
+                  <div class="mlm-cover-row">
+                    <span class="mlm-cover-glyph">&#10551;</span>
+                    <span class="mlm-cover-label">cover of {SECTION_LABELS[sec] ?? sec}</span>
+                    <select
+                      class="mlm-select mlm-cover-model"
+                      value={coverEntry.model}
+                      onchange={(e) => setCoverModel(sec, (e.target as HTMLSelectElement).value)}
+                    >
+                      {#each eligible as m (m.id)}
+                        <option value={m.model_id}>{m.nickname}</option>
+                      {/each}
+                    </select>
+                    <button class="ml-icon-btn" onclick={() => removeCover(sec)} title="Remove cover">×</button>
+                  </div>
+                {:else}
+                  <div class="mlm-cover-add-row">
+                    <button class="mlm-cover-add" onclick={() => addCover(sec)}>+ cover</button>
+                    <span class="mlm-cover-hint">produces two takes you'll pick between</span>
+                  </div>
+                {/if}
+
+                {#if hasSkip}
+                  <div class="mlm-skip-div">── skip ──</div>
+                {/if}
+              </div>
+            {/each}
+          {:else}
+            <!-- Archive track list — NO merge-rail, each track = 1 call -->
+            {#each archiveWorkingCopy.order as sec, idx (sec)}
+              {@const hasCover = archiveWorkingCopy.covers.some((c) => c.of === sec)}
+              {@const coverEntry = archiveWorkingCopy.covers.find((c) => c.of === sec)}
+              {@const hasSkip = !!archiveWorkingCopy.skipAfter[sec]}
+              {@const eligible = qualifying({ json: true })}
+
+              <div class="mlm-track-item">
+                <div class="mlm-track-row">
+                  <div class="mlm-reorder-btns">
+                    <button
+                      class="ml-icon-btn mlm-reorder-btn"
+                      disabled={idx === 0}
+                      onclick={() => moveSection(idx, -1)}
+                      title="Move up"
+                    >▲</button>
+                    <button
+                      class="ml-icon-btn mlm-reorder-btn"
+                      disabled={idx === archiveWorkingCopy.order.length - 1}
+                      onclick={() => moveSection(idx, 1)}
+                      title="Move down"
+                    >▼</button>
+                  </div>
+
+                  <div class="mlm-track-name-col">
+                    <span class="mlm-track-label">{SECTION_LABELS[sec] ?? sec}</span>
+                    <!-- Archive: always 1 call — no merge badge -->
+                    <span class="mlm-archive-call-badge">1 call</span>
+                  </div>
+
+                  <select
+                    class="mlm-select mlm-track-model"
+                    value={archiveWorkingCopy.models[sec] ?? '__default__'}
+                    onchange={(e) => setSectionPipelineModel(sec, (e.target as HTMLSelectElement).value)}
+                  >
+                    <option value="__default__">Use default · {digestBucket.resolved ?? digestBucket.hardcoded}</option>
+                    {#each eligible as m (m.id)}
+                      <option value={m.model_id}>{m.nickname}</option>
+                    {/each}
+                  </select>
+
+                  <button
+                    class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
+                    onclick={() => toggleSkip(sec)}
+                    title={hasSkip ? 'Remove skip after this track' : 'Add skip after this track'}
+                  >{hasSkip ? '- skip' : '+ skip'}</button>
+                </div>
+
+                {#if hasCover && coverEntry}
+                  <div class="mlm-cover-row">
+                    <span class="mlm-cover-glyph">&#10551;</span>
+                    <span class="mlm-cover-label">cover of {SECTION_LABELS[sec] ?? sec}</span>
+                    <select
+                      class="mlm-select mlm-cover-model"
+                      value={coverEntry.model}
+                      onchange={(e) => setCoverModel(sec, (e.target as HTMLSelectElement).value)}
+                    >
+                      {#each eligible as m (m.id)}
+                        <option value={m.model_id}>{m.nickname}</option>
+                      {/each}
+                    </select>
+                    <button class="ml-icon-btn" onclick={() => removeCover(sec)} title="Remove cover">×</button>
+                  </div>
+                {:else}
+                  <div class="mlm-cover-add-row">
+                    <button class="mlm-cover-add" onclick={() => addCover(sec)}>+ cover</button>
+                    <span class="mlm-cover-hint">re-run this task on a different model</span>
+                  </div>
+                {/if}
+
+                {#if hasSkip}
+                  <div class="mlm-skip-div">── skip ──</div>
+                {/if}
+              </div>
+            {/each}
+          {/if}
         </div>
 
         <!-- Right: run preview EP timeline (desktop only via CSS) -->
         <div class="mlm-run-preview">
           <div class="mlm-preview-head">Run preview</div>
-          {#each clientEPs as ep, i}
+          {#each activeEPs as ep, i}
             {#if i > 0}
               <div class="mlm-preview-skip">── skip ──</div>
             {/if}
@@ -1159,7 +1362,7 @@
     {:else}
       <!-- Preview mode: Option B EP cards -->
       <div class="mlm-ep-cards">
-        {#each clientEPs as ep, i}
+        {#each activeEPs as ep, i}
           {#if i > 0}
             <div class="mlm-skip-div">── skip ──</div>
           {/if}
@@ -1732,5 +1935,61 @@
   .mlm-section-select[disabled] {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+
+  /* ===== digest/archive kind switcher (sprint-46 b1) ====================== */
+  .mlm-kind-switcher {
+    display: inline-flex;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-3);
+    overflow: hidden;
+    align-self: flex-start;
+  }
+
+  .mlm-kind-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 18px;
+    border: none;
+    background: var(--surface-2);
+    font: 600 12px/1 var(--font-body);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .mlm-kind-btn + .mlm-kind-btn {
+    border-left: 1px solid var(--line-strong);
+  }
+  .mlm-kind-btn:hover { color: var(--fg); background: var(--surface-hover); }
+  .mlm-kind-btn.is-active {
+    background: var(--mash-pulp-soft);
+    border-color: var(--mash-pulp-edge);
+    color: var(--mash-pulp);
+    /* override border-left on sibling when active */
+  }
+
+  /* archive context note */
+  .mlm-archive-note {
+    margin: 0;
+    font: 400 12px/1.45 var(--font-mono);
+    color: var(--fg-quiet);
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+  }
+
+  /* archive "1 call" badge (replaces merge badge in archive mode) */
+  .mlm-archive-call-badge {
+    display: inline-flex;
+    align-self: flex-start;
+    font: 700 9px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    color: var(--fg-quiet);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    padding: 2px 5px;
+    white-space: nowrap;
   }
 </style>
