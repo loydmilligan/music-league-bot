@@ -751,7 +751,7 @@ export function buildUserPrompt(
 // Bump this string whenever the system/user prompt template changes materially.
 const DIGEST_PROMPT_VERSION = 'digest-v1';
 
-interface DraftLLMOutput {
+export interface DraftLLMOutput {
   sections: Record<SectionKind, unknown>;
   /**
    * sprint-43 a3/a4: cover outputs keyed by section.

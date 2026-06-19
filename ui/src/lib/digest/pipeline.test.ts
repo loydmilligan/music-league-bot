@@ -48,7 +48,7 @@ function makeUniformDb(model: string): Database.Database {
 function makePinDb(sectionPins: Partial<Record<string, string>>, defaultModel = 'base-model'): Database.Database {
   const pinMap: Record<string, string> = { digest_model: defaultModel, predict_model: defaultModel };
   for (const [section, model] of Object.entries(sectionPins)) {
-    pinMap[`digest_model_${section}`] = model;
+    if (model !== undefined) pinMap[`digest_model_${section}`] = model;
   }
   return makeDb(pinMap, defaultModel);
 }
