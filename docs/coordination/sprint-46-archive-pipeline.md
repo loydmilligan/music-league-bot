@@ -1,6 +1,6 @@
 ---
-status: planned
-shippedIn: null
+status: shipped
+shippedIn: v1.13.0
 campaign: generation-pipeline
 sprint: sprint-46-archive-pipeline
 version: v1.13.0

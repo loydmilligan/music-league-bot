@@ -297,6 +297,8 @@ followsFrom: openrouter-cost-management
 sprints:
   - sprint-43-pipeline-core
   - sprint-44-covers-ab-review
+  - sprint-45-pipeline-config-ui
+  - sprint-46-archive-pipeline
 summary: >-
   Closes the production gap found after sprint-41: per-section model pins did
   nothing on a fresh digest because the draft was a single hard-coded call. A

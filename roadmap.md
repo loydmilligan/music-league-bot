@@ -1008,6 +1008,20 @@ summary: >-
   review surface in the digest flow + an llm_preference table logging each pick as a
   head-to-head model-preference signal. Default pipeline covers Flow on Sonnet.
 ---
+id: archive-pipeline
+title: Archive (b-side) Pipeline
+stage: shipped
+shippedIn: v1.13.0
+effort: large
+source: owner
+campaign: generation-pipeline
+sprint: sprint-46-archive-pipeline
+summary: >-
+  Extended the generation pipeline to b-side archive generation: buildReadModel now runs
+  an archive pipeline (order + skip/context + covers + per-task model), with a digest/archive
+  switcher on the Pipeline tab. No merge (b-side tasks are heterogeneous — each its own call);
+  regression-guarded so the degenerate archive pipeline reproduces today's b-side generation.
+---
 id: pipeline-config-ui
 title: Pipeline Config UI
 stage: shipped
