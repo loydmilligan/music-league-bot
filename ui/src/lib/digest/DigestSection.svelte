@@ -24,6 +24,21 @@
     items?: unknown[];
   };
 
+  // Cover A/B data shape (Contract 1 from sprint-44 coord-doc).
+  // Null when no pipeline cover exists for this section.
+  export type CoverData = {
+    regenId: string;
+    originalContent: unknown;
+    coverContent: unknown;
+    originalModel: string;
+    coverModel: string;
+    originalCostUsd: number;
+    coverCostUsd: number;
+    originalLatencyMs: number;
+    coverLatencyMs: number;
+    picked: 'original' | 'cover' | null;
+  };
+
   type Props = {
     kind: SectionKind;
     label: string;
@@ -46,6 +61,11 @@
     /** Persist a non-LLM inline content edit. The page PATCHes + invalidates. */
     onEditSave?: (content: unknown) => void;
     onKebabAction: (action: 'edit' | 'up' | 'down' | 'delete') => void;
+    /** Pipeline cover A/B data. Null = no cover for this section (renders as today). */
+    coverData?: CoverData | null;
+    /** Called when the user picks a take. Parent POSTs to cover-pick + updates content.
+     *  Returns a Promise so the child can show the correct badge phase. */
+    onCoverPick?: (picked: 'original' | 'cover') => Promise<void>;
   };
   let {
     kind,
@@ -63,10 +83,80 @@
     onVariantChange,
     onEditSave,
     onKebabAction,
+    coverData = null,
+    onCoverPick,
   }: Props = $props();
 
   // Inline (non-LLM) edit mode, toggled by the kebab "Edit inline" action.
   let editing = $state(false);
+
+  // -------- Cover A/B control (sprint-44 b2-cover-ab-block) ----------
+  // selectedPick tracks which take is currently displayed. Initialized to 'cover'
+  // (the default per spec — the upgrade is shown first). Synced to coverData.picked
+  // on first render when a prior pick exists.
+  let selectedPick = $state<'original' | 'cover'>('cover');
+  $effect(() => {
+    if (coverData?.picked) {
+      selectedPick = coverData.picked;
+    } else {
+      selectedPick = 'cover';
+    }
+  });
+
+  // The content currently displayed: the selected take's content, or the section's
+  // main `content` prop when there is no cover.
+  const displayContent = $derived<unknown>(
+    coverData !== null && coverData !== undefined
+      ? selectedPick === 'cover'
+        ? coverData.coverContent
+        : coverData.originalContent
+      : content,
+  );
+
+  // Transient "pick saved" badge — same fade pattern as the delight "✦ marked" badge.
+  type CoverPickPhase = 'idle' | 'saving' | 'saved' | 'error';
+  let coverPickPhase = $state<CoverPickPhase>('idle');
+  let coverPickError = $state('');
+
+  function shortModelName(model: string): string {
+    // e.g. "anthropic/claude-haiku-4-5" → "claude-haiku-4-5"
+    const parts = model.split('/');
+    return parts[parts.length - 1] ?? model;
+  }
+  function fmtCost(usd: number): string {
+    if (usd === 0) return '$0';
+    if (usd < 0.01) return `$${usd.toFixed(4)}`;
+    return `$${usd.toFixed(3)}`;
+  }
+  function fmtLatency(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+
+  async function handleCoverPick(pick: 'original' | 'cover') {
+    if (coverPickPhase === 'saving') return;
+    const prevPick = selectedPick;
+    selectedPick = pick; // optimistic
+    coverPickPhase = 'saving';
+    coverPickError = '';
+    try {
+      await onCoverPick?.(pick);
+      // Badge: transient success, fades after 3s.
+      coverPickPhase = 'saved';
+      setTimeout(() => {
+        if (coverPickPhase === 'saved') coverPickPhase = 'idle';
+      }, 3000);
+    } catch (err) {
+      // Rollback optimistic pick on failure.
+      selectedPick = prevPick;
+      coverPickPhase = 'error';
+      coverPickError = err instanceof Error ? err.message : String(err);
+      // Auto-clear error badge after 5s.
+      setTimeout(() => {
+        if (coverPickPhase === 'error') coverPickPhase = 'idle';
+      }, 5000);
+    }
+  }
 
   // -------- Delight control (sprint-42 b1-delight-control) ----------
   // Three states: idle → open (modal) → marked (transient success badge).
@@ -78,8 +168,9 @@
 
   // Extract sentence-level spans from the section's body text for the span-picker.
   // Falls back to the whole body as a single span when there are no sentence breaks.
+  // Uses displayContent (the currently selected cover/original take) when a cover exists.
   const delightSpans = $derived.by<string[]>(() => {
-    const body = (content as { body?: string } | null)?.body?.trim() ?? '';
+    const body = (displayContent as { body?: string } | null)?.body?.trim() ?? '';
     if (!body) return [];
     // Split on sentence-ending punctuation followed by a space or end-of-string.
     const raw = body.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) ?? [];
@@ -172,7 +263,8 @@
     onKebabAction(action);
   }
 
-  const c = $derived((content ?? {}) as SectionContent);
+  // Use displayContent (selected cover/original take) for rendering.
+  const c = $derived((displayContent ?? {}) as SectionContent);
   const items = $derived(Array.isArray(c.items) ? c.items : []);
   const eyebrow = $derived(c.title?.trim() ? c.title : label);
 
@@ -415,6 +507,48 @@
 
   <section class="dg-section">
     <p class="dg-section-eyebrow">{eyebrow}</p>
+
+    {#if coverData !== null && coverData !== undefined}
+      <!-- Cover A/B segmented control (sprint-44 b2-cover-ab-block).
+           Placed ABOVE body content so the user sees the choice before reading the default.
+           Visual model: dg-variant-switch segmented control pattern. -->
+      <div class="dg-cover-ab" data-export-hide="1">
+        <div class="dg-cover-ab-head">
+          <span class="dg-cover-ab-label">pipeline cover</span>
+          {#if coverPickPhase === 'saved'}
+            <span class="dg-cover-ab-saved">pick saved</span>
+          {:else if coverPickPhase === 'error'}
+            <span class="dg-cover-ab-err" role="alert">{coverPickError}</span>
+          {/if}
+        </div>
+        <div class="dg-cover-ab-switch" role="group" aria-label="Choose take">
+          <button
+            type="button"
+            class="dg-cover-ab-btn"
+            class:is-on={selectedPick === 'original'}
+            onclick={() => handleCoverPick('original')}
+            disabled={coverPickPhase === 'saving'}
+            aria-pressed={selectedPick === 'original'}
+          >
+            <span class="dg-cover-ab-model">{shortModelName(coverData.originalModel)}</span>
+            <span class="dg-cover-ab-meta">{fmtCost(coverData.originalCostUsd)} · {fmtLatency(coverData.originalLatencyMs)}</span>
+            <span class="dg-cover-ab-tag">Original</span>
+          </button>
+          <button
+            type="button"
+            class="dg-cover-ab-btn dg-cover-ab-btn--cover"
+            class:is-on={selectedPick === 'cover'}
+            onclick={() => handleCoverPick('cover')}
+            disabled={coverPickPhase === 'saving'}
+            aria-pressed={selectedPick === 'cover'}
+          >
+            <span class="dg-cover-ab-model">{shortModelName(coverData.coverModel)}</span>
+            <span class="dg-cover-ab-meta">{fmtCost(coverData.coverCostUsd)} · {fmtLatency(coverData.coverLatencyMs)}</span>
+            <span class="dg-cover-ab-tag">Cover · saw prior sections</span>
+          </button>
+        </div>
+      </div>
+    {/if}
 
     {#if editing}
       <SectionInlineEditor
@@ -779,4 +913,94 @@
     color: var(--ink-0);
   }
   .dg-delight-save:disabled { cursor: default; opacity: 0.6; }
+
+  /* -------- Cover A/B block (sprint-44 b2-cover-ab-block) ---------- */
+  .dg-cover-ab {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+  }
+  .dg-cover-ab-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .dg-cover-ab-label {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .dg-cover-ab-saved {
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--moss, var(--fg-muted));
+    animation: dg-cover-ab-fade 3s ease-out forwards;
+  }
+  @keyframes dg-cover-ab-fade {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .dg-cover-ab-err {
+    font: 500 10px/1.3 var(--font-mono);
+    color: var(--ember);
+  }
+  .dg-cover-ab-switch {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .dg-cover-ab-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 140px;
+    min-width: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: 8px 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                background var(--dur-fast) var(--ease-out);
+  }
+  .dg-cover-ab-btn:hover:not(:disabled) {
+    border-color: var(--line-strong);
+  }
+  .dg-cover-ab-btn.is-on {
+    background: var(--mash-pulp-soft);
+    border-color: var(--mash-pulp);
+  }
+  .dg-cover-ab-btn--cover.is-on {
+    background: var(--amber-soft);
+    border-color: var(--amber);
+  }
+  .dg-cover-ab-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+  .dg-cover-ab-model {
+    font: 700 11px/1.2 var(--font-mono);
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dg-cover-ab-meta {
+    font: 400 10px/1.2 var(--font-mono);
+    color: var(--fg-muted);
+  }
+  .dg-cover-ab-tag {
+    font: 600 10px/1.2 var(--font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fg-quiet, var(--fg-muted));
+    margin-top: 2px;
+  }
 </style>

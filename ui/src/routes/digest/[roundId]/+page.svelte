@@ -2,7 +2,7 @@
   import '$lib/digest/digest.css';
   import '$lib/content/content.css';
   import { invalidateAll } from '$app/navigation';
-  import DigestSection, { type SectionState } from '$lib/digest/DigestSection.svelte';
+  import DigestSection, { type SectionState, type CoverData } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
   import GenerateModal, { type GenerateParams } from '$lib/digest/GenerateModal.svelte';
   import RelContextDiffModal, { type DiffSegment } from '$lib/digest/RelContextDiffModal.svelte';
@@ -496,6 +496,89 @@
 
   let lastInstructions = $state<Record<string, string>>({});
   let lastChips = $state<Record<string, string[]>>({});
+
+  // -------- Cover A/B data (sprint-44 b1-cover-data-fetch + b3-page-pick-wire) ----------
+  // Lazy per-section fetch: coverDataMap is populated when a section is first visible.
+  // cover data is optional enrichment — the page renders without it; the A/B block
+  // appears when data arrives. Fetched on mount for all sections in the current view.
+  // Approach: fetch for all rendered sections in parallel on stage entry (N calls but small N;
+  // the backend returns { cover: null } quickly for sections without a cover).
+  // Uses $effect (Svelte 5 runes) — no onMount needed.
+
+  let coverDataMap = $state<Map<string, CoverData | null>>(new Map());
+
+  async function fetchCoverData(sectionId: string) {
+    // Skip if already fetched for this section.
+    if (coverDataMap.has(sectionId)) return;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/sections/${sectionId}/cover`);
+      if (!res.ok) {
+        // 404 or unexpected error — treat as no cover (don't crash the page).
+        coverDataMap = new Map(coverDataMap).set(sectionId, null);
+        return;
+      }
+      const body = (await res.json().catch(() => ({}))) as { cover: CoverData | null };
+      coverDataMap = new Map(coverDataMap).set(sectionId, body.cover ?? null);
+    } catch {
+      // Network error — treat as no cover.
+      coverDataMap = new Map(coverDataMap).set(sectionId, null);
+    }
+  }
+
+  // Fetch cover data for all sections when entering refine/finalize stage.
+  // Fire in parallel; each sets its own map entry on arrival.
+  $effect(() => {
+    if (data.stage === 'refine' || data.stage === 'finalize') {
+      // Reset map when sections change (e.g. after regen or round change).
+      coverDataMap = new Map();
+      for (const s of data.sections) {
+        void fetchCoverData(s.id);
+      }
+    }
+  });
+
+  // Cover pick handler: POST to cover-pick endpoint, update local section content
+  // and coverDataMap pick status from the response.
+  async function handleCoverPick(sectionId: string, picked: 'original' | 'cover') {
+    try {
+      const res = await fetch(
+        `/api/digest/${data.roundId}/sections/${sectionId}/cover-pick`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ picked }),
+        },
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`cover-pick failed (${res.status}) ${text.slice(0, 200)}`);
+      }
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        preferenceId?: string;
+        publishedContent?: unknown;
+      };
+      // Update local section content optimistically from publishedContent.
+      if (body.publishedContent !== undefined) {
+        // Find the section in data.sections and update its content.
+        // invalidateAll would work but is heavier — direct mutation is lighter.
+        const sec = (data.sections as undefined | Array<{ id: string; content: unknown }>)?.find((s) => s.id === sectionId);
+        if (sec) {
+          sec.content = body.publishedContent;
+        }
+      }
+      // Update pick status in the coverDataMap.
+      const existing = coverDataMap.get(sectionId);
+      if (existing) {
+        coverDataMap = new Map(coverDataMap).set(sectionId, { ...existing, picked });
+      }
+    } catch (err) {
+      showError(err);
+      // Rollback optimistic pick in DigestSection happens naturally since
+      // the section's content prop is not updated; the badge phase stays 'error'.
+      throw err; // re-throw so DigestSection can show the error badge
+    }
+  }
 
   // -------- Variant system (sprint-14, +standings sprint-15) ----------
   // Visual component registry — frontend wires viz's visual components here.
@@ -1015,6 +1098,8 @@
         onVariantChange={(v) => changeVariant(section.id, v)}
         onEditSave={(content) => saveInlineEdit(section.id, content)}
         onKebabAction={(action) => kebabAction(section.id, action)}
+        coverData={coverDataMap.get(section.id) ?? null}
+        onCoverPick={(picked) => handleCoverPick(section.id, picked)}
       />
     {/each}
 
