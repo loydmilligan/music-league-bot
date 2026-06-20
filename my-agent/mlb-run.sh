@@ -7,7 +7,15 @@
 # --chat can be:
 #   a file path   → parses it, filters to the round's date window (submission → voting + 3 days)
 #   quoted text   → used verbatim
-#   omitted       → no chat content (section will be skipped or left minimal)
+#   omitted       → auto-detect from ~/Downloads/mlb-chat/ (see below)
+#
+# Auto chat ingestion (when --chat is omitted):
+#   Drop a WhatsApp export zip into ~/Downloads/mlb-chat/.
+#   The zip is matched to the current league by word overlap between the
+#   zip filename and the league name (e.g. "Hip Jammers" → *hip jammers*.zip).
+#   First run:  finds the matching unprocessed zip, extracts it, renames *.done.zip
+#   Regen run:  no unprocessed zip → uses most-recently-modified matching *.done.zip
+#   No match:   chat is skipped
 #
 # Examples:
 #   mlb-run --round 108
@@ -71,17 +79,97 @@ echo "Round: [$ROUND_ID] $ROUND_NAME"
 echo "League: [$LEAGUE_ID] $LEAGUE_NAME"
 echo "Dates: sub=$SUB_DEADLINE  vote=$VOTE_DEADLINE"
 
+# -- Auto-detect chat from ~/Downloads/mlb-chat/ when --chat not given --
+MLB_CHAT_DIR="$HOME/Downloads/mlb-chat"
+EXTRACTED_TXT=""  # set below if we extract from a zip; cleaned up afterward
+
+extract_zip() {
+  local zip_path="$1"
+  EXTRACTED_TXT=$(mktemp /tmp/mlb-chat-XXXXXX.txt)
+  python3 -c "
+import zipfile, sys
+with zipfile.ZipFile('$zip_path') as z:
+    txts = [n for n in z.namelist() if n.endswith('.txt')]
+    if not txts:
+        print('ERROR: no .txt in zip', file=sys.stderr); sys.exit(1)
+    with z.open(txts[0]) as src, open('$EXTRACTED_TXT', 'wb') as dst:
+        dst.write(src.read())
+"
+}
+
+# Score a zip filename against the league name: count words (>2 chars) in common
+score_match() {
+  python3 -c "
+import os, re
+league = '$LEAGUE_NAME'.lower()
+fname  = os.path.basename('$1').lower()
+words  = [w for w in re.split(r'\W+', league) if len(w) > 2]
+print(sum(1 for w in words if w in fname))
+"
+}
+
+if [ -z "$CHAT_INPUT" ] && [ -d "$MLB_CHAT_DIR" ]; then
+  # Collect all unprocessed zips, score each against league name, pick best match
+  BEST_SCORE=0
+  BEST_UNPROCESSED=""
+  BEST_MTIME=0
+  while IFS= read -r -d '' zipfile; do
+    score=$(score_match "$zipfile")
+    mtime=$(stat -c %Y "$zipfile" 2>/dev/null || echo 0)
+    if [ "$score" -gt "$BEST_SCORE" ] || { [ "$score" -eq "$BEST_SCORE" ] && [ "$mtime" -gt "$BEST_MTIME" ]; }; then
+      BEST_SCORE="$score"
+      BEST_UNPROCESSED="$zipfile"
+      BEST_MTIME="$mtime"
+    fi
+  done < <(find "$MLB_CHAT_DIR" -maxdepth 1 -name "*.zip" ! -name "*.done.*" -print0 2>/dev/null)
+
+  if [ "$BEST_SCORE" -gt 0 ] && [ -n "$BEST_UNPROCESSED" ]; then
+    extract_zip "$BEST_UNPROCESSED"
+    DONE_NAME="${BEST_UNPROCESSED%.zip}.done.zip"
+    mv "$BEST_UNPROCESSED" "$DONE_NAME"
+    echo "Chat: $(basename "$BEST_UNPROCESSED") → $(basename "$DONE_NAME") (score=$BEST_SCORE)"
+    CHAT_INPUT="$EXTRACTED_TXT"
+
+  else
+    # Regen: no matching unprocessed zip — find best matching processed zip
+    BEST_SCORE=0
+    BEST_PROCESSED=""
+    BEST_MTIME=0
+    while IFS= read -r -d '' zipfile; do
+      score=$(score_match "$zipfile")
+      mtime=$(stat -c %Y "$zipfile" 2>/dev/null || echo 0)
+      if [ "$score" -gt "$BEST_SCORE" ] || { [ "$score" -eq "$BEST_SCORE" ] && [ "$mtime" -gt "$BEST_MTIME" ]; }; then
+        BEST_SCORE="$score"
+        BEST_PROCESSED="$zipfile"
+        BEST_MTIME="$mtime"
+      fi
+    done < <(find "$MLB_CHAT_DIR" -maxdepth 1 -name "*.done.zip" -print0 2>/dev/null)
+
+    if [ "$BEST_SCORE" -gt 0 ] && [ -n "$BEST_PROCESSED" ]; then
+      extract_zip "$BEST_PROCESSED"
+      echo "Chat: regen — $(basename "$BEST_PROCESSED") (score=$BEST_SCORE)"
+      CHAT_INPUT="$EXTRACTED_TXT"
+    elif [ -n "$BEST_PROCESSED" ]; then
+      # Fallback: no word match at all, just use most recent processed zip and warn
+      extract_zip "$BEST_PROCESSED"
+      echo "Chat: regen — no league match found; using most recent: $(basename "$BEST_PROCESSED") (check this is the right chat)"
+      CHAT_INPUT="$EXTRACTED_TXT"
+    else
+      echo "Chat: no zip found in $MLB_CHAT_DIR — skipping chat"
+    fi
+  fi
+fi
+
 # -- Handle chat input --
 CHAT_CONTENT="none"
 
 if [ -n "$CHAT_INPUT" ]; then
   if [ -f "$CHAT_INPUT" ]; then
-    echo "Chat: filtering $CHAT_INPUT to round date window..."
+    echo "Chat: filtering to round date window..."
     CHAT_CONTENT=$(python3 << PYEOF
 import re, sys
 from datetime import datetime, timedelta
 
-# Parse round date window: sub_deadline - 1 day through vote_deadline + 3 days
 sub_str = """$SUB_DEADLINE"""
 vote_str = """$VOTE_DEADLINE"""
 
@@ -94,7 +182,6 @@ def parse_round_date(s):
 window_start = parse_round_date(sub_str) - timedelta(days=1) if parse_round_date(sub_str) else None
 window_end   = parse_round_date(vote_str) + timedelta(days=3) if parse_round_date(vote_str) else None
 
-# WhatsApp line format: M/DD/YY, H:MM AM/PM - ...
 line_re = re.compile(r'^(\d{1,2}/\d{1,2}/\d{2}), \d{1,2}:\d{2} [AP]M - ')
 
 lines = open("""$CHAT_INPUT""", encoding='utf-8', errors='replace').readlines()
@@ -110,7 +197,7 @@ for line in lines:
             dt = None
         if dt and window_start and window_end:
             current_in_window = window_start <= dt <= window_end
-        elif not window_start:  # no dates known — include everything
+        elif not window_start:
             current_in_window = True
     if current_in_window:
         out.append(line.rstrip())
@@ -150,3 +237,6 @@ echo ""
 echo "first_prompt.txt written. Launching agent..."
 echo ""
 bash launch.sh
+
+# Clean up temp extracted txt (if we created one)
+[ -n "$EXTRACTED_TXT" ] && rm -f "$EXTRACTED_TXT"
