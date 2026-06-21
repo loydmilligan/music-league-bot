@@ -22,7 +22,8 @@ function getDb(): Database.Database {
       msg_hash     TEXT NOT NULL,
       captured_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
     );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_msg_hash ON chat_messages(msg_hash);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_msg_hash    ON chat_messages(msg_hash);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_msg_natural ON chat_messages(group_name, sender, ts, text);
     CREATE INDEX IF NOT EXISTS idx_chat_msg_group_ts  ON chat_messages(group_name, ts);
     CREATE INDEX IF NOT EXISTS idx_chat_msg_platform  ON chat_messages(platform);
   `);

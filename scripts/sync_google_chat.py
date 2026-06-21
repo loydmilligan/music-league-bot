@@ -77,6 +77,7 @@ def ensure_table(db: sqlite3.Connection):
         )
     ''')
     db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_msg_hash ON chat_messages(msg_hash)')
+    db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_msg_natural ON chat_messages(group_name, sender, ts, text)')
     db.execute('CREATE INDEX IF NOT EXISTS idx_chat_msg_group_ts ON chat_messages(group_name, ts)')
 
 
