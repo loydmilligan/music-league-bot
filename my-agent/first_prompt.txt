@@ -1,0 +1,13 @@
+Automate the round transition for Music League.
+
+League: Hip Jammers
+League ID: 1
+Round ID: 103
+
+Chat content: none
+
+NOTE: This is a test run on a past completed round. Skip STEP 8 (advance active round) — do not change the league's active round, as round 108 is the real current active round.
+
+Run steps 1-7 only: confirm state → validate data → generate/retrieve draft → export HTML → finalize.
+
+Write sharing-ready.md to /mnt/session/outputs/ with the digest URL and the sharing message for Hip Jammers (WhatsApp), then print the same summary.

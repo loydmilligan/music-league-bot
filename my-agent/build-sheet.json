@@ -1,0 +1,41 @@
+{
+  "name": "round-transition-agent",
+  "description": "Automates the end-of-round workflow for music-league-bot: end voting → validate data → generate digest → publish HTML → advance to next round → output sharing messages.",
+  "problem": "The round transition workflow — end voting, check data, generate digest, export HTML, share the link, advance to the next round — is currently done manually across 10+ UI steps.",
+  "agent": {
+    "model": "claude-sonnet-4-6",
+    "toolset": "agent_toolset_20260401"
+  },
+  "environment": {
+    "type": "cloud",
+    "networking": "unrestricted"
+  },
+  "trigger": {
+    "type": "manual",
+    "input": "league name, league ID, round ID, pasted chat content"
+  },
+  "outcome": {
+    "max_iterations": 15,
+    "criteria": [
+      "All required data checks pass before generation (submissions, votes, vote comments, round metadata)",
+      "Digest draft generated without errors",
+      "HTML export URL returned and accessible (HTTP 200)",
+      "League active round advanced to the next round (or reason reported if none found)"
+    ]
+  },
+  "connectors": [],
+  "vault": null,
+  "memory_store": null,
+  "app_base_url": "https://mlbot2.mattmariani.com",
+  "leagues": [
+    { "id": "TODO", "name": "TODO", "share_via": "WhatsApp" },
+    { "id": "TODO", "name": "TODO", "share_via": "WhatsApp" },
+    { "id": "TODO", "name": "TODO", "share_via": "GChat" }
+  ],
+  "versions": {
+    "v0": "Manual trigger; chat content as initial input; HIL pause if data checks fail",
+    "v1": "WhatsApp automated send (Business API + vault); GChat incoming webhook",
+    "v2": "Scheduled polling deployment for auto-round-end; automated chat ingestion",
+    "v3": "Archive generation automation (after content quality improvements)"
+  }
+}
