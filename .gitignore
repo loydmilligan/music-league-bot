@@ -41,3 +41,10 @@ docs/prototype/
 docs/*.zip
 docs/*-proto/
 docs/mashco-design-handoff-digest/
+docs/design/**/*_unzip/
+
+# SvelteKit build cache
+.svelte-kit/
+
+# Runtime-generated bside league slug dirs (created by the digest pipeline)
+bside/public/*/
