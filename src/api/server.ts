@@ -5,6 +5,14 @@ import { SpotifyAdapter } from '../spotify/adapter.js';
 import { kvDelete, kvGet, kvSet } from './tournamentStore.js';
 import { computePopularityProxies, getLastfmTrackInfo } from './lastfm.js';
 import { getMlAuthState, probeMlAuth, startMlAuthHeartbeat } from './mlAuthHeartbeat.js';
+import {
+  ingestRelayPayload,
+  listChatGroups,
+  exportChatMessages,
+  exportByLeagueName,
+  formatAsWhatsAppText,
+  type RelayPayload,
+} from '../storage/chatMessagesDb.js';
 
 const PORT = parseInt(process.env.BRACKET_API_PORT ?? '3001', 10);
 const spotify = new SpotifyAdapter();
@@ -176,6 +184,81 @@ const server = createServer(async (req, res) => {
       json(res, 200, state);
     } catch (err) {
       json(res, 500, { error: err instanceof Error ? err.message : 'probe failed' });
+    }
+    return;
+  }
+
+  // ── Chat capture relay (receives NotifAI Android payloads) ──────────────────
+  if (method === 'POST' && url === '/webhooks/relay') {
+    if (req.headers['x-grouprelay-test']) {
+      json(res, 200, { ok: true, test: true });
+      return;
+    }
+    try {
+      const raw = await readBody(req);
+      const payload = JSON.parse(raw) as RelayPayload;
+      const { inserted, skipped } = ingestRelayPayload(payload);
+      const label = payload.device_id ?? payload.source_type ?? '?';
+      console.log(`[chat-relay] ${label}: +${inserted} new, ${skipped} dup`);
+      json(res, 201, { ok: true, inserted, skipped });
+    } catch (err) {
+      console.error('[chat-relay] error:', err);
+      json(res, 500, { error: err instanceof Error ? err.message : 'relay error' });
+    }
+    return;
+  }
+
+  // ── Chat message export ─────────────────────────────────────────────────────
+  if (method === 'GET' && url.startsWith('/chat/groups')) {
+    const qs = new URL(url, 'http://localhost').searchParams;
+    const platform = qs.get('platform') ?? undefined;
+    json(res, 200, { groups: listChatGroups(platform) });
+    return;
+  }
+
+  if (method === 'GET' && url.startsWith('/chat/export')) {
+    try {
+      const qs = new URL(url, 'http://localhost').searchParams;
+      const group = qs.get('group');
+      const league = qs.get('league');
+      const start = qs.get('start');
+      const end = qs.get('end');
+      const platform = qs.get('platform') ?? undefined;
+      const fmt = qs.get('fmt') ?? 'whatsapp';
+
+      if (!start || !end) {
+        json(res, 400, { error: 'start and end are required (ISO8601)' });
+        return;
+      }
+
+      let messages;
+      let resolvedGroup = group;
+
+      if (league && !group) {
+        const result = exportByLeagueName({ leagueName: league, start, end, platform });
+        if (!result) { json(res, 200, fmt === 'json' ? [] : ''); return; }
+        messages = result.messages;
+        resolvedGroup = result.groupName;
+      } else if (group) {
+        messages = exportChatMessages({ groupName: group, start, end, platform });
+      } else {
+        json(res, 400, { error: 'group or league parameter required' }); return;
+      }
+
+      if (fmt === 'json') {
+        json(res, 200, messages);
+      } else {
+        setCors(res);
+        res.writeHead(200, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Chat-Group': resolvedGroup ?? '',
+          'X-Message-Count': String(messages.length),
+        });
+        res.end(formatAsWhatsAppText(messages));
+      }
+    } catch (err) {
+      console.error('[chat-export] error:', err);
+      json(res, 500, { error: err instanceof Error ? err.message : 'export error' });
     }
     return;
   }

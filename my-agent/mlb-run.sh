@@ -108,6 +108,87 @@ print(sum(1 for w in words if w in fname))
 "
 }
 
+# -- Primary: check DB for captured messages in the round window --
+if [ -z "$CHAT_INPUT" ] && [ -n "$SUB_DEADLINE" ] && [ -n "$VOTE_DEADLINE" ]; then
+  DB_CHAT=$(python3 -c "
+import sqlite3, re, json
+from datetime import datetime, timedelta, timezone
+
+db_path = '$DB'
+league  = '$LEAGUE_NAME'
+sub     = '$SUB_DEADLINE'
+vote    = '$VOTE_DEADLINE'
+
+def parse_iso(s):
+    for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
+        try: return datetime.strptime(s[:len(fmt)], fmt).replace(tzinfo=timezone.utc)
+        except: pass
+    return None
+
+sub_dt  = parse_iso(sub)
+vote_dt = parse_iso(vote)
+if not sub_dt or not vote_dt:
+    print('NO_DATES'); exit()
+
+start = (sub_dt - timedelta(days=1)).isoformat()
+end   = (vote_dt + timedelta(days=3)).isoformat()
+
+try:
+    db = sqlite3.connect(db_path)
+    groups = [r[0] for r in db.execute('SELECT DISTINCT group_name FROM chat_messages')]
+except Exception:
+    print('NO_DB'); exit()
+
+if not groups:
+    print('NO_MSGS'); exit()
+
+words = [w for w in re.split(r'\W+', league.lower()) if len(w) > 2]
+best_group, best_score = '', 0
+for g in groups:
+    score = sum(1 for w in words if w in g.lower())
+    if score > best_score:
+        best_score, best_group = score, g
+
+if best_score == 0:
+    print('NO_MATCH'); exit()
+
+rows = db.execute('''
+  SELECT ts, sender, text FROM chat_messages
+  WHERE group_name = ? AND ts >= ? AND ts <= ?
+  ORDER BY ts ASC
+''', (best_group, start, end)).fetchall()
+
+if not rows:
+    print('EMPTY'); exit()
+
+print(f'DB:{best_group}:{len(rows)}')
+for ts, sender, text in rows:
+    dt = datetime.fromisoformat(ts.replace('Z','+00:00'))
+    date = f'{dt.month}/{dt.day}/{str(dt.year)[-2:]}'
+    h = dt.hour % 12 or 12
+    ampm = 'AM' if dt.hour < 12 else 'PM'
+    mins = str(dt.minute).zfill(2)
+    line = text.replace('\n', ' ')
+    print(f'{date}, {h}:{mins} {ampm} - {sender}: {line}')
+" 2>/dev/null || echo "NO_DB")
+
+  FIRST_LINE=$(echo "$DB_CHAT" | head -1)
+  if [[ "$FIRST_LINE" == DB:* ]]; then
+    GROUP_NAME_USED=$(echo "$FIRST_LINE" | cut -d: -f2)
+    MSG_COUNT=$(echo "$FIRST_LINE" | cut -d: -f3)
+    CHAT_CONTENT=$(echo "$DB_CHAT" | tail -n +2)
+    echo "Chat: DB — group '$GROUP_NAME_USED', $MSG_COUNT messages"
+    # Skip the zip/file handling below by jumping to write first_prompt.txt directly
+    SKIP_CHAT_PROCESSING=1
+  else
+    case "$FIRST_LINE" in
+      NO_DB|NO_DATES) echo "Chat: DB not available, falling back to zip" ;;
+      NO_MSGS|NO_MATCH) echo "Chat: no captured messages for this league, falling back to zip" ;;
+      EMPTY) echo "Chat: no messages in round window in DB, falling back to zip" ;;
+    esac
+  fi
+fi
+
 if [ -z "$CHAT_INPUT" ] && [ -d "$MLB_CHAT_DIR" ]; then
   # Collect all unprocessed zips, score each against league name, pick best match
   BEST_SCORE=0
@@ -160,10 +241,11 @@ if [ -z "$CHAT_INPUT" ] && [ -d "$MLB_CHAT_DIR" ]; then
   fi
 fi
 
-# -- Handle chat input --
-CHAT_CONTENT="none"
+# -- Handle chat input (skipped if DB already populated CHAT_CONTENT) --
+CHAT_CONTENT="${CHAT_CONTENT:-none}"
+SKIP_CHAT_PROCESSING="${SKIP_CHAT_PROCESSING:-0}"
 
-if [ -n "$CHAT_INPUT" ]; then
+if [ "$SKIP_CHAT_PROCESSING" = "0" ] && [ -n "$CHAT_INPUT" ]; then
   if [ -f "$CHAT_INPUT" ]; then
     echo "Chat: filtering to round date window..."
     CHAT_CONTENT=$(python3 << PYEOF
@@ -182,7 +264,7 @@ def parse_round_date(s):
 window_start = parse_round_date(sub_str) - timedelta(days=1) if parse_round_date(sub_str) else None
 window_end   = parse_round_date(vote_str) + timedelta(days=3) if parse_round_date(vote_str) else None
 
-line_re = re.compile(r'^(\d{1,2}/\d{1,2}/\d{2}), \d{1,2}:\d{2} [AP]M - ')
+line_re = re.compile(r'^(\d{1,2}/\d{1,2}/\d{2}), \d{1,2}:\d{2}[\s ]?[AP]M - ')
 
 lines = open("""$CHAT_INPUT""", encoding='utf-8', errors='replace').readlines()
 out = []
