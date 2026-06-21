@@ -197,6 +197,9 @@ const server = createServer(async (req, res) => {
     try {
       const raw = await readBody(req);
       const payload = JSON.parse(raw) as RelayPayload;
+      if (process.env.RELAY_DEBUG) {
+        console.log('[chat-relay:raw]', JSON.stringify(payload, null, 2));
+      }
       const { inserted, skipped } = ingestRelayPayload(payload);
       const label = payload.device_id ?? payload.source_type ?? '?';
       console.log(`[chat-relay] ${label}: +${inserted} new, ${skipped} dup`);

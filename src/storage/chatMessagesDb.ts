@@ -102,10 +102,15 @@ export function ingestRelayPayload(payload: RelayPayload): { inserted: number; s
 
   let inserted = 0, skipped = 0;
 
+  const debug = !!process.env.RELAY_DEBUG;
+
   const run = db.transaction(() => {
     for (const e of events) {
       const text = (e.text ?? '').trim();
-      if (!text) continue;
+      if (!text) {
+        if (debug) console.log('[chat-relay:ingest] skip — empty text', e);
+        continue;
+      }
       const platform = pkgToPlatform(e.package_name ?? e.platform ?? '');
       const groupName = (e.conversation ?? '').trim() || 'Unknown Group';
       const groupKey = e.conversation_key ?? null;
@@ -115,7 +120,13 @@ export function ingestRelayPayload(payload: RelayPayload): { inserted: number; s
       const hash = msgHash(sourceType, platform, groupName, sender, tsMs, text);
 
       const result = insert.run(randomUUID(), platform, groupName, groupKey, sender, text, tsIso, hash);
-      if (result.changes > 0) inserted++; else skipped++;
+      if (result.changes > 0) {
+        if (debug) console.log(`[chat-relay:ingest] INSERT  ${platform}/${groupName}/${sender}: "${text.slice(0, 60)}"`);
+        inserted++;
+      } else {
+        if (debug) console.log(`[chat-relay:ingest] SKIPPED ${platform}/${groupName}/${sender}: "${text.slice(0, 60)}"`);
+        skipped++;
+      }
     }
   });
 
