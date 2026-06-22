@@ -2,11 +2,14 @@
   interface Props {
     groups: { group_name: string; platform: string }[];
     senders: string[];
+    seasons: number[];
     selectedGroup: string;
+    selectedSeason: number | null;
     selectedSender: string;
     mediaOnly: boolean;
     searchQuery: string;
     onGroupChange: (g: string) => void;
+    onSeasonChange: (s: number | null) => void;
     onSenderChange: (s: string) => void;
     onMediaOnlyChange: (v: boolean) => void;
     onSearchChange: (q: string) => void;
@@ -15,11 +18,14 @@
   let {
     groups,
     senders,
+    seasons,
     selectedGroup,
+    selectedSeason,
     selectedSender,
     mediaOnly,
     searchQuery,
     onGroupChange,
+    onSeasonChange,
     onSenderChange,
     onMediaOnlyChange,
     onSearchChange,
@@ -51,6 +57,26 @@
       {/each}
     </select>
   </div>
+
+  <!-- Season select -->
+  {#if seasons.length > 1}
+    <div class="flex items-center gap-1">
+      <span class="font-mono text-[9px] tracking-widest uppercase text-fg-faint">Season</span>
+      <select
+        class="ch-select"
+        value={selectedSeason ?? ''}
+        onchange={(e) => {
+          const v = (e.target as HTMLSelectElement).value;
+          onSeasonChange(v ? Number(v) : null);
+        }}
+      >
+        <option value="">All</option>
+        {#each seasons as s (s)}
+          <option value={s}>S{s}</option>
+        {/each}
+      </select>
+    </div>
+  {/if}
 
   <!-- Player select -->
   <div class="flex items-center gap-1">

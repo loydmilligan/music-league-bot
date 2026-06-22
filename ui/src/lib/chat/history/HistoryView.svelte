@@ -47,6 +47,9 @@
     senders: string[];
     sendersByGroup?: Record<string, string[]>;
     selfNames?: string[];
+    roundBoundary?: 'strict' | 'buffer';
+    bufferDays?: number;
+    hasUnlinkedLeagues?: boolean;
     // scope lock: when set, the view is locked to one round (round page mode)
     lockedRound?: RoundInfo | null;
     lockedMessages?: ChatMessage[];
@@ -59,6 +62,9 @@
     senders,
     sendersByGroup = {},
     selfNames = [],
+    roundBoundary = 'strict',
+    bufferDays = 1,
+    hasUnlinkedLeagues = false,
     lockedRound = null,
     lockedMessages = [],
     lockedHasMore = false,
@@ -66,6 +72,7 @@
 
   // Filter state
   let selectedGroup = $state('');
+  let selectedSeason = $state<number | null>(null);
   let selectedSender = $state('');
   let mediaOnly = $state(false);
   let searchQuery = $state('');
@@ -106,7 +113,16 @@
   const filteredRounds = $derived.by(() => {
     let r = rounds;
     if (selectedGroup) r = r.filter(x => x.groupName === selectedGroup);
+    if (selectedSeason !== null) r = r.filter(x => x.seasonNumber === selectedSeason);
     return r;
+  });
+
+  // Available seasons for the filter (from group-filtered rounds, before season filter)
+  const availableSeasons = $derived.by(() => {
+    let r = rounds;
+    if (selectedGroup) r = r.filter(x => x.groupName === selectedGroup);
+    const nums = [...new Set(r.map(x => x.seasonNumber))].sort((a, b) => b - a);
+    return nums;
   });
 
   const seasonGroups = $derived.by<SeasonGroup[]>(() => {
@@ -122,6 +138,15 @@
 
   let viewerEl = $state<HTMLDivElement | null>(null);
 
+  function bufferWindow(from: string, to: string): { qFrom: string; qTo: string } {
+    if (roundBoundary !== 'buffer') return { qFrom: from, qTo: to };
+    const ms = bufferDays * 86_400_000;
+    return {
+      qFrom: new Date(new Date(from).getTime() - ms).toISOString(),
+      qTo: new Date(new Date(to).getTime() + ms).toISOString(),
+    };
+  }
+
   async function loadRoundThread(round: RoundWithStats) {
     if (selectedRound?.id === round.id) return;
     selectedRound = round;
@@ -129,11 +154,16 @@
     viewerLoading = true;
     viewerHasMore = false;
     try {
+      const { qFrom, qTo } = bufferWindow(round.fromIso, round.toIso);
       const params = new URLSearchParams({
         groupName: round.groupName,
-        from: round.fromIso,
-        to: round.toIso,
+        from: qFrom,
+        to: qTo,
       });
+      if (roundBoundary === 'buffer') {
+        params.set('strictFrom', round.fromIso);
+        params.set('strictTo', round.toIso);
+      }
       const res = await fetch(`/api/chat/history/thread?${params}`);
       if (!res.ok) throw new Error('Load failed');
       const data = await res.json() as { messages: ChatMessage[]; hasMore: boolean };
@@ -151,12 +181,17 @@
     if (!oldest) return;
     loadingOlder = true;
     try {
+      const { qFrom, qTo } = bufferWindow(round.fromIso, round.toIso);
       const params = new URLSearchParams({
         groupName: round.groupName,
-        from: round.fromIso,
-        to: round.toIso,
+        from: qFrom,
+        to: qTo,
         before: oldest.ts,
       });
+      if (roundBoundary === 'buffer') {
+        params.set('strictFrom', round.fromIso);
+        params.set('strictTo', round.toIso);
+      }
       const res = await fetch(`/api/chat/history/thread?${params}`);
       if (!res.ok) throw new Error('Load failed');
       const data = await res.json() as { messages: ChatMessage[]; hasMore: boolean };
@@ -258,11 +293,14 @@
     <HistoryFilters
       {groups}
       senders={activeSenders}
+      seasons={availableSeasons}
       {selectedGroup}
+      {selectedSeason}
       {selectedSender}
       {mediaOnly}
       {searchQuery}
-      onGroupChange={(g) => { selectedGroup = g; selectedSender = ''; }}
+      onGroupChange={(g) => { selectedGroup = g; selectedSeason = null; selectedSender = ''; }}
+      onSeasonChange={(s) => { selectedSeason = s; selectedSender = ''; }}
       onSenderChange={(s) => { selectedSender = s; showMine = false; }}
       onMediaOnlyChange={(v) => { mediaOnly = v; }}
       onSearchChange={(q) => { searchQuery = q; }}
@@ -363,7 +401,13 @@
           {/each}
           {#if filteredRounds.length === 0}
             <div class="ch-empty">
-              {selectedGroup ? 'No rounds linked to this chat group.' : 'No rounds yet.'}
+              {#if selectedGroup}
+                No rounds linked to this chat group.
+              {:else if rounds.length === 0 && hasUnlinkedLeagues}
+                No chat groups linked yet. Go to <a href="/settings/chat" class="text-accent hover:underline">Settings › Chat</a> to map leagues to chat groups.
+              {:else}
+                No rounds yet.
+              {/if}
             </div>
           {/if}
         {/if}

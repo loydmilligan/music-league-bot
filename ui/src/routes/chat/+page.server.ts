@@ -123,5 +123,8 @@ export const load: PageServerLoad = async ({ url }) => {
     sendersByGroup,
     selfNames: chatSettings.selfNames,
     historyRounds: historyRoundsWithMessages,
+    roundBoundary: chatSettings.roundBoundary,
+    bufferDays: chatSettings.bufferDays,
+    hasUnlinkedLeagues: leagues.some(l => !chatSettings.leagueGroupMap[l.slug]),
   };
 };

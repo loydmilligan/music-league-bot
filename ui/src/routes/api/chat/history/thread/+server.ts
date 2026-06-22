@@ -13,12 +13,22 @@ export const GET: RequestHandler = ({ url }) => {
   if (!groupName || !from || !to) throw error(400, 'groupName, from, to required');
 
   const before = url.searchParams.get('before') ?? undefined;
+  // strictFrom/strictTo: if provided, messages outside this window are tagged isBuffer
+  const strictFrom = url.searchParams.get('strictFrom') ?? null;
+  const strictTo = url.searchParams.get('strictTo') ?? null;
   const db = getDb();
 
-  const messages = getRoundMessages(db, groupName, from, to, { limit: PAGE_SIZE, before });
+  const rawMessages = getRoundMessages(db, groupName, from, to, { limit: PAGE_SIZE, before });
+
+  const messages = rawMessages.map(m => ({
+    ...m,
+    isBuffer: strictFrom && strictTo
+      ? m.ts < strictFrom || m.ts > strictTo
+      : false,
+  }));
 
   // hasMore: true if there are older messages before the first one we returned
-  const oldestTs = messages[0]?.ts;
+  const oldestTs = rawMessages[0]?.ts;
   let hasMore = false;
   if (oldestTs) {
     const stats = getRoundStats(db, groupName, from, oldestTs);

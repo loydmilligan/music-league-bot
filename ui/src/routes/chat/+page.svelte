@@ -80,6 +80,9 @@
       senders={data.allSenders}
       sendersByGroup={data.sendersByGroup}
       selfNames={data.selfNames}
+      roundBoundary={data.roundBoundary}
+      bufferDays={data.bufferDays}
+      hasUnlinkedLeagues={data.hasUnlinkedLeagues}
     />
   {:else}
     <div class="cw-main">
