@@ -103,7 +103,7 @@
         <span class="ch-daysep-label">{fmtDay(day.date)}</span>
         <div class="ch-daysep-line"></div>
       </div>
-      {#each day.groups as group (group.sender + group.messages[0].ts)}
+      {#each day.groups as group (group.messages[0].id)}
         {@const tone = nameToTone(group.sender)}
         {@const initials = nameInitials(group.sender)}
         <div class="ch-group">

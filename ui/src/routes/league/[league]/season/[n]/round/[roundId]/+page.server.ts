@@ -58,7 +58,7 @@ export const load: PageServerLoad = async ({ params }) => {
   const roundGroup = groups.find(g => g.group_name === roundGroupName);
   const roundPlatform = roundGroup?.platform ?? 'whatsapp';
 
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 25;
   const roundStats = roundGroupName ? getRoundStats(db, roundGroupName, qFrom, qTo) : null;
   const roundMessageCount = roundStats?.messageCount ?? 0;
 

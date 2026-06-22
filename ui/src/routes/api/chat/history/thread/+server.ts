@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { getDb } from '$lib/db/client.js';
 import { getRoundMessages, getRoundStats } from '$lib/chat/historyQuery.js';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 25;
 
 export const GET: RequestHandler = ({ url }) => {
   const groupName = url.searchParams.get('groupName');
