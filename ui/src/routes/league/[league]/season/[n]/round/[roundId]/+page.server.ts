@@ -12,8 +12,8 @@ import {
   getChatSettings,
   getChatGroups,
   getRoundMessages,
+  getRoundStats,
   getDistinctSenders,
-  getTotalMessageCount,
 } from '$lib/chat/historyQuery.js';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -65,7 +65,7 @@ export const load: PageServerLoad = async ({ params }) => {
     ? getDistinctSenders(db, roundGroupName)
     : [];
   const roundMessageCount = roundGroupName
-    ? getTotalMessageCount(db, roundGroupName)
+    ? getRoundStats(db, roundGroupName, qFrom, qTo).messageCount
     : 0;
 
   return {

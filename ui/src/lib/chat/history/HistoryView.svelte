@@ -45,6 +45,7 @@
     rounds: RoundWithStats[];
     groups: { group_name: string; platform: string }[];
     senders: string[];
+    sendersByGroup?: Record<string, string[]>;
     selfNames?: string[];
     // scope lock: when set, the view is locked to one round (round page mode)
     lockedRound?: RoundInfo | null;
@@ -55,6 +56,7 @@
     rounds,
     groups,
     senders,
+    sendersByGroup = {},
     selfNames = [],
     lockedRound = null,
     lockedMessages = [],
@@ -76,6 +78,13 @@
   let searchResults = $state<SearchResult[]>([]);
   let searchLoading = $state(false);
   let isSearchMode = $derived(searchQuery.trim().length > 0);
+
+  // Sender list: scoped to selected group when possible, else all senders
+  const activeSenders = $derived(
+    selectedGroup && sendersByGroup[selectedGroup]
+      ? sendersByGroup[selectedGroup]
+      : senders
+  );
 
   // + mine toggle
   let showMine = $state(false);
@@ -203,12 +212,12 @@
   {#if !isLocked}
     <HistoryFilters
       {groups}
-      {senders}
+      senders={activeSenders}
       {selectedGroup}
       {selectedSender}
       {mediaOnly}
       {searchQuery}
-      onGroupChange={(g) => { selectedGroup = g; }}
+      onGroupChange={(g) => { selectedGroup = g; selectedSender = ''; }}
       onSenderChange={(s) => { selectedSender = s; showMine = false; }}
       onMediaOnlyChange={(v) => { mediaOnly = v; }}
       onSearchChange={(q) => { searchQuery = q; }}
@@ -234,7 +243,7 @@
           onchange={() => { showMine = false; }}
         >
           <option value="">Everyone</option>
-          {#each senders as s (s)}
+          {#each activeSenders as s (s)}
             <option value={s}>{s}</option>
           {/each}
         </select>

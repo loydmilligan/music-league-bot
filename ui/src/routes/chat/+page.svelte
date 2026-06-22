@@ -78,6 +78,7 @@
       rounds={data.historyRounds}
       groups={data.chatGroups}
       senders={data.allSenders}
+      sendersByGroup={data.sendersByGroup}
       selfNames={data.selfNames}
     />
   {:else}

@@ -5,6 +5,7 @@ import {
   getTotalMessageCount,
   getChatGroups,
   getAllDistinctSenders,
+  getDistinctSenders,
   getRoundStats,
   getChatSettings,
 } from '$lib/chat/historyQuery.js';
@@ -92,8 +93,19 @@ export const load: PageServerLoad = async ({ url }) => {
     }
   }
 
-  // Newest-first within each league
+  // Newest-first within each league; only show rounds with messages
   historyRounds.reverse();
+  const historyRoundsWithMessages = historyRounds.filter(r => r.messageCount > 0);
+
+  // Only expose groups that are actually mapped to a league (active links)
+  const linkedGroupNames = new Set(Object.values(chatSettings.leagueGroupMap).filter(Boolean));
+  const linkedChatGroups = chatGroups.filter(g => linkedGroupNames.has(g.group_name));
+
+  // Per-group sender lists for the player filter
+  const sendersByGroup: Record<string, string[]> = {};
+  for (const g of linkedChatGroups) {
+    sendersByGroup[g.group_name] = getDistinctSenders(db, g.group_name);
+  }
 
   return {
     songs,
@@ -106,9 +118,10 @@ export const load: PageServerLoad = async ({ url }) => {
     sort,
     // History tab data
     totalMessageCount,
-    chatGroups,
+    chatGroups: linkedChatGroups,
     allSenders,
+    sendersByGroup,
     selfNames: chatSettings.selfNames,
-    historyRounds,
+    historyRounds: historyRoundsWithMessages,
   };
 };
