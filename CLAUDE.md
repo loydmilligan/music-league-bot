@@ -82,3 +82,17 @@ docker build -f Dockerfile.base -t music-league-bot-base:chromium .
 ```
 This is what already removed the ~150 MB chromium download from every app build (sprint-19).
 
+<!-- agent-bus:start -->
+## Agent coordination (agent-bus)
+
+This repo participates in **agent-bus**, a file-based channel for coordinating
+with peer agents in other repos.
+
+- Hub: `/home/loydmilligan/Projects/agent-bus`
+- This repo's registered handle: `music-league-bot` (see `/home/loydmilligan/Projects/agent-bus/registry.md`).
+- Before coordinating with another agent, read `/home/loydmilligan/Projects/agent-bus/PROTOCOL.md`.
+- To start a session with a peer: `/agent-connect <peer-tmux-pane> [goal-slug]`.
+- If you get a doorbell ping pointing at a message file, read that file and
+  follow `PROTOCOL.md`.
+<!-- agent-bus:end -->
+

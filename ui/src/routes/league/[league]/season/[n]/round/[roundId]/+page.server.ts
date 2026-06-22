@@ -8,6 +8,13 @@ import { getResearchSongs } from '$lib/db/research.js';
 import { getSettings } from '$lib/db/settings.js';
 import { computeScore } from '$lib/scoring.js';
 import { getChatMentionsBetween } from '$lib/submissionsDb.js';
+import {
+  getChatSettings,
+  getChatGroups,
+  getRoundMessages,
+  getDistinctSenders,
+  getTotalMessageCount,
+} from '$lib/chat/historyQuery.js';
 
 export const load: PageServerLoad = async ({ params }) => {
   const db = getDb();
@@ -33,5 +40,50 @@ export const load: PageServerLoad = async ({ params }) => {
     ...s, score: computeScore(s, settings),
   }));
 
-  return { league, season, round, mlSubmissions, chatMentions, research, settings };
+  // Chat History tab data
+  const chatSettings = getChatSettings(db);
+  const roundGroupName = chatSettings.leagueGroupMap[league.slug] ?? '';
+  const roundFromIso = round.createdAt;
+  const roundToIso = nextRound ? nextRound.createdAt : new Date().toISOString();
+
+  let qFrom = roundFromIso;
+  let qTo = roundToIso;
+  if (chatSettings.roundBoundary === 'buffer') {
+    const bufMs = chatSettings.bufferDays * 86_400_000;
+    qFrom = new Date(new Date(roundFromIso).getTime() - bufMs).toISOString();
+    qTo = new Date(new Date(roundToIso).getTime() + bufMs).toISOString();
+  }
+
+  const groups = getChatGroups(db);
+  const roundGroup = groups.find(g => g.group_name === roundGroupName);
+  const roundPlatform = roundGroup?.platform ?? 'whatsapp';
+
+  const roundMessages = roundGroupName
+    ? getRoundMessages(db, roundGroupName, qFrom, qTo)
+    : [];
+  const roundSenders = roundGroupName
+    ? getDistinctSenders(db, roundGroupName)
+    : [];
+  const roundMessageCount = roundGroupName
+    ? getTotalMessageCount(db, roundGroupName)
+    : 0;
+
+  return {
+    league,
+    season,
+    round,
+    mlSubmissions,
+    chatMentions,
+    research,
+    settings,
+    // Chat History
+    roundGroupName,
+    roundFromIso,
+    roundToIso,
+    roundPlatform,
+    roundMessages,
+    roundSenders,
+    roundMessageCount,
+    selfNames: chatSettings.selfNames,
+  };
 };

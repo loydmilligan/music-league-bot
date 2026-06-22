@@ -29,7 +29,7 @@
   const navItems = $derived<NavItem[]>([
     { href: '/',          label: 'Active round',   glyph: '▸', count: 'r-14' },
     { href: '/shortlist', label: 'Shortlist',      glyph: '▸', count: '11' },
-    { href: '/chat',      label: 'Chat watcher',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
+    { href: '/chat',      label: 'Chat Content',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
     { href: '/content',   label: 'Content',        glyph: '▸', badge: contentPendingCount > 0 ? contentPendingCount : undefined },
     { href: '/history',   label: 'History',        glyph: '▸' },
     { href: '/settings',  label: 'Settings',       glyph: '▸' },

@@ -5,6 +5,7 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import HeadToHeadCard from '$lib/components/HeadToHeadCard.svelte';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
+  import HistoryView from '$lib/chat/history/HistoryView.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
   import { invalidateAll } from '$app/navigation';
 
@@ -113,7 +114,7 @@
   }
   // --------------------------------------------------------------------------
 
-  let tab = $state<'ml' | 'chat' | 'research' | 'h2h'>('ml');
+  let tab = $state<'ml' | 'chat' | 'history' | 'research' | 'h2h'>('ml');
   let ytmMode = $state(false);
 
   // h2h state — fetched lazily when the tab is first activated, and
@@ -296,11 +297,12 @@
     [...data.mlSubmissions].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))[0]
   );
 
-  const tabs: { key: 'ml' | 'chat' | 'research' | 'h2h'; label: string; count: number }[] = $derived([
-    { key: 'ml', label: 'ML Playlist', count: data.mlSubmissions.length },
-    { key: 'chat', label: 'Chat Mentions', count: data.chatMentions.length },
-    { key: 'research', label: 'Research', count: data.research.length },
-    { key: 'h2h', label: 'Head-to-Head', count: h2hState?.candidates.length ?? 0 },
+  const tabs: { key: 'ml' | 'chat' | 'history' | 'research' | 'h2h'; label: string; count: number }[] = $derived([
+    { key: 'ml',      label: 'ML Playlist',   count: data.mlSubmissions.length },
+    { key: 'chat',    label: 'Chat Songs',     count: data.chatMentions.length },
+    { key: 'history', label: 'Chat History',   count: data.roundMessageCount },
+    { key: 'research', label: 'Research',      count: data.research.length },
+    { key: 'h2h',    label: 'Head-to-Head',   count: h2hState?.candidates.length ?? 0 },
   ]);
 </script>
 
@@ -584,6 +586,34 @@
         </div>
       {/each}
     </div>
+  {/if}
+{/if}
+
+{#if tab === 'history'}
+  {#if !data.roundGroupName}
+    <div class="bg-surface border border-border-muted rounded-xl p-6 max-w-xl">
+      <p class="text-fg-muted text-sm">
+        Chat not linked for this league yet.
+        <a href="/settings/chat" class="text-accent hover:text-accent-strong underline decoration-dotted underline-offset-4 transition-colors">Configure in Settings › Chat</a>.
+      </p>
+    </div>
+  {:else}
+    <HistoryView
+      rounds={[]}
+      groups={[]}
+      senders={data.roundSenders}
+      selfNames={data.selfNames}
+      lockedRound={{
+        id: data.round.id,
+        name: data.round.name,
+        seasonNumber: data.season.seasonNumber,
+        fromIso: data.roundFromIso,
+        toIso: data.roundToIso,
+        platform: data.roundPlatform,
+        groupName: data.roundGroupName,
+      }}
+      lockedMessages={data.roundMessages}
+    />
   {/if}
 {/if}
 
