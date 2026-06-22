@@ -58,15 +58,19 @@ export const load: PageServerLoad = async ({ params }) => {
   const roundGroup = groups.find(g => g.group_name === roundGroupName);
   const roundPlatform = roundGroup?.platform ?? 'whatsapp';
 
+  const PAGE_SIZE = 100;
+  const roundStats = roundGroupName ? getRoundStats(db, roundGroupName, qFrom, qTo) : null;
+  const roundMessageCount = roundStats?.messageCount ?? 0;
+
+  // Load only the last PAGE_SIZE messages — client fetches older pages on demand
   const roundMessages = roundGroupName
-    ? getRoundMessages(db, roundGroupName, qFrom, qTo)
+    ? getRoundMessages(db, roundGroupName, qFrom, qTo, { limit: PAGE_SIZE })
     : [];
+  const roundHasMore = roundMessageCount > PAGE_SIZE;
+
   const roundSenders = roundGroupName
     ? getDistinctSenders(db, roundGroupName)
     : [];
-  const roundMessageCount = roundGroupName
-    ? getRoundStats(db, roundGroupName, qFrom, qTo).messageCount
-    : 0;
 
   return {
     league,
@@ -78,10 +82,11 @@ export const load: PageServerLoad = async ({ params }) => {
     settings,
     // Chat History
     roundGroupName,
-    roundFromIso,
-    roundToIso,
+    roundFromIso: qFrom,
+    roundToIso: qTo,
     roundPlatform,
     roundMessages,
+    roundHasMore,
     roundSenders,
     roundMessageCount,
     selfNames: chatSettings.selfNames,

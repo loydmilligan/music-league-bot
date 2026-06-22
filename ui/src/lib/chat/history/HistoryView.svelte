@@ -50,6 +50,7 @@
     // scope lock: when set, the view is locked to one round (round page mode)
     lockedRound?: RoundInfo | null;
     lockedMessages?: ChatMessage[];
+    lockedHasMore?: boolean;
   }
 
   let {
@@ -60,6 +61,7 @@
     selfNames = [],
     lockedRound = null,
     lockedMessages = [],
+    lockedHasMore = false,
   }: Props = $props();
 
   // Filter state
@@ -72,6 +74,8 @@
   let selectedRound = $state<RoundWithStats | null>(null);
   let viewerMessages = $state<ChatMessage[]>([]);
   let viewerLoading = $state(false);
+  let viewerHasMore = $state(false);
+  let loadingOlder = $state(false);
   let hitId = $state<string | null>(null);
 
   // Search state
@@ -123,6 +127,7 @@
     selectedRound = round;
     hitId = null;
     viewerLoading = true;
+    viewerHasMore = false;
     try {
       const params = new URLSearchParams({
         groupName: round.groupName,
@@ -131,13 +136,50 @@
       });
       const res = await fetch(`/api/chat/history/thread?${params}`);
       if (!res.ok) throw new Error('Load failed');
-      viewerMessages = await res.json() as ChatMessage[];
+      const data = await res.json() as { messages: ChatMessage[]; hasMore: boolean };
+      viewerMessages = data.messages;
+      viewerHasMore = data.hasMore;
     } catch {
       viewerMessages = [];
     } finally {
       viewerLoading = false;
     }
   }
+
+  async function loadOlder(round: RoundInfo, currentMessages: ChatMessage[], isLocked: boolean) {
+    const oldest = currentMessages[0];
+    if (!oldest) return;
+    loadingOlder = true;
+    try {
+      const params = new URLSearchParams({
+        groupName: round.groupName,
+        from: round.fromIso,
+        to: round.toIso,
+        before: oldest.ts,
+      });
+      const res = await fetch(`/api/chat/history/thread?${params}`);
+      if (!res.ok) throw new Error('Load failed');
+      const data = await res.json() as { messages: ChatMessage[]; hasMore: boolean };
+      if (isLocked) {
+        // locked mode uses lockedMessages — we need to prepend; signal via a local override
+        lockedMessagesExtra = [...data.messages, ...lockedMessagesExtra];
+        lockedHasMoreOverride = data.hasMore;
+      } else {
+        viewerMessages = [...data.messages, ...currentMessages];
+        viewerHasMore = data.hasMore;
+      }
+    } catch {
+      // silent — button stays visible so user can retry
+    } finally {
+      loadingOlder = false;
+    }
+  }
+
+  // Locked-mode pagination state (prepended older pages)
+  let lockedMessagesExtra = $state<ChatMessage[]>([]);
+  let lockedHasMoreOverride = $state<boolean | null>(null);
+  const lockedHasMoreEffective = $derived(lockedHasMoreOverride !== null ? lockedHasMoreOverride : lockedHasMore);
+  const allLockedMessages = $derived([...lockedMessagesExtra, ...lockedMessages]);
 
   $effect(() => {
     if (!isSearchMode) {
@@ -162,7 +204,7 @@
   });
 
   // For locked mode, load thread immediately when lockedMessages provided
-  const displayMessages = $derived(isLocked ? lockedMessages : viewerMessages);
+  const displayMessages = $derived(isLocked ? allLockedMessages : viewerMessages);
 
   const viewerFilteredMessages = $derived.by(() => {
     let msgs = displayMessages;
@@ -202,7 +244,10 @@
       });
       fetch(`/api/chat/history/thread?${params}`)
         .then(r => r.json())
-        .then((data: ChatMessage[]) => { viewerMessages = data; })
+        .then((data: { messages: ChatMessage[]; hasMore: boolean }) => {
+          viewerMessages = data.messages;
+          viewerHasMore = data.hasMore;
+        })
         .finally(() => { viewerLoading = false; });
     }
   }
@@ -329,17 +374,25 @@
     <div class="ch-viewer">
       {#if isLocked}
         <!-- Locked mode: display the loaded thread directly -->
-        {#if lockedMessages.length === 0}
+        {#if allLockedMessages.length === 0}
           <div class="ch-empty">No messages in this round's window yet.</div>
         {:else}
           <div class="ch-viewer-header">
             <div class="ch-viewer-meta">
-              {lockedMessages.length} message{lockedMessages.length === 1 ? '' : 's'}
+              {lockedHasMoreEffective ? `${allLockedMessages.length}+ messages` : `${allLockedMessages.length} message${allLockedMessages.length === 1 ? '' : 's'}`}
               {#if selectedSender}
                 <span class="ch-viewer-filter-note"> · filtered: {selectedSender}{showMine ? ' + you' : ''}</span>
               {/if}
             </div>
           </div>
+          {#if lockedHasMoreEffective && lockedRound}
+            <button
+              type="button"
+              class="ch-load-older"
+              disabled={loadingOlder}
+              onclick={() => lockedRound && loadOlder(lockedRound, allLockedMessages, true)}
+            >{loadingOlder ? 'Loading…' : '↑ Load older messages'}</button>
+          {/if}
           <BubbleThread
             messages={viewerFilteredMessages}
             {hitId}
@@ -378,6 +431,14 @@
                 onclick={() => (showMine = !showMine)}
               >+ mine</button>
             </div>
+          {/if}
+          {#if viewerHasMore && selectedRound}
+            <button
+              type="button"
+              class="ch-load-older"
+              disabled={loadingOlder}
+              onclick={() => selectedRound && loadOlder(selectedRound, viewerMessages, false)}
+            >{loadingOlder ? 'Loading…' : '↑ Load older messages'}</button>
           {/if}
           <BubbleThread
             messages={viewerFilteredMessages}

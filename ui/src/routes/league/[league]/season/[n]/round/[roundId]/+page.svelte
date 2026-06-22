@@ -613,6 +613,7 @@
         groupName: data.roundGroupName,
       }}
       lockedMessages={data.roundMessages}
+      lockedHasMore={data.roundHasMore}
     />
   {/if}
 {/if}

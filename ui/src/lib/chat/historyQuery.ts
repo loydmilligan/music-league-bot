@@ -56,7 +56,20 @@ export function getRoundMessages(
   groupName: string,
   fromIso: string,
   toIso: string,
+  opts: { limit?: number; before?: string } = {},
 ): ChatMessage[] {
+  const { limit, before } = opts;
+  if (limit) {
+    // Fetch last `limit` messages before `before` (or end of window), then reverse to ASC order
+    const ceiling = before ?? toIso;
+    const rows = db.prepare(`
+      SELECT id, platform, group_name, sender, text, ts
+      FROM chat_messages
+      WHERE group_name = ? AND ts >= ? AND ts < ?
+      ORDER BY ts DESC LIMIT ?
+    `).all(groupName, fromIso, ceiling, limit) as ChatMessage[];
+    return rows.reverse();
+  }
   return db.prepare(`
     SELECT id, platform, group_name, sender, text, ts
     FROM chat_messages

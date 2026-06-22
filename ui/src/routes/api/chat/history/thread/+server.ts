@@ -1,7 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { getDb } from '$lib/db/client.js';
-import { getRoundMessages } from '$lib/chat/historyQuery.js';
+import { getRoundMessages, getRoundStats } from '$lib/chat/historyQuery.js';
+
+const PAGE_SIZE = 100;
 
 export const GET: RequestHandler = ({ url }) => {
   const groupName = url.searchParams.get('groupName');
@@ -10,7 +12,18 @@ export const GET: RequestHandler = ({ url }) => {
 
   if (!groupName || !from || !to) throw error(400, 'groupName, from, to required');
 
+  const before = url.searchParams.get('before') ?? undefined;
   const db = getDb();
-  const messages = getRoundMessages(db, groupName, from, to);
-  return json(messages);
+
+  const messages = getRoundMessages(db, groupName, from, to, { limit: PAGE_SIZE, before });
+
+  // hasMore: true if there are older messages before the first one we returned
+  const oldestTs = messages[0]?.ts;
+  let hasMore = false;
+  if (oldestTs) {
+    const stats = getRoundStats(db, groupName, from, oldestTs);
+    hasMore = stats.messageCount > 0;
+  }
+
+  return json({ messages, hasMore });
 };
