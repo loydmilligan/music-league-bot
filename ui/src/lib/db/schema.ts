@@ -235,6 +235,17 @@ export const SCHEMA = `
     spotify_popularity INTEGER,
     fetched_at         TEXT NOT NULL
   );
+  -- Audio features from sintel (librosa analysis). Keyed by spotify_uri; shared
+  -- across rounds. bpm and key are derived from the audio file, not Spotify metadata.
+  CREATE TABLE IF NOT EXISTS song_audio_features (
+    spotify_uri  TEXT PRIMARY KEY,
+    bpm          REAL NOT NULL,
+    key          TEXT NOT NULL,
+    scale        TEXT NOT NULL CHECK(scale IN ('major','minor')),
+    energy       REAL NOT NULL,
+    duration_s   REAL NOT NULL,
+    analyzed_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
   CREATE TABLE IF NOT EXISTS api_tokens (
     id            INTEGER PRIMARY KEY,
     hash          TEXT NOT NULL UNIQUE,

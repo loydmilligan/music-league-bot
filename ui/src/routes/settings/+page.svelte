@@ -7,6 +7,39 @@
 
   let { data } = $props<{ data: PageData }>();
 
+  // Auto-analyze audio toggle
+  let autoAnalyzeEnabled = $state(false);
+  let autoAnalyzeLoading = $state(false);
+
+  async function loadAutoAnalyze() {
+    try {
+      const r = await fetch('/api/settings/auto-analyze');
+      if (r.ok) {
+        const body = await r.json() as { enabled: boolean };
+        autoAnalyzeEnabled = body.enabled;
+      }
+    } catch { /* silently ignore */ }
+  }
+
+  async function toggleAutoAnalyze() {
+    autoAnalyzeLoading = true;
+    try {
+      const r = await fetch('/api/settings/auto-analyze', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: autoAnalyzeEnabled }),
+      });
+      if (r.ok) {
+        const body = await r.json() as { enabled: boolean };
+        autoAnalyzeEnabled = body.enabled;
+      }
+    } catch {
+      autoAnalyzeEnabled = !autoAnalyzeEnabled;
+    } finally {
+      autoAnalyzeLoading = false;
+    }
+  }
+
   // Debug mode toggle — fetches current state on mount, PUTs on change
   let debugEnabled = $state(false);
   let debugLoading = $state(false);
@@ -46,6 +79,7 @@
   // Load on mount
   $effect(() => {
     loadDebugMode();
+    loadAutoAnalyze();
   });
 
   let w = $state({ ...data.settings });
@@ -460,6 +494,37 @@
 </section>
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
+
+<!-- Auto-analyze audio toggle card -->
+<section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">
+  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+    <div>
+      <SectionLabel>Audio intelligence</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Auto-analyze audio</h2>
+    </div>
+    {#if autoAnalyzeEnabled}
+      <StatusChip label="ENABLED" tone="health" />
+    {:else}
+      <StatusChip label="OFF" tone="muted" />
+    {/if}
+  </header>
+  <p class="text-xs text-fg-dim mb-5">
+    When enabled, audio features (BPM, key, energy) are automatically extracted via sintel after each zip import.
+    You can also trigger analysis manually from any round's edit modal.
+  </p>
+  <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+    <input
+      type="checkbox"
+      bind:checked={autoAnalyzeEnabled}
+      onchange={toggleAutoAnalyze}
+      disabled={autoAnalyzeLoading}
+      class="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
+    />
+    <span class="font-mono text-[11px] tracking-widest uppercase text-fg-muted">
+      {autoAnalyzeEnabled ? 'Auto-analyze on — runs after every import' : 'Enable auto-analyze after import'}
+    </span>
+  </label>
+</section>
 
 <!-- Debug mode toggle card -->
 <section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">

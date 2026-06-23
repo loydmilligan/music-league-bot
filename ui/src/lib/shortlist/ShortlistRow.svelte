@@ -44,6 +44,27 @@
     else if (dimension === 'personal') localSong = { ...localSong, ratingPersonal: value };
   }
 
+  // Audio analysis
+  let analyzeState = $state<'idle' | 'running' | 'done' | 'error'>('idle');
+  let audioFeatures = $state<{ bpm: number; key: string; scale: string; energy: number } | null>(null);
+  let analyzeError = $state<string | null>(null);
+
+  async function analyzeAudio() {
+    if (analyzeState === 'running') return;
+    analyzeState = 'running';
+    analyzeError = null;
+    try {
+      const res = await fetch(`/api/shortlist/${localSong.id}/analyze-audio`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.text()) || `failed (${res.status})`);
+      const body = await res.json() as { bpm: number; key: string; scale: string; energy: number };
+      audioFeatures = body;
+      analyzeState = 'done';
+    } catch (err) {
+      analyzeError = err instanceof Error ? err.message : 'Analysis failed';
+      analyzeState = 'error';
+    }
+  }
+
   let notesVal = $state(song.notes);
   async function saveNotes() {
     await fetch(`/api/shortlist/${localSong.id}/notes`, {
@@ -97,6 +118,19 @@
       </div>
       <div class="sl-row-open-actions">
         <a href="https://open.spotify.com/track/{localSong.spotifyUri.split(':').at(-1)}" target="_blank" rel="noopener" class="sl-btn sl-btn-primary">▶ Play on Spotify</a>
+        <button type="button" class="sl-btn sl-btn-secondary" onclick={analyzeAudio} disabled={analyzeState === 'running'}>
+          {analyzeState === 'running' ? '…' : '♫ Analyze'}
+        </button>
+        {#if audioFeatures}
+          <div class="sl-audio-features">
+            <span>{audioFeatures.bpm} BPM</span>
+            <span>{audioFeatures.key} {audioFeatures.scale}</span>
+            <span>energy {audioFeatures.energy}</span>
+          </div>
+        {/if}
+        {#if analyzeError}
+          <p class="sl-analyze-error">{analyzeError}</p>
+        {/if}
         <div style="position: relative">
           <button type="button" class="sl-btn sl-btn-secondary sl-iconbtn" class:has-some={hasAssignments} onclick={() => showAssignPopover = !showAssignPopover}>
             ⊕ Assign to round

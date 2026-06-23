@@ -1053,3 +1053,24 @@
   color: var(--fg-2);
   font: 600 10px/1.2 var(--font-mono);
 }
+
+/* ============================================================== audio features */
+.sl-audio-features {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.sl-audio-features span {
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--fg-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line-muted);
+  border-radius: var(--r-1);
+  padding: 2px 6px;
+}
+.sl-analyze-error {
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--warn, #f59e0b);
+  margin-top: 4px;
+}

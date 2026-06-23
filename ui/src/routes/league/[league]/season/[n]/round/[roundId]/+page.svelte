@@ -106,6 +106,30 @@
     }
   }
 
+  // --- Analyze audio -----------------------------------------------------------
+  let analyzeState = $state<'idle' | 'running' | 'done' | 'error'>('idle');
+  let analyzeResult = $state<string | null>(null);
+
+  async function analyzeAudio() {
+    if (analyzeState === 'running') return;
+    analyzeState = 'running';
+    analyzeResult = null;
+    try {
+      const res = await fetch(`/api/rounds/${data.round.id}/analyze-audio`, { method: 'POST' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Analysis failed (${res.status})`);
+      }
+      const body = await res.json() as { analyzed: number; total: number; message?: string };
+      analyzeResult = body.message ?? `${body.analyzed} / ${body.total} tracks analyzed`;
+      analyzeState = 'done';
+    } catch (err) {
+      analyzeResult = err instanceof Error ? err.message : 'Analysis failed';
+      analyzeState = 'error';
+    }
+  }
+  // --------------------------------------------------------------------------
+
   function onKeydown(ev: KeyboardEvent) {
     if (showEdit && ev.key === 'Escape') {
       ev.preventDefault();
@@ -847,7 +871,20 @@
         <p class="font-mono text-xs text-warn mt-4">{editError}</p>
       {/if}
 
-      <div class="flex items-center justify-end gap-2 mt-6">
+      <!-- Audio analysis row -->
+      <div class="flex items-center gap-3 mt-5 pt-4 border-t border-border-muted">
+        <button
+          type="button"
+          onclick={analyzeAudio}
+          disabled={analyzeState === 'running'}
+          class="bg-bg text-fg-muted border border-border-muted hover:text-fg hover:border-border disabled:opacity-60 disabled:cursor-not-allowed px-4 py-1.5 rounded-md font-mono text-xs tracking-widest uppercase transition-colors"
+        >{analyzeState === 'running' ? 'Analyzing…' : '♫ Analyze Audio'}</button>
+        {#if analyzeResult}
+          <span class="font-mono text-xs {analyzeState === 'error' ? 'text-warn' : 'text-health'}">{analyzeResult}</span>
+        {/if}
+      </div>
+
+      <div class="flex items-center justify-end gap-2 mt-4">
         <button
           type="button"
           onclick={closeEdit}
