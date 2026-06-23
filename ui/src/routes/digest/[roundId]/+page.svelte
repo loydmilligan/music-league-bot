@@ -743,8 +743,36 @@
   function toggleLocked(id: string) {
     sectionStates[id] = sectionStates[id] === 'locked' ? 'default' : 'locked';
   }
-  function kebabAction(_id: string, action: 'edit' | 'up' | 'down' | 'delete') {
-    console.warn('[digest] kebab action not yet wired:', action);
+  async function kebabAction(id: string, action: 'edit' | 'up' | 'down' | 'delete') {
+    if (action !== 'up' && action !== 'down') {
+      console.warn('[digest] kebab action not yet wired:', action);
+      return;
+    }
+    // Snapshot the sorted order at call time.
+    const sorted = [...renderSections];
+    const idx = sorted.findIndex((s) => s.id === id);
+    if (idx === -1) return;
+    const swapIdx = action === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+    try {
+      await Promise.all([
+        fetch(`/api/digest/${data.roundId}/sections/${a.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ position: b.position }),
+        }),
+        fetch(`/api/digest/${data.roundId}/sections/${b.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ position: a.position }),
+        }),
+      ]);
+      await invalidateAll();
+    } catch (err) {
+      showError(err);
+    }
   }
 
   async function submitRegen(payload: { chips: string[]; instructions: string }) {
