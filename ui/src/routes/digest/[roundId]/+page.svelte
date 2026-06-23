@@ -2,6 +2,7 @@
   import '$lib/digest/digest.css';
   import '$lib/content/content.css';
   import { invalidateAll } from '$app/navigation';
+  import { untrack } from 'svelte';
   import DigestSection, { type SectionState, type CoverData } from '$lib/digest/DigestSection.svelte';
   import RegenModal from '$lib/digest/RegenModal.svelte';
   import GenerateModal, { type GenerateParams } from '$lib/digest/GenerateModal.svelte';
@@ -84,7 +85,7 @@
     const target = e.target as HTMLSelectElement;
     const next = Number(target.value);
     if (Number.isFinite(next) && next !== data.roundId) {
-      goto(`/digest/${next}`);
+      window.location.href = `/digest/${next}`;
     }
   }
 
@@ -531,9 +532,17 @@
     if (data.stage === 'refine' || data.stage === 'finalize') {
       // Reset map when sections change (e.g. after regen or round change).
       coverDataMap = new Map();
-      for (const s of data.sections) {
-        void fetchCoverData(s.id);
-      }
+      // untrack: fetchCoverData reads coverDataMap.has() synchronously before its
+      // first await, which would make coverDataMap a tracked dependency of this
+      // effect. When the fetch resolves and writes coverDataMap, that would
+      // re-trigger the effect → infinite effect_update_depth_exceeded cycle.
+      // untrack prevents coverDataMap from being tracked here.
+      const sections = data.sections;
+      untrack(() => {
+        for (const s of sections) {
+          void fetchCoverData(s.id);
+        }
+      });
     }
   });
 
