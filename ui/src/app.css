@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import '$lib/shortlist/colors_and_type.css';
+@import '$lib/song/song.css';
 @import '$lib/chat/chat.css';
 @import '$lib/history/history-coloring.css';
 @import '$lib/history/taste-overlap.css';
