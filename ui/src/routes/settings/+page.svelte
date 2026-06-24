@@ -186,6 +186,25 @@
       : 0
   );
 
+  let failuresOpen = $state(true);
+  let retryingId = $state<number | null>(null);
+
+  async function retryJob(id: number) {
+    retryingId = id;
+    try {
+      const r = await fetch('/api/metadata-queue/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (r.ok && queueData) {
+        queueData = { ...queueData, failures: queueData.failures.filter(f => f.id !== id) };
+      }
+    } catch { /* ignore */ } finally {
+      retryingId = null;
+    }
+  }
+
   async function fillGaps() {
     if (selectedScope == null || fillGapsLoading) return;
     fillGapsLoading = true;
@@ -545,7 +564,82 @@
     {/if}
   {/if}
 
-  <!-- [Task 11 slot: Failures list + Auto-enrich footer] -->
+  <!-- Failures list — all-rounds scope only -->
+  {#if selectedScope == null && queueData && queueData.failures.length > 0}
+    <div class="mt-6 border-t border-border-muted pt-5">
+      <button
+        type="button"
+        onclick={() => { failuresOpen = !failuresOpen; }}
+        class="w-full flex items-center justify-between gap-2 text-left group"
+      >
+        <span class="font-mono text-[10px] tracking-widest uppercase text-warn">
+          Failures ({queueData.failures.length})
+          · {queueData.failures.reduce((s, f) => s + f.retries, 0)} retries used
+        </span>
+        <span class="text-fg-faint text-xs group-hover:text-fg transition-colors">{failuresOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {#if failuresOpen}
+        <div class="mt-3 space-y-0">
+          {#each queueData.failures as f (f.id)}
+            <div class="flex items-start gap-3 py-2 border-t border-border-muted first:border-t-0">
+              <div class="flex-1 min-w-0">
+                <div class="text-xs text-fg font-medium truncate">{f.spotify_uri.split(':').pop()}</div>
+                <div class="font-mono text-[10px] text-fg-faint mt-0.5">
+                  {JOB_META[f.job_type]?.provider ?? f.job_type} · {f.job_type}
+                  {#if f.retries > 0} · {f.retries}/3 retries{/if}
+                </div>
+                {#if f.error}
+                  <div class="text-warn text-[11px] mt-0.5 truncate">{f.error}</div>
+                {/if}
+              </div>
+              <button
+                type="button"
+                onclick={() => retryJob(f.id)}
+                disabled={retryingId === f.id}
+                class="font-mono text-[10px] tracking-widest uppercase shrink-0 transition-colors {retryingId === f.id ? 'text-fg-faint cursor-not-allowed' : 'text-accent hover:text-accent-strong'}"
+              >
+                {retryingId === f.id ? '…' : 'Retry ↻'}
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Auto-enrich footer — always visible -->
+  <div class="mt-6 border-t border-border-muted pt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+    <div>
+      <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint block mb-2">Auto-enrich on import</span>
+      <div class="flex flex-wrap gap-1.5">
+        {#each ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics'] as jt (jt)}
+          <span class="inline-flex items-center gap-1 border border-health/40 bg-health-bg text-health font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-sm">
+            ✓ {JOB_META[jt].name.split(' ')[0]}
+          </span>
+        {/each}
+        {#if autoAnalyzeEnabled}
+          <span class="inline-flex items-center gap-1 border border-health/40 bg-health-bg text-health font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-sm">
+            ✓ audio
+          </span>
+        {:else}
+          <span class="inline-flex items-center gap-1 border border-dashed border-border text-fg-faint font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-sm">
+            audio · manual
+          </span>
+        {/if}
+      </div>
+    </div>
+    <label class="inline-flex items-center gap-2 cursor-pointer select-none ml-auto">
+      <input
+        type="checkbox"
+        bind:checked={autoAnalyzeEnabled}
+        onchange={toggleAutoAnalyze}
+        disabled={autoAnalyzeLoading}
+        class="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
+      />
+      <span class="font-mono text-[10px] tracking-widest uppercase text-fg-muted">Include audio</span>
+    </label>
+  </div>
 </section>
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right). -->
@@ -847,36 +941,6 @@
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
 
-<!-- Auto-analyze audio toggle card -->
-<section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">
-  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-    <div>
-      <SectionLabel>Audio intelligence</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Auto-analyze audio</h2>
-    </div>
-    {#if autoAnalyzeEnabled}
-      <StatusChip label="ENABLED" tone="health" />
-    {:else}
-      <StatusChip label="OFF" tone="muted" />
-    {/if}
-  </header>
-  <p class="text-xs text-fg-dim mb-5">
-    When enabled, audio features (BPM, key, energy) are automatically extracted via sintel after each zip import.
-    You can also trigger analysis manually from any round's edit modal.
-  </p>
-  <label class="inline-flex items-center gap-3 cursor-pointer select-none">
-    <input
-      type="checkbox"
-      bind:checked={autoAnalyzeEnabled}
-      onchange={toggleAutoAnalyze}
-      disabled={autoAnalyzeLoading}
-      class="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
-    />
-    <span class="font-mono text-[11px] tracking-widest uppercase text-fg-muted">
-      {autoAnalyzeEnabled ? 'Auto-analyze on — runs after every import' : 'Enable auto-analyze after import'}
-    </span>
-  </label>
-</section>
 
 <!-- Debug mode toggle card -->
 <section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">
