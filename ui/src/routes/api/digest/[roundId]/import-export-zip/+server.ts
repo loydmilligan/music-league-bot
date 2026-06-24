@@ -8,7 +8,6 @@ import { importLiveRoundsData, importZipData } from '$lib/import/importer.js';
 import { logImport } from '$lib/db/importLog.js';
 import { probeMlAuth } from '$lib/mlAuth.js';
 import { runPrepChecks } from '$lib/digest/prepChecks.js';
-import { analyzeTrack, type AudioFeatures } from '$lib/sintel.js';
 
 const TRIGGER_URL = process.env.ML_AUTH_TRIGGER_URL ?? 'http://localhost:7679';
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
@@ -245,34 +244,6 @@ export const POST: RequestHandler = async ({ params }) => {
 
   const after = countRoundData(roundId);
   const checks = runPrepChecks(getDb(), roundId);
-
-  // Fire-and-forget audio analysis if the setting is enabled.
-  void (async () => {
-    try {
-      const db = getDb();
-      const setting = db.prepare('SELECT value FROM settings WHERE key = ?').get('auto_analyze_audio') as { value: string } | undefined;
-      if (setting?.value !== '1') return;
-
-      const uris = (
-        db.prepare('SELECT DISTINCT spotify_uri FROM ml_submissions WHERE round_id = ?').all(roundId) as Array<{ spotify_uri: string }>
-      ).map((r) => r.spotify_uri);
-      if (uris.length === 0) return;
-
-      const results = await Promise.allSettled(uris.map((u) => analyzeTrack(u)));
-      const features = results.flatMap((r): AudioFeatures[] => r.status === 'fulfilled' ? [r.value] : []);
-      if (features.length === 0) return;
-
-      const stmt = db.prepare(`INSERT OR REPLACE INTO song_audio_features (spotify_uri, bpm, key, scale, energy, duration_s, analyzed_at)
-        VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))`);
-      const insert = db.transaction((rows: AudioFeatures[]) => {
-        for (const f of rows) stmt.run(f.spotify_uri, f.bpm, f.key, f.scale, f.energy, f.duration_s);
-      });
-      insert(features);
-      console.log(`[auto-analyze] analyzed ${features.length}/${uris.length} tracks for round ${roundId}`);
-    } catch (e) {
-      console.error('[auto-analyze] failed:', e);
-    }
-  })();
 
   const body: SuccessBody = {
     ok: true,
