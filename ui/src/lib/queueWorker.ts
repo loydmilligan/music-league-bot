@@ -28,6 +28,10 @@ import type Database from 'better-sqlite3';
 
 const POLL_MS = 6_000;
 const MAX_RETRIES = 3;
+const LASTFM_MIN_GAP_MS = 8_000;
+
+// Tracks the last time any lastfm job was dispatched (module-level rate gate).
+let lastLastfmCallMs = 0;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,16 +149,21 @@ export async function runWorkerTick(db: Database.Database): Promise<'processed' 
 		.get() as { n: number };
 	const audioBlocked = audioProcessing.n > 0;
 
+	// Rate-gate Last.fm: enforce minimum gap between lastfm_pop / lastfm_tags jobs.
+	const lastfmBlocked = Date.now() - lastLastfmCallMs < LASTFM_MIN_GAP_MS;
+
+	// Build exclusion clause from blocked types.
+	const excluded: string[] = [];
+	if (audioBlocked) excluded.push("'audio'");
+	if (lastfmBlocked) excluded.push("'lastfm_pop'", "'lastfm_tags'");
+	const exclusionClause = excluded.length
+		? `AND job_type NOT IN (${excluded.join(',')})`
+		: '';
+
 	// Pick next pending job. Prefer fast jobs (non-audio) over audio.
-	// If audio is blocked, exclude audio entirely this tick.
-	const query = audioBlocked
-		? `SELECT id, spotify_uri, job_type, retries
+	const query = `SELECT id, spotify_uri, job_type, retries
 		   FROM song_metadata_queue
-		   WHERE status='pending' AND job_type != 'audio'
-		   ORDER BY queued_at ASC LIMIT 1`
-		: `SELECT id, spotify_uri, job_type, retries
-		   FROM song_metadata_queue
-		   WHERE status='pending'
+		   WHERE status='pending' ${exclusionClause}
 		   ORDER BY CASE WHEN job_type='audio' THEN 1 ELSE 0 END ASC, queued_at ASC
 		   LIMIT 1`;
 
@@ -180,6 +189,10 @@ export async function runWorkerTick(db: Database.Database): Promise<'processed' 
 
 	try {
 		await dispatchJob(db, job, meta);
+
+		if (job.job_type === 'lastfm_pop' || job.job_type === 'lastfm_tags') {
+			lastLastfmCallMs = Date.now();
+		}
 
 		const doneAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 		db.prepare(

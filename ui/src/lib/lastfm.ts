@@ -14,6 +14,12 @@ import type Database from 'better-sqlite3';
 
 const LASTFM_ROOT = 'https://ws.audioscrobbler.com/2.0/';
 
+// Read once at module load — if missing, fail at startup rather than per-job.
+const LASTFM_API_KEY = process.env.LASTFM_API_KEY ?? '';
+if (!LASTFM_API_KEY) {
+	console.error('[lastfm] LASTFM_API_KEY is not set — Last.fm jobs will fail');
+}
+
 // ---------------------------------------------------------------------------
 // Low-level helpers (ported verbatim from src/api/lastfm.ts)
 // ---------------------------------------------------------------------------
@@ -200,10 +206,9 @@ export async function fetchPopularity(
 	title: string,
 	artist: string
 ): Promise<void> {
-	const apiKey = process.env.LASTFM_API_KEY;
-	if (!apiKey) throw new Error('LASTFM_API_KEY not set');
+	if (!LASTFM_API_KEY) throw new Error('LASTFM_API_KEY not set');
 
-	const result = await getLastfmPopularity(artist, title, apiKey);
+	const result = await getLastfmPopularity(artist, title, LASTFM_API_KEY);
 	if (result.error) {
 		throw new Error(`Last.fm popularity fetch failed: ${result.error}`);
 	}
@@ -242,8 +247,8 @@ export async function fetchTags(
 	title: string,
 	artist: string
 ): Promise<void> {
-	const apiKey = process.env.LASTFM_API_KEY;
-	if (!apiKey) throw new Error('LASTFM_API_KEY not set');
+	if (!LASTFM_API_KEY) throw new Error('LASTFM_API_KEY not set');
+	const apiKey = LASTFM_API_KEY;
 
 	const normTitle = normalizeTrackTitle(title);
 
