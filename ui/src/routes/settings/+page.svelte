@@ -265,24 +265,6 @@
     data.importLog.some((e: { status: string }) => e.status === 'error')
   );
 
-  // Queue status derivation. The loader doesn't surface worker-running state,
-  // so we infer a visual from what we have: any failures → warn; pending in
-  // flight → accent ("DRAINING"); otherwise health ("IDLE").
-  const queueTone = $derived(
-    data.queueStatus.failures.length > 0
-      ? 'warn'
-      : data.queueStatus.pending > 0
-        ? 'accent'
-        : 'health'
-  );
-  const queueLabel = $derived(
-    data.queueStatus.failures.length > 0
-      ? `${data.queueStatus.failures.length} FAILURE${data.queueStatus.failures.length === 1 ? '' : 'S'}`
-      : data.queueStatus.pending > 0
-        ? `DRAINING · ${data.queueStatus.pending} PENDING`
-        : 'IDLE'
-  );
-
   type WeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightPersonal' | 'weightNostalgia';
   const weightFields: Array<{ field: WeightField; label: string; dot: string; tooltip: string }> = [
     {
@@ -858,86 +840,6 @@
   {/if}
 </section>
 
-<!-- Section 3: Songlink Queue (right column, below Import) -->
-<section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-    <div>
-      <SectionLabel>Queue</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Songlink resolution queue</h2>
-    </div>
-    <StatusChip label={queueLabel} tone={queueTone} />
-  </header>
-  <p class="text-xs text-fg-dim mb-5">
-    Background worker resolves Spotify URIs to YouTube Music links via Songlink, capped at 10/min.
-  </p>
-
-  <div class="grid grid-cols-3 gap-3 mb-5">
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Pending</SectionLabel>
-      <div class="text-3xl font-display font-bold text-warn mt-1 leading-none">
-        {data.queueStatus.pending}
-      </div>
-      {#if data.queueStatus.pending > 0}
-        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
-          ~{data.queueStatus.estimatedMinutes}m @ 10/min
-        </div>
-      {:else}
-        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">drained</div>
-      {/if}
-    </div>
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Resolved 24h</SectionLabel>
-      <div class="text-3xl font-display font-bold text-health mt-1 leading-none">
-        {data.queueStatus.done24h}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">last 24h</div>
-    </div>
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Failures</SectionLabel>
-      <div
-        class="text-3xl font-display font-bold mt-1 leading-none {data.queueStatus.failures.length > 0 ? 'text-accent' : 'text-fg-faint'}"
-      >
-        {data.queueStatus.failures.length}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
-        {data.queueStatus.failures.length > 0 ? 'needs retry' : 'clean'}
-      </div>
-    </div>
-  </div>
-
-  {#if data.queueStatus.failures.length}
-    <div class="overflow-x-auto border-t border-border-muted -mx-6 px-6 pt-4">
-      <table class="w-full text-xs">
-        <thead>
-          <tr class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">
-            <th class="text-left py-1.5 pr-4 font-bold">Track</th>
-            <th class="text-left py-1.5 pr-4 font-bold">Error</th>
-            <th class="py-1.5"></th>
-          </tr>
-        </thead>
-        <tbody class="text-fg-muted">
-          {#each data.queueStatus.failures as f (f.id)}
-            <tr class="border-t border-border-muted">
-              <td class="py-1.5 pr-4 text-fg">{f.title ?? f.spotify_uri}</td>
-              <td class="py-1.5 pr-4 text-warn">{f.error ?? 'No YTM link found'}</td>
-              <td class="py-1.5 text-right">
-                <form method="POST" action="?/retryYtm" use:enhance>
-                  <input type="hidden" name="id" value={f.id} />
-                  <button
-                    type="submit"
-                    class="font-mono text-[10px] tracking-widest uppercase text-accent hover:text-accent-strong transition-colors"
-                  >
-                    Retry
-                  </button>
-                </form>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-</section>
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
 

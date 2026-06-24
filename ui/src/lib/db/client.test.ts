@@ -24,7 +24,7 @@ it('creates all tables', () => {
 		'votes',
 		'research_songs',
 		'ytm_link_cache',
-		'ytm_resolution_queue',
+		'song_metadata_queue',
 		'import_log',
 		'settings',
 		'dashboard_sites',

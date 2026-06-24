@@ -17,8 +17,6 @@
  *   - On failure with retries >= 3: mark 'failed' permanently
  *   - Manual retry (via retryJob from metadataQueue.ts) resets retries = 0
  *
- * The old ytm_resolution_queue / ytmQueue.ts are NOT touched here
- * (they are retired in Task 12).
  */
 
 import { getDb } from './db/client.js';

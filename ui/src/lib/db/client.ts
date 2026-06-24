@@ -415,6 +415,25 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (songPopCols.length && !songPopCols.some(c => c.name === 'tags')) {
 		db.exec("ALTER TABLE song_popularity ADD COLUMN tags TEXT");
 	}
+	// sprint-queue Task 12: migrate pending/failed ytm_resolution_queue rows into
+	// song_metadata_queue so no YTM work is lost when the old table is retired.
+	// Guarded: only runs when the old table exists and has pending/failed rows.
+	const oldQueueExists = (db.prepare(
+		"SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='ytm_resolution_queue'"
+	).get() as { n: number }).n > 0;
+	if (oldQueueExists) {
+		const orphans = (db.prepare(
+			"SELECT COUNT(*) AS n FROM ytm_resolution_queue WHERE status IN ('pending','failed')"
+		).get() as { n: number }).n;
+		if (orphans > 0) {
+			db.prepare(
+				`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, queued_at)
+				 SELECT spotify_uri, 'ytm', queued_at
+				 FROM ytm_resolution_queue
+				 WHERE status IN ('pending', 'failed')`
+			).run();
+		}
+	}
 	return db;
 }
 

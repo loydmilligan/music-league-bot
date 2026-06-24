@@ -5,7 +5,6 @@ import { getDb } from '$lib/db/client.js';
 import { getSettings, updateWeights } from '$lib/db/settings.js';
 import { getImportLog, logImport } from '$lib/db/importLog.js';
 import { getAllLeagues } from '$lib/db/leagues.js';
-import { getQueueStatus, retryFailed } from '$lib/db/ytmQueue.js';
 import { parseZip } from '$lib/import/zipParser.js';
 import { importZipData } from '$lib/import/importer.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
@@ -17,11 +16,10 @@ export const load: PageServerLoad = async () => {
   const settings = getSettings(db);
   const importLog = getImportLog(db);
   const allLeagues = getAllLeagues(db);
-  const queueStatus = getQueueStatus(db);
   const recentRounds = db
     .prepare(`SELECT id, name FROM rounds ORDER BY id DESC LIMIT 12`)
     .all() as Array<{ id: number; name: string }>;
-  return { settings, importLog, allLeagues, queueStatus, recentRounds };
+  return { settings, importLog, allLeagues, recentRounds };
 };
 
 export const actions: Actions = {
@@ -60,10 +58,4 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  retryYtm: async ({ request }) => {
-    const db = getDb();
-    const fd = await request.formData();
-    retryFailed(db, Number(fd.get('id')));
-    return { success: true };
-  },
 };

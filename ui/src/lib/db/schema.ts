@@ -388,7 +388,7 @@ export const SCHEMA = `
   -- Unified song metadata queue (sprint-queue). One row per (spotify_uri, job_type)
   -- pair. job_type ∈ {ytm, lastfm_pop, lastfm_tags, audio, lyrics}. Idempotent
   -- INSERT OR IGNORE; workers claim rows by setting status='processing'.
-  -- ytm_resolution_queue stays untouched until Task 12 (retirement sprint).
+  -- ytm_resolution_queue retained in schema for migration safety; ytmQueue.ts and worker references removed.
   CREATE TABLE IF NOT EXISTS song_metadata_queue (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     spotify_uri TEXT NOT NULL,

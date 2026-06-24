@@ -427,13 +427,4 @@ describe('schema tables', () => {
 			expect(cols).toContain(col);
 		}
 	});
-
-	it('ytm_resolution_queue still exists (not removed)', () => {
-		const db = freshDb();
-		const tables = (
-			db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
-		).map((r) => r.name);
-		expect(tables).toContain('ytm_resolution_queue');
-		expect(tables).toContain('song_metadata_queue');
-	});
 });
