@@ -5,7 +5,6 @@
  * by setting status='processing'. All helpers accept a Database instance so
  * callers can pass an in-memory DB for tests.
  *
- * ytm_resolution_queue is NOT touched here — it is retired in Task 12.
  */
 
 import type Database from 'better-sqlite3';
