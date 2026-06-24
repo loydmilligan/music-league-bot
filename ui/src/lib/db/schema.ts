@@ -383,6 +383,30 @@ export const SCHEMA = `
     picked_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
   );
   CREATE INDEX IF NOT EXISTS idx_llm_preference_round ON llm_preference(round_id, section);
+  -- Unified song metadata queue (sprint-queue). One row per (spotify_uri, job_type)
+  -- pair. job_type ∈ {ytm, lastfm_pop, lastfm_tags, audio, lyrics}. Idempotent
+  -- INSERT OR IGNORE; workers claim rows by setting status='processing'.
+  -- ytm_resolution_queue stays untouched until Task 12 (retirement sprint).
+  CREATE TABLE IF NOT EXISTS song_metadata_queue (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    spotify_uri TEXT NOT NULL,
+    job_type   TEXT NOT NULL CHECK(job_type IN ('ytm','lastfm_pop','lastfm_tags','audio','lyrics')),
+    status     TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','done','failed')),
+    error      TEXT,
+    retries    INTEGER NOT NULL DEFAULT 0,
+    queued_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    started_at TEXT,
+    done_at    TEXT,
+    UNIQUE(spotify_uri, job_type)
+  );
+  CREATE INDEX IF NOT EXISTS idx_song_metadata_queue_status ON song_metadata_queue(status, job_type);
+  -- Lyrics presence cache (sprint-queue Task 2 LRCLIB handler).
+  -- has_lyrics = 1 when LRCLIB returned a result, 0 when not found.
+  CREATE TABLE IF NOT EXISTS song_lyrics_metrics (
+    spotify_uri TEXT PRIMARY KEY,
+    has_lyrics  INTEGER NOT NULL DEFAULT 0,
+    fetched_at  TEXT NOT NULL
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
