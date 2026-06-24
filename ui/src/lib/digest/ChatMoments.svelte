@@ -24,7 +24,7 @@
   // it once the restructured content lands).
   import type { VisualComponentProps } from './variants.js';
 
-  export type ChatMoment = { label?: string; detail?: string; description?: string };
+  export type ChatMoment = { label?: string; detail?: string; description?: string; quote?: string };
   export type ChatContent = { summary?: string; moments?: ChatMoment[] };
 </script>
 
@@ -44,7 +44,7 @@
       ? c.moments
           // Tolerate the LLM emitting a moment's body under `description` (the
           // renderer reads `detail`) — normalize before filtering.
-          .map((m) => ({ ...m, detail: m?.detail ?? m?.description }) as ChatMoment)
+          .map((m) => ({ ...m, detail: m?.detail ?? m?.description ?? m?.quote }) as ChatMoment)
           .filter((m): m is ChatMoment => !!m && (!!m.label || !!m.detail))
       : [],
   );
