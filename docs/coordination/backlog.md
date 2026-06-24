@@ -415,3 +415,38 @@ of the round transition); the song-metadata-queue work currently in the tree.
 
 ## PR-10 — Judge each player's own voting-weight profile (L, research-y)
 Per-player, *estimate the weighting* each player actually uses when voting (their personal version of the PR-9 dials) — because it strongly drives how they vote. May need **more than the owner's 3 factors** (some players weight by weird/idiosyncratic factors). Capture for now; don't over-engineer. This is high-leverage for the whole prediction engine (knowing a player's weighting makes SAS far more accurate) — likely its own spec, and a natural input to the future whole-round predictor.
+
+## Universal Songcard — one configurable song-display component (drafted 2026-06-24, owner VSM brainstorm) — L, brief ready for Claude Design
+
+**Source:** owner, 2026-06-24 VSM brainstorm. Artifacts:
+`docs/design-briefs/2026-06-24-universal-songcard-inventory.md` (current-state inventory) and
+`docs/design-briefs/2026-06-24-universal-songcard-CD-brief.md` (Claude Design brief). Both
+committed + pushed to origin and copied to `~/pixel9-pro_sync/`.
+
+**The problem.** A song is rendered in ~9 places (History Song-Search, Shortlist, Round
+Research, Round H2H, Shortlist king-of-hill, Chat Songs, Digest podium/tastemaker, public
+b-side), each a bespoke component with its own data shape and its own subset of
+actions/badges/rating UIs. We were about to build the single-song-analysis UI and realized
+it should be built *into* a unified card instead of adding a 10th variant.
+
+**The goal.** ONE configurable Svelte element usable wherever a song (or list of songs) is
+shown, with features toggled at render time per context — so "add a song list anywhere"
+becomes trivial.
+
+**The real knot (more than buttons).** Every surface consumes a different song type that
+disagrees on fundamentals: `title` vs `name`, id `string` vs `number`, rating field names
+(`ratingThemeFit` vs `themeFit`), rating scale `0–5` vs `1–5`, three album-art key
+spellings. Needs **one canonical `Song` model + thin per-source adapters**.
+
+**Folds in the existing metadata suite** (all built): YTM links (`ytm_link_cache`),
+tastemaker popularity/obscurity (`song_popularity` + `db/discoverability.ts`), Last.fm
+genre/mood tags, audio insights (`song_audio_features` via sintel), lyrics presence
+(`song_lyrics_metrics`), single-track enrich (`POST /api/songs/[uri]/enrich`), playlist
+ingestion (`/api/ingest/songs`).
+
+**Rating UI** unifies 4 renderings of the same 4 dimensions (editable bars, editable H2H
+dots, read-only MiniDna, read-only ScoreChip) into one component: `mode` × `editable`.
+
+**Next step:** hand the brief to Claude Design (repo access + the two doc paths) → get a
+design (canonical type, component API, variant system) → spec → plan → build. Supersedes
+the never-built standalone single-song-analysis UI.
