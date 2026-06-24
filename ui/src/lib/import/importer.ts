@@ -3,6 +3,7 @@ import type { ParsedZip } from './zipParser.js';
 import { getLeagueBySlug, upsertSeason } from '../db/leagues.js';
 import { getCurrentRoundForSeason, upsertRound, upsertRoundWithDeadlines } from '../db/rounds.js';
 import { upsertCompetitor, upsertSubmission, upsertVote } from '../db/submissions.js';
+import { enqueueMany } from '../db/metadataQueue.js';
 
 export interface ImportResult { roundsCount: number; submissionsCount: number; votesCount: number; status: 'success'|'partial'|'error'; error?: string; }
 
@@ -27,10 +28,16 @@ function inferSeasonStatus(db: Database.Database, leagueId: number, seasonNumber
   return parsed.rounds.every((r) => votedRounds.has(r.id)) ? 'complete' : 'active';
 }
 
-export function importZipData(db: Database.Database, leagueSlug: string, seasonNumber: number, parsed: ParsedZip): ImportResult {
+export interface ImportZipOptions {
+  /** When true, also enqueue 'audio' job type after import. */
+  autoAnalyzeAudio?: boolean;
+}
+
+export function importZipData(db: Database.Database, leagueSlug: string, seasonNumber: number, parsed: ParsedZip, opts: ImportZipOptions = {}): ImportResult {
   const league = getLeagueBySlug(db, leagueSlug);
   if (!league) return { roundsCount: 0, submissionsCount: 0, votesCount: 0, status: 'error', error: `Unknown league: ${leagueSlug}` };
   let rc = 0, sc = 0, vc = 0;
+  const newUris: string[] = [];
   try {
     db.transaction(() => {
       const status = inferSeasonStatus(db, league.id, seasonNumber, parsed);
@@ -46,6 +53,7 @@ export function importZipData(db: Database.Database, leagueSlug: string, seasonN
         const roundId = rMap.get(s.roundId), competitorId = cMap.get(s.submitterId);
         if (!roundId || !competitorId) continue;
         upsertSubmission(db, { roundId, competitorId, spotifyUri: s.spotifyUri, title: s.title, album: s.album, artists: s.artists, comment: s.comment, createdAt: s.createdAt, visibleToVoters: s.visibleToVoters });
+        newUris.push(s.spotifyUri);
         sc++;
       }
       for (const v of parsed.votes) {
@@ -55,6 +63,13 @@ export function importZipData(db: Database.Database, leagueSlug: string, seasonN
         vc++;
       }
     })();
+    // Enqueue metadata jobs for all submission URIs (idempotent via INSERT OR IGNORE).
+    if (newUris.length > 0) {
+      enqueueMany(db, newUris, ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics']);
+      if (opts.autoAnalyzeAudio) {
+        enqueueMany(db, newUris, ['audio']);
+      }
+    }
     return { roundsCount: rc, submissionsCount: sc, votesCount: vc, status: 'success' };
   } catch (err) {
     return { roundsCount: rc, submissionsCount: sc, votesCount: vc, status: 'error', error: String(err) };

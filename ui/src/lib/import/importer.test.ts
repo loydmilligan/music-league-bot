@@ -200,6 +200,52 @@ it('non-matching competitor gets NULL player_id on import (unlinked banner catch
   expect(sub.player_id).toBeNull();
 });
 
+// Task 4: zip import enqueues metadata jobs for all submission URIs.
+it('importZipData enqueues ytm/lastfm_pop/lastfm_tags/lyrics jobs for all submissions', () => {
+  const db = mk();
+  importZipData(db, 'second-best', 1, parsedZip(['r1', 'r2'], ['r1']));
+
+  const queued = db.prepare(
+    `SELECT spotify_uri, job_type FROM song_metadata_queue ORDER BY spotify_uri, job_type`
+  ).all() as Array<{ spotify_uri: string; job_type: string }>;
+
+  // parsedZip produces one submission per round: spotify:track:r1 and spotify:track:r2
+  const uris = [...new Set(queued.map(r => r.spotify_uri))].sort();
+  expect(uris).toEqual(['spotify:track:r1', 'spotify:track:r2']);
+
+  const jobTypes = [...new Set(queued.map(r => r.job_type))].sort();
+  expect(jobTypes).toEqual(['lastfm_pop', 'lastfm_tags', 'lyrics', 'ytm']);
+
+  // audio should NOT be enqueued by default
+  const audioRows = queued.filter(r => r.job_type === 'audio');
+  expect(audioRows).toHaveLength(0);
+});
+
+it('importZipData enqueues audio jobs when autoAnalyzeAudio is true', () => {
+  const db = mk();
+  importZipData(db, 'second-best', 1, parsedZip(['r1'], ['r1']), { autoAnalyzeAudio: true });
+
+  const audioRows = db.prepare(
+    `SELECT spotify_uri FROM song_metadata_queue WHERE job_type='audio'`
+  ).all() as Array<{ spotify_uri: string }>;
+
+  expect(audioRows).toHaveLength(1);
+  expect(audioRows[0].spotify_uri).toBe('spotify:track:r1');
+});
+
+it('importZipData enqueue is idempotent — re-import does not duplicate queue rows', () => {
+  const db = mk();
+  importZipData(db, 'second-best', 1, parsedZip(['r1'], ['r1']));
+  importZipData(db, 'second-best', 1, parsedZip(['r1'], ['r1']));
+
+  const count = (db.prepare(
+    `SELECT COUNT(*) AS n FROM song_metadata_queue WHERE spotify_uri='spotify:track:r1'`
+  ).get() as { n: number }).n;
+
+  // 4 job types, each URI × job_type is unique — no duplicates
+  expect(count).toBe(4);
+});
+
 // sprint-26 season-override-fix regression: a manually-completed season must
 // survive an importLiveRoundsData call (the W2 path which previously forced
 // 'active' unconditionally at importer.ts:76).

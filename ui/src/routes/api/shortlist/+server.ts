@@ -6,6 +6,7 @@ import {
   deleteShortlistSongByUri,
 } from '$lib/shortlist/shortlist.js';
 import { attachYtmLinks } from '$lib/db/ytmLinks.js';
+import { enqueueMany } from '$lib/db/metadataQueue.js';
 
 export const GET: RequestHandler = async () => {
   const db = getDb();
@@ -30,6 +31,12 @@ export const POST: RequestHandler = async ({ request }) => {
     year: body.year ?? null,
     durationSec: body.duration_sec ?? null,
   });
+  // Enqueue fast metadata jobs for the new shortlist song.
+  enqueueMany(db, [song.spotifyUri], ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics']);
+  const autoAudioSetting = db.prepare("SELECT value FROM settings WHERE key='auto_analyze_audio'").get() as { value: string } | undefined;
+  if (autoAudioSetting?.value === '1') {
+    enqueueMany(db, [song.spotifyUri], ['audio']);
+  }
   return json(song, { status: 201 });
 };
 

@@ -218,7 +218,9 @@ export const POST: RequestHandler = async ({ params }) => {
   let importResult;
   try {
     const parsed = parseZip(buf);
-    importResult = importZipData(getDb(), ctx.slug, ctx.seasonNumber, parsed);
+    const db = getDb();
+    const autoAudioSetting = db.prepare('SELECT value FROM settings WHERE key = ?').get('auto_analyze_audio') as { value: string } | undefined;
+    importResult = importZipData(db, ctx.slug, ctx.seasonNumber, parsed, { autoAnalyzeAudio: autoAudioSetting?.value === '1' });
   } catch (err) {
     return fail('import', err instanceof Error ? err.message : String(err));
   }
