@@ -41,6 +41,12 @@ services:
       # Shared digests/ volume — bot-ui WRITES rendered html-share artifacts here
       # (sprint-20 render-pipeline); digest-static serves the same dir read-only.
       - ./digests:/app/digests
+      # sintel audio analysis — host project + uv binary are available in the
+      # runtime image; this mount gives the container the source + pyproject.toml.
+      - /home/loydmilligan/Projects/sintel:/home/loydmilligan/Projects/sintel
+      # Isolated venv for sintel inside the container (named volume so it persists
+      # across recreates and never clobbers the host's .venv).
+      - sintel_venv:/app/sintel-venv
     restart: unless-stopped
 
   # Static-only public file server for the shared digests/ volume (sprint-20).
@@ -56,3 +62,6 @@ services:
       # host:container — host port is what the cloudflared ingress targets.
       - "8088:8080"
     restart: unless-stopped
+
+volumes:
+  sintel_venv:

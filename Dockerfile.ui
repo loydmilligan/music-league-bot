@@ -34,12 +34,21 @@ RUN npm prune --omit=dev
 # no per-build apt install of those so rebuilds stay fast.
 FROM music-league-bot-base:chromium AS runtime
 
+# uv — installed from official image so we get a static binary with no apt deps.
+# python 3.12 is pre-installed into uv's managed store so the first audio job
+# doesn't need to download it at runtime.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+RUN uv python install 3.12
+
 ENV NODE_ENV=production
 ENV PORT=3002
 ENV HOST=0.0.0.0
 ENV DATA_DIR=/app/data
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# sintel venv lives here (named volume) so the container's venv never clobbers
+# the host's .venv (which uses a different python path).
+ENV UV_PROJECT_ENVIRONMENT=/app/sintel-venv
 
 WORKDIR /app/ui
 
