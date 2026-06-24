@@ -81,6 +81,49 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
 
   const artOk = subs_count > 0;
 
+  // Metadata coverage checks (optional — 80% threshold mirrors Tastemaker logic)
+  const threshold = subs_count === 0 ? 0 : subs_count * 0.8;
+
+  const ytm_count = (db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ml_submissions s
+       JOIN ytm_link_cache y ON y.spotify_uri = s.spotify_uri
+       WHERE s.round_id = ?`,
+    )
+    .get(roundId) as { n: number }).n;
+
+  const pop_count = (db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ml_submissions s
+       JOIN song_popularity p ON p.spotify_uri = s.spotify_uri
+       WHERE s.round_id = ?`,
+    )
+    .get(roundId) as { n: number }).n;
+
+  const tags_count = (db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ml_submissions s
+       JOIN song_popularity p ON p.spotify_uri = s.spotify_uri
+       WHERE s.round_id = ? AND p.tags IS NOT NULL`,
+    )
+    .get(roundId) as { n: number }).n;
+
+  const lyrics_count = (db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ml_submissions s
+       JOIN song_lyrics_metrics l ON l.spotify_uri = s.spotify_uri
+       WHERE s.round_id = ?`,
+    )
+    .get(roundId) as { n: number }).n;
+
+  const audio_count = (db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ml_submissions s
+       JOIN song_audio_features a ON a.spotify_uri = s.spotify_uri
+       WHERE s.round_id = ?`,
+    )
+    .get(roundId) as { n: number }).n;
+
   return [
     { name: 'Round metadata', ok: meta_ok, src: roundSrc },
     { name: 'Submissions', ok: subs_count > 0, src: roundSrc, count: subs_count },
@@ -94,5 +137,40 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
       optional: true,
     },
     { name: 'Album art', ok: artOk, src: 'spotify api', count: subs_count },
+    {
+      name: 'YTM playlist links',
+      ok: subs_count > 0 && ytm_count >= subs_count,
+      src: 'ytm_link_cache',
+      count: ytm_count,
+      optional: true,
+    },
+    {
+      name: 'Tastemaker leaderboard',
+      ok: subs_count > 0 && pop_count >= threshold,
+      src: 'song_popularity',
+      count: pop_count,
+      optional: true,
+    },
+    {
+      name: 'Genre & mood blurbs',
+      ok: subs_count > 0 && tags_count >= threshold,
+      src: 'song_popularity',
+      count: tags_count,
+      optional: true,
+    },
+    {
+      name: 'Lyrical metrics',
+      ok: subs_count > 0 && lyrics_count >= threshold,
+      src: 'song_lyrics_metrics',
+      count: lyrics_count,
+      optional: true,
+    },
+    {
+      name: 'Audio insights',
+      ok: subs_count > 0 && audio_count >= threshold,
+      src: 'song_audio_features',
+      count: audio_count,
+      optional: true,
+    },
   ];
 }
