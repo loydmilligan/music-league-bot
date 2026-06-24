@@ -8,6 +8,10 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
   import HeadToHeadCard, { type H2HCardSong } from '$lib/components/HeadToHeadCard.svelte';
+  import Rating from '$lib/song/Rating.svelte';
+  import SongCard from '$lib/song/SongCard.svelte';
+  import SongList from '$lib/song/SongList.svelte';
+  import type { Song, SongRatings } from '$lib/song/canonical.js';
 
   const holdingLane: H2HCardSong = {
     id: 1,
@@ -36,6 +40,41 @@
   function pick(which: string) {
     return () => console.log('picked', which);
   }
+
+  const demoRatings: SongRatings = { discovery: 4, themeFit: 3, quality: 5, replayability: 2 };
+  const demoRatingsPartial: SongRatings = { discovery: 3, themeFit: null, quality: null, replayability: null };
+
+  const demoSong: Song = {
+    id: 'spotify:track:demo1',
+    spotifyUri: 'spotify:track:demo1',
+    ytmUrl: null,
+    title: 'Hold On',
+    artist: 'Tom Waits',
+    album: 'Mule Variations',
+    year: 1999,
+    durationSec: 348,
+    art: { url: 'https://i.scdn.co/image/ab67616d0000b27341a65d40ebcc80e60e6c14be' },
+    ratings: demoRatings,
+    metadata: { popularity: { proxy: 42, obscurity: 0.7, bucket: 'deepCut' }, tags: ['folk', 'grit'] },
+    context: {},
+  };
+
+  const demoSong2: Song = {
+    id: 'spotify:track:demo2',
+    spotifyUri: 'spotify:track:demo2',
+    ytmUrl: null,
+    title: 'Sparrow',
+    artist: 'Big Thief',
+    album: 'Two Hands',
+    year: 2019,
+    durationSec: 192,
+    art: null,
+    ratings: demoRatingsPartial,
+    metadata: { popularity: { proxy: 28, obscurity: 0.85, bucket: 'rabbitHole' }, tags: ['indie', 'folk'] },
+    context: { historyStatus: 'song-mine' },
+  };
+
+  let ratingVal = $state({ ...demoRatings });
 </script>
 
 <svelte:head><title>Component examples</title></svelte:head>
@@ -107,6 +146,58 @@
         <span class="text-fg-dim flex-1">archived-league</span>
         <StatusChip label="IDLE" tone="muted" />
       </div>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <SectionLabel>Rating — all 6 modes</SectionLabel>
+    <div class="bg-surface p-4 rounded-md border border-border-muted space-y-6">
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">bars (editable)</p>
+        <Rating value={ratingVal} mode="bars" editable onchange={(key, val) => { ratingVal = { ...ratingVal, [key]: val }; }} />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">dots (editable)</p>
+        <Rating value={demoRatings} mode="dots" editable />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">fingerprint (editable)</p>
+        <Rating value={demoRatings} mode="fingerprint" editable />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">mini (read-only)</p>
+        <Rating value={demoRatings} mode="mini" />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">chip (read-only)</p>
+        <Rating value={demoRatings} mode="chip" />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">strata (read-only)</p>
+        <Rating value={demoRatings} mode="strata" />
+      </div>
+      <div class="space-y-1">
+        <p class="text-fg-muted text-xs">partial ratings (some null)</p>
+        <Rating value={demoRatingsPartial} mode="bars" />
+      </div>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <SectionLabel>SongCard — row + expanded density</SectionLabel>
+    <div class="bg-surface p-4 rounded-md border border-border-muted space-y-4">
+      <p class="text-fg-muted text-xs">row density (collapses/expands)</p>
+      <SongCard song={demoSong} density="row" config={{ ratingMode: 'mini', ratingEditable: true, art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal' }} onAction={(id, s) => console.log('action', id, s.title)} onRate={(r) => console.log('rate', r)} />
+      <SongCard song={demoSong2} density="row" config={{ ratingMode: 'mini', art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal' }} />
+      <p class="text-fg-muted text-xs mt-4">expanded density</p>
+      <SongCard song={demoSong} density="expanded" config={{ ratingMode: 'bars', ratingEditable: true, art: true, layers: ['rating','meta','tags','notes'], actions: ['play','ytm','analyze','remove'], actionStyle: 'inline' }} />
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <SectionLabel>SongList — accordion</SectionLabel>
+    <div class="bg-surface p-4 rounded-md border border-border-muted">
+      <SongList songs={[demoSong, demoSong2]} density="row" config={{ ratingMode: 'mini', art: true, layers: ['state','rating','tags'], actions: ['play','shortlist'], actionStyle: 'reveal' }} accordion />
     </div>
   </section>
 </div>
