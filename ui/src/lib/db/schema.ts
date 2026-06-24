@@ -233,7 +233,9 @@ export const SCHEMA = `
     playcount          INTEGER,
     popularity_proxy   INTEGER,
     spotify_popularity INTEGER,
-    fetched_at         TEXT NOT NULL
+    fetched_at         TEXT NOT NULL,
+    -- sprint-queue Task 2: Last.fm genre tags (JSON array of strings, top-5 by count)
+    tags               TEXT
   );
   -- Audio features from sintel (librosa analysis). Keyed by spotify_uri; shared
   -- across rounds. bpm and key are derived from the audio file, not Spotify metadata.

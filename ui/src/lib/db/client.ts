@@ -409,6 +409,12 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (regenCols.length && !regenCols.some(c => c.name === 'cover_kind')) {
 		db.exec("ALTER TABLE digest_regenerations ADD COLUMN cover_kind TEXT");
 	}
+	// sprint-queue Task 2: tags column on song_popularity for Last.fm genre tags.
+	// JSON array of top-5 tag name strings. NULL until a lastfm_tags job completes.
+	const songPopCols = db.prepare("PRAGMA table_info(song_popularity)").all() as { name: string }[];
+	if (songPopCols.length && !songPopCols.some(c => c.name === 'tags')) {
+		db.exec("ALTER TABLE song_popularity ADD COLUMN tags TEXT");
+	}
 	return db;
 }
 
