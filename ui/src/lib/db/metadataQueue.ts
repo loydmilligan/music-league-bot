@@ -246,11 +246,13 @@ export function getDigestReadiness(db: Database.Database, roundId: number): Dige
 		return { ytm: empty, lastfm_pop: empty, lastfm_tags: empty, lyrics: empty, audio: empty };
 	}
 
-	// YTM: count submissions that have a ytm_link_cache row
+	// YTM: count submissions where the ytm lookup job completed (link may be null —
+	// not all tracks are on YouTube Music, but "checked" counts as covered).
 	const ytmCount = (db.prepare(
 		`SELECT COUNT(DISTINCT ms.spotify_uri) AS n
 		 FROM ml_submissions ms
-		 JOIN ytm_link_cache ytc ON ytc.spotify_uri = ms.spotify_uri
+		 JOIN song_metadata_queue smq ON smq.spotify_uri = ms.spotify_uri
+		   AND smq.job_type = 'ytm' AND smq.status = 'done'
 		 WHERE ms.round_id = ?`
 	).get(roundId) as { n: number }).n;
 
