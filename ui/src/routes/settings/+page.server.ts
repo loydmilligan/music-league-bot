@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types.js';
 import { fail } from '@sveltejs/kit';
 import { resolve } from 'node:path';
 import { getDb } from '$lib/db/client.js';
-import { getSettings, updateWeights } from '$lib/db/settings.js';
+import { getSettings, updateWeights, updateUnicardWeights } from '$lib/db/settings.js';
 import { getImportLog, logImport } from '$lib/db/importLog.js';
 import { getAllLeagues } from '$lib/db/leagues.js';
 import { parseZip } from '$lib/import/zipParser.js';
@@ -35,6 +35,21 @@ export const actions: Actions = {
     const total = Object.values(w).reduce((a, b) => a + b, 0);
     if (Math.abs(total - 100) > 1) return fail(400, { error: 'Weights must sum to 100' });
     updateWeights(db, w);
+    return { success: true };
+  },
+
+  updateUnicardWeights: async ({ request }) => {
+    const db = getDb();
+    const fd = await request.formData();
+    const w = {
+      weightDiscovery:     Number(fd.get('weightDiscovery')),
+      weightThemeFit:      Number(fd.get('weightThemeFit')),
+      weightQuality:       Number(fd.get('weightQuality')),
+      weightReplayability: Number(fd.get('weightReplayability')),
+    };
+    const total = Object.values(w).reduce((a, b) => a + b, 0);
+    if (Math.abs(total - 100) > 1) return fail(400, { error: 'Weights must sum to 100' });
+    updateUnicardWeights(db, w);
     return { success: true };
   },
 

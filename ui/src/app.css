@@ -48,6 +48,12 @@
 	/* Secondary accents (yellow + magenta) — used sparingly -------------- */
 	--color-warn: #e8a83a;           /* yellow                    rgb(232,168,58) */
 	--color-rose-bg: #3b1a22;        /* rose surface              rgb(59,26,34)   */
+
+	/* Universal songcard axis colors (mirrors colors_and_type.css tokens) - */
+	--color-sky:   #5aa3ff;          /* discovery axis            rgb(90,163,255) */
+	--color-ember: #e6566c;          /* theme fit axis            rgb(230,86,108) */
+	--color-moss:  #3ec27a;          /* quality axis              rgb(62,194,122) */
+	--color-amber: #e8a83a;          /* replayability axis        rgb(232,168,58) */
 }
 
 /* Global resets / base ---------------------------------------------------- */

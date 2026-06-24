@@ -7,10 +7,13 @@ export function getSettings(db: Database.Database): Settings {
     (db.prepare('SELECT key,value FROM settings').all() as any[]).map(r => [r.key, r.value])
   );
   return {
-    weightDiscovery: +( m.weight_discovery ?? DEFAULT_SETTINGS.weight_discovery),
-    weightThemeFit:  +( m.weight_theme_fit  ?? DEFAULT_SETTINGS.weight_theme_fit),
-    weightPersonal:  +( m.weight_personal   ?? DEFAULT_SETTINGS.weight_personal),
-    weightNostalgia: +( m.weight_nostalgia  ?? DEFAULT_SETTINGS.weight_nostalgia),
+    weightDiscovery:       +( m.weight_discovery       ?? DEFAULT_SETTINGS.weight_discovery),
+    weightThemeFit:        +( m.weight_theme_fit        ?? DEFAULT_SETTINGS.weight_theme_fit),
+    weightPersonal:        +( m.weight_personal         ?? DEFAULT_SETTINGS.weight_personal),
+    weightNostalgia:       +( m.weight_nostalgia        ?? DEFAULT_SETTINGS.weight_nostalgia),
+    weightQuality:         +( m.weight_quality          ?? DEFAULT_SETTINGS.weight_quality),
+    weightReplayability:   +( m.weight_replayability    ?? DEFAULT_SETTINGS.weight_replayability),
+    legacyWeightsDeprecatedAt: m.legacy_weights_deprecated_at ?? null,
   };
 }
 
@@ -23,4 +26,23 @@ export function updateWeights(db: Database.Database, w: Partial<Settings>): void
     if (weights.weightNostalgia != null) stmt.run('weight_nostalgia',  String(weights.weightNostalgia));
   });
   tx(w);
+}
+
+export function updateUnicardWeights(db: Database.Database, w: { weightDiscovery: number; weightThemeFit: number; weightQuality: number; weightReplayability: number }): void {
+  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)');
+  db.transaction(() => {
+    stmt.run('weight_discovery',     String(w.weightDiscovery));
+    stmt.run('weight_theme_fit',     String(w.weightThemeFit));
+    stmt.run('weight_quality',       String(w.weightQuality));
+    stmt.run('weight_replayability', String(w.weightReplayability));
+  })();
+}
+
+export function setLegacyWeightsDeprecatedAt(db: Database.Database, ts: string | null): void {
+  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)');
+  if (ts == null) {
+    db.prepare("DELETE FROM settings WHERE key='legacy_weights_deprecated_at'").run();
+  } else {
+    stmt.run('legacy_weights_deprecated_at', ts);
+  }
 }

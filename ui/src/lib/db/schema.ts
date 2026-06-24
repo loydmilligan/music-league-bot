@@ -415,5 +415,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',
 	weight_theme_fit: '25',
 	weight_personal: '25',
-	weight_nostalgia: '15'
+	weight_nostalgia: '15',
+	weight_quality: '20',
+	weight_replayability: '10',
 };

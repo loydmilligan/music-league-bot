@@ -18,6 +18,8 @@ function songRow(r: any): ShortlistSong {
     ratingThemeFit: r.rating_theme_fit,
     ratingNostalgia: r.rating_nostalgia,
     ratingPersonal: r.rating_personal,
+    ratingQuality: r.rating_quality ?? 0,
+    ratingReplayability: r.rating_replayability ?? 0,
     submittedElsewhere: !!r.submitted_elsewhere,
     notes: r.notes,
   };
@@ -59,7 +61,7 @@ export function deleteShortlistSongByUri(db: Database.Database, spotifyUri: stri
   db.prepare('DELETE FROM shortlist_songs WHERE spotify_uri=?').run(spotifyUri);
 }
 
-export function patchShortlistRating(db: Database.Database, id: string, dimension: 'discovery' | 'theme_fit' | 'nostalgia' | 'personal', value: number): void {
+export function patchShortlistRating(db: Database.Database, id: string, dimension: 'discovery' | 'theme_fit' | 'nostalgia' | 'personal' | 'quality' | 'replayability', value: number): void {
   const col = `rating_${dimension}`;
   db.prepare(`UPDATE shortlist_songs SET ${col}=? WHERE id=?`).run(value, id);
 }

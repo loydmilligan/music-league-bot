@@ -7,6 +7,7 @@ function row(r: any): ResearchSong {
     album: r.album, addedAt: r.added_at, notes: r.notes,
     themeFit: r.theme_fit, discoveryPotential: r.discovery_potential,
     nostalgiaPotential: r.nostalgia_potential, personalRating: r.personal_rating,
+    quality: r.quality ?? null, replayability: r.replayability ?? null,
     saveForFuture: !!r.save_for_future, submittedByMe: !!r.submitted_by_me,
     submittedByOther: !!r.submitted_by_other, otherSubmissionVotes: r.other_submission_votes,
   };
@@ -47,6 +48,7 @@ export function updateResearchSong(db: Database.Database, id: number, patch: Par
   const map: Record<string,string> = {
     notes: 'notes', themeFit: 'theme_fit', discoveryPotential: 'discovery_potential',
     nostalgiaPotential: 'nostalgia_potential', personalRating: 'personal_rating',
+    quality: 'quality', replayability: 'replayability',
     saveForFuture: 'save_for_future', submittedByMe: 'submitted_by_me',
     submittedByOther: 'submitted_by_other', otherSubmissionVotes: 'other_submission_votes',
   };

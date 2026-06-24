@@ -136,6 +136,22 @@ export function openLeagueDb(path?: string): Database.Database {
 			WHERE cost_usd IS NOT NULL
 	`);
 
+	// unicard Phase 1: new rating axes on shortlist + research songs.
+	const shortlistCols = db.prepare("PRAGMA table_info(shortlist_songs)").all() as { name: string }[];
+	if (shortlistCols.length && !shortlistCols.some(c => c.name === 'rating_quality')) {
+		db.exec("ALTER TABLE shortlist_songs ADD COLUMN rating_quality INTEGER NOT NULL DEFAULT 0");
+	}
+	if (shortlistCols.length && !shortlistCols.some(c => c.name === 'rating_replayability')) {
+		db.exec("ALTER TABLE shortlist_songs ADD COLUMN rating_replayability INTEGER NOT NULL DEFAULT 0");
+	}
+	const rsCols2 = db.prepare("PRAGMA table_info(research_songs)").all() as { name: string }[];
+	if (rsCols2.length && !rsCols2.some(c => c.name === 'quality')) {
+		db.exec("ALTER TABLE research_songs ADD COLUMN quality INTEGER CHECK(quality BETWEEN 0 AND 5)");
+	}
+	if (rsCols2.length && !rsCols2.some(c => c.name === 'replayability')) {
+		db.exec("ALTER TABLE research_songs ADD COLUMN replayability INTEGER CHECK(replayability BETWEEN 0 AND 5)");
+	}
+
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	// sprint-43 pipeline: seed the default pipeline config on first boot.

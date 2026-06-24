@@ -247,14 +247,23 @@
     loadAutoAnalyze();
   });
 
-  let w = $state({ ...data.settings });
-  let wTotal = $derived(
-    w.weightDiscovery + w.weightThemeFit + w.weightPersonal + w.weightNostalgia
-  );
+  // Legacy weights (read-only — frozen once all surfaces migrate)
+  const wLegacy = data.settings;
+  const wLegacyTotal = wLegacy.weightDiscovery + wLegacy.weightThemeFit + wLegacy.weightPersonal + wLegacy.weightNostalgia;
+  const legacyDeprecated = !!data.settings.legacyWeightsDeprecatedAt;
+
+  // Universal songcard weights (editable)
+  let w = $state({
+    weightDiscovery:     data.settings.weightDiscovery,
+    weightThemeFit:      data.settings.weightThemeFit,
+    weightQuality:       data.settings.weightQuality,
+    weightReplayability: data.settings.weightReplayability,
+  });
+  let wTotal = $derived(w.weightDiscovery + w.weightThemeFit + w.weightQuality + w.weightReplayability);
   const totalOk = $derived(Math.abs(wTotal - 100) <= 1);
 
   function resetWeights() {
-    w = { weightDiscovery: 35, weightThemeFit: 25, weightPersonal: 25, weightNostalgia: 15 };
+    w = { weightDiscovery: 30, weightThemeFit: 40, weightQuality: 20, weightReplayability: 10 };
   }
 
   // Last successful import for the import-card header chip.
@@ -265,34 +274,42 @@
     data.importLog.some((e: { status: string }) => e.status === 'error')
   );
 
-  type WeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightPersonal' | 'weightNostalgia';
+  type WeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightQuality' | 'weightReplayability';
   const weightFields: Array<{ field: WeightField; label: string; dot: string; tooltip: string }> = [
     {
       field: 'weightDiscovery',
-      label: 'Discovery potential',
-      dot: 'bg-health',
+      label: 'Discovery',
+      dot: 'bg-sky',
       tooltip: 'Likelihood this is new to the league — niche or underrated.'
     },
     {
       field: 'weightThemeFit',
       label: 'Theme fit',
-      dot: 'bg-accent',
+      dot: 'bg-ember',
       tooltip: "How well the song matches the round's stated theme."
     },
     {
-      field: 'weightPersonal',
-      label: 'Personal rating',
-      dot: 'bg-warn',
-      tooltip: 'Your gut-level affection independent of theme.'
+      field: 'weightQuality',
+      label: 'Quality',
+      dot: 'bg-moss',
+      tooltip: 'Intrinsic quality and craft of the song.'
     },
     {
-      field: 'weightNostalgia',
-      label: 'Nostalgia potential',
-      dot: 'bg-accent-strong',
-      tooltip: 'Emotional / personal connection from the past.'
+      field: 'weightReplayability',
+      label: 'Replayability',
+      dot: 'bg-amber',
+      tooltip: 'How often you want to revisit it.'
     }
   ];
   const weightFieldKeys: WeightField[] = weightFields.map((f) => f.field);
+
+  type LegacyWeightField = 'weightDiscovery' | 'weightThemeFit' | 'weightPersonal' | 'weightNostalgia';
+  const legacyWeightFields: Array<{ field: LegacyWeightField; label: string; dot: string }> = [
+    { field: 'weightDiscovery', label: 'Discovery potential', dot: 'bg-health' },
+    { field: 'weightThemeFit',  label: 'Theme fit',           dot: 'bg-accent' },
+    { field: 'weightPersonal',  label: 'Personal rating',     dot: 'bg-warn' },
+    { field: 'weightNostalgia', label: 'Nostalgia potential', dot: 'bg-accent-strong' },
+  ];
 
   // Auto-balance: when on, moving one slider by Δ distributes −Δ/3 across the other
   // three (clamped to [0,100]). Implemented via explicit oninput (not bind:value) so
@@ -626,15 +643,20 @@
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right). -->
 <div class="grid md:grid-cols-2 gap-6 mb-6 items-start mt-6">
-<!-- Section 1: Rating Weights (left column) -->
+<!-- Section 1: Rating Weights (left column) — dual panels -->
+<div class="flex flex-col gap-4">
+
+<!-- Universal Songcard weights panel (active, editable) -->
 <section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="mb-1">
-    <SectionLabel>Research weights</SectionLabel>
-    <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
+  <header class="mb-1 flex items-center gap-3">
+    <div class="flex-1">
+      <SectionLabel>Universal songcard</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
+    </div>
+    <StatusChip label="ACTIVE" tone="accent" />
   </header>
   <p class="text-xs text-fg-dim mb-4">
-    Four dimensions, sums to 100. The weighted score is
-    <code class="font-mono text-fg">Σ(rating × weight) / Σ(weight)</code>.
+    Four axes, sums to 100. Score = <code class="font-mono text-fg">Σ(rating × weight) / Σ(weight) × 4</code> → /20.
   </p>
 
   <!-- Auto-balance toggle + live sum indicator -->
@@ -659,7 +681,7 @@
     {/if}
   </div>
 
-  <form method="POST" action="?/updateWeights" use:enhance class="space-y-4">
+  <form method="POST" action="?/updateUnicardWeights" use:enhance class="space-y-4">
     {#each weightFields as { field, label, dot, tooltip } (field)}
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2 w-52">
@@ -690,10 +712,10 @@
 
     <!-- Visual proportion bar -->
     <div class="flex h-2 rounded-sm overflow-hidden border border-border-muted">
-      <div class="bg-health transition-all" style="width:{w.weightDiscovery}%"></div>
-      <div class="bg-accent transition-all" style="width:{w.weightThemeFit}%"></div>
-      <div class="bg-warn transition-all" style="width:{w.weightPersonal}%"></div>
-      <div class="bg-accent-strong transition-all" style="width:{w.weightNostalgia}%"></div>
+      <div class="bg-sky transition-all" style="width:{w.weightDiscovery}%"></div>
+      <div class="bg-ember transition-all" style="width:{w.weightThemeFit}%"></div>
+      <div class="bg-moss transition-all" style="width:{w.weightQuality}%"></div>
+      <div class="bg-amber transition-all" style="width:{w.weightReplayability}%"></div>
     </div>
 
     <div class="flex items-center gap-4 pt-2">
@@ -713,6 +735,41 @@
     </div>
   </form>
 </section>
+
+<!-- Legacy weights panel (frozen, read-only) — hidden once all surfaces migrated -->
+{#if !legacyDeprecated}
+<section class="bg-surface border border-dashed border-border-muted rounded-xl p-6 opacity-60">
+  <header class="mb-1 flex items-center gap-3">
+    <div class="flex-1">
+      <SectionLabel>Legacy cards</SectionLabel>
+      <h2 class="text-lg font-bold text-fg-muted mt-1">Rating weights (legacy)</h2>
+    </div>
+    <StatusChip label="DEPRECATED" tone="muted" />
+  </header>
+  <p class="text-xs text-fg-dim mb-4">
+    Applies only to pre-unicard surfaces. Frozen — remove this panel once every surface is on the universal songcard.
+  </p>
+  <div class="space-y-3">
+    {#each legacyWeightFields as { field, label, dot } (field)}
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 w-52">
+          <span class="w-2 h-2 rounded-full {dot} shrink-0 opacity-50"></span>
+          <span class="text-sm text-fg-dim">{label}</span>
+        </div>
+        <div class="flex-1 h-2 rounded-sm bg-border-muted overflow-hidden">
+          <div class="h-full bg-fg-dim opacity-40 transition-all" style="width:{wLegacy[field]}%"></div>
+        </div>
+        <span class="w-12 text-right text-sm font-mono text-fg-dim">
+          {wLegacy[field]}%
+        </span>
+      </div>
+    {/each}
+    <div class="pt-1 text-xs font-mono text-fg-dim">Total: {wLegacyTotal}%</div>
+  </div>
+</section>
+{/if}
+
+</div>
 
 <!-- Right column: Import + Queue stacked -->
 <div class="flex flex-col gap-6">

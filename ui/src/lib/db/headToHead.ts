@@ -17,6 +17,8 @@ function candidateRow(r: any, weightedScore: number | null): H2HCandidate {
     discoveryPotential: r.discovery_potential,
     nostalgiaPotential: r.nostalgia_potential,
     personalRating: r.personal_rating,
+    quality: r.quality ?? null,
+    replayability: r.replayability ?? null,
     notes: r.notes,
     weightedScore,
     status: r.status,

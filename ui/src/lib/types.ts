@@ -18,10 +18,15 @@ export interface ResearchSong {
   album: string | null; addedAt: string; notes: string | null;
   themeFit: number | null; discoveryPotential: number | null;
   nostalgiaPotential: number | null; personalRating: number | null;
+  quality: number | null; replayability: number | null;
   saveForFuture: boolean; submittedByMe: boolean; submittedByOther: boolean;
   otherSubmissionVotes: number | null; score?: number | null;
 }
-export interface Settings { weightDiscovery: number; weightThemeFit: number; weightPersonal: number; weightNostalgia: number; }
+export interface Settings {
+  weightDiscovery: number; weightThemeFit: number; weightPersonal: number; weightNostalgia: number;
+  weightQuality: number; weightReplayability: number;
+  legacyWeightsDeprecatedAt: string | null;
+}
 export interface ImportLogEntry {
   id: number; leagueSlug: string; seasonNumber: number; filename: string; importedAt: string;
   roundsCount: number; submissionsCount: number; votesCount: number;
@@ -45,6 +50,8 @@ export interface H2HCandidate {
   discoveryPotential: number | null;
   nostalgiaPotential: number | null;
   personalRating: number | null;
+  quality: number | null;
+  replayability: number | null;
   notes: string | null;
   weightedScore: number | null;
   status: string;
@@ -77,6 +84,8 @@ export interface ShortlistSong {
   ratingThemeFit: number;
   ratingNostalgia: number;
   ratingPersonal: number;
+  ratingQuality: number;
+  ratingReplayability: number;
   submittedElsewhere: boolean;
   notes: string;
   assignments?: ShortlistAssignment[];
