@@ -193,7 +193,7 @@ export async function runWorkerTick(db: Database.Database): Promise<'processed' 
 		const errorMsg = err instanceof Error ? err.message : String(err);
 		const newRetries = (job.retries ?? 0) + 1;
 
-		if (newRetries < MAX_RETRIES) {
+		if (job.retries < MAX_RETRIES) {
 			// Auto-retry: increment retries, reset to pending.
 			db.prepare(
 				`UPDATE song_metadata_queue
