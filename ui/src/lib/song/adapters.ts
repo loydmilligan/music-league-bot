@@ -64,8 +64,9 @@ export const adapters = {
       quality: clamp05(ratings.ratingQuality != null ? ratings.ratingQuality : ratings.ratingPersonal),
       replayability: clamp05(ratings.ratingReplayability),
     };
+    const rawAssignments = (r.assignments as { roundId?: number | string }[]) || [];
     s.context = {
-      assignments: (r.assignments as string[]) || [],
+      assignments: rawAssignments.map(a => String(a.roundId ?? a)),
       submittedElsewhere: !!(r.submittedElsewhere),
       badges: r.badges as SongContext['badges'],
       corpus: r.corpus as SongContext['corpus'],

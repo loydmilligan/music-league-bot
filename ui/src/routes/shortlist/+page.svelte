@@ -1,9 +1,12 @@
 <script lang="ts">
   import '$lib/shortlist/shortlist.css';
   import SearchBar from '$lib/shortlist/SearchBar.svelte';
-  import ShortlistRow from '$lib/shortlist/ShortlistRow.svelte';
+  import AssignPopover from '$lib/shortlist/AssignPopover.svelte';
   import ShortlistStrip from '$lib/shortlist/ShortlistStrip.svelte';
   import ShortlistH2HPanel from '$lib/shortlist/ShortlistH2HPanel.svelte';
+  import SongCard from '$lib/song/SongCard.svelte';
+  import { adapters } from '$lib/song/adapters.js';
+  import type { SongRatings, SongCardConfig, Song, SongAudio } from '$lib/song/canonical.js';
   import type { PageData } from './$types.js';
   import type { ShortlistSong } from '$lib/types.js';
 
@@ -20,15 +23,45 @@
   let searchRef: { focusInput: () => void } | undefined;
   let rKeyHeld = $state(false);
   let rTimeout: ReturnType<typeof setTimeout>;
-  let personalRatingBus = $state<{ id: string; value: number } | null>(null);
+  let assignPopoverSongId = $state<string | null>(null);
+  let audioMap = $state<Map<string, SongAudio>>(new Map());
+  let analyzingIds = $state<Set<string>>(new Set());
+
+  const BASE_CONFIG: Omit<SongCardConfig, 'noteText'> = {
+    art: true,
+    ratingMode: 'mini',
+    expandedConfig: {
+      ratingMode: 'bars',
+      ratingEditable: true,
+      artPx: 180,
+      layers: ['state', 'rating', 'notes', 'analyze'],
+      actions: ['play', 'assign', 'submitted', 'remove'],
+      actionStyle: 'inline',
+    },
+  };
+
+  function toCard(s: ShortlistSong): Song {
+    const song = adapters.fromShortlist(s as unknown as Record<string, unknown>);
+    const audio = audioMap.get(s.id);
+    if (audio) {
+      song.metadata = { ...song.metadata, audio, enrichState: 'done' };
+    } else if (analyzingIds.has(s.id)) {
+      song.metadata = { ...song.metadata, enrichState: 'running' };
+    }
+    return song;
+  }
+
+  function songConfig(s: ShortlistSong): SongCardConfig {
+    return { ...BASE_CONFIG, noteText: s.notes };
+  }
 
   function totalScore(s: ShortlistSong) {
-    return s.ratingDiscovery + s.ratingThemeFit + s.ratingNostalgia + s.ratingPersonal;
+    return s.ratingDiscovery + s.ratingThemeFit + s.ratingQuality + s.ratingReplayability;
   }
 
   const sorted = $derived([...songs].sort((a, b) => {
     if (sortKey === 'score') return totalScore(b) - totalScore(a);
-    if (sortKey === 'personal') return b.ratingPersonal - a.ratingPersonal;
+    if (sortKey === 'personal') return (b.ratingQuality ?? 0) - (a.ratingQuality ?? 0);
     return Date.parse(b.addedAt) - Date.parse(a.addedAt);
   }));
 
@@ -48,13 +81,9 @@
     }
   }
 
-  function handleRemoved(id: string) {
-    songs = songs.filter(s => s.id !== id);
-    if (openId === id) openId = null;
-  }
-
   function handleToggle(id: string) {
     openId = openId === id ? null : id;
+    if (assignPopoverSongId !== id) assignPopoverSongId = null;
   }
 
   function handleH2hStart(leagueId: number, leagueName: string, roundId: number) {
@@ -80,17 +109,113 @@
     );
   }
 
+  const DIM_API_MAP: Record<string, string> = {
+    discovery: 'discovery',
+    themeFit: 'theme_fit',
+    quality: 'quality',
+    replayability: 'replayability',
+  };
+
+  async function handleRate(ratings: SongRatings, song: Song) {
+    const sl = songs.find(s => s.id === song.id);
+    if (!sl) return;
+    const prev: Record<string, number | null> = {
+      discovery: sl.ratingDiscovery,
+      themeFit: sl.ratingThemeFit,
+      quality: sl.ratingQuality,
+      replayability: sl.ratingReplayability,
+    };
+    const next: Record<string, number | null> = ratings as unknown as Record<string, number | null>;
+    const patches: Promise<void>[] = [];
+    for (const [key, dim] of Object.entries(DIM_API_MAP)) {
+      const newVal = next[key];
+      if (newVal !== null && newVal !== prev[key]) {
+        patches.push(
+          fetch(`/api/shortlist/${sl.id}/rating`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dimension: dim, value: newVal }),
+          }).then(() => undefined),
+        );
+      }
+    }
+    songs = songs.map(s => s.id === song.id ? {
+      ...s,
+      ratingDiscovery: ratings.discovery ?? s.ratingDiscovery,
+      ratingThemeFit: ratings.themeFit ?? s.ratingThemeFit,
+      ratingQuality: ratings.quality ?? s.ratingQuality,
+      ratingReplayability: ratings.replayability ?? s.ratingReplayability,
+    } : s);
+    await Promise.all(patches);
+  }
+
+  async function handleNotes(text: string, song: Song) {
+    const sl = songs.find(s => s.id === song.id);
+    if (!sl) return;
+    await fetch(`/api/shortlist/${sl.id}/notes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: text }),
+    });
+    songs = songs.map(s => s.id === song.id ? { ...s, notes: text } : s);
+  }
+
+  async function handleAnalyze(song: Song) {
+    if (analyzingIds.has(song.id)) return;
+    analyzingIds = new Set([...analyzingIds, song.id]);
+    try {
+      const res = await fetch(`/api/shortlist/${song.id}/analyze-audio`, { method: 'POST' });
+      if (res.ok) {
+        const body = await res.json() as SongAudio;
+        audioMap = new Map([...audioMap, [song.id, body]]);
+      }
+    } finally {
+      analyzingIds = new Set([...analyzingIds].filter(id => id !== song.id));
+    }
+  }
+
+  async function handleAction(actionId: string, song: Song) {
+    const sl = songs.find(s => s.id === song.id);
+    if (!sl) return;
+    if (actionId === 'play') {
+      const trackId = sl.spotifyUri?.split(':').at(-1);
+      if (trackId) window.open(`https://open.spotify.com/track/${trackId}`, '_blank');
+    } else if (actionId === 'assign') {
+      assignPopoverSongId = assignPopoverSongId === sl.id ? null : sl.id;
+    } else if (actionId === 'submitted') {
+      const newVal = !sl.submittedElsewhere;
+      await fetch(`/api/shortlist/${sl.id}/submitted-elsewhere`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newVal }),
+      });
+      songs = songs.map(s => s.id === sl.id ? { ...s, submittedElsewhere: newVal } : s);
+    } else if (actionId === 'remove') {
+      await fetch(`/api/shortlist/${sl.id}`, { method: 'DELETE' });
+      songs = songs.filter(s => s.id !== sl.id);
+      if (openId === sl.id) openId = null;
+      if (assignPopoverSongId === sl.id) assignPopoverSongId = null;
+    }
+  }
+
   function handleGlobalKeydown(e: KeyboardEvent) {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.key === '/') { e.preventDefault(); searchRef?.focusInput(); return; }
-    if (e.key === 'Escape') { openId = null; showHelp = false; return; }
+    if (e.key === 'Escape') { openId = null; assignPopoverSongId = null; showHelp = false; return; }
     if (e.key === '?') { e.preventDefault(); showHelp = !showHelp; return; }
     if (e.key === 'r') { rKeyHeld = true; clearTimeout(rTimeout); rTimeout = setTimeout(() => rKeyHeld = false, 1000); return; }
     if (rKeyHeld && openId && '12345'.includes(e.key)) {
       rKeyHeld = false;
-      personalRatingBus = { id: openId, value: parseInt(e.key) };
-      setTimeout(() => { personalRatingBus = null; }, 0);
+      const sl = songs.find(s => s.id === openId);
+      if (!sl) return;
+      const song = toCard(sl);
+      handleRate({
+        discovery: song.ratings.discovery,
+        themeFit: song.ratings.themeFit,
+        quality: parseInt(e.key),
+        replayability: song.ratings.replayability,
+      }, song);
     }
   }
 </script>
@@ -129,14 +254,41 @@
   </div>
 
   <div class="sl-rows mt-2">
-    {#each sorted as song (song.id)}
-      <ShortlistRow
-        {song}
-        open={openId === song.id}
-        ontoggle={() => handleToggle(song.id)}
-        onremoved={handleRemoved}
-        personalRatingSignal={personalRatingBus?.id === song.id ? personalRatingBus.value : null}
-      />
+    {#each sorted as sl (sl.id)}
+      <div style="position: relative">
+        <SongCard
+          song={toCard(sl)}
+          config={songConfig(sl)}
+          expanded={openId === sl.id}
+          onToggle={() => handleToggle(sl.id)}
+          onAction={handleAction}
+          onRate={handleRate}
+          onNotes={handleNotes}
+          onAnalyze={handleAnalyze}
+        />
+        {#if assignPopoverSongId === sl.id}
+          <AssignPopover
+            songTitle={sl.title}
+            assignedRoundIds={(sl.assignments ?? []).map(a => a.roundId)}
+            onAssign={async (roundId) => {
+              await fetch(`/api/shortlist/${sl.id}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ round_id: roundId }),
+              });
+              handleQuickAssigned(sl.id, roundId);
+            }}
+            onUnassign={async (roundId) => {
+              await fetch(`/api/shortlist/${sl.id}/assign/${roundId}`, { method: 'DELETE' });
+              songs = songs.map(s => s.id === sl.id
+                ? { ...s, assignments: (s.assignments ?? []).filter(a => a.roundId !== roundId) }
+                : s,
+              );
+            }}
+            onclose={() => assignPopoverSongId = null}
+          />
+        {/if}
+      </div>
     {/each}
     {#if songs.length === 0}
       <p class="font-mono text-sm text-fg-faint italic mt-8 text-center">No songs yet — search above to add your first.</p>
@@ -156,7 +308,7 @@
             <tr><td><kbd>Esc</kbd></td><td>Close search / collapse row</td></tr>
             <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move search selection</td></tr>
             <tr><td><kbd>↵</kbd></td><td>Add keyed result / expand row</td></tr>
-            <tr><td><kbd>r</kbd> <kbd>1–5</kbd></td><td>Set Personal rating (row open)</td></tr>
+            <tr><td><kbd>r</kbd> <kbd>1–5</kbd></td><td>Set Quality rating (row open)</td></tr>
             <tr><td><kbd>?</kbd></td><td>Toggle this overlay</td></tr>
           </tbody>
         </table>

@@ -13,6 +13,7 @@
     onAction,
     onRate,
     onAnalyze,
+    onNotes,
   } = $props<{
     song: Song;
     density?: 'row' | 'expanded';
@@ -24,6 +25,7 @@
     onAction?: (actionId: string, song: Song) => void;
     onRate?: (ratings: SongRatings, song: Song) => void;
     onAnalyze?: (song: Song) => void;
+    onNotes?: (text: string, song: Song) => void;
   }>();
 
   let _expanded = $state(defaultExpanded);
@@ -431,7 +433,7 @@
           {#if has('notes')}
             <div>
               <div class="usc-layer-label">notes</div>
-              <textarea class="usc-notes" placeholder="Why this one? (private operator note)" value={cfg.noteText || ''}></textarea>
+              <textarea class="usc-notes" placeholder="Why this one? (private operator note)" value={cfg.noteText || ''} onblur={(e) => onNotes?.(e.currentTarget.value, song)}></textarea>
             </div>
           {/if}
           {#if has('analyze')}
