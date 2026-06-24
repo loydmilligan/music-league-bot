@@ -6,7 +6,7 @@
   import ShortlistH2HPanel from '$lib/shortlist/ShortlistH2HPanel.svelte';
   import SongCard from '$lib/song/SongCard.svelte';
   import { adapters } from '$lib/song/adapters.js';
-  import type { SongRatings, SongCardConfig, Song, SongAudio } from '$lib/song/canonical.js';
+  import type { SongRatings, SongCardConfig, Song } from '$lib/song/canonical.js';
   import type { PageData } from './$types.js';
   import type { ShortlistSong } from '$lib/types.js';
 
@@ -24,7 +24,6 @@
   let rKeyHeld = $state(false);
   let rTimeout: ReturnType<typeof setTimeout>;
   let assignPopoverSongId = $state<string | null>(null);
-  let audioMap = $state<Map<string, SongAudio>>(new Map());
   let analyzingIds = $state<Set<string>>(new Set());
 
   const BASE_CONFIG: Omit<SongCardConfig, 'noteText'> = {
@@ -42,10 +41,7 @@
 
   function toCard(s: ShortlistSong): Song {
     const song = adapters.fromShortlist(s as unknown as Record<string, unknown>);
-    const audio = audioMap.get(s.id);
-    if (audio) {
-      song.metadata = { ...song.metadata, audio, enrichState: 'done' };
-    } else if (analyzingIds.has(s.id)) {
+    if (analyzingIds.has(s.id)) {
       song.metadata = { ...song.metadata, enrichState: 'running' };
     }
     return song;
@@ -161,17 +157,12 @@
   }
 
   async function handleAnalyze(song: Song) {
-    if (analyzingIds.has(song.id)) return;
+    if (analyzingIds.has(song.id) || !song.spotifyUri) return;
     analyzingIds = new Set([...analyzingIds, song.id]);
-    try {
-      const res = await fetch(`/api/shortlist/${song.id}/analyze-audio`, { method: 'POST' });
-      if (res.ok) {
-        const body = await res.json() as SongAudio;
-        audioMap = new Map([...audioMap, [song.id, body]]);
-      }
-    } finally {
-      analyzingIds = new Set([...analyzingIds].filter(id => id !== song.id));
-    }
+    await fetch(`/api/songs/${encodeURIComponent(song.spotifyUri)}/enrich`, { method: 'POST' });
+    // Jobs are now queued — the background worker will process them.
+    // analyzingIds stays set so SongCard shows 'running'; clears on page reload
+    // when enriched data comes back from the DB.
   }
 
   async function handleAction(actionId: string, song: Song) {
