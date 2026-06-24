@@ -87,11 +87,22 @@
     failed: number;
     total: number;
   }
+  interface ReadinessItem { ok: boolean; count: number; total: number; }
+  interface DigestReadiness {
+    ytm: ReadinessItem; lastfm_pop: ReadinessItem; lastfm_tags: ReadinessItem;
+    lyrics: ReadinessItem; audio: ReadinessItem;
+  }
+  interface CoverageRow {
+    spotify_uri: string; title: string | null; artist: string | null;
+    jobs: Record<string, 'done' | 'processing' | 'pending' | 'failed' | 'missing'>;
+  }
   interface QueueStatusPayload {
     byJobType: Record<string, JobCounts>;
     failures: Array<{ id: number; spotify_uri: string; job_type: string; error: string | null; retries: number }>;
     totalPending: number;
     totalProcessing: number;
+    digestReadiness?: DigestReadiness;
+    coverageMatrix?: CoverageRow[];
   }
 
   const JOB_META: Record<string, { name: string; provider: string; speed: string }> = {
@@ -145,6 +156,58 @@
   const totalDone24h = $derived(
     queueData ? Object.values(queueData.byJobType).reduce((s, c) => s + c.done24h, 0) : 0
   );
+  // Digest readiness metadata
+  const READINESS_META = [
+    { key: 'ytm'         as const, label: 'YTM playlist links',    src: 'ytm_link_cache'      },
+    { key: 'lastfm_pop'  as const, label: 'Tastemaker leaderboard', src: 'song_popularity'    },
+    { key: 'lastfm_tags' as const, label: 'Genre & mood blurbs',    src: 'song_popularity'    },
+    { key: 'lyrics'      as const, label: 'Lyrical metrics',        src: 'song_lyrics_metrics' },
+    { key: 'audio'       as const, label: 'Audio insights',         src: 'song_audio_features' },
+  ];
+
+  const CELL_COL = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio'] as const;
+  const CELL_HEADER = ['YTM', 'Pop', 'Tags', 'Lyr', 'Audio'];
+
+  let fillGapsLoading = $state(false);
+  let fillGapsToast = $state<string | null>(null);
+
+  const blockedCount = $derived(
+    queueData?.digestReadiness
+      ? READINESS_META.filter(m => !queueData!.digestReadiness![m.key].ok).length
+      : 0
+  );
+  const songsToEnrich = $derived(
+    queueData?.coverageMatrix
+      ? queueData.coverageMatrix.filter(row =>
+          (['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics'] as const).some(
+            jt => row.jobs[jt] === 'missing' || row.jobs[jt] === 'failed'
+          )
+        ).length
+      : 0
+  );
+
+  async function fillGaps() {
+    if (selectedScope == null || fillGapsLoading) return;
+    fillGapsLoading = true;
+    fillGapsToast = null;
+    try {
+      const r = await fetch('/api/metadata-queue/fill-gaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roundId: selectedScope }),
+      });
+      if (r.ok) {
+        const body = (await r.json()) as { queued: number };
+        fillGapsToast = `Queued ${body.queued} jobs`;
+        const res = await fetch(`/api/metadata-queue/status?roundId=${selectedScope}`);
+        if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
+        setTimeout(() => { fillGapsToast = null; }, 3500);
+      }
+    } catch { /* ignore */ } finally {
+      fillGapsLoading = false;
+    }
+  }
+
   const overallTone = $derived(
     !queueData ? 'muted'
     : queueData.failures.length > 0 ? 'warn'
@@ -385,7 +448,103 @@
     {/each}
   </div>
 
-  <!-- [Task 10 slot: Digest readiness + Coverage matrix when round selected] -->
+  <!-- Digest readiness + Coverage matrix — round-scoped only -->
+  {#if selectedScope != null && queueData?.digestReadiness}
+    {@const dr = queueData.digestReadiness}
+
+    <!-- Digest readiness block -->
+    <div class="mt-6 border-t border-border-muted pt-5">
+      <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Digest readiness</span>
+          <div class="text-sm font-semibold text-fg mt-0.5">
+            {#if blockedCount === 0}
+              All metadata sections ready
+            {:else}
+              {blockedCount} section{blockedCount === 1 ? '' : 's'} blocked
+            {/if}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          {#if fillGapsToast}
+            <span class="font-mono text-[10px] tracking-widest uppercase text-health">{fillGapsToast}</span>
+          {/if}
+          {#if blockedCount > 0}
+            <button
+              type="button"
+              onclick={fillGaps}
+              disabled={fillGapsLoading}
+              class="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-sm border transition-colors {fillGapsLoading ? 'border-border-muted text-fg-faint cursor-not-allowed' : 'border-accent text-accent hover:bg-accent hover:text-bg'}"
+            >
+              {fillGapsLoading ? 'Enqueueing…' : `Fill gaps · enrich ${songsToEnrich}`}
+            </button>
+          {/if}
+        </div>
+      </div>
+
+      <div class="space-y-0">
+        {#each READINESS_META as row (row.key)}
+          {@const item = dr[row.key]}
+          <div class="flex items-center gap-3 py-2 border-t border-border-muted first:border-t-0">
+            <span class="text-base w-5 shrink-0 {item.ok ? 'text-health' : 'text-warn'}">{item.ok ? '✓' : '!'}</span>
+            <span class="text-sm text-fg flex-1">{row.label}</span>
+            <span class="font-mono text-[11px] text-fg-faint">{row.src} · {item.count}/{item.total}</span>
+            {#if item.ok}
+              <StatusChip label="READY" tone="health" />
+            {:else}
+              <StatusChip label="BLOCKED" tone="warn" />
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Coverage matrix -->
+    {#if queueData.coverageMatrix && queueData.coverageMatrix.length > 0}
+      <div class="mt-6 border-t border-border-muted pt-5">
+        <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Coverage matrix</span>
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full text-xs min-w-[480px]">
+            <thead>
+              <tr>
+                <th class="text-left py-1.5 pr-3 font-mono text-[10px] tracking-widest uppercase text-fg-faint font-normal w-48">Song</th>
+                {#each CELL_HEADER as hdr, i (hdr)}
+                  <th class="text-center py-1.5 px-2 font-mono text-[10px] tracking-widest uppercase text-fg-faint font-normal w-14" title={JOB_META[CELL_COL[i]].name}>{hdr}</th>
+                {/each}
+              </tr>
+            </thead>
+            <tbody>
+              {#each queueData.coverageMatrix as song (song.spotify_uri)}
+                <tr class="border-t border-border-muted hover:bg-surface-hover">
+                  <td class="py-1.5 pr-3 max-w-[12rem]">
+                    <div class="truncate text-fg">{song.title ?? song.spotify_uri}</div>
+                    {#if song.artist}<div class="truncate text-fg-faint text-[10px]">{song.artist}</div>{/if}
+                  </td>
+                  {#each CELL_COL as jt (jt)}
+                    {@const st = song.jobs[jt]}
+                    <td class="py-1.5 px-2 text-center">
+                      {#if st === 'done'}
+                        <span class="text-health text-base leading-none" title="done">●</span>
+                      {:else if st === 'processing'}
+                        <span class="text-accent text-base leading-none animate-pulse" title="processing">●</span>
+                      {:else if st === 'pending'}
+                        <span class="text-accent/50 text-base leading-none" title="queued">○</span>
+                      {:else if st === 'failed'}
+                        <span class="text-warn font-bold" title="failed">✗</span>
+                      {:else}
+                        <span class="text-fg-faint" title="missing">—</span>
+                      {/if}
+                    </td>
+                  {/each}
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {/if}
+  {/if}
+
   <!-- [Task 11 slot: Failures list + Auto-enrich footer] -->
 </section>
 
