@@ -18,7 +18,10 @@ export const load: PageServerLoad = async () => {
   const importLog = getImportLog(db);
   const allLeagues = getAllLeagues(db);
   const queueStatus = getQueueStatus(db);
-  return { settings, importLog, allLeagues, queueStatus };
+  const recentRounds = db
+    .prepare(`SELECT id, name FROM rounds ORDER BY id DESC LIMIT 12`)
+    .all() as Array<{ id: number; name: string }>;
+  return { settings, importLog, allLeagues, queueStatus, recentRounds };
 };
 
 export const actions: Actions = {

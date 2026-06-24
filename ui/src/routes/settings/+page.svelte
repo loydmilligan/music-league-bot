@@ -76,6 +76,89 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Metadata queue panel
+  // ---------------------------------------------------------------------------
+
+  interface JobCounts {
+    pending: number;
+    processing: number;
+    done24h: number;
+    failed: number;
+    total: number;
+  }
+  interface QueueStatusPayload {
+    byJobType: Record<string, JobCounts>;
+    failures: Array<{ id: number; spotify_uri: string; job_type: string; error: string | null; retries: number }>;
+    totalPending: number;
+    totalProcessing: number;
+  }
+
+  const JOB_META: Record<string, { name: string; provider: string; speed: string }> = {
+    ytm:         { name: 'YTM playlist links',    provider: 'Songlink', speed: 'fast' },
+    lastfm_pop:  { name: 'Tastemaker popularity', provider: 'Last.fm',  speed: 'fast' },
+    lastfm_tags: { name: 'Genre & mood tags',     provider: 'Last.fm',  speed: 'fast' },
+    lyrics:      { name: 'Lyrical metrics',       provider: 'LRCLIB',   speed: 'fast' },
+    audio:       { name: 'Audio insights',        provider: 'sintel',   speed: '2–10m · 1 concurrent' },
+  };
+  const JOB_ORDER = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio'] as const;
+
+  let selectedScope = $state<number | null>(null);
+  let queueData = $state<QueueStatusPayload | null>(null);
+
+  $effect(() => {
+    const scope = selectedScope;
+    async function doFetch() {
+      const url = scope != null
+        ? `/api/metadata-queue/status?roundId=${scope}`
+        : '/api/metadata-queue/status';
+      try {
+        const r = await fetch(url);
+        if (r.ok) queueData = (await r.json()) as QueueStatusPayload;
+      } catch { /* silently ignore */ }
+    }
+    doFetch();
+    const interval = setInterval(doFetch, 10000);
+    return () => clearInterval(interval);
+  });
+
+  function jobDone(c: JobCounts): number {
+    return Math.max(0, c.total - c.pending - c.processing - c.failed);
+  }
+  function jobProgress(c: JobCounts): number {
+    return c.total === 0 ? 0 : jobDone(c) / c.total;
+  }
+  function jobChipTone(c: JobCounts): 'health' | 'accent' | 'warn' | 'muted' {
+    if (c.total === 0) return 'muted';
+    if (c.failed > 0) return 'warn';
+    if (c.processing > 0 || c.pending > 0) return 'accent';
+    return 'health';
+  }
+  function jobChipLabel(c: JobCounts): string {
+    if (c.total === 0) return 'NO DATA';
+    if (c.failed > 0) return `${c.failed} FAILED`;
+    if (c.processing > 0) return 'RUNNING';
+    if (c.pending > 0) return `${c.pending} QUEUED`;
+    return 'DONE';
+  }
+
+  const totalDone24h = $derived(
+    queueData ? Object.values(queueData.byJobType).reduce((s, c) => s + c.done24h, 0) : 0
+  );
+  const overallTone = $derived(
+    !queueData ? 'muted'
+    : queueData.failures.length > 0 ? 'warn'
+    : queueData.totalPending > 0 || queueData.totalProcessing > 0 ? 'accent'
+    : 'health'
+  );
+  const overallLabel = $derived(
+    !queueData ? 'LOADING'
+    : queueData.failures.length > 0 ? `${queueData.failures.length} FAILURE${queueData.failures.length === 1 ? '' : 'S'}`
+    : queueData.totalProcessing > 0 ? `RUNNING · ${queueData.totalProcessing}`
+    : queueData.totalPending > 0 ? `${queueData.totalPending} PENDING`
+    : 'IDLE'
+  );
+
   // Load on mount
   $effect(() => {
     loadDebugMode();
@@ -195,6 +278,116 @@
 </div>
 
 <SettingsTabs />
+
+<!-- ── Song Metadata Queue panel ─────────────────────────────────────────── -->
+<section
+  class="bg-surface border border-border-muted rounded-xl p-6 mt-6 mb-6"
+  style="border-left: 3px solid var(--color-accent);"
+>
+  <!-- Header -->
+  <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+    <div>
+      <SectionLabel>Enrichment</SectionLabel>
+      <h2 class="text-lg font-bold text-fg mt-1">Song metadata queue</h2>
+    </div>
+    <StatusChip label={overallLabel} tone={overallTone} />
+  </header>
+
+  <!-- Scope control -->
+  <div class="flex flex-wrap gap-1.5 mb-5">
+    <button
+      type="button"
+      onclick={() => { selectedScope = null; }}
+      class="font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-sm border transition-colors {selectedScope === null ? 'bg-accent text-bg border-accent' : 'bg-bg-elevated text-fg-dim border-border-muted hover:border-accent hover:text-fg'}"
+    >
+      All rounds
+    </button>
+    {#each data.recentRounds as round (round.id)}
+      <button
+        type="button"
+        onclick={() => { selectedScope = round.id; }}
+        class="font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-sm border transition-colors max-w-[14rem] truncate {selectedScope === round.id ? 'bg-accent text-bg border-accent' : 'bg-bg-elevated text-fg-dim border-border-muted hover:border-accent hover:text-fg'}"
+        title={round.name}
+      >
+        {round.name}
+      </button>
+    {/each}
+  </div>
+
+  <!-- 4 summary tiles -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Pending</SectionLabel>
+      <div class="text-3xl font-display font-bold text-warn mt-1 leading-none">
+        {queueData?.totalPending ?? '—'}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">queued</div>
+    </div>
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Processing</SectionLabel>
+      <div class="text-3xl font-display font-bold text-accent mt-1 leading-none">
+        {queueData?.totalProcessing ?? '—'}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">active</div>
+    </div>
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Done (24h)</SectionLabel>
+      <div class="text-3xl font-display font-bold text-health mt-1 leading-none">
+        {queueData ? totalDone24h : '—'}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">completed</div>
+    </div>
+    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
+      <SectionLabel>Failures</SectionLabel>
+      <div class="text-3xl font-display font-bold mt-1 leading-none {queueData && queueData.failures.length > 0 ? 'text-warn' : 'text-fg-faint'}">
+        {queueData?.failures.length ?? '—'}
+      </div>
+      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
+        {queueData && queueData.failures.length > 0 ? 'needs retry' : 'clean'}
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 per-job rows -->
+  <div class="space-y-2">
+    {#each JOB_ORDER as jobType (jobType)}
+      {@const meta = JOB_META[jobType]}
+      {@const counts = queueData?.byJobType[jobType] ?? { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0 }}
+      {@const done = jobDone(counts)}
+      {@const progress = jobProgress(counts)}
+      <div class="flex items-center gap-3 py-2 border-t border-border-muted first:border-t-0">
+        <!-- Name + provider -->
+        <div class="w-52 shrink-0">
+          <div class="text-sm text-fg font-medium leading-tight">{meta.name}</div>
+          <div class="font-mono text-[10px] text-fg-faint mt-0.5">
+            {meta.provider} · {meta.speed}
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div class="flex-1 h-1.5 bg-bg-elevated rounded-full overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-500 {counts.total === 0 ? 'bg-fg-faint/20' : 'bg-health'}"
+            style="width: {(progress * 100).toFixed(1)}%"
+          ></div>
+        </div>
+        <!-- done / total -->
+        <div class="font-mono text-xs text-fg-muted w-16 text-right shrink-0">
+          {counts.total === 0 ? '—' : `${done}/${counts.total}`}
+        </div>
+        <!-- Status chip (audio gets pulsing dot when running) -->
+        <div class="shrink-0 flex items-center gap-1.5">
+          {#if jobType === 'audio' && counts.processing > 0}
+            <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse inline-block"></span>
+          {/if}
+          <StatusChip label={jobChipLabel(counts)} tone={jobChipTone(counts)} />
+        </div>
+      </div>
+    {/each}
+  </div>
+
+  <!-- [Task 10 slot: Digest readiness + Coverage matrix when round selected] -->
+  <!-- [Task 11 slot: Failures list + Auto-enrich footer] -->
+</section>
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right). -->
 <div class="grid md:grid-cols-2 gap-6 mb-6 items-start mt-6">
