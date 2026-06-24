@@ -2,7 +2,7 @@
 project: music-league-bot
 type: backlog
 created: 2026-05-20T00:00:00Z
-updated: 2026-06-13T00:00:00Z
+updated: 2026-06-23T00:00:00Z
 ---
 
 # music-league-bot — backlog
@@ -56,6 +56,34 @@ Producer follow-ons section below.)*
 - Caching policy: how long is a Songlink result good for? Songlink URLs typically don't change, so persistent cache is fine; only invalidate if a song is re-resolved manually by an operator.
 
 **Pairs with:** Sprint-10 T9 (YTM Songlink backend ingest path — already shipped, has the deferred debug bug; that debug informs the same code path this feature uses).
+
+## Commissioner's Notes on digest sections (drafted 2026-06-22)
+
+**Source:** user, 2026-06-22, during round 131 digest refinement.
+
+**Problem.** The commissioner wants a place to add personal color commentary to digest sections during the refinement phase — a reaction, a correction, an aside — without having to modify LLM-generated text directly or regenerate. Currently the only workaround is embedding text inline (e.g. `**Commissioner's note: ...**` in a moment's `detail` field), but this renders as literal asterisks because ChatMoments uses plain-text rendering.
+
+**Direction.**
+
+1. **DB schema.** Add a `commissioner_note` TEXT column (nullable) to `digest_sections`. No migration needed for existing rows — NULL = hidden.
+
+2. **Schema shape by section type.** Two cases:
+   - **Item-list sections** (chat moments, consensus clusters, quotes, podium items): each individual item/moment gets its own `commissioner_note` field in `content_json`. Hidden when null/empty.
+   - **Paragraph sections** (villain, flow, and any single-body section): one `commissioner_note` per section, stored in `content_json.commissioner_note`. Hidden when null/empty.
+
+3. **Generation behavior.** LLM never populates commissioner_note — the field is always generated empty/null. It is exclusively a manual refinement-phase field.
+
+4. **UI.** In the digest web view (not the export), each item/section that supports a commissioner's note shows a small inline edit affordance (pencil icon, appears on hover) during the refine/finalize stage. Clicking opens a minimal text input. Save PATCHes the section's content_json directly (same path as existing inline edits). Renders as italic text block (visually distinct from the LLM content) when populated.
+
+5. **Export behavior.** Commissioner's notes render in PDF/PNG exports — they're part of the editorial voice of the digest, not just a web UI overlay. Style: italicized, visually separated (subtle rule or indent).
+
+6. **Markdown rendering prerequisite.** ChatMoments (and other section renderers that use plain `{text}`) need to support at minimum italic/bold rendering before commissioner's notes are worth adding. Consider swapping `{m.detail}` for `{@html marked(m.detail)}` with a lightweight sanitizer, or a custom micro-renderer that handles `*italic*` / `**bold**` / `***bold-italic***` only.
+
+**Why it matters.** The commissioner's voice is part of what makes the digest a league artifact rather than an AI summary. The format already has editorial opinions (the villain section, the chat moments) — a dedicated note slot formalizes the commissioner's ability to editorialize without fighting the LLM text.
+
+**Pairs with:** digest section inline-edit infrastructure (already shipped for content_json PATCH); ChatMoments markdown rendering (prerequisite, see note 6 above).
+
+---
 
 ## Deferred from sprint-16 (2026-06-03)
 
@@ -323,6 +351,67 @@ These feed the SAS / submission / H2H tools. **Naming help wanted on factor 1** 
 
 ## PR-11 — Theme picker: filter to the relevant league (S) — reuse AssignPopover pattern
 The Submission Predictor (and Vote Probe) theme dropdown currently lists ALL themes globally (`/api/history/themes`, deduped across every league) — annoying and unscoped. Filter it to the rounds/themes of the **relevant league**. **Reuse the existing pattern from `AssignPopover.svelte`** (the song-card "assign to round" dropdown): it sources rounds and groups/filters by `leagueName` with a league selector (`AssignPopover.svelte:41-43`, `/api/rounds/open`). Apply the same league-scoped approach to the theme picker so the user only sees themes from the league they care about. (Owner: "I think we already solved this in the song-card assign-to-round feature — its much easier.")
+
+## Agent auto-pull WhatsApp chat — eliminate manual paste (drafted 2026-06-22) — S
+
+**Source:** session observation, 2026-06-22. The round-transition agent (`my-agent/`) currently requires the user to manually paste WhatsApp chat content into the prompt before the agent can draft the digest section commentary. That chat content already lives in the DB (`chat_messages` table) and is queryable via `historyQuery.ts` (`getRoundMessages`) and the `/api/chat/history/thread?groupName=...&from=...&to=...` endpoint.
+
+**Direction.** Wire the round-transition agent to automatically fetch the round's WhatsApp chat transcript before calling the draft endpoint:
+1. **Add a fetch step** in `my-agent/launch.sh` (or the agent's first-prompt flow) that calls `GET /api/chat/history/thread?groupName=<leagueName>&from=<roundStart>&to=<roundEnd>` to retrieve the relevant messages for the round's time window.
+2. **Pass the fetched chat** as `pastedChat` (or equivalent) to the draft endpoint — the endpoint already accepts this field; the agent just needs to populate it automatically instead of requiring a manual paste.
+3. **Fallback:** if the API returns no messages (empty window), proceed without chat data (same behavior as today).
+
+**Why it matters.** Eliminates a manual copy-paste step that requires opening WhatsApp, finding the right message window, and extracting the content — a friction point in every round transition. The data is already in the DB; this is a wiring task, not a new feature.
+
+**Pairs with:** `historyQuery.ts` → `getRoundMessages`; `/api/chat/history/thread` route.
+
+## Music League email event bus — IMAP ingestion as the round-lifecycle trigger (drafted 2026-06-23, owner VSM brainstorm) — L, needs own spec
+
+**Source:** owner, 2026-06-23 VSM brainstorm. Full session log:
+`~/Projects/vocal-session-manager/2026-06-23-2115-ml-email-event-bus-trigger-brainstorm.md`.
+Decisions recorded in `docs/sessions/VSM-important-items.md`.
+
+**The reframe.** We kept framing automated digest scheduling as "detect when a round is
+over." Wrong problem. **Music League already decides "round over" and emails a notification
+almost immediately.** So we don't compute it — we *listen*. This kills the
+`digest-auto-schedule` idea (it assumed a trigger that didn't exist) and the
+"detect all votes in is unreliable" worry from `my-agent/NEXT-DIRECTIONS.md` v2. A round
+officially ends the moment the **last person votes**, not at the deadline — which is why
+deadline-as-trigger is rejected (and why the commissioner routinely hand-corrects the
+just-ended round's voting deadline).
+
+**Direction — treat the ML notifications inbox as a first-class event bus, read via
+direct IMAP.** The subject line carries `league + round name + event type`, so events are
+routable. Direct IMAP is *strictly more capable* than the GroupRelay (Pixel-5 notification
+forwarder) path, because the GroupRelay path only forwards notification **text** while the
+full email **body** carries the Spotify playlist on the voting-started event.
+
+**ML notification event taxonomy (known):**
+| Event | Payload highlight | Consumer |
+|---|---|---|
+| Voting started | **the Spotify playlist** (anonymous — correct) | feed the song-analysis queue immediately (analysis is slow → early capture is a big head start) |
+| Voting ended | = round officially ended | trigger the round-ending / digest process |
+| Round starting | — | a signal not captured today |
+| Player voted / submitted (each) | league, round, **+ player name** | real-time who-voted/who-submitted; could replace part of the export.zip CLI scrape + power commissioner reminders |
+| Half submitted / half voted | milestone | — |
+| Phase about to end | reminder | could automate the commissioner nudges done by hand today |
+
+**Sub-items (decompose in spec):**
+1. `ml-email-event-bus` (foundation) — IMAP reader + subject parser + event router.
+2. `trigger-digest-on-voting-ended` — voting-ended → kick the round-ending pipeline.
+3. `early-playlist-capture` — voting-started playlist → song-analysis queue. Dovetails with
+   the in-flight song-metadata-queue work.
+4. `participation-tracking-from-email` — per-player emails → participation state.
+5. `round-starting-signal` — capture the currently-missing round-start signal.
+
+**Open questions (resolve in spec):**
+- Which inbox/account receives these — one ML account for all leagues, or per-account?
+- Where IMAP ingestion lives — local app (`src/`) vs. the cloud agent (`my-agent/`).
+- De-dup / idempotency: don't fire the digest twice if an email is re-read.
+
+**Pairs with:** `my-agent/NEXT-DIRECTIONS.md` (v1 auto-share / v2 polling — this supersedes
+the "detect" half of v2); "Agent auto-pull WhatsApp chat" backlog item (same de-manualizing
+of the round transition); the song-metadata-queue work currently in the tree.
 
 ## PR-10 — Judge each player's own voting-weight profile (L, research-y)
 Per-player, *estimate the weighting* each player actually uses when voting (their personal version of the PR-9 dials) — because it strongly drives how they vote. May need **more than the owner's 3 factors** (some players weight by weird/idiosyncratic factors). Capture for now; don't over-engineer. This is high-leverage for the whole prediction engine (knowing a player's weighting makes SAS far more accurate) — likely its own spec, and a natural input to the future whole-round predictor.
