@@ -4,6 +4,8 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
+  import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
+  import type { Filter } from '$lib/metadata-queue/metricTiles.js';
 
   let { data } = $props<{ data: PageData }>();
 
@@ -86,6 +88,7 @@
     done24h: number;
     failed: number;
     total: number;
+    done: number; // lifetime done — added by Task 2; required by MetricTiles
   }
   interface ReadinessItem { ok: boolean; count: number; total: number; }
   interface DigestReadiness {
@@ -116,6 +119,8 @@
 
   let selectedScope = $state<number | null>(null);
   let queueData = $state<QueueStatusPayload | null>(null);
+  let filter = $state<Filter>('all');
+  let triageOpen = $state(false);
 
   $effect(() => {
     const scope = selectedScope;
@@ -155,6 +160,16 @@
 
   const totalDone24h = $derived(
     queueData ? Object.values(queueData.byJobType).reduce((s, c) => s + c.done24h, 0) : 0
+  );
+  // approxSongs: exact when coverageMatrix present (round scope); otherwise estimate as
+  // ceil(total / 4) — typical songs have 4–5 job types, so total/4 is a conservative bound.
+  // The "~" prefix in failedLabel signals the value is approximate.
+  const approxSongs = $derived(
+    queueData?.coverageMatrix
+      ? queueData.coverageMatrix.length
+      : queueData
+        ? Math.ceil(Object.values(queueData.byJobType).reduce((s, c) => s + c.total, 0) / 4)
+        : 0
   );
   // Digest readiness metadata
   const READINESS_META = [
@@ -395,45 +410,31 @@
     {/each}
   </div>
 
-  <!-- 4 summary tiles -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Pending</SectionLabel>
-      <div class="text-3xl font-display font-bold text-warn mt-1 leading-none">
-        {queueData?.totalPending ?? '—'}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">queued</div>
+  <!-- 4 metric tiles: Queued / Running / Done / Failed — filter-aware, monotonic colors -->
+  {#if queueData}
+    <MetricTiles
+      byJobType={queueData.byJobType}
+      approxSongs={approxSongs}
+      filter={filter}
+      onFilter={(f) => {
+        filter = f;
+        if (f === 'failed') triageOpen = true;
+      }}
+    />
+  {:else}
+    <!-- skeleton while loading -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {#each [0,1,2,3] as _}
+        <div class="bg-bg-elevated border border-border-muted rounded-md p-3 animate-pulse h-24"></div>
+      {/each}
     </div>
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Processing</SectionLabel>
-      <div class="text-3xl font-display font-bold text-accent mt-1 leading-none">
-        {queueData?.totalProcessing ?? '—'}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">active</div>
-    </div>
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Done (24h)</SectionLabel>
-      <div class="text-3xl font-display font-bold text-health mt-1 leading-none">
-        {queueData ? totalDone24h : '—'}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">completed</div>
-    </div>
-    <div class="bg-bg-elevated border border-border-muted rounded-md p-3">
-      <SectionLabel>Failures</SectionLabel>
-      <div class="text-3xl font-display font-bold mt-1 leading-none {queueData && queueData.failures.length > 0 ? 'text-warn' : 'text-fg-faint'}">
-        {queueData?.failures.length ?? '—'}
-      </div>
-      <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mt-2">
-        {queueData && queueData.failures.length > 0 ? 'needs retry' : 'clean'}
-      </div>
-    </div>
-  </div>
+  {/if}
 
   <!-- 5 per-job rows -->
   <div class="space-y-2">
     {#each JOB_ORDER as jobType (jobType)}
       {@const meta = JOB_META[jobType]}
-      {@const counts = queueData?.byJobType[jobType] ?? { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0 }}
+      {@const counts = queueData?.byJobType[jobType] ?? { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0, done: 0 }}
       {@const done = jobDone(counts)}
       {@const progress = jobProgress(counts)}
       <div class="flex items-center gap-3 py-2 border-t border-border-muted first:border-t-0">
