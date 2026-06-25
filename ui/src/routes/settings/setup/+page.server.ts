@@ -40,7 +40,56 @@ export const load: PageServerLoad = async () => {
     };
   });
 
-  const players = getAllPlayers(db);
+  const basePlayers = getAllPlayers(db);
+
+  // Bulk-load avatar traits + avatar-image presence so the per-player editor can
+  // render the trait controls and base-avatar preview without N round-trips.
+  const traitRows = db
+    .prepare(
+      `SELECT player_id, avatar_gender, avatar_style, avatar_height,
+              avatar_build, avatar_hair, avatar_trait
+       FROM player_profiles`,
+    )
+    .all() as Array<{
+    player_id: number;
+    avatar_gender: string | null;
+    avatar_style: string | null;
+    avatar_height: string | null;
+    avatar_build: string | null;
+    avatar_hair: string | null;
+    avatar_trait: string | null;
+  }>;
+  const traitsByPlayer = new Map(traitRows.map(r => [r.player_id, r]));
+
+  const avatarRows = db
+    .prepare(`SELECT player_id, base_r2_key, themed_r2_key, base_source FROM player_avatars`)
+    .all() as Array<{
+    player_id: number;
+    base_r2_key: string | null;
+    themed_r2_key: string | null;
+    base_source: string | null;
+  }>;
+  const avatarByPlayer = new Map(avatarRows.map(r => [r.player_id, r]));
+
+  const players = basePlayers.map(p => {
+    const t = traitsByPlayer.get(p.id);
+    const a = avatarByPlayer.get(p.id);
+    return {
+      ...p,
+      avatar: {
+        gender: t?.avatar_gender ?? '',
+        style: t?.avatar_style ?? '',
+        height: t?.avatar_height ?? '',
+        build: t?.avatar_build ?? '',
+        hair: t?.avatar_hair ?? '',
+        trait: t?.avatar_trait ?? '',
+        hasBase: !!a?.base_r2_key,
+        hasThemed: !!a?.themed_r2_key,
+        baseSource: a?.base_source ?? null,
+      },
+    };
+  });
+
   const allSeasons = allLeagues.flatMap(l => getSeasonsForLeague(db, l.id).map(s => ({
     ...s,
     leagueName: l.name,

@@ -97,10 +97,35 @@
   let editAge = $state<string>('');
   let editSaving = $state(false);
 
+  // ---- avatar editor (operates on the currently-edited player) -------------
+  const AV_STYLES = ['average', 'skater', 'preppy', 'formal', 'jock', 'punk', 'bohemian'];
+  const AV_GENDERS = ['male', 'female', 'nonbinary'];
+  const AV_HEIGHTS = ['petite', 'short', 'average', 'tall', 'very tall'];
+  const AV_BUILDS = ['lanky', 'medium', 'athletic', 'thick'];
+
+  let avTraits = $state({ gender: '', style: '', height: '', build: '', hair: '', trait: '' });
+  let avSaving = $state(false);
+  let avGenerating = $state(false);
+  let avUploading = $state(false);
+  let avHasBase = $state(false);
+  let avBaseSource = $state<string | null>(null);
+  let avBaseVersion = $state(0); // bumps to cache-bust the preview <img> after a new base lands
+
   function startEdit(player: Player) {
     editingId = player.id;
     editName = player.name;
     editAge = player.age != null ? String(player.age) : '';
+    avTraits = {
+      gender: player.avatar.gender,
+      style: player.avatar.style,
+      height: player.avatar.height,
+      build: player.avatar.build,
+      hair: player.avatar.hair,
+      trait: player.avatar.trait,
+    };
+    avHasBase = player.avatar.hasBase;
+    avBaseSource = player.avatar.baseSource;
+    avBaseVersion = 0;
     newIdentityType = $state.snapshot(newIdentityType) === newIdentityType ? newIdentityType : 'whatsapp';
     newIdentityId = '';
     newIdentityLeague = '';
@@ -112,6 +137,78 @@
 
   function cancelEdit() {
     editingId = null;
+  }
+
+  // Persist the six avatar trait columns. Called on every control change so the
+  // generate-base endpoint (which reads traits from the DB) always sees current values.
+  async function saveTraits() {
+    if (!editingId || avSaving) return;
+    avSaving = true;
+    const res = await apiCall(`/api/players/${editingId}/avatar/traits`, 'PATCH', {
+      avatar_gender: avTraits.gender,
+      avatar_style: avTraits.style,
+      avatar_height: avTraits.height,
+      avatar_build: avTraits.build,
+      avatar_hair: avTraits.hair,
+      avatar_trait: avTraits.trait,
+    });
+    avSaving = false;
+    if (!res.ok) showBanner('Error saving avatar traits', 'warn');
+  }
+
+  function setTrait<K extends keyof typeof avTraits>(key: K, value: string) {
+    // Toggle off a pill if the same value is clicked again.
+    avTraits[key] = avTraits[key] === value ? '' : value;
+    saveTraits();
+  }
+
+  async function generateBase() {
+    if (!editingId || avGenerating) return;
+    if (!avTraits.gender || !avTraits.style) return;
+    avGenerating = true;
+    // Make sure the latest traits are persisted before the server reads them.
+    await saveTraits();
+    const res = await apiCall(`/api/players/${editingId}/avatar/generate-base`, 'POST');
+    avGenerating = false;
+    if (!res.ok) {
+      const msg = await res.json().then(j => j.error).catch(() => 'Generate failed');
+      showBanner(`Avatar generate failed: ${msg}`, 'warn');
+      return;
+    }
+    avHasBase = true;
+    avBaseSource = 'generated';
+    avBaseVersion += 1;
+    showBanner('Base avatar generated');
+    await invalidateAll();
+  }
+
+  let avFileInput = $state<HTMLInputElement | null>(null);
+
+  async function uploadBase(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !editingId) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showBanner('Image too large (max 5MB)', 'warn');
+      input.value = '';
+      return;
+    }
+    avUploading = true;
+    const fd = new FormData();
+    fd.append('avatar', file);
+    const res = await fetch(`/api/players/${editingId}/avatar/upload`, { method: 'POST', body: fd });
+    avUploading = false;
+    input.value = '';
+    if (!res.ok) {
+      const msg = await res.json().then(j => j.error).catch(() => 'Upload failed');
+      showBanner(`Avatar upload failed: ${msg}`, 'warn');
+      return;
+    }
+    avHasBase = true;
+    avBaseSource = 'uploaded';
+    avBaseVersion += 1;
+    showBanner('Base avatar uploaded');
+    await invalidateAll();
   }
 
   async function saveNameAge() {
@@ -1031,6 +1128,140 @@
                   {#if editSaving}
                     <span class="font-mono text-[10px] text-fg-faint">saving…</span>
                   {/if}
+                </div>
+              </div>
+
+              <div>
+                <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-2 flex items-center gap-2">
+                  Avatar
+                  {#if avSaving}<span class="text-fg-faint normal-case tracking-normal">saving…</span>{/if}
+                </div>
+                <div class="flex flex-col sm:flex-row gap-5">
+                  <!-- Base avatar preview + actions -->
+                  <div class="flex flex-col items-center gap-2 shrink-0">
+                    <div class="w-24 h-24 rounded-xl overflow-hidden border border-border-muted bg-bg-elevated flex items-center justify-center">
+                      {#if avHasBase}
+                        <img
+                          src="/api/avatars/{player.id}/base?v={avBaseVersion}"
+                          alt="Base avatar for {player.name}"
+                          class="w-full h-full object-cover"
+                        />
+                      {:else}
+                        <span class="font-mono text-[9px] text-fg-faint text-center px-2">no base avatar</span>
+                      {/if}
+                    </div>
+                    <div class="flex gap-1.5">
+                      <button
+                        type="button"
+                        onclick={generateBase}
+                        disabled={avGenerating || avUploading || !avTraits.gender || !avTraits.style}
+                        title={!avTraits.gender || !avTraits.style ? 'Set gender and style first' : 'Generate from traits'}
+                        class="font-mono text-[10px] px-2 py-1 rounded-sm border border-border-muted text-fg-dim hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {avGenerating ? 'generating…' : avHasBase ? 'Regenerate' : 'Generate'}
+                      </button>
+                      <button
+                        type="button"
+                        onclick={() => avFileInput?.click()}
+                        disabled={avGenerating || avUploading}
+                        class="font-mono text-[10px] px-2 py-1 rounded-sm border border-border-muted text-fg-dim hover:border-accent hover:text-accent transition-colors disabled:opacity-40"
+                      >
+                        {avUploading ? 'uploading…' : 'Upload'}
+                      </button>
+                      <input
+                        bind:this={avFileInput}
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        onchange={uploadBase}
+                        class="hidden"
+                      />
+                    </div>
+                    {#if avHasBase && avBaseSource}
+                      <span class="font-mono text-[9px] text-fg-faint">{avBaseSource}</span>
+                    {/if}
+                  </div>
+
+                  <!-- Trait controls -->
+                  <div class="flex-1 flex flex-col gap-3">
+                    <div>
+                      <div class="font-mono text-[10px] text-fg-faint mb-1">Style</div>
+                      <div class="flex flex-wrap gap-1">
+                        {#each AV_STYLES as s (s)}
+                          <button
+                            type="button"
+                            onclick={() => setTrait('style', s)}
+                            class="font-mono text-[10px] px-2 py-0.5 rounded-sm border transition-colors {avTraits.style === s
+                              ? 'border-accent bg-accent-bg text-accent'
+                              : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                          >{s}</button>
+                        {/each}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="font-mono text-[10px] text-fg-faint mb-1">Gender</div>
+                      <div class="flex flex-wrap gap-1">
+                        {#each AV_GENDERS as g (g)}
+                          <button
+                            type="button"
+                            onclick={() => setTrait('gender', g)}
+                            class="font-mono text-[10px] px-2 py-0.5 rounded-sm border transition-colors {avTraits.gender === g
+                              ? 'border-accent bg-accent-bg text-accent'
+                              : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                          >{g}</button>
+                        {/each}
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-height-{player.id}">Height</label>
+                        <select
+                          id="av-height-{player.id}"
+                          bind:value={avTraits.height}
+                          onchange={saveTraits}
+                          class="bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {#each AV_HEIGHTS as h (h)}<option value={h}>{h}</option>{/each}
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-build-{player.id}">Build</label>
+                        <select
+                          id="av-build-{player.id}"
+                          bind:value={avTraits.build}
+                          onchange={saveTraits}
+                          class="bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {#each AV_BUILDS as b (b)}<option value={b}>{b}</option>{/each}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-hair-{player.id}">Hair</label>
+                        <input
+                          id="av-hair-{player.id}"
+                          type="text"
+                          bind:value={avTraits.hair}
+                          onblur={saveTraits}
+                          placeholder="e.g. curly red shoulder-length"
+                          class="bg-bg-elevated border border-border-muted rounded px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none w-52"
+                        />
+                      </div>
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-trait-{player.id}">Freeform trait</label>
+                        <input
+                          id="av-trait-{player.id}"
+                          type="text"
+                          bind:value={avTraits.trait}
+                          onblur={saveTraits}
+                          placeholder="e.g. round glasses, denim jacket"
+                          class="bg-bg-elevated border border-border-muted rounded px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none w-52"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
