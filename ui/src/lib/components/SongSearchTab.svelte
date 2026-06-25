@@ -1,18 +1,15 @@
 <script lang="ts">
-  // History → Tab 1 "Song search". Spotify search box → results as collapsed
-  // cards (one open at a time, Esc collapses — card model mirrors shortlist).
-  // Wires to the EXISTING GET /api/spotify/search; no new search backend.
-  //
-  // History coloring (D3), badges (D6/D7), promote actions, and the
-  // corpus-history panel layer onto SongSearchCard in later waves — this tab
-  // owns search + the open-one-at-a-time card model only.
+  // History → Tab 1 "Song search". Spotify search box → results as SongCards
+  // using adapters.fromSearch so corpus info, badges, and history coloring all
+  // flow through the universal SongCard model. statusMap + badgeMap load async
+  // after search; fromSearch is called inline per-card so cards update reactively.
   import { onMount } from 'svelte';
-  import SongSearchCard, { type SpotifyResult } from './SongSearchCard.svelte';
-  import BadgeStrip from './BadgeStrip.svelte';
-  import ArtistBadgeHint from './ArtistBadgeHint.svelte';
+  import { type SpotifyResult } from './SongSearchCard.svelte';
+  import SongCard from '$lib/song/SongCard.svelte';
   import PromoteActions from './PromoteActions.svelte';
-  import CorpusHistoryPanel from './CorpusHistoryPanel.svelte';
-  import type { SongStatusMap, SongStatus } from '$lib/db/songHistory.js';
+  import { adapters } from '$lib/song/adapters.js';
+  import type { SongCardConfig } from '$lib/song/canonical.js';
+  import type { SongStatusMap } from '$lib/db/songHistory.js';
   import type { BadgeMap } from '$lib/db/badges.js';
 
   // Promote-actions supporting data — loaded once on mount, shared across all
@@ -39,13 +36,19 @@
   let searchError = $state<string | null>(null);
   let results = $state<SpotifyResult[]>([]);
   let hasSearched = $state(false);
-  // One card open at a time, keyed by spotify uri (results have no db id yet).
+  // One card open at a time, keyed by spotify uri.
   let openUri = $state<string | null>(null);
-  // History + badge data for the current result page, keyed by uri. Fetched in
-  // one batch each so the whole page resolves in two POSTs. Drives viz coloring
-  // (D3) + badges (D6/D7) and the corpus-history panel.
+  // History + badge data keyed by uri — fetched in one batch after search.
   let statusMap = $state<SongStatusMap>({});
   let badgeMap = $state<BadgeMap>({});
+
+  const SEARCH_CONFIG: SongCardConfig = {
+    layers: ['badges', 'corpus'],
+    actions: [],
+    art: true,
+    artPx: 72,
+    ratingMode: 'none',
+  };
 
   async function runSearch(e: SubmitEvent) {
     e.preventDefault();
@@ -134,36 +137,23 @@
       <h3 class="font-mono text-xs tracking-widest uppercase text-fg-faint mb-3">
         Results [{results.length}]
       </h3>
-      <!-- Badge snippets (viz, D6/D7) — defined once, passed to every card. -->
-      {#snippet songBadgesSnip(badgeSet: import('$lib/db/badges.js').BadgeSet)}
-        <BadgeStrip set={badgeSet} />
-      {/snippet}
-      {#snippet artistBadgesSnip(badgeSet: import('$lib/db/badges.js').BadgeSet)}
-        <BadgeStrip set={badgeSet} label="Artist" />
-      {/snippet}
-      {#snippet artistBadgeHintSnip(badgeSet: import('$lib/db/badges.js').BadgeSet)}
-        <ArtistBadgeHint set={badgeSet} />
-      {/snippet}
-
       <div class="flex flex-col gap-2">
         {#each results as r (r.uri)}
-          <SongSearchCard
-            result={r}
-            open={openUri === r.uri}
-            ontoggle={() => toggle(r.uri)}
-            historyStatus={statusMap[r.uri] ?? null}
-            badges={badgeMap[r.uri] ?? null}
-            songBadges={songBadgesSnip}
-            artistBadges={artistBadgesSnip}
-            artistBadgeHint={artistBadgeHintSnip}
+          {@const song = adapters.fromSearch(
+            r as unknown as Record<string, unknown>,
+            statusMap[r.uri],
+            badgeMap[r.uri],
+          )}
+          <SongCard
+            {song}
+            config={SEARCH_CONFIG}
+            expanded={openUri === r.uri}
+            onToggle={() => toggle(r.uri)}
           >
-            {#snippet promoteActions()}
+            {#snippet expandedFooter()}
               <PromoteActions result={r} {activeRoundId} {openRounds} />
             {/snippet}
-            {#snippet corpusHistory(status: SongStatus)}
-              <CorpusHistoryPanel {status} />
-            {/snippet}
-          </SongSearchCard>
+          </SongCard>
         {/each}
       </div>
     {:else if hasSearched && !searching && !searchError}
