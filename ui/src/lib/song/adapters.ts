@@ -132,16 +132,56 @@ export const adapters = {
 
   fromChat(r: Record<string, unknown>): Song {
     const s = baseSong(r);
-    const mentions = (r.mentions as unknown[]) || [];
     const chatNames = (r.chatNames as string[]) || [];
+    const TONES = ['sky', 'amber', 'moss', 'pulp', 'ember'] as const;
+    const chatToneMap: Record<string, string> = Object.fromEntries(
+      chatNames.map((n, i) => [n, TONES[i % TONES.length]])
+    );
+    const senderToneMap: Record<string, string> = {};
+    let toneIdx = 0;
+    function senderTone(name: string): string {
+      if (!senderToneMap[name]) senderToneMap[name] = TONES[toneIdx++ % TONES.length];
+      return senderToneMap[name];
+    }
+    function fmtTime(iso?: string): string | undefined {
+      if (!iso) return undefined;
+      const ms = Date.now() - Date.parse(iso);
+      const min = Math.floor(ms / 60000);
+      if (min < 60) return min <= 1 ? 'just now' : `${min}m ago`;
+      const h = Math.floor(ms / 3600000);
+      if (h < 24) return `${h}h ago`;
+      const d = Math.floor(ms / 86400000);
+      if (d < 30) return `${d}d ago`;
+      return `${Math.round(d / 30)}mo ago`;
+    }
+    type RawMention = {
+      rawMessage?: string; senderName?: string; chatName?: string;
+      intent?: string; capturedAt?: string;
+      priorMessages?: { text?: string; sender?: string }[];
+    };
+    const rawMentions = (r.mentions as RawMention[]) || [];
+    const mentions: SongChat['mentions'] = rawMentions.map(m => ({
+      text: m.rawMessage || '',
+      sender: m.senderName || '',
+      senderTone: senderTone(m.senderName || ''),
+      chatName: m.chatName || '',
+      tone: chatToneMap[m.chatName || ''] || 'muted',
+      intent: m.intent,
+      time: fmtTime(m.capturedAt),
+      priors: (m.priorMessages || []).map(p => ({
+        text: p.text || '',
+        sender: p.sender || '',
+        tone: senderTone(p.sender || ''),
+      })),
+    }));
     s.context = {
       chat: {
-        mentionCount: mentions.length,
-        chats: chatNames.map((n, i) => ({ name: n, tone: ['sky', 'amber', 'moss'][i % 3] })),
-        intent: r.intent as string | undefined,
-        mentions: mentions as SongChat['mentions'],
+        mentionCount: (r.mentionCount as number) || mentions.length,
+        chats: chatNames.map((n, i) => ({ name: n, tone: TONES[i % TONES.length] })),
+        intent: rawMentions.at(-1)?.intent,
+        mentions,
       },
-      assignments: (r.assignedRoundIds as string[]) || [],
+      assignments: ((r.assignedRoundIds as number[]) || []).map(String),
     };
     return s;
   },

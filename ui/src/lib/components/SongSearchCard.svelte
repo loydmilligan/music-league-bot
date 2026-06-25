@@ -127,7 +127,7 @@
     {/if}
 
     <!-- promote-actions (frontend): + Shortlist / + Round / + H2H / ▶ Play -->
-    <footer class="flex items-center gap-4 mt-4 pt-3 border-t border-border-muted text-xs">
+    <footer class="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-border-muted text-xs">
       {#if promoteActions}
         {@render promoteActions()}
       {:else}
