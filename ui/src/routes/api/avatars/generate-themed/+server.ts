@@ -105,15 +105,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
   let generated = 0;
   let failed = 0;
-  for (const result of results) {
+  results.forEach((result, idx) => {
     if (result.status === 'fulfilled') {
       generated++;
     } else {
       failed++;
-      const playerName = players[results.indexOf(result)]?.name ?? 'unknown';
-      console.error(`[generate-themed] Failed for player "${playerName}":`, result.reason);
+      console.error(`[generate-themed] Failed for player "${players[idx]?.name ?? 'unknown'}":`, result.reason);
     }
-  }
+  });
 
   return json({ generated, failed }, { status: 200 });
 };
