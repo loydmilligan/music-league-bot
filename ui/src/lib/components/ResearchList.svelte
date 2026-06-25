@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { ResearchSong, Settings } from '$lib/types.js';
   import { computeScore } from '$lib/scoring.js';
-  import SongRatingBars, { type RatingDimension } from '$lib/components/SongRatingBars.svelte';
+  import SongCard from '$lib/song/SongCard.svelte';
+  import { adapters } from '$lib/song/adapters.js';
+  import type { SongRatings, SongCardConfig, Song } from '$lib/song/canonical.js';
 
   let { roundId, initial, weights }: {
     roundId: number;
@@ -18,16 +20,13 @@
   let searchError = $state<string | null>(null);
   let busyAddUris = $state<Set<string>>(new Set());
 
-  // Research uses (discoveryPotential, themeFit, nostalgiaPotential,
-  // personalRating). The canonical SongRatingBars component talks in
-  // (discovery, theme_fit, nostalgia, personal). Map at the boundary so the
-  // research column shape stays untouched on disk.
-  type ResearchKey = 'themeFit' | 'discoveryPotential' | 'nostalgiaPotential' | 'personalRating';
-  const DIM_TO_FIELD: Record<RatingDimension, ResearchKey> = {
-    discovery: 'discoveryPotential',
-    theme_fit: 'themeFit',
-    nostalgia: 'nostalgiaPotential',
-    personal: 'personalRating',
+  const RR_CONFIG: SongCardConfig = {
+    art: false,
+    ratingMode: 'bars',
+    ratingEditable: true,
+    layers: ['state', 'rating', 'notes', 'analyze'],
+    actions: ['play', 'ytm', 'save', 'remove'],
+    actionStyle: 'inline',
   };
 
   // Sort order is user-controlled. The list does NOT re-sort on every rating
@@ -59,23 +58,63 @@
   }
 
   function hasAllFourRatings(s: ResearchSong): boolean {
-    return s.themeFit != null
-      && s.discoveryPotential != null
-      && s.nostalgiaPotential != null
-      && s.personalRating != null;
+    return s.discoveryPotential != null
+      && s.themeFit != null
+      && s.quality != null
+      && s.replayability != null;
   }
 
-  // Called from the canonical SongRatingBars onchange. Value 0 clears the
-  // rating (matches "click far-left to clear" UX). Otherwise persist 1-5.
-  function onBarChange(song: ResearchSong, dim: RatingDimension, value: number) {
-    const field = DIM_TO_FIELD[dim];
-    const next = value <= 0 ? null : value;
-    const wasComplete = hasAllFourRatings(song);
-    const willBeComplete = hasAllFourRatings({ ...song, [field]: next } as ResearchSong);
-    patchSong(song.id, { [field]: next });
-    if (autoSortAfterAll4 && willBeComplete && !wasComplete) {
-      resort();
+  function toCard(s: ResearchSong): Song {
+    return adapters.fromResearch(s as unknown as Record<string, unknown>);
+  }
+
+  async function handleRate(ratings: SongRatings, song: Song) {
+    const s = songs.find(r => String(r.id) === song.id);
+    if (!s) return;
+    const patch = {
+      discoveryPotential: ratings.discovery,
+      themeFit: ratings.themeFit,
+      quality: ratings.quality,
+      replayability: ratings.replayability,
+    };
+    // optimistic update
+    const wasComplete = hasAllFourRatings(s);
+    const optimistic = { ...s, ...patch };
+    const willBeComplete = hasAllFourRatings(optimistic as ResearchSong);
+    patchSong(s.id, patch);
+    if (autoSortAfterAll4 && willBeComplete && !wasComplete) resort();
+  }
+
+  async function handleNotes(text: string, song: Song) {
+    const s = songs.find(r => String(r.id) === song.id);
+    if (!s) return;
+    patchSong(s.id, { notes: text || null });
+  }
+
+  async function handleAction(actionId: string, song: Song) {
+    const s = songs.find(r => String(r.id) === song.id);
+    if (!s) return;
+    if (actionId === 'play') {
+      const trackId = s.spotifyUri.replace('spotify:track:', '');
+      window.open(`https://open.spotify.com/track/${trackId}`, '_blank');
+    } else if (actionId === 'ytm') {
+      const url = song.ytmUrl || `/api/ytm/${encodeURIComponent(s.spotifyUri)}?redirect=1`;
+      window.open(url, '_blank');
+    } else if (actionId === 'save') {
+      patchSong(s.id, { saveForFuture: !s.saveForFuture });
+    } else if (actionId === 'remove') {
+      removeSong(s.id);
+    } else if (actionId === 'analyze') {
+      if (s.spotifyUri) {
+        await fetch(`/api/songs/${encodeURIComponent(s.spotifyUri)}/enrich`, { method: 'POST' });
+      }
     }
+  }
+
+  async function handleAnalyze(song: Song) {
+    const s = songs.find(r => String(r.id) === song.id);
+    if (!s || !s.spotifyUri) return;
+    await fetch(`/api/songs/${encodeURIComponent(s.spotifyUri)}/enrich`, { method: 'POST' });
   }
 
   async function runSearch(e: SubmitEvent) {
@@ -149,13 +188,6 @@
       body: JSON.stringify({ id }),
     });
     if (!res.ok) { songs = prev; orderedIds = prevOrder; }
-  }
-
-  function scoreToneClass(score: number | null | undefined): string {
-    if (score == null) return 'text-fg-faint';
-    if (score >= 4) return 'text-health';
-    if (score >= 3) return 'text-warn';
-    return 'text-fg-dim';
   }
 
   // Display order = the user-controlled snapshot in `orderedIds`, with any
@@ -261,86 +293,15 @@
     {:else}
       <div class="flex flex-col gap-3">
         {#each sorted as song (song.id)}
-          <article class="bg-bg-elevated border border-border-muted rounded-xl p-4">
-            <header class="flex items-start gap-3 mb-3">
-              <div class="flex-1 min-w-0">
-                <div class="font-bold text-fg truncate">{song.title}</div>
-                <div class="font-mono text-[11px] text-fg-dim truncate">
-                  {song.artist}{song.album ? ` · ${song.album}` : ''}
-                </div>
-                {#if song.submittedByMe || song.submittedByOther}
-                  <div class="flex flex-wrap gap-1.5 mt-1.5">
-                    {#if song.submittedByMe}
-                      <span class="bg-accent-bg text-accent border border-accent-deep font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm">
-                        Submitted by me
-                      </span>
-                    {/if}
-                    {#if song.submittedByOther}
-                      <span class="bg-surface text-fg-dim border border-border-muted font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm">
-                        Submitted by other{song.otherSubmissionVotes != null ? ` · ${song.otherSubmissionVotes} pts` : ''}
-                      </span>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
-              <div class="text-right flex-shrink-0">
-                <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Score</div>
-                <div class="text-3xl font-bold font-display {scoreToneClass(song.score)}">
-                  {song.score != null ? song.score.toFixed(2) : '—'}
-                </div>
-              </div>
-            </header>
-
-            <!-- Ratings: canonical multi-color bars (shortlist + research share
-                 the same component now). Click bar position to set 0-5;
-                 clicking far-left (0) clears the field to null. -->
-            <div class="mb-3">
-              <SongRatingBars
-                discovery={song.discoveryPotential ?? 0}
-                themeFit={song.themeFit ?? 0}
-                nostalgia={song.nostalgiaPotential ?? 0}
-                personal={song.personalRating ?? 0}
-                onchange={(dim, value) => onBarChange(song, dim, value)}
-              />
-            </div>
-
-            <textarea
-              value={song.notes ?? ''}
-              onchange={(e) => patchSong(song.id, { notes: (e.currentTarget as HTMLTextAreaElement).value || null })}
-              placeholder="Notes…"
-              rows="2"
-              class="w-full bg-bg border border-border-muted focus:border-accent rounded px-2 py-1.5 text-xs text-fg placeholder-fg-faint mb-3 outline-none transition-colors"
-            ></textarea>
-
-            <footer class="flex items-center gap-4 text-xs">
-              <label class="flex items-center gap-1.5 text-fg-muted cursor-pointer font-mono text-[11px]">
-                <input
-                  type="checkbox"
-                  checked={song.saveForFuture}
-                  onchange={(e) => patchSong(song.id, { saveForFuture: (e.currentTarget as HTMLInputElement).checked })}
-                  class="accent-accent"
-                />
-                Save for future
-              </label>
-              <a
-                href={`https://open.spotify.com/track/${song.spotifyUri.replace('spotify:track:', '')}`}
-                target="_blank"
-                rel="noreferrer"
-                class="text-health hover:text-health/80 font-mono transition-colors"
-              >Spotify ↗</a>
-              <a
-                href={`/api/ytm/${encodeURIComponent(song.spotifyUri)}?redirect=1`}
-                target="_blank"
-                rel="noreferrer"
-                class="text-accent hover:text-accent-strong font-mono transition-colors"
-              >YT Music ↗</a>
-              <button
-                type="button"
-                onclick={() => removeSong(song.id)}
-                class="ml-auto font-mono text-fg-faint hover:text-warn transition-colors"
-              >Remove</button>
-            </footer>
-          </article>
+          <SongCard
+            density="expanded"
+            song={toCard(song)}
+            config={{ ...RR_CONFIG, noteText: song.notes ?? undefined }}
+            onAction={handleAction}
+            onRate={handleRate}
+            onNotes={handleNotes}
+            onAnalyze={handleAnalyze}
+          />
         {/each}
       </div>
     {/if}
