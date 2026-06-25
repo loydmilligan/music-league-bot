@@ -11,6 +11,7 @@
   import HierarchyNavigator from '$lib/metadata-queue/HierarchyNavigator.svelte';
   import EnrichControl from '$lib/metadata-queue/EnrichControl.svelte';
   import { rollupChip } from '$lib/metadata-queue/ladder.js';
+  import QueueSongCard from '$lib/metadata-queue/QueueSongCard.svelte';
 
   let { data } = $props<{ data: PageData }>();
 
@@ -165,9 +166,6 @@
     { key: 'audio'       as const, label: 'Audio insights',         src: 'song_audio_features' },
   ];
 
-  const CELL_COL = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio'] as const;
-  const CELL_HEADER = ['YTM', 'Pop', 'Tags', 'Lyr', 'Audio'];
-
   let fillGapsLoading = $state(false);
   let fillGapsToast = $state<string | null>(null);
 
@@ -194,6 +192,50 @@
       }
     } catch { /* ignore */ } finally {
       retryingId = null;
+    }
+  }
+
+  /**
+   * enqueueOne — POST a single (uri, job_type) to the Task-8 /enqueue endpoint.
+   * On success, optimistically flips that element to 'pending' in the local
+   * coverageMatrix so the pill updates immediately. The 10s poll reconciles to
+   * real state.
+   */
+  async function enqueueOne(uri: string, jobType: string) {
+    try {
+      const r = await fetch('/api/metadata-queue/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uri, job_type: jobType }),
+      });
+      if (r.ok && queueData?.coverageMatrix) {
+        // Optimistic flip: mark that element as pending so the pill updates immediately.
+        queueData = {
+          ...queueData,
+          coverageMatrix: queueData.coverageMatrix.map(row =>
+            row.spotify_uri === uri
+              ? { ...row, jobs: { ...row.jobs, [jobType]: 'pending' as const } }
+              : row
+          ),
+        };
+      }
+    } catch { /* silently ignore — poll will reconcile */ }
+  }
+
+  function enqueueRunMissing(uri: string) {
+    for (const jt of JOB_ORDER) {
+      const row = queueData?.coverageMatrix?.find(r => r.spotify_uri === uri);
+      if (!row) continue;
+      const state = row.jobs[jt] ?? 'missing';
+      if (state !== 'done' && state !== 'processing') {
+        enqueueOne(uri, jt);
+      }
+    }
+  }
+
+  function enqueueAll(uri: string) {
+    for (const jt of JOB_ORDER) {
+      enqueueOne(uri, jt);
     }
   }
 
@@ -487,47 +529,31 @@
       </div>
     </div>
 
-    <!-- Coverage matrix -->
+    <!-- Song metadata queue cards — per-song, per-element run -->
     {#if queueData.coverageMatrix && queueData.coverageMatrix.length > 0}
       <div class="mt-6 border-t border-border-muted pt-5">
-        <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Coverage matrix</span>
-        <div class="mt-3 overflow-x-auto">
-          <table class="w-full text-xs min-w-[480px]">
-            <thead>
-              <tr>
-                <th class="text-left py-1.5 pr-3 font-mono text-[10px] tracking-widest uppercase text-fg-faint font-normal w-48">Song</th>
-                {#each CELL_HEADER as hdr, i (hdr)}
-                  <th class="text-center py-1.5 px-2 font-mono text-[10px] tracking-widest uppercase text-fg-faint font-normal w-14" title={JOB_META[CELL_COL[i]].name}>{hdr}</th>
-                {/each}
-              </tr>
-            </thead>
-            <tbody>
-              {#each queueData.coverageMatrix as song (song.spotify_uri)}
-                <tr class="border-t border-border-muted hover:bg-surface-hover">
-                  <td class="py-1.5 pr-3 max-w-[12rem]">
-                    <div class="truncate text-fg">{song.title ?? song.spotify_uri}</div>
-                    {#if song.artist}<div class="truncate text-fg-faint text-[10px]">{song.artist}</div>{/if}
-                  </td>
-                  {#each CELL_COL as jt (jt)}
-                    {@const st = song.jobs[jt]}
-                    <td class="py-1.5 px-2 text-center">
-                      {#if st === 'done'}
-                        <span class="text-health text-base leading-none" title="done">●</span>
-                      {:else if st === 'processing'}
-                        <span class="text-accent text-base leading-none animate-pulse" title="processing">●</span>
-                      {:else if st === 'pending'}
-                        <span class="text-accent/50 text-base leading-none" title="queued">○</span>
-                      {:else if st === 'failed'}
-                        <span class="text-warn font-bold" title="failed">✗</span>
-                      {:else}
-                        <span class="text-fg-faint" title="missing">—</span>
-                      {/if}
-                    </td>
-                  {/each}
-                </tr>
-              {/each}
-            </tbody>
-          </table>
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Song metadata queue</span>
+          <span class="font-mono text-[10px] text-fg-faint">{queueData.coverageMatrix.length} songs</span>
+        </div>
+        <div class="space-y-3">
+          {#each queueData.coverageMatrix as song (song.spotify_uri)}
+            <QueueSongCard
+              {song}
+              jobOrder={JOB_ORDER}
+              jobMeta={JOB_META}
+              onRunElement={enqueueOne}
+              onRunMissing={enqueueRunMissing}
+              onEnrichAll={enqueueAll}
+            />
+          {/each}
+        </div>
+        <!-- Last.fm shared rate-limit note (lastfm_pop + lastfm_tags share the limit) -->
+        <div class="mt-4 flex items-center gap-2 px-3 py-2 bg-surface rounded-lg border border-amber/20">
+          <span class="text-amber font-mono text-[10px]">&#9650;</span>
+          <span class="text-amber text-xs font-mono">
+            Last.fm rate limit shared — <code class="text-[10px]">lastfm_pop</code> and <code class="text-[10px]">lastfm_tags</code> draw from the same quota. Enrich them together or in sequence.
+          </span>
         </div>
       </div>
     {/if}
