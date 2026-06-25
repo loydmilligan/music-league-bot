@@ -3,6 +3,7 @@
  *   GET /api/metadata-queue/status
  *   POST /api/metadata-queue/fill-gaps
  *   POST /api/metadata-queue/retry
+ *   GET /api/metadata-queue/children
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -23,6 +24,7 @@ let GET_status: typeof import('./status/+server.js').GET;
 let POST_fillGaps: typeof import('./fill-gaps/+server.js').POST;
 let POST_retry: typeof import('./retry/+server.js').POST;
 let POST_enqueue: typeof import('./enqueue/+server.js').POST;
+let GET_children: typeof import('./children/+server.js').GET;
 
 // ---------------------------------------------------------------------------
 // Seed helpers
@@ -101,6 +103,7 @@ beforeEach(async () => {
 	({ POST: POST_fillGaps } = await import('./fill-gaps/+server.js'));
 	({ POST: POST_retry } = await import('./retry/+server.js'));
 	({ POST: POST_enqueue } = await import('./enqueue/+server.js'));
+	({ GET: GET_children } = await import('./children/+server.js'));
 });
 
 // ---------------------------------------------------------------------------
@@ -572,5 +575,104 @@ describe('POST /api/metadata-queue/enqueue', () => {
 	it('returns 400 when job_type is invalid', async () => {
 		const res = await POST_enqueue(mkEnqueueEvent({ uri: 'spotify:track:DDD', job_type: 'bogus' }));
 		expect(res.status).toBe(400);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/metadata-queue/children
+// ---------------------------------------------------------------------------
+
+function mkChildrenEvent(searchParams: Record<string, string> = {}) {
+	const params = new URLSearchParams(searchParams);
+	return {
+		url: { searchParams: params },
+	} as unknown as Parameters<typeof GET_children>[0];
+}
+
+function seedChildrenRound(
+	db: Database.Database,
+	leagueId: number,
+	leagueName: string,
+	seasonId: number,
+	seasonNumber: number,
+	roundId: number,
+	roundName: string,
+	uris: string[]
+): void {
+	db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (?, ?, ?)`).run(leagueId, `slug-${leagueId}`, leagueName);
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (?, ?, ?, 'active')`).run(seasonId, leagueId, seasonNumber);
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (?, ?, ?, ?, datetime('now'))`).run(roundId, seasonId, `ml-${roundId}`, roundName);
+	for (const uri of uris) {
+		db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (?, ?, 'T', 'A', datetime('now'))`).run(roundId, uri);
+	}
+}
+
+describe('GET /api/metadata-queue/children', () => {
+	it('returns 400 for missing level param', async () => {
+		const res = await GET_children(mkChildrenEvent());
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 for an unrecognised level value', async () => {
+		const res = await GET_children(mkChildrenEvent({ level: 'bogus' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=league with no id', async () => {
+		const res = await GET_children(mkChildrenEvent({ level: 'league' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=season with a non-integer id', async () => {
+		const res = await GET_children(mkChildrenEvent({ level: 'season', id: 'notanumber' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 200 with children array at level=all', async () => {
+		seedChildrenRound(db, 50, 'League X', 500, 1, 5000, 'Round X1', ['spotify:track:X1']);
+		enqueue(db, 'spotify:track:X1', 'ytm');
+
+		const res = await GET_children(mkChildrenEvent({ level: 'all' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { children: unknown[] };
+		expect(body.children).toBeDefined();
+		expect(Array.isArray(body.children)).toBe(true);
+		// Should include League X
+		const leagueX = (body.children as Array<{ name: string; byJobType: Record<string, unknown> }>).find(c => c.name === 'League X');
+		expect(leagueX).toBeDefined();
+	});
+
+	it('returns 200 with league children at level=league&id=N', async () => {
+		seedChildrenRound(db, 60, 'League Y', 600, 1, 6000, 'Round Y1', ['spotify:track:Y1']);
+
+		const res = await GET_children(mkChildrenEvent({ level: 'league', id: '60' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { children: Array<{ name: string }> };
+		expect(body.children.length).toBeGreaterThan(0);
+		expect(body.children[0].name).toBe('Season 1');
+	});
+
+	it('returns empty children array for round scope', async () => {
+		seedChildrenRound(db, 70, 'League Z', 700, 1, 7000, 'Round Z1', ['spotify:track:Z1']);
+
+		const res = await GET_children(mkChildrenEvent({ level: 'round', id: '7000' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { children: unknown[] };
+		expect(body.children).toHaveLength(0);
+	});
+
+	it('children at level=league include byJobType with per-job-type counts', async () => {
+		seedChildrenRound(db, 80, 'League W', 800, 1, 8000, 'Round W1', ['spotify:track:W1']);
+		enqueue(db, 'spotify:track:W1', 'ytm');
+		db.prepare("UPDATE song_metadata_queue SET status='done' WHERE spotify_uri='spotify:track:W1' AND job_type='ytm'").run();
+
+		const res = await GET_children(mkChildrenEvent({ level: 'league', id: '80' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { children: Array<{ byJobType: Record<string, { done: number; total: number }> }> };
+		const season = body.children[0];
+		expect(season.byJobType).toBeDefined();
+		// ytm done=1 (W1 done), total=1
+		expect(season.byJobType['ytm']?.total).toBe(1);
+		expect(season.byJobType['ytm']?.done).toBe(1);
 	});
 });

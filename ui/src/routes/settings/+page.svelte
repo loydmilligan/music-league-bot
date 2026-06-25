@@ -6,8 +6,9 @@
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
   import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
+  import HeatmapView from '$lib/metadata-queue/HeatmapView.svelte';
   import type { Filter } from '$lib/metadata-queue/metricTiles.js';
-  import type { Scope, HierarchyLeague } from '$lib/db/metadataQueue.js';
+  import type { Scope, HierarchyLeague, ChildRollup } from '$lib/db/metadataQueue.js';
   import HierarchyNavigator from '$lib/metadata-queue/HierarchyNavigator.svelte';
   import EnrichControl from '$lib/metadata-queue/EnrichControl.svelte';
   import { rollupChip } from '$lib/metadata-queue/ladder.js';
@@ -128,6 +129,93 @@
   let filter = $state<Filter>('all');
   let triageOpen = $state(false);
 
+  // ── View toggle: 'rows' (JobTypeRollups) | 'heatmap' (HeatmapView) ──────
+  type ViewMode = 'rows' | 'heatmap';
+  let view = $state<ViewMode>('rows');
+
+  // Round-scope sub-toggle: 'songs' | 'rounds' (sibling rounds of same season)
+  type RoundSubView = 'songs' | 'rounds';
+  let roundSubView = $state<RoundSubView>('songs');
+
+  // Heatmap data — fetched lazily on toggle/scope-change; NOT in the 10s poll.
+  let heatmapChildren = $state<ChildRollup[] | null>(null);
+  let heatmapFetching = $state(false);
+  // Request guard: only the latest token's result is applied.
+  let heatmapToken = $state(0);
+
+  /**
+   * Fetch children rollups for the heatmap. Called on view=heatmap toggle and
+   * scope changes (only when heatmap is active). Uses a token-based request
+   * guard to prevent stale responses from racing into state.
+   */
+  async function fetchHeatmapChildren(s: Scope) {
+    const token = ++heatmapToken;
+    heatmapFetching = true;
+    try {
+      const url = s.level === 'all'
+        ? '/api/metadata-queue/children?level=all'
+        : `/api/metadata-queue/children?level=${s.level}&id=${s.id}`;
+      const r = await fetch(url);
+      if (r.ok && heatmapToken === token) {
+        const body = (await r.json()) as { children: ChildRollup[] };
+        heatmapChildren = body.children;
+      }
+    } catch { /* silently ignore */ } finally {
+      if (heatmapToken === token) heatmapFetching = false;
+    }
+  }
+
+  // Fetch heatmap data on scope change when heatmap is active, or when
+  // view is switched to heatmap. NOT triggered by the 10s status poll.
+  $effect(() => {
+    const s = scope;
+    const v = view;
+    if (v === 'heatmap' && s.level !== 'round') {
+      // Reset children while loading to avoid stale grid
+      heatmapChildren = null;
+      fetchHeatmapChildren(s);
+    }
+    // At round scope, heatmap uses coverageMatrix from queueData — no extra fetch.
+  });
+
+  // At round scope + heatmap + roundSubView='rounds': fetch sibling rounds.
+  // We need the parent season id. Look it up in the hierarchy.
+  let siblingRoundChildren = $state<ChildRollup[] | null>(null);
+  let siblingFetching = $state(false);
+  let siblingToken = $state(0);
+
+  $effect(() => {
+    const s = scope;
+    const v = view;
+    const rsv = roundSubView;
+    if (v !== 'heatmap' || s.level !== 'round' || rsv !== 'rounds') return;
+    // Find parent season_id from hierarchy
+    const hierarchy = data.hierarchy as HierarchyLeague[];
+    let parentSeasonId: number | null = null;
+    outer: for (const league of hierarchy) {
+      for (const season of league.seasons) {
+        for (const round of season.rounds) {
+          if (round.id === s.id) { parentSeasonId = season.id; break outer; }
+        }
+      }
+    }
+    if (parentSeasonId == null) return;
+    const seasonId = parentSeasonId;
+    const token = ++siblingToken;
+    siblingFetching = true;
+    siblingRoundChildren = null;
+    fetch(`/api/metadata-queue/children?level=season&id=${seasonId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(body => {
+        if (siblingToken === token && body) {
+          siblingRoundChildren = (body as { children: ChildRollup[] }).children;
+        }
+      })
+      .catch(() => { /* ignore */ })
+      .finally(() => { if (siblingToken === token) siblingFetching = false; });
+  });
+
+  // Status poll — 10s interval, scoped to status endpoint only.
   $effect(() => {
     const s = scope;
     async function doFetch() {
@@ -486,12 +574,84 @@
     {/if}
   </div>
 
-  <!-- 5 per-job rows (segmented rollup bars, Task 5) -->
-  <JobTypeRollups
-    byJobType={queueData?.byJobType}
-    jobMeta={JOB_META}
-    jobOrder={JOB_ORDER}
-  />
+  <!-- View toggle: [ rows | heatmap ] -->
+  <div class="flex items-center gap-1 mb-4">
+    <div class="inline-flex rounded-md border border-border-muted overflow-hidden">
+      <button
+        type="button"
+        onclick={() => { view = 'rows'; }}
+        class="px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors {view === 'rows' ? 'bg-accent text-bg-elevated' : 'bg-transparent text-fg-muted hover:text-fg'}"
+      >
+        rows
+      </button>
+      <button
+        type="button"
+        onclick={() => { view = 'heatmap'; }}
+        class="px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase border-l border-border-muted transition-colors {view === 'heatmap' ? 'bg-accent text-bg-elevated' : 'bg-transparent text-fg-muted hover:text-fg'}"
+      >
+        heatmap
+      </button>
+    </div>
+
+    <!-- [songs | rounds] sub-toggle at round scope inside heatmap mode -->
+    {#if scope.level === 'round' && view === 'heatmap'}
+      <div class="inline-flex rounded-md border border-border-muted overflow-hidden ml-3">
+        <button
+          type="button"
+          onclick={() => { roundSubView = 'songs'; }}
+          class="px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors {roundSubView === 'songs' ? 'bg-accent text-bg-elevated' : 'bg-transparent text-fg-muted hover:text-fg'}"
+        >
+          songs
+        </button>
+        <button
+          type="button"
+          onclick={() => { roundSubView = 'rounds'; }}
+          class="px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase border-l border-border-muted transition-colors {roundSubView === 'rounds' ? 'bg-accent text-bg-elevated' : 'bg-transparent text-fg-muted hover:text-fg'}"
+        >
+          rounds
+        </button>
+      </div>
+    {/if}
+  </div>
+
+  {#if view === 'heatmap'}
+    {#if scope.level === 'round'}
+      {#if roundSubView === 'songs'}
+        <!-- Songs heatmap: use polled coverageMatrix (no extra fetch needed) -->
+        <HeatmapView
+          coverageMatrix={queueData?.coverageMatrix}
+          jobMeta={JOB_META}
+        />
+      {:else}
+        <!-- Sibling rounds heatmap -->
+        {#if siblingFetching}
+          <div class="font-mono text-[10px] text-fg-faint py-4">Loading sibling rounds...</div>
+        {:else}
+          <HeatmapView
+            children={siblingRoundChildren ?? []}
+            jobMeta={JOB_META}
+          />
+        {/if}
+      {/if}
+    {:else}
+      <!-- All/league/season scope: use fetched children -->
+      {#if heatmapFetching}
+        <div class="font-mono text-[10px] text-fg-faint py-4">Loading heatmap...</div>
+      {:else}
+        <HeatmapView
+          children={heatmapChildren ?? []}
+          jobMeta={JOB_META}
+        />
+      {/if}
+    {/if}
+  {:else}
+    <!-- 5 per-job rows (segmented rollup bars) -->
+    <JobTypeRollups
+      byJobType={queueData?.byJobType}
+      jobMeta={JOB_META}
+      jobOrder={JOB_ORDER}
+    />
+  {/if}
 
   <!-- Digest readiness + Coverage matrix — round-scoped only -->
   {#if scope.level === 'round' && queueData?.digestReadiness}

@@ -19,6 +19,7 @@ import {
 	classifyFailure,
 	getHierarchy,
 	getScopeRollup,
+	getChildrenRollups,
 	type JobType
 } from './metadataQueue.js';
 
@@ -746,5 +747,140 @@ describe('schema tables', () => {
 		for (const col of ['spotify_uri', 'has_lyrics', 'fetched_at']) {
 			expect(cols).toContain(col);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getChildrenRollups
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed data for getChildrenRollups tests.
+ *
+ * League A (id=10) → Season A1 (id=100, season_number=1) → Round A1R1 (id=1000)
+ *                  → Season A2 (id=101, season_number=2) → Round A2R1 (id=1001)
+ * League B (id=11) → Season B1 (id=200, season_number=1) → Round B1R1 (id=2000)
+ *
+ * Submissions:
+ *   R A1R1: track:AA (ytm=done, lastfm_pop=pending)
+ *   R A2R1: track:AB (ytm=failed)
+ *   R B1R1: track:BA (ytm=processing)
+ */
+function seedChildrenData(db: Database.Database): void {
+	// Leagues
+	db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (10, 'lg-a', 'League A')`).run();
+	db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (11, 'lg-b', 'League B')`).run();
+	// Seasons
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (100, 10, 1, 'active')`).run();
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (101, 10, 2, 'active')`).run();
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (200, 11, 1, 'active')`).run();
+	// Rounds
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (1000, 100, 'ml-a1r1', 'Round 1', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (1001, 101, 'ml-a2r1', 'Round 2', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (2000, 200, 'ml-b1r1', 'Round B1', datetime('now'))`).run();
+	// Submissions
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (1000, 'spotify:track:AA', 'Song AA', 'Artist', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (1001, 'spotify:track:AB', 'Song AB', 'Artist', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (2000, 'spotify:track:BA', 'Song BA', 'Artist', datetime('now'))`).run();
+	// Queue rows
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, queued_at) VALUES ('spotify:track:AA', 'ytm', 'done', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, queued_at) VALUES ('spotify:track:AA', 'lastfm_pop', 'pending', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, error, queued_at) VALUES ('spotify:track:AB', 'ytm', 'failed', 'err', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, queued_at) VALUES ('spotify:track:BA', 'ytm', 'processing', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+}
+
+describe('getChildrenRollups', () => {
+	it('at all scope, returns leagues as children', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		const children = getChildrenRollups(db, { level: 'all' });
+		expect(children.length).toBe(2);
+		const names = children.map(c => c.name);
+		expect(names).toContain('League A');
+		expect(names).toContain('League B');
+	});
+
+	it('at league scope, returns seasons as children', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		// League A has 2 seasons
+		const children = getChildrenRollups(db, { level: 'league', id: 10 });
+		expect(children.length).toBe(2);
+		const names = children.map(c => c.name);
+		expect(names).toContain('Season 1');
+		expect(names).toContain('Season 2');
+	});
+
+	it('at season scope, returns rounds as children', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		// Season A1 (id=100) has 1 round
+		const children = getChildrenRollups(db, { level: 'season', id: 100 });
+		expect(children.length).toBe(1);
+		expect(children[0].name).toBe('Round 1');
+	});
+
+	it('at round scope, returns empty array (songs are handled via coverageMatrix)', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		const children = getChildrenRollups(db, { level: 'round', id: 1000 });
+		expect(children).toHaveLength(0);
+	});
+
+	it('per-job-type counts are correct for league A children', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		const children = getChildrenRollups(db, { level: 'all' });
+		const leagueA = children.find(c => c.name === 'League A');
+		expect(leagueA).toBeDefined();
+		// track:AA has ytm=done → done=1, lastfm_pop=pending → pending=1
+		// track:AB has ytm=failed → failed=1
+		// ytm for League A: done=1 (AA), failed=1 (AB) → total=2
+		expect(leagueA!.byJobType['ytm']).toBeDefined();
+		expect(leagueA!.byJobType['ytm'].total).toBe(2);
+		expect(leagueA!.byJobType['ytm'].failed).toBe(1);
+		// done = total - pending - processing - failed = 2 - 0 - 0 - 1 = 1
+		expect(leagueA!.byJobType['ytm'].done).toBe(1);
+		// lastfm_pop for League A: pending=1 (AA)
+		expect(leagueA!.byJobType['lastfm_pop'].pending).toBe(1);
+		expect(leagueA!.byJobType['lastfm_pop'].total).toBe(1);
+	});
+
+	it('cross-league isolation: League B child has only its own data', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		const children = getChildrenRollups(db, { level: 'all' });
+		const leagueB = children.find(c => c.name === 'League B');
+		expect(leagueB).toBeDefined();
+		// Only track:BA with ytm=processing
+		expect(leagueB!.byJobType['ytm']).toBeDefined();
+		expect(leagueB!.byJobType['ytm'].processing).toBe(1);
+		expect(leagueB!.byJobType['ytm'].total).toBe(1);
+		// No lastfm_pop for League B
+		expect(leagueB!.byJobType['lastfm_pop']?.total ?? 0).toBe(0);
+		// League B should not include League A's tracks
+		expect(leagueB!.songCount).toBe(1);
+	});
+
+	it('songCount is distinct URI count in scope', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		const children = getChildrenRollups(db, { level: 'league', id: 10 });
+		// Season A1 (id=100) has 1 song (track:AA), Season A2 has 1 song (track:AB)
+		const season1 = children.find(c => c.name === 'Season 1');
+		const season2 = children.find(c => c.name === 'Season 2');
+		expect(season1?.songCount).toBe(1);
+		expect(season2?.songCount).toBe(1);
+	});
+
+	it('round children are scoped to the given season only', () => {
+		const db = freshDb();
+		seedChildrenData(db);
+		// Season A2 (id=101) has 1 round
+		const children = getChildrenRollups(db, { level: 'season', id: 101 });
+		expect(children.length).toBe(1);
+		expect(children[0].id).toBe(1001);
+		// track:AB has ytm=failed
+		expect(children[0].byJobType['ytm'].failed).toBe(1);
 	});
 });

@@ -567,3 +567,186 @@ export function getHierarchy(db: Database.Database): HierarchyLeague[] {
 export function getScopeRollup(db: Database.Database, scope: Scope): QueueStatus {
 	return getQueueStatus(db, scope);
 }
+
+// ---------------------------------------------------------------------------
+// getChildrenRollups — per-child, per-job-type counts for heatmap view
+// ---------------------------------------------------------------------------
+
+export interface ChildRollup {
+	id: number;
+	name: string;
+	songCount: number;
+	byJobType: Record<string, { done: number; pending: number; processing: number; failed: number; total: number }>;
+}
+
+/**
+ * Returns the CHILDREN of the given scope, each with per-job-type job counts.
+ * Mapping:
+ *   all    → leagues
+ *   league → seasons (named "Season N")
+ *   season → rounds
+ *   round  → [] (songs are served by coverageMatrix, not this fn)
+ *
+ * Uses a small number of grouped queries (no N+1). Bound ? params throughout.
+ */
+export function getChildrenRollups(db: Database.Database, scope: Scope): ChildRollup[] {
+	if (scope.level === 'round') {
+		// Round children (songs) come from coverageMatrix, not this function.
+		return [];
+	}
+
+	if (scope.level === 'all') {
+		return getLeagueRollups(db);
+	}
+
+	if (scope.level === 'league') {
+		return getSeasonRollups(db, scope.id!);
+	}
+
+	// season
+	return getRoundRollups(db, scope.id!);
+}
+
+/** Return per-league rollups (children of 'all' scope). */
+function getLeagueRollups(db: Database.Database): ChildRollup[] {
+	// 1. All leagues
+	const leagues = db.prepare(
+		`SELECT id, name FROM leagues ORDER BY id`
+	).all() as Array<{ id: number; name: string }>;
+
+	if (leagues.length === 0) return [];
+
+	// 2. Song count per league (distinct URIs via submissions → rounds → seasons → leagues)
+	const songCountRows = db.prepare(
+		`SELECT s.league_id AS child_id, COUNT(DISTINCT ms.spotify_uri) AS cnt
+		 FROM ml_submissions ms
+		 JOIN rounds r ON r.id = ms.round_id
+		 JOIN seasons s ON s.id = r.season_id
+		 GROUP BY s.league_id`
+	).all() as Array<{ child_id: number; cnt: number }>;
+
+	// 3. Grouped queue counts per league per job_type per status
+	const queueRows = db.prepare(
+		`SELECT s.league_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		 FROM song_metadata_queue q
+		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
+		 JOIN rounds r ON r.id = ms.round_id
+		 JOIN seasons s ON s.id = r.season_id
+		 GROUP BY s.league_id, q.job_type, q.status`
+	).all() as Array<{ child_id: number; job_type: string; status: string; cnt: number }>;
+
+	return buildChildRollups(leagues, songCountRows, queueRows);
+}
+
+/** Return per-season rollups (children of a league scope). */
+function getSeasonRollups(db: Database.Database, leagueId: number): ChildRollup[] {
+	// 1. Seasons for this league
+	const seasons = db.prepare(
+		`SELECT id, season_number FROM seasons WHERE league_id = ? ORDER BY season_number`
+	).all(leagueId) as Array<{ id: number; season_number: number }>;
+
+	if (seasons.length === 0) return [];
+
+	const nodes = seasons.map(s => ({ id: s.id, name: `Season ${s.season_number}` }));
+
+	// 2. Song count per season
+	const songCountRows = db.prepare(
+		`SELECT r.season_id AS child_id, COUNT(DISTINCT ms.spotify_uri) AS cnt
+		 FROM ml_submissions ms
+		 JOIN rounds r ON r.id = ms.round_id
+		 WHERE r.season_id IN (SELECT id FROM seasons WHERE league_id = ?)
+		 GROUP BY r.season_id`
+	).all(leagueId) as Array<{ child_id: number; cnt: number }>;
+
+	// 3. Queue counts per season per job_type per status
+	const queueRows = db.prepare(
+		`SELECT r.season_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		 FROM song_metadata_queue q
+		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
+		 JOIN rounds r ON r.id = ms.round_id
+		 WHERE r.season_id IN (SELECT id FROM seasons WHERE league_id = ?)
+		 GROUP BY r.season_id, q.job_type, q.status`
+	).all(leagueId) as Array<{ child_id: number; job_type: string; status: string; cnt: number }>;
+
+	return buildChildRollups(nodes, songCountRows, queueRows);
+}
+
+/** Return per-round rollups (children of a season scope). */
+function getRoundRollups(db: Database.Database, seasonId: number): ChildRollup[] {
+	// 1. Rounds for this season
+	const rounds = db.prepare(
+		`SELECT id, name FROM rounds WHERE season_id = ? ORDER BY id`
+	).all(seasonId) as Array<{ id: number; name: string }>;
+
+	if (rounds.length === 0) return [];
+
+	// 2. Song count per round
+	const songCountRows = db.prepare(
+		`SELECT round_id AS child_id, COUNT(DISTINCT spotify_uri) AS cnt
+		 FROM ml_submissions
+		 WHERE round_id IN (SELECT id FROM rounds WHERE season_id = ?)
+		 GROUP BY round_id`
+	).all(seasonId) as Array<{ child_id: number; cnt: number }>;
+
+	// 3. Queue counts per round per job_type per status
+	const queueRows = db.prepare(
+		`SELECT ms.round_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		 FROM song_metadata_queue q
+		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
+		 WHERE ms.round_id IN (SELECT id FROM rounds WHERE season_id = ?)
+		 GROUP BY ms.round_id, q.job_type, q.status`
+	).all(seasonId) as Array<{ child_id: number; job_type: string; status: string; cnt: number }>;
+
+	return buildChildRollups(rounds, songCountRows, queueRows);
+}
+
+/**
+ * Shared assembler: merges flat query results into ChildRollup[].
+ * nodes: the child items (id + name)
+ * songCountRows: one row per child_id with a count
+ * queueRows: one row per (child_id, job_type, status) with a count
+ */
+function buildChildRollups(
+	nodes: Array<{ id: number; name: string }>,
+	songCountRows: Array<{ child_id: number; cnt: number }>,
+	queueRows: Array<{ child_id: number; job_type: string; status: string; cnt: number }>
+): ChildRollup[] {
+	const songCounts = new Map(songCountRows.map(r => [r.child_id, r.cnt]));
+
+	// Index queue data: child_id → job_type → { pending, processing, done, failed, total }
+	type Counts = { pending: number; processing: number; failed: number; total: number };
+	const queueMap = new Map<number, Map<string, Counts>>();
+
+	for (const row of queueRows) {
+		if (!queueMap.has(row.child_id)) queueMap.set(row.child_id, new Map());
+		const jtMap = queueMap.get(row.child_id)!;
+		if (!jtMap.has(row.job_type)) jtMap.set(row.job_type, { pending: 0, processing: 0, failed: 0, total: 0 });
+		const counts = jtMap.get(row.job_type)!;
+		counts.total += row.cnt;
+		if (row.status === 'pending') counts.pending += row.cnt;
+		else if (row.status === 'processing') counts.processing += row.cnt;
+		else if (row.status === 'failed') counts.failed += row.cnt;
+	}
+
+	return nodes.map(node => {
+		const jtMap = queueMap.get(node.id) ?? new Map<string, Counts>();
+		const byJobType: ChildRollup['byJobType'] = {};
+
+		for (const [jobType, counts] of jtMap) {
+			byJobType[jobType] = {
+				done: Math.max(0, counts.total - counts.pending - counts.processing - counts.failed),
+				pending: counts.pending,
+				processing: counts.processing,
+				failed: counts.failed,
+				total: counts.total,
+			};
+		}
+
+		return {
+			id: node.id,
+			name: node.name,
+			songCount: songCounts.get(node.id) ?? 0,
+			byJobType,
+		};
+	});
+}
