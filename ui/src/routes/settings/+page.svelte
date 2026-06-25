@@ -5,6 +5,7 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
+  import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
   import type { Filter } from '$lib/metadata-queue/metricTiles.js';
 
   let { data } = $props<{ data: PageData }>();
@@ -137,26 +138,6 @@
     const interval = setInterval(doFetch, 10000);
     return () => clearInterval(interval);
   });
-
-  function jobDone(c: JobCounts): number {
-    return Math.max(0, c.total - c.pending - c.processing - c.failed);
-  }
-  function jobProgress(c: JobCounts): number {
-    return c.total === 0 ? 0 : jobDone(c) / c.total;
-  }
-  function jobChipTone(c: JobCounts): 'health' | 'accent' | 'warn' | 'muted' {
-    if (c.total === 0) return 'muted';
-    if (c.failed > 0) return 'warn';
-    if (c.processing > 0 || c.pending > 0) return 'accent';
-    return 'health';
-  }
-  function jobChipLabel(c: JobCounts): string {
-    if (c.total === 0) return 'NO DATA';
-    if (c.failed > 0) return `${c.failed} FAILED`;
-    if (c.processing > 0) return 'RUNNING';
-    if (c.pending > 0) return `${c.pending} QUEUED`;
-    return 'DONE';
-  }
 
   const totalDone24h = $derived(
     queueData ? Object.values(queueData.byJobType).reduce((s, c) => s + c.done24h, 0) : 0
@@ -430,42 +411,12 @@
     </div>
   {/if}
 
-  <!-- 5 per-job rows -->
-  <div class="space-y-2">
-    {#each JOB_ORDER as jobType (jobType)}
-      {@const meta = JOB_META[jobType]}
-      {@const counts = queueData?.byJobType[jobType] ?? { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0, done: 0 }}
-      {@const done = jobDone(counts)}
-      {@const progress = jobProgress(counts)}
-      <div class="flex items-center gap-3 py-2 border-t border-border-muted first:border-t-0">
-        <!-- Name + provider -->
-        <div class="w-52 shrink-0">
-          <div class="text-sm text-fg font-medium leading-tight">{meta.name}</div>
-          <div class="font-mono text-[10px] text-fg-faint mt-0.5">
-            {meta.provider} · {meta.speed}
-          </div>
-        </div>
-        <!-- Progress bar -->
-        <div class="flex-1 h-1.5 bg-bg-elevated rounded-full overflow-hidden">
-          <div
-            class="h-full rounded-full transition-all duration-500 {counts.total === 0 ? 'bg-fg-faint/20' : 'bg-health'}"
-            style="width: {(progress * 100).toFixed(1)}%"
-          ></div>
-        </div>
-        <!-- done / total -->
-        <div class="font-mono text-xs text-fg-muted w-16 text-right shrink-0">
-          {counts.total === 0 ? '—' : `${done}/${counts.total}`}
-        </div>
-        <!-- Status chip (audio gets pulsing dot when running) -->
-        <div class="shrink-0 flex items-center gap-1.5">
-          {#if jobType === 'audio' && counts.processing > 0}
-            <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse inline-block"></span>
-          {/if}
-          <StatusChip label={jobChipLabel(counts)} tone={jobChipTone(counts)} />
-        </div>
-      </div>
-    {/each}
-  </div>
+  <!-- 5 per-job rows (segmented rollup bars, Task 5) -->
+  <JobTypeRollups
+    byJobType={queueData?.byJobType}
+    jobMeta={JOB_META}
+    jobOrder={JOB_ORDER}
+  />
 
   <!-- Digest readiness + Coverage matrix — round-scoped only -->
   {#if selectedScope != null && queueData?.digestReadiness}
