@@ -108,6 +108,37 @@ export async function uploadToR2(key: string, bytes: Uint8Array): Promise<void> 
 }
 
 /**
+ * Build a text-to-image prompt for a player's base avatar.
+ * Optional trait fields are omitted when null/empty.
+ * Age is clamped to [5, 95] after applying the shift.
+ */
+export function buildBasePrompt(
+  player: {
+    age: number | null;
+    avatar_gender: string | null;
+    avatar_hair: string | null;
+    avatar_height: string | null;
+    avatar_build: string | null;
+    avatar_style: string | null;
+    avatar_trait: string | null;
+  },
+  shift: number,
+): string {
+  const effectiveAge = Math.min(95, Math.max(5, (player.age ?? 40) + shift));
+  const parts = [
+    `Cartoon portrait illustration of a ${player.avatar_gender} person,`,
+    `approximately ${effectiveAge} years old,`,
+    player.avatar_height ? `${player.avatar_height} height,` : null,
+    player.avatar_build ? `${player.avatar_build} build,` : null,
+    player.avatar_style ? `${player.avatar_style} style,` : null,
+    player.avatar_hair ? `${player.avatar_hair} hair.` : null,
+    player.avatar_trait ? `Key trait: ${player.avatar_trait}.` : null,
+    'Square format, warm friendly illustration style, no text, no background clutter.',
+  ].filter(Boolean);
+  return parts.join(' ');
+}
+
+/**
  * Resolve the model to use for avatar image generation.
  * Fallback chain: settings['avatar_image_model'] → env OPENROUTER_AVATAR_IMAGE_MODEL → hardcoded default.
  */
