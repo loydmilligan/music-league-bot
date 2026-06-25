@@ -1,14 +1,8 @@
 <script lang="ts">
-  import { coverageStatePill, runMissingCount } from './queueSongCard.js';
+  import { coverageStatePill, ladderKey, runMissingCount } from './queueSongCard.js';
   import { LADDER } from './ladder.js';
   import type { CoverageState } from './queueSongCard.js';
-
-  interface CoverageRow {
-    spotify_uri: string;
-    title: string | null;
-    artist: string | null;
-    jobs: Record<string, CoverageState>;
-  }
+  import type { CoverageRow } from '$lib/db/metadataQueue.js';
 
   interface JobMeta {
     name: string;
@@ -56,8 +50,8 @@
         <!-- Pill -->
         <span
           class="inline-flex items-center gap-1 font-mono text-[11px] px-1.5 py-0.5 rounded border
-            {pill.toneClass} {LADDER[state === 'processing' ? 'running' : state === 'pending' ? 'queued' : state === 'failed' ? 'failedHard' : state].soft}
-            {LADDER[state === 'processing' ? 'running' : state === 'pending' ? 'queued' : state === 'failed' ? 'failedHard' : state].border}
+            {pill.toneClass} {LADDER[ladderKey(state)].soft}
+            {LADDER[ladderKey(state)].border}
             {state === 'processing' ? 'animate-pulse' : ''}"
           title="{meta?.name ?? jt} · {pill.label}"
         >

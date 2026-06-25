@@ -26,6 +26,32 @@ export interface PillDescriptor {
 export type CoverageState = 'done' | 'processing' | 'pending' | 'failed' | 'missing';
 
 // ---------------------------------------------------------------------------
+// ladderKey — map CoverageState → ElementState for LADDER lookup
+// ---------------------------------------------------------------------------
+
+/**
+ * Pure mapping from CoverageState to ElementState.
+ * Used to index into LADDER for .soft and .border classes.
+ *
+ * Bridge:
+ *   done       → 'done'
+ *   processing → 'running'
+ *   pending    → 'queued'
+ *   failed     → 'failedHard'
+ *   missing    → 'missing'
+ */
+export function ladderKey(state: CoverageState): ElementState {
+  const map: Record<CoverageState, ElementState> = {
+    done:       'done',
+    processing: 'running',
+    pending:    'queued',
+    failed:     'failedHard',
+    missing:    'missing',
+  };
+  return map[state];
+}
+
+// ---------------------------------------------------------------------------
 // coverageStatePill — map a coverage state to a LADDER-derived pill
 // ---------------------------------------------------------------------------
 

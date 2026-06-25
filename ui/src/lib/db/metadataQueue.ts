@@ -631,7 +631,7 @@ function getLeagueRollups(db: Database.Database): ChildRollup[] {
 
 	// 3. Grouped queue counts per league per job_type per status
 	const queueRows = db.prepare(
-		`SELECT s.league_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		`SELECT s.league_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri) AS cnt
 		 FROM song_metadata_queue q
 		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
 		 JOIN rounds r ON r.id = ms.round_id
@@ -664,7 +664,7 @@ function getSeasonRollups(db: Database.Database, leagueId: number): ChildRollup[
 
 	// 3. Queue counts per season per job_type per status
 	const queueRows = db.prepare(
-		`SELECT r.season_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		`SELECT r.season_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri) AS cnt
 		 FROM song_metadata_queue q
 		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
 		 JOIN rounds r ON r.id = ms.round_id
@@ -694,7 +694,7 @@ function getRoundRollups(db: Database.Database, seasonId: number): ChildRollup[]
 
 	// 3. Queue counts per round per job_type per status
 	const queueRows = db.prepare(
-		`SELECT ms.round_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		`SELECT ms.round_id AS child_id, q.job_type, q.status, COUNT(DISTINCT q.spotify_uri) AS cnt
 		 FROM song_metadata_queue q
 		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
 		 WHERE ms.round_id IN (SELECT id FROM rounds WHERE season_id = ?)

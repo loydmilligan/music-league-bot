@@ -1,5 +1,5 @@
 import { it, expect, describe } from 'vitest';
-import { coverageStatePill, runMissingCount } from './queueSongCard.js';
+import { coverageStatePill, ladderKey, runMissingCount } from './queueSongCard.js';
 import { LADDER } from './ladder.js';
 
 // -----------------------------------------------------------------------
@@ -133,5 +133,41 @@ describe('runMissingCount', () => {
     };
     // pending + failed + missing = 3; done + processing excluded
     expect(runMissingCount(jobs)).toBe(3);
+  });
+});
+
+// -----------------------------------------------------------------------
+// ladderKey — maps CoverageState → ElementState for LADDER lookup
+// -----------------------------------------------------------------------
+
+describe('ladderKey', () => {
+  it('done → "done"', () => {
+    expect(ladderKey('done')).toBe('done');
+  });
+
+  it('processing → "running"', () => {
+    expect(ladderKey('processing')).toBe('running');
+  });
+
+  it('pending → "queued"', () => {
+    expect(ladderKey('pending')).toBe('queued');
+  });
+
+  it('failed → "failedHard"', () => {
+    expect(ladderKey('failed')).toBe('failedHard');
+  });
+
+  it('missing → "missing"', () => {
+    expect(ladderKey('missing')).toBe('missing');
+  });
+
+  it('all keys map to valid LADDER entries', () => {
+    const states = ['done', 'processing', 'pending', 'failed', 'missing'] as const;
+    for (const s of states) {
+      const key = ladderKey(s);
+      expect(LADDER[key]).toBeDefined();
+      expect(typeof LADDER[key].soft).toBe('string');
+      expect(typeof LADDER[key].border).toBe('string');
+    }
   });
 });
