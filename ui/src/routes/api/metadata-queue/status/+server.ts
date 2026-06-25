@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json({ error: 'roundId must be an integer' }, { status: 400 });
 	}
 
-	const status = getQueueStatus(db, roundId);
+	const status = getQueueStatus(db, roundId != null ? { level: 'round', id: roundId } : undefined);
 
 	if (roundId != null) {
 		const digestReadiness = getDigestReadiness(db, roundId);

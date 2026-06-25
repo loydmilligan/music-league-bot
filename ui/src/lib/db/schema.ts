@@ -402,6 +402,8 @@ export const SCHEMA = `
     UNIQUE(spotify_uri, job_type)
   );
   CREATE INDEX IF NOT EXISTS idx_song_metadata_queue_status ON song_metadata_queue(status, job_type);
+  CREATE INDEX IF NOT EXISTS idx_ml_submissions_uri_round ON ml_submissions(spotify_uri, round_id);
+  CREATE INDEX IF NOT EXISTS idx_song_metadata_queue_uri ON song_metadata_queue(spotify_uri);
   -- Lyrics presence cache (sprint-queue Task 2 LRCLIB handler).
   -- has_lyrics = 1 when LRCLIB returned a result, 0 when not found.
   CREATE TABLE IF NOT EXISTS song_lyrics_metrics (

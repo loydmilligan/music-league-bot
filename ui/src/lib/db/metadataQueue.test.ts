@@ -16,6 +16,9 @@ import {
 	retryJob,
 	getCoverageMatrix,
 	getDigestReadiness,
+	classifyFailure,
+	getHierarchy,
+	getScopeRollup,
 	type JobType
 } from './metadataQueue.js';
 
@@ -163,7 +166,7 @@ describe('getQueueStatus', () => {
 		enqueue(db, 'spotify:track:inRound', 'ytm');
 		enqueue(db, 'spotify:track:notInRound', 'ytm');
 
-		const status = getQueueStatus(db, 1);
+		const status = getQueueStatus(db, { level: 'round', id: 1 });
 		// Only the in-round submission should be counted
 		expect(status.totalPending).toBe(1);
 	});
@@ -400,6 +403,323 @@ describe('getDigestReadiness', () => {
 		for (const item of Object.values(readiness)) {
 			expect(item.total).toBe(3);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// seedMultiLeague helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates two leagues, two seasons, two rounds and queue rows across them.
+ *
+ * League A → Season 1 (season_number=1) → Round 1 "Round 1A"
+ *   Submissions: R1a (spotify:track:R1a), R1b (spotify:track:R1b)
+ *   Queue: R1a/ytm=done, R1a/lastfm_pop=pending, R1b/ytm=failed
+ *
+ * League B → Season 2 (season_number=1) → Round 2 "Round 2B"
+ *   Submissions: R2a (spotify:track:R2a)
+ *   Queue: R2a/ytm=processing
+ */
+function seedMultiLeague(db: Database.Database): void {
+	// Leagues
+	db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (1, 'league-a', 'League A')`).run();
+	db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (2, 'league-b', 'League B')`).run();
+	// Seasons
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')`).run();
+	db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (2, 2, 1, 'active')`).run();
+	// Rounds
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (1, 1, 'ml-r1', 'Round 1A', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (2, 2, 'ml-r2', 'Round 2B', datetime('now'))`).run();
+	// Submissions
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (1, 'spotify:track:R1a', 'Song R1a', 'Artist', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (1, 'spotify:track:R1b', 'Song R1b', 'Artist', datetime('now'))`).run();
+	db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (2, 'spotify:track:R2a', 'Song R2a', 'Artist', datetime('now'))`).run();
+	// Queue rows
+	// R1a/ytm = done (done_at set to a recent timestamp)
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, done_at, queued_at) VALUES ('spotify:track:R1a', 'ytm', 'done', strftime('%Y-%m-%dT%H:%M:%SZ', datetime('now', '-1 hour')), strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	// R1a/lastfm_pop = pending
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, queued_at) VALUES ('spotify:track:R1a', 'lastfm_pop', 'pending', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	// R1b/ytm = failed
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, error, queued_at) VALUES ('spotify:track:R1b', 'ytm', 'failed', 'Track not found', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+	// R2a/ytm = processing
+	db.prepare(`INSERT OR IGNORE INTO song_metadata_queue (spotify_uri, job_type, status, queued_at) VALUES ('spotify:track:R2a', 'ytm', 'processing', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run();
+}
+
+// ---------------------------------------------------------------------------
+// classifyFailure
+// ---------------------------------------------------------------------------
+
+describe('classifyFailure', () => {
+	it('classifies "Track not found" as no_data', () => {
+		expect(classifyFailure('Track not found')).toBe('no_data');
+	});
+
+	it('classifies "HTTP 503" as transient', () => {
+		expect(classifyFailure('HTTP 503')).toBe('transient');
+	});
+
+	it('classifies "HTTP 429 rate limit" as rate_limited', () => {
+		expect(classifyFailure('HTTP 429 rate limit')).toBe('rate_limited');
+	});
+
+	it('classifies "API key not configured" as config', () => {
+		expect(classifyFailure('API key not configured')).toBe('config');
+	});
+
+	it('classifies null as transient', () => {
+		expect(classifyFailure(null)).toBe('transient');
+	});
+
+	it('"API key not found" is no_data (not found matches rule 2, config requires not set|not configured)', () => {
+		// Rule 1: /not set|not configured/i → config. "not found" does NOT match.
+		// Rule 2: /not found/i → no_data. "not found" DOES match.
+		// Therefore 'API key not found' → 'no_data'
+		expect(classifyFailure('API key not found')).toBe('no_data');
+	});
+
+	it('classifies empty string as transient', () => {
+		expect(classifyFailure('')).toBe('transient');
+	});
+
+	it('classifies ECONNREFUSED as transient', () => {
+		expect(classifyFailure('ECONNREFUSED')).toBe('transient');
+	});
+
+	it('classifies timeout as transient', () => {
+		expect(classifyFailure('Request timeout')).toBe('transient');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// scope-aware aggregation
+// ---------------------------------------------------------------------------
+
+describe('scope-aware aggregation', () => {
+	it('all scope sees all 4 job rows', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'all' });
+		// 4 rows: R1a/ytm, R1a/lastfm_pop, R1b/ytm, R2a/ytm
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(4);
+	});
+
+	it('undefined scope sees all rows (same as all)', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db);
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(4);
+	});
+
+	it('league scope (league_id=1) sees 3 rows, NOT R2a', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'league', id: 1 });
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(3);
+		// No ytm processing (that's R2a)
+		expect(status.byJobType['ytm']?.processing ?? 0).toBe(0);
+	});
+
+	it('season scope (season_id=1) sees 3 rows, NOT R2a', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'season', id: 1 });
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(3);
+	});
+
+	it('round scope (round_id=1) sees 3 rows, NOT R2a', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'round', id: 1 });
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(3);
+	});
+
+	it('round scope (round_id=2) sees 1 row (R2a ytm processing)', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'round', id: 2 });
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(1);
+		expect(status.byJobType['ytm']?.processing).toBe(1);
+	});
+
+	it('league B scope sees only R2a', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'league', id: 2 });
+		let total = 0;
+		for (const jtc of Object.values(status.byJobType)) {
+			total += jtc.total;
+		}
+		expect(total).toBe(1);
+		expect(status.byJobType['ytm']?.processing).toBe(1);
+	});
+
+	it('done field is computed as total - pending - processing - failed', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'all' });
+		// ytm: total=3 (R1a done, R1b failed, R2a processing), pending=0, processing=1, failed=1 → done=1
+		const ytm = status.byJobType['ytm'];
+		expect(ytm).toBeDefined();
+		expect(ytm.total).toBe(3);
+		expect(ytm.done).toBe(1); // lifetime done, not done24h
+		expect(ytm.failed).toBe(1);
+		expect(ytm.processing).toBe(1);
+	});
+
+	it('done is lifetime done, not done24h', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const status = getQueueStatus(db, { level: 'all' });
+		const ytm = status.byJobType['ytm'];
+		// done24h counts rows where done_at is within last 24h (R1a was done 1 hour ago = within 24h)
+		// done (lifetime) = total - pending - processing - failed = 3 - 0 - 1 - 1 = 1
+		expect(ytm.done).toBe(ytm.total - ytm.pending - ytm.processing - ytm.failed);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getHierarchy
+// ---------------------------------------------------------------------------
+
+describe('getHierarchy', () => {
+	it('returns array of length 2 (2 leagues)', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		expect(hierarchy).toHaveLength(2);
+	});
+
+	it('League A has 1 season and 1 round', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1);
+		expect(leagueA).toBeDefined();
+		expect(leagueA!.seasons).toHaveLength(1);
+		expect(leagueA!.seasons[0].rounds).toHaveLength(1);
+	});
+
+	it('Round 1 has songCount=2 (R1a, R1b)', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		const season1 = leagueA.seasons[0];
+		const round1 = season1.rounds[0];
+		expect(round1.songCount).toBe(2);
+	});
+
+	it('Season 1 rolls up songCount=2 and name is "Season 1"', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		const season1 = leagueA.seasons[0];
+		expect(season1.songCount).toBe(2);
+		expect(season1.name).toBe('Season 1');
+	});
+
+	it('League A rolls up songCount=2', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		expect(leagueA.songCount).toBe(2);
+	});
+
+	it('Round-level queue counts are correct', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		const round1 = leagueA.seasons[0].rounds[0];
+		// R1a/ytm=done, R1b/ytm=failed, R1a/lastfm_pop=pending
+		expect(round1.done).toBe(1);
+		expect(round1.failed).toBe(1);
+		expect(round1.pending).toBe(1);
+		expect(round1.processing).toBe(0);
+		expect(round1.total).toBe(3);
+	});
+
+	it('Season-level counts are sum of rounds', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		const season1 = leagueA.seasons[0];
+		expect(season1.done).toBe(1);
+		expect(season1.failed).toBe(1);
+		expect(season1.pending).toBe(1);
+		expect(season1.total).toBe(3);
+	});
+
+	it('League name matches seeded name', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const hierarchy = getHierarchy(db);
+		const leagueA = hierarchy.find((l) => l.id === 1)!;
+		const leagueB = hierarchy.find((l) => l.id === 2)!;
+		expect(leagueA.name).toBe('League A');
+		expect(leagueB.name).toBe('League B');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getScopeRollup
+// ---------------------------------------------------------------------------
+
+describe('getScopeRollup', () => {
+	it('matches getQueueStatus for league scope', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const rollup = getScopeRollup(db, { level: 'league', id: 1 });
+		const direct = getQueueStatus(db, { level: 'league', id: 1 });
+		expect(rollup.totalPending).toBe(direct.totalPending);
+		expect(rollup.totalProcessing).toBe(direct.totalProcessing);
+		expect(rollup.byJobType).toEqual(direct.byJobType);
+	});
+
+	it('matches getQueueStatus for season scope', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const rollup = getScopeRollup(db, { level: 'season', id: 1 });
+		const direct = getQueueStatus(db, { level: 'season', id: 1 });
+		expect(rollup.totalPending).toBe(direct.totalPending);
+		expect(rollup.totalProcessing).toBe(direct.totalProcessing);
+	});
+
+	it('matches getQueueStatus for round scope', () => {
+		const db = freshDb();
+		seedMultiLeague(db);
+		const rollup = getScopeRollup(db, { level: 'round', id: 1 });
+		const direct = getQueueStatus(db, { level: 'round', id: 1 });
+		expect(rollup.totalPending).toBe(direct.totalPending);
+		expect(rollup.byJobType).toEqual(direct.byJobType);
 	});
 });
 

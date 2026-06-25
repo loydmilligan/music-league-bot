@@ -16,6 +16,9 @@ import type Database from 'better-sqlite3';
 export type JobType = 'ytm' | 'lastfm_pop' | 'lastfm_tags' | 'audio' | 'lyrics';
 export type JobStatus = 'pending' | 'processing' | 'done' | 'failed';
 
+/** Scope for filtering queue rows by league/season/round/all. */
+export type Scope = { level: 'all' | 'league' | 'season' | 'round'; id?: number };
+
 export interface QueueFailure {
 	id: number;
 	spotify_uri: string;
@@ -30,6 +33,7 @@ export interface JobTypeCounts {
 	done24h: number;
 	failed: number;
 	total: number;
+	done: number; // lifetime done = total - pending - processing - failed
 }
 
 export interface QueueStatus {
@@ -58,6 +62,41 @@ export interface DigestReadiness {
 	lastfm_tags: ReadinessItem;
 	lyrics: ReadinessItem;
 	audio: ReadinessItem;
+}
+
+export interface HierarchyRound {
+	id: number;
+	name: string;
+	songCount: number;
+	done: number;
+	pending: number;
+	processing: number;
+	failed: number;
+	total: number;
+}
+
+export interface HierarchySeason {
+	id: number;
+	name: string;
+	rounds: HierarchyRound[];
+	done: number;
+	pending: number;
+	processing: number;
+	failed: number;
+	total: number;
+	songCount: number;
+}
+
+export interface HierarchyLeague {
+	id: number;
+	name: string;
+	seasons: HierarchySeason[];
+	done: number;
+	pending: number;
+	processing: number;
+	failed: number;
+	total: number;
+	songCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,29 +141,53 @@ export function enqueueMany(
 // Status queries
 // ---------------------------------------------------------------------------
 
+/** Build a subquery that returns the set of spotify_uris in scope. */
+function buildScopeUriSubquery(scope: Scope | undefined): { subquery: string | null; params: unknown[] } {
+	if (scope == null || scope.level === 'all') {
+		return { subquery: null, params: [] };
+	}
+	if (scope.level === 'round') {
+		return {
+			subquery: `SELECT DISTINCT spotify_uri FROM ml_submissions WHERE round_id = ?`,
+			params: [scope.id]
+		};
+	}
+	if (scope.level === 'season') {
+		return {
+			subquery: `SELECT DISTINCT ms.spotify_uri FROM ml_submissions ms JOIN rounds r ON r.id = ms.round_id WHERE r.season_id = ?`,
+			params: [scope.id]
+		};
+	}
+	// league
+	return {
+		subquery: `SELECT DISTINCT ms.spotify_uri FROM ml_submissions ms JOIN rounds r ON r.id = ms.round_id JOIN seasons s ON s.id = r.season_id WHERE s.league_id = ?`,
+		params: [scope.id]
+	};
+}
+
 /**
  * Returns per-job-type counts and the failures list.
- * When roundId is provided, results are scoped to submissions in that round.
+ * When scope is provided, results are filtered accordingly.
  */
-export function getQueueStatus(db: Database.Database, roundId?: number): QueueStatus {
-	// Build a WHERE clause that optionally scopes to a round's submissions.
-	const scopeJoin = roundId != null
-		? `JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri AND ms.round_id = ${roundId}`
-		: '';
+export function getQueueStatus(db: Database.Database, scope?: Scope): QueueStatus {
+	const { subquery, params } = buildScopeUriSubquery(scope);
 
+	// Use DISTINCT on (q.spotify_uri, q.job_type) when joining to avoid
+	// double-counting when the same URI has multiple submission rows in a round.
+	const whereClause = subquery ? `WHERE q.spotify_uri IN (${subquery})` : '';
 	const rows = db.prepare(
 		`SELECT q.job_type, q.status,
 		        COUNT(*) AS cnt,
 		        SUM(CASE WHEN q.status='done' AND q.done_at > strftime('%Y-%m-%dT%H:%M:%SZ', datetime('now','-1 day')) THEN 1 ELSE 0 END) AS done24h_cnt
 		 FROM song_metadata_queue q
-		 ${scopeJoin}
+		 ${whereClause}
 		 GROUP BY q.job_type, q.status`
-	).all() as Array<{ job_type: string; status: string; cnt: number; done24h_cnt: number }>;
+	).all(...params) as Array<{ job_type: string; status: string; cnt: number; done24h_cnt: number }>;
 
 	const byJobType: Record<string, JobTypeCounts> = {};
 	for (const row of rows) {
 		if (!byJobType[row.job_type]) {
-			byJobType[row.job_type] = { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0 };
+			byJobType[row.job_type] = { pending: 0, processing: 0, done24h: 0, failed: 0, total: 0, done: 0 };
 		}
 		const entry = byJobType[row.job_type];
 		entry.total += row.cnt;
@@ -133,8 +196,11 @@ export function getQueueStatus(db: Database.Database, roundId?: number): QueueSt
 		else if (row.status === 'done') entry.done24h += row.done24h_cnt;
 		else if (row.status === 'failed') entry.failed += row.cnt;
 	}
+	for (const entry of Object.values(byJobType)) {
+		entry.done = Math.max(0, entry.total - entry.pending - entry.processing - entry.failed);
+	}
 
-	const failures = getFailures(db, roundId);
+	const failures = getFailures(db, scope);
 
 	let totalPending = 0;
 	let totalProcessing = 0;
@@ -147,20 +213,29 @@ export function getQueueStatus(db: Database.Database, roundId?: number): QueueSt
 }
 
 /**
- * Returns all failed jobs, optionally scoped to a round's submissions.
+ * Returns all failed jobs, optionally scoped.
+ * Accepts either a Scope object or a legacy number (round id) for backwards compatibility.
  */
-export function getFailures(db: Database.Database, roundId?: number): QueueFailure[] {
-	const scopeJoin = roundId != null
-		? `JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri AND ms.round_id = ${roundId}`
-		: '';
+export function getFailures(db: Database.Database, scope?: Scope | number): QueueFailure[] {
+	// Handle legacy call signature where scope was roundId: number
+	let resolvedScope: Scope | undefined;
+	if (typeof scope === 'number') {
+		resolvedScope = { level: 'round', id: scope };
+	} else {
+		resolvedScope = scope;
+	}
+
+	const { subquery, params } = buildScopeUriSubquery(resolvedScope);
+	const whereClause = subquery
+		? `WHERE q.status = 'failed' AND q.spotify_uri IN (${subquery})`
+		: `WHERE q.status = 'failed'`;
 
 	return db.prepare(
 		`SELECT q.id, q.spotify_uri, q.job_type, q.error, q.retries
 		 FROM song_metadata_queue q
-		 ${scopeJoin}
-		 WHERE q.status = 'failed'
+		 ${whereClause}
 		 ORDER BY q.queued_at DESC`
-	).all() as QueueFailure[];
+	).all(...params) as QueueFailure[];
 }
 
 /**
@@ -298,4 +373,185 @@ export function getDigestReadiness(db: Database.Database, roundId: number): Dige
 		lyrics: { ok: pct80(lyricsCount), count: lyricsCount, total },
 		audio: { ok: pct80(audioCount), count: audioCount, total }
 	};
+}
+
+// ---------------------------------------------------------------------------
+// classifyFailure
+// ---------------------------------------------------------------------------
+
+/**
+ * Classify a job failure error string into a category.
+ * Precedence (first match wins):
+ *  1. 'config'       — /not set|not configured/i
+ *  2. 'no_data'      — /not found/i
+ *  3. 'rate_limited' — /HTTP 4|rate/i
+ *  4. 'transient'    — /HTTP 5|ECONN|timeout/i
+ *  5. default        — 'transient'
+ */
+export function classifyFailure(error: string | null): 'rate_limited' | 'no_data' | 'transient' | 'config' {
+	if (!error) return 'transient';
+	if (/not set|not configured/i.test(error)) return 'config';
+	if (/not found/i.test(error)) return 'no_data';
+	if (/HTTP 4|rate/i.test(error)) return 'rate_limited';
+	if (/HTTP 5|ECONN|timeout/i.test(error)) return 'transient';
+	return 'transient';
+}
+
+// ---------------------------------------------------------------------------
+// getHierarchy — league → season → round tree with roll-up counts
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the full hierarchy tree without N+1 queries.
+ * Uses 5 flat queries then stitches in JS.
+ */
+export function getHierarchy(db: Database.Database): HierarchyLeague[] {
+	// 1. All leagues
+	const leagues = db.prepare(
+		`SELECT id, name FROM leagues ORDER BY id`
+	).all() as Array<{ id: number; name: string }>;
+
+	// 2. All seasons with league_id
+	const seasons = db.prepare(
+		`SELECT id, league_id, season_number FROM seasons ORDER BY league_id, season_number`
+	).all() as Array<{ id: number; league_id: number; season_number: number }>;
+
+	// 3. All rounds with season_id
+	const rounds = db.prepare(
+		`SELECT id, season_id, name FROM rounds ORDER BY season_id, id`
+	).all() as Array<{ id: number; season_id: number; name: string }>;
+
+	// 4. Aggregation per round + status (no N+1)
+	// Use DISTINCT on (ms.spotify_uri, ms.round_id) to avoid double-counting
+	// URIs that appear multiple times in ml_submissions for a round.
+	const statusAgg = db.prepare(
+		`SELECT r.id AS round_id, q.status, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		 FROM song_metadata_queue q
+		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
+		 JOIN rounds r ON r.id = ms.round_id
+		 GROUP BY r.id, q.status`
+	).all() as Array<{ round_id: number; status: string; cnt: number }>;
+
+	// 5. Song count per round (distinct URIs)
+	const songCountRows = db.prepare(
+		`SELECT round_id, COUNT(DISTINCT spotify_uri) AS cnt FROM ml_submissions GROUP BY round_id`
+	).all() as Array<{ round_id: number; cnt: number }>;
+
+	// Also need total jobs per round (across all statuses)
+	const totalAgg = db.prepare(
+		`SELECT r.id AS round_id, COUNT(DISTINCT q.spotify_uri || '|' || q.job_type) AS cnt
+		 FROM song_metadata_queue q
+		 JOIN ml_submissions ms ON ms.spotify_uri = q.spotify_uri
+		 JOIN rounds r ON r.id = ms.round_id
+		 GROUP BY r.id`
+	).all() as Array<{ round_id: number; cnt: number }>;
+
+	// Index data for O(1) lookup
+	const songCountByRound = new Map(songCountRows.map((r) => [r.round_id, r.cnt]));
+	const totalByRound = new Map(totalAgg.map((r) => [r.round_id, r.cnt]));
+
+	// status counts per round
+	type RoundCounts = { done: number; pending: number; processing: number; failed: number };
+	const countsByRound = new Map<number, RoundCounts>();
+	for (const row of statusAgg) {
+		if (!countsByRound.has(row.round_id)) {
+			countsByRound.set(row.round_id, { done: 0, pending: 0, processing: 0, failed: 0 });
+		}
+		const c = countsByRound.get(row.round_id)!;
+		if (row.status === 'done') c.done += row.cnt;
+		else if (row.status === 'pending') c.pending += row.cnt;
+		else if (row.status === 'processing') c.processing += row.cnt;
+		else if (row.status === 'failed') c.failed += row.cnt;
+	}
+
+	// Index rounds by season_id
+	const roundsBySeason = new Map<number, Array<{ id: number; season_id: number; name: string }>>();
+	for (const r of rounds) {
+		if (!roundsBySeason.has(r.season_id)) roundsBySeason.set(r.season_id, []);
+		roundsBySeason.get(r.season_id)!.push(r);
+	}
+
+	// Index seasons by league_id
+	const seasonsByLeague = new Map<number, Array<{ id: number; league_id: number; season_number: number }>>();
+	for (const s of seasons) {
+		if (!seasonsByLeague.has(s.league_id)) seasonsByLeague.set(s.league_id, []);
+		seasonsByLeague.get(s.league_id)!.push(s);
+	}
+
+	// Build hierarchy
+	return leagues.map((league) => {
+		const leagueSeasons = seasonsByLeague.get(league.id) ?? [];
+
+		const builtSeasons: HierarchySeason[] = leagueSeasons.map((season) => {
+			const seasonRounds = roundsBySeason.get(season.id) ?? [];
+
+			const builtRounds: HierarchyRound[] = seasonRounds.map((round) => {
+				const counts = countsByRound.get(round.id) ?? { done: 0, pending: 0, processing: 0, failed: 0 };
+				const total = totalByRound.get(round.id) ?? 0;
+				const songCount = songCountByRound.get(round.id) ?? 0;
+				return {
+					id: round.id,
+					name: round.name,
+					songCount,
+					done: counts.done,
+					pending: counts.pending,
+					processing: counts.processing,
+					failed: counts.failed,
+					total
+				};
+			});
+
+			// Roll up season from rounds
+			const seasonDone = builtRounds.reduce((acc, r) => acc + r.done, 0);
+			const seasonPending = builtRounds.reduce((acc, r) => acc + r.pending, 0);
+			const seasonProcessing = builtRounds.reduce((acc, r) => acc + r.processing, 0);
+			const seasonFailed = builtRounds.reduce((acc, r) => acc + r.failed, 0);
+			const seasonTotal = builtRounds.reduce((acc, r) => acc + r.total, 0);
+			const seasonSongCount = builtRounds.reduce((acc, r) => acc + r.songCount, 0);
+
+			return {
+				id: season.id,
+				name: `Season ${season.season_number}`,
+				rounds: builtRounds,
+				done: seasonDone,
+				pending: seasonPending,
+				processing: seasonProcessing,
+				failed: seasonFailed,
+				total: seasonTotal,
+				songCount: seasonSongCount
+			};
+		});
+
+		// Roll up league from seasons
+		const leagueDone = builtSeasons.reduce((acc, s) => acc + s.done, 0);
+		const leaguePending = builtSeasons.reduce((acc, s) => acc + s.pending, 0);
+		const leagueProcessing = builtSeasons.reduce((acc, s) => acc + s.processing, 0);
+		const leagueFailed = builtSeasons.reduce((acc, s) => acc + s.failed, 0);
+		const leagueTotal = builtSeasons.reduce((acc, s) => acc + s.total, 0);
+		const leagueSongCount = builtSeasons.reduce((acc, s) => acc + s.songCount, 0);
+
+		return {
+			id: league.id,
+			name: league.name,
+			seasons: builtSeasons,
+			done: leagueDone,
+			pending: leaguePending,
+			processing: leagueProcessing,
+			failed: leagueFailed,
+			total: leagueTotal,
+			songCount: leagueSongCount
+		};
+	});
+}
+
+// ---------------------------------------------------------------------------
+// getScopeRollup — per-scope QueueStatus (delegates to getQueueStatus)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the QueueStatus for a given scope node.
+ * Delegates to getQueueStatus for DRY implementation.
+ */
+export function getScopeRollup(db: Database.Database, scope: Scope): QueueStatus {
+	return getQueueStatus(db, scope);
 }
