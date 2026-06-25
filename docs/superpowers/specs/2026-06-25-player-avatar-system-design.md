@@ -291,6 +291,99 @@ Avatar at `sm` size, inserted between the points bar graph and the weekly rank a
 
 ---
 
+## Implementation Plan
+
+Tasks are ordered by dependency. Each task must pass `npm run check` before the next begins.
+
+### Task 1 — DB migrations + age-field-save bug fix
+
+Files: `ui/src/lib/server/db/migrations.ts` (or equivalent boot-migration runner), `ui/src/routes/settings/setup/+page.svelte`
+
+1. Add `player_avatars` table (idempotent `CREATE TABLE IF NOT EXISTS`).
+2. Add six `ALTER TABLE player_profiles ADD COLUMN avatar_*` columns (idempotent: wrap each in `IF NOT EXISTS` check or catch SQLITE_ERROR duplicate-column).
+3. Add `cap_image_gen` column to `ai_models`.
+4. Insert/upsert `avatar_age_shift` global setting with default `0`.
+5. Fix age-field-save bug: verify `players.age` is included in the save payload in `+page.svelte` and actually written to the DB.
+
+Gate: boot the dev server; confirm the new columns exist via a quick `sqlite3 data/*.db ".schema player_profiles"` check.
+
+---
+
+### Task 2 — Backend: image helper + serve endpoint
+
+Files: `ui/src/lib/server/openrouter.ts` (new helper), `ui/src/routes/api/avatars/[playerId]/[type]/+server.ts` (new)
+
+1. Add `callOpenRouterImage(prompt, model, opts)` helper — mirrors existing `generateImage` in `ml_companion/openrouter-round-story`. Handles both URL and `data:image/...` base64 responses. Throws on missing image.
+2. Add `modelForSection('avatar', db)` lookup — reads `avatar_image_model` setting, falls back to `OPENROUTER_AVATAR_IMAGE_MODEL` env var.
+3. Create `GET /api/avatars/[playerId]/[type]` serve route — looks up `r2_key` from `player_avatars`, fetches from R2 REST API with Bearer token, streams `image/png` with `Cache-Control: max-age=3600`. Returns 404 when key absent.
+
+Gate: `npm run check`; manual curl of the serve route against a known R2 key.
+
+---
+
+### Task 3 — Backend: generate-base + upload endpoints
+
+Files: `ui/src/routes/api/players/[id]/avatar/generate-base/+server.ts`, `ui/src/routes/api/players/[id]/avatar/upload/+server.ts`
+
+1. Build `buildBasePrompt(player, shift)` utility — pulls trait fields, computes effective_age with clamp, omits blank optional fields.
+2. `POST /api/players/[id]/avatar/generate-base` — validate gender + style present (400 otherwise), call `callOpenRouterImage`, upload bytes to R2 key `{playerId}/base.png`, upsert `player_avatars`, return `{ url }`.
+3. `POST /api/players/[id]/avatar/upload` — accept multipart `avatar` field, validate type (PNG/JPG) + size (≤5MB), upload to same R2 key, upsert `player_avatars` with `base_source='uploaded'`, return `{ url }`.
+
+Gate: `npm run check`; smoke test generate-base in dev server console; confirm R2 key appears in bucket.
+
+---
+
+### Task 4 — Backend: themed-batch endpoint
+
+File: `ui/src/routes/api/avatars/generate-themed/+server.ts`
+
+1. `POST /api/avatars/generate-themed { roundId }` — fetch round (title, description), fetch all players with `avatar_gender IS NOT NULL`.
+2. Fan out via `Promise.allSettled` (not `Promise.all`) — per-player failures isolated. For each settled player: on success upload `{playerId}/themed.png` + upsert; on failure log + continue.
+3. Return `{ generated: N, failed: M }`.
+
+Gate: `npm run check`; invoke with a real round ID in dev; verify result counts match player count.
+
+---
+
+### Task 5 — Avatar.svelte component update + call sites
+
+Files: `bside/src/lib/atoms/Avatar.svelte`, all existing `<Avatar>` usages in HomeScreen, ProfileScreen, player research tab
+
+1. Add optional `src` prop (`string | null`). When set, render `<img>` with `on:error` falling back to initials circle.
+2. Build fallback chain helper in read-model generator: `themed_r2_key` → `/api/avatars/{id}/themed`, else `base_r2_key` → `/api/avatars/{id}/base`, else `null`. Expose as `avatar_url` on the player read-model.
+3. Update `HomeScreen` and `ProfileScreen` member grid: pass `src={player.avatar_url}` to existing `<Avatar>` calls.
+4. Update player research tab: add `<Avatar size="sm" src={player.avatar_url} ... />` to the left of the player name in each expanded card. Ensure `avatar_url` is included in the player history API response.
+
+Gate: `npm run check`; open member grid in dev server; confirm initials circle still renders when no avatar, image renders when one exists.
+
+---
+
+### Task 6 — Digest: season standings avatar
+
+Files: digest PNG generator (Puppeteer template), `ui/src/routes/api/digest/...`
+
+1. Fetch `avatar_url` for each player in the season standings read-model.
+2. In the standings row template: insert `<img>` between the points bar and the weekly rank arrow. Size: `sm` (32px).
+3. Add **previous rank** badge: small number overlaid at bottom-center of the avatar (absolute-position child).
+4. Reposition existing rank-change arrow as a top-right badge on the avatar rather than a standalone element.
+5. Fallback: when `avatar_url` is null, show the initials circle styled to match.
+
+Gate: generate a digest PNG in dev; visually verify standings rows; `npm run check`.
+
+---
+
+### Task 7 — Modal checkboxes
+
+Files: `bside/src/routes/.../DigestModal.svelte`, `bside/src/routes/.../BsideModal.svelte` (or equivalent)
+
+1. Both digest-generation and b-side-generation modals get an unchecked `<Checkbox>` labeled *"Regenerate themed avatars for this round"*.
+2. When checked, the submit handler calls `POST /api/avatars/generate-themed { roundId }` immediately before (or concurrently with) the main generation job.
+3. Show inline progress (e.g. "Generating avatars… 8/12") while the batch runs; display `generated`/`failed` counts in the success toast.
+
+Gate: `npm run check`; tick the checkbox in dev; verify the themed-batch endpoint fires and the toast shows counts.
+
+---
+
 ## Out of Scope (this sprint)
 
 - Public CDN URL for the R2 bucket (avatars are served through the SvelteKit proxy)
