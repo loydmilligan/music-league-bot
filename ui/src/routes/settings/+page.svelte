@@ -727,14 +727,24 @@
     {/if}
   {/if}
 
-  <!-- Triage — grouped failures -->
+  <!-- Triage — grouped failures (collapsible, opens when Failed tile clicked) -->
   {#if queueData && queueData.failures.length > 0}
     <div class="mt-6 border-t border-border-muted pt-5">
-      <Triage
-        failures={queueData.failures}
-        jobMeta={JOB_META}
-        onBulkAction={bulkAction}
-      />
+      <button
+        type="button"
+        onclick={() => { triageOpen = !triageOpen; }}
+        class="flex items-center gap-2 font-mono text-[10px] tracking-widest uppercase text-amber hover:text-amber/80 transition-colors mb-3"
+      >
+        <span>{triageOpen ? '▾' : '▸'}</span>
+        <span>Failures ({queueData.failures.length})</span>
+      </button>
+      {#if triageOpen}
+        <Triage
+          failures={queueData.failures}
+          jobMeta={JOB_META}
+          onBulkAction={bulkAction}
+        />
+      {/if}
     </div>
   {/if}
 

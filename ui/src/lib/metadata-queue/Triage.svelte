@@ -25,6 +25,13 @@
     muted: 'border-border-muted',
   };
 
+  const TONE_TEXT: Record<string, string> = {
+    amber: 'text-amber',
+    ember: 'text-ember',
+    sky: 'text-sky',
+    muted: 'text-fg-faint',
+  };
+
   const BY_LABELS: { value: GroupBy; label: string }[] = [
     { value: 'reason', label: 'Reason' },
     { value: 'job', label: 'Job' },
@@ -73,7 +80,7 @@
         <!-- Left: glyph + label + count + why -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <span class="font-mono text-[11px] {borderClass.replace('border-', 'text-')}">{group.glyph}</span>
+            <span class="font-mono text-[11px] {TONE_TEXT[group.tone] ?? 'text-fg-faint'}">{group.glyph}</span>
             <span class="text-xs text-fg font-medium">{group.label}</span>
             <span class="font-mono text-[10px] text-fg-faint">({group.count})</span>
           </div>
