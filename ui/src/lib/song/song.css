@@ -315,6 +315,8 @@
 /* ---- SHOW/HIDE BREAKPOINT ---- */
 @media (max-width: 767px) {
   .usc-cardwrap > .usc-row { display: none; }
+  /* density='expanded': hide the desktop card, show touch row instead */
+  .usc-cardwrap > .usc-deskonly { display: none; }
 }
 @media (min-width: 768px) {
   .usc-cardwrap > .mcm-row { display: none; }

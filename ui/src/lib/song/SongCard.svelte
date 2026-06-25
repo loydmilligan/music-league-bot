@@ -595,7 +595,24 @@
 {/snippet}
 
 {#if density === 'expanded'}
-  {@render expandedBody(config, null)}
+  <div class="usc-cardwrap">
+    <div class="usc-deskonly">
+      {@render expandedBody(config, null)}
+    </div>
+    {@render mobileRow(config)}
+    {#if sheetOpen}
+      <SongSheet
+        {song}
+        config={expandedCfg}
+        animate={sheetAnimate}
+        onClose={closeSheet}
+        {onAction}
+        {onRate}
+        {onAnalyze}
+        {onNotes}
+      />
+    {/if}
+  </div>
 {:else}
   <div class="usc-cardwrap">
     {@render compactRow(config, expanded, toggleExpand)}
