@@ -7,6 +7,9 @@
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
   import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
   import type { Filter } from '$lib/metadata-queue/metricTiles.js';
+  import type { Scope, HierarchyLeague } from '$lib/db/metadataQueue.js';
+  import HierarchyNavigator from '$lib/metadata-queue/HierarchyNavigator.svelte';
+  import { rollupChip } from '$lib/metadata-queue/ladder.js';
 
   let { data } = $props<{ data: PageData }>();
 
@@ -118,17 +121,17 @@
   };
   const JOB_ORDER = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio'] as const;
 
-  let selectedScope = $state<number | null>(null);
+  let scope = $state<Scope>({ level: 'all' });
   let queueData = $state<QueueStatusPayload | null>(null);
   let filter = $state<Filter>('all');
   let triageOpen = $state(false);
 
   $effect(() => {
-    const scope = selectedScope;
+    const s = scope;
     async function doFetch() {
-      const url = scope != null
-        ? `/api/metadata-queue/status?roundId=${scope}`
-        : '/api/metadata-queue/status';
+      const url = s.level === 'all'
+        ? '/api/metadata-queue/status'
+        : `/api/metadata-queue/status?level=${s.level}&id=${s.id}`;
       try {
         const r = await fetch(url);
         if (r.ok) queueData = (await r.json()) as QueueStatusPayload;
@@ -202,19 +205,19 @@
   }
 
   async function fillGaps() {
-    if (selectedScope == null || fillGapsLoading) return;
+    if (scope.level !== 'round' || fillGapsLoading) return;
     fillGapsLoading = true;
     fillGapsToast = null;
     try {
       const r = await fetch('/api/metadata-queue/fill-gaps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roundId: selectedScope }),
+        body: JSON.stringify({ roundId: scope.id }),
       });
       if (r.ok) {
         const body = (await r.json()) as { queued: number };
         fillGapsToast = `Queued ${body.queued} jobs`;
-        const res = await fetch(`/api/metadata-queue/status?roundId=${selectedScope}`);
+        const res = await fetch(`/api/metadata-queue/status?level=round&id=${scope.id}`);
         if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
         setTimeout(() => { fillGapsToast = null; }, 3500);
       }
@@ -223,18 +226,16 @@
     }
   }
 
-  const overallTone = $derived(
-    !queueData ? 'muted'
-    : queueData.failures.length > 0 ? 'warn'
-    : queueData.totalPending > 0 || queueData.totalProcessing > 0 ? 'accent'
-    : 'health'
-  );
-  const overallLabel = $derived(
-    !queueData ? 'LOADING'
-    : queueData.failures.length > 0 ? `${queueData.failures.length} FAILURE${queueData.failures.length === 1 ? '' : 'S'}`
-    : queueData.totalProcessing > 0 ? `RUNNING · ${queueData.totalProcessing}`
-    : queueData.totalPending > 0 ? `${queueData.totalPending} PENDING`
-    : 'IDLE'
+  const overallChip = $derived(
+    queueData
+      ? rollupChip({
+          pending: queueData.totalPending,
+          processing: queueData.totalProcessing,
+          done24h: 0,
+          failed: queueData.failures.length,
+          total: Object.values(queueData.byJobType).reduce((s, c) => s + c.total, 0),
+        })
+      : { label: 'LOADING', tone: 'muted' as const }
   );
 
   // Load on mount
@@ -367,29 +368,15 @@
       <SectionLabel>Enrichment</SectionLabel>
       <h2 class="text-lg font-bold text-fg mt-1">Song metadata queue</h2>
     </div>
-    <StatusChip label={overallLabel} tone={overallTone} />
+    <StatusChip label={overallChip.label} tone={overallChip.tone} />
   </header>
 
-  <!-- Scope control -->
-  <div class="flex flex-wrap gap-1.5 mb-5">
-    <button
-      type="button"
-      onclick={() => { selectedScope = null; }}
-      class="font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-sm border transition-colors {selectedScope === null ? 'bg-accent text-bg border-accent' : 'bg-bg-elevated text-fg-dim border-border-muted hover:border-accent hover:text-fg'}"
-    >
-      All rounds
-    </button>
-    {#each data.recentRounds as round (round.id)}
-      <button
-        type="button"
-        onclick={() => { selectedScope = round.id; }}
-        class="font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-sm border transition-colors max-w-[14rem] truncate {selectedScope === round.id ? 'bg-accent text-bg border-accent' : 'bg-bg-elevated text-fg-dim border-border-muted hover:border-accent hover:text-fg'}"
-        title={round.name}
-      >
-        {round.name}
-      </button>
-    {/each}
-  </div>
+  <!-- Hierarchy navigator (scope drill-down) -->
+  <HierarchyNavigator
+    hierarchy={data.hierarchy}
+    {scope}
+    onScope={(s) => { scope = s; filter = 'all'; }}
+  />
 
   <!-- 4 metric tiles: Queued / Running / Done / Failed — filter-aware, monotonic colors -->
   {#if queueData}
@@ -419,7 +406,7 @@
   />
 
   <!-- Digest readiness + Coverage matrix — round-scoped only -->
-  {#if selectedScope != null && queueData?.digestReadiness}
+  {#if scope.level === 'round' && queueData?.digestReadiness}
     {@const dr = queueData.digestReadiness}
 
     <!-- Digest readiness block -->
@@ -516,7 +503,7 @@
   {/if}
 
   <!-- Failures list — all-rounds scope only -->
-  {#if selectedScope == null && queueData && queueData.failures.length > 0}
+  {#if scope.level === 'all' && queueData && queueData.failures.length > 0}
     <div class="mt-6 border-t border-border-muted pt-5">
       <button
         type="button"
