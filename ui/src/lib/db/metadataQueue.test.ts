@@ -884,3 +884,54 @@ describe('getChildrenRollups', () => {
 		expect(children[0].byJobType['ytm'].failed).toBe(1);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// getFailures — round_id and round_name fields (Task 11)
+// ---------------------------------------------------------------------------
+
+describe('getFailures round attribution', () => {
+	it('returns round_id and round_name for a uri in a round', () => {
+		const db = freshDb();
+		// seed: league 1, season 1, round 42
+		db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (1, 'test', 'Test League')`).run();
+		db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')`).run();
+		db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (42, 1, 'ml-42', 'Round Forty-Two', datetime('now'))`).run();
+		db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (42, 'spotify:track:ATTR', 'Title', 'Artist', datetime('now'))`).run();
+		enqueue(db, 'spotify:track:ATTR', 'ytm');
+		db.prepare(`UPDATE song_metadata_queue SET status='failed', error='oops' WHERE spotify_uri='spotify:track:ATTR'`).run();
+
+		const failures = getFailures(db);
+		expect(failures).toHaveLength(1);
+		expect(failures[0].round_id).toBe(42);
+		expect(failures[0].round_name).toBe('Round Forty-Two');
+	});
+
+	it('returns round_id: null and round_name: null for a uri not in any round', () => {
+		const db = freshDb();
+		enqueue(db, 'spotify:track:UNATTR', 'ytm');
+		db.prepare(`UPDATE song_metadata_queue SET status='failed', error='oops' WHERE spotify_uri='spotify:track:UNATTR'`).run();
+
+		const failures = getFailures(db);
+		expect(failures).toHaveLength(1);
+		expect(failures[0].round_id).toBeNull();
+		expect(failures[0].round_name).toBeNull();
+	});
+
+	it('picks the minimum round_id when uri appears in multiple rounds', () => {
+		const db = freshDb();
+		db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (1, 'test', 'Test League')`).run();
+		db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')`).run();
+		db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (10, 1, 'ml-10', 'Early Round', datetime('now'))`).run();
+		db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (20, 1, 'ml-20', 'Later Round', datetime('now'))`).run();
+		db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (10, 'spotify:track:MULTI', 'Title', 'Artist', datetime('now'))`).run();
+		db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (20, 'spotify:track:MULTI', 'Title', 'Artist', datetime('now'))`).run();
+		enqueue(db, 'spotify:track:MULTI', 'ytm');
+		db.prepare(`UPDATE song_metadata_queue SET status='failed', error='oops' WHERE spotify_uri='spotify:track:MULTI'`).run();
+
+		const failures = getFailures(db);
+		expect(failures).toHaveLength(1);
+		// MIN(round_id) = 10 → 'Early Round'
+		expect(failures[0].round_id).toBe(10);
+		expect(failures[0].round_name).toBe('Early Round');
+	});
+});

@@ -501,6 +501,79 @@ describe('POST /api/metadata-queue/retry', () => {
 		expect(row.error).toBeNull();
 		expect(row.retries).toBe(0);
 	});
+
+	// --- Task 11: bulk ids + dismiss action ---
+
+	it('bulk retry {ids: [id1, id2]} flips both rows to pending (DB-asserted)', async () => {
+		enqueue(db, 'spotify:track:B1', 'ytm');
+		enqueue(db, 'spotify:track:B2', 'lastfm_pop');
+		db.prepare("UPDATE song_metadata_queue SET status='failed', error='e', retries=2").run();
+
+		const id1 = (db.prepare("SELECT id FROM song_metadata_queue WHERE spotify_uri='spotify:track:B1'").get() as { id: number }).id;
+		const id2 = (db.prepare("SELECT id FROM song_metadata_queue WHERE spotify_uri='spotify:track:B2'").get() as { id: number }).id;
+
+		const res = await POST_retry(mkRetryEvent({ ids: [id1, id2], action: 'retry' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { updated: number };
+		expect(body.updated).toBe(2);
+
+		// DB assertion: both rows now pending
+		const row1 = db.prepare("SELECT status, retries FROM song_metadata_queue WHERE id=?").get(id1) as { status: string; retries: number };
+		const row2 = db.prepare("SELECT status, retries FROM song_metadata_queue WHERE id=?").get(id2) as { status: string; retries: number };
+		expect(row1.status).toBe('pending');
+		expect(row1.retries).toBe(0);
+		expect(row2.status).toBe('pending');
+		expect(row2.retries).toBe(0);
+	});
+
+	it('bulk dismiss {ids: [id1, id2], action: "dismiss"} deletes both rows (DB-asserted)', async () => {
+		enqueue(db, 'spotify:track:D1', 'ytm');
+		enqueue(db, 'spotify:track:D2', 'lastfm_pop');
+		db.prepare("UPDATE song_metadata_queue SET status='failed', error='e'").run();
+
+		const id1 = (db.prepare("SELECT id FROM song_metadata_queue WHERE spotify_uri='spotify:track:D1'").get() as { id: number }).id;
+		const id2 = (db.prepare("SELECT id FROM song_metadata_queue WHERE spotify_uri='spotify:track:D2'").get() as { id: number }).id;
+
+		const res = await POST_retry(mkRetryEvent({ ids: [id1, id2], action: 'dismiss' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { dismissed: number };
+		expect(body.dismissed).toBe(2);
+
+		// DB assertion: both rows gone
+		const count = (db.prepare("SELECT COUNT(*) AS n FROM song_metadata_queue WHERE id IN (?, ?)").get(id1, id2) as { n: number }).n;
+		expect(count).toBe(0);
+	});
+
+	it('returns 400 when ids array contains a non-integer', async () => {
+		const res = await POST_retry(mkRetryEvent({ ids: [1, 'abc', 3] }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when ids array contains a float', async () => {
+		const res = await POST_retry(mkRetryEvent({ ids: [1, 2.5] }));
+		expect(res.status).toBe(400);
+	});
+
+	it('bulk retry with empty ids array returns {updated: 0}', async () => {
+		const res = await POST_retry(mkRetryEvent({ ids: [] }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { updated: number };
+		expect(body.updated).toBe(0);
+	});
+
+	it('back-compat {id: N} single retry still works', async () => {
+		enqueue(db, 'spotify:track:BC', 'ytm');
+		db.prepare("UPDATE song_metadata_queue SET status='failed', error='e' WHERE spotify_uri='spotify:track:BC'").run();
+		const id = (db.prepare("SELECT id FROM song_metadata_queue WHERE spotify_uri='spotify:track:BC'").get() as { id: number }).id;
+
+		const res = await POST_retry(mkRetryEvent({ id }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { ok: boolean };
+		expect(body.ok).toBe(true);
+
+		const row = db.prepare("SELECT status FROM song_metadata_queue WHERE id=?").get(id) as { status: string };
+		expect(row.status).toBe('pending');
+	});
 });
 
 // ---------------------------------------------------------------------------

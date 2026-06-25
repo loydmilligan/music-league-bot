@@ -13,6 +13,7 @@
   import EnrichControl from '$lib/metadata-queue/EnrichControl.svelte';
   import { rollupChip } from '$lib/metadata-queue/ladder.js';
   import QueueSongCard from '$lib/metadata-queue/QueueSongCard.svelte';
+  import Triage from '$lib/metadata-queue/Triage.svelte';
 
   let { data } = $props<{ data: PageData }>();
 
@@ -108,7 +109,15 @@
   }
   interface QueueStatusPayload {
     byJobType: Record<string, JobCounts>;
-    failures: Array<{ id: number; spotify_uri: string; job_type: string; error: string | null; retries: number }>;
+    failures: Array<{
+      id: number;
+      spotify_uri: string;
+      job_type: string;
+      error: string | null;
+      retries: number;
+      round_id: number | null;
+      round_name: string | null;
+    }>;
     totalPending: number;
     totalProcessing: number;
     digestReadiness?: DigestReadiness;
@@ -264,23 +273,22 @@
   );
 
 
-  let failuresOpen = $state(true);
-  let retryingId = $state<number | null>(null);
-
-  async function retryJob(id: number) {
-    retryingId = id;
+  async function bulkAction(ids: number[], action: 'retry' | 'dismiss') {
     try {
       const r = await fetch('/api/metadata-queue/retry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ ids, action }),
       });
-      if (r.ok && queueData) {
-        queueData = { ...queueData, failures: queueData.failures.filter(f => f.id !== id) };
+      if (r.ok) {
+        // Refetch status to reconcile state after bulk action
+        const statusUrl = scope.level === 'all'
+          ? '/api/metadata-queue/status'
+          : `/api/metadata-queue/status?level=${scope.level}&id=${scope.id}`;
+        const res = await fetch(statusUrl);
+        if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
       }
-    } catch { /* ignore */ } finally {
-      retryingId = null;
-    }
+    } catch { /* ignore */ }
   }
 
   /**
@@ -719,47 +727,14 @@
     {/if}
   {/if}
 
-  <!-- Failures list — all-rounds scope only -->
-  {#if scope.level === 'all' && queueData && queueData.failures.length > 0}
+  <!-- Triage — grouped failures -->
+  {#if queueData && queueData.failures.length > 0}
     <div class="mt-6 border-t border-border-muted pt-5">
-      <button
-        type="button"
-        onclick={() => { failuresOpen = !failuresOpen; }}
-        class="w-full flex items-center justify-between gap-2 text-left group"
-      >
-        <span class="font-mono text-[10px] tracking-widest uppercase text-warn">
-          Failures ({queueData.failures.length})
-          · {queueData.failures.reduce((s, f) => s + f.retries, 0)} retries used
-        </span>
-        <span class="text-fg-faint text-xs group-hover:text-fg transition-colors">{failuresOpen ? '▲' : '▼'}</span>
-      </button>
-
-      {#if failuresOpen}
-        <div class="mt-3 space-y-0">
-          {#each queueData.failures as f (f.id)}
-            <div class="flex items-start gap-3 py-2 border-t border-border-muted first:border-t-0">
-              <div class="flex-1 min-w-0">
-                <div class="text-xs text-fg font-medium truncate">{f.spotify_uri.split(':').pop()}</div>
-                <div class="font-mono text-[10px] text-fg-faint mt-0.5">
-                  {JOB_META[f.job_type]?.provider ?? f.job_type} · {f.job_type}
-                  {#if f.retries > 0} · {f.retries}/3 retries{/if}
-                </div>
-                {#if f.error}
-                  <div class="text-warn text-[11px] mt-0.5 truncate">{f.error}</div>
-                {/if}
-              </div>
-              <button
-                type="button"
-                onclick={() => retryJob(f.id)}
-                disabled={retryingId === f.id}
-                class="font-mono text-[10px] tracking-widest uppercase shrink-0 transition-colors {retryingId === f.id ? 'text-fg-faint cursor-not-allowed' : 'text-accent hover:text-accent-strong'}"
-              >
-                {retryingId === f.id ? '…' : 'Retry ↻'}
-              </button>
-            </div>
-          {/each}
-        </div>
-      {/if}
+      <Triage
+        failures={queueData.failures}
+        jobMeta={JOB_META}
+        onBulkAction={bulkAction}
+      />
     </div>
   {/if}
 

@@ -9,6 +9,10 @@
 
 import type Database from 'better-sqlite3';
 
+// Re-export classifyFailure (extracted to client-safe failureReason.ts) so
+// existing imports from this module still work. ONE source of truth.
+export { classifyFailure } from '../metadata-queue/failureReason.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -25,6 +29,14 @@ export interface QueueFailure {
 	job_type: string;
 	error: string | null;
 	retries: number;
+	/**
+	 * The earliest round (MIN round_id) that includes this track's spotify_uri.
+	 * NULL when the track is not associated with any round submission.
+	 * We pick MIN(round_id) as the deterministic representative round — the
+	 * earliest round that included this track.
+	 */
+	round_id: number | null;
+	round_name: string | null;
 }
 
 export interface JobTypeCounts {
@@ -230,9 +242,23 @@ export function getFailures(db: Database.Database, scope?: Scope | number): Queu
 		? `WHERE q.status = 'failed' AND q.spotify_uri IN (${subquery})`
 		: `WHERE q.status = 'failed'`;
 
+	// LEFT JOIN ml_submissions to find the representative round for each track.
+	// We use MIN(ms.round_id) as the deterministic representative — the earliest
+	// round that included this track. This avoids non-determinism when a track
+	// appears in multiple rounds. The round_name is looked up via a JOIN on the
+	// aggregated round_id using a subquery so MIN() is only used in the GROUP BY
+	// context, not in a correlated subquery scalar position.
 	return db.prepare(
-		`SELECT q.id, q.spotify_uri, q.job_type, q.error, q.retries
+		`SELECT q.id, q.spotify_uri, q.job_type, q.error, q.retries,
+		        agg.round_id,
+		        r.name AS round_name
 		 FROM song_metadata_queue q
+		 LEFT JOIN (
+		   SELECT spotify_uri, MIN(round_id) AS round_id
+		   FROM ml_submissions
+		   GROUP BY spotify_uri
+		 ) agg ON agg.spotify_uri = q.spotify_uri
+		 LEFT JOIN rounds r ON r.id = agg.round_id
 		 ${whereClause}
 		 ORDER BY q.queued_at DESC`
 	).all(...params) as QueueFailure[];
@@ -385,28 +411,6 @@ export function getDigestReadiness(db: Database.Database, roundId: number): Dige
 		lyrics: { ok: pct80(lyricsCount), count: lyricsCount, total },
 		audio: { ok: pct80(audioCount), count: audioCount, total }
 	};
-}
-
-// ---------------------------------------------------------------------------
-// classifyFailure
-// ---------------------------------------------------------------------------
-
-/**
- * Classify a job failure error string into a category.
- * Precedence (first match wins):
- *  1. 'config'       — /not set|not configured/i
- *  2. 'no_data'      — /not found/i
- *  3. 'rate_limited' — /HTTP 4|rate/i
- *  4. 'transient'    — /HTTP 5|ECONN|timeout/i
- *  5. default        — 'transient'
- */
-export function classifyFailure(error: string | null): 'rate_limited' | 'no_data' | 'transient' | 'config' {
-	if (!error) return 'transient';
-	if (/not set|not configured/i.test(error)) return 'config';
-	if (/not found/i.test(error)) return 'no_data';
-	if (/HTTP 4|rate/i.test(error)) return 'rate_limited';
-	if (/HTTP 5|ECONN|timeout/i.test(error)) return 'transient';
-	return 'transient';
 }
 
 // ---------------------------------------------------------------------------
