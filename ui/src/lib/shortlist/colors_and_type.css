@@ -43,6 +43,13 @@
   --sky:        #5aa3ff;   /* info */
   --sky-soft:   #16263f;   /* info surface */
 
+  /* === METADATA-QUEUE chip surface aliases ==============================
+     Mirror of the Tailwind @theme tokens above, for use in non-Tailwind
+     contexts and vanilla CSS components.
+     ==================================================================== */
+  --sky-bg:     #16263f;   /* = --sky-soft / Tailwind sky-bg  */
+  --ember-bg:   #3b1a22;   /* = --ember-soft / Tailwind ember-bg */
+
   /* === SEMANTIC ALIASES — use these in components ====================== */
   --bg:           var(--ink-0);
   --surface:      var(--ink-1);
@@ -146,6 +153,23 @@
   --dur-fast:   120ms;
   --dur-base:   200ms;
   --dur-slow:   360ms;
+}
+
+/* === METADATA-QUEUE keyframes ==========================================
+   mq-flow  — shimmer sweep for "running" chip backgrounds
+   mq-pulse — opacity pulse for running state indicators
+   Referenced by LADDER.running.pulse === true; components apply these
+   animation names when the pulse flag is set.
+   ===================================================================== */
+
+@keyframes mq-flow {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes mq-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
 }
 
 /* === LIGHT MODE ========================================================

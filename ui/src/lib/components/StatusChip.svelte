@@ -7,7 +7,7 @@
     <StatusChip label="STALE" tone="warn" />
 -->
 <script lang="ts">
-  type Tone = 'accent' | 'health' | 'muted' | 'warn';
+  type Tone = 'accent' | 'health' | 'muted' | 'warn' | 'sky' | 'ember';
 
   let { label, tone = 'muted' }: { label: string; tone?: Tone } = $props();
 
@@ -16,6 +16,8 @@
     health: 'bg-health-bg text-health border-health/40',
     muted:  'bg-surface text-fg-dim border-border-muted',
     warn:   'bg-warn/15 text-warn border-warn/40',
+    sky:    'bg-sky-bg text-sky border-sky/40',
+    ember:  'bg-ember-bg text-ember border-ember/40',
   };
 </script>
 

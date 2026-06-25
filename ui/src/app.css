@@ -55,6 +55,10 @@
 	--color-ember: #e6566c;          /* theme fit axis            rgb(230,86,108) */
 	--color-moss:  #3ec27a;          /* quality axis              rgb(62,194,122) */
 	--color-amber: #e8a83a;          /* replayability axis        rgb(232,168,58) */
+
+	/* Chip surface tokens for metadata-queue status chips ------------------- */
+	--color-sky-bg:   #16263f;       /* sky chip surface          rgb(22,38,63)   */
+	--color-ember-bg: #3b1a22;       /* ember chip surface        rgb(59,26,34)   */
 }
 
 /* Global resets / base ---------------------------------------------------- */
