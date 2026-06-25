@@ -27,6 +27,8 @@
     layers: ['state', 'rating', 'notes', 'analyze'],
     actions: ['play', 'ytm', 'save', 'remove'],
     actionStyle: 'inline',
+    mobileTrailing: 'score',
+    mobileBucketDot: true,
   };
 
   // Sort order is user-controlled. The list does NOT re-sort on every rating

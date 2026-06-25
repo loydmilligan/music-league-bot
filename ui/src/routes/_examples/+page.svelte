@@ -187,8 +187,8 @@
     <SectionLabel>SongCard — row + expanded density</SectionLabel>
     <div class="bg-surface p-4 rounded-md border border-border-muted space-y-4">
       <p class="text-fg-muted text-xs">row density (collapses/expands)</p>
-      <SongCard song={demoSong} density="row" config={{ ratingMode: 'mini', ratingEditable: true, art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal' }} onAction={(id, s) => console.log('action', id, s.title)} onRate={(r) => console.log('rate', r)} />
-      <SongCard song={demoSong2} density="row" config={{ ratingMode: 'mini', art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal' }} />
+      <SongCard song={demoSong} density="row" config={{ ratingMode: 'mini', ratingEditable: true, art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal', mobileTrailing: 'mini', mobileBucketDot: true }} onAction={(id, s) => console.log('action', id, s.title)} onRate={(r) => console.log('rate', r)} />
+      <SongCard song={demoSong2} density="row" config={{ ratingMode: 'mini', art: true, layers: ['state','rating','meta','tags'], actions: ['play','shortlist'], actionStyle: 'reveal', mobileTrailing: 'mini', mobileBucketDot: true }} />
       <p class="text-fg-muted text-xs mt-4">expanded density</p>
       <SongCard song={demoSong} density="expanded" config={{ ratingMode: 'bars', ratingEditable: true, art: true, layers: ['rating','meta','tags','notes'], actions: ['play','ytm','analyze','remove'], actionStyle: 'inline' }} />
     </div>
