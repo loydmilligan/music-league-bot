@@ -22,6 +22,7 @@ vi.mock('$lib/db/client.js', async (orig) => {
 let GET_status: typeof import('./status/+server.js').GET;
 let POST_fillGaps: typeof import('./fill-gaps/+server.js').POST;
 let POST_retry: typeof import('./retry/+server.js').POST;
+let POST_enqueue: typeof import('./enqueue/+server.js').POST;
 
 // ---------------------------------------------------------------------------
 // Seed helpers
@@ -99,6 +100,7 @@ beforeEach(async () => {
 	({ GET: GET_status } = await import('./status/+server.js'));
 	({ POST: POST_fillGaps } = await import('./fill-gaps/+server.js'));
 	({ POST: POST_retry } = await import('./retry/+server.js'));
+	({ POST: POST_enqueue } = await import('./enqueue/+server.js'));
 });
 
 // ---------------------------------------------------------------------------
@@ -495,5 +497,80 @@ describe('POST /api/metadata-queue/retry', () => {
 		expect(row.status).toBe('pending');
 		expect(row.error).toBeNull();
 		expect(row.retries).toBe(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/metadata-queue/enqueue
+// ---------------------------------------------------------------------------
+
+function mkEnqueueEvent(body: unknown) {
+	return {
+		request: { json: async () => body } as unknown as Request,
+	} as unknown as Parameters<typeof POST_enqueue>[0];
+}
+
+describe('POST /api/metadata-queue/enqueue', () => {
+	it('enqueues a single (uri, job_type) pair and returns {queued:1}', async () => {
+		const res = await POST_enqueue(mkEnqueueEvent({ uri: 'spotify:track:AAA', job_type: 'lyrics' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		expect(body.queued).toBe(1);
+
+		const row = db.prepare(
+			"SELECT status FROM song_metadata_queue WHERE spotify_uri='spotify:track:AAA' AND job_type='lyrics'"
+		).get() as { status: string } | undefined;
+		expect(row).toBeDefined();
+		expect(row!.status).toBe('pending');
+	});
+
+	it('is idempotent on already-pending: second call still returns {queued:1} with exactly one row', async () => {
+		const ev = mkEnqueueEvent({ uri: 'spotify:track:BBB', job_type: 'ytm' });
+		await POST_enqueue(ev);
+		const res2 = await POST_enqueue(mkEnqueueEvent({ uri: 'spotify:track:BBB', job_type: 'ytm' }));
+		expect(res2.status).toBe(200);
+		const body = await res2.json() as { queued: number };
+		expect(body.queued).toBe(1);
+
+		const count = (db.prepare(
+			"SELECT COUNT(*) AS n FROM song_metadata_queue WHERE spotify_uri='spotify:track:BBB' AND job_type='ytm'"
+		).get() as { n: number }).n;
+		expect(count).toBe(1);
+	});
+
+	it('resets a failed row back to pending, clears error', async () => {
+		enqueue(db, 'spotify:track:CCC', 'lastfm_tags');
+		db.prepare(
+			"UPDATE song_metadata_queue SET status='failed', error='some error', retries=2, started_at='2024-01-01T00:00:00Z', done_at='2024-01-01T00:01:00Z' WHERE spotify_uri='spotify:track:CCC' AND job_type='lastfm_tags'"
+		).run();
+
+		const res = await POST_enqueue(mkEnqueueEvent({ uri: 'spotify:track:CCC', job_type: 'lastfm_tags' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		expect(body.queued).toBe(1);
+
+		const row = db.prepare(
+			"SELECT status, error, retries, started_at, done_at FROM song_metadata_queue WHERE spotify_uri='spotify:track:CCC' AND job_type='lastfm_tags'"
+		).get() as { status: string; error: string | null; retries: number; started_at: string | null; done_at: string | null };
+		expect(row.status).toBe('pending');
+		expect(row.error).toBeNull();
+		expect(row.retries).toBe(0);
+		expect(row.started_at).toBeNull();
+		expect(row.done_at).toBeNull();
+	});
+
+	it('returns 400 when uri is missing', async () => {
+		const res = await POST_enqueue(mkEnqueueEvent({ job_type: 'ytm' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when uri is empty string', async () => {
+		const res = await POST_enqueue(mkEnqueueEvent({ uri: '', job_type: 'ytm' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when job_type is invalid', async () => {
+		const res = await POST_enqueue(mkEnqueueEvent({ uri: 'spotify:track:DDD', job_type: 'bogus' }));
+		expect(res.status).toBe(400);
 	});
 });

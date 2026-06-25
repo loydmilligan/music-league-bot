@@ -249,6 +249,18 @@ export function retryJob(db: Database.Database, id: number): void {
 	).run(id);
 }
 
+/**
+ * If the row for (spotifyUri, jobType) exists and is 'failed', reset it to pending.
+ * No-op if the row doesn't exist or is in any other status.
+ */
+export function resetFailed(db: Database.Database, spotifyUri: string, jobType: JobType): void {
+	db.prepare(
+		`UPDATE song_metadata_queue
+		 SET status = 'pending', error = NULL, retries = 0, started_at = NULL, done_at = NULL
+		 WHERE spotify_uri = ? AND job_type = ? AND status = 'failed'`
+	).run(spotifyUri, jobType);
+}
+
 // ---------------------------------------------------------------------------
 // Coverage matrix
 // ---------------------------------------------------------------------------
