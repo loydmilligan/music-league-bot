@@ -65,7 +65,7 @@
 		<!-- Hero -->
 		<header class="bs-phero">
 			<div class="bs-phero-top">
-				<Avatar hue={member.hue} initials={member.initials} size="lg" />
+				<Avatar hue={member.hue} initials={member.initials} size="lg" src={member.avatar_url ?? null} />
 				<div class="bs-phero-id">
 					<div class="bs-phero-name">{member.name}</div>
 					{#if member.joined}
@@ -223,7 +223,7 @@
 							<div class="bs-fhcard" data-kind="fan">
 								<div class="bs-fh-tag">{@html icons.heart} Biggest fan</div>
 								<div class="bs-fh-who">
-									{#if fanM}<Avatar hue={fanM.hue} initials={fanM.initials} size="sm" />{/if}
+									{#if fanM}<Avatar hue={fanM.hue} initials={fanM.initials} size="sm" src={fanM.avatar_url ?? null} />{/if}
 									<div class="bs-fh-whoname">{fan.who}</div>
 									<div class="bs-fh-pts">+{fan.pts}</div>
 								</div>
@@ -236,7 +236,7 @@
 							<div class="bs-fhcard" data-kind="hater">
 								<div class="bs-fh-tag">{@html icons.bolt} Friendly hater</div>
 								<div class="bs-fh-who">
-									{#if haterM}<Avatar hue={haterM.hue} initials={haterM.initials} size="sm" />{/if}
+									{#if haterM}<Avatar hue={haterM.hue} initials={haterM.initials} size="sm" src={haterM.avatar_url ?? null} />{/if}
 									<div class="bs-fh-whoname">{hater.who}</div>
 									<div class="bs-fh-pts">{hater.pts}</div>
 								</div>
@@ -257,7 +257,7 @@
 				<div class="bs-fhcard" data-kind="fan" style="max-width:300px;">
 					<div class="bs-fh-tag">{@html icons.heart} Biggest fan</div>
 					<div class="bs-fh-who">
-						{#if fanM}<Avatar hue={fanM.hue} initials={fanM.initials} size="sm" />{/if}
+						{#if fanM}<Avatar hue={fanM.hue} initials={fanM.initials} size="sm" src={fanM.avatar_url ?? null} />{/if}
 						<div class="bs-fh-whoname">{fan.who}</div>
 						<div class="bs-fh-pts">+{fan.pts}</div>
 					</div>
@@ -289,7 +289,7 @@
 								{#each full.voteTogether as p}
 									{@const pm = memberByName(p.who)}
 									<div class="bs-person">
-										{#if pm}<Avatar hue={pm.hue} initials={pm.initials} size="sm" />{/if}
+										{#if pm}<Avatar hue={pm.hue} initials={pm.initials} size="sm" src={pm.avatar_url ?? null} />{/if}
 										<div class="bs-person-name">{p.who}</div>
 										<div class="bs-person-bar">
 											<div class="bs-person-fill" style:width={p.pct + '%'}></div>
@@ -311,7 +311,7 @@
 								{#each full.voteTwins as p}
 									{@const pm = memberByName(p.who)}
 									<div class="bs-person">
-										{#if pm}<Avatar hue={pm.hue} initials={pm.initials} size="sm" />{/if}
+										{#if pm}<Avatar hue={pm.hue} initials={pm.initials} size="sm" src={pm.avatar_url ?? null} />{/if}
 										<div class="bs-person-name">{p.who}</div>
 										<div class="bs-person-bar">
 											<div class="bs-person-fill" style:width={p.pct + '%'}></div>
