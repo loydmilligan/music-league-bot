@@ -484,3 +484,89 @@
 .mcm-moreact .g { width: 22px; text-align: center; color: var(--fg-muted); font-size: 17px; }
 .mcm-moreact.ember { color: var(--ember); } .mcm-moreact.ember .g { color: var(--ember); }
 .mcm-moreact:active { background: var(--surface-hover); }
+
+/* =========================================================================
+   COMPARISON SURFACE — mobile H2H + KOTH (king-of-hill). Prefix mcc-.
+   "Tale of the tape": two stacked cards, VS medallion, category leaders.
+   ========================================================================= */
+.mcc-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.mcc-bar { flex: none; padding: 6px 18px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mcc-bar-title { font-family: var(--font-display); font-weight: 800; font-size: 23px; letter-spacing: -0.02em; color: var(--fg); }
+.mcc-bar-prog { font-family: var(--font-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; margin-top: 3px; }
+.mcc-bar-eyebrow { font-family: var(--font-mono); font-size: 10px; color: var(--fg-quiet); letter-spacing: 0.08em; text-transform: uppercase; }
+
+.mcc-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 16px 12px; display: flex; flex-direction: column; align-items: stretch; scrollbar-width: none; }
+.mcc-stage::-webkit-scrollbar { display: none; }
+
+.mcc-card {
+  position: relative; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-5); padding: 15px; transition: opacity var(--dur-base, 150ms) var(--ease-out, ease), border-color var(--dur-base, 150ms) var(--ease-out, ease);
+}
+.mcc-card.champ { border-color: color-mix(in oklch, var(--amber) 45%, var(--line)); }
+.mcc-card.win   { border-color: var(--moss); box-shadow: 0 0 0 1px var(--moss), var(--shadow-2); }
+.mcc-card.lose  { opacity: 0.46; }
+
+.mcc-ribbon {
+  position: absolute; top: -1px; left: -1px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--bg); background: var(--amber); padding: 4px 12px; border-radius: var(--r-5) 0 var(--r-3) 0;
+}
+.mcc-ribbon .streak { background: rgba(7,9,12,0.25); padding: 0 6px; border-radius: 999px; }
+.mcc-newchamp {
+  position: absolute; top: -1px; right: -1px; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--bg); background: var(--moss);
+  padding: 4px 12px; border-radius: 0 var(--r-5) 0 var(--r-3);
+}
+
+.mcc-head { display: flex; align-items: center; gap: 12px; }
+.mcc-art { width: 54px; height: 54px; flex: none; border-radius: var(--r-2); position: relative; overflow: hidden; display: grid; place-items: center; }
+.mcc-art img { width: 100%; height: 100%; object-fit: cover; }
+.mcc-art svg { width: 38%; height: 38%; opacity: 0.55; color: var(--bone, var(--fg-quiet)); }
+.mcc-art::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 26%, rgba(255,255,255,0.16), transparent 44%); pointer-events: none; }
+.mcc-head-text { min-width: 0; flex: 1; }
+.mcc-title { font-size: 16px; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcc-artist { font-size: 13px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcc-scorebig { flex: none; text-align: right; }
+.mcc-scorebig .n { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1; color: var(--fg); font-variant-numeric: tabular-nums; }
+.mcc-scorebig .d { font-family: var(--font-mono); font-size: 10px; color: var(--fg-quiet); }
+
+.mcc-tape { display: flex; gap: 14px; align-items: center; margin-top: 13px; padding-top: 13px; border-top: 1px solid var(--line); }
+.mcc-tape-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.mcc-axis { display: flex; align-items: center; justify-content: space-between; background: var(--ink-1); border: 1px solid var(--line); border-radius: var(--r-2); padding: 5px 10px; }
+.mcc-axis .l { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; }
+.mcc-axis .v { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--fg-2); display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+.mcc-axis.hi { border-color: color-mix(in oklch, var(--mcc-c, var(--accent)) 50%, var(--line)); background: color-mix(in oklch, var(--mcc-c, var(--accent)) 12%, var(--ink-1)); }
+.mcc-axis.hi .v { color: var(--mcc-c, var(--accent)); }
+.mcc-axis.hi .v::after { content: "\25B2"; font-size: 8px; }
+
+.mcc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.mcc-chip2 { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); background: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+
+.mcc-pick {
+  width: 100%; height: 44px; margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: var(--r-3); background: var(--ink-2); border: 1px solid var(--line-strong); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.mcc-pick:active { transform: translateY(1px); }
+.mcc-pick.is-win  { background: var(--moss-soft); border-color: var(--moss); color: var(--moss); }
+.mcc-pick.is-lose { opacity: 0.5; cursor: default; }
+
+.mcc-vs { display: flex; align-items: center; justify-content: center; height: 30px; position: relative; z-index: 2; }
+.mcc-vs span {
+  width: 46px; height: 46px; border-radius: 999px; background: var(--ink-0); border: 1px solid var(--line-strong);
+  display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 16px;
+  color: var(--accent); box-shadow: var(--shadow-1); position: relative; top: -1px;
+}
+
+.mcc-foot {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 18px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
+  background: color-mix(in oklch, var(--surface) 92%, transparent);
+}
+.mcc-dots { display: flex; gap: 5px; }
+.mcc-dotp { width: 8px; height: 8px; border-radius: 999px; background: var(--ink-4); }
+.mcc-dotp.on   { background: var(--accent); }
+.mcc-dotp.done { background: var(--moss); }
+.mcc-tie { background: none; border: 0; color: var(--fg-muted); font-family: var(--font-body); font-size: 14px; cursor: pointer; padding: 6px 8px; }
+.mcc-undo { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--ink-2); color: var(--fg-muted); font-size: 16px; cursor: pointer; }
+.mcc-next { flex: 1; height: 46px; border-radius: var(--r-3); background: var(--accent); color: var(--on-accent); border: 0; font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }

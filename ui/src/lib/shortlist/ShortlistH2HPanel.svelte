@@ -2,10 +2,12 @@
   ShortlistH2HPanel — inline king-of-the-hill H2H comparison on /shortlist.
   Uses shortlist songs directly (no research_songs step); assignment of the
   champion to the target league's active round is the final "write" step.
+  Mobile (<768px): SongCompare swipe surface. Desktop: side-by-side cards.
   (sprint-25 h2h-league-selector)
 -->
 <script lang="ts">
   import type { ShortlistSong } from '$lib/types.js';
+  import SongCompare from '$lib/song/SongCompare.svelte';
 
   type Candidate = {
     id: string;
@@ -84,7 +86,83 @@
     const max = initialCandidates[0]?.score ?? 1;
     return max > 0 ? Math.min(100, Math.round((score / max) * 100)) : 0;
   }
+
+  // Mobile detection — SongCompare renders below 768px; desktop cards above.
+  let isMobile = $state(false);
+  $effect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    isMobile = mq.matches;
+    const handler = (e: MediaQueryListEvent) => { isMobile = e.matches; };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  });
+
+  // Mobile winner lands here; then the shared assign UI takes over.
+  let mobileWinner = $state<ShortlistSong | null>(null);
+
+  async function assignMobileWinner() {
+    if (!mobileWinner || assigning || assigned) return;
+    assigning = true;
+    assignError = null;
+    try {
+      const res = await fetch(`/api/shortlist/${mobileWinner.id}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ round_id: roundId }),
+      });
+      if (!res.ok) throw new Error(`assign failed (${res.status})`);
+      assigned = true;
+      onAssigned(mobileWinner.id, roundId);
+    } catch (e) {
+      assignError = e instanceof Error ? e.message : 'assign failed';
+    } finally {
+      assigning = false;
+    }
+  }
 </script>
+
+{#if isMobile}
+  <!-- Mobile path: SongCompare stacked-card surface -->
+  {#if mobileWinner}
+    <div class="sl-h2h-panel">
+      <div class="sl-h2h-header">
+        <span class="sl-h2h-league">{leagueName}</span>
+        <span class="sl-h2h-title">Your pick</span>
+        <button type="button" class="sl-h2h-close" onclick={onClose} aria-label="Close">✕</button>
+      </div>
+      <div class="sl-h2h-winner">
+        <p class="sl-h2h-winner-label">Winner</p>
+        <p class="sl-h2h-winner-artist">{mobileWinner.artist}</p>
+        <p class="sl-h2h-winner-title">{mobileWinner.title}</p>
+        <div class="sl-h2h-winner-actions">
+          {#if assigned}
+            <span class="sl-h2h-assigned-badge">✓ Assigned to {leagueName}</span>
+          {:else}
+            <button
+              type="button"
+              class="sl-h2h-btn-assign"
+              disabled={assigning}
+              onclick={assignMobileWinner}
+            >{assigning ? '…' : `↗ Assign to ${leagueName} round`}</button>
+          {/if}
+          {#if assignError}<span class="sl-h2h-err">{assignError}</span>{/if}
+          <button type="button" class="sl-h2h-btn-ghost" onclick={onClose}>
+            {assigned ? 'Close' : 'Skip & close'}
+          </button>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <div class="sl-mobile-compare">
+      <SongCompare
+        {leagueName}
+        {songs}
+        onComplete={(winner) => { mobileWinner = winner; }}
+        {onClose}
+      />
+    </div>
+  {/if}
+{:else}
 
 <div class="sl-h2h-panel">
   <div class="sl-h2h-header">
@@ -174,7 +252,20 @@
   {/if}
 </div>
 
+{/if}<!-- end mobile/desktop branch -->
+
 <style>
+  .sl-mobile-compare {
+    border: 1px solid var(--mash-pulp, #7fb3ff);
+    border-radius: var(--r-3, 8px);
+    background: var(--surface-2, #141921);
+    margin-bottom: 14px;
+    overflow: hidden;
+    height: 92dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
   .sl-h2h-panel {
     border: 1px solid var(--mash-pulp, #7fb3ff);
     border-radius: var(--r-3, 8px);
