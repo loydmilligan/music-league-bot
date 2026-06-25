@@ -8,6 +8,7 @@ import { getAllLeagues } from '$lib/db/leagues.js';
 import { parseZip } from '$lib/import/zipParser.js';
 import { importZipData } from '$lib/import/importer.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
+import { getHierarchy } from '$lib/db/metadataQueue.js';
 
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
 
@@ -19,7 +20,8 @@ export const load: PageServerLoad = async () => {
   const recentRounds = db
     .prepare(`SELECT id, name FROM rounds ORDER BY id DESC LIMIT 12`)
     .all() as Array<{ id: number; name: string }>;
-  return { settings, importLog, allLeagues, recentRounds };
+  const hierarchy = getHierarchy(db);
+  return { settings, importLog, allLeagues, recentRounds, hierarchy };
 };
 
 export const actions: Actions = {

@@ -185,6 +185,91 @@ describe('GET /api/metadata-queue/status', () => {
 		expect(body.failures[0].error).toBe('timeout');
 		expect(body.failures[0].retries).toBe(2);
 	});
+
+	// --- Task 3: scope-aware ?level=&id= params ---
+
+	it('returns 400 when level is an unrecognised value', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'bogus' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=league with no id', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'league' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=season with no id', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'season' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=round with no id', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'round' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=round with non-integer id', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'round', id: 'notanumber' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=league with non-integer id', async () => {
+		const res = await GET_status(mkGetEvent({ level: 'league', id: 'abc' }));
+		expect(res.status).toBe(400);
+	});
+
+	it('returns league-scoped counts matching getQueueStatus for level=league&id=1', async () => {
+		seedRound(1, ['spotify:track:leagueTrack']);
+		enqueue(db, 'spotify:track:leagueTrack', 'ytm');
+
+		const res = await GET_status(mkGetEvent({ level: 'league', id: '1' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as { totalPending: number };
+		// The seeded track is in league 1, so scope-filtered count should be 1
+		expect(body.totalPending).toBe(1);
+	});
+
+	it('omits digestReadiness and coverageMatrix for non-round scope (level=league)', async () => {
+		seedRound(1, ['spotify:track:leagueTrack2']);
+
+		const res = await GET_status(mkGetEvent({ level: 'league', id: '1' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as Record<string, unknown>;
+		expect(body.digestReadiness).toBeUndefined();
+		expect(body.coverageMatrix).toBeUndefined();
+	});
+
+	it('level=all with no id returns all-scope counts (same as no params)', async () => {
+		enqueue(db, 'spotify:track:allScope', 'ytm');
+
+		const resAll = await GET_status(mkGetEvent({ level: 'all' }));
+		const resNoParams = await GET_status(mkGetEvent());
+		expect(resAll.status).toBe(200);
+		const bodyAll = await resAll.json() as { totalPending: number };
+		const bodyNone = await resNoParams.json() as { totalPending: number };
+		expect(bodyAll.totalPending).toBe(bodyNone.totalPending);
+	});
+
+	it('?roundId= back-compat returns round-scoped counts with digestReadiness and coverageMatrix', async () => {
+		seedRound(2, ['spotify:track:backcompat']);
+
+		const res = await GET_status(mkGetEvent({ roundId: '2' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as Record<string, unknown>;
+		// digestReadiness and coverageMatrix must be present for round scope
+		expect(body.digestReadiness).toBeDefined();
+		expect(body.coverageMatrix).toBeDefined();
+	});
+
+	it('?level=round&id=N returns digestReadiness and coverageMatrix (new param form)', async () => {
+		seedRound(3, ['spotify:track:newform']);
+
+		const res = await GET_status(mkGetEvent({ level: 'round', id: '3' }));
+		expect(res.status).toBe(200);
+		const body = await res.json() as Record<string, unknown>;
+		expect(body.digestReadiness).toBeDefined();
+		expect(body.coverageMatrix).toBeDefined();
+	});
 });
 
 // ---------------------------------------------------------------------------
