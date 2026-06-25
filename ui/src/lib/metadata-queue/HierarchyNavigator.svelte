@@ -10,8 +10,8 @@
     - Search input filtering rounds by name
 -->
 <script lang="ts">
-  import type { HierarchyLeague } from '$lib/db/metadataQueue.js';
-  import type { Scope } from '$lib/db/metadataQueue.js';
+  import type { HierarchyLeague, Scope } from '$lib/db/metadataQueue.js';
+  import { untrack } from 'svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import { rollupChip } from '$lib/metadata-queue/ladder.js';
   import { nodeToScope, roundMatchesQuery, filterHierarchy } from '$lib/metadata-queue/hierarchyNavigator.js';
@@ -39,37 +39,57 @@
   let expandedLeagues = $state(new Set<number>());
   let expandedSeasons = $state(new Set<number>());
 
-  // Auto-expand ancestors of selected scope when it changes
+  // Auto-expand ancestors of selected scope when it changes.
+  // We untrack reads of expandedLeagues/expandedSeasons so that writing to them
+  // does NOT re-trigger this effect — only `scope` and `hierarchy` are tracked deps.
   $effect(() => {
     const s = scope;
+    // Reading hierarchy here is intentional — if hierarchy changes we re-evaluate.
+    const h = hierarchy;
     if (s.level === 'round' || s.level === 'season') {
-      // Find the season/league containing this node and expand it
-      for (const league of hierarchy) {
+      for (const league of h) {
         for (const season of league.seasons) {
           if (s.level === 'season' && season.id === s.id) {
-            expandedLeagues = new Set([...expandedLeagues, league.id]);
+            const current = untrack(() => expandedLeagues);
+            if (!current.has(league.id)) {
+              expandedLeagues = new Set([...current, league.id]);
+            }
           }
           if (s.level === 'round') {
             const round = season.rounds.find(r => r.id === s.id);
             if (round) {
-              expandedLeagues = new Set([...expandedLeagues, league.id]);
-              expandedSeasons = new Set([...expandedSeasons, season.id]);
+              const curLeagues = untrack(() => expandedLeagues);
+              const curSeasons = untrack(() => expandedSeasons);
+              if (!curLeagues.has(league.id)) {
+                expandedLeagues = new Set([...curLeagues, league.id]);
+              }
+              if (!curSeasons.has(season.id)) {
+                expandedSeasons = new Set([...curSeasons, season.id]);
+              }
             }
           }
         }
       }
     }
     if (s.level === 'league') {
-      expandedLeagues = new Set([...expandedLeagues, s.id!]);
+      const current = untrack(() => expandedLeagues);
+      if (!current.has(s.id!)) {
+        expandedLeagues = new Set([...current, s.id!]);
+      }
     }
   });
 
-  // When a search is active, auto-expand all leagues/seasons that have matches
+  // When a search is active, auto-expand all leagues/seasons that have matches.
+  // We untrack reads of expandedLeagues/expandedSeasons so that writing to them
+  // does NOT re-trigger this effect — only `searchQuery` and `filteredHierarchy` are deps.
   $effect(() => {
     const q = searchQuery.trim();
     if (q === '') return;
-    const newLeagues = new Set(expandedLeagues);
-    const newSeasons = new Set(expandedSeasons);
+    // Build candidate sets from the current state without registering them as deps.
+    const curLeagues = untrack(() => expandedLeagues);
+    const curSeasons = untrack(() => expandedSeasons);
+    const newLeagues = new Set(curLeagues);
+    const newSeasons = new Set(curSeasons);
     for (const league of filteredHierarchy) {
       newLeagues.add(league.id);
       for (const season of league.seasons) {
@@ -78,8 +98,13 @@
         }
       }
     }
-    expandedLeagues = newLeagues;
-    expandedSeasons = newSeasons;
+    // Only write if the contents actually changed to avoid a needless re-render.
+    if (newLeagues.size !== curLeagues.size) {
+      expandedLeagues = newLeagues;
+    }
+    if (newSeasons.size !== curSeasons.size) {
+      expandedSeasons = newSeasons;
+    }
   });
 
   function toggleLeague(id: number) {
@@ -97,7 +122,7 @@
   // ---------------------------------------------------------------------------
   // Breadcrumb — derive path from current scope
   // ---------------------------------------------------------------------------
-  const breadcrumb = $derived(() => {
+  const breadcrumb = $derived.by(() => {
     const s = scope;
     const crumbs: Array<{ label: string; scope: Scope }> = [
       { label: 'All', scope: { level: 'all' } }
@@ -168,14 +193,14 @@
   <!-- Breadcrumb -->
   {#if scope.level !== 'all'}
     <nav class="flex items-center gap-1 text-[10px] font-mono tracking-widest uppercase text-fg-faint mb-3 flex-wrap">
-      {#each breadcrumb() as crumb, i (crumb.label)}
+      {#each breadcrumb as crumb, i (crumb.label)}
         {#if i > 0}
           <span class="text-fg-faint">›</span>
         {/if}
         <button
           type="button"
           onclick={() => onScope(crumb.scope)}
-          class="hover:text-fg transition-colors {i === breadcrumb().length - 1 ? 'text-fg' : 'hover:underline decoration-dotted underline-offset-2'}"
+          class="hover:text-fg transition-colors {i === breadcrumb.length - 1 ? 'text-fg' : 'hover:underline decoration-dotted underline-offset-2'}"
         >
           {crumb.label}
         </button>
