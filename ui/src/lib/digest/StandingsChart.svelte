@@ -22,6 +22,9 @@
     priorTotal: number;
     roundPoints: number;
     currentTotal: number;
+    avatar_url?: string | null;
+    initials?: string;
+    hue?: string;
   };
 </script>
 
@@ -57,12 +60,33 @@
       {#each rows as r (r.name + r.rank)}
         {@const mv = movement(r)}
         <li class="stch-row">
-          <div class="stch-rankcell">
-            <span class="stch-arrow is-{mv.dir}" title={`prev rank ${r.prevRank ?? '—'}`}
-              >{mv.glyph}</span
+          <!-- Avatar with badge overlays (replaces stch-rankcell) -->
+          <div class="stch-avwrap">
+            {#if r.avatar_url}
+              <img
+                class="stch-av"
+                src={r.avatar_url}
+                alt={r.initials ?? r.name}
+                onerror={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  img.style.display = 'none';
+                  const next = img.nextElementSibling as HTMLElement | null;
+                  if (next) next.style.display = 'grid';
+                }}
+              />
+            {/if}
+            <!-- Initials fallback (shown when no avatar_url, or on img error) -->
+            <div
+              class="stch-av stch-av-init"
+              style:background={r.hue ?? 'oklch(0.72 0.15 0)'}
+              style:display={r.avatar_url ? 'none' : 'grid'}
             >
-            <span class="stch-rank">{r.rank}</span>
-            <span class="stch-prev">{r.prevRank == null ? '(new)' : `(${r.prevRank})`}</span>
+              {r.initials ?? r.name.slice(0, 2).toUpperCase()}
+            </div>
+            <!-- Rank badge at bottom-center -->
+            <span class="stch-rank-badge">{r.rank}</span>
+            <!-- Arrow badge at top-right -->
+            <span class="stch-arrow-badge is-{mv.dir}" title={`prev rank ${r.prevRank ?? '—'}`}>{mv.glyph}</span>
           </div>
 
           <div class="stch-main">
@@ -91,8 +115,7 @@
       <span class="stch-leg"><i class="sw sw-prior"></i>season so far</span>
       <span class="stch-leg"><i class="sw sw-round"></i>this round</span>
       <span class="stch-leg"
-        ><i class="stch-arrow is-up">▲</i> up <i class="stch-arrow is-down">▼</i> down · (n) = prev
-        rank</span
+        ><i class="stch-arrow is-up">▲</i> up <i class="stch-arrow is-down">▼</i> down · # = rank</span
       >
     </div>
   {:else}
@@ -116,47 +139,66 @@
   }
   .stch-row {
     display: grid;
-    grid-template-columns: 64px 1fr;
+    grid-template-columns: 40px 1fr;
     align-items: center;
     gap: 10px;
   }
 
-  /* ── rank cell: arrow · rank · (prev) ────────────────────────────────── */
-  .stch-rankcell {
+  /* ── avatar column with badge overlays ──────────────────────────────── */
+  .stch-avwrap {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    margin-right: 0;
+  }
+  .stch-av {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+  .stch-av-init {
     display: grid;
-    grid-template-columns: 12px auto;
-    grid-template-rows: auto auto;
-    column-gap: 5px;
-    align-items: center;
-    justify-content: start;
-  }
-  .stch-arrow {
-    grid-row: 1 / 3;
+    place-items: center;
     font-size: 11px;
+    font-weight: 700;
+    color: #0c0a08;
+    letter-spacing: -0.02em;
+  }
+  /* Rank badge — bottom center */
+  .stch-rank-badge {
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
     line-height: 1;
-    text-align: center;
+    padding: 1px 3px;
+    border-radius: 3px;
+    pointer-events: none;
   }
-  .stch-arrow.is-up {
-    color: var(--moss);
+  /* Arrow badge — top right */
+  .stch-arrow-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
   }
-  .stch-arrow.is-down {
-    color: var(--ember);
+  .stch-arrow-badge.is-up {
+    color: #22c55e;
   }
-  .stch-arrow.is-same {
-    color: var(--fg-quiet);
+  .stch-arrow-badge.is-down {
+    color: #ef4444;
   }
-  .stch-rank {
-    grid-column: 2;
-    grid-row: 1;
-    font: 700 18px/1 var(--font-mono);
-    color: var(--fg);
-    font-variant-numeric: tabular-nums;
-  }
-  .stch-prev {
-    grid-column: 2;
-    grid-row: 2;
-    font: 500 9.5px/1 var(--font-mono);
-    color: var(--fg-quiet);
+  .stch-arrow-badge.is-same {
+    color: #6b7280;
   }
 
   /* ── bar ─────────────────────────────────────────────────────────────── */
@@ -241,6 +283,15 @@
   .sw-round {
     background: var(--mash-pulp);
   }
+  .stch-arrow.is-up {
+    color: var(--moss);
+  }
+  .stch-arrow.is-down {
+    color: var(--ember);
+  }
+  .stch-arrow.is-same {
+    color: var(--fg-quiet);
+  }
   .stch-legend .stch-arrow {
     font-size: 9px;
   }
@@ -252,17 +303,14 @@
     font-style: italic;
   }
 
-  /* html-share on phone (≤640px): taller bars, wider rankcell, larger type */
+  /* html-share on phone (≤640px): taller bars, larger type */
   @media (max-width: 640px) {
     .stch-row {
-      grid-template-columns: 60px 1fr;
+      grid-template-columns: 40px 1fr;
       gap: 10px;
     }
     .stch-track {
       height: 24px;
-    }
-    .stch-rank {
-      font-size: 20px;
     }
     .stch-round-lbl {
       font-size: 10px;
@@ -277,11 +325,8 @@
 
   @media (max-width: 460px) {
     .stch-row {
-      grid-template-columns: 54px 1fr;
+      grid-template-columns: 40px 1fr;
       gap: 8px;
-    }
-    .stch-rank {
-      font-size: 16px;
     }
     .stch-legend {
       gap: 10px;
