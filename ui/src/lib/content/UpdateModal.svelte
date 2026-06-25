@@ -144,19 +144,33 @@
         body: JSON.stringify({ decisions, steer: steerPayload, announce }),
       });
       if (!r.ok) throw new Error(await r.text());
-      const result = await r.json();
+      const { jobId } = await r.json();
 
-      onPublished({
-        leagueId: league.id,
-        url: result.url,
-        round: plan.pending.roundId,
-        theme: plan.pending.theme,
-        league: plan.league.name,
-        headline: result.reshare?.headline ?? 'NEW IN THE ARCHIVE',
-        blurb: result.reshare?.blurb ?? '',
-        cardText: result.reshare?.cardText ?? result.url,
-      });
-      onClose();
+      // Poll until done — server runs LLM work async to avoid Cloudflare 100s timeout
+      while (true) {
+        await new Promise<void>((res) => setTimeout(res, 2000));
+        const statusR = await fetch(`/api/content/${league.id}/update-status/${jobId}`);
+        if (!statusR.ok) throw new Error('Status check failed');
+        const status = await statusR.json();
+
+        if (status.status === 'error') throw new Error(status.error ?? 'Generate failed');
+        if (status.status === 'done') {
+          const result = status.result;
+          onPublished({
+            leagueId: league.id,
+            url: result.url,
+            round: plan.pending.roundId,
+            theme: plan.pending.theme,
+            league: plan.league.name,
+            headline: result.reshare?.headline ?? 'NEW IN THE ARCHIVE',
+            blurb: result.reshare?.blurb ?? '',
+            cardText: result.reshare?.cardText ?? result.url,
+          });
+          onClose();
+          return;
+        }
+        // status === 'running' — keep polling
+      }
     } catch (e: unknown) {
       generateErr = e instanceof Error ? e.message : 'Generate failed';
     } finally {

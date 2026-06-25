@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
+import { updateJobs } from '$lib/content/updateJobs.js';
 import { buildDeterministicSlices } from '$lib/dashboard/generators/deterministic.js';
 import { buildOverlap } from '$lib/dashboard/generators/overlap.js';
 import { generateProfile } from '$lib/dashboard/generators/profile.js';
@@ -69,7 +70,7 @@ const DEFAULT_FP: FingerprintOutput = {
 
 // POST /api/content/:leagueId/update
 // Body: { decisions: {section: 'refresh'|'hold'|'lock'}, steer: {section: string}, announce: 'card'|'link'|'silent' }
-// Recomputes only 'refresh' sections, persists decisions, rewrites read_model + archived_rounds in place.
+// Returns 202 + jobId immediately; LLM work runs async. Poll GET /update-status/:jobId for completion.
 export const POST: RequestHandler = async ({ params, request }) => {
 	const leagueId = Number(params.leagueId);
 	if (!Number.isInteger(leagueId) || leagueId <= 0) throw error(400, 'invalid leagueId');
@@ -138,119 +139,129 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		throw error(409, 'no pending update for this league');
 	}
 
-	// Persist decisions in dashboard_section_state
-	for (const [section, decision] of Object.entries(decisions)) {
-		db.prepare(
-			`INSERT INTO dashboard_section_state (league_id, section, decision, steer)
-			 VALUES (?, ?, ?, ?)
-			 ON CONFLICT(league_id, section) DO UPDATE SET decision = excluded.decision, steer = COALESCE(excluded.steer, steer)`,
-		).run(leagueId, section, decision, steer[section] ?? null);
-	}
-	// Also update steer separately for any steer without explicit decision
-	for (const [section, steerText] of Object.entries(steer)) {
-		if (!decisions[section]) {
+	const jobId = crypto.randomUUID();
+	updateJobs.set(jobId, { status: 'running' });
+
+	// Fire-and-forget: all LLM work runs detached so we can return 202 immediately
+	// and avoid Cloudflare's 100s proxy timeout on long multi-member generations.
+	(async () => {
+		try {
+			// Persist decisions in dashboard_section_state
+			for (const [section, decision] of Object.entries(decisions)) {
+				db.prepare(
+					`INSERT INTO dashboard_section_state (league_id, section, decision, steer)
+					 VALUES (?, ?, ?, ?)
+					 ON CONFLICT(league_id, section) DO UPDATE SET decision = excluded.decision, steer = COALESCE(excluded.steer, steer)`,
+				).run(leagueId, section, decision, steer[section] ?? null);
+			}
+			for (const [section, steerText] of Object.entries(steer)) {
+				if (!decisions[section]) {
+					db.prepare(
+						`INSERT INTO dashboard_section_state (league_id, section, decision, steer)
+						 VALUES (?, ?, 'refresh', ?)
+						 ON CONFLICT(league_id, section) DO UPDATE SET steer = excluded.steer`,
+					).run(leagueId, section, steerText);
+				}
+			}
+
+			const newModel = await buildUpdatedReadModel(
+				db,
+				leagueId,
+				league.name,
+				currentModel,
+				decisions,
+				site.slug,
+			);
+
+			const newEntry = buildArchiveEntry(db, pendingRow.round_id, pendingRow.round_name, pendingRow.season_number, 0);
+
+			const isReArchive = archivedRoundIds.includes(pendingRow.round_id);
+
+			let newArchive: z.infer<typeof ArchiveEntrySchema>[];
+			let newArchivedRoundIds: number[];
+			let newRoundCount: number;
+			let archiveEntryForReshare: z.infer<typeof ArchiveEntrySchema>;
+
+			if (isReArchive) {
+				const allRoundIds = (
+					db
+						.prepare(
+							`SELECT r.id FROM rounds r
+							 JOIN seasons se ON se.id = r.season_id
+							 WHERE se.league_id = ?
+							 ORDER BY se.season_number, r.id`,
+						)
+						.all(leagueId) as { id: number }[]
+				).map((r) => r.id);
+				const chronoIdx = allRoundIds.indexOf(pendingRow.round_id);
+				const existingN = chronoIdx >= 0 ? chronoIdx + 1 : null;
+
+				if (existingN !== null) {
+					const replacedEntry = { ...newEntry, n: existingN };
+					newArchive = newModel.archive.map((e) => (e.n === existingN ? replacedEntry : e));
+					archiveEntryForReshare = replacedEntry;
+				} else {
+					newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
+					archiveEntryForReshare = newArchive[0];
+				}
+
+				newArchivedRoundIds = archivedRoundIds;
+				newRoundCount = newModel.league.round;
+			} else {
+				newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
+				archiveEntryForReshare = newArchive[0];
+				newArchivedRoundIds = [...archivedRoundIds, pendingRow.round_id];
+				newRoundCount = newModel.league.round + 1;
+			}
+
+			const finalModel: ReadModel = ReadModelSchema.parse({
+				...newModel,
+				archive: newArchive,
+				league: {
+					...newModel.league,
+					round: newRoundCount,
+					updated: new Date().toISOString(),
+				},
+			});
+
+			const now = new Date().toISOString();
+
 			db.prepare(
-				`INSERT INTO dashboard_section_state (league_id, section, decision, steer)
-				 VALUES (?, ?, 'refresh', ?)
-				 ON CONFLICT(league_id, section) DO UPDATE SET steer = excluded.steer`,
-			).run(leagueId, section, steerText);
+				`UPDATE dashboard_sites
+				 SET read_model = ?, archived_rounds = ?, refreshed_at = ?
+				 WHERE league_id = ?`,
+			).run(JSON.stringify(finalModel), JSON.stringify(newArchivedRoundIds), now, leagueId);
+
+			await writePublicArtifacts(site.slug, finalModel);
+
+			const resharePayload = buildResharePayload(
+				league.name,
+				site.slug,
+				pendingRow.round_id,
+				pendingRow.round_name,
+				announce,
+				archiveEntryForReshare,
+			);
+
+			updateJobs.set(jobId, {
+				status: 'done',
+				result: {
+					ok: true,
+					slug: site.slug,
+					url: `${B_SIDE_BASE}/${site.slug}`,
+					archivedRoundId: pendingRow.round_id,
+					reshare: resharePayload,
+				},
+			});
+		} catch (e) {
+			updateJobs.set(jobId, {
+				status: 'error',
+				error: e instanceof Error ? e.message : 'Update failed',
+			});
 		}
-	}
+	})();
 
-	// Build new read_model with section-wise updates
-	const newModel = await buildUpdatedReadModel(
-		db,
-		leagueId,
-		league.name,
-		currentModel,
-		decisions,
-		site.slug,
-	);
-
-	// Build the fresh archive entry (n is a placeholder overridden below)
-	const newEntry = buildArchiveEntry(db, pendingRow.round_id, pendingRow.round_name, pendingRow.season_number, 0);
-
-	const isReArchive = archivedRoundIds.includes(pendingRow.round_id);
-
-	let newArchive: z.infer<typeof ArchiveEntrySchema>[];
-	let newArchivedRoundIds: number[];
-	let newRoundCount: number;
-	let archiveEntryForReshare: z.infer<typeof ArchiveEntrySchema>;
-
-	if (isReArchive) {
-		// Round already in the b-side — replace its entry IN PLACE, preserving order and n values.
-		// Derive the existing n-value from the round's position in league-chronological order
-		// (the same ORDER BY season_number, r.id that buildArchive uses → n = position + 1).
-		const allRoundIds = (
-			db
-				.prepare(
-					`SELECT r.id FROM rounds r
-					 JOIN seasons se ON se.id = r.season_id
-					 WHERE se.league_id = ?
-					 ORDER BY se.season_number, r.id`,
-				)
-				.all(leagueId) as { id: number }[]
-		).map((r) => r.id);
-		const chronoIdx = allRoundIds.indexOf(pendingRow.round_id);
-		const existingN = chronoIdx >= 0 ? chronoIdx + 1 : null;
-
-		if (existingN !== null) {
-			const replacedEntry = { ...newEntry, n: existingN };
-			newArchive = newModel.archive.map((e) => (e.n === existingN ? replacedEntry : e));
-			archiveEntryForReshare = replacedEntry;
-		} else {
-			// Fallback: position unknown — prepend (shouldn't happen for a properly archived round)
-			newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
-			archiveEntryForReshare = newArchive[0];
-		}
-
-		newArchivedRoundIds = archivedRoundIds; // already present, no duplicate
-		newRoundCount = newModel.league.round; // archive size unchanged
-	} else {
-		// Genuinely new round: prepend + renumber newest-first
-		newArchive = [newEntry, ...newModel.archive].map((e, i, arr) => ({ ...e, n: arr.length - i }));
-		archiveEntryForReshare = newArchive[0];
-		newArchivedRoundIds = [...archivedRoundIds, pendingRow.round_id];
-		newRoundCount = newModel.league.round + 1;
-	}
-
-	const finalModel: ReadModel = ReadModelSchema.parse({
-		...newModel,
-		archive: newArchive,
-		league: {
-			...newModel.league,
-			round: newRoundCount,
-			updated: new Date().toISOString(),
-		},
-	});
-
-	const now = new Date().toISOString();
-
-	db.prepare(
-		`UPDATE dashboard_sites
-		 SET read_model = ?, archived_rounds = ?, refreshed_at = ?
-		 WHERE league_id = ?`,
-	).run(JSON.stringify(finalModel), JSON.stringify(newArchivedRoundIds), now, leagueId);
-
-	await writePublicArtifacts(site.slug, finalModel);
-
-	// Build reshare payload
-	const resharePayload = buildResharePayload(
-		league.name,
-		site.slug,
-		pendingRow.round_id,
-		pendingRow.round_name,
-		announce,
-		archiveEntryForReshare,
-	);
-
-	return json({
-		ok: true,
-		slug: site.slug,
-		url: `${B_SIDE_BASE}/${site.slug}`,
-		archivedRoundId: pendingRow.round_id,
-		reshare: resharePayload,
-	});
+	return json({ jobId }, { status: 202 });
 };
 
 // ── Section-wise read_model builder ─────────────────────────────────────────
