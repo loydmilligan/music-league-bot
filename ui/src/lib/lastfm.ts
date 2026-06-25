@@ -14,10 +14,13 @@ import type Database from 'better-sqlite3';
 
 const LASTFM_ROOT = 'https://ws.audioscrobbler.com/2.0/';
 
-// Read once at module load — if missing, fail at startup rather than per-job.
-const LASTFM_API_KEY = process.env.LASTFM_API_KEY ?? '';
-if (!LASTFM_API_KEY) {
-	console.error('[lastfm] LASTFM_API_KEY is not set — Last.fm jobs will fail');
+// Read at CALL time, never captured at module load. A module-level const reads
+// process.env when this file is first imported — which, in the bundled server,
+// can happen before the key is populated (and silently bakes in an empty string
+// for the whole process). Reading lazily makes Last.fm jobs robust to import
+// order and lets tests set the key after import.
+function lastfmApiKey(): string {
+	return process.env.LASTFM_API_KEY ?? '';
 }
 
 // ---------------------------------------------------------------------------
@@ -206,9 +209,10 @@ export async function fetchPopularity(
 	title: string,
 	artist: string
 ): Promise<void> {
-	if (!LASTFM_API_KEY) throw new Error('LASTFM_API_KEY not set');
+	const apiKey = lastfmApiKey();
+	if (!apiKey) throw new Error('LASTFM_API_KEY not set');
 
-	const result = await getLastfmPopularity(artist, title, LASTFM_API_KEY);
+	const result = await getLastfmPopularity(artist, title, apiKey);
 	if (result.error) {
 		throw new Error(`Last.fm popularity fetch failed: ${result.error}`);
 	}
@@ -247,8 +251,8 @@ export async function fetchTags(
 	title: string,
 	artist: string
 ): Promise<void> {
-	if (!LASTFM_API_KEY) throw new Error('LASTFM_API_KEY not set');
-	const apiKey = LASTFM_API_KEY;
+	const apiKey = lastfmApiKey();
+	if (!apiKey) throw new Error('LASTFM_API_KEY not set');
 
 	const normTitle = normalizeTrackTitle(title);
 
