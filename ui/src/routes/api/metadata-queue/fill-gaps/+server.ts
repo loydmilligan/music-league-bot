@@ -3,22 +3,75 @@ import { json } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { enqueueMany, type JobType } from '$lib/db/metadataQueue.js';
 
+const VALID_LEVELS = ['all', 'league', 'season', 'round'] as const;
+type Level = (typeof VALID_LEVELS)[number];
+
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
-	const roundId = body?.roundId;
 
-	if (roundId == null || typeof roundId !== 'number' || !Number.isInteger(roundId)) {
-		return json({ error: 'roundId is required and must be an integer' }, { status: 400 });
+	// Resolve scope: new {level, id} form OR legacy {roundId} back-compat
+	let level: Level;
+	let scopeId: number | undefined;
+
+	if (body?.roundId != null) {
+		// Legacy back-compat: {roundId: N}
+		const roundId = body.roundId;
+		if (typeof roundId !== 'number' || !Number.isInteger(roundId)) {
+			return json({ error: 'roundId is required and must be an integer' }, { status: 400 });
+		}
+		level = 'round';
+		scopeId = roundId;
+	} else if (body?.level != null) {
+		// New form: {level, id?}
+		if (!VALID_LEVELS.includes(body.level)) {
+			return json({ error: `level must be one of: ${VALID_LEVELS.join(', ')}` }, { status: 400 });
+		}
+		level = body.level as Level;
+
+		if (level !== 'all') {
+			const id = body.id;
+			if (id == null || typeof id !== 'number' || !Number.isInteger(id)) {
+				return json({ error: `id is required and must be an integer when level=${level}` }, { status: 400 });
+			}
+			scopeId = id;
+		}
+	} else {
+		return json({ error: 'Provide {level} or legacy {roundId}' }, { status: 400 });
 	}
 
 	const db = getDb();
 
-	// Get all URIs for the round
-	const uriRows = db
-		.prepare(
-			`SELECT DISTINCT spotify_uri FROM ml_submissions WHERE round_id = ?`
-		)
-		.all(roundId) as { spotify_uri: string }[];
+	// Resolve URIs by scope — bind params, never string-interpolate ids
+	let uriRows: { spotify_uri: string }[];
+	if (level === 'all') {
+		uriRows = db
+			.prepare(`SELECT DISTINCT spotify_uri FROM ml_submissions`)
+			.all() as { spotify_uri: string }[];
+	} else if (level === 'round') {
+		uriRows = db
+			.prepare(`SELECT DISTINCT spotify_uri FROM ml_submissions WHERE round_id = ?`)
+			.all(scopeId) as { spotify_uri: string }[];
+	} else if (level === 'season') {
+		uriRows = db
+			.prepare(
+				`SELECT DISTINCT ms.spotify_uri
+				 FROM ml_submissions ms
+				 JOIN rounds r ON r.id = ms.round_id
+				 WHERE r.season_id = ?`
+			)
+			.all(scopeId) as { spotify_uri: string }[];
+	} else {
+		// league
+		uriRows = db
+			.prepare(
+				`SELECT DISTINCT ms.spotify_uri
+				 FROM ml_submissions ms
+				 JOIN rounds r ON r.id = ms.round_id
+				 JOIN seasons s ON s.id = r.season_id
+				 WHERE s.league_id = ?`
+			)
+			.all(scopeId) as { spotify_uri: string }[];
+	}
 
 	const uris = uriRows.map((r) => r.spotify_uri);
 

@@ -9,6 +9,7 @@
   import type { Filter } from '$lib/metadata-queue/metricTiles.js';
   import type { Scope, HierarchyLeague } from '$lib/db/metadataQueue.js';
   import HierarchyNavigator from '$lib/metadata-queue/HierarchyNavigator.svelte';
+  import EnrichControl from '$lib/metadata-queue/EnrichControl.svelte';
   import { rollupChip } from '$lib/metadata-queue/ladder.js';
 
   let { data } = $props<{ data: PageData }>();
@@ -175,15 +176,7 @@
       ? READINESS_META.filter(m => !queueData!.digestReadiness![m.key].ok).length
       : 0
   );
-  const songsToEnrich = $derived(
-    queueData?.coverageMatrix
-      ? queueData.coverageMatrix.filter(row =>
-          (['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics'] as const).some(
-            jt => row.jobs[jt] === 'missing' || row.jobs[jt] === 'failed'
-          )
-        ).length
-      : 0
-  );
+
 
   let failuresOpen = $state(true);
   let retryingId = $state<number | null>(null);
@@ -205,19 +198,22 @@
   }
 
   async function fillGaps() {
-    if (scope.level !== 'round' || fillGapsLoading) return;
+    if (fillGapsLoading) return;
     fillGapsLoading = true;
     fillGapsToast = null;
     try {
       const r = await fetch('/api/metadata-queue/fill-gaps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roundId: scope.id }),
+        body: JSON.stringify({ level: scope.level, id: scope.id }),
       });
       if (r.ok) {
         const body = (await r.json()) as { queued: number };
         fillGapsToast = `Queued ${body.queued} jobs`;
-        const res = await fetch(`/api/metadata-queue/status?level=round&id=${scope.id}`);
+        const statusUrl = scope.level === 'all'
+          ? '/api/metadata-queue/status'
+          : `/api/metadata-queue/status?level=${scope.level}&id=${scope.id}`;
+        const res = await fetch(statusUrl);
         if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
         setTimeout(() => { fillGapsToast = null; }, 3500);
       }
@@ -225,6 +221,43 @@
       fillGapsLoading = false;
     }
   }
+
+  // Enrich-count estimate for the EnrichControl label.
+  // The endpoint's returned {queued} is the source of truth shown in the toast.
+  const enrichableTypes = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics'] as const;
+
+  const enrichCount = $derived.by(() => {
+    const hierarchy = data.hierarchy as HierarchyLeague[];
+    const songsInScope = (() => {
+      if (scope.level === 'round') {
+        return queueData?.coverageMatrix?.length ?? 0;
+      }
+      if (scope.level === 'all') {
+        return hierarchy.reduce((sum: number, league: HierarchyLeague) => sum + league.songCount, 0);
+      }
+      if (scope.level === 'league') {
+        const league = hierarchy.find((l: HierarchyLeague) => l.id === scope.id);
+        return league?.songCount ?? 0;
+      }
+      // season
+      for (const league of hierarchy) {
+        const season = league.seasons.find(s => s.id === scope.id);
+        if (season) return season.songCount;
+      }
+      return 0;
+    })();
+
+    const existingEnrichable = enrichableTypes.reduce(
+      (sum, jt) => sum + (queueData?.byJobType[jt]?.total ?? 0),
+      0
+    );
+    const failedEnrichable = enrichableTypes.reduce(
+      (sum, jt) => sum + (queueData?.byJobType[jt]?.failed ?? 0),
+      0
+    );
+    const missing = Math.max(0, songsInScope * enrichableTypes.length - existingEnrichable);
+    return missing + failedEnrichable;
+  });
 
   const overallChip = $derived(
     queueData
@@ -398,6 +431,19 @@
     </div>
   {/if}
 
+  <!-- Always-visible enrich control -->
+  <div class="mb-4">
+    <EnrichControl
+      {scope}
+      n={enrichCount}
+      loading={fillGapsLoading}
+      onEnrich={fillGaps}
+    />
+    {#if fillGapsToast}
+      <span class="ml-3 font-mono text-[10px] tracking-widest uppercase text-health">{fillGapsToast}</span>
+    {/if}
+  </div>
+
   <!-- 5 per-job rows (segmented rollup bars, Task 5) -->
   <JobTypeRollups
     byJobType={queueData?.byJobType}
@@ -421,21 +467,6 @@
               {blockedCount} section{blockedCount === 1 ? '' : 's'} blocked
             {/if}
           </div>
-        </div>
-        <div class="flex items-center gap-2">
-          {#if fillGapsToast}
-            <span class="font-mono text-[10px] tracking-widest uppercase text-health">{fillGapsToast}</span>
-          {/if}
-          {#if blockedCount > 0}
-            <button
-              type="button"
-              onclick={fillGaps}
-              disabled={fillGapsLoading}
-              class="font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-sm border transition-colors {fillGapsLoading ? 'border-border-muted text-fg-faint cursor-not-allowed' : 'border-accent text-accent hover:bg-accent hover:text-bg'}"
-            >
-              {fillGapsLoading ? 'Enqueueing…' : `Fill gaps · enrich ${songsToEnrich}`}
-            </button>
-          {/if}
         </div>
       </div>
 

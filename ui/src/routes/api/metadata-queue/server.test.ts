@@ -373,6 +373,94 @@ describe('POST /api/metadata-queue/fill-gaps', () => {
 	});
 });
 
+	// --- Task 7: scope-aware {level, id} params ---
+
+	it('returns 400 when level is an unrecognised value', async () => {
+		const res = await POST_fillGaps(mkPostEvent({ level: 'bogus' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=league with no id', async () => {
+		const res = await POST_fillGaps(mkPostEvent({ level: 'league' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=season with no id', async () => {
+		const res = await POST_fillGaps(mkPostEvent({ level: 'season' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(400);
+	});
+
+	it('returns 400 when level=round with no id', async () => {
+		const res = await POST_fillGaps(mkPostEvent({ level: 'round' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(400);
+	});
+
+	it('level=all with no id enqueues the entire corpus', async () => {
+		// Seed 2 leagues with separate rounds and URIs
+		db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (1, 'alpha', 'Alpha'), (2, 'beta', 'Beta')`).run();
+		db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (10, 1, 1, 'active'), (20, 2, 1, 'active')`).run();
+		db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (100, 10, 'ml-100', 'Round 100', datetime('now')), (200, 20, 'ml-200', 'Round 200', datetime('now'))`).run();
+		for (const [roundId, uri] of [[100, 'spotify:track:alpha1'], [100, 'spotify:track:alpha2'], [200, 'spotify:track:beta1']] as [number, string][]) {
+			db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (?, ?, 'T', 'A', datetime('now'))`).run(roundId, uri);
+		}
+
+		const res = await POST_fillGaps(mkPostEvent({ level: 'all' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		// 3 URIs × 4 fast job types = 12 pending rows
+		expect(body.queued).toBe(12);
+
+		const totalPending = (db.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE status='pending'`).get() as { n: number }).n;
+		expect(totalPending).toBe(12);
+
+		// Verify both leagues' URIs are in the queue
+		const alphaRows = (db.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE spotify_uri LIKE 'spotify:track:alpha%'`).get() as { n: number }).n;
+		const betaRows = (db.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE spotify_uri LIKE 'spotify:track:beta%'`).get() as { n: number }).n;
+		expect(alphaRows).toBe(8); // 2 URIs × 4 job types
+		expect(betaRows).toBe(4);  // 1 URI × 4 job types
+	});
+
+	it('level=league enqueues only that league\'s submissions (other league NOT enqueued)', async () => {
+		// Seed 2 leagues with separate rounds and URIs
+		db.prepare(`INSERT OR IGNORE INTO leagues (id, slug, name) VALUES (1, 'alpha', 'Alpha'), (2, 'beta', 'Beta')`).run();
+		db.prepare(`INSERT OR IGNORE INTO seasons (id, league_id, season_number, status) VALUES (10, 1, 1, 'active'), (20, 2, 1, 'active')`).run();
+		db.prepare(`INSERT OR IGNORE INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (100, 10, 'ml-100', 'Round 100', datetime('now')), (200, 20, 'ml-200', 'Round 200', datetime('now'))`).run();
+		for (const [roundId, uri] of [[100, 'spotify:track:leagueA'], [200, 'spotify:track:leagueB']] as [number, string][]) {
+			db.prepare(`INSERT OR IGNORE INTO ml_submissions (round_id, spotify_uri, title, artists, created_at) VALUES (?, ?, 'T', 'A', datetime('now'))`).run(roundId, uri);
+		}
+
+		// Fill gaps only for league 1 (alpha)
+		const res = await POST_fillGaps(mkPostEvent({ level: 'league', id: 1 }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		// 1 URI × 4 job types = 4
+		expect(body.queued).toBe(4);
+
+		// League 2's URI must NOT be enqueued
+		const betaRow = db.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE spotify_uri='spotify:track:leagueB'`).get() as { n: number };
+		expect(betaRow.n).toBe(0);
+	});
+
+	it('round-scope back-compat: {roundId: N} still behaves as today', async () => {
+		seedRound(10, ['spotify:track:backcompat1', 'spotify:track:backcompat2']);
+
+		const res = await POST_fillGaps(mkPostEvent({ roundId: 10 }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		// 2 URIs × 4 job types = 8
+		expect(body.queued).toBe(8);
+
+		const pending = (db.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE status='pending'`).get() as { n: number }).n;
+		expect(pending).toBe(8);
+	});
+
+	it('level=all with empty corpus returns {queued: 0}', async () => {
+		const res = await POST_fillGaps(mkPostEvent({ level: 'all' }) as Parameters<typeof POST_fillGaps>[0]);
+		expect(res.status).toBe(200);
+		const body = await res.json() as { queued: number };
+		expect(body.queued).toBe(0);
+	});
+
 // ---------------------------------------------------------------------------
 // POST /api/metadata-queue/retry
 // ---------------------------------------------------------------------------
