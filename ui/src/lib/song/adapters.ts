@@ -1,5 +1,7 @@
-import type { Song, SongRatings, SongContext, SongChat, HistoryStatus } from './canonical.js';
+import type { Song, SongRatings, SongContext, SongChat, HistoryStatus, SongCorpusEntry, SongCorpusMention } from './canonical.js';
 import { EMPTY_RATINGS } from './canonical.js';
+import type { SongStatus } from '$lib/db/songHistory.js';
+import type { SongBadges as DbSongBadges } from '$lib/db/badges.js';
 
 const clamp05 = (n: number | null | undefined): number | null =>
   n == null ? null : Math.max(0, Math.min(5, n));
@@ -193,6 +195,57 @@ export const adapters = {
       points: r.points as number,
       submitter: r.submitter as string,
     };
+    return s;
+  },
+
+  fromSearch(r: Record<string, unknown>, status?: SongStatus, badges?: DbSongBadges): Song {
+    const s = baseSong(r);
+
+    // Derive the strongest single history signal for the chip/coloring
+    let historyStatus: HistoryStatus = null;
+    if (status) {
+      if (status.submittedByMe) historyStatus = 'song-mine';
+      else if (status.submittedByOthers.length > 0) historyStatus = 'song-others';
+      else if (status.artistSubmittedByMe) historyStatus = 'artist-mine';
+    }
+
+    // Build corpus entry list: "You submitted this" + each other submission with details
+    const entries: SongCorpusEntry[] = [
+      ...(status?.submittedByMe ? [{ by: 'You', mine: true as const }] : []),
+      ...((status?.submittedByOthers ?? []).map(e => ({
+        by: e.by,
+        mine: false as const,
+        league: e.league,
+        season: e.season,
+        round: e.round,
+        points: e.points,
+      }))),
+    ];
+    const chatList: SongCorpusMention[] = (status?.chatMentions ?? []).map(m => ({
+      by: m.by,
+      quote: m.quote,
+    }));
+
+    const hasCorpus = entries.length > 0 || chatList.length > 0;
+    const corpus = hasCorpus ? {
+      appearances: entries.length,
+      submitters: Array.from(new Set(entries.map(e => e.mine ? 'You' : e.by))),
+      chatMentions: chatList.length,
+      artistMine: status?.artistSubmittedByMe ?? false,
+      entries: entries.length > 0 ? entries : undefined,
+      chatList: chatList.length > 0 ? chatList : undefined,
+    } : undefined;
+
+    // Map db BadgeSet → canonical SongBadges (falsy counts become undefined)
+    const songBadges = badges?.song ? {
+      gold: badges.song.medals.gold || undefined,
+      silver: badges.song.medals.silver || undefined,
+      bronze: badges.song.medals.bronze || undefined,
+      poop: badges.song.poop > 0 || undefined,
+      bigDiscussion: badges.song.bigDiscussion > 0 || undefined,
+    } : undefined;
+
+    s.context = { historyStatus, corpus, badges: songBadges };
     return s;
   },
 };
