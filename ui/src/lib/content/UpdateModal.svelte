@@ -125,6 +125,8 @@
     if (e.key === 'Escape') onClose();
   }
 
+  let regenAvatars = $state(false);
+
   async function generate() {
     if (!plan) return;
     generating = true;
@@ -156,6 +158,13 @@
         if (status.status === 'error') throw new Error(status.error ?? 'Generate failed');
         if (status.status === 'done') {
           const result = status.result;
+          if (regenAvatars) {
+            fetch('/api/avatars/generate-themed', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ roundId: plan.pending.roundId }),
+            }).catch(() => {});
+          }
           onPublished({
             leagueId: league.id,
             url: result.url,
@@ -297,6 +306,11 @@
           </span>
         </div>
 
+        <label class="dg-av-regen">
+          <input type="checkbox" bind:checked={regenAvatars} />
+          <span>Regenerate themed avatars for this round</span>
+        </label>
+
         {#if generateErr}
           <p style="color: var(--mash-pulp); font: 500 11px/1.5 var(--font-mono); margin: 8px 0 0;">
             {generateErr}
@@ -327,6 +341,19 @@
 </div>
 
 <style>
+  .dg-av-regen {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font: 600 12px/1.2 var(--font-body);
+    color: var(--fg-muted);
+    margin-top: 10px;
+  }
+  .dg-av-regen input {
+    accent-color: var(--mash-pulp);
+    cursor: pointer;
+  }
   .ct-steer-panel {
     display: flex;
     flex-direction: column;

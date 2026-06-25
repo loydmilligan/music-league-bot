@@ -216,6 +216,14 @@
   async function submitGenerate(params: GenerateParams) {
     drafting = true;
     try {
+      const avatarPromise = params.regenAvatars
+        ? fetch('/api/avatars/generate-themed', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ roundId: data.roundId }),
+          }).then((r) => r.json() as Promise<{ generated: number; failed: number }>)
+        : Promise.resolve(null);
+
       const res = await fetch(`/api/digest/${data.roundId}/draft`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -230,6 +238,14 @@
         reconcile?: Reconcile;
       };
       genModalOpen = false;
+
+      if (params.regenAvatars) {
+        avatarPromise
+          .then((av) => {
+            if (av) showError(`Avatars: ${av.generated} generated, ${av.failed} failed`);
+          })
+          .catch(() => showError('Avatar regen request failed'));
+      }
 
       // Standings handling (the draft endpoint recomputes + reconciles standings).
       standingsExcluded = !params.standings.include;

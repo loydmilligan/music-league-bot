@@ -43,6 +43,7 @@
     nextRound: DataGenOpt;
     tastemaker: DataGenOpt;
     recap: RecapGenOpt;
+    regenAvatars: boolean;
   };
 
   // Availability state for a DATA section's indicator. 'ready' = the underlying
@@ -108,6 +109,9 @@
     return a === 'ready' ? '● coverage ready' : '⚠ incomplete coverage';
   }
 
+  // Avatar regen toggle (Task 7). Default OFF — unchecked.
+  let regenAvatars = $state(false);
+
   // Season-recap mode (sprint-21). Default OFF; when ON the "Final recap"
   // sub-toggle defaults ON (OFF = mid-season framing).
   let recapEnabled = $state(false);
@@ -132,6 +136,7 @@
       nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
       recap: { enabled: recapEnabled, final: recapFinal },
+      regenAvatars,
     });
   }
 
@@ -356,6 +361,10 @@
         bind:value={pastedChat}
         placeholder="Paste the round's WhatsApp chat here. Used as the chat section's source (overrides the flaky auto-capture)."
       ></textarea>
+      <label class="dg-av-regen">
+        <input type="checkbox" bind:checked={regenAvatars} />
+        <span>Regenerate themed avatars for this round</span>
+      </label>
       <p class="dg-modal-hint">
         Unchecked sections are skipped. Style words + context steer each section. The full source data (votes, comments) is always passed alongside.
       </p>
@@ -577,6 +586,19 @@
   }
   .dg-gen-context {
     min-height: 56px;
+  }
+  .dg-av-regen {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font: 600 12px/1.2 var(--font-body);
+    color: var(--fg-muted);
+    margin-top: 6px;
+  }
+  .dg-av-regen input {
+    accent-color: var(--mash-pulp);
+    cursor: pointer;
   }
   .dg-gen-note {
     margin: 0;
