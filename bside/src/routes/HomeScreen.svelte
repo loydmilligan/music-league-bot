@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Avatar from '../lib/atoms/Avatar.svelte';
 	import { icons } from '../lib/icons.js';
-	import { bsAcc } from '../lib/accents.js';
+	import { bsAcc, accentIcon } from '../lib/accents.js';
 	import type { ReadModel, Nav, SharePayload } from '../lib/types.js';
 
 	interface Props { readModel: ReadModel; nav: Nav; }
@@ -105,7 +105,7 @@
 				<div class={'bs-award ' + bsAcc(item.accent)} role="button" tabindex="0"
 					onclick={() => member && nav.goProfile(member.id)}
 					onkeydown={(e) => e.key === 'Enter' && member && nav.goProfile(member.id)}>
-					<div class="bs-medal">{@html icons.trophy}</div>
+					<div class="bs-medal">{@html accentIcon(item.accent)}</div>
 					<div class="bs-award-name">{item.award}</div>
 					<div class="bs-award-blurb">{item.blurb}</div>
 					{#if member}
@@ -139,6 +139,12 @@
 							<span class="bs-player-role">{m.headline}</span>
 						{/if}
 					</span>
+					{#if m.stat.wins > 0}
+						<span class="bs-player-wins">
+							<span class="bs-player-wins-val">{m.stat.wins}</span>
+							<span class="bs-player-wins-label">{m.stat.wins === 1 ? 'win' : 'wins'}</span>
+						</span>
+					{/if}
 				</button>
 			{/each}
 		</div>
@@ -153,7 +159,7 @@
 				{#each momentRows as r}
 					{@const sub = readModel.members.find((m) => m.id === r.d.submitter)}
 					<div class="bs-moment">
-						<div class={'bs-moment-icon ' + bsAcc(r.accent)} style="color:var(--acc)">
+						<div class={'bs-moment-icon ' + bsAcc(r.accent)} style="color:var(--acc); background:var(--acc-soft); border-color:color-mix(in oklch,var(--acc) 28%,transparent)">
 							{@html r.icon}
 						</div>
 						<div class="bs-moment-body">

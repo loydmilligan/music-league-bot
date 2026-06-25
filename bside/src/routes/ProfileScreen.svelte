@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Avatar from '../lib/atoms/Avatar.svelte';
 	import { icons } from '../lib/icons.js';
-	import { bsAcc } from '../lib/accents.js';
+	import { bsAcc, accentIcon } from '../lib/accents.js';
 	import type { ReadModel, Nav, SharePayload, FullMember } from '../lib/types.js';
 
 	interface Props { readModel: ReadModel; memberId: string; nav: Nav; }
@@ -192,7 +192,7 @@
 					</div>
 					{#each full.superlatives as sup}
 						<div class={'bs-award ' + bsAcc(sup.accent)}>
-							<div class="bs-medal">{@html icons.star}</div>
+							<div class="bs-medal">{@html accentIcon(sup.accent)}</div>
 							<div class="bs-award-name">{sup.award}</div>
 							<div class="bs-award-blurb">{sup.blurb}</div>
 							<div class="bs-award-winner">

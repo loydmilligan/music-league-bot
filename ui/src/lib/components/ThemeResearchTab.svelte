@@ -108,20 +108,21 @@
               </header>
 
               {#if t.picks.length}
-                <ul class="mt-4 flex flex-col divide-y divide-border-muted">
-                  {#each ranked(t.picks) as p (p.title + '::' + p.submitter)}
+                <ul class="mt-4 flex flex-col gap-2">
+                  {#each ranked(t.picks) as p, i (p.title + '::' + p.submitter)}
                     <li
-                      class="theme-pick flex items-center gap-3 py-2 first:pt-0"
+                      class="theme-pick flex items-center gap-3 rounded-xl px-3 py-2.5 border border-border-muted bg-bg-elevated hover:border-border transition-colors"
                       data-artist={p.artist}
                       data-submitter={p.submitter}
                       data-points={p.points}
                     >
+                      <span class="shrink-0 font-mono text-[11px] text-fg-faint tabular-nums w-5 text-right">{i + 1}</span>
                       <span class="flex-1 min-w-0">
-                        <span class="block font-bold text-fg text-sm truncate">{p.title}</span>
+                        <span class="block font-bold text-fg text-sm leading-snug truncate">{p.title}</span>
                         <span class="block font-mono text-[11px] text-fg-dim truncate">{p.artist}</span>
                       </span>
-                      <span class="flex-shrink-0 font-mono text-[11px] text-fg-muted truncate max-w-[8rem] text-right">{p.submitter}</span>
-                      <span class="flex-shrink-0 font-mono text-xs tabular-nums text-accent w-10 text-right">{p.points}</span>
+                      <span class="shrink-0 font-mono text-[10px] text-fg-faint bg-bg border border-border-muted rounded-full px-2 py-0.5 truncate max-w-[7rem]">{p.submitter}</span>
+                      <span class="shrink-0 font-display font-bold tabular-nums text-accent text-sm w-8 text-right">{p.points}</span>
                     </li>
                   {/each}
                 </ul>

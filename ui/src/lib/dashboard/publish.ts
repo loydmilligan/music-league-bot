@@ -112,11 +112,16 @@ export async function writePublicArtifacts(slug: string, readModel: ReadModel): 
 	await mkdir(dir, { recursive: true });
 	await Promise.all([
 		writeFile(join(dir, 'read_model.json'), JSON.stringify(readModel), 'utf8'),
-		writeFile(join(dir, 'index.html'), buildSpaShell(slug), 'utf8'),
+		writeFile(join(dir, 'index.html'), buildSpaShell(slug, readModel), 'utf8'),
 	]);
 }
 
-function buildSpaShell(slug: string): string {
+function buildSpaShell(slug: string, readModel: ReadModel): string {
+	const league = readModel.league;
+	const ogTitle = escapeHtml(`${league.name} · the b-side`);
+	const ogDesc = escapeHtml(
+		`${league.memberCount} members · Season ${league.season} · Round ${league.round} — the music league b-side`,
+	);
 	// The slug is embedded as a data attribute so the SPA can read it without
 	// parsing the URL (avoids hash vs. history-mode ambiguity at boot time).
 	return `<!doctype html>
@@ -125,7 +130,12 @@ function buildSpaShell(slug: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>the b-side</title>
+  <title>${ogTitle}</title>
+  <!-- Open Graph / chat unfurl — lets the link preview nicely in WhatsApp / iMessage -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${ogTitle}" />
+  <meta property="og:description" content="${ogDesc}" />
+  <meta name="description" content="${ogDesc}" />
   <link rel="stylesheet" href="/_bside/bside.css" />
 </head>
 <body data-league-slug="${escapeAttr(slug)}">
@@ -136,4 +146,8 @@ function buildSpaShell(slug: string): string {
 
 function escapeAttr(s: string): string {
 	return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function escapeHtml(s: string): string {
+	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

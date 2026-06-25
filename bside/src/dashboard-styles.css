@@ -126,7 +126,13 @@
 @keyframes bs-pulse { 0% { box-shadow: 0 0 0 0 #3ec27a66; } 70%,100% { box-shadow: 0 0 0 7px #3ec27a00; } }
 
 /* ── KPI ribbon ─────────────────────────────────────────────────────────── */
-.bs-ribbon { display: grid; grid-auto-flow: column; grid-auto-columns: 138px; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
+.bs-ribbon {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 138px; gap: 10px;
+  overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px;
+  /* Right-edge fade signals "more content →" */
+  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 52px), transparent 100%);
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 52px), transparent 100%);
+}
 .bs-ribbon::-webkit-scrollbar { display: none; }
 .bs-kpi { display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 13px; background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--r-4); box-shadow: var(--shadow-1); }
 .bs-kpi-val { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.03em; color: var(--fg); line-height: 1; }
@@ -141,7 +147,13 @@
 .bs-acc-ember { --acc: var(--ember);     --acc-2:#f2899b; --acc-soft:#e6566c1f; }
 
 /* reel = horizontal scroll of award cards */
-.bs-reel { display: grid; grid-auto-flow: column; grid-auto-columns: 230px; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 8px; }
+.bs-reel {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 230px; gap: 12px;
+  overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 8px;
+  /* Right-edge fade signals "more awards →" */
+  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 60px), transparent 100%);
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 60px), transparent 100%);
+}
 .bs-reel::-webkit-scrollbar { display: none; }
 
 .bs-award {
@@ -156,7 +168,13 @@
   transition: transform var(--dur-base) var(--ease-spring), border-color var(--dur-fast);
 }
 .bs-award:hover { transform: translateY(-3px); border-color: var(--acc); }
-.bs-medal { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--acc-soft); border: 1.5px solid var(--acc); color: var(--acc); flex: 0 0 auto; }
+.bs-medal {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 35%, color-mix(in oklch, var(--acc) 30%, var(--ink-3)), var(--acc-soft));
+  border: 1.5px solid var(--acc);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--acc) 12%, transparent), 0 1px 4px rgba(0,0,0,.4);
+  color: var(--acc); flex: 0 0 auto;
+}
 .bs-award-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; line-height: 1.12; letter-spacing: -0.015em; color: var(--fg); }
 .bs-award-blurb { font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); }
 .bs-award-winner { display: flex; align-items: center; gap: 9px; margin-top: auto; padding-top: 4px; }
@@ -190,12 +208,26 @@
 .bs-player {
   display: flex; align-items: center; gap: 11px; text-align: left; cursor: pointer;
   padding: 11px 12px; background: var(--ink-2); border: 1px solid var(--line); border-radius: var(--r-4);
-  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-base) var(--ease-spring);
+  position: relative;
 }
-.bs-player:hover { background: var(--ink-3); border-color: var(--line-strong); transform: translateY(-2px); }
-.bs-player-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.bs-player-name { font-weight: 600; font-size: 14px; color: var(--fg); }
+.bs-player:hover { background: var(--ink-3); border-color: var(--line-strong); transform: translateY(-3px); }
+.bs-player-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.bs-player-name { font-weight: 700; font-size: 14px; color: var(--fg); line-height: 1.2; }
 .bs-player-role { font-size: 11px; line-height: 1.3; color: var(--fg-quiet); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* Win count badge on player cards */
+.bs-player-wins {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 28px;
+}
+.bs-player-wins-val {
+  font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: -0.02em;
+  color: var(--amber); line-height: 1;
+}
+.bs-player-wins-label {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--fg-quiet); white-space: nowrap;
+}
 
 /* ── Profile hero ───────────────────────────────────────────────────────── */
 .bs-phero { display: flex; flex-direction: column; gap: 14px; }
@@ -318,7 +350,12 @@
 /* ── Season moments (home) ──────────────────────────────────────────────── */
 .bs-moments { display: flex; flex-direction: column; gap: 10px; }
 .bs-moment { display: flex; gap: 12px; padding: 13px 14px; background: var(--ink-1); border: 1px solid var(--line); border-radius: var(--r-4); align-items: flex-start; }
-.bs-moment-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; flex: 0 0 auto; background: var(--ink-3); }
+.bs-moment-icon {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 17px; flex: 0 0 auto;
+  background: var(--acc-soft, var(--ink-3));
+  border: 1px solid color-mix(in oklch, var(--acc, var(--ink-4)) 30%, transparent);
+}
 .bs-moment-body { display: flex; flex-direction: column; gap: 3px; }
 .bs-moment-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-quiet); }
 .bs-moment-song { font-weight: 600; font-size: 13.5px; color: var(--fg); }

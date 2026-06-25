@@ -138,7 +138,7 @@
 
   <div class="ct-tabrow">
     <div class="ct-tabs">
-      <a href={digestHref} class="ct-tab">
+      <a href={digestHref} class="ct-tab" data-sveltekit-reload>
         <span class="ct-tab-glyph">✉</span>
         Digest
       </a>

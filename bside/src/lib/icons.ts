@@ -11,6 +11,11 @@ export const icons = {
 	spark:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z"/></svg>`,
 	thumbU: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 10v10H4V10h3zm0 0l4-7c1.6 0 2.5 1 2.3 2.6L13 9h5.4c1.2 0 2 1.1 1.7 2.3l-1.6 6.4c-.2 1-1.1 1.7-2.2 1.7H7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
 	thumbD: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M17 14V4h3v10h-3zm0 0l-4 7c-1.6 0-2.5-1-2.3-2.6L11 15H5.6c-1.2 0-2-1.1-1.7-2.3l1.6-6.4C5.7 5.3 6.6 4.6 7.7 4.6H17" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+	/* semantic award icons */
+	crown:  `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 17h18M4 17L3 8l5 4 4-6 4 6 5-4-1 9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+	fire:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2c0 0-4 4-4 8 0 2.2 1.8 4 4 4s4-1.8 4-4c0-1-.3-2-.8-3C14.5 8.5 14 10 12 10c0-3 2-5 2-5s-1 .5-2 3c-.5-2 0-4 0-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 22c0-2 3-4 3-6 0 2 3 4 3 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+	wave:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+	medal:  `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="14" r="6" stroke="currentColor" stroke-width="1.8"/><path d="M9 3l3 5 3-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17v-2.5l2 1.5-2-4-2 4 2-1.5z" fill="currentColor" opacity=".7"/></svg>`,
 } as const;
 
 export type IconName = keyof typeof icons;
