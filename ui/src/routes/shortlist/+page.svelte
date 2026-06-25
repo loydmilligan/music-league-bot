@@ -29,12 +29,14 @@
   const BASE_CONFIG: Omit<SongCardConfig, 'noteText'> = {
     art: true,
     ratingMode: 'mini',
+    mobileTrailing: 'score',
+    mobileBucketDot: true,
     expandedConfig: {
       ratingMode: 'bars',
       ratingEditable: true,
       artPx: 180,
-      layers: ['state', 'rating', 'notes', 'analyze'],
-      actions: ['play', 'assign', 'submitted', 'remove'],
+      layers: ['state', 'rating', 'meta', 'tags', 'notes', 'analyze'],
+      actions: ['play', 'assign', 'analyze', 'save', 'submitted', 'remove'],
       actionStyle: 'inline',
     },
   };

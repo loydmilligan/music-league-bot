@@ -2,6 +2,7 @@
   import type { Song, SongRatings, SongCardConfig, ActionId, LayerId } from './canonical.js';
   import { DIMS, EMPTY_RATINGS, BUCKETS, fmtDur } from './canonical.js';
   import Rating from './Rating.svelte';
+  import SongSheet from './SongSheet.svelte';
 
   const {
     song,
@@ -117,6 +118,12 @@
     analyzePhase = 'running';
     onAnalyze?.(song);
   }
+
+  // Mobile bottom sheet
+  let sheetOpen = $state(false);
+  let sheetAnimate = $state(false);
+  function openSheet() { sheetAnimate = true; sheetOpen = true; }
+  function closeSheet() { sheetOpen = false; sheetAnimate = false; }
 
   // Overflow menu
   let menuOpen = $state(false);
@@ -502,6 +509,47 @@
   </div>
 {/snippet}
 
+{#snippet mobileRow(cfg: SongCardConfig)}
+  {@const bucket = song.metadata?.popularity?.bucket}
+  {@const mobileTrailing = cfg.mobileTrailing ?? (cfg.ratingMode === 'mini' ? 'mini' : 'none')}
+  {@const accentCls = cfg.accent === 'accent' ? ' accent' : cfg.accent === 'sky' ? ' accent-sky' : ''}
+  <button class="mcm-row{accentCls}" onclick={openSheet}>
+    <div class="mcm-art" style:background={song.art ? 'var(--ink-3)' : artGradient()}>
+      {#if song.art}
+        <img src={song.art.url} alt="" />
+      {:else}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="2.6" />
+        </svg>
+      {/if}
+      {#if cfg.mobileBucketDot && bucket}
+        {@const bk = BUCKETS[bucket as keyof typeof BUCKETS]}
+        {#if bk}
+          <span class="mcm-bucketdot" style="background: var(--{bucket === 'radioHit' ? 'ember' : bucket === 'known' ? 'amber' : bucket === 'deepCut' ? 'sky' : 'moss'})"></span>
+        {/if}
+      {/if}
+    </div>
+    <div class="mcm-rowbody">
+      <div class="mcm-rowtitle">{song.title}</div>
+      <div class="mcm-rowsub">{song.artist}</div>
+    </div>
+    <div class="mcm-rowtrail">
+      {#if mobileTrailing === 'score'}
+        <span class="mcm-scorepill">
+          <Rating value={ratings} mode="mini" />
+          {DIMS.reduce((a, d) => a + ((ratings as unknown as Record<string, number | null>)[d.key] ?? 0), 0)}
+          <span class="max">/20</span>
+        </span>
+      {:else if mobileTrailing === 'mini'}
+        <Rating value={ratings} mode="mini" />
+        <span class="mcm-chev">›</span>
+      {:else}
+        <span class="mcm-chev">›</span>
+      {/if}
+    </div>
+  </button>
+{/snippet}
+
 {#if density === 'expanded'}
   {@render expandedBody(config, null)}
 {:else}
@@ -511,6 +559,19 @@
       <div style="margin-top: 6px">
         {@render expandedBody(expandedCfg, toggleExpand)}
       </div>
+    {/if}
+    {@render mobileRow(config)}
+    {#if sheetOpen}
+      <SongSheet
+        {song}
+        config={expandedCfg}
+        animate={sheetAnimate}
+        onClose={closeSheet}
+        {onAction}
+        {onRate}
+        {onAnalyze}
+        {onNotes}
+      />
     {/if}
   </div>
 {/if}

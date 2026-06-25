@@ -112,6 +112,10 @@ export interface SongCardConfig {
   expandedConfig?: Partial<SongCardConfig>;
   shortlisted?: boolean;
   noteText?: string;
+  /** Mobile row trailing display. Defaults to 'mini' (mini rating bars). */
+  mobileTrailing?: 'mini' | 'score' | 'none';
+  /** Show bucket-category dot on mobile art corner. */
+  mobileBucketDot?: boolean;
 }
 
 export const DIMS = [
