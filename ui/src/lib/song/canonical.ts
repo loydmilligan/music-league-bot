@@ -36,14 +36,34 @@ export interface SongMetadata {
   enrichState?: 'none' | 'running' | 'done';
 }
 
+export interface SongCorpusEntry {
+  by: string;
+  mine: boolean;
+  league?: string;
+  season?: number;
+  round?: string;
+  points?: number;
+}
+
+export interface SongCorpusMention {
+  by: string;
+  quote: string;
+}
+
 export interface SongCorpus {
   appearances: number;
   submitters: string[];
   chatMentions: number;
+  artistMine?: boolean;
+  entries?: SongCorpusEntry[];
+  chatList?: SongCorpusMention[];
 }
 
 export interface SongBadges {
   medals?: number;
+  gold?: number;
+  silver?: number;
+  bronze?: number;
   bigDiscussion?: boolean;
   artistBigDiscussion?: boolean;
   poop?: boolean;

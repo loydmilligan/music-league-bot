@@ -15,6 +15,7 @@
     onRate,
     onAnalyze,
     onNotes,
+    expandedFooter,
   } = $props<{
     song: Song;
     density?: 'row' | 'expanded';
@@ -27,6 +28,7 @@
     onRate?: (ratings: SongRatings, song: Song) => void;
     onAnalyze?: (song: Song) => void;
     onNotes?: (text: string, song: Song) => void;
+    expandedFooter?: import('svelte').Snippet;
   }>();
 
   let _expanded = $state(defaultExpanded);
@@ -221,18 +223,23 @@
 
 {#snippet badgeRow(badges: Song['context']['badges'])}
   {#if badges}
+    {@const hasDetail = badges.gold != null || badges.silver != null || badges.bronze != null}
     {@const items = [
-      ...(badges.medals ? [`★ ${badges.medals} placed`] : []),
+      ...(hasDetail
+        ? [
+            ...(badges.gold ? [`🥇${badges.gold > 1 ? ` ×${badges.gold}` : ''}`] : []),
+            ...(badges.silver ? [`🥈${badges.silver > 1 ? ` ×${badges.silver}` : ''}`] : []),
+            ...(badges.bronze ? [`🥉${badges.bronze > 1 ? ` ×${badges.bronze}` : ''}`] : []),
+          ]
+        : badges.medals ? [`★ ${badges.medals} placed`] : []),
       ...(badges.bigDiscussion ? ['▸ discussed'] : []),
       ...(badges.artistBigDiscussion ? ['▸ artist talked-up'] : []),
-      ...(badges.poop ? ['flopped before'] : []),
+      ...(badges.poop ? ['💩 flopped'] : []),
     ]}
     {#if items.length}
       <div class="usc-badges">
-        {#each items as item, i}
-          <span class="usc-badge{i === 0 && badges.medals ? ' gold' : i === (badges.medals ? 1 : 0) && badges.bigDiscussion ? ' disc' : ''}">
-            {item}
-          </span>
+        {#each items as item}
+          <span class="usc-badge">{item}</span>
         {/each}
       </div>
     {/if}
@@ -241,12 +248,44 @@
 
 {#snippet corpusLayer(corpus: Song['context']['corpus'])}
   {#if corpus}
-    <div class="usc-stats">
-      <div class="usc-stat"><span class="k">Appearances</span><span class="v">{corpus.appearances}×</span></div>
-      {#if corpus.submitters?.length}
-        <div class="usc-stat"><span class="k">Submitted by</span><span class="v" style="font-weight:400">{corpus.submitters.join(', ')}</span></div>
+    <div class="usc-corpus-wrap">
+      {#if corpus.entries?.length}
+        <div class="usc-corpus-list">
+          {#each corpus.entries as e}
+            <div class="usc-corpus-row">
+              <span class={e.mine ? 'usc-corpus-mine' : 'usc-corpus-by'}>{e.by}</span>
+              {#if e.mine}
+                <span class="usc-corpus-faint">submitted this</span>
+              {:else}
+                <span class="usc-corpus-sep">·</span>
+                <span class="usc-corpus-loc">{e.league} S{e.season} · {e.round}</span>
+                <span class="usc-corpus-pts">{e.points}pt</span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="usc-stats">
+          <div class="usc-stat"><span class="k">Appearances</span><span class="v">{corpus.appearances}×</span></div>
+          {#if corpus.submitters?.length}
+            <div class="usc-stat"><span class="k">Submitted by</span><span class="v" style="font-weight:400">{corpus.submitters.join(', ')}</span></div>
+          {/if}
+          <div class="usc-stat"><span class="k">Chat mentions</span><span class="v">{corpus.chatMentions}</span></div>
+        </div>
       {/if}
-      <div class="usc-stat"><span class="k">Chat mentions</span><span class="v">{corpus.chatMentions}</span></div>
+      {#if corpus.artistMine}
+        <p class="usc-corpus-artist-hint">Artist submitted by you in another round</p>
+      {/if}
+      {#if corpus.chatList?.length}
+        <div class="usc-corpus-mentions">
+          {#each corpus.chatList as m}
+            <div class="usc-corpus-mention">
+              <span class="usc-corpus-faint">{m.by}:</span>
+              <span class="usc-corpus-quote">"{m.quote}"</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 {/snippet}
@@ -459,6 +498,11 @@
         </div>
       {/if}
     </div>
+    {#if expandedFooter}
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--color-border-muted)">
+        {@render expandedFooter()}
+      </div>
+    {/if}
   </div>
 {/snippet}
 
