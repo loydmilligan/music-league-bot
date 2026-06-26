@@ -127,6 +127,58 @@
   let showKey = $state(false);
   let savingKey = $state(false);
 
+  // ---- image generation (base avatar) settings -----------------------------
+  let avatarImageModel = $state<string | null>(null);
+  let avatarAgeShift = $state(0);
+  let avatarSaving = $state(false);
+
+  // Image-capable models from the roster, favorites first. Matches the manual
+  // 'image' model_type or an OpenRouter modality that outputs image.
+  const imageModels = $derived(
+    [...models]
+      .filter((m) => m.model_type === 'image' || /->.*image/.test(m.model_type ?? ''))
+      .sort((a, b) => b.favorite - a.favorite || a.model_id.localeCompare(b.model_id)),
+  );
+
+  async function loadAvatarImage() {
+    try {
+      const r = await fetch('/api/settings/avatar-image');
+      if (r.ok) {
+        const d = await r.json();
+        avatarImageModel = d.model ?? null;
+        avatarAgeShift = d.ageShift ?? 0;
+      }
+    } catch { /* backend not ready */ }
+  }
+
+  async function saveAvatarModel(modelId: string) {
+    avatarImageModel = modelId || null;
+    avatarSaving = true;
+    try {
+      await fetch('/api/settings/avatar-image', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model_id: avatarImageModel }),
+      });
+    } finally {
+      avatarSaving = false;
+    }
+  }
+
+  async function saveAvatarShift() {
+    const shift = Number.isInteger(avatarAgeShift) ? avatarAgeShift : 0;
+    avatarSaving = true;
+    try {
+      await fetch('/api/settings/avatar-image', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ age_shift: shift }),
+      });
+    } finally {
+      avatarSaving = false;
+    }
+  }
+
   let lookupQuery = $state('');
   let lookupStatus = $state<'idle' | 'loading' | 'done' | 'notfound' | 'error'>('idle');
   let draft = $state<Draft | null>(null);
@@ -236,6 +288,7 @@
     loadModelVars();
     loadSections();
     loadPipeline();
+    loadAvatarImage();
   });
 
   // ---- key management -------------------------------------------------------
@@ -1127,6 +1180,56 @@
     </article>
   {/if}
 
+  <!-- ===== Image generation card (base avatar model + age shift) ===== -->
+  <article class="ml-card ml-card--accent">
+    <header class="ml-card-head">
+      <div>
+        <h3 class="ml-card-title">Image generation</h3>
+        <p class="ml-card-sub">
+          Model and settings for player base-avatar generation. The dropdown lists models marked
+          <code>image</code> in the roster above (favorites first). Leave unset to auto-pick the
+          top image model.
+        </p>
+      </div>
+      {#if avatarSaving}<span class="mlm-av-saving">saving…</span>{/if}
+    </header>
+
+    <div class="mlm-av-grid">
+      <label class="mlm-av-field">
+        <span class="mlm-av-label">Image model for base avatar generation</span>
+        {#if imageModels.length === 0}
+          <span class="mlm-av-empty">No image models in the roster — add one above with type <code>image</code>.</span>
+        {:else}
+          <select
+            class="mlm-av-select"
+            value={avatarImageModel ?? ''}
+            onchange={(e) => saveAvatarModel((e.currentTarget as HTMLSelectElement).value)}
+          >
+            <option value="">Auto (top image model)</option>
+            {#each imageModels as m (m.id)}
+              <option value={m.model_id}>{m.favorite ? '★ ' : ''}{m.nickname || m.model_id}</option>
+            {/each}
+          </select>
+        {/if}
+      </label>
+
+      <label class="mlm-av-field">
+        <span class="mlm-av-label">Age adjustment for base avatar generation (years)</span>
+        <input
+          class="mlm-av-input"
+          type="number"
+          min="-50"
+          max="50"
+          step="1"
+          bind:value={avatarAgeShift}
+          onchange={saveAvatarShift}
+          onblur={saveAvatarShift}
+        />
+        <span class="mlm-av-hint">Skews every avatar younger (negative) or older (positive) than the stored player age.</span>
+      </label>
+    </div>
+  </article>
+
 {/if}
 
 {#if activeTab === 'pipeline'}
@@ -1991,5 +2094,52 @@
     border-radius: var(--r-1);
     padding: 2px 5px;
     white-space: nowrap;
+  }
+
+  /* image generation card */
+  .mlm-av-saving {
+    font: 400 11px/1 var(--font-mono);
+    color: var(--fg-quiet);
+    align-self: center;
+  }
+  .mlm-av-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .mlm-av-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 260px;
+    flex: 1 1 260px;
+  }
+  .mlm-av-label {
+    font: 700 10px/1.2 var(--font-body);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .mlm-av-select,
+  .mlm-av-input {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    padding: 8px 10px;
+    font: 400 13px/1.3 var(--font-body);
+    color: var(--fg);
+  }
+  .mlm-av-input {
+    width: 100px;
+  }
+  .mlm-av-select:focus,
+  .mlm-av-input:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .mlm-av-hint,
+  .mlm-av-empty {
+    font: 400 11px/1.4 var(--font-mono);
+    color: var(--fg-quiet);
   }
 </style>
