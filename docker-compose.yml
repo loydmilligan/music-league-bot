@@ -30,6 +30,10 @@ services:
       - DATA_DIR=/app/data
       - DIGESTS_DIR=/app/digests
       - ML_AUTH_TRIGGER_URL=http://host.docker.internal:7679
+      # adapter-node defaults the request body cap to 512K, which rejected ~1.4MB
+      # avatar uploads before the endpoint's own 5MB check ran (request.formData()
+      # threw "failed to parse multipart form data"). 6M = 5MB cap + multipart overhead.
+      - BODY_SIZE_LIMIT=6M
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
       # on localhost:7679) via host.docker.internal.
