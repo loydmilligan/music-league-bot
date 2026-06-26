@@ -12,7 +12,7 @@ import type { DailyCost, CostCall } from './costApi.js';
 // When one day has total = yMax, it should fill 100% of the plot height.
 
 function computeBarHeights(days: DailyCost[], plotH: number): number[] {
-  const totals = days.map((d) => d.digest + d.archive + d.predict);
+  const totals = days.map((d) => d.digest + d.archive + d.predict + d.avatar);
   const yMax = Math.max(...totals, 0.001);
   return totals.map((t) => (t / yMax) * plotH);
 }
@@ -20,9 +20,9 @@ function computeBarHeights(days: DailyCost[], plotH: number): number[] {
 describe('CostBarChart scale', () => {
   it('tallest bar fills 100% of plot height', () => {
     const days: DailyCost[] = [
-      { date: '2026-06-01', digest: 0.10, archive: 0.05, predict: 0.02 },
-      { date: '2026-06-02', digest: 0.50, archive: 0.20, predict: 0.10 }, // tallest
-      { date: '2026-06-03', digest: 0.03, archive: 0.01, predict: 0.00 },
+      { date: '2026-06-01', digest: 0.10, archive: 0.05, predict: 0.02, avatar: 0 },
+      { date: '2026-06-02', digest: 0.50, archive: 0.20, predict: 0.10, avatar: 0 }, // tallest
+      { date: '2026-06-03', digest: 0.03, archive: 0.01, predict: 0.00, avatar: 0 },
     ];
     const PLOT_H = 182; // (200 - 18 label band)
     const heights = computeBarHeights(days, PLOT_H);
@@ -31,8 +31,8 @@ describe('CostBarChart scale', () => {
 
   it('zero days produce height 0', () => {
     const days: DailyCost[] = [
-      { date: '2026-06-01', digest: 0, archive: 0, predict: 0 },
-      { date: '2026-06-02', digest: 0.30, archive: 0.10, predict: 0.05 },
+      { date: '2026-06-01', digest: 0, archive: 0, predict: 0, avatar: 0 },
+      { date: '2026-06-02', digest: 0.30, archive: 0.10, predict: 0.05, avatar: 0 },
     ];
     const PLOT_H = 182;
     const heights = computeBarHeights(days, PLOT_H);
@@ -41,7 +41,7 @@ describe('CostBarChart scale', () => {
 
   it('empty-state: all zero days — yMax is clamped to 0.001 (no NaN)', () => {
     const days: DailyCost[] = [
-      { date: '2026-06-01', digest: 0, archive: 0, predict: 0 },
+      { date: '2026-06-01', digest: 0, archive: 0, predict: 0, avatar: 0 },
     ];
     const PLOT_H = 182;
     const heights = computeBarHeights(days, PLOT_H);

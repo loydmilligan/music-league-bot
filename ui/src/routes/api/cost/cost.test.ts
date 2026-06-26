@@ -92,7 +92,7 @@ describe('GET /api/cost/summary', () => {
   it('returns zeroes when no rows exist for the date', async () => {
     const res = await summaryGET(mkEvent('?date=2020-01-01'));
     const body = await res.json();
-    expect(body).toEqual({ digest: 0, archive: 0, predict: 0, total: 0 });
+    expect(body).toEqual({ digest: 0, archive: 0, predict: 0, avatar: 0, total: 0 });
   });
 
   it('sums digest and predict rows from both tables', async () => {

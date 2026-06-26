@@ -12,7 +12,7 @@ export interface Playlist { name: string; nudge: string; tracks: PlaylistTrack[]
 
 export interface FullMember {
 	id: string; name: string; initials: string; hue: string; tier: 'full';
-	joined?: string; headline?: string;
+	joined?: string; headline?: string; avatar_url?: string | null;
 	signatureArtists: SignatureArtist[];
 	genres: string[]; eras: string[];
 	rewards: string[]; punishes: string[];
@@ -27,7 +27,7 @@ export interface FullMember {
 
 export interface LiteMember {
 	id: string; name: string; initials: string; hue: string; tier: 'lite';
-	joined?: string; headline?: string;
+	joined?: string; headline?: string; avatar_url?: string | null;
 	signatureArtists: SignatureArtist[];
 	genres: string[]; eras: string[];
 	signatureSuperlative: SignatureSuperlative;

@@ -1,13 +1,273 @@
 Automate the round transition for Music League.
 
-League: Hip Jammers
-League ID: 1
-Round ID: 103
+League: Second Best
+League ID: 3
+Round ID: 131
 
-Chat content: none
+Chat content:
+6/15/26, 3:24 AM - Phil Chapin: With the upcoming week's theme I'm wondering if we are supposed to be stoned and then submit, or stay sober and wish we were stoned, and then submit…. Also what does an 8ball cost in your towns? Just worried about overpaying for a casual music league…. Less intense than my wordl league but we usually stay no more than buzzed or sleep deprived on that one.  Also do poppers count <This message was edited>
+6/15/26, 9:16 AM - Jon Black: Based on the looseness with which category compliance is enforced by the Commissioners Mariani, I think any drug goes.  Right now, I'm leaning toward the Ozempic theme song over Celebrex.
+6/15/26, 9:16 AM - Jon Black: https://www.youtube.com/watch?v=YlF5XrTO6rw
+6/15/26, 10:15 AM - Matt Mariani: Lucky for this league, compliance enforcement does not come from on high. Like a musical lord of the flies, the second best and friends music league is governed by its inhabitants. Also, briumvi slaps, ozempic is for my grandpappy's meemaw
+6/15/26, 10:15 AM - Matt Mariani: https://youtu.be/x53E0Y2i0ek?is=XHWYbP3Q1M9guTpN
+6/15/26, 10:22 AM - Jon Black: It's clear that prescription drug jingles need to be a standalone category.  That's actually how K-Dot got his start.  Heard about it on the Dissect podcast.
+6/15/26, 8:14 PM - Matt Mariani: what a round for the bonus Chapin
+6/15/26, 8:14 PM - Matt Mariani: https://digest.mattmariani.com/d/7RrFR_pukBsyfxL7/
+6/15/26, 8:40 PM - Jon Black: Joe brought the heat on the reviews. Feedback on his love of lady singers was surprising, given his three-cat-household.
+6/15/26, 8:43 PM - Jon Black: Also, my estimate of the value of a Kendrick submission was pretty close when taking into account all the L.A. Marianis.
+6/15/26, 8:46 PM - Matt Mariani: Chicken and the egg my friend
+6/15/26, 8:47 PM - Matt Mariani: Also, it's a lil Wayne song, you even had the ai dancing to your tune
+6/15/26, 8:49 PM - Jon Black: When a married couple shares the same middle name, you know things are going to get weird.
+6/15/26, 8:49 PM - Matt Mariani: Sara walcolm?
+6/15/26, 8:50 PM - Jon Black: I thought Mara is a lee also. Maybe different spelling.
+6/15/26, 8:51 PM - Matt Mariani: I'll never tell. Good job this week
+6/15/26, 8:52 PM - Matt Mariani: You no like mosquito song?
+6/15/26, 8:52 PM - Matt Mariani: I thought it was about twilight or some shit
+6/15/26, 8:54 PM - Jon Black: Thx. I gave it a +1 and said "pretty good."
+6/15/26, 8:54 PM - Jon Black: But I think it's about sex, not camping.
+6/15/26, 8:55 PM - Matt Mariani: I wanted to choose a tool song but I'm trying to expand your horizons
+6/15/26, 8:55 PM - Matt Mariani: https://open.spotify.com/track/2uzCJ4ckvFhv6F9Q1CMkys?si=E5Q2vVVHQpSY3dPeNRkd-Q
+6/15/26, 8:57 PM - Mike Layous: Stealing my lines
+6/15/26, 8:57 PM - Matt Mariani: Or if you want one that sounds good
+6/15/26, 8:57 PM - Matt Mariani: https://open.spotify.com/track/6AioOohg4bQZFA4jIYQQ2r?si=6I4PjOGPTLGTnupS-WKpqQ
+6/15/26, 8:57 PM - Jon Black: Well it wasn't a mid- indie hip-hop song, so I do appreciate that.
+6/15/26, 8:58 PM - Matt Mariani: Use of mid is sus
+6/15/26, 8:58 PM - Jon Black: Haha
+6/15/26, 8:59 PM - Jon Black: Sorry, driving and didn't want type mediocre out.
+6/15/26, 8:59 PM - Mike Layous: This league is sus
+6/15/26, 9:02 PM - Mike Layous: I think too many weird songs
+Just my opinion
+I think it's because of the theme focus
 
-NOTE: This is a test run on a past completed round. Skip STEP 8 (advance active round) — do not change the league's active round, as round 108 is the real current active round.
+Or, it's just difficult to find songs that we haven't already heard
+6/15/26, 9:03 PM - Mike Layous: I don't have any better ideas so not meaning to critique or judge
+6/15/26, 9:06 PM - Jon Black: Is that why you went for an unspooky spooky song? Out of protest?
+6/15/26, 9:10 PM - Matt Mariani: I hear you layous - but just wait it out a bit - youll have a week where you "Get it"
+6/15/26, 9:11 PM - Matt Mariani: hte good hting about the bad songs - you just listen to like 1 minute of them and strike them from your memory <This message was edited>
+6/15/26, 9:12 PM - Matt Mariani: Also - you did pick a strikingly unspooky song
+6/15/26, 9:14 PM - Mike Layous: I think each week I've barely hit the theme
 
-Run steps 1-7 only: confirm state → validate data → generate/retrieve draft → export HTML → finalize.
+Imo, the themes allow for a ton of wiggle room….
 
-Write sharing-ready.md to /mnt/session/outputs/ with the digest URL and the sharing message for Hip Jammers (WhatsApp), then print the same summary.
+Depressed chick that attempted suicide and is revealing this to her present lover causing putting her in a position a lot of vulnerability
+
+Kind of "spooky"    ;-)
+Or edgy or dark
+
+Like Matt said, like 10 Tool songs fit this perfectly but we've all already heard it.
+6/15/26, 9:17 PM - Jon Black: But does anyone disagree with my Peaky Blinders list?
+6/15/26, 9:21 PM - Matt Mariani: I think the issue you are experiencing is partially from the downvote being included. people are looking for a reason to throw their downvote at someone
+6/15/26, 9:28 PM - Mike Layous: Maybe…but I don't think so
+
+The "competition" part of the league doesn't exist. So, no one should care if they're downvoted…unless they have a lot going on behind a song choice :-)
+6/15/26, 9:30 PM - Matt Mariani: was not really saying anybody cared about getting them
+6/15/26, 9:31 PM - Matt Mariani: people don't want ot feel like jerks so they find someone whose song is loosely connected to the theme
+6/15/26, 9:32 PM - Matt Mariani: you're not complaining about your performance - but teh quality of the music solely? <This message was edited>
+6/15/26, 9:32 PM - Mike Layous: I think Susan and Sarah Walcom Black's songs were best….
+
+Instead, we're voting for Pennywise song, run rabbit run, and a borderline line monster mash (Philip) which was great imo for the theme but I would never choose to listen to in day to day life
+6/15/26, 9:33 PM - Matt Mariani: interesting - i think that song is flat out good
+6/15/26, 9:33 PM - Mike Layous: That's right
+That's right
+
+And maybe I'm off
+6/15/26, 9:34 PM - Matt Mariani: in the bekier league we are playig now witha rule that you cannot vote for a song if you ahve heard it before
+6/15/26, 9:34 PM - Matt Mariani: side effect that youd love - it kills partner collusion
+6/15/26, 9:34 PM - Mike Layous: Your taste has always been a little so so ;-)
+6/15/26, 9:34 PM - Matt Mariani: me and the rest of the league
+6/15/26, 9:35 PM - Mike Layous: I do love that
+A lot
+I'd eat that up
+6/15/26, 9:35 PM - Mike Layous: Ha
+6/15/26, 9:35 PM - Matt Mariani: we tried that rule with my family - and it failed...hard
+6/15/26, 9:36 PM - Mike Layous: Not complaining about my performance
+
+I've got so much shit im good at
+;-)
+
+I can't do everything
+6/15/26, 9:37 PM - Matt Mariani: sort of sounds like you are saying - "who cares about getting downvotes - I only care about who gets up votes"
+
+for my part - I mostly am just hoping to find that next "less than jake" kidding, but really <This message was edited>
+6/15/26, 9:39 PM - Matt Mariani: like you said - not about compettiton - just about finding new songs - or rediscovering old songs
+6/15/26, 9:40 PM - Mike Layous: I just thought there'd be a higher percentage chance of being introduced to music
+
+I am so out of it
+I was selfishly hoping everyone would spoon feed me absolute gems each week
+
+What else are you guys doing ?
+;-)
+6/15/26, 9:40 PM - Matt Mariani: I hear that, good music hard to find
+6/15/26, 9:41 PM - Mike Layous: Not sure if I remember perfectly, but I think I recall thinking that you fucking mailed it in the first few rounds… And I'm over here thinking this guy introduced this league to us to get us to find songs to show him…and he sits back and doesn't do any work
+6/15/26, 9:42 PM - Matt Mariani: hahah - I am runnign 2 leagues and in a couple more -prolly osme truth to that
+6/15/26, 9:44 PM - Matt Mariani: as Jon has pointed out a time or six, my tastes have recently changed a bit
+6/15/26, 9:47 PM - Mike Layous: Just a question (please no one get too upset)…but…
+
+Is "no theme" music league an option?…everyone just tries to submit a song each week that they think others may enjoy…
+6/15/26, 9:53 PM - Phil Chapin: I did not expect to place high let alone win with that song.  Wow!
+6/15/26, 9:54 PM - Mike Layous: You are being humble
+
+You had the "best song that fit the theme"….
+
+And these people love it
+6/15/26, 9:58 PM - Mike Layous: That sultry bourbon spiel from a few weeks ago…
+
+Your drug talk from the wee hours this morning
+
+They are eating it up
+6/15/26, 9:58 PM - Phil Chapin: Hah
+6/15/26, 9:59 PM - Matt Mariani: We can try it one week and see how it goes. I think the theme helps you focus your searching to make the possibility space a reasonable size. Also, what you are suggesting Layous, is what I have been preaching since day one
+6/15/26, 10:03 PM - Matt Mariani: the way i look at this, its not really about winning, so when choosing a song to submit, i like to think about making a good playlist - try to submit a song that I think that yallmight like that also fits the theme. If i am trying to dole out votes, the theme is more like a tiebreaker - unless it is something that fits the theme in my esimation in an interesting or notable way - its more just like a binary
+6/15/26, 10:03 PM - Mara Mariani: I think that could work. Or you could make it a little more narrow- current jam/song you've been playing on repeat lately.
+6/15/26, 10:03 PM - Matt Mariani: That's the third message i sent to y'all about it.. so I guess I should say, I agree with you
+6/15/26, 10:07 PM - Jon Black: Without a theme, and adherence to said theme, we have chaos.
+6/15/26, 10:26 PM - Jon Black: https://open.spotify.com/playlist/3BRMxR5BZWQxR5icP9QvwD?si=3eb586b7c6f74e16
+6/15/26, 10:26 PM - Jon Black: This is mostly for Matt, but all may enjoy. The top 10 Long Black Veils from best to worst. Mike Ness coming in at #10.
+6/16/26, 12:52 AM - Mike Layous: Give this playlist a listen: Zach Bryan https://open.spotify.com/playlist/2Zl8YpSincd4BnQeOAAHXC?si=eXIL4gAZRf2-NJ4hQPzb3Q&pi=0qPj2DQbQoGqZ
+6/16/26, 12:54 AM - Mike Layous: Been listening to Zach Bryan
+
+Likely too much country for some/many
+
+But thought someone might like
+6/17/26, 8:45 AM - Matt Mariani: sorry Mikey - not my style, bruv
+6/17/26, 8:46 AM - Matt Mariani: Decided to archive the history and provide even more low cost, low quality AI content, probably laced with inaccuracies- https://digest.mattmariani.com/yFfer5bePejN4PRXvgAfMg
+6/17/26, 9:02 AM - Jon Black: "Phil's dark horse entry" - "French Disko" by Stereolab.  I think missmara would have something to say about that.
+6/17/26, 9:12 AM - Phil Chapin: Hey the font is better!
+6/17/26, 9:19 AM - Phil Chapin: That AI stuff is pretty cool though. Have you read The Metamorphosis of Prime Intelligence
+6/17/26, 9:19 AM - Phil Chapin: Es loco
+6/17/26, 9:21 AM - Matt Mariani: I have not but the premise sounds right up my alley - you into scifi? got any other good recs?
+6/17/26, 9:24 AM - Phil Chapin: I think this is my first tech type of sci-fi. Was passed along from a coworker.  Quick read.  But I like suggestions too.  Maybe for Book League…🤓
+6/17/26, 9:47 AM - Matt Mariani: Ha, don't tempt me! Book league sounds like a good time to me. If ya want scifi that is compelling and fun to read, can't go wrong with dungeon crawler Carl. Jonathan just read it on my rec and I think he liked it as well
+6/17/26, 9:50 AM - Matt Mariani: Something more serious but that  will have you thinking about it for a long time after you put it down? try Blindsight
+6/17/26, 10:00 AM - Phil Chapin: Awesome they're on my list now
+6/17/26, 10:12 AM - Jon Black: Can confirm (and not just b/c the hero's sidekick is a Persian, award-winning show cat)
+6/18/26, 5:05 PM - Mara Mariani: @⁨Bp⁩ @⁨Tj Cook⁩ 2 hrs left to submit
+6/18/26, 5:50 PM - Bp: @⁨Mara Mariani⁩
+You complete me
+6/18/26, 5:52 PM - Bp: @⁨Tj Cook⁩ get your pick in before Mex vs Korea kicks off
+6/18/26, 7:34 PM - Mara Mariani: https://music.youtube.com/playlist?list=PLOhpM75zDo1k4rQlRv_JFXCAQhUS3YfCs&si=6m_XZ93a0TXTiEIQ
+6/18/26, 8:10 PM - Sara Zucker: Good tunes.
+6/18/26, 9:49 PM - Jb Joe: So, Jon Black, I'm calling bullshit. I feel that setting up an entire playlist of "Long Black Veil's" is a direct attack of my virgin offering to the music league.  Now, I will accept a wealth of blame for submitting a cover song.  That may very well have been out of line, and lame.  Still, I think that's a "spooky" song, and I think it fit the category.  The songs you provided only serve to enforce that assertion, especially the nick cave version; fuckin spooky, man!  I'll concede that the Lefty Frizzell version is the best one.  However. That Dave Matthews is an absolute piece of shit, and the chieftains not much better.  Forget about the female singers, but at least there's the Boss.  Backup singers in that one not great ether, though.  I'll never argue against Johnny, but there's no way I accept that the Ness version is the worst.  That's just incorrect.
+6/18/26, 9:49 PM - Jb Joe: Love this weeks playlist, so far...!
+6/18/26, 11:01 PM - Mike Layous: JQ…Just keep your chin up ….Don't let these negatives opinions get to you.
+6/18/26, 11:45 PM - Jon Black: In Mike Ness's defense, he does appear to know most of the words.
+6/19/26, 12:51 AM - Jac Chapin: https://open.spotify.com/track/1eA6HGJ1qZXEL7NIFKYrXK?si=57DzSHwZQkSC1bZ81ZmRew
+6/19/26, 1:19 AM - Jac Chapin: Good job people.
+6/19/26, 1:20 AM - Jac Chapin: Go USA !
+6/19/26, 9:41 AM - Jac Chapin: https://open.spotify.com/track/4AHU8QRdwCUWxPC53cw4Hh?si=NUG9KEAdQ7-hG8nCDCVCbw
+6/19/26, 1:23 PM - Jon Black: https://youtube.com/shorts/iJGo_Gfrz8c?is=0mxZbKTXZId5jL4f
+6/19/26, 1:37 PM - Jac Chapin: David Gilmore is one of my favorite guitarist of all time. So even minded. Some of the best guitar sounds of all time. Sucks Roger Waters is a lyrical genius and dick.
+6/19/26, 1:38 PM - Jac Chapin: Pink Floyd could have been one of the best bands of all time.
+6/19/26, 1:39 PM - Jon Black: Waters was not a dick. Just to wild for the anti-drug Gilmore.
+6/19/26, 1:40 PM - Jon Black: *too
+6/19/26, 1:44 PM - Jac Chapin: Yeah. Syd Barrett went down a line neither wanted to see. That put a lot of strain between the two. I think they found it hard to collaborate after that. Lyrically Gillmore is lacking. Roger is a liberal pungent now...or something.
+6/19/26, 1:45 PM - Jac Chapin: They both still play
+6/19/26, 1:45 PM - Phil Chapin: Is anyone getting high this weekend or just being nostalgic
+6/19/26, 1:46 PM - Jac Chapin: We have jobs Bro!
+6/19/26, 1:46 PM - Jac Chapin: Why?
+6/19/26, 1:46 PM - Jac Chapin: You carrying?
+6/19/26, 1:46 PM - Phil Chapin: I'm a pusher.
+6/19/26, 1:46 PM - Jac Chapin: Is that a drug thing or.....?
+6/19/26, 1:46 PM - Phil Chapin: If you want something you gotta meet with shy Ronnie in the back.
+6/19/26, 1:47 PM - Jon Black: I was just kidding. I assume Gilmore loved drugs, too. He certainly looks high in that clip.
+6/19/26, 1:47 PM - Phil Chapin: I think so. I saw the first season of the wire.
+6/19/26, 1:47 PM - Phil Chapin: And mean girls.
+6/19/26, 1:48 PM - Jac Chapin: What?
+6/19/26, 1:48 PM - Phil Chapin: I shrug myself
+6/19/26, 1:48 PM - Jac Chapin: Are you day drinking too?
+6/19/26, 1:48 PM - Phil Chapin: For America.
+6/19/26, 1:48 PM - Jac Chapin: US already won. Like twenty minutes ago.
+6/19/26, 1:49 PM - Phil Chapin: Also haven't slept since before shift yesterday.
+6/19/26, 1:49 PM - Phil Chapin: Well the beer is more cold than the water
+6/19/26, 1:50 PM - Jac Chapin: True.
+6/19/26, 1:51 PM - Phil Chapin: https://open.spotify.com/track/4d7MxMjR1dpGhQMxsDil6Z?si=pCrUkBl7RjGcgtlrmp-rig
+6/19/26, 1:52 PM - Phil Chapin: This should've been my drug song.
+6/19/26, 1:52 PM - Jac Chapin: Some of these soccer flops make LeBron James ....like a soccer player.
+6/19/26, 1:52 PM - Jac Chapin: I hate him so much.
+6/19/26, 1:53 PM - Phil Chapin: There there
+6/19/26, 1:53 PM - Jac Chapin: Look*
+6/19/26, 1:55 PM - Jac Chapin: Sorry. I hate floppers in any sport.
+6/19/26, 1:57 PM - Jac Chapin: Women's US team won a World Cup by Alex Morgan (hot) flopping three times in the box during the championship game and the pink haired player taking the PK. Not a respectable way to win.
+6/19/26, 2:00 PM - Phil Chapin: Hot
+6/19/26, 2:04 PM - Jac Chapin: Hell yeah!
+6/19/26, 2:12 PM - Jac Chapin: Sorry. Mixed in some soccer enthusiasm there.
+6/19/26, 2:13 PM - Phil Chapin: Apologies all around.
+6/19/26, 3:12 PM - Jac Chapin: Don't apologize to these people for doing nothing.
+6/19/26, 3:13 PM - Phil Chapin: You're right, my bad
+6/19/26, 3:14 PM - Jac Chapin: They don't care. It's why we love each other.
+6/19/26, 3:14 PM - Phil Chapin: Love yoh bro, no homo
+6/19/26, 3:14 PM - Jac Chapin: ?
+6/19/26, 3:14 PM - Jac Chapin: Again, no one cares.
+6/19/26, 3:15 PM - Jac Chapin: Good music...
+Really shit music...
+No one cares.
+6/19/26, 3:16 PM - Jac Chapin: Praise or rip on people's choice every week.
+6/19/26, 3:17 PM - Jac Chapin: You're doing a good job Phil.
+6/19/26, 3:18 PM - Jac Chapin: You fat ass motherfucker!
+6/19/26, 3:19 PM - Jac Chapin: Enjoy the music.
+6/19/26, 4:20 PM - Jon Black: The Chapins of Bakersfield - their reputation as brilliant conversationalists clearly well-earned.
+6/19/26, 6:09 PM - Jac Chapin: Thanks JB.
+6/19/26, 6:10 PM - Jac Chapin: You're sweet to say such.
+6/19/26, 6:12 PM - Jac Chapin: That's not just insulting to Phil and me.
+6/19/26, 6:13 PM - Jac Chapin: More ammunition for you John.
+6/19/26, 6:15 PM - Jac Chapin: I
+6/19/26, 6:16 PM - Jac Chapin: I guess it's nice you notice my family.
+6/19/26, 6:16 PM - Jon Black: 😘
+6/19/26, 6:17 PM - Jon Black: Tommy came to Friday after Thanksgiving in 2024. I seem to recall a good chat.
+6/19/26, 6:19 PM - Jac Chapin: I love the Black family. I was supper hungover. Sorry. Nothing personal.
+6/19/26, 6:19 PM - Jac Chapin: And I love you John💋
+6/19/26, 6:24 PM - Jon Black: No hangover after Thanksgiving is unamerican.  I'm proud that was your excuse.
+6/19/26, 6:27 PM - Jac Chapin: Not showing to a Black's house at thanksgiving when the girls are there still feels like an insult. I'm talking your family and Cattani and friends.
+6/19/26, 6:27 PM - Phil Chapin: Bryan is Don Meloton a good tequila company
+6/19/26, 6:28 PM - Phil Chapin: Meleton
+6/19/26, 6:28 PM - Phil Chapin: And do you know the family.
+6/19/26, 6:28 PM - Jac Chapin: ?
+6/19/26, 6:28 PM - Phil Chapin: Sorry it's for a friend. Checking references
+6/19/26, 6:28 PM - Jac Chapin: That's a question. Got it.
+6/19/26, 6:31 PM - Jac Chapin: Brother, I don't know if those octogenarians drink tequila. They wood be a lot cooler if they do.
+6/19/26, 6:33 PM - Jon Black: Debbie Lewis came last Thanksgiving.  She was no Tommy Chapin, but she was a nice addition.
+6/19/26, 6:37 PM - Jac Chapin: Sucks the bowling place closed.
+6/19/26, 6:38 PM - Jac Chapin: West Chester
+6/19/26, 6:39 PM - Jon Black: Definitely.  Apparently, it's just a big empty space now, except that diner is still open.  I wish I would have took advantage of it more as a youth.
+6/19/26, 6:40 PM - Jac Chapin: Tj is crushed.
+6/19/26, 6:42 PM - Jac Chapin: He and Mikey will find us a place. After the have rooked everyone.
+6/19/26, 6:42 PM - Jon Black: He should have focused more on bowling than golf/soccer.  He could have been a contender.
+6/19/26, 6:43 PM - Jon Black: Speaking of which, that HBO bowling series is worth a watch.  Pretty good, and one episode takes place in Reno.
+6/19/26, 6:43 PM - Jac Chapin: For true!
+6/19/26, 6:46 PM - Jac Chapin: No more "Swansening" shit. Just Cooking shit.
+6/19/26, 6:47 PM - Jac Chapin: All you can eat turkeys.🦃
+6/19/26, 7:46 PM - Jac Chapin: So....drugs anyone?
+6/19/26, 7:54 PM - Jac Chapin: https://open.spotify.com/track/5by3w3NXvwDpV9FBSOR35u?si=BdG-WsruSimcAnLOUNUgHQ
+6/19/26, 9:59 PM - Jac Chapin: https://open.spotify.com/track/3VAl4ctgeGRhkubFTaBIcY?si=LcO8AXYtTZy5txAW2IYIGA
+6/19/26, 10:00 PM - Jac Chapin: Drugs are good still.
+6/19/26, 10:04 PM - Jac Chapin: https://open.spotify.com/track/7ISqa8HKu4uhpRkJ4Uk2AC?si=srDcwmrUSF6CR0Kb-tZDFA
+6/19/26, 10:05 PM - Jac Chapin: Should have been a submission for "spooky" week.
+6/20/26, 1:18 AM - Phil Chapin: Check out this video, "song because im so strung out pink" https://share.google/qXscRoBnEveCVQwCI
+6/20/26, 1:18 AM - Phil Chapin: JAC did you mean this song
+6/21/26, 6:34 PM - Mike Layous: <Media omitted>
+6/21/26, 6:35 PM - Mike Layous: <Media omitted>
+6/21/26, 6:45 PM - Jon Black: I could crush that bowl of rice. All of it looks great!
+6/21/26, 6:46 PM - Jon Black: Enjoy
+6/22/26, 12:33 PM - Jac Chapin: Matt, is there any meat?
+6/22/26, 12:33 PM - Jac Chapin: At all?
+6/22/26, 12:35 PM - Jac Chapin: I am less worried about Layous's food. I eat like that.
+6/22/26, 12:45 PM - Matt Mariani: Me? I've cut back on red meat. But I still l devour my fair share of cooked animal flesh. Had a 'tasty burger' at smitten cafe yesterday.
+6/22/26, 2:27 PM - Matt Mariani: https://open.spotify.com/track/4UxguRE3pCAET6BianBp4F?si=N5vsNGW2RFCYn0FixezKrg
+6/22/26, 2:27 PM - Matt Mariani: Didn't forget to vote
+6/22/26, 2:29 PM - Matt Mariani: @⁨Jac Chapin⁩ @⁨Mike Layous⁩ @⁨Jb Joe⁩ @⁨Bp⁩ @⁨Sarah Black⁩
+6/22/26, 2:31 PM - Sarah Black: Thank you for the nudge!
+6/22/26, 3:03 PM - Jac Chapin: I voted. Sorry.
+6/22/26, 3:15 PM - Jac Chapin: https://share.google/RoK0ReJUpIIdd1pqJ
+6/22/26, 3:15 PM - Jac Chapin: My cousin
+6/22/26, 4:07 PM - Susan Black: Btw, the next category says it was submitted by me, but it was not. Was just thinking about some songs and I think they all fall into the genre of punk. Who really picked this?!? Just curious. Gotta do some thinking
+6/22/26, 4:10 PM - Jon Black: If you didn't submit a category, the commissioner had a category selected on your behalf.  It says, "Theme provided on behalf of Susan."  I submitted a few, and this appears to be one of mine.  You're welcome for being associated with such a fun, original, and thought-provoking category.
+6/22/26, 4:13 PM - Susan Black: Like the sound of that lap steel guitar
+6/22/26, 5:06 PM - Matt Mariani: Wow. I did not realize I was about to be publicly taken to task like this by a Black(yikes...a member of the Black family). Uncle!
+Moving forward, Season 2 will include a Black Family Exception Clause for late theme submissions so we can all avoid this level of vitriol.
+
+J/k - if you have a theme idea youd like to swap to - I think we can make the change - however - since we are so close to the next round starting - I would need it asap and I might need to make it the final round instead penultimate  - so keep in mind this could be the Finale of Season 1 of Second Best & Friends Music League - lotta presh. J/k again - if everyone is down we will probably just be starting up a new season when this one ends - so really its sort of the same as all the other rounds/themes
+6/22/26, 7:47 PM - Sara Zucker: I'd be such a respectable gal without all my downvotes. I love my song! It's so multicultural and inclusive. But I was prepared for it not to fit the vibe of the group. I always really wish he had said a black drug with his black friends and a white drug with his white friends. Offends my OCD how wonky it is now.
+
+Run all steps 1-8: confirm state → end voting → validate data → generate draft → get next round → export HTML → finalize → advance active round.
+
+Write sharing-ready.md to /mnt/session/outputs/ with the digest URL and the sharing message for Second Best (WhatsApp), then print the same summary.

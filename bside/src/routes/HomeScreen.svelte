@@ -110,7 +110,7 @@
 					<div class="bs-award-blurb">{item.blurb}</div>
 					{#if member}
 						<div class="bs-award-winner">
-							<Avatar hue={member.hue} initials={member.initials} size="sm" />
+							<Avatar hue={member.hue} initials={member.initials} size="sm" src={member.avatar_url ?? null} />
 							<span class="bs-who">{member.name}<small>tap to see profile</small></span>
 							<button class="bs-share-mini"
 								onclick={(e) => { e.stopPropagation(); openReelShare(item); }}
@@ -132,7 +132,7 @@
 		<div class="bs-players">
 			{#each readModel.members as m}
 				<button class="bs-player" onclick={() => nav.goProfile(m.id)}>
-					<Avatar hue={m.hue} initials={m.initials} size="md" />
+					<Avatar hue={m.hue} initials={m.initials} size="md" src={m.avatar_url ?? null} />
 					<span class="bs-player-txt">
 						<span class="bs-player-name">{m.name}</span>
 						{#if m.headline}
@@ -194,7 +194,7 @@
 				<div class="bs-featured-theme">{latestRound.theme}</div>
 				<div class="bs-winner-row">
 					{#if latestSubmitter}
-						<Avatar hue={latestSubmitter.hue} initials={latestSubmitter.initials} size="sm" />
+						<Avatar hue={latestSubmitter.hue} initials={latestSubmitter.initials} size="sm" src={latestSubmitter.avatar_url ?? null} />
 					{/if}
 					<div class="bs-winner-meta">
 						<div class="bs-winner-song">{latestRound.winnerSong} — {latestRound.winnerArtist}</div>

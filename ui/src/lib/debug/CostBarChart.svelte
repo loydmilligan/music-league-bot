@@ -22,17 +22,18 @@
     callsByDate?: Record<string, CostCall[]>;
   } = $props();
 
-  const CATS = ['digest', 'archive', 'predict'] as const;
+  const CATS = ['digest', 'archive', 'predict', 'avatar'] as const;
   type Cat = typeof CATS[number];
 
   const CAT_LABEL: Record<Cat, string> = {
     digest:  'Digest',
     archive: 'Archive',
     predict: 'Predict',
+    avatar:  'Avatar',
   };
 
   // Max total across all days — determines the y-scale ceiling
-  const yMax = $derived(Math.max(...days.map((d) => d.digest + d.archive + d.predict), 0.001));
+  const yMax = $derived(Math.max(...days.map((d) => d.digest + d.archive + d.predict + d.avatar), 0.001));
 
   // For each day and category, produce opacity-stepped segments.
   // Segments = individual calls sorted by cost (largest first = bottom).
@@ -84,7 +85,7 @@
   <div class="cbc-title">
     14-day spend · stacked by category
     {#if !isEmpty}
-      <span class="cbc-total">{money(days.reduce((s, d) => s + d.digest + d.archive + d.predict, 0))}</span>
+      <span class="cbc-total">{money(days.reduce((s, d) => s + d.digest + d.archive + d.predict + d.avatar, 0))}</span>
     {/if}
   </div>
 
@@ -103,7 +104,7 @@
       <!-- Bars grid -->
       <div class="cbc-bars-plot" style="height: {PLOT_H}px">
         {#each days as day (day.date)}
-          {@const total = day.digest + day.archive + day.predict}
+          {@const total = day.digest + day.archive + day.predict + day.avatar}
           {@const isZero = total <= 0}
           <div class="cbc-daycol" class:is-zero={isZero}>
             {#if isZero}
@@ -248,6 +249,7 @@
   .cbc-seg--digest  { background: var(--mash-pulp); }
   .cbc-seg--archive { background: var(--moss); }
   .cbc-seg--predict { background: var(--sky); }
+  .cbc-seg--avatar  { background: var(--amber); }
 
   .cbc-daycol.is-zero .cbc-stack {
     background: var(--ink-2);
@@ -298,6 +300,7 @@
   .cbc-leg-swatch--digest  { background: var(--mash-pulp); }
   .cbc-leg-swatch--archive { background: var(--moss); }
   .cbc-leg-swatch--predict { background: var(--sky); }
+  .cbc-leg-swatch--avatar  { background: var(--amber); }
 
   /* On narrow mobile: shrink font sizes */
   @media (max-width: 460px) {

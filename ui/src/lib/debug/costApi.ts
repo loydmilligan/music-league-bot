@@ -8,6 +8,7 @@ export interface DaySummary {
   digest: number;
   archive: number;
   predict: number;
+  avatar: number;
   total: number;
 }
 
@@ -16,9 +17,10 @@ export interface DailyCost {
   digest: number;
   archive: number;
   predict: number;
+  avatar: number;
 }
 
-export type CostCategory = 'digest' | 'archive' | 'predict';
+export type CostCategory = 'digest' | 'archive' | 'predict' | 'avatar';
 
 export interface CostCall {
   ts: string;

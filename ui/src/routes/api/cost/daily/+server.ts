@@ -33,19 +33,19 @@ export const GET: RequestHandler = ({ url }) => {
     ORDER BY day ASC
   `).all(dates[0]) as { day: string; category: string; total: number }[];
 
-  // Build a map of day → { digest, archive, predict }
-  const byDay = new Map<string, { digest: number; archive: number; predict: number }>();
+  // Build a map of day → { digest, archive, predict, avatar }
+  const byDay = new Map<string, { digest: number; archive: number; predict: number; avatar: number }>();
   for (const row of rows) {
-    if (!byDay.has(row.day)) byDay.set(row.day, { digest: 0, archive: 0, predict: 0 });
+    if (!byDay.has(row.day)) byDay.set(row.day, { digest: 0, archive: 0, predict: 0, avatar: 0 });
     const entry = byDay.get(row.day)!;
-    const cat = row.category as 'digest' | 'archive' | 'predict';
+    const cat = row.category as 'digest' | 'archive' | 'predict' | 'avatar';
     if (cat in entry) entry[cat] += row.total ?? 0;
   }
 
   // Zero-fill gaps
   const result = dates.map(date => ({
     date,
-    ...(byDay.get(date) ?? { digest: 0, archive: 0, predict: 0 }),
+    ...(byDay.get(date) ?? { digest: 0, archive: 0, predict: 0, avatar: 0 }),
   }));
 
   return json(result);

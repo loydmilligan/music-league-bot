@@ -75,6 +75,9 @@ export type StandingsRow = {
   priorTotal: number;
   roundPoints: number;
   currentTotal: number;
+  avatar_url?: string | null;   // avatar image URL (base or themed)
+  initials?: string;            // deterministic initials fallback
+  hue?: string;                 // deterministic hue for initials circle
 };
 export type StandingsPayload = {
   seasonId: number;

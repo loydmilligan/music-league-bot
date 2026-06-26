@@ -73,6 +73,7 @@ export const FullMemberSchema = z.object({
 	tier: z.literal('full'),
 	joined: z.string().optional(),
 	headline: z.string().optional(),
+	avatar_url: z.string().nullable().optional(),
 	signatureArtists: z.array(SignatureArtistSchema),
 	genres: z.array(z.string()),
 	eras: z.array(z.string()),
@@ -98,6 +99,7 @@ export const LiteMemberSchema = z.object({
 	tier: z.literal('lite'),
 	joined: z.string().optional(),
 	headline: z.string().optional(),
+	avatar_url: z.string().nullable().optional(),
 	signatureArtists: z.array(SignatureArtistSchema),
 	genres: z.array(z.string()),
 	eras: z.array(z.string()),
@@ -460,7 +462,19 @@ export async function buildReadModel(
 	// 6. Fingerprints: load from DB, generate via LLM if missing
 	const fingerprints = await loadOrGenerateFingerprints(db, memberRows);
 
-	// 7. Per-player joined season + best round (deterministic DB queries)
+	// 7. Avatar data — load from player_avatars (base or themed R2 key)
+	const avatarRows = (memberRows.length > 0
+		? db
+				.prepare(
+					`SELECT pa.player_id, pa.base_r2_key, pa.themed_r2_key
+           FROM player_avatars pa
+           WHERE pa.player_id IN (${memberRows.map(() => '?').join(',')})`,
+				)
+				.all(...memberRows.map((m) => m.player_id))
+		: []) as { player_id: number; base_r2_key: string | null; themed_r2_key: string | null }[];
+	const avatarMap = new Map(avatarRows.map((r) => [r.player_id, r]));
+
+	// 7b. Per-player joined season + best round (deterministic DB queries)
 	const joinedRows = db
 		.prepare(
 			`SELECT c.player_id, MIN(se.season_number) AS earliest_season
@@ -705,6 +719,13 @@ export async function buildReadModel(
 				...(bestRound ? { bestRound } : {}),
 			};
 
+			const avatarEntry = avatarMap.get(m.player_id);
+			const avatar_url = avatarEntry?.themed_r2_key
+				? `/api/avatars/${m.player_id}/themed`
+				: avatarEntry?.base_r2_key
+					? `/api/avatars/${m.player_id}/base`
+					: null;
+
 			const base = {
 				id: String(m.player_id),
 				name: m.name,
@@ -712,6 +733,7 @@ export async function buildReadModel(
 				hue: playerHue(m.player_id),
 				...(joinedSeason !== undefined ? { joined: `S${joinedSeason}` } : {}),
 				...(fp.summary ? { headline: fp.summary } : {}),
+				avatar_url,
 				signatureArtists,
 				genres: fp.genres,
 				eras: fp.eras,

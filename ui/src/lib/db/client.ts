@@ -450,6 +450,67 @@ export function openLeagueDb(path?: string): Database.Database {
 			).run();
 		}
 	}
+	// sprint-28 avatar system Task 1: player_avatars table — one row per player,
+	// stores R2 keys for base and themed avatar images. Themed avatar is scoped to
+	// a round so we know when to regenerate (new round = new theme context).
+	const tableNames2 = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map(r => r.name);
+	if (!tableNames2.includes('player_avatars')) {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS player_avatars (
+				player_id             INTEGER PRIMARY KEY REFERENCES players(id),
+				base_r2_key           TEXT,
+				themed_r2_key         TEXT,
+				themed_round_id       INTEGER,
+				base_generated_at     TEXT,
+				themed_generated_at   TEXT,
+				base_source           TEXT CHECK(base_source IN ('generated','uploaded')) DEFAULT 'generated'
+			);
+		`);
+	}
+	// sprint-28 avatar system Task 1: six avatar trait columns on player_profiles.
+	// Each is a freeform text field (e.g. gender, hair colour, height descriptor).
+	// Idempotent: checked via PRAGMA table_info before ALTER.
+	const playerProfileCols = db.prepare("PRAGMA table_info(player_profiles)").all() as { name: string }[];
+	if (playerProfileCols.length) {
+		const avatarCols: Array<[string, string]> = [
+			['avatar_gender', 'TEXT'],
+			['avatar_hair',   'TEXT'],   // deprecated freeform — kept as prompt fallback
+			['avatar_height', 'TEXT'],
+			['avatar_build',  'TEXT'],
+			['avatar_style',  'TEXT'],
+			['avatar_trait',  'TEXT'],
+			// later additions: race + split hair into style/length + colour
+			['avatar_race',       'TEXT'],
+			['avatar_hair_style', 'TEXT'],
+			['avatar_hair_color', 'TEXT'],
+		];
+		for (const [col, def] of avatarCols) {
+			if (!playerProfileCols.some(c => c.name === col)) {
+				db.exec(`ALTER TABLE player_profiles ADD COLUMN ${col} ${def}`);
+			}
+		}
+	}
+	// avatar cost tracking: last-generation USD cost per tier, stored directly on
+	// player_avatars so the roster editor can show "base $X · themed $Y" without a
+	// join into llm_cost_log. Updated on each (re)generation. Idempotent ALTER.
+	const playerAvatarCols = db.prepare("PRAGMA table_info(player_avatars)").all() as { name: string }[];
+	if (playerAvatarCols.length) {
+		for (const col of ['base_cost_usd', 'themed_cost_usd']) {
+			if (!playerAvatarCols.some(c => c.name === col)) {
+				db.exec(`ALTER TABLE player_avatars ADD COLUMN ${col} REAL`);
+			}
+		}
+	}
+	// sprint-28 avatar system Task 1: cap_image_gen flag on ai_models — marks
+	// which models support image generation (e.g. OpenRouter DALL-E wrappers).
+	const aiModelCols = db.prepare("PRAGMA table_info(ai_models)").all() as { name: string }[];
+	if (aiModelCols.length && !aiModelCols.some(c => c.name === 'cap_image_gen')) {
+		db.exec("ALTER TABLE ai_models ADD COLUMN cap_image_gen INTEGER NOT NULL DEFAULT 0");
+	}
+	// sprint-28 avatar system Task 1: avatar_age_shift setting — global offset
+	// (in years) applied when prompting image generation, allowing the operator
+	// to skew all avatars younger or older than the stored player age.
+	upsert.run('avatar_age_shift', '0');
 	return db;
 }
 
