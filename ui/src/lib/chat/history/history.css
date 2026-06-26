@@ -473,6 +473,51 @@
   cursor: default;
 }
 
+/* Back-to-rounds button (mobile master-detail only) */
+.ch-back {
+  display: none;
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: var(--color-bg-elevated);
+  border: none;
+  border-bottom: 1px solid var(--color-border-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+/*
+ * Mobile: the fixed 372px list + flex viewer collapse the viewer to ~0 width on
+ * a phone. Switch to a single-pane master-detail instead — show the round list
+ * full-width, and when a round is selected (.is-viewing) swap to the thread
+ * full-width with a back button.
+ */
+@media (max-width: 640px) {
+  .ch-layout {
+    height: calc(100vh - 7rem);
+  }
+  .ch-list {
+    width: 100%;
+    border-right: none;
+  }
+  .ch-columns .ch-viewer {
+    display: none;
+  }
+  .ch-columns.is-viewing .ch-list {
+    display: none;
+  }
+  .ch-columns.is-viewing .ch-viewer {
+    display: flex;
+  }
+  .ch-columns.is-viewing .ch-back {
+    display: block;
+  }
+}
+
 /* Down-latest button */
 .ch-scroll-latest {
   position: sticky;

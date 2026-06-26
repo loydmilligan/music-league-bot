@@ -356,7 +356,7 @@
     </div>
   {/if}
 
-  <div class="ch-columns">
+  <div class="ch-columns" class:is-viewing={isLocked || selectedRound !== null}>
     <!-- Left column -->
     {#if !isLocked}
       <div class="ch-list">
@@ -416,6 +416,13 @@
 
     <!-- Right column — viewer -->
     <div class="ch-viewer">
+      {#if !isLocked && selectedRound !== null}
+        <button
+          type="button"
+          class="ch-back"
+          onclick={() => { selectedRound = null; viewerMessages = []; }}
+        >← Rounds</button>
+      {/if}
       {#if isLocked}
         <!-- Locked mode: display the loaded thread directly -->
         {#if allLockedMessages.length === 0}
