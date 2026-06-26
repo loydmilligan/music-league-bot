@@ -18,9 +18,9 @@ export const GET: RequestHandler = ({ url }) => {
     GROUP BY category
   `).all(date) as { category: string; total: number }[];
 
-  const result = { digest: 0, archive: 0, predict: 0, total: 0 };
+  const result = { digest: 0, archive: 0, predict: 0, avatar: 0, total: 0 };
   for (const row of rows) {
-    const cat = row.category as 'digest' | 'archive' | 'predict';
+    const cat = row.category as 'digest' | 'archive' | 'predict' | 'avatar';
     if (cat in result) result[cat] += row.total ?? 0;
     result.total += row.total ?? 0;
   }

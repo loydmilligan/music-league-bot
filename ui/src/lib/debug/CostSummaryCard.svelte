@@ -21,6 +21,7 @@
           { key: 'digest',  label: 'Digest',  value: summary.digest,  mod: 'cd-cat--digest' },
           { key: 'archive', label: 'Archive', value: summary.archive, mod: 'cd-cat--archive' },
           { key: 'predict', label: 'Predict', value: summary.predict, mod: 'cd-cat--predict' },
+          { key: 'avatar',  label: 'Avatar',  value: summary.avatar,  mod: 'cd-cat--avatar' },
         ]
       : []
   );
@@ -161,4 +162,8 @@
   .cd-cat--predict .cd-cat-dot { background: var(--sky); }
   .cd-cat--predict .cd-cat-label { color: var(--sky); }
   .cd-cat--predict .cd-cat-bar { background: var(--sky); }
+
+  .cd-cat--avatar .cd-cat-dot { background: var(--amber); }
+  .cd-cat--avatar .cd-cat-label { color: var(--amber); }
+  .cd-cat--avatar .cd-cat-bar { background: var(--amber); }
 </style>

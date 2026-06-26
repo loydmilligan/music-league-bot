@@ -216,14 +216,6 @@
   async function submitGenerate(params: GenerateParams) {
     drafting = true;
     try {
-      const avatarPromise = params.regenAvatars
-        ? fetch('/api/avatars/generate-themed', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ roundId: data.roundId }),
-          }).then((r) => r.json() as Promise<{ generated: number; failed: number }>)
-        : Promise.resolve(null);
-
       const res = await fetch(`/api/digest/${data.roundId}/draft`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -236,11 +228,19 @@
       const body = (await res.json().catch(() => ({}))) as {
         standings?: StandingsResult['standings'];
         reconcile?: Reconcile;
+        draft?: { run_id?: string | null };
       };
       genModalOpen = false;
 
+      // Optional themed-avatar regen — fired AFTER the draft so we can pass the
+      // draft's run_id, folding the image-gen cost into this generation's run total.
       if (params.regenAvatars) {
-        avatarPromise
+        fetch('/api/avatars/generate-themed', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ roundId: data.roundId, runId: body.draft?.run_id ?? undefined }),
+        })
+          .then((r) => r.json() as Promise<{ generated: number; failed: number; costUsd: number }>)
           .then((av) => {
             if (av) showError(`Avatars: ${av.generated} generated, ${av.failed} failed`);
           })

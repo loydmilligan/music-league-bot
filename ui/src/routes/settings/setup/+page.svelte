@@ -111,6 +111,8 @@
   let avUploading = $state(false);
   let avHasBase = $state(false);
   let avBaseSource = $state<string | null>(null);
+  let avBaseCost = $state<number | null>(null);   // last base-gen cost (USD), null if uploaded/never
+  let avThemedCost = $state<number | null>(null);  // last themed-gen cost (USD)
   let avBaseVersion = $state(0); // bumps to cache-bust the preview <img> after a new base lands
 
   function startEdit(player: Player) {
@@ -127,6 +129,8 @@
     };
     avHasBase = player.avatar.hasBase;
     avBaseSource = player.avatar.baseSource;
+    avBaseCost = player.avatar.baseCostUsd;
+    avThemedCost = player.avatar.themedCostUsd;
     avBaseVersion = 0;
     newIdentityType = $state.snapshot(newIdentityType) === newIdentityType ? newIdentityType : 'whatsapp';
     newIdentityId = '';
@@ -177,8 +181,10 @@
       showBanner(`Avatar generate failed: ${msg}`, 'warn');
       return;
     }
+    const gen = await res.json().catch(() => ({}));
     avHasBase = true;
     avBaseSource = 'generated';
+    avBaseCost = typeof gen.costUsd === 'number' ? gen.costUsd : null;
     avBaseVersion += 1;
     showBanner('Base avatar generated');
     await invalidateAll();
@@ -208,6 +214,7 @@
     }
     avHasBase = true;
     avBaseSource = 'uploaded';
+    avBaseCost = null;
     avBaseVersion += 1;
     showBanner('Base avatar uploaded');
     await invalidateAll();
@@ -1185,7 +1192,9 @@
                       />
                     </div>
                     {#if avHasBase && avBaseSource}
-                      <span class="font-mono text-[9px] text-fg-faint">{avBaseSource}</span>
+                      <span class="font-mono text-[9px] text-fg-faint">
+                        {avBaseSource}{#if avBaseCost != null} · base ${avBaseCost.toFixed(3)}{/if}{#if avThemedCost != null} · themed ${avThemedCost.toFixed(3)}{/if}
+                      </span>
                     {/if}
                   </div>
 

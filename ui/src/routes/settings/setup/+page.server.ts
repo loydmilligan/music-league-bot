@@ -62,12 +62,17 @@ export const load: PageServerLoad = async () => {
   const traitsByPlayer = new Map(traitRows.map(r => [r.player_id, r]));
 
   const avatarRows = db
-    .prepare(`SELECT player_id, base_r2_key, themed_r2_key, base_source FROM player_avatars`)
+    .prepare(
+      `SELECT player_id, base_r2_key, themed_r2_key, base_source, base_cost_usd, themed_cost_usd
+       FROM player_avatars`,
+    )
     .all() as Array<{
     player_id: number;
     base_r2_key: string | null;
     themed_r2_key: string | null;
     base_source: string | null;
+    base_cost_usd: number | null;
+    themed_cost_usd: number | null;
   }>;
   const avatarByPlayer = new Map(avatarRows.map(r => [r.player_id, r]));
 
@@ -86,6 +91,8 @@ export const load: PageServerLoad = async () => {
         hasBase: !!a?.base_r2_key,
         hasThemed: !!a?.themed_r2_key,
         baseSource: a?.base_source ?? null,
+        baseCostUsd: a?.base_cost_usd ?? null,
+        themedCostUsd: a?.themed_cost_usd ?? null,
       },
     };
   });
