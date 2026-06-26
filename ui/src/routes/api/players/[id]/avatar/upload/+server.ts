@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
-import { uploadToR2 } from '$lib/server/avatarImage.js';
+import { uploadToR2, deleteFromR2, avatarKey } from '$lib/server/avatarImage.js';
 
 export const POST: RequestHandler = async ({ params, request }) => {
   const playerId = Number(params.id);
@@ -30,7 +30,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const r2Key = `${playerId}/base.png`;
+  const db = getDb();
+  // Versioned key so the new image lands on a never-cached URL (see avatarKey).
+  const prevKey = (
+    db.prepare('SELECT base_r2_key FROM player_avatars WHERE player_id = ?').get(playerId) as
+      | { base_r2_key: string | null }
+      | undefined
+  )?.base_r2_key ?? null;
+  const r2Key = avatarKey(playerId, 'base');
 
   try {
     await uploadToR2(r2Key, bytes);
@@ -39,7 +46,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     return json({ error: `R2 upload failed: ${msg}` }, { status: 500 });
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO player_avatars (player_id, base_r2_key, base_generated_at, base_source, base_cost_usd)
@@ -50,6 +56,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
        base_source = 'uploaded',
        base_cost_usd = NULL`,
   ).run(playerId, r2Key, now);
+
+  // Best-effort: remove the previous object so orphans don't accumulate.
+  if (prevKey && prevKey !== r2Key) await deleteFromR2(prevKey);
 
   return json({ url: `/api/avatars/${playerId}/base` }, { status: 200 });
 };

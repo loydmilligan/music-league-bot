@@ -4,6 +4,8 @@ import { getDb } from '$lib/db/client.js';
 import {
   callOpenRouterImage,
   uploadToR2,
+  deleteFromR2,
+  avatarKey,
   modelForAvatar,
   buildBasePrompt,
   logImageGen,
@@ -68,7 +70,13 @@ export const POST: RequestHandler = async ({ params }) => {
     return json({ error: `Image generation failed: ${msg}` }, { status: 500 });
   }
 
-  const r2Key = `${playerId}/base.png`;
+  // Versioned key so the new image lands on a never-cached URL (see avatarKey).
+  const prevKey = (
+    db.prepare('SELECT base_r2_key FROM player_avatars WHERE player_id = ?').get(playerId) as
+      | { base_r2_key: string | null }
+      | undefined
+  )?.base_r2_key ?? null;
+  const r2Key = avatarKey(playerId, 'base');
   try {
     await uploadToR2(r2Key, result.bytes);
   } catch (err) {
@@ -88,6 +96,9 @@ export const POST: RequestHandler = async ({ params }) => {
   ).run(playerId, r2Key, now, result.costUsd);
 
   logImageGen(db, result, model, { label: 'base', playerId, outputKey: r2Key });
+
+  // Best-effort: remove the previous object so orphans don't accumulate.
+  if (prevKey && prevKey !== r2Key) await deleteFromR2(prevKey);
 
   return json({ url: `/api/avatars/${playerId}/base`, costUsd: result.costUsd }, { status: 200 });
 };
