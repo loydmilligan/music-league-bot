@@ -96,6 +96,9 @@ export const load: PageServerLoad = async () => {
         trait: t?.avatar_trait ?? '',
         hasBase: !!a?.base_r2_key,
         hasThemed: !!a?.themed_r2_key,
+        // Unique per image version — the preview <img> cache-busts on this so a
+        // re-upload/regenerate never serves the stale prior image.
+        baseKey: a?.base_r2_key ?? null,
         baseSource: a?.base_source ?? null,
         baseCostUsd: a?.base_cost_usd ?? null,
         themedCostUsd: a?.themed_cost_usd ?? null,

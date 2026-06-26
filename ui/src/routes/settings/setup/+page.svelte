@@ -14,6 +14,7 @@
     AVATAR_HAIR_COLORS,
     stylesForGender,
   } from '$lib/avatarTraits.js';
+  import { basePreviewUrl } from '$lib/avatarPreview.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -128,7 +129,6 @@
   let avBaseSource = $state<string | null>(null);
   let avBaseCost = $state<number | null>(null);   // last base-gen cost (USD), null if uploaded/never
   let avThemedCost = $state<number | null>(null);  // last themed-gen cost (USD)
-  let avBaseVersion = $state(0); // bumps to cache-bust the preview <img> after a new base lands
 
   function startEdit(player: Player) {
     editingId = player.id;
@@ -148,7 +148,6 @@
     avBaseSource = player.avatar.baseSource;
     avBaseCost = player.avatar.baseCostUsd;
     avThemedCost = player.avatar.themedCostUsd;
-    avBaseVersion = 0;
     newIdentityType = $state.snapshot(newIdentityType) === newIdentityType ? newIdentityType : 'whatsapp';
     newIdentityId = '';
     newIdentityLeague = '';
@@ -208,7 +207,6 @@
     avHasBase = true;
     avBaseSource = 'generated';
     avBaseCost = typeof gen.costUsd === 'number' ? gen.costUsd : null;
-    avBaseVersion += 1;
     showBanner('Base avatar generated');
     await invalidateAll();
   }
@@ -238,7 +236,6 @@
     avHasBase = true;
     avBaseSource = 'uploaded';
     avBaseCost = null;
-    avBaseVersion += 1;
     showBanner('Base avatar uploaded');
     await invalidateAll();
   }
@@ -1178,9 +1175,9 @@
                   <!-- Base avatar preview + actions -->
                   <div class="flex flex-col items-center gap-2 shrink-0">
                     <div class="w-24 h-24 rounded-xl overflow-hidden border border-border-muted bg-bg-elevated flex items-center justify-center">
-                      {#if avHasBase}
+                      {#if player.avatar.baseKey}
                         <img
-                          src="/api/avatars/{player.id}/base?v={avBaseVersion}"
+                          src={basePreviewUrl(player.id, player.avatar.baseKey)}
                           alt="Base avatar for {player.name}"
                           class="w-full h-full object-cover"
                         />
