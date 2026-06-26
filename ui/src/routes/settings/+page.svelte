@@ -138,6 +138,18 @@
   let filter = $state<Filter>('all');
   let triageOpen = $state(false);
 
+  // Live hierarchy — seeded from the SSR load, then refreshed client-side so the
+  // HierarchyNavigator status chips reflect completions without a full page
+  // reload. `data.hierarchy` alone is fetched once at load and goes stale.
+  let hierarchy = $state<HierarchyLeague[]>(data.hierarchy as HierarchyLeague[]);
+
+  async function refreshHierarchy() {
+    try {
+      const r = await fetch('/api/metadata-queue/hierarchy');
+      if (r.ok) hierarchy = ((await r.json()) as { hierarchy: HierarchyLeague[] }).hierarchy;
+    } catch { /* silently ignore */ }
+  }
+
   // ── View toggle: 'rows' (JobTypeRollups) | 'heatmap' (HeatmapView) ──────
   type ViewMode = 'rows' | 'heatmap';
   let view = $state<ViewMode>('rows');
@@ -199,7 +211,6 @@
     const rsv = roundSubView;
     if (v !== 'heatmap' || s.level !== 'round' || rsv !== 'rounds') return;
     // Find parent season_id from hierarchy
-    const hierarchy = data.hierarchy as HierarchyLeague[];
     let parentSeasonId: number | null = null;
     outer: for (const league of hierarchy) {
       for (const season of league.seasons) {
@@ -235,6 +246,8 @@
         const r = await fetch(url);
         if (r.ok) queueData = (await r.json()) as QueueStatusPayload;
       } catch { /* silently ignore */ }
+      // Keep the navigator chips in sync with background worker progress.
+      refreshHierarchy();
     }
     doFetch();
     const interval = setInterval(doFetch, 10000);
@@ -287,6 +300,7 @@
           : `/api/metadata-queue/status?level=${scope.level}&id=${scope.id}`;
         const res = await fetch(statusUrl);
         if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
+        refreshHierarchy();
       }
     } catch { /* ignore */ }
   }
@@ -353,6 +367,7 @@
           : `/api/metadata-queue/status?level=${scope.level}&id=${scope.id}`;
         const res = await fetch(statusUrl);
         if (res.ok) queueData = (await res.json()) as QueueStatusPayload;
+        refreshHierarchy();
         setTimeout(() => { fillGapsToast = null; }, 3500);
       }
     } catch { /* ignore */ } finally {
@@ -365,7 +380,6 @@
   const enrichableTypes = ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics'] as const;
 
   const enrichCount = $derived.by(() => {
-    const hierarchy = data.hierarchy as HierarchyLeague[];
     const songsInScope = (() => {
       if (scope.level === 'round') {
         return queueData?.coverageMatrix?.length ?? 0;
@@ -544,7 +558,7 @@
 
   <!-- Hierarchy navigator (scope drill-down) -->
   <HierarchyNavigator
-    hierarchy={data.hierarchy}
+    {hierarchy}
     {scope}
     onScope={(s) => { scope = s; filter = 'all'; }}
   />

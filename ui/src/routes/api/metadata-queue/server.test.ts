@@ -25,6 +25,7 @@ let POST_fillGaps: typeof import('./fill-gaps/+server.js').POST;
 let POST_retry: typeof import('./retry/+server.js').POST;
 let POST_enqueue: typeof import('./enqueue/+server.js').POST;
 let GET_children: typeof import('./children/+server.js').GET;
+let GET_hierarchy: typeof import('./hierarchy/+server.js').GET;
 
 // ---------------------------------------------------------------------------
 // Seed helpers
@@ -104,6 +105,7 @@ beforeEach(async () => {
 	({ POST: POST_retry } = await import('./retry/+server.js'));
 	({ POST: POST_enqueue } = await import('./enqueue/+server.js'));
 	({ GET: GET_children } = await import('./children/+server.js'));
+	({ GET: GET_hierarchy } = await import('./hierarchy/+server.js'));
 });
 
 // ---------------------------------------------------------------------------
@@ -747,5 +749,39 @@ describe('GET /api/metadata-queue/children', () => {
 		// ytm done=1 (W1 done), total=1
 		expect(season.byJobType['ytm']?.total).toBe(1);
 		expect(season.byJobType['ytm']?.done).toBe(1);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/metadata-queue/hierarchy
+// ---------------------------------------------------------------------------
+
+function mkHierarchyEvent() {
+	return {} as unknown as Parameters<typeof GET_hierarchy>[0];
+}
+
+describe('GET /api/metadata-queue/hierarchy', () => {
+	it('returns 200 with a hierarchy array', async () => {
+		seedChildrenRound(db, 90, 'League H', 900, 1, 9000, 'Round H1', ['spotify:track:H1']);
+
+		const res = await GET_hierarchy(mkHierarchyEvent());
+		expect(res.status).toBe(200);
+		const body = await res.json() as { hierarchy: Array<{ name: string; seasons: unknown[] }> };
+		expect(Array.isArray(body.hierarchy)).toBe(true);
+		const leagueH = body.hierarchy.find(l => l.name === 'League H');
+		expect(leagueH).toBeDefined();
+		expect(Array.isArray(leagueH!.seasons)).toBe(true);
+	});
+
+	it('reflects fresh roll-up counts (done after completion)', async () => {
+		seedChildrenRound(db, 91, 'League I', 910, 1, 9100, 'Round I1', ['spotify:track:I1']);
+		enqueue(db, 'spotify:track:I1', 'ytm');
+		db.prepare("UPDATE song_metadata_queue SET status='done' WHERE spotify_uri='spotify:track:I1' AND job_type='ytm'").run();
+
+		const res = await GET_hierarchy(mkHierarchyEvent());
+		const body = await res.json() as { hierarchy: Array<{ name: string; done: number; total: number }> };
+		const leagueI = body.hierarchy.find(l => l.name === 'League I');
+		expect(leagueI).toBeDefined();
+		expect(leagueI!.done).toBe(1);
 	});
 });
