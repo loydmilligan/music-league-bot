@@ -450,3 +450,36 @@ dots, read-only MiniDna, read-only ScoreChip) into one component: `mode` × `edi
 **Next step:** hand the brief to Claude Design (repo access + the two doc paths) → get a
 design (canonical type, component API, variant system) → spec → plan → build. Supersedes
 the never-built standalone single-song-analysis UI.
+
+## Avatar system — follow-ups (drafted 2026-06-26, owner Matt) — 2 features + 2 bug fixes
+
+**Context.** Player avatars (base + per-round themed images, R2-backed) ship in the digest.
+Source: `ui/src/routes/api/avatars/*`, `ui/src/lib/server/avatarImage.ts`, the Settings →
+Setup per-player editor (`ui/src/routes/settings/setup/+page.svelte`), and the digest
+standings render. Four asks captured this session:
+
+1. **Wipe-avatars button in Settings (S).** Add a button (Settings → Setup, or the avatar
+   section) that clears ALL avatar images — delete every R2 object referenced by
+   `player_avatars.{base_r2_key,themed_r2_key}` and clear the `player_avatars` rows
+   (preserve `player_profiles` traits). **Require a confirmation dialog** before it fires.
+   Mirrors the manual wipe done 2026-06-26 (delete R2 objects via the CF API, then
+   `DELETE FROM player_avatars`). New endpoint e.g. `POST /api/avatars/wipe`.
+
+2. **Lock avatars when a digest is finalized (M).** Option so that once a digest is
+   finalized, its avatars are frozen/snapshotted and no longer regenerate or get wiped —
+   the finalized digest keeps the exact images it shipped with. Decide storage: snapshot
+   the R2 keys onto the digest/round record at finalize time so later regen/wipe can't
+   change a published digest.
+
+3. **Bug — digest ranking number placement (S, NOT image-related).** In the avatar digest
+   layout, the **current ranking** was supposed to remain on the **far left as a large
+   number** (about the size of the avatar). The number rendered **at the bottom of the
+   avatar** was meant to be the **previous week's ranking**. Currently this is wrong — fix
+   the standings render so current rank = big left number, avatar-bottom number = prior
+   week's rank. (Digest standings render — `ui/src/routes/api/digest/[roundId]/standings`
+   / the standings chart component.)
+
+4. **Bug — "generate avatars during digest creation" toggle has no off path (S).** When the
+   toggle is **unchecked**, avatars should NOT be included and the digest should fall back
+   to the **old no-avatar style**. Currently unchecking it doesn't suppress avatars / use
+   the legacy layout. Wire the toggle so off = legacy (no-avatar) rendering.
