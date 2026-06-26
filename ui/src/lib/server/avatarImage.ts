@@ -169,6 +169,35 @@ export async function uploadToR2(key: string, bytes: Uint8Array): Promise<void> 
 }
 
 /**
+ * Best-effort delete of an R2 object. Used to clean up the previous avatar after a
+ * new versioned key is written. Never throws — a failed cleanup just leaves an
+ * orphan object, which is harmless.
+ */
+export async function deleteFromR2(key: string): Promise<void> {
+  const accountId = process.env.CF_ACCOUNT_ID;
+  const bucket = process.env.CF_R2_BUCKET;
+  const token = process.env.CF_R2_API_TOKEN;
+  if (!accountId || !bucket || !token) return;
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucket}/objects/${encodeURIComponent(key)}`;
+  try {
+    await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    // orphan cleanup is best-effort
+  }
+}
+
+/**
+ * Unique R2 key for an avatar generation. Versioned (timestamp) so each write lands
+ * on a never-before-cached URL — the Cloudflare edge caches R2 API GETs per-URL and
+ * does NOT purge them when an object is overwritten, so reusing a fixed key
+ * ({id}/base.png) served the stale prior image after a re-upload.
+ */
+export function avatarKey(playerId: number, type: 'base' | 'themed'): string {
+  return `${playerId}/${type}-${Date.now()}.png`;
+}
+
+/**
  * Build a text-to-image prompt for a player's base avatar.
  * Optional trait fields are omitted when null/empty.
  * Age is clamped to [5, 95] after applying the shift.

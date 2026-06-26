@@ -4,6 +4,8 @@ import { getDb } from '$lib/db/client.js';
 import {
   callOpenRouterImage,
   uploadToR2,
+  deleteFromR2,
+  avatarKey,
   modelForAvatar,
   buildBasePrompt,
   logImageGen,
@@ -99,7 +101,13 @@ export const POST: RequestHandler = async ({ request }) => {
     players.map(async (player) => {
       const prompt = buildThemedPrompt(player, effectiveShift, round);
       const result = await callOpenRouterImage(prompt, model, { aspect_ratio: '1:1' });
-      const key = `${player.id}/themed.png`;
+      // Versioned key so the new image lands on a never-cached URL (see avatarKey).
+      const prevKey = (
+        db.prepare('SELECT themed_r2_key FROM player_avatars WHERE player_id = ?').get(player.id) as
+          | { themed_r2_key: string | null }
+          | undefined
+      )?.themed_r2_key ?? null;
+      const key = avatarKey(player.id, 'themed');
       await uploadToR2(key, result.bytes);
       db.prepare(
         `INSERT INTO player_avatars (player_id, themed_r2_key, themed_round_id, themed_generated_at, themed_cost_usd)
@@ -117,6 +125,7 @@ export const POST: RequestHandler = async ({ request }) => {
         runId,
         outputKey: key,
       });
+      if (prevKey && prevKey !== key) await deleteFromR2(prevKey);
       return result.costUsd;
     }),
   );

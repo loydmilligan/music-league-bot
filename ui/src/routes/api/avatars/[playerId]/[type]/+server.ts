@@ -56,7 +56,11 @@ export const GET: RequestHandler = async ({ params }) => {
   return new Response(r2res.body, {
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': 'max-age=3600',
+      // Short cache: the R2 key is versioned per write so bytes never change under a
+      // given key, but the avatar_url (/api/avatars/{id}/{type}) is stable — a long
+      // cache here would let display surfaces lag behind a re-upload by up to an hour.
+      // 60s keeps them fresh while still absorbing repeated views.
+      'Cache-Control': 'max-age=60',
     },
   });
 };
