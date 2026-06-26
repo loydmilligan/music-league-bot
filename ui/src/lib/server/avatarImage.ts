@@ -1,7 +1,10 @@
 import type Database from 'better-sqlite3';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_AVATAR_MODEL = 'black-forest-labs/flux-1.1-pro';
+// A real OpenRouter image-output model (verified present in /api/v1/models).
+// The previous default ('black-forest-labs/flux-1.1-pro') is not a valid OpenRouter
+// model ID and made every avatar generation 400 when no image model was configured.
+const DEFAULT_AVATAR_MODEL = 'google/gemini-2.5-flash-image';
 
 /**
  * Call OpenRouter image generation endpoint and return the raw image bytes.
@@ -140,12 +143,34 @@ export function buildBasePrompt(
 
 /**
  * Resolve the model to use for avatar image generation.
- * Fallback chain: settings['avatar_image_model'] → env OPENROUTER_AVATAR_IMAGE_MODEL → hardcoded default.
+ * Priority:
+ *   1. settings['avatar_image_model'] — explicit override (no UI yet, kept for compat)
+ *   2. an image-capable model from the Models screen (ai_models) — favorite first, so the
+ *      operator picks which one by starring it. Matches the manual 'image' model_type or an
+ *      OpenRouter modality that outputs image (e.g. 'text+image->text+image').
+ *   3. env OPENROUTER_AVATAR_IMAGE_MODEL
+ *   4. hardcoded valid default
  */
 export function modelForAvatar(db: Database.Database): string {
   const row = db
     .prepare('SELECT value FROM settings WHERE key = ?')
     .get('avatar_image_model') as { value: string } | undefined;
   if (row?.value) return row.value;
+
+  // ai_models may not exist on a fresh DB — guard the lookup.
+  try {
+    const model = db
+      .prepare(
+        `SELECT model_id FROM ai_models
+         WHERE model_type = 'image' OR model_type LIKE '%->%image%'
+         ORDER BY favorite DESC, sort_order ASC, id ASC
+         LIMIT 1`,
+      )
+      .get() as { model_id: string } | undefined;
+    if (model?.model_id) return model.model_id;
+  } catch {
+    // table absent — fall through to env/default
+  }
+
   return process.env.OPENROUTER_AVATAR_IMAGE_MODEL ?? DEFAULT_AVATAR_MODEL;
 }

@@ -94,7 +94,9 @@
 
   let editingId = $state<number | null>(null);
   let editName = $state('');
-  let editAge = $state<string>('');
+  // Bound to a type="number" input, so Svelte stores a number (or null when blank) —
+  // NOT a string. Treating it as a string (.trim()) is what wedged the save spinner.
+  let editAge = $state<number | null>(null);
   let editSaving = $state(false);
 
   // ---- avatar editor (operates on the currently-edited player) -------------
@@ -114,7 +116,7 @@
   function startEdit(player: Player) {
     editingId = player.id;
     editName = player.name;
-    editAge = player.age != null ? String(player.age) : '';
+    editAge = player.age ?? null;
     avTraits = {
       gender: player.avatar.gender,
       style: player.avatar.style,
@@ -214,17 +216,23 @@
   async function saveNameAge() {
     if (!editingId || editSaving) return;
     editSaving = true;
-    const body: Record<string, unknown> = {};
-    if (editName.trim()) body.name = editName.trim();
-    const parsedAge = editAge.trim() === '' ? null : Number(editAge.trim());
-    if (editAge.trim() === '' || (parsedAge !== null && Number.isInteger(parsedAge) && parsedAge >= 0)) {
-      body.age = parsedAge;
+    try {
+      const body: Record<string, unknown> = {};
+      if (editName.trim()) body.name = editName.trim();
+      // editAge is a number (or null when blank) from the type="number" binding.
+      const age = editAge;
+      if (age === null || (Number.isInteger(age) && age >= 0 && age <= 150)) {
+        body.age = age;
+      }
+      const res = await apiCall(`/api/players/${editingId}`, 'PATCH', body);
+      if (!res.ok) { showBanner('Error saving player', 'warn'); return; }
+      showBanner('Player updated');
+      await invalidateAll();
+    } finally {
+      // Always release the spinner, even if a fetch throws — the old code left
+      // "saving…" stuck forever when this function errored mid-way.
+      editSaving = false;
     }
-    const res = await apiCall(`/api/players/${editingId}`, 'PATCH', body);
-    editSaving = false;
-    if (!res.ok) { showBanner('Error saving player', 'warn'); return; }
-    showBanner('Player updated');
-    await invalidateAll();
   }
 
   let membershipSaving = $state<Record<string, boolean>>({});
