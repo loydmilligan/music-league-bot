@@ -11,6 +11,7 @@ import {
 } from '$lib/chat/historyQuery.js';
 import { getAllLeagues, getSeasonsForLeague } from '$lib/db/leagues.js';
 import { getRoundsForSeason } from '$lib/db/rounds.js';
+import { buildRoundWindows } from '$lib/chat/roundWindow.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const db = getDb();
@@ -61,32 +62,49 @@ export const load: PageServerLoad = async ({ url }) => {
     const seasons = getSeasonsForLeague(db, league.id);
     for (const season of seasons) {
       const rounds = getRoundsForSeason(db, season.id);
-      for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        const nextRound = rounds[i + 1];
-        const fromIso = round.createdAt;
-        const toIso = nextRound ? nextRound.createdAt : new Date().toISOString();
-        const isLive = !nextRound;
+      // Real phase timestamps (populated by the email poller) live in columns the
+      // Round mapper doesn't expose — read them directly and merge by id.
+      const phaseById = new Map(
+        (
+          db
+            .prepare('SELECT id, voting_started_at, voting_ended_at FROM rounds WHERE season_id = ?')
+            .all(season.id) as Array<{ id: number; voting_started_at: string | null; voting_ended_at: string | null }>
+        ).map((r) => [r.id, r] as const),
+      );
+      const windows = buildRoundWindows(
+        rounds.map((r) => ({
+          id: r.id,
+          name: r.name,
+          seasonNumber: season.seasonNumber,
+          votingStartedAt: phaseById.get(r.id)?.voting_started_at ?? null,
+          votingEndedAt: phaseById.get(r.id)?.voting_ended_at ?? null,
+          submissionDeadline: r.submissionDeadline ?? null,
+          votingDeadline: r.votingDeadline ?? null,
+          createdAt: r.createdAt,
+        })),
+        new Date().toISOString(),
+      );
 
+      for (const w of windows) {
         // Buffer adjustment
-        let qFrom = fromIso;
-        let qTo = toIso;
+        let qFrom = w.fromIso;
+        let qTo = w.toIso;
         if (chatSettings.roundBoundary === 'buffer') {
           const bufMs = chatSettings.bufferDays * 86_400_000;
-          qFrom = new Date(new Date(fromIso).getTime() - bufMs).toISOString();
-          qTo = new Date(new Date(toIso).getTime() + bufMs).toISOString();
+          qFrom = new Date(new Date(w.fromIso).getTime() - bufMs).toISOString();
+          qTo = new Date(new Date(w.toIso).getTime() + bufMs).toISOString();
         }
 
         const stats = getRoundStats(db, groupName, qFrom, qTo);
         historyRounds.push({
-          id: round.id,
-          name: round.name,
-          seasonNumber: season.seasonNumber,
-          fromIso,
-          toIso,
+          id: w.id,
+          name: w.name,
+          seasonNumber: w.seasonNumber,
+          fromIso: w.fromIso,
+          toIso: w.toIso,
           platform,
           groupName,
-          isLive,
+          isLive: w.isLive,
           ...stats,
         });
       }

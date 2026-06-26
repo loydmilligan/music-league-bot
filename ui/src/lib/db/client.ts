@@ -26,7 +26,14 @@ export function openLeagueDb(path?: string): Database.Database {
 	// Relax ml_submissions.competitor_id NOT NULL → nullable so anonymous
 	// playlist-ingest rows (sprint-5 D2) can use competitor_id IS NULL.
 	// SQLite has no ALTER COLUMN; one-time table rebuild preserving every row.
-	const msCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string; notnull: number }[];
+	// Real round phase timestamps, populated by the Music League email poller
+		// (src/email). Kept in sync with src/email/emailIngest.ensureEmailSchema.
+		for (const phaseCol of ['round_started_at', 'voting_started_at', 'voting_ended_at']) {
+			if (!roundsCols.some(c => c.name === phaseCol)) {
+				db.exec(`ALTER TABLE rounds ADD COLUMN ${phaseCol} TEXT`);
+			}
+		}
+		const msCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string; notnull: number }[];
 	const competitorCol = msCols.find(c => c.name === 'competitor_id');
 	if (competitorCol && competitorCol.notnull === 1) {
 		db.exec(`

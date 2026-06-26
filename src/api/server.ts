@@ -5,6 +5,7 @@ import { SpotifyAdapter } from '../spotify/adapter.js';
 import { kvDelete, kvGet, kvSet } from './tournamentStore.js';
 import { computePopularityProxies, getLastfmTrackInfo } from './lastfm.js';
 import { getMlAuthState, probeMlAuth, startMlAuthHeartbeat } from './mlAuthHeartbeat.js';
+import { startEmailPoller } from '../email/emailPoller.js';
 import {
   ingestRelayPayload,
   listChatGroups,
@@ -270,6 +271,7 @@ const server = createServer(async (req, res) => {
 });
 
 startMlAuthHeartbeat();
+startEmailPoller();
 
 server.listen(PORT, () => {
   console.log(`[bracket-api] Listening on http://localhost:${PORT}`);
