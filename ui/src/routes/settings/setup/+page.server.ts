@@ -46,17 +46,20 @@ export const load: PageServerLoad = async () => {
   // render the trait controls and base-avatar preview without N round-trips.
   const traitRows = db
     .prepare(
-      `SELECT player_id, avatar_gender, avatar_style, avatar_height,
-              avatar_build, avatar_hair, avatar_trait
+      `SELECT player_id, avatar_gender, avatar_race, avatar_style, avatar_height,
+              avatar_build, avatar_hair, avatar_hair_style, avatar_hair_color, avatar_trait
        FROM player_profiles`,
     )
     .all() as Array<{
     player_id: number;
     avatar_gender: string | null;
+    avatar_race: string | null;
     avatar_style: string | null;
     avatar_height: string | null;
     avatar_build: string | null;
     avatar_hair: string | null;
+    avatar_hair_style: string | null;
+    avatar_hair_color: string | null;
     avatar_trait: string | null;
   }>;
   const traitsByPlayer = new Map(traitRows.map(r => [r.player_id, r]));
@@ -83,9 +86,12 @@ export const load: PageServerLoad = async () => {
       ...p,
       avatar: {
         gender: t?.avatar_gender ?? '',
+        race: t?.avatar_race ?? '',
         style: t?.avatar_style ?? '',
         height: t?.avatar_height ?? '',
         build: t?.avatar_build ?? '',
+        hairStyle: t?.avatar_hair_style ?? '',
+        hairColor: t?.avatar_hair_color ?? '',
         hair: t?.avatar_hair ?? '',
         trait: t?.avatar_trait ?? '',
         hasBase: !!a?.base_r2_key,

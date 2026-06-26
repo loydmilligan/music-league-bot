@@ -5,6 +5,15 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
+  import {
+    AVATAR_GENDERS,
+    AVATAR_RACES,
+    AVATAR_HEIGHTS,
+    AVATAR_BUILDS,
+    AVATAR_HAIR_STYLES,
+    AVATAR_HAIR_COLORS,
+    stylesForGender,
+  } from '$lib/avatarTraits.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -100,12 +109,18 @@
   let editSaving = $state(false);
 
   // ---- avatar editor (operates on the currently-edited player) -------------
-  const AV_STYLES = ['average', 'skater', 'preppy', 'formal', 'jock', 'punk', 'bohemian'];
-  const AV_GENDERS = ['male', 'female', 'nonbinary'];
-  const AV_HEIGHTS = ['petite', 'short', 'average', 'tall', 'very tall'];
-  const AV_BUILDS = ['lanky', 'medium', 'athletic', 'thick'];
+  const AV_GENDERS = AVATAR_GENDERS;
+  const AV_RACES = AVATAR_RACES;
+  const AV_HEIGHTS = AVATAR_HEIGHTS;
+  const AV_BUILDS = AVATAR_BUILDS;
+  const AV_HAIR_STYLES = AVATAR_HAIR_STYLES;
+  const AV_HAIR_COLORS = AVATAR_HAIR_COLORS;
 
-  let avTraits = $state({ gender: '', style: '', height: '', build: '', hair: '', trait: '' });
+  let avTraits = $state({
+    gender: '', race: '', style: '', height: '', build: '', hairStyle: '', hairColor: '', trait: '',
+  });
+  // Style options depend on the selected gender (separate list per gender).
+  const avStyleOptions = $derived(stylesForGender(avTraits.gender));
   let avSaving = $state(false);
   let avGenerating = $state(false);
   let avUploading = $state(false);
@@ -121,10 +136,12 @@
     editAge = player.age ?? null;
     avTraits = {
       gender: player.avatar.gender,
+      race: player.avatar.race,
       style: player.avatar.style,
       height: player.avatar.height,
       build: player.avatar.build,
-      hair: player.avatar.hair,
+      hairStyle: player.avatar.hairStyle,
+      hairColor: player.avatar.hairColor,
       trait: player.avatar.trait,
     };
     avHasBase = player.avatar.hasBase;
@@ -152,10 +169,12 @@
     avSaving = true;
     const res = await apiCall(`/api/players/${editingId}/avatar/traits`, 'PATCH', {
       avatar_gender: avTraits.gender,
+      avatar_race: avTraits.race,
       avatar_style: avTraits.style,
       avatar_height: avTraits.height,
       avatar_build: avTraits.build,
-      avatar_hair: avTraits.hair,
+      avatar_hair_style: avTraits.hairStyle,
+      avatar_hair_color: avTraits.hairColor,
       avatar_trait: avTraits.trait,
     });
     avSaving = false;
@@ -165,6 +184,10 @@
   function setTrait<K extends keyof typeof avTraits>(key: K, value: string) {
     // Toggle off a pill if the same value is clicked again.
     avTraits[key] = avTraits[key] === value ? '' : value;
+    // Changing gender re-scopes the style list; drop a now-invalid style.
+    if (key === 'gender' && avTraits.style && !stylesForGender(avTraits.gender).includes(avTraits.style)) {
+      avTraits.style = '';
+    }
     saveTraits();
   }
 
@@ -1201,20 +1224,6 @@
                   <!-- Trait controls -->
                   <div class="flex-1 flex flex-col gap-3">
                     <div>
-                      <div class="font-mono text-[10px] text-fg-faint mb-1">Style</div>
-                      <div class="flex flex-wrap gap-1">
-                        {#each AV_STYLES as s (s)}
-                          <button
-                            type="button"
-                            onclick={() => setTrait('style', s)}
-                            class="font-mono text-[10px] px-2 py-0.5 rounded-sm border transition-colors {avTraits.style === s
-                              ? 'border-accent bg-accent-bg text-accent'
-                              : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
-                          >{s}</button>
-                        {/each}
-                      </div>
-                    </div>
-                    <div>
                       <div class="font-mono text-[10px] text-fg-faint mb-1">Gender</div>
                       <div class="flex flex-wrap gap-1">
                         {#each AV_GENDERS as g (g)}
@@ -1228,7 +1237,35 @@
                         {/each}
                       </div>
                     </div>
+                    <div>
+                      <div class="font-mono text-[10px] text-fg-faint mb-1">
+                        Style{#if !avTraits.gender}<span class="text-fg-faint"> · set gender for the full list</span>{/if}
+                      </div>
+                      <div class="flex flex-wrap gap-1">
+                        {#each avStyleOptions as s (s)}
+                          <button
+                            type="button"
+                            onclick={() => setTrait('style', s)}
+                            class="font-mono text-[10px] px-2 py-0.5 rounded-sm border transition-colors {avTraits.style === s
+                              ? 'border-accent bg-accent-bg text-accent'
+                              : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                          >{s}</button>
+                        {/each}
+                      </div>
+                    </div>
                     <div class="flex flex-wrap gap-3">
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-race-{player.id}">Race</label>
+                        <select
+                          id="av-race-{player.id}"
+                          bind:value={avTraits.race}
+                          onchange={saveTraits}
+                          class="bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {#each AV_RACES as r (r)}<option value={r}>{r}</option>{/each}
+                        </select>
+                      </div>
                       <div>
                         <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-height-{player.id}">Height</label>
                         <select
@@ -1256,15 +1293,28 @@
                     </div>
                     <div class="flex flex-wrap gap-3">
                       <div>
-                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-hair-{player.id}">Hair</label>
-                        <input
-                          id="av-hair-{player.id}"
-                          type="text"
-                          bind:value={avTraits.hair}
-                          onblur={saveTraits}
-                          placeholder="e.g. curly red shoulder-length"
-                          class="bg-bg-elevated border border-border-muted rounded px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none w-52"
-                        />
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-hairstyle-{player.id}">Hair style / length</label>
+                        <select
+                          id="av-hairstyle-{player.id}"
+                          bind:value={avTraits.hairStyle}
+                          onchange={saveTraits}
+                          class="bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {#each AV_HAIR_STYLES as h (h)}<option value={h}>{h}</option>{/each}
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-haircolor-{player.id}">Hair color</label>
+                        <select
+                          id="av-haircolor-{player.id}"
+                          bind:value={avTraits.hairColor}
+                          onchange={saveTraits}
+                          class="bg-bg-elevated border border-border-muted rounded px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {#each AV_HAIR_COLORS as c (c)}<option value={c}>{c}</option>{/each}
+                        </select>
                       </div>
                       <div>
                         <label class="block font-mono text-[10px] text-fg-faint mb-1" for="av-trait-{player.id}">Freeform trait</label>

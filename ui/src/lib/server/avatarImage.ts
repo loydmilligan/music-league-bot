@@ -177,7 +177,10 @@ export function buildBasePrompt(
   player: {
     age: number | null;
     avatar_gender: string | null;
-    avatar_hair: string | null;
+    avatar_race?: string | null;
+    avatar_hair?: string | null;          // legacy freeform (fallback)
+    avatar_hair_style?: string | null;
+    avatar_hair_color?: string | null;
     avatar_height: string | null;
     avatar_build: string | null;
     avatar_style: string | null;
@@ -186,13 +189,20 @@ export function buildBasePrompt(
   shift: number,
 ): string {
   const effectiveAge = Math.min(95, Math.max(5, (player.age ?? 40) + shift));
+  // Prefer the new colour + style fields; fall back to legacy freeform hair.
+  const hair =
+    [player.avatar_hair_color, player.avatar_hair_style].filter(Boolean).join(' ') ||
+    player.avatar_hair ||
+    null;
+  // "White male" / "male" / "White" / "" → "a White male person," etc.
+  const descriptor = [player.avatar_race, player.avatar_gender].filter(Boolean).join(' ');
   const parts = [
-    `Cartoon portrait illustration of a ${player.avatar_gender} person,`,
+    `Cartoon portrait illustration of a ${descriptor || 'person'}${descriptor ? ' person' : ''},`,
     `approximately ${effectiveAge} years old,`,
     player.avatar_height ? `${player.avatar_height} height,` : null,
     player.avatar_build ? `${player.avatar_build} build,` : null,
     player.avatar_style ? `${player.avatar_style} style,` : null,
-    player.avatar_hair ? `${player.avatar_hair} hair.` : null,
+    hair ? `${hair} hair.` : null,
     player.avatar_trait ? `Key trait: ${player.avatar_trait}.` : null,
     'Square format, warm friendly illustration style, no text, no background clutter.',
   ].filter(Boolean);

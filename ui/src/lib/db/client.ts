@@ -474,11 +474,15 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (playerProfileCols.length) {
 		const avatarCols: Array<[string, string]> = [
 			['avatar_gender', 'TEXT'],
-			['avatar_hair',   'TEXT'],
+			['avatar_hair',   'TEXT'],   // deprecated freeform — kept as prompt fallback
 			['avatar_height', 'TEXT'],
 			['avatar_build',  'TEXT'],
 			['avatar_style',  'TEXT'],
 			['avatar_trait',  'TEXT'],
+			// later additions: race + split hair into style/length + colour
+			['avatar_race',       'TEXT'],
+			['avatar_hair_style', 'TEXT'],
+			['avatar_hair_color', 'TEXT'],
 		];
 		for (const [col, def] of avatarCols) {
 			if (!playerProfileCols.some(c => c.name === col)) {

@@ -14,7 +14,10 @@ type PlayerRow = {
   age: number | null;
   name: string;
   avatar_gender: string | null;
+  avatar_race: string | null;
   avatar_hair: string | null;
+  avatar_hair_style: string | null;
+  avatar_hair_color: string | null;
   avatar_height: string | null;
   avatar_build: string | null;
   avatar_style: string | null;
@@ -74,7 +77,8 @@ export const POST: RequestHandler = async ({ request }) => {
   const players = db
     .prepare(
       `SELECT p.id, p.age, p.name,
-              pp.avatar_gender, pp.avatar_hair, pp.avatar_height,
+              pp.avatar_gender, pp.avatar_race, pp.avatar_hair,
+              pp.avatar_hair_style, pp.avatar_hair_color, pp.avatar_height,
               pp.avatar_build, pp.avatar_style, pp.avatar_trait
        FROM players p
        JOIN player_profiles pp ON pp.player_id = p.id

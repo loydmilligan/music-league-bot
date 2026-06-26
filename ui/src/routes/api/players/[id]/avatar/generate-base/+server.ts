@@ -21,7 +21,8 @@ export const POST: RequestHandler = async ({ params }) => {
   // Fetch player traits
   const player = db
     .prepare(
-      `SELECT p.age, pp.avatar_gender, pp.avatar_hair, pp.avatar_height,
+      `SELECT p.age, pp.avatar_gender, pp.avatar_race, pp.avatar_hair,
+              pp.avatar_hair_style, pp.avatar_hair_color, pp.avatar_height,
               pp.avatar_build, pp.avatar_style, pp.avatar_trait
        FROM players p
        LEFT JOIN player_profiles pp ON pp.player_id = p.id
@@ -31,7 +32,10 @@ export const POST: RequestHandler = async ({ params }) => {
     | {
         age: number | null;
         avatar_gender: string | null;
+        avatar_race: string | null;
         avatar_hair: string | null;
+        avatar_hair_style: string | null;
+        avatar_hair_color: string | null;
         avatar_height: string | null;
         avatar_build: string | null;
         avatar_style: string | null;
