@@ -277,7 +277,7 @@ export interface LLMResult {
  * When absent, callOpenRouter behaves as before (no-op extension).
  */
 export type LLMCallMeta = {
-  category: 'digest' | 'archive' | 'predict';
+  category: 'digest' | 'archive' | 'predict' | 'avatar';
   label: string;
   db: Database.Database;
   leagueId?: number;

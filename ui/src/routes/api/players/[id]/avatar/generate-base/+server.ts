@@ -6,6 +6,8 @@ import {
   uploadToR2,
   modelForAvatar,
   buildBasePrompt,
+  logImageGen,
+  type ImageGenResult,
 } from '$lib/server/avatarImage.js';
 
 export const POST: RequestHandler = async ({ params }) => {
@@ -54,9 +56,9 @@ export const POST: RequestHandler = async ({ params }) => {
   const prompt = buildBasePrompt(player, isNaN(shift) ? 0 : shift);
   const model = modelForAvatar(db);
 
-  let bytes: Uint8Array;
+  let result: ImageGenResult;
   try {
-    bytes = await callOpenRouterImage(prompt, model, { aspect_ratio: '1:1' });
+    result = await callOpenRouterImage(prompt, model, { aspect_ratio: '1:1' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return json({ error: `Image generation failed: ${msg}` }, { status: 500 });
@@ -64,7 +66,7 @@ export const POST: RequestHandler = async ({ params }) => {
 
   const r2Key = `${playerId}/base.png`;
   try {
-    await uploadToR2(r2Key, bytes);
+    await uploadToR2(r2Key, result.bytes);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return json({ error: `R2 upload failed: ${msg}` }, { status: 500 });
@@ -72,13 +74,16 @@ export const POST: RequestHandler = async ({ params }) => {
 
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO player_avatars (player_id, base_r2_key, base_generated_at, base_source)
-     VALUES (?, ?, ?, 'generated')
+    `INSERT INTO player_avatars (player_id, base_r2_key, base_generated_at, base_source, base_cost_usd)
+     VALUES (?, ?, ?, 'generated', ?)
      ON CONFLICT(player_id) DO UPDATE SET
        base_r2_key = excluded.base_r2_key,
        base_generated_at = excluded.base_generated_at,
-       base_source = 'generated'`,
-  ).run(playerId, r2Key, now);
+       base_source = 'generated',
+       base_cost_usd = excluded.base_cost_usd`,
+  ).run(playerId, r2Key, now, result.costUsd);
 
-  return json({ url: `/api/avatars/${playerId}/base` }, { status: 200 });
+  logImageGen(db, result, model, { label: 'base', playerId, outputKey: r2Key });
+
+  return json({ url: `/api/avatars/${playerId}/base`, costUsd: result.costUsd }, { status: 200 });
 };

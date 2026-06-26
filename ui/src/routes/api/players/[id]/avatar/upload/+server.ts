@@ -42,12 +42,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const db = getDb();
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO player_avatars (player_id, base_r2_key, base_generated_at, base_source)
-     VALUES (?, ?, ?, 'uploaded')
+    `INSERT INTO player_avatars (player_id, base_r2_key, base_generated_at, base_source, base_cost_usd)
+     VALUES (?, ?, ?, 'uploaded', NULL)
      ON CONFLICT(player_id) DO UPDATE SET
        base_r2_key = excluded.base_r2_key,
        base_generated_at = excluded.base_generated_at,
-       base_source = 'uploaded'`,
+       base_source = 'uploaded',
+       base_cost_usd = NULL`,
   ).run(playerId, r2Key, now);
 
   return json({ url: `/api/avatars/${playerId}/base` }, { status: 200 });

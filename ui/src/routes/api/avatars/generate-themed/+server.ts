@@ -6,6 +6,7 @@ import {
   uploadToR2,
   modelForAvatar,
   buildBasePrompt,
+  logImageGen,
 } from '$lib/server/avatarImage.js';
 
 type PlayerRow = {
@@ -53,6 +54,10 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const roundId = (body as { roundId: number }).roundId;
+  // Optional: when fired from the digest modal, the caller passes the digest draft's
+  // run_id so these image-gen costs fold into that generation's whole-run total.
+  const runIdRaw = (body as Record<string, unknown>).runId;
+  const runId = typeof runIdRaw === 'string' && runIdRaw.trim() ? runIdRaw : undefined;
 
   const db = getDb();
 
@@ -89,30 +94,41 @@ export const POST: RequestHandler = async ({ request }) => {
   const results = await Promise.allSettled(
     players.map(async (player) => {
       const prompt = buildThemedPrompt(player, effectiveShift, round);
-      const bytes = await callOpenRouterImage(prompt, model, { aspect_ratio: '1:1' });
+      const result = await callOpenRouterImage(prompt, model, { aspect_ratio: '1:1' });
       const key = `${player.id}/themed.png`;
-      await uploadToR2(key, bytes);
+      await uploadToR2(key, result.bytes);
       db.prepare(
-        `INSERT INTO player_avatars (player_id, themed_r2_key, themed_round_id, themed_generated_at)
-         VALUES (?, ?, ?, ?)
+        `INSERT INTO player_avatars (player_id, themed_r2_key, themed_round_id, themed_generated_at, themed_cost_usd)
+         VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(player_id) DO UPDATE SET
            themed_r2_key = excluded.themed_r2_key,
            themed_round_id = excluded.themed_round_id,
-           themed_generated_at = excluded.themed_generated_at`,
-      ).run(player.id, key, round.id, new Date().toISOString());
+           themed_generated_at = excluded.themed_generated_at,
+           themed_cost_usd = excluded.themed_cost_usd`,
+      ).run(player.id, key, round.id, new Date().toISOString(), result.costUsd);
+      logImageGen(db, result, model, {
+        label: 'themed',
+        playerId: player.id,
+        roundId: round.id,
+        runId,
+        outputKey: key,
+      });
+      return result.costUsd;
     }),
   );
 
   let generated = 0;
   let failed = 0;
+  let costUsd = 0;
   results.forEach((result, idx) => {
     if (result.status === 'fulfilled') {
       generated++;
+      costUsd += result.value ?? 0;
     } else {
       failed++;
       console.error(`[generate-themed] Failed for player "${players[idx]?.name ?? 'unknown'}":`, result.reason);
     }
   });
 
-  return json({ generated, failed }, { status: 200 });
+  return json({ generated, failed, costUsd }, { status: 200 });
 };

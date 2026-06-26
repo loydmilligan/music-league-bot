@@ -486,6 +486,17 @@ export function openLeagueDb(path?: string): Database.Database {
 			}
 		}
 	}
+	// avatar cost tracking: last-generation USD cost per tier, stored directly on
+	// player_avatars so the roster editor can show "base $X · themed $Y" without a
+	// join into llm_cost_log. Updated on each (re)generation. Idempotent ALTER.
+	const playerAvatarCols = db.prepare("PRAGMA table_info(player_avatars)").all() as { name: string }[];
+	if (playerAvatarCols.length) {
+		for (const col of ['base_cost_usd', 'themed_cost_usd']) {
+			if (!playerAvatarCols.some(c => c.name === col)) {
+				db.exec(`ALTER TABLE player_avatars ADD COLUMN ${col} REAL`);
+			}
+		}
+	}
 	// sprint-28 avatar system Task 1: cap_image_gen flag on ai_models — marks
 	// which models support image generation (e.g. OpenRouter DALL-E wrappers).
 	const aiModelCols = db.prepare("PRAGMA table_info(ai_models)").all() as { name: string }[];

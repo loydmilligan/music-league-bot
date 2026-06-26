@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { logLlmCall } from '$lib/digest/llm.js';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // A real OpenRouter image-output model (verified present in /api/v1/models).
@@ -6,15 +7,26 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // model ID and made every avatar generation 400 when no image model was configured.
 const DEFAULT_AVATAR_MODEL = 'google/gemini-2.5-flash-image';
 
+/** Image generation result: the bytes plus OpenRouter cost/usage accounting. */
+export interface ImageGenResult {
+  bytes: Uint8Array;
+  costUsd: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  latencyMs: number;
+}
+
 /**
- * Call OpenRouter image generation endpoint and return the raw image bytes.
- * Handles both URL responses (http/https) and data-URI base64 responses.
+ * Call OpenRouter image generation endpoint and return the raw image bytes plus
+ * cost/usage accounting. Handles both URL and data-URI base64 responses.
+ * `usage: { include: true }` makes OpenRouter return the call's USD cost.
  */
 export async function callOpenRouterImage(
   prompt: string,
   model: string,
   opts?: { aspect_ratio?: string },
-): Promise<Uint8Array> {
+): Promise<ImageGenResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
@@ -23,8 +35,10 @@ export async function callOpenRouterImage(
     messages: [{ role: 'user', content: prompt }],
     modalities: ['image', 'text'],
     image_config: { aspect_ratio: opts?.aspect_ratio ?? '1:1' },
+    usage: { include: true },
   };
 
+  const startMs = Date.now();
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
     headers: {
@@ -35,6 +49,7 @@ export async function callOpenRouterImage(
     },
     body: JSON.stringify(body),
   });
+  const latencyMs = Date.now() - startMs;
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -48,6 +63,7 @@ export async function callOpenRouterImage(
         image_url?: string;
       };
     }[];
+    usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
 
   const images = json.choices?.[0]?.message?.images;
@@ -68,17 +84,59 @@ export async function callOpenRouterImage(
     throw new Error('OpenRouter returned no image');
   }
 
+  const cost = {
+    costUsd: typeof json.usage?.cost === 'number' ? json.usage.cost : 0,
+    promptTokens: typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0,
+    completionTokens: typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0,
+    totalTokens: typeof json.usage?.total_tokens === 'number' ? json.usage.total_tokens : 0,
+    latencyMs,
+  };
+
   // Handle data URI
   if (raw.startsWith('data:')) {
     const b64Match = raw.match(/^data:[^;]+;base64,(.+)$/);
     if (!b64Match) throw new Error('OpenRouter returned malformed data URI');
-    return new Uint8Array(Buffer.from(b64Match[1], 'base64'));
+    return { bytes: new Uint8Array(Buffer.from(b64Match[1], 'base64')), ...cost };
   }
 
   // Handle URL
   const imgRes = await fetch(raw);
   if (!imgRes.ok) throw new Error(`Failed to fetch image from URL: ${imgRes.status}`);
-  return new Uint8Array(await imgRes.arrayBuffer());
+  return { bytes: new Uint8Array(await imgRes.arrayBuffer()), ...cost };
+}
+
+/**
+ * Record an avatar image generation into the shared llm_cost_log ledger, so its
+ * cost shows up in the debug cost dashboard alongside text LLM calls. Passing a
+ * runId folds the cost into that generation's whole-run total (e.g. a digest).
+ * Fire-and-forget via logLlmCall (its own try/catch shields the call path).
+ */
+export function logImageGen(
+  db: Database.Database,
+  result: ImageGenResult,
+  model: string,
+  meta: { label: 'base' | 'themed'; playerId: number; roundId?: number; runId?: string; outputKey: string },
+): void {
+  logLlmCall(
+    {
+      content: meta.outputKey,
+      costUsd: result.costUsd,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      totalTokens: result.totalTokens,
+      latencyMs: result.latencyMs,
+    },
+    { model },
+    {
+      db,
+      category: 'avatar',
+      label: `avatar-${meta.label}`,
+      artifactType: 'player',
+      artifactId: String(meta.playerId),
+      roundId: meta.roundId,
+      runId: meta.runId,
+    },
+  );
 }
 
 /**
