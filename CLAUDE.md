@@ -24,7 +24,13 @@ your project-domain rules below this block.
 - **Push threshold: 10.** Before any push, check `git status` vs origin. When local is **10 or more commits ahead** of `origin/master`, surface that fact in your next status report and ask whether to push. If fewer than 10 ahead, don't mention pushing — just keep committing locally.
 - **Rationale:** prod deploys come from local `docker compose build`, not from `git pull`. Push is purely a backup / cross-machine sync concern, so we accumulate locally during sprints and push in batches.
 
-## Deploy — two-loop workflow (sprint-22, ratified 2026-06-06)
+## Deploy — two-loop workflow (sprint-22, ratified 2026-06-06; updated 2026-06-25)
+
+> **2026-06-25 update:** orc-tower is retired — ignore the "orc gates the deploy" /
+> coord-doc language below; lanes now self-coordinate. The hard rule that replaces it:
+> **prod runs one shared image, so merge your branch into `master` and deploy from the
+> main checkout — a deploy built from a worktree-only branch gets clobbered by the next
+> `master`-based deploy.** See "Prod runs ONE shared image" below.
 
 > **This replaces the old "always deploy to prod for every change" rule.** That rule
 > turned every one-line fix into a full Docker build, and with parallel lanes each
@@ -49,30 +55,49 @@ your project-domain rules below this block.
 - **Per-lane dev servers = zero shared-container contention**, so parallel lanes finally
   run in parallel. The only serialized step left is the single wave-gate deploy below.
 
-**Outer loop — ONE prod deploy per wave gate (not per change):**
-- After **all lanes in a wave have committed**, do a **single** authoritative prod build+swap
-  (orc gates this — see serialize rule). Cached build, no `--no-cache`:
+**Outer loop — ONE prod deploy per wave (not per change):**
+- After the lanes in a wave have committed **and merged to `master`**, do a **single**
+  authoritative prod build+swap **from the main checkout** (`/home/loydmilligan/Projects/music-league-bot`,
+  on `master`). Cached build, no `--no-cache`:
   ```
   docker compose build bot-ui && docker compose up -d --force-recreate bot-ui
   ```
-  Then smoke `mlb.mattmariani.com` (→ `192.168.4.217:3002`).
+  Then smoke `mlbot2.mattmariani.com` (→ `192.168.4.217:3002`).
 - **`--no-cache` is dropped.** It was a band-aid for the concurrent-deploy stale-image
   race (review item 6) — the single serialized wave-gate deploy removes that race, so the
   layer cache is safe to use. The Dockerfile's layer order (`package.json` → `npm ci` →
   source) means a cached build reuses `npm ci` unless `package-lock.json` changed, so a
   routine deploy is a fast `vite build` + container swap (~30s) instead of ~59s clean.
 - **Mandatory post-deploy assertion (replaces the safety `--no-cache` gave us).** After
-  `up`, assert the change is actually in the running container before claiming success —
-  e.g. `curl` the new route / grep the served bundle for a known new string. A stale layer
-  can then never silently ship. (review item 6d)
+  `up`, assert the change is actually in the running container before claiming success.
+  **Assert the CLIENT bundle, not just a route:** grep a served `/_app/immutable/*.js`
+  chunk (or the in-container `/app/ui/build`) for a known new **UI** string. A server route
+  returning 200 does NOT prove the client bundle rebuilt — the two can cache independently,
+  so a route check passes while the UI ships stale. (2026-06-25: a stale `COPY ui/`+`npm run
+  build` layer served old client JS even though the new API routes responded 200; only a
+  bundle-content grep caught it.) A stale layer can then never silently ship. (review item 6d)
 - **Keep `--force-recreate`** — without it, `up -d` may keep the old container on the old
   image even after a new build (confirmed sprint-10).
 
-**Serialize the WHOLE build→up, gated at dispatch (not "is a build running?"):**
-- Only **one** `bot-ui` build+up runs at a time, full stop. The race that bit sprint-14
-  and sprint-22 was two lanes both seeing a clear lane and starting together. **Orc owns
-  the wave-gate deploy** — lanes commit; orc runs the one deploy after the wave lands. If a
-  lane must deploy mid-wave, it acquires the deploy by announcing in the coord-doc first.
+**Prod runs ONE shared image — deploy from `master`, the source of truth for what's live:**
+- The prod `bot-ui` container runs the single `music-league-bot-bot-ui` image tag, which is
+  just **whatever the last `docker compose build` produced** from its build context. Work
+  that lives only on a feature branch / worktree is invisible to a deploy run from the main
+  checkout (which sits on `master`), so **any `master`-based deploy silently overwrites a
+  worktree-only deploy.**
+  - *2026-06-25, learned the hard way:* one lane built+deployed its worktree branch image
+    (metadata-queue redesign); a second lane later merged unrelated work to `master` and
+    deployed from the main checkout, clobbering the redesign with a redesign-free image.
+    Fix was a clean merge of both branches into `master`, then one rebuild from the main
+    checkout. Both feature sets then shipped and persist.
+- **Therefore: merge your branch into `master` BEFORE you deploy**, and build + `up` from the
+  **main checkout** so (a) `master` always reflects what's running, (b) the bind-mounted
+  `./data` resolves to real prod data, and (c) the next lane's deploy *integrates* rather than
+  *erases*. A deploy built from a worktree is transient at best.
+- **Serialize the whole build→up:** only one `bot-ui` build+up at a time, full stop (the
+  sprint-14/22 race was two lanes both starting on a clear lane). With orc-tower retired
+  there's no central gate — coordinate directly with other active lanes, or just be the only
+  one deploying. Merging to `master` first is what makes a missed coordination non-fatal.
 
 **Base image (unchanged):** all app images `FROM music-league-bot-base:chromium`
 (chromium + fonts for the digest PNG export). Build once; **rebuild ONLY when

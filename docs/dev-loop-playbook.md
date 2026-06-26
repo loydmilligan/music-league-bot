@@ -1,8 +1,14 @@
 # Dev-loop playbook — fast iteration for music-league-bot
 
-**Status:** ratified 2026-06-06 (sprint-22). Supersedes the "always deploy to prod for
+**Status:** ratified 2026-06-06 (sprint-22); updated 2026-06-25 (orc-tower retired; added the
+shared-image / merge-to-master-before-deploy rule). Supersedes the "always deploy to prod for
 every change" rule. Canonical operational summary lives in `CLAUDE.md` → Deploy; this doc
 is the full rationale + recipes.
+
+> **Coordination note (2026-06-25):** orc-tower and the sprint coord-doc are retired. Where
+> this doc says "orc-gated" or "log in the coord-doc," read it as: lanes self-coordinate, and
+> the deploy builds from `master`. See "Prod runs one shared image" below — that rule is what
+> keeps concurrent lanes from clobbering each other now that there's no central gate.
 
 ## Why this exists
 
@@ -29,7 +35,7 @@ structural: too many full prod builds per wave, plus the race.
 | **Speed** | <1s (HMR) | ~30s (cached build + swap) |
 | **Tooling** | `vite dev` / `tsx watch` + `npm run check` | `docker compose build && up --force-recreate` |
 | **Touches Docker?** | no | yes |
-| **Parallel-safe?** | yes — per-lane port, no shared resource | serialized — one at a time, orc-gated |
+| **Parallel-safe?** | yes — per-lane port, no shared resource | serialized — one at a time; merge to `master`, then build from the main checkout |
 
 You catch ~95% of issues instantly in the inner loop; the single wave-gate prod build +
 smoke catches the build-only/SSR/adapter last 5%. Strictly better than before, where prod
@@ -61,22 +67,51 @@ cd ui && npm run dev -- --host --port 51XX     # unique port per lane: 5180, 518
 **Every lane, every change:** run `npm run check` (svelte-check) — it surfaces the type
 errors a prod build would, in seconds.
 
-## Outer-loop procedure (the wave gate) — orc-owned
+## Prod runs one shared image — deploy from `master`
 
-1. All lanes in the wave **commit** their work (inner-loop-verified).
-2. **Orc runs ONE deploy** (serialized — never two at once):
+The prod `bot-ui` container runs a **single** image tag, `music-league-bot-bot-ui`, which is
+nothing more than *whatever the last `docker compose build` produced* from its build context.
+That has a sharp consequence:
+
+- A deploy run from the **main checkout** builds from `master`. Work that exists **only** on a
+  feature branch / worktree is not in `master`, so it is **not** in that image — and the
+  deploy silently **overwrites** any earlier deploy that *did* carry it.
+- So a deploy built from a worktree-only branch is **transient**: the next `master`-based
+  deploy (by any lane) erases it.
+
+**2026-06-25 incident.** A lane built+deployed its worktree-branch image (the metadata-queue
+redesign). A second lane later merged unrelated avatars work to `master` and deployed from the
+main checkout — clobbering the redesign with a redesign-free image (the new API routes 404'd,
+the UI reverted). The two branches turned out to touch disjoint files, so the fix was: merge
+both into `master` (clean, no conflicts), one rebuild from the main checkout, verify **both**
+feature sets in the bundle. Both shipped and now persist because they're on `master`.
+
+**The rule:** **merge your branch into `master` BEFORE you deploy**, then build + `up` from the
+main checkout. That gives you (a) `master` as the single source of truth for what's live,
+(b) correct prod `./data` bind-mount, and (c) the next lane *integrates* with your change
+instead of erasing it.
+
+## Outer-loop procedure (the deploy)
+
+1. Lane **commits** its inner-loop-verified work, then **merges to `master`** (resolve any
+   conflicts on the branch first; verify `npm run check` + tests on the merged result).
+2. From the **main checkout** (`/home/loydmilligan/Projects/music-league-bot`, on `master`),
+   run **ONE** deploy — serialized, never two `bot-ui` build+ups at once:
    ```
    docker compose build bot-ui && docker compose up -d --force-recreate bot-ui
    ```
-3. **Assert the change is actually live** (mandatory — this is the safety that dropping
-   `--no-cache` gives up): curl the new route / grep the served bundle for a known new
-   string. If it's missing → the layer cache served stale; rebuild once with `--no-cache`
-   as the *exception*, not the default.
-4. Smoke `mlb.mattmariani.com` and log the deploy in the coord-doc Activity Log.
+3. **Assert the change is actually live** (mandatory — the safety that dropping `--no-cache`
+   gives up). **Check the CLIENT bundle, not just a route:** grep a served
+   `/_app/immutable/*.js` chunk (or in-container `/app/ui/build`) for a known new **UI**
+   string. A server route returning 200 does *not* prove the client bundle rebuilt — they
+   cache independently (2026-06-25: a stale `COPY ui/`+`npm run build` layer served old client
+   JS while the new API routes answered 200; only a bundle grep caught it). If the marker is
+   missing → the layer cache served stale; rebuild once with `--no-cache` as the *exception*.
+4. Smoke `mlbot2.mattmariani.com` (→ `192.168.4.217:3002`).
 
-If a lane genuinely must deploy mid-wave, it **acquires the deploy lane by announcing in the
-coord-doc first** — "is a build running?" is not enough (two lanes can both see it clear and
-start together; that's the exact sprint-22 race).
+With orc-tower retired there is no central gate: coordinate the single deploy lane directly
+with other active lanes, or simply be the only one deploying. Merging to `master` first is
+what makes a missed hand-off non-fatal — concurrent deploys then integrate rather than clobber.
 
 ## Prod-build speedups (incremental — chromium already handled in sprint-19)
 
@@ -94,8 +129,8 @@ These shave the wave-gate build further. Tracked as a follow-up task (owner: viz
 3. **Move `python3 make g++` into `Dockerfile.base`** so the ui builder stops apt-installing
    build tools on every build (they only exist for native modules like better-sqlite3).
 4. Validate any Dockerfile change by building to a **throwaway tag** (no `up`) and measuring,
-   then coordinate the prod cutover with orc when the deploy lane is clear — never during a
-   live wave deploy.
+   then cut over to prod when the deploy lane is clear — never concurrently with another
+   lane's `bot-ui` build+up.
 
 ## Net effect
 
