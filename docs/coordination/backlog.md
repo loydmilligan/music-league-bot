@@ -483,3 +483,22 @@ standings render. Four asks captured this session:
    toggle is **unchecked**, avatars should NOT be included and the digest should fall back
    to the **old no-avatar style**. Currently unchecking it doesn't suppress avatars / use
    the legacy layout. Wire the toggle so off = legacy (no-avatar) rendering.
+
+## Group-relay chat ingestion status panel — sibling of the email-poller panel (drafted 2026-06-26, owner Matt) — S/M
+
+**Source:** owner, 2026-06-26. Once the **email-poller status panel** ships
+(`docs/superpowers/specs/2026-06-26-email-poller-status-panel-design.md` — App
+Settings, large connect/results indicator + log of the 10 most recent emails with
+per-email action outcomes), build the **same shape of panel for the group-relay
+chat ingestion** (the path that fills `chat_messages` via `src/storage/chatMessagesDb.ts`).
+
+**Direction.** Mirror the email panel: a large status indicator (did the most
+recent relay/ingest run connect, how many messages, when) + a log of the ~10 most
+recent ingested chat messages with their source group and whether they were
+stored (deduped vs new) / assigned. Reuse the email panel's pure view-formatter
+and card layout where possible; the chat relay is a push/relay rather than a
+poll, so the "status" semantics may differ (last-received timestamp vs last-poll).
+Decide what "status" means for the relay during its own spec.
+
+**Pairs with:** the email-poller panel (shared component patterns), the chat
+History screen, `chatMessagesDb.ts`.
