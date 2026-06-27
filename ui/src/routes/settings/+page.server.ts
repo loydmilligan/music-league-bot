@@ -9,6 +9,7 @@ import { parseZip } from '$lib/import/zipParser.js';
 import { importZipData } from '$lib/import/importer.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
 import { getHierarchy } from '$lib/db/metadataQueue.js';
+import { getEmailPollerData } from '$lib/email/emailPollerQuery.js';
 
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
 
@@ -18,7 +19,8 @@ export const load: PageServerLoad = async () => {
   const importLog = getImportLog(db);
   const allLeagues = getAllLeagues(db);
   const hierarchy = getHierarchy(db);
-  return { settings, importLog, allLeagues, hierarchy };
+  const emailPoller = getEmailPollerData(db);
+  return { settings, importLog, allLeagues, hierarchy, emailPoller };
 };
 
 export const actions: Actions = {

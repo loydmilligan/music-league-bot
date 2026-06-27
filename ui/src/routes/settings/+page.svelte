@@ -4,6 +4,7 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
+  import EmailPollerPanel from '$lib/email/EmailPollerPanel.svelte';
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
   import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
   import HeatmapView from '$lib/metadata-queue/HeatmapView.svelte';
@@ -541,6 +542,9 @@
 </div>
 
 <SettingsTabs />
+
+<!-- ── Email ingestion status panel ──────────────────────────────────────── -->
+<EmailPollerPanel initial={data.emailPoller} />
 
 <!-- ── Song Metadata Queue panel ─────────────────────────────────────────── -->
 <section

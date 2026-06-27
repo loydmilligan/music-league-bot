@@ -33,6 +33,16 @@ export function openLeagueDb(path?: string): Database.Database {
 				db.exec(`ALTER TABLE rounds ADD COLUMN ${phaseCol} TEXT`);
 			}
 		}
+		// email_messages is owned by the api-side email poller; mirror its action
+		// columns here so the Settings status endpoint can read them regardless of
+		// which service touched the DB first. Guard on the table existing.
+		const emailTbl = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='email_messages'").get();
+		if (emailTbl) {
+			const ecols = db.prepare("PRAGMA table_info(email_messages)").all() as { name: string }[];
+			for (const col of ['action_status', 'action_detail']) {
+				if (!ecols.some(c => c.name === col)) db.exec(`ALTER TABLE email_messages ADD COLUMN ${col} TEXT`);
+			}
+		}
 		const msCols = db.prepare("PRAGMA table_info(ml_submissions)").all() as { name: string; notnull: number }[];
 	const competitorCol = msCols.find(c => c.name === 'competitor_id');
 	if (competitorCol && competitorCol.notnull === 1) {

@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
-import { ensureEmailSchema, ingestParsedEmail } from '../src/email/emailIngest.js';
+import { ensureEmailSchema, ingestParsedEmail, recordIngestFailure } from '../src/email/emailIngest.js';
 import type { ParsedEmail } from '../src/email/emailParser.js';
 
 function seedDb(): Database.Database {
@@ -99,6 +99,56 @@ describe('ingestParsedEmail — new_playlist mapping by round name + league', ()
     const r = db.prepare('SELECT voting_started_at, spotify_playlist_url FROM rounds WHERE id=10').get() as any;
     expect(r.voting_started_at).toBe('2026-05-31T07:00:00.000Z');
     expect(r.spotify_playlist_url).toContain('02J0ICSMkywokNYRhFxWCp');
+  });
+});
+
+describe('ingestParsedEmail — action_status / action_detail', () => {
+  it('round_starting → recorded with round name', () => {
+    const res = ingestParsedEmail(db, mkEmail({ type: 'round_starting', mlRoundId: '12c30e07f33d4acd92ca489696788036' }));
+    expect(res.actionStatus).toBe('recorded');
+    expect(res.actionDetail).toContain('round_started');
+    expect(res.actionDetail).toContain("EDM 'em");
+    const row = db.prepare("SELECT action_status, action_detail FROM email_messages WHERE round_id=11").get() as any;
+    expect(row.action_status).toBe('recorded');
+  });
+
+  it('new_playlist mapped → recorded + "playlist captured"', () => {
+    const res = ingestParsedEmail(db, mkEmail({
+      type: 'new_playlist', roundName: 'Plots so thicc', leagueLabel: 'Hip Jammers 3',
+      playlistUrl: 'https://open.spotify.com/playlist/abc',
+    }));
+    expect(res.actionStatus).toBe('recorded');
+    expect(res.actionDetail).toContain('playlist captured');
+  });
+
+  it('new_playlist when the round already has a playlist → "playlist already set"', () => {
+    db.prepare("UPDATE rounds SET spotify_playlist_url='https://open.spotify.com/playlist/old' WHERE id=10").run();
+    const res = ingestParsedEmail(db, mkEmail({
+      type: 'new_playlist', roundName: 'Plots so thicc', leagueLabel: 'Hip Jammers 3',
+      playlistUrl: 'https://open.spotify.com/playlist/abc',
+    }));
+    expect(res.actionDetail).toContain('playlist already set');
+  });
+
+  it('new_playlist unmapped → "playlist NOT captured"', () => {
+    const res = ingestParsedEmail(db, mkEmail({ type: 'new_playlist', roundName: 'No Such Round', leagueLabel: 'Hip Jammers 3' }));
+    expect(res.actionStatus).toBe('unmapped');
+    expect(res.actionDetail).toContain('NOT captured');
+  });
+
+  it('other → archived (no action)', () => {
+    const res = ingestParsedEmail(db, mkEmail({ type: 'other' }));
+    expect(res.actionStatus).toBe('archived');
+  });
+});
+
+describe('recordIngestFailure', () => {
+  it('writes an error row visible in the log', () => {
+    recordIngestFailure(db, 'fail-1@x', { subject: 'broke', uid: 999 }, 'boom');
+    const row = db.prepare("SELECT parsed_type, action_status, action_detail FROM email_messages WHERE message_id='fail-1@x'").get() as any;
+    expect(row.parsed_type).toBe('error');
+    expect(row.action_status).toBe('error');
+    expect(row.action_detail).toContain('boom');
   });
 });
 
