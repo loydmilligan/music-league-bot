@@ -29,6 +29,10 @@ import type Database from 'better-sqlite3';
 const POLL_MS = 6_000;
 const MAX_RETRIES = 3;
 const LASTFM_MIN_GAP_MS = 8_000;
+// How long an audio job may sit in 'processing' before it's treated as stale
+// and recovered. 300 s = 5 min ≈ 2.5× the 120-s sintel CLI timeout, so a
+// legitimately in-flight job is never reset mid-analysis.
+const AUDIO_STALE_SECS = 300;
 
 // Tracks the last time any lastfm job was dispatched (module-level rate gate).
 let lastLastfmCallMs = 0;
@@ -143,6 +147,29 @@ async function dispatchJob(
  * Returns 'processed' | 'idle' | 'skipped' for test observability.
  */
 export async function runWorkerTick(db: Database.Database): Promise<'processed' | 'idle' | 'skipped'> {
+	// ── Stale audio-job recovery ─────────────────────────────────────────────
+	// A crash, or a sintel process that ignores SIGTERM, can leave an audio job
+	// in 'processing' forever. That permanently trips the audioBlocked gate
+	// below and starves every future audio job. Recover anything that has been
+	// processing longer than AUDIO_STALE_SECS: retry while attempts remain,
+	// otherwise fail it. Runs before the audioBlocked check so the gate sees a
+	// cleaned-up queue. (Fresh, legitimately in-flight jobs are left alone.)
+	const staleCutoff = `strftime('%Y-%m-%dT%H:%M:%SZ', datetime('now', '-${AUDIO_STALE_SECS} seconds'))`;
+	db.prepare(
+		`UPDATE song_metadata_queue
+		 SET status='pending', retries=retries+1, started_at=NULL,
+		     error='stale: audio job exceeded processing window (recovered)'
+		 WHERE job_type='audio' AND status='processing'
+		   AND retries < ? AND started_at < ${staleCutoff}`
+	).run(MAX_RETRIES);
+	db.prepare(
+		`UPDATE song_metadata_queue
+		 SET status='failed', retries=retries+1,
+		     error='stale: audio job exceeded processing window after max retries'
+		 WHERE job_type='audio' AND status='processing'
+		   AND retries >= ? AND started_at < ${staleCutoff}`
+	).run(MAX_RETRIES);
+
 	// Check if any audio job is currently processing (1-concurrent limit).
 	const audioProcessing = db
 		.prepare(`SELECT COUNT(*) AS n FROM song_metadata_queue WHERE job_type='audio' AND status='processing'`)
@@ -229,10 +256,36 @@ export async function runWorkerTick(db: Database.Database): Promise<'processed' 
 // ---------------------------------------------------------------------------
 
 /**
+ * Reset every job left in 'processing' back to 'pending'.
+ *
+ * A job can only be legitimately 'processing' within the lifetime of the
+ * process that claimed it. Anything still 'processing' at startup was orphaned
+ * by a prior process (crash / restart / redeploy) and would otherwise sit
+ * stuck forever — for audio jobs, permanently tripping the audioBlocked gate.
+ * Returns the number of rows recovered.
+ */
+export function resetOrphanedJobs(db: Database.Database): number {
+	const res = db
+		.prepare(
+			`UPDATE song_metadata_queue SET status='pending', started_at=NULL WHERE status='processing'`
+		)
+		.run();
+	return res.changes;
+}
+
+/**
  * Start the unified metadata queue worker.
  * Called once from hooks.server.ts at startup.
  */
 export function startQueueWorker(): void {
+	// Recover jobs orphaned in 'processing' by a previous process before polling.
+	try {
+		const n = resetOrphanedJobs(getDb());
+		if (n > 0) console.log(`[queueWorker] reset ${n} orphaned processing job(s) on startup`);
+	} catch (err) {
+		console.error('[queueWorker] startup reset error:', err);
+	}
+
 	setInterval(() => {
 		const db = getDb();
 		runWorkerTick(db).catch((err) => {

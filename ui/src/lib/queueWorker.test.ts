@@ -30,7 +30,7 @@ vi.mock('./sintel.js', () => ({
 	analyzeTrack: vi.fn()
 }));
 
-import { runWorkerTick, getSongMeta } from './queueWorker.js';
+import { runWorkerTick, getSongMeta, resetOrphanedJobs } from './queueWorker.js';
 import { resolveYtmLink } from './songlink.js';
 import { fetchPopularity, fetchTags } from './lastfm.js';
 import { fetchLyrics } from './lrclib.js';
@@ -387,5 +387,107 @@ describe('runWorkerTick — optimistic lock', () => {
 
 		const result = await runWorkerTick(db);
 		expect(result).toBe('idle'); // No pending jobs remain, so idle
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Stuck-job recovery — metadata queue "audio stuck in processing" fix
+// ---------------------------------------------------------------------------
+
+function insertProcessingAudio(
+	db: Database.Database,
+	spotifyUri: string,
+	opts: { retries?: number; ageSeconds?: number } = {}
+): number {
+	const { retries = 0, ageSeconds = 0 } = opts;
+	const startedExpr =
+		ageSeconds > 0
+			? `strftime('%Y-%m-%dT%H:%M:%SZ', datetime('now', '-${ageSeconds} seconds'))`
+			: `strftime('%Y-%m-%dT%H:%M:%SZ','now')`;
+	const result = db
+		.prepare(
+			`INSERT INTO song_metadata_queue (spotify_uri, job_type, status, retries, queued_at, started_at)
+			 VALUES (?, 'audio', 'processing', ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), ${startedExpr})`
+		)
+		.run(spotifyUri, retries);
+	return result.lastInsertRowid as number;
+}
+
+describe('resetOrphanedJobs — startup recovery', () => {
+	it('resets every processing row to pending (orphaned by a prior process)', () => {
+		const db = freshDb();
+		const audioId = insertProcessingAudio(db, 'spotify:track:stuckaudio', { retries: 1 });
+		const ytmId = db
+			.prepare(
+				`INSERT INTO song_metadata_queue (spotify_uri, job_type, status, retries, queued_at, started_at)
+				 VALUES ('spotify:track:stuckytm', 'ytm', 'processing', 0,
+				         strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))`
+			)
+			.run().lastInsertRowid as number;
+
+		const n = resetOrphanedJobs(db);
+
+		expect(n).toBe(2);
+		expect(getJob(db, audioId).status).toBe('pending');
+		expect(getJob(db, audioId).started_at).toBeNull();
+		expect(getJob(db, ytmId).status).toBe('pending');
+	});
+
+	it('leaves pending / done / failed rows untouched', () => {
+		const db = freshDb();
+		const pendingId = enqueueJob(db, 'spotify:track:p', 'audio');
+		db.prepare(
+			`INSERT INTO song_metadata_queue (spotify_uri, job_type, status, queued_at)
+			 VALUES ('spotify:track:d', 'ytm', 'done', strftime('%Y-%m-%dT%H:%M:%SZ','now'))`
+		).run();
+
+		const n = resetOrphanedJobs(db);
+
+		expect(n).toBe(0);
+		expect(getJob(db, pendingId).status).toBe('pending');
+	});
+});
+
+describe('runWorkerTick — stale audio recovery', () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it('recovers an audio job stuck in processing past the stale threshold', async () => {
+		const db = freshDb();
+		// A lone audio job that has been 'processing' for 10 minutes — the classic
+		// permanently-stuck row that otherwise blocks every future audio job.
+		const id = insertProcessingAudio(db, 'spotify:track:stale', { ageSeconds: 600 });
+		vi.mocked(analyzeTrack).mockResolvedValue({
+			spotify_uri: 'spotify:track:stale', bpm: 120, key: 'C', scale: 'major', energy: 0.5, duration_s: 180,
+		});
+
+		const result = await runWorkerTick(db);
+
+		// Recovered to pending, then claimed + dispatched within the same tick.
+		expect(result).toBe('processed');
+		expect(analyzeTrack).toHaveBeenCalledTimes(1);
+		expect(getJob(db, id).status).toBe('done');
+	});
+
+	it('marks a stale audio job failed once retries are exhausted', async () => {
+		const db = freshDb();
+		const id = insertProcessingAudio(db, 'spotify:track:staledead', { retries: 3, ageSeconds: 600 });
+
+		await runWorkerTick(db);
+
+		expect(getJob(db, id).status).toBe('failed');
+		expect(analyzeTrack).not.toHaveBeenCalled();
+	});
+
+	it('does NOT reset a fresh processing audio job (still 1-concurrent blocked)', async () => {
+		const db = freshDb();
+		const freshId = insertProcessingAudio(db, 'spotify:track:fresh'); // started just now
+		const pendingId = enqueueJob(db, 'spotify:track:waiting', 'audio');
+
+		const result = await runWorkerTick(db);
+
+		expect(getJob(db, freshId).status).toBe('processing'); // untouched
+		expect(getJob(db, pendingId).status).toBe('pending'); // still blocked
+		expect(analyzeTrack).not.toHaveBeenCalled();
+		expect(result).toBe('idle');
 	});
 });

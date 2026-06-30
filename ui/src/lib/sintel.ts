@@ -35,7 +35,12 @@ export async function analyzeTrack(spotifyUri: string): Promise<AudioFeatures> {
 	const { stdout } = await execFileAsync(
 		'uv',
 		['run', 'sintel', 'analyze', url, '--quiet'],
-		{ cwd: SINTEL_DIR, timeout: 120_000 },
+		// killSignal:'SIGKILL' — the default SIGTERM can be caught/ignored by the
+		// sintel/uv process (or a Python grandchild), in which case the child
+		// never exits, execFile's promise never settles, and the caller's await
+		// hangs forever — wedging the audio job in 'processing'. SIGKILL can't be
+		// trapped, so the timeout always terminates the process and rejects.
+		{ cwd: SINTEL_DIR, timeout: 120_000, killSignal: 'SIGKILL' },
 	);
 	const raw = JSON.parse(stdout) as {
 		spotify_url: string; bpm: number; key: string; scale: string; energy: number; duration_s: number;
@@ -54,7 +59,9 @@ export async function analyzePlaylist(playlistUrl: string): Promise<TrackAnalysi
 	const { stdout } = await execFileAsync(
 		'uv',
 		['run', 'sintel', 'analyze-playlist', playlistUrl, '--quiet'],
-		{ cwd: SINTEL_DIR, timeout: 600_000 },
+		// killSignal:'SIGKILL' — same latent hang as analyzeTrack: a SIGTERM the
+		// child ignores would leave this promise pending past the timeout.
+		{ cwd: SINTEL_DIR, timeout: 600_000, killSignal: 'SIGKILL' },
 	);
 	const raw = JSON.parse(stdout) as Array<{
 		track_id: string; artist: string; name: string;
