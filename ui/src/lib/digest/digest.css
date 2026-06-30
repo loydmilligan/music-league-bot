@@ -2130,4 +2130,22 @@
 
   /* Chat: min-width on label so it doesn't push body off-screen */
   .dg-export:not(.dg-export--mobile) .dgC-chat-h { min-width: 80px; }
+
+  /* Phone legibility: the reflow above fixes LAYOUT but leaves the desktop px
+     type, which reads tiny on a phone. Now that every section is a fluid
+     single column, bump the reading copy — larger text just wraps, it can't
+     overflow a fixed grid. Increases only (never below the desktop size), and
+     scoped :not(.dg-export--mobile) so the WhatsApp PNG export keeps its own
+     tuned sizes. */
+  .dg-export:not(.dg-export--mobile) .dg-section-body { font-size: 16px; line-height: 1.6; }
+  .dg-export:not(.dg-export--mobile) .dg-section-items { font-size: 15.5px; }
+  .dg-export:not(.dg-export--mobile) .dgC-consensus-note { font-size: 15px; line-height: 1.55; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-title { font-size: 16px; }
+  .dg-export:not(.dg-export--mobile) .dgC-track--gold .dgC-track-title { font-size: 18px; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-sub { font-size: 12.5px; }
+  .dg-export:not(.dg-export--mobile) .dgC-track-pts { font-size: 20px; }
+  .dg-export:not(.dg-export--mobile) .dgC-quote-q { font-size: 18px; }
+  .dg-export:not(.dg-export--mobile) .dgC-quote-gloss { font-size: 13.5px; }
+  .dg-export:not(.dg-export--mobile) .dgC-chat-body { font-size: 14px; }
+  .dg-export:not(.dg-export--mobile) .dg-section-eyebrow { font-size: 11px; }
 }
