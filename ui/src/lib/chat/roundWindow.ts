@@ -35,11 +35,21 @@ export function resolveStart(r: RoundWindowInput): string {
 
 export function buildRoundWindows(rounds: RoundWindowInput[], nowIso: string): RoundWindow[] {
   const sorted = [...rounds].sort((a, b) => Date.parse(resolveStart(a)) - Date.parse(resolveStart(b)));
-  return sorted.map((r, i) => {
+  // Each round's END from the best available signal.
+  const ends = sorted.map((r, i) => {
     const next = sorted[i + 1];
-    const fromIso = resolveStart(r);
-    const toIso = r.votingEndedAt ?? r.votingDeadline ?? (next ? resolveStart(next) : nowIso);
-    const isLive = !r.votingEndedAt && !r.votingDeadline && !next;
+    return r.votingEndedAt ?? r.votingDeadline ?? (next ? resolveStart(next) : nowIso);
+  });
+  return sorted.map((r, i) => {
+    // Chain each round's START to the previous round's END so windows are
+    // contiguous and a round owns its whole active span — including the
+    // submission phase, which falls between the prior round's voting-end and
+    // this round's voting-start. Without this, that submission-phase chat lands
+    // in a gap between windows and shows under no round. The first round keeps
+    // its own resolved start.
+    const fromIso = i === 0 ? resolveStart(r) : ends[i - 1];
+    const toIso = ends[i];
+    const isLive = !r.votingEndedAt && !r.votingDeadline && !sorted[i + 1];
     return { id: r.id, name: r.name, seasonNumber: r.seasonNumber, fromIso, toIso, isLive };
   });
 }

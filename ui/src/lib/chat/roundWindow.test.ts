@@ -52,4 +52,32 @@ describe('buildRoundWindows', () => {
     expect(w[1].toIso).toBe('2026-07-01T00:00:00Z');
     expect(w[1].isLive).toBe(true);
   });
+
+  it('starts each round at the previous round end so submission-phase chat is captured', () => {
+    // "Drugs" voting ends 06-23; "Let's Talk" has NO voting_started_at (poller
+    // missed it), submission_deadline 06-26, voting_ended 06-30. The round was
+    // actually active from 06-23 (when Drugs ended), so its window must start
+    // there — not at the 06-26 submission deadline, which would drop the
+    // submission-phase chat (the reported "only see 26th–28th" bug).
+    const rounds = [
+      r({ id: 8, name: 'Drugs', votingStartedAt: '2026-06-19T00:00:00Z', votingEndedAt: '2026-06-23T00:00:00Z' }),
+      r({ id: 10, name: "Let's Talk", submissionDeadline: '2026-06-26T00:00:00Z', votingEndedAt: '2026-06-30T00:00:00Z' }),
+    ];
+    const w = buildRoundWindows(rounds, '2026-07-01T00:00:00Z');
+    expect(w[0]).toMatchObject({ id: 8, fromIso: '2026-06-19T00:00:00Z', toIso: '2026-06-23T00:00:00Z' });
+    expect(w[1]).toMatchObject({ id: 10, fromIso: '2026-06-23T00:00:00Z', toIso: '2026-06-30T00:00:00Z' });
+  });
+
+  it('produces contiguous windows (no inter-round gaps that orphan chat)', () => {
+    const rounds = [
+      r({ id: 1, votingStartedAt: '2026-05-03T00:00:00Z', votingEndedAt: '2026-05-07T00:00:00Z' }),
+      r({ id: 2, votingStartedAt: '2026-05-12T00:00:00Z', votingEndedAt: '2026-05-16T00:00:00Z' }),
+      r({ id: 3, votingStartedAt: '2026-05-20T00:00:00Z', votingEndedAt: '2026-05-24T00:00:00Z' }),
+    ];
+    const w = buildRoundWindows(rounds, '2026-07-01T00:00:00Z');
+    // every round (after the first) begins exactly where the previous ended
+    for (let i = 1; i < w.length; i++) {
+      expect(w[i].fromIso).toBe(w[i - 1].toIso);
+    }
+  });
 });
