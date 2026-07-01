@@ -53,12 +53,14 @@ export interface TasteSettings {
 	lyrWeight: number;  // lyrical impact (compress toward center)
 	spread: number;     // non-linear legibility stretch (does not change archetype)
 	scopeAll: boolean;  // use all leagues (vs current league only)
+	showLabels: boolean; showKey: boolean; showRead: boolean; showChips: boolean; showLeagueAvg: boolean;
 }
 export const DEFAULT_TASTE_SETTINGS: TasteSettings = {
 	signal: 'frac', votePct: 5, negatives: true, dnPct: 100, lyrWeight: 0.45, spread: 1.15, scopeAll: true,
+	showLabels: true, showKey: true, showRead: true, showChips: true, showLeagueAvg: false,
 };
 
-export interface BuildChartOpts { chrome?: boolean; nodes?: boolean; sample?: number; }
+export interface BuildChartOpts { chrome?: boolean; nodes?: boolean; sample?: number; leagueAvg?: number[]; }
 
 // ── locked constants (verbatim) ──────────────────────────────────────────────
 const TRAITS = ['#ff5bbe', '#ffd23a', '#5affd0', '#5a8cff', '#ff5b6e', '#b65bff'];
@@ -128,6 +130,7 @@ export interface TasteEngine {
 	nameOf: (pi: number) => string;
 	proseFor: (pi: number) => string;
 	chipsFor: (pi: number) => string[];
+	leagueAvg: () => number[];
 	buildChart: (pi: number, W: number, H: number, opts?: BuildChartOpts) => string;
 }
 
@@ -234,6 +237,11 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 			const segs = seg(pts, ORDER); const mag = Math.min(1, Math.abs(s[5])); const op = (chrome ? 0.15 : 0.2) * (0.35 + 0.65 * mag) * (neg ? 1.5 : 1);
 			segs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: neg ? REPEL : strokeOf(sg), strokeWidth: neg ? 1.1 : 0.9, opacity: op.toFixed(3), strokeLinecap: 'round', strokeDasharray: neg ? '2 2' : undefined })));
 		});
+		if (opts.leagueAvg) {
+			const laDev = ORDER.map((idx) => TX(aA(idx, opts.leagueAvg![idx])));
+			const laPts = laDev.map((d, k) => ({ x: xk(k), y: yd(d), dev: d }));
+			seg(laPts, ORDER).forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#5a6773', strokeWidth: 1.5, opacity: 0.5, strokeLinecap: 'round', strokeDasharray: '3 4' })));
+		}
 		const V = sig6(pi); const avgDev = ORDER.map((idx) => TX(aA(idx, V[idx]))); const avgPts = avgDev.map((d, k) => ({ x: xk(k), y: yd(d), dev: d })); const avgSegs = seg(avgPts, ORDER);
 		avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#07090c', strokeWidth: H < 70 ? 4 : 6.5, opacity: 0.45, strokeLinecap: 'round' })));
 		avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: strokeOf(sg), strokeWidth: H < 70 ? 3 : 4.5, opacity: 0.92, strokeLinecap: 'round' })));
@@ -242,5 +250,5 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 		return svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', style: { display: 'block', width: '100%', height: 'auto', maxWidth: W + 'px', overflow: 'visible' } }, kids);
 	};
 
-	return { nP, name: (pi) => PLAYERS[pi].name, sig6, nameOf, proseFor, chipsFor, buildChart };
+	return { nP, name: (pi) => PLAYERS[pi].name, sig6, nameOf, proseFor, chipsFor, leagueAvg: () => leagueSig.slice(), buildChart };
 }
