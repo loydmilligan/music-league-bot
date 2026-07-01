@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { openLeagueDb } from './db/client.js';
 import type Database from 'better-sqlite3';
-import { fetchLyrics } from './lrclib.js';
+import { fetchLyrics, lyricMetrics } from './lrclib.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,6 +30,47 @@ function makeFetch(responses: Array<{ ok: boolean; status?: number; body: object
 		} as unknown as Response;
 	});
 }
+
+// ---------------------------------------------------------------------------
+// lyricMetrics (pure)
+// ---------------------------------------------------------------------------
+
+describe('lyricMetrics', () => {
+	it('counts words and lines from plain lyrics', () => {
+		const m = lyricMetrics(null, 'hello world\nthis is a test');
+		expect(m).toEqual({ hasLyrics: 1, wordCount: 6, lineCount: 2 });
+	});
+
+	it('strips LRC timestamp tags from synced lyrics before counting', () => {
+		const synced = '[00:01.00] hello world\n[00:05.50] second line here';
+		const m = lyricMetrics(synced, null);
+		expect(m.hasLyrics).toBe(1);
+		expect(m.wordCount).toBe(5); // tags excluded
+		expect(m.lineCount).toBe(2);
+	});
+
+	it('strips LRC metadata tags ([ar:], [ti:]) and blank lines', () => {
+		const synced = '[ar:Some Artist]\n[ti:Song]\n[00:01.00] only real words count';
+		const m = lyricMetrics(synced, null);
+		expect(m.wordCount).toBe(4);
+		expect(m.lineCount).toBe(1);
+	});
+
+	it('prefers plainLyrics when both are present', () => {
+		const m = lyricMetrics('[00:01.00] a b c d e', 'just two');
+		expect(m.wordCount).toBe(2);
+	});
+
+	it('does not count punctuation-only tokens as words', () => {
+		const m = lyricMetrics(null, 'word — ! word');
+		expect(m.wordCount).toBe(2);
+	});
+
+	it('returns zeros for empty / whitespace input (instrumental)', () => {
+		expect(lyricMetrics(null, null)).toEqual({ hasLyrics: 0, wordCount: 0, lineCount: 0 });
+		expect(lyricMetrics('', '   ')).toEqual({ hasLyrics: 0, wordCount: 0, lineCount: 0 });
+	});
+});
 
 // ---------------------------------------------------------------------------
 // fetchLyrics
@@ -93,6 +134,47 @@ describe('fetchLyrics', () => {
 			.get('spotify:track:def') as { has_lyrics: number } | undefined;
 
 		expect(row?.has_lyrics).toBe(1);
+	});
+
+	it('persists word_count and line_count alongside has_lyrics', async () => {
+		const db = freshDb();
+		vi.stubGlobal(
+			'fetch',
+			makeFetch([
+				{
+					ok: true,
+					body: {
+						syncedLyrics: null,
+						plainLyrics: 'one two three\nfour five'
+					}
+				}
+			])
+		);
+
+		await fetchLyrics(db, 'spotify:track:wc', 'Wordy Song', 'Wordy Artist');
+
+		const row = db
+			.prepare(
+				`SELECT has_lyrics, word_count, line_count FROM song_lyrics_metrics WHERE spotify_uri = ?`
+			)
+			.get('spotify:track:wc') as
+			| { has_lyrics: number; word_count: number; line_count: number }
+			| undefined;
+
+		expect(row).toEqual({ has_lyrics: 1, word_count: 5, line_count: 2 });
+	});
+
+	it('stores zero counts for a 404 / instrumental', async () => {
+		const db = freshDb();
+		vi.stubGlobal('fetch', makeFetch([{ ok: false, status: 404, body: {} }]));
+
+		await fetchLyrics(db, 'spotify:track:inst', 'Instrumental', 'Composer');
+
+		const row = db
+			.prepare(`SELECT word_count, line_count FROM song_lyrics_metrics WHERE spotify_uri = ?`)
+			.get('spotify:track:inst') as { word_count: number; line_count: number } | undefined;
+
+		expect(row).toEqual({ word_count: 0, line_count: 0 });
 	});
 
 	it('stores has_lyrics=0 when both fields are null', async () => {

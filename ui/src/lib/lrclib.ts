@@ -1,10 +1,14 @@
 /**
- * ui/src/lib/lrclib.ts — LRCLIB lyrics presence handler for the song metadata queue.
+ * ui/src/lib/lrclib.ts — LRCLIB lyrics handler for the song metadata queue.
  *
  * LRCLIB is a public API (no key needed) that returns synced and plain lyrics
- * for a given artist + track. We store a binary has_lyrics flag in
- * song_lyrics_metrics rather than the raw text — lyrics length is not a blocker
- * for digest quality and raw storage would balloon the DB.
+ * for a given artist + track. We do NOT store the raw text (it would balloon the
+ * DB), but we DO derive a few cheap metrics from it before discarding it:
+ *   - has_lyrics : 1 if any lyrics exist, else 0 (instrumental / not found)
+ *   - word_count : total words (drives the "wordiness" / lyrical-density axis)
+ *   - line_count : non-empty lines
+ * Wordiness as words-per-second is computed at read time from word_count and the
+ * audio duration, so storage stays minimal.
  *
  * Task 2 (sprint-queue): implements fetchLyrics() called by the queue worker
  * for job_type='lyrics'.
@@ -13,6 +17,43 @@
 import type Database from 'better-sqlite3';
 
 const LRCLIB_ROOT = 'https://lrclib.net/api/get';
+
+// ---------------------------------------------------------------------------
+// Lyric metrics (pure — no I/O, unit-tested directly)
+// ---------------------------------------------------------------------------
+
+export interface LyricMetrics {
+	hasLyrics: 0 | 1;
+	wordCount: number;
+	lineCount: number;
+}
+
+/** Remove LRC tags: timestamps like `[00:12.34]` and metadata like `[ar:Name]`. */
+function stripLrcTags(text: string): string {
+	return text.replace(/\[[^\]]*\]/g, ' ');
+}
+
+/**
+ * Derive lyric metrics from an LRCLIB response. Prefers plainLyrics; falls back
+ * to syncedLyrics with its timestamp tags stripped. A token counts as a word
+ * only if it contains a letter or digit (so stray punctuation isn't counted).
+ */
+export function lyricMetrics(
+	synced?: string | null,
+	plain?: string | null
+): LyricMetrics {
+	const hasPlain = typeof plain === 'string' && plain.trim().length > 0;
+	const source = hasPlain ? (plain as string) : typeof synced === 'string' ? synced : '';
+	const text = stripLrcTags(source);
+
+	const wordCount = text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+	const lineCount = source
+		.split(/\r?\n/)
+		.map((l) => stripLrcTags(l).trim())
+		.filter((l) => l.length > 0).length;
+
+	return { hasLyrics: wordCount > 0 ? 1 : 0, wordCount, lineCount };
+}
 
 // ---------------------------------------------------------------------------
 // Queue handler: fetchLyrics
@@ -44,21 +85,15 @@ export async function fetchLyrics(
 	});
 
 	// 404 = not found → store has_lyrics = 0 (not an error worth retrying)
-	let hasLyrics = 0;
+	let metrics: LyricMetrics = { hasLyrics: 0, wordCount: 0, lineCount: 0 };
 	if (res.ok) {
 		const data = (await res.json()) as {
 			syncedLyrics?: string | null;
 			plainLyrics?: string | null;
 		};
-		const synced = data.syncedLyrics;
-		const plain = data.plainLyrics;
-		hasLyrics =
-			(typeof synced === 'string' && synced.trim().length > 0) ||
-			(typeof plain === 'string' && plain.trim().length > 0)
-				? 1
-				: 0;
+		metrics = lyricMetrics(data.syncedLyrics, data.plainLyrics);
 	} else if (res.status === 404) {
-		hasLyrics = 0;
+		metrics = { hasLyrics: 0, wordCount: 0, lineCount: 0 };
 	} else {
 		throw new Error(`LRCLIB fetch HTTP ${res.status}`);
 	}
@@ -66,7 +101,8 @@ export async function fetchLyrics(
 	const now = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 	db.prepare(
-		`INSERT OR REPLACE INTO song_lyrics_metrics (spotify_uri, has_lyrics, fetched_at)
-		 VALUES (?, ?, ?)`
-	).run(spotifyUri, hasLyrics, now);
+		`INSERT OR REPLACE INTO song_lyrics_metrics
+		 (spotify_uri, has_lyrics, word_count, line_count, fetched_at)
+		 VALUES (?, ?, ?, ?, ?)`
+	).run(spotifyUri, metrics.hasLyrics, metrics.wordCount, metrics.lineCount, now);
 }

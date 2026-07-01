@@ -409,6 +409,8 @@ export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS song_lyrics_metrics (
     spotify_uri TEXT PRIMARY KEY,
     has_lyrics  INTEGER NOT NULL DEFAULT 0,
+    word_count  INTEGER,
+    line_count  INTEGER,
     fetched_at  TEXT NOT NULL
   );
 `;

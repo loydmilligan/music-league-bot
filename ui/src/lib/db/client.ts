@@ -169,6 +169,17 @@ export function openLeagueDb(path?: string): Database.Database {
 		db.exec("ALTER TABLE research_songs ADD COLUMN replayability INTEGER CHECK(replayability BETWEEN 0 AND 5)");
 	}
 
+	// sonic-signature lyrical-density: capture word/line counts (wordiness) on
+	// existing DBs. Nullable — NULL means "not yet computed" (re-run the lyrics
+	// job to backfill); 0 with has_lyrics=0 means a genuine instrumental.
+	const lyricsCols = db.prepare("PRAGMA table_info(song_lyrics_metrics)").all() as { name: string }[];
+	if (lyricsCols.length && !lyricsCols.some(c => c.name === 'word_count')) {
+		db.exec("ALTER TABLE song_lyrics_metrics ADD COLUMN word_count INTEGER");
+	}
+	if (lyricsCols.length && !lyricsCols.some(c => c.name === 'line_count')) {
+		db.exec("ALTER TABLE song_lyrics_metrics ADD COLUMN line_count INTEGER");
+	}
+
 	const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 	for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) upsert.run(k, v);
 	// sprint-43 pipeline: seed the default pipeline config on first boot.
