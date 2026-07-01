@@ -28,6 +28,7 @@ import type { FingerprintOutput } from '../predict/tasks/tasteFingerprint.js';
 import { runPrediction } from '../predict/predict.js';
 import type { PredictionTask } from '../predict/predict.js';
 import { buildPlayerContext } from '../predict/playerContext.js';
+import { buildTasteData } from './tasteData.js';
 import {
 	ARCHIVE_DEFAULT_PIPELINE,
 	ARCHIVE_TASK_KINDS,
@@ -149,12 +150,24 @@ export const ArchiveEntrySchema = z.object({
 
 const LeagueMetaSchema = z.object({
 	name: z.string(),
+	id: z.number().int().optional(),
 	slug: z.string().optional(),
 	season: z.number().int(),
 	round: z.number().int(),
 	seasons: z.number().int(),
 	memberCount: z.number().int(),
 	updated: z.string(),
+});
+
+/** Interaction-level input for the client-side Taste Waveform engine (see tasteData.ts). */
+export const TasteBlockSchema = z.object({
+	axes: z.array(z.tuple([z.number(), z.number(), z.number(), z.number(), z.number()])),
+	players: z.array(
+		z.object({
+			name: z.string(),
+			rows: z.array(z.tuple([z.number(), z.number(), z.number(), z.number(), z.number(), z.number()])),
+		}),
+	),
 });
 
 export const ReadModelSchema = z.object({
@@ -165,6 +178,7 @@ export const ReadModelSchema = z.object({
 	moments: MomentsWithLinesSchema.nullable(),
 	archive: z.array(ArchiveEntrySchema),
 	seasonUpdate: z.object({ title: z.string(), body: z.string() }).nullable().optional(),
+	taste: TasteBlockSchema.optional(),
 });
 export type ReadModel = z.infer<typeof ReadModelSchema>;
 
@@ -774,10 +788,14 @@ export async function buildReadModel(
 		})
 		.filter((m): m is Member => m !== null);
 
-	// 13. Final assembly + zod validation
+	// 13. Taste Waveform input — interaction-level, computed client-side from settings.
+	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })));
+
+	// 14. Final assembly + zod validation
 	const readModel = {
 		league: {
 			name: leagueRow.name,
+			id: leagueId,
 			season: leagueMeta.latestSeason,
 			round: leagueMeta.totalRounds,
 			seasons: leagueMeta.seasonCount,
@@ -791,6 +809,7 @@ export async function buildReadModel(
 		moments,
 		archive,
 		seasonUpdate,
+		taste,
 	};
 
 	return ReadModelSchema.parse(readModel);

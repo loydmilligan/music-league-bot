@@ -42,6 +42,7 @@
     stats: DataGenOpt;
     nextRound: DataGenOpt;
     tastemaker: DataGenOpt;
+    sonicSignatures: DataGenOpt;
     recap: RecapGenOpt;
     regenAvatars: boolean;
   };
@@ -103,6 +104,8 @@
   let statsInclude = $state(true);
   let nextRoundInclude = $state(true);
   let tastemakerInclude = $state(true);
+  // Sonic Signatures — embed each player's taste waveform in their digest card. Opt-in.
+  let sonicSignaturesInclude = $state(false);
 
   // Shared indicator markup helper data (keeps the rows uniform).
   function covLabel(a: DataAvailability): string {
@@ -135,6 +138,7 @@
       stats: { include: statsInclude },
       nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
+      sonicSignatures: { include: sonicSignaturesInclude },
       recap: { enabled: recapEnabled, final: recapFinal },
       regenAvatars,
     });
@@ -309,6 +313,21 @@
             Computed from votes, not written by the LLM — auto-reconciled against the stored table on
             generate (a mismatch pops the reconcile modal). “Recompute” overwrites the gospel with the
             fresh computed values.
+          </p>
+        </div>
+
+        <!-- Sonic Signatures: embed each player's taste waveform in their digest card. -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!sonicSignaturesInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={sonicSignaturesInclude} />
+              <span class="dg-gen-name">Sonic Signatures</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+          </div>
+          <p class="dg-gen-note">
+            Embed each player's taste waveform (a mini mark + archetype) in their digest card.
+            Computed from their submissions — no LLM prompt.
           </p>
         </div>
 

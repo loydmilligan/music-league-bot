@@ -25,6 +25,7 @@ import type { ReadModel, FullMember, LiteMember, Member } from '$lib/dashboard/b
 import { writePublicArtifacts, getSnarkLevel } from '$lib/dashboard/publish.js';
 import { seasonUpdateTask } from '$lib/dashboard/generators/seasonUpdate.js';
 import { computeSeasonSignalsForLeague } from '$lib/dashboard/seasonSignals.js';
+import { buildTasteData } from '$lib/dashboard/tasteData.js';
 import { z } from 'zod';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
@@ -534,7 +535,7 @@ async function buildUpdatedReadModel(
 				? fp.summary || undefined
 				: currentMember?.headline;
 
-			const base = {
+				const base = {
 				id: String(m.player_id),
 				name: m.name,
 				initials: playerInitials(m.name),
@@ -609,9 +610,12 @@ async function buildUpdatedReadModel(
 		seasonUpdate = r.output;
 	}
 
+	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })));
+
 	return ReadModelSchema.parse({
 		league: {
 			name: leagueName,
+			id: leagueId,
 			slug,
 			season: leagueMeta.latestSeason,
 			round: leagueMeta.totalRounds,
@@ -625,6 +629,7 @@ async function buildUpdatedReadModel(
 		moments,
 		archive: currentModel.archive, // archive updated by caller
 		seasonUpdate,
+		taste,
 	});
 }
 

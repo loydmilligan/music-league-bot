@@ -1,0 +1,80 @@
+/* ============================================================================
+   Taste Waveform (Sonic Signature) — surface chrome. Prefix .tw-*.
+   Mashco tokens only, dark-first, pulp accent. Downvote strands use --ember
+   (inside the SVG). The waveform SVG is self-styled by taste-waveform.ts; these
+   classes are the cards/labels around it.
+   ============================================================================ */
+
+.tw-sig {
+	background:
+		radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--mash-pulp) 12%, transparent), transparent 55%),
+		var(--ink-2);
+	border: 1px solid var(--ink-4);
+	border-top: 2px solid var(--mash-pulp);
+	border-radius: var(--r-5, 14px);
+	padding: 14px 14px 16px;
+}
+.tw-eyebrow {
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+	color: var(--mash-pulp);
+}
+.tw-name {
+	font-family: 'Bricolage Grotesque', sans-serif;
+	font-weight: 700; font-size: 22px; line-height: 1.05;
+	margin: 3px 0 1px; color: var(--fg);
+}
+.tw-sub { font-size: 12px; color: var(--fg-muted); margin-bottom: 8px; }
+.tw-wave { display: flex; justify-content: center; }
+.tw-chips { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin: 10px 0 12px; }
+.tw-chip {
+	font-family: 'JetBrains Mono', monospace; font-size: 10px;
+	background: var(--ink-3); color: var(--fg-2);
+	border-radius: var(--r-full, 999px); padding: 4px 10px; border: 1px solid var(--line);
+}
+.tw-chip--star { background: var(--mash-pulp); color: var(--ink-0); font-weight: 700; border: none; }
+.tw-read { font-size: 12.5px; line-height: 1.55; color: var(--fg-2); text-wrap: pretty; }
+
+/* ---- 264px sharecard (naked mark) ---- */
+.tw-card {
+	width: 264px; border-radius: var(--r-6, 20px);
+	background: var(--ink-1); border: 1px solid var(--ink-4);
+	border-top: 2px solid var(--mash-pulp);
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); overflow: hidden; position: relative;
+}
+.tw-card__glow {
+	position: absolute; inset: 0; pointer-events: none;
+	background: radial-gradient(90% 60% at 100% 0%, color-mix(in srgb, var(--mash-pulp) 15%, transparent), transparent 60%);
+}
+.tw-card__in { position: relative; padding: 15px 16px 13px; }
+.tw-card__head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.tw-card__who { font-size: 14px; font-weight: 700; line-height: 1; color: var(--fg); }
+.tw-card__name { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 17px; text-align: center; margin: 2px 0 9px; color: var(--fg); }
+.tw-card__foot {
+	border-top: 1px solid var(--ink-3); padding-top: 8px;
+	display: flex; justify-content: space-between; align-items: center;
+	font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.05em; color: var(--fg-muted);
+}
+.tw-mono-av {
+	width: 28px; height: 28px; border-radius: 50%;
+	background: var(--mash-pulp-soft, #ff5b2e22); border: 1px solid var(--mash-pulp); color: var(--mash-pulp);
+	font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 13px;
+	display: flex; align-items: center; justify-content: center; flex: none;
+}
+
+/* ---- research row ---- */
+.tw-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-bottom: 1px solid var(--ink-2); cursor: pointer; }
+.tw-row.is-on { background: var(--ink-2); }
+.tw-row__label { width: 104px; flex: none; }
+.tw-row__name { font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.tw-row__arch {
+	font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.03em;
+	color: var(--fg-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tw-row__wave { flex: 1; display: flex; justify-content: flex-end; }
+
+/* honest low-coverage cue */
+.tw-filling {
+	font-family: 'JetBrains Mono', monospace; font-size: 10px;
+	color: var(--amber, #e8a83a); letter-spacing: 0.02em;
+}

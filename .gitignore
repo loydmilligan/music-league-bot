@@ -51,3 +51,8 @@ bside/public/*/
 
 # design-sync: local bundle is just copies of source; keep only the config pin tracked
 .design-sync/bundle/
+
+# Taste Waveform design handoff package (large; not source)
+taste-waveform-package/
+docs/design_handoff_sonic_signature/*.png
+docs/design_handoff_sonic_signature/*.html

@@ -10,6 +10,12 @@ export interface SuperlativeItem { award: string; accent: Accent; blurb: string;
 export interface PlaylistTrack { title: string; artist: string; why: string; }
 export interface Playlist { name: string; nudge: string; tracks: PlaylistTrack[]; }
 
+/** Interaction-level input for the Taste Waveform engine (mirrors read_model.taste). */
+export interface TasteBlock {
+	axes: [number, number, number, number, number][];
+	players: { name: string; rows: number[][] }[];
+}
+
 export interface FullMember {
 	id: string; name: string; initials: string; hue: string; tier: 'full';
 	joined?: string; headline?: string; avatar_url?: string | null;
@@ -56,7 +62,7 @@ export interface ArchiveEntry {
 }
 
 export interface LeagueMeta {
-	name: string; slug?: string; season: number; round: number;
+	name: string; id?: number; slug?: string; season: number; round: number;
 	seasons: number; memberCount: number; updated: string;
 }
 
@@ -68,12 +74,19 @@ export interface ReadModel {
 	moments: Moments | null;
 	archive: ArchiveEntry[];
 	seasonUpdate: { title: string; body: string } | null;
+	taste?: TasteBlock;
 }
 
 export interface SharePayload {
 	award: string; blurb: string;
 	who: string; hue: string; initials: string;
 	accent: Accent;
+	/** When 'signature', ShareOverlay renders a Taste Waveform card instead of the trophy card. */
+	kind?: 'superlative' | 'signature';
+	/** In-memory engine + player index for the signature card (not serialized). */
+	engine?: import('./taste-waveform/taste-waveform.js').TasteEngine;
+	pi?: number;
+	league?: string;
 }
 
 export interface Nav {

@@ -127,6 +127,12 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
+  import TasteWaveform from '$lib/taste-waveform/TasteWaveform.svelte';
+  import { tasteEngine, DEFAULT_TASTE_SETTINGS, type TasteBlock } from '$lib/taste-waveform/taste-waveform.js';
+
+  let tasteBlock = $state<TasteBlock | null>(null);
+  const tasteEng = $derived(tasteBlock ? tasteEngine(tasteBlock, DEFAULT_TASTE_SETTINGS) : null);
+  const piOf = (name: string): number => tasteBlock ? tasteBlock.players.findIndex((p) => p.name === name) : -1;
 
   let loading = $state(true);
   let loadError = $state<string | null>(null);
@@ -188,13 +194,15 @@
 
   onMount(async () => {
     try {
-      const [histRes, playersRes, roundsRes] = await Promise.all([
+      const [histRes, playersRes, roundsRes, tasteRes] = await Promise.all([
         fetch('/api/history/players'),
         fetch('/api/players'),
         fetch('/api/rounds/open'),
+        fetch('/api/history/taste'),
       ]);
       if (!histRes.ok) throw new Error(`Failed to load players (${histRes.status})`);
       players = await histRes.json();
+      if (tasteRes.ok) tasteBlock = (await tasteRes.json()) as TasteBlock;
       if (playersRes.ok) {
         const allPlayers = (await playersRes.json()) as { id: number; name: string }[];
         playerIdMap = new Map(allPlayers.map((p) => [p.name, p.id]));
@@ -523,6 +531,9 @@
             class:hover:border-border={!isSel}
           >
             <span class="font-medium whitespace-nowrap">{p.name}</span>
+            {#if tasteEng && piOf(p.name) >= 0}
+              <span class="inline-block w-[54px]" title={tasteEng.nameOf(piOf(p.name))}>{@html tasteEng.buildChart(piOf(p.name), 54, 18, { chrome: false, nodes: false, sample: 40 })}</span>
+            {/if}
             <span class="font-mono text-[10px]" class:text-white={isSel} class:text-fg-faint={!isSel}>
               {p.songsSubmitted}♪ · {pct(p.winRate)}
             </span>
@@ -554,6 +565,13 @@
             class="flex-shrink-0 font-mono text-fg-faint hover:text-fg text-lg leading-none transition-colors"
           >×</button>
         </header>
+
+        <!-- Sonic Signature — the taste waveform -->
+        {#if tasteEng && piOf(selected) >= 0}
+          <div class="mt-4">
+            <TasteWaveform variant="hero" engine={tasteEng} pi={piOf(selected)} name={selected} sub="taste across all leagues" />
+          </div>
+        {/if}
 
         <!-- Taste overlap (viz layer renders ranked bars off this markup) -->
         {#if detail.tasteOverlap && Object.keys(detail.tasteOverlap).length}

@@ -3,12 +3,39 @@
 	import { icons } from '../lib/icons.js';
 	import { bsAcc, accentIcon } from '../lib/accents.js';
 	import type { ReadModel, Nav, SharePayload, FullMember } from '../lib/types.js';
+	import TasteWaveform from '../lib/taste-waveform/TasteWaveform.svelte';
+	import { tasteEngine, scopedLeague } from '../lib/taste-waveform/taste-waveform.js';
+	import { tasteSettings } from '../lib/tasteSettings.svelte.js';
+	import TasteSettings from '../lib/atoms/TasteSettings.svelte';
 
 	interface Props { readModel: ReadModel; memberId: string; nav: Nav; }
 	let { readModel, memberId, nav }: Props = $props();
 
 	const member = $derived(readModel.members.find((m) => m.id === memberId));
 	const isFull = $derived(member?.tier === 'full');
+
+	// Build the (scope-filtered) league engine, then find this member's player index.
+	const lg = $derived(readModel.taste ? scopedLeague(readModel.taste, tasteSettings, readModel.league.id) : null);
+	const eng = $derived(lg ? tasteEngine(lg, tasteSettings) : null);
+	const pi = $derived(lg && member ? lg.players.findIndex((p) => p.name === member.name) : -1);
+	const waveSub = $derived(
+		tasteSettings.scopeAll ? 'your taste, across all your leagues' : `your taste, in ${readModel.league.name}`,
+	);
+
+	let settingsOpen = $state(false);
+
+	function openWaveShare() {
+		if (!member || !eng || pi < 0) return;
+		nav.openShare({
+			award: '', blurb: '',
+			who: member.name, hue: member.hue, initials: member.initials,
+			accent: 'pulp',
+			kind: 'signature',
+			engine: eng,
+			pi,
+			league: readModel.league.name,
+		});
+	}
 
 	function openSigShare() {
 		if (!member) return;
@@ -107,77 +134,16 @@
 			</button>
 		</section>
 
-		<!-- Taste fingerprint — chips for both tiers; spectrum + rewards/punishes for full -->
-		{#if member.signatureArtists.length > 0 || member.genres.length > 0 || member.eras.length > 0 || isFull}
+		<!-- Sonic Signature — the taste waveform (supersedes the old AI fingerprint) -->
+		{#if eng && pi >= 0}
 			<section class="bs-sec">
-				<div>
-					<div class="bs-eyebrow bs-acc-pulp"><span class="bs-acc-dot"></span>Taste fingerprint</div>
-					<div class="bs-sec-title">What makes them tick</div>
-					{#if isFull}
-						<div class="bs-sec-sub">An AI read of their picks and votes.</div>
-					{/if}
+				<TasteWaveform variant="hero" engine={eng} {pi} name={member.name} sub={waveSub} />
+				<div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+					<button class="bs-share-btn" onclick={openWaveShare}>
+						{@html icons.share} Share your signature
+					</button>
+					<button class="bs-icon-btn" onclick={() => (settingsOpen = true)} aria-label="Signature settings" title="Signature settings">⚙</button>
 				</div>
-
-				{#if member.signatureArtists.length > 0}
-					<div>
-						<div class="bs-rp-h" style="color:var(--fg-quiet); margin-bottom:7px;">Signature artists</div>
-						<div class="bs-chips">
-							{#each member.signatureArtists as a}
-								<div class={'bs-chip' + (a.star ? ' bs-chip--star' : '')}>
-									{#if a.star}{@html icons.star}{/if}
-									{a.name}
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				{#if member.genres.length > 0 || member.eras.length > 0}
-					<div>
-						<div class="bs-rp-h" style="color:var(--fg-quiet); margin-bottom:7px;">Sounds like</div>
-						<div class="bs-chips">
-							{#each member.genres as g}<div class="bs-chip bs-chip--soft">{g}</div>{/each}
-							{#each member.eras as e}<div class="bs-chip bs-chip--soft">{e}</div>{/each}
-						</div>
-					</div>
-				{/if}
-
-				{#if isFull}
-					{@const full = member as FullMember}
-
-					{#if full.spectrum.length > 0}
-						<div class="bs-spectrum">
-							{#each full.spectrum as axis}
-								<div class="bs-spec-row">
-									<div class="bs-spec-ends">
-										<span class="bs-end-l">{axis.left}</span>
-										<span class="bs-end-r">{axis.right}</span>
-									</div>
-									<div class="bs-spec-track">
-										<div class="bs-spec-dot" style:left={axis.value + '%'}></div>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
-					{#if full.rewards.length > 0 || full.punishes.length > 0}
-						<div class="bs-rp">
-							{#if full.rewards.length > 0}
-								<div class="bs-rp-col" data-kind="up">
-									<div class="bs-rp-h">{@html icons.thumbU} Rewards</div>
-									{#each full.rewards as r}<div class="bs-rp-item">{r}</div>{/each}
-								</div>
-							{/if}
-							{#if full.punishes.length > 0}
-								<div class="bs-rp-col" data-kind="down">
-									<div class="bs-rp-h">{@html icons.thumbD} Punishes</div>
-									{#each full.punishes as p}<div class="bs-rp-item">{p}</div>{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
-				{/if}
 			</section>
 		{/if}
 
@@ -369,4 +335,6 @@
 		</footer>
 
 	</div>
+
+	<TasteSettings open={settingsOpen} onClose={() => (settingsOpen = false)} />
 {/if}
