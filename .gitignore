@@ -48,3 +48,6 @@ docs/design/**/*_unzip/
 
 # Runtime-generated bside league slug dirs (created by the digest pipeline)
 bside/public/*/
+
+# design-sync: local bundle is just copies of source; keep only the config pin tracked
+.design-sync/bundle/

@@ -1,0 +1,7 @@
+{
+  "projectId": "29b5b2e4-906a-4e5b-ad92-8e2ccab617e1",
+  "projectName": "Music League — Current System",
+  "shape": "styles-only",
+  "source": "bside/src (live production b/side app — the real shipped design system)",
+  "notes": "Hand-authored styles-first CD project (not the heavy converter): bside is Svelte, CD renders React, and the design system is really a CSS token + .bs-* class vocabulary. styles.css @imports the real colors_and_type.css (tokens/type/fonts) + dashboard-styles.css (.bs-* classes). README.md is the conventions header for the CD agent. reference/ holds the real production screens as source. Supersedes the sprawling 'Mash Co. Design System' project 019e258c which had drifted into an ideal-version dumping ground. Re-sync = re-copy the two CSS files from bside/src and re-upload."
+}
