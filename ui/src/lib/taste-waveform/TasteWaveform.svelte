@@ -5,7 +5,8 @@
   Visual is locked; players tune only the signal/shape settings that feed the engine.
 -->
 <script lang="ts">
-	import type { TasteEngine } from './taste-waveform.js';
+	import type { TasteEngine, TasteSettings } from './taste-waveform.js';
+	import { DEFAULT_TASTE_SETTINGS } from './taste-waveform.js';
 	import './taste-waveform.css';
 
 	interface Props {
@@ -18,10 +19,13 @@
 		sub?: string;
 		selected?: boolean;
 		onselect?: () => void;
+		settings?: TasteSettings;
+		onshare?: () => void;
 	}
 	let {
 		engine, pi, variant = 'hero', name = '', avatar = '',
 		league = 'family league', sub, selected = false, onselect,
+		settings = DEFAULT_TASTE_SETTINGS, onshare,
 	}: Props = $props();
 
 	const dims = $derived(
@@ -29,12 +33,14 @@
 		variant === 'card' ? { w: 228, h: 98 } :
 		variant === 'row' ? { w: 150, h: 40 } : { w: 150, h: 54 },
 	);
-	// hero shows the grid + pole labels; every other placement is naked (per spec)
-	const chrome = $derived(variant === 'hero');
-	const svg = $derived(engine.buildChart(pi, dims.w, dims.h, { chrome, nodes: true }));
+	const svg = $derived(engine.buildChart(pi, dims.w, dims.h, {
+		chrome: settings.showLabels && variant !== 'row' && variant !== 'mark',
+		nodes: true,
+		leagueAvg: settings.showLeagueAvg ? engine.leagueAvg() : undefined,
+	}));
 	const archetype = $derived(engine.nameOf(pi));
 	const read = $derived(engine.proseFor(pi));
-	const chips = $derived(engine.chipsFor(pi));
+	const chips = $derived(settings.showChips ? engine.chipsFor(pi) : []);
 </script>
 
 {#if variant === 'card'}
@@ -50,6 +56,22 @@
 			</div>
 			<div class="tw-wave">{@html svg}</div>
 			<div class="tw-card__name">{archetype}</div>
+			{#if settings.showChips && chips.length}
+				<div class="tw-chips">
+					{#each chips as c, i}
+						<span class="tw-chip {i === 0 ? 'tw-chip--star' : ''}">{c}</span>
+					{/each}
+				</div>
+			{/if}
+			{#if settings.showRead}
+				<div class="tw-read">{read}</div>
+			{/if}
+			{#if settings.showKey}
+				<div class="tw-key">━ your average · faint = your songs · - - downvotes</div>
+			{/if}
+			{#if onshare}
+				<button class="tw-share" onclick={onshare}>Share</button>
+			{/if}
 			<div class="tw-card__foot"><span>the b/side · {league}</span><span style="color:var(--fg-quiet)">no login</span></div>
 		</div>
 	</div>
@@ -60,14 +82,22 @@
 		<div class="tw-name">{archetype}</div>
 		<div class="tw-sub">{sub ?? 'your taste, across all your leagues'}</div>
 		<div class="tw-wave">{@html svg}</div>
-		{#if chips.length}
+		{#if settings.showChips && chips.length}
 			<div class="tw-chips">
 				{#each chips as c, i}
 					<span class="tw-chip {i === 0 ? 'tw-chip--star' : ''}">{c}</span>
 				{/each}
 			</div>
 		{/if}
-		<div class="tw-read">{read}</div>
+		{#if settings.showRead}
+			<div class="tw-read">{read}</div>
+		{/if}
+		{#if settings.showKey}
+			<div class="tw-key">━ your average · faint = your songs · - - downvotes</div>
+		{/if}
+		{#if onshare}
+			<button class="tw-share" onclick={onshare}>Share</button>
+		{/if}
 	</div>
 
 {:else if variant === 'row'}

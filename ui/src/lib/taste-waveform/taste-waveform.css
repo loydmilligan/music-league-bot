@@ -73,6 +73,9 @@
 }
 .tw-row__wave { flex: 1; display: flex; justify-content: flex-end; }
 
+.tw-key { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--fg-quiet); text-align:center; margin:6px 0; }
+.tw-share { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; width:100%; padding:8px; margin-top:8px; border-radius:var(--r-3); border:1px solid var(--mash-pulp); background:var(--mash-pulp-soft,#ff5b2e22); color:var(--mash-pulp); cursor:pointer; }
+
 /* honest low-coverage cue */
 .tw-filling {
 	font-family: 'JetBrains Mono', monospace; font-size: 10px;
