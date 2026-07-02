@@ -90,3 +90,19 @@ describe('amplitude + band', () => {
     expect(svg).toContain('opacity="0.04"');
   });
 });
+
+describe('separation()', () => {
+  it('returns 0 for a single-player league', () => {
+    const solo: LeagueData = { axes: LG.axes, players: [LG.players[0]] };
+    expect(tasteEngine(solo, S()).separation()).toBe(0);
+  });
+  it('is the mean pairwise sig6 distance (positive for distinct players)', () => {
+    const sep = tasteEngine(LG, S()).separation();
+    expect(sep).toBeGreaterThan(0);
+    // two players → exactly one pair → equals that pair's distance
+    const eng = tasteEngine(LG, S());
+    const a = eng.sig6(0), b = eng.sig6(1);
+    const d = Math.sqrt(a.reduce((s, _v, k) => s + (a[k] - b[k]) ** 2, 0));
+    expect(sep).toBeCloseTo(d, 6);
+  });
+});

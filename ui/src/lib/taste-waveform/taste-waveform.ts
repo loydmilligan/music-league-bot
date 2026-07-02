@@ -152,6 +152,7 @@ export interface TasteEngine {
 	chipsFor: (pi: number) => string[];
 	leagueAvg: () => number[];
 	buildChart: (pi: number, W: number, H: number, opts?: BuildChartOpts) => string;
+	separation: () => number;
 }
 
 export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngine {
@@ -300,5 +301,16 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 		return svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', style: { display: 'block', width: '100%', height: 'auto', maxWidth: W + 'px', overflow: 'visible' } }, kids);
 	};
 
-	return { nP, name: (pi) => PLAYERS[pi].name, sig6, nameOf, proseFor, chipsFor, leagueAvg: () => leagueSig.slice(), buildChart };
+	const separation = (): number => {
+		if (nP < 2) return 0;
+		const sigs = PLAYERS.map((_, i) => sig6(i));
+		let sum = 0, cnt = 0;
+		for (let i = 0; i < nP; i++) for (let j = i + 1; j < nP; j++) {
+			let d = 0; for (let k = 0; k < 6; k++) { const df = sigs[i][k] - sigs[j][k]; d += df * df; }
+			sum += Math.sqrt(d); cnt++;
+		}
+		return cnt ? sum / cnt : 0;
+	};
+
+	return { nP, name: (pi) => PLAYERS[pi].name, sig6, nameOf, proseFor, chipsFor, leagueAvg: () => leagueSig.slice(), buildChart, separation };
 }
