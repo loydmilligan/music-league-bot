@@ -530,12 +530,6 @@
     { value: 'frac', label: 'VOTE%' },
   ];
 
-  const sampleEng = $derived(
-    sampleBlock
-      ? tasteEngine({ axes: sampleBlock.axes, players: sampleBlock.players }, tasteSettings)
-      : null,
-  );
-
   // ---- League → Player picker state (Task 9) ---------------------------------
   let selectedLeagueId = $state<number | null>(null);
   let selectedPlayerIdx = $state(0);
@@ -2017,6 +2011,9 @@
               pi={previewPlayerIdx}
               settings={tasteSettings}
               name={previewEng.name(previewPlayerIdx)}
+              sub={selectedLeagueId == null
+                ? 'your taste, across all your leagues'
+                : `your taste · ${data.leagues.find((l) => l.id === selectedLeagueId)?.name ?? 'this league'}`}
             />
           {:else}
             <span class="font-mono text-[10px] text-fg-faint">no players in this league yet</span>
