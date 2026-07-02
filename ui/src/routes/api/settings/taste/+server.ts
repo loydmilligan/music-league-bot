@@ -2,33 +2,11 @@ import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { z } from 'zod';
 import { getDb } from '$lib/db/client.js';
 import { getTasteSettings } from '$lib/db/settings.js';
+import { TasteSettingsSchema } from './schema.js';
 
 const DIGESTS_DIR = process.env.DIGESTS_DIR ?? 'digests';
-
-export const TasteSettingsSchema = z.object({
-	signal: z.enum(['all', 'subs', 'top', 'frac']),
-	votePct: z.number().min(0).max(25),
-	negatives: z.boolean(),
-	dnPct: z.number().min(0).max(150),
-	lyrWeight: z.number().min(0).max(1),
-	spread: z.number().min(1).max(1.6),
-	scopeAll: z.boolean(),
-	showLabels: z.boolean(),
-	showKey: z.boolean(),
-	showRead: z.boolean(),
-	showChips: z.boolean(),
-	showLeagueAvg: z.boolean(),
-	palette: z.enum(['neon', 'cool', 'spectrum']),
-	lineStyle: z.enum(['strand', 'solid', 'none']),
-	nodeStyle: z.enum(['glow', 'dot', 'none']),
-	order: z.enum(['alt', 'raw', 'lyric-last', 'lyric-first']),
-	band: z.boolean(),
-	bandOpacity: z.number().min(0).max(0.3),
-	amplitude: z.number().min(0.6).max(2.2),
-});
 
 export const GET: RequestHandler = async () => {
 	const db = getDb();

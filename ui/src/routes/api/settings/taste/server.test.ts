@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
 
 // Rebuild the schema shape here to assert its contract without a live DB.
 // This mirrors TasteSettingsSchema in +server.ts; keep in sync.
-import { TasteSettingsSchema } from './+server.js';
+import { TasteSettingsSchema } from './schema.js';
 
 const full = {
   signal: 'frac', votePct: 5, negatives: true, dnPct: 100, lyrWeight: 0.45, spread: 1.15, scopeAll: true,
