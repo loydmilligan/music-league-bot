@@ -8,7 +8,7 @@ import { getTasteSettings } from '$lib/db/settings.js';
 
 const DIGESTS_DIR = process.env.DIGESTS_DIR ?? 'digests';
 
-const TasteSettingsSchema = z.object({
+export const TasteSettingsSchema = z.object({
 	signal: z.enum(['all', 'subs', 'top', 'frac']),
 	votePct: z.number().min(0).max(25),
 	negatives: z.boolean(),
@@ -21,6 +21,13 @@ const TasteSettingsSchema = z.object({
 	showRead: z.boolean(),
 	showChips: z.boolean(),
 	showLeagueAvg: z.boolean(),
+	palette: z.enum(['neon', 'cool', 'spectrum']),
+	lineStyle: z.enum(['strand', 'solid', 'none']),
+	nodeStyle: z.enum(['glow', 'dot', 'none']),
+	order: z.enum(['alt', 'raw', 'lyric-last', 'lyric-first']),
+	band: z.boolean(),
+	bandOpacity: z.number().min(0).max(0.3),
+	amplitude: z.number().min(0.6).max(2.2),
 });
 
 export const GET: RequestHandler = async () => {
