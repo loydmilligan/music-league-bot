@@ -45,29 +45,49 @@ export function scopedLeague(taste: TasteBlock, settings: TasteSettings, current
 }
 
 export type SignalMode = 'all' | 'subs' | 'top' | 'frac';
+export type PaletteName = 'neon' | 'cool' | 'spectrum';
+export type LineStyle = 'strand' | 'solid' | 'none';
+export type NodeStyle = 'glow' | 'dot' | 'none';
+export type OrderName = 'alt' | 'raw' | 'lyric-last' | 'lyric-first';
+
 export interface TasteSettings {
 	signal: SignalMode;
-	votePct: number;   // vote value: % of a submission per point
-	negatives: boolean; // count downvotes
-	dnPct: number;      // downvote impact %
-	lyrWeight: number;  // lyrical impact (compress toward center)
-	spread: number;     // non-linear legibility stretch (does not change archetype)
-	scopeAll: boolean;  // use all leagues (vs current league only)
+	votePct: number;
+	negatives: boolean;
+	dnPct: number;
+	lyrWeight: number;
+	spread: number;
+	scopeAll: boolean;
 	showLabels: boolean; showKey: boolean; showRead: boolean; showChips: boolean; showLeagueAvg: boolean;
+	// v3 look knobs
+	palette: PaletteName;
+	lineStyle: LineStyle;
+	nodeStyle: NodeStyle;
+	order: OrderName;
+	band: boolean;
+	bandOpacity: number;
+	amplitude: number;
 }
 export const DEFAULT_TASTE_SETTINGS: TasteSettings = {
 	signal: 'frac', votePct: 5, negatives: true, dnPct: 100, lyrWeight: 0.45, spread: 1.15, scopeAll: true,
 	showLabels: true, showKey: true, showRead: true, showChips: true, showLeagueAvg: false,
+	palette: 'neon', lineStyle: 'strand', nodeStyle: 'glow', order: 'alt', band: false, bandOpacity: 0.04, amplitude: 1.0,
 };
 
 export interface BuildChartOpts { chrome?: boolean; nodes?: boolean; sample?: number; leagueAvg?: number[]; }
 
 // ── locked constants (verbatim) ──────────────────────────────────────────────
-const TRAITS = ['#ff5bbe', '#ffd23a', '#5affd0', '#5a8cff', '#ff5b6e', '#b65bff'];
+export const THEMES: Record<PaletteName, { traits: string[]; above: string }> = {
+	neon:     { traits: ['#ff5bbe', '#ffd23a', '#5affd0', '#5a8cff', '#ff5b6e', '#b65bff'], above: '#5affd0' },
+	cool:     { traits: ['#5aa3ff', '#3fb6c4', '#3ec27a', '#6a8cff', '#4ad0d9', '#5ad0a0'], above: '#7fd0ff' },
+	spectrum: { traits: ['#ff5b2e', '#e8a83a', '#5aa3ff', '#3ec27a', '#e6566c', '#3fb6c4'], above: '#5aa3ff' },
+};
+export const ORDERS: Record<OrderName, number[]> = {
+	alt: [0, 4, 3, 2, 1], raw: [0, 1, 2, 3, 4], 'lyric-last': [0, 2, 3, 1, 4], 'lyric-first': [4, 0, 1, 2, 3],
+};
 const POLES: Record<number, [string, string]> = {
 	0: ['POP', 'HIPSTER'], 1: ['HYPE', 'CHILL'], 2: ['BRIGHT', 'DARK'], 3: ['FAST', 'SLOW'], 4: ['WORDY', 'INSTR'],
 };
-const ORDER = [0, 4, 3, 2, 1];
 const REPEL = '#e6566c';
 const aA = (idx: number, v: number): number => (idx === 0 ? 50 - v : v - 50);
 
@@ -136,6 +156,9 @@ export interface TasteEngine {
 
 export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngine {
 	const st = settings;
+	const TH = THEMES[st.palette] ?? THEMES.neon;
+	const TRAITS = TH.traits;
+	const ORDER = ORDERS[st.order] ?? ORDERS.alt;
 	const PLAYERS = LG.players, AXT = LG.axes, nP = PLAYERS.length;
 	const short = (nm: string): string => nm.split(' ')[0];
 
