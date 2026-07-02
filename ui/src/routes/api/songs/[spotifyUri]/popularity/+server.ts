@@ -24,11 +24,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	if (upd.changes === 0) {
 		const s = db
-			.prepare('SELECT title, artist FROM ml_submissions WHERE spotify_uri=? LIMIT 1')
-			.get(uri) as { title?: string; artist?: string } | undefined;
+			.prepare('SELECT title, artists FROM ml_submissions WHERE spotify_uri=? LIMIT 1')
+			.get(uri) as { title?: string; artists?: string } | undefined;
 		db.prepare(
 			"INSERT INTO song_popularity (spotify_uri, title, artist, popularity_proxy, popularity_source, fetched_at) VALUES (?,?,?,?,'manual',?)"
-		).run(uri, s?.title ?? '', s?.artist ?? '', proxy, new Date().toISOString());
+		).run(uri, s?.title ?? '', s?.artists ?? '', proxy, new Date().toISOString());
 	}
 
 	return json({ ok: true });

@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	const roundId = Number(params.roundId);
 	const songs = db
 		.prepare(
-			`SELECT DISTINCT s.spotify_uri AS spotifyUri, s.title, s.artist
+			`SELECT DISTINCT s.spotify_uri AS spotifyUri, s.title, s.artists AS artist
        FROM ml_submissions s
        JOIN rounds r ON r.id = s.round_id
        LEFT JOIN song_popularity sp ON sp.spotify_uri = s.spotify_uri
