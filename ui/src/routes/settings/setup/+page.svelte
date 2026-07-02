@@ -2,6 +2,7 @@
   import type { PageData } from './$types.js';
   import { invalidateAll } from '$app/navigation';
   import { enhance } from '$app/forms';
+  import { onMount } from 'svelte';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
@@ -15,6 +16,12 @@
     stylesForGender,
   } from '$lib/avatarTraits.js';
   import { basePreviewUrl } from '$lib/avatarPreview.js';
+  import TasteWaveform from '$lib/taste-waveform/TasteWaveform.svelte';
+  import {
+    tasteEngine,
+    DEFAULT_TASTE_SETTINGS,
+  } from '$lib/taste-waveform/taste-waveform.js';
+  import type { TasteSettings, TasteBlock } from '$lib/taste-waveform/taste-waveform.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -503,6 +510,72 @@
       afSeason = opts[0];
     }
   });
+
+  onMount(() => {
+    loadTasteSettings();
+  });
+
+  // ---- Taste Waveform settings panel --------------------------------------
+  let tasteSettings = $state<TasteSettings>({ ...DEFAULT_TASTE_SETTINGS });
+  let sampleBlock = $state<TasteBlock | null>(null);
+  let tasteSaving = $state(false);
+  let tasteStatus = $state<{ tone: 'health' | 'warn'; label: string } | null>(null);
+
+  const SIGNAL_OPTIONS: { value: TasteSettings['signal']; label: string }[] = [
+    { value: 'all', label: 'ALL' },
+    { value: 'subs', label: 'SUBS' },
+    { value: 'top', label: 'TOP' },
+    { value: 'frac', label: 'VOTE%' },
+  ];
+
+  const sampleEng = $derived(
+    sampleBlock
+      ? tasteEngine({ axes: sampleBlock.axes, players: sampleBlock.players }, tasteSettings)
+      : null,
+  );
+
+  async function loadTasteSettings() {
+    try {
+      const [settingsRes, sampleRes] = await Promise.all([
+        fetch('/api/settings/taste'),
+        fetch('/api/history/taste'),
+      ]);
+      if (settingsRes.ok) {
+        const loaded = await settingsRes.json() as TasteSettings;
+        tasteSettings = { ...DEFAULT_TASTE_SETTINGS, ...loaded };
+      }
+      if (sampleRes.ok) {
+        sampleBlock = await sampleRes.json() as TasteBlock;
+      }
+    } catch { /* silently ignore */ }
+  }
+
+  async function saveTasteSettings() {
+    if (tasteSaving) return;
+    tasteSaving = true;
+    tasteStatus = null;
+    try {
+      const res = await fetch('/api/settings/taste', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(tasteSettings),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null) as { message?: string } | null;
+        tasteStatus = { tone: 'warn', label: (err?.message ?? `HTTP ${res.status}`).toUpperCase() };
+        return;
+      }
+      const result = await res.json() as { ok: boolean; patched: number };
+      tasteStatus = {
+        tone: 'health',
+        label: `SAVED · ${result.patched} SITE${result.patched === 1 ? '' : 'S'} PATCHED`,
+      };
+    } catch (e) {
+      tasteStatus = { tone: 'warn', label: (e instanceof Error ? e.message : 'NETWORK ERROR').toUpperCase() };
+    } finally {
+      tasteSaving = false;
+    }
+  }
 
   async function autoFillDeadlines() {
     if (!afLeague || afSeason === '' || afSubmitting) return;
@@ -1671,5 +1744,177 @@
     {/if}
   </div>
 </details>
+
+<!-- ======== TASTE WAVEFORM ======== -->
+<section class="mb-10 mt-10">
+  <header class="flex items-start justify-between gap-3 flex-wrap mb-5">
+    <div>
+      <SectionLabel>Taste Waveform</SectionLabel>
+      <h2 class="text-2xl font-bold text-fg mt-1">Sonic Signature settings</h2>
+      <p class="text-xs text-fg-dim mt-1">
+        Controls how the Taste Waveform is computed and displayed. Changes apply to all
+        published dashboards immediately.
+      </p>
+    </div>
+    {#if tasteStatus}
+      <StatusChip label={tasteStatus.label} tone={tasteStatus.tone} />
+    {/if}
+  </header>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Controls column -->
+    <div class="flex-1 flex flex-col gap-6">
+
+      <!-- Signal mode -->
+      <div class="bg-surface border border-border-muted rounded-xl p-5">
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-3">Signal mode</div>
+        <div class="flex flex-wrap gap-2">
+          {#each SIGNAL_OPTIONS as opt (opt.value)}
+            <button
+              type="button"
+              onclick={() => { tasteSettings = { ...tasteSettings, signal: opt.value }; }}
+              class="font-mono text-[10px] px-3 py-1.5 rounded-md border transition-colors {tasteSettings.signal === opt.value
+                ? 'border-accent bg-accent-bg text-accent'
+                : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+            >{opt.label}</button>
+          {/each}
+        </div>
+        <p class="text-[10px] text-fg-faint mt-2">
+          ALL = all interactions · SUBS = submissions only · TOP = top N% vote-getters · VOTE% = vote points as % of a submission
+        </p>
+      </div>
+
+      <!-- Numeric sliders -->
+      <div class="bg-surface border border-border-muted rounded-xl p-5">
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-4">Weighting</div>
+        <div class="flex flex-col gap-4">
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono text-[10px] uppercase text-fg-muted" for="tw-votePct">Vote % <span class="text-fg-faint">(per point, 0–25)</span></label>
+              <span class="font-mono text-[10px] text-accent">{tasteSettings.votePct}</span>
+            </div>
+            <input
+              id="tw-votePct"
+              type="range" min="0" max="25" step="1"
+              bind:value={tasteSettings.votePct}
+              class="w-full accent-accent"
+            />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono text-[10px] uppercase text-fg-muted" for="tw-dnPct">Downvote impact % <span class="text-fg-faint">(0–150)</span></label>
+              <span class="font-mono text-[10px] text-accent">{tasteSettings.dnPct}</span>
+            </div>
+            <input
+              id="tw-dnPct"
+              type="range" min="0" max="150" step="5"
+              bind:value={tasteSettings.dnPct}
+              class="w-full accent-accent"
+            />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono text-[10px] uppercase text-fg-muted" for="tw-lyrWeight">Lyrical weight <span class="text-fg-faint">(0–1)</span></label>
+              <span class="font-mono text-[10px] text-accent">{tasteSettings.lyrWeight.toFixed(2)}</span>
+            </div>
+            <input
+              id="tw-lyrWeight"
+              type="range" min="0" max="1" step="0.05"
+              bind:value={tasteSettings.lyrWeight}
+              class="w-full accent-accent"
+            />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono text-[10px] uppercase text-fg-muted" for="tw-spread">Spread <span class="text-fg-faint">(1–1.6 legibility stretch)</span></label>
+              <span class="font-mono text-[10px] text-accent">{tasteSettings.spread.toFixed(2)}</span>
+            </div>
+            <input
+              id="tw-spread"
+              type="range" min="1" max="1.6" step="0.05"
+              bind:value={tasteSettings.spread}
+              class="w-full accent-accent"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggle switches -->
+      <div class="bg-surface border border-border-muted rounded-xl p-5">
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-4">Behaviour &amp; display</div>
+        <div class="flex flex-col gap-3">
+          {#each [
+            { key: 'negatives' as const, label: 'Count downvotes' },
+            { key: 'scopeAll' as const, label: 'Use all leagues (vs current league only)' },
+            { key: 'showLabels' as const, label: 'Show axis labels' },
+            { key: 'showKey' as const, label: 'Show key' },
+            { key: 'showRead' as const, label: 'Show prose read' },
+            { key: 'showChips' as const, label: 'Show taste chips' },
+            { key: 'showLeagueAvg' as const, label: 'Show league average overlay' },
+          ] as items}
+            {@const item = items}
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={tasteSettings[item.key]}
+                onclick={() => { tasteSettings = { ...tasteSettings, [item.key]: !tasteSettings[item.key] }; }}
+                class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors focus:outline-none {tasteSettings[item.key] ? 'bg-accent border-accent' : 'bg-bg-elevated border-border-muted'}"
+              >
+                <span
+                  class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform mt-px {tasteSettings[item.key] ? 'translate-x-4' : 'translate-x-0.5'}"
+                ></span>
+              </button>
+              <span class="font-mono text-[10px] uppercase text-fg-muted group-hover:text-fg transition-colors">{item.label}</span>
+            </label>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <div class="flex items-center gap-4">
+        <button
+          type="button"
+          onclick={saveTasteSettings}
+          disabled={tasteSaving}
+          class="bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-6 py-2 rounded-md transition-colors"
+        >
+          {tasteSaving ? 'Saving…' : 'Save & apply to live'}
+        </button>
+        {#if tasteStatus}
+          <StatusChip label={tasteStatus.label} tone={tasteStatus.tone} />
+        {/if}
+      </div>
+
+    </div>
+
+    <!-- Live sample column -->
+    <div class="lg:w-72 shrink-0">
+      <div class="bg-surface border border-border-muted rounded-xl p-5 sticky top-4">
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-3">Live preview</div>
+        {#if sampleEng && sampleBlock}
+          <TasteWaveform
+            variant="card"
+            engine={sampleEng}
+            pi={0}
+            settings={tasteSettings}
+            name={sampleBlock.players[0]?.name ?? 'Player'}
+          />
+        {:else}
+          <div class="flex items-center justify-center h-32 rounded-lg bg-bg-elevated border border-border-muted">
+            <span class="font-mono text-[10px] text-fg-faint">loading sample…</span>
+          </div>
+        {/if}
+        <p class="text-[10px] text-fg-faint mt-3">
+          Preview re-renders as you adjust controls. Showing player 1 of the full roster.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
 </div><!-- /mt-6 wrapper -->
