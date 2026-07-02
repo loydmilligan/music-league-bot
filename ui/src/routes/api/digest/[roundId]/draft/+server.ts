@@ -17,6 +17,7 @@ import {
 import { gatherSeasonData } from '$lib/db/seasonData.js';
 import { getStandings } from '$lib/db/standings.js';
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
+import { recomputePopularityProxies } from '$lib/lastfm.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -63,6 +64,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       reconcile: standings.reconcile,
     });
   }
+
+  await recomputePopularityProxies(db); // fresh proxy so the tastemaker gate passes when data exists
 
   const data = gatherRoundData(db, roundId);
   // sprint-21: recap mode feeds per-section season slices (rounds ≤ roundId).
