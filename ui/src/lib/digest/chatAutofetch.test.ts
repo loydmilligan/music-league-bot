@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type Database from 'better-sqlite3';
 import { openLeagueDb } from '$lib/db/client.js';
 import { roundChatWindow, getRoundMessages } from '$lib/chat/historyQuery.js';
+import { activeKindsForDraft } from '$lib/digest/llm.js';
+import type { RoundData } from '$lib/digest/llm.js';
 
 const CHAT_MSGS_DDL = `
   CREATE TABLE IF NOT EXISTS chat_messages (
@@ -124,5 +126,56 @@ describe('getRoundMessages over roundChatWindow', () => {
     expect(m.text).toBe('in-window msg 1');
     expect(m.ts).toBe('2026-06-02T10:00:00Z');
     expect(m.group_name).toBe('TestGroup');
+  });
+});
+
+// Minimal RoundData stub — only the fields activeKindsForDraft reads.
+function makeRoundData(overrides: Partial<RoundData> = {}): RoundData {
+  return {
+    round: { id: 1, name: 'Round 1', description: null },
+    league: { id: 1, name: 'Test League' },
+    roundSequence: { number: 1, total: 1 },
+    priorRounds: [],
+    bundle: [],
+    submissions: [],
+    votes: [],
+    chatMentions: [],
+    relContext: '',
+    chatHistory: undefined,
+    ...overrides,
+  } as RoundData;
+}
+
+describe('activeKindsForDraft — chat section inclusion gate', () => {
+  it('includes "chat" when chatHistory is present and no pasted chat or chatMentions', () => {
+    const data = makeRoundData({ chatHistory: 'Alice: great track!' });
+    const kinds = activeKindsForDraft(data);
+    expect(kinds).toContain('chat');
+  });
+
+  it('excludes "chat" when chatHistory is undefined, chatMentions is empty, and no pastedChat', () => {
+    const data = makeRoundData({ chatHistory: undefined });
+    const kinds = activeKindsForDraft(data);
+    expect(kinds).not.toContain('chat');
+  });
+
+  it('excludes "chat" when chatHistory is an empty/whitespace string', () => {
+    const data = makeRoundData({ chatHistory: '   ' });
+    const kinds = activeKindsForDraft(data);
+    expect(kinds).not.toContain('chat');
+  });
+
+  it('includes "chat" when only chatMentions are present (pre-existing behavior)', () => {
+    const data = makeRoundData({
+      chatMentions: [{ sender: 'Bob', raw_message: 'nice', captured_at: '2026-06-01T00:00:00Z' }],
+    });
+    const kinds = activeKindsForDraft(data);
+    expect(kinds).toContain('chat');
+  });
+
+  it('includes "chat" when only pastedChat is provided (pre-existing behavior)', () => {
+    const data = makeRoundData();
+    const kinds = activeKindsForDraft(data, { sections: [], pastedChat: 'pasted content' });
+    expect(kinds).toContain('chat');
   });
 });

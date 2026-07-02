@@ -627,7 +627,7 @@ export function activeKindsForDraft(data: RoundData, genParams?: GenParams): Sec
   const disabled = new Set(
     (genParams?.sections ?? []).filter((s) => s.enabled === false).map((s) => s.id),
   );
-  const hasChat = data.chatMentions.length > 0 || !!genParams?.pastedChat?.trim();
+  const hasChat = data.chatMentions.length > 0 || !!genParams?.pastedChat?.trim() || !!data.chatHistory?.trim();
   return SECTION_KINDS.filter((k) => {
     if (disabled.has(k)) return false;
     if (k === 'chat') return hasChat;
