@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const ORIG_ID = process.env.SPOTIFY_CLIENT_ID;
 const ORIG_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
@@ -17,7 +17,7 @@ afterEach(() => {
 it('maps track URIs to popularity, batching by 50', async () => {
   const uris = Array.from({ length: 51 }, (_, i) => `spotify:track:id${i}`);
   const calls: string[] = [];
-  vi.stubGlobal('fetch', vi.fn(async (url: string, opts?: any) => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string, _opts?: any) => {
     if (String(url).includes('accounts.spotify.com')) {
       return new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 });
     }

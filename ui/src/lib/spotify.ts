@@ -60,33 +60,6 @@ export function parsePlaylistId(url: string): string | null {
  *
  * Injectable `fetcher` so tests don't hit the network — defaults to global fetch.
  */
-/**
- * Fetch Spotify track popularity (0–100) for a list of spotify:track: URIs.
- * Batches 50 ids/request. Returns an empty map when creds are missing or on
- * any error (best-effort — callers treat absence as "no Spotify signal").
- */
-export async function fetchSpotifyPopularity(uris: string[]): Promise<Map<string, number>> {
-	const out = new Map<string, number>();
-	if (!uris.length) return out;
-	const token = await getSpotifyToken();
-	if (!token) return out;
-	const ids = uris.map((u) => u.split(':').pop()!).filter(Boolean);
-	try {
-		for (let i = 0; i < ids.length; i += 50) {
-			const batch = ids.slice(i, i + 50);
-			const r = await fetch(`https://api.spotify.com/v1/tracks?ids=${batch.join(',')}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (!r.ok) continue;
-			const { tracks } = (await r.json()) as { tracks: ({ uri: string; popularity?: number } | null)[] };
-			for (const t of tracks) if (t && typeof t.popularity === 'number') out.set(t.uri, t.popularity);
-		}
-	} catch (e) {
-		console.warn('[spotify] popularity fetch skipped:', (e as Error).message);
-	}
-	return out;
-}
-
 export async function fetchPlaylistTracks(
   playlistId: string,
   token: string,
@@ -115,4 +88,31 @@ export async function fetchPlaylistTracks(
     url = data.next ?? null;
   }
   return tracks;
+}
+
+/**
+ * Fetch Spotify track popularity (0–100) for a list of spotify:track: URIs.
+ * Batches 50 ids/request. Returns an empty map when creds are missing or on
+ * any error (best-effort — callers treat absence as "no Spotify signal").
+ */
+export async function fetchSpotifyPopularity(uris: string[]): Promise<Map<string, number>> {
+	const out = new Map<string, number>();
+	if (!uris.length) return out;
+	const token = await getSpotifyToken();
+	if (!token) return out;
+	const ids = uris.map((u) => u.split(':').pop()!).filter(Boolean);
+	try {
+		for (let i = 0; i < ids.length; i += 50) {
+			const batch = ids.slice(i, i + 50);
+			const r = await fetch(`https://api.spotify.com/v1/tracks?ids=${batch.join(',')}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!r.ok) continue;
+			const { tracks } = (await r.json()) as { tracks: ({ uri: string; popularity?: number } | null)[] };
+			for (const t of tracks) if (t && typeof t.popularity === 'number') out.set(t.uri, t.popularity);
+		}
+	} catch (e) {
+		console.warn('[spotify] popularity fetch skipped:', e instanceof Error ? e.message : String(e));
+	}
+	return out;
 }
