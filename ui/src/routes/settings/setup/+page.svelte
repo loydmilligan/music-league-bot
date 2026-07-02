@@ -1822,6 +1822,104 @@
         </div>
       </div>
 
+      <!-- Configure the look -->
+      <div class="bg-surface border border-border-muted rounded-xl p-5">
+        <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-4">Configure the look</div>
+        <div class="flex flex-col gap-4">
+
+          <!-- Palette -->
+          <div>
+            <div class="font-mono text-[10px] uppercase text-fg-muted mb-1.5">Palette</div>
+            <div class="flex gap-1.5">
+              {#each (['neon', 'cool', 'spectrum'] as const) as p (p)}
+                <button type="button"
+                  class="flex-1 px-2 py-1.5 rounded-md text-xs font-mono border transition-colors {tasteSettings.palette === p
+                    ? 'border-accent bg-accent-bg text-accent'
+                    : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                  onclick={() => { tasteSettings = { ...tasteSettings, palette: p }; }}
+                >{p}</button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Line style -->
+          <div>
+            <div class="font-mono text-[10px] uppercase text-fg-muted mb-1.5">Line style</div>
+            <div class="flex gap-1.5">
+              {#each (['strand', 'solid', 'none'] as const) as ls (ls)}
+                <button type="button"
+                  class="flex-1 px-2 py-1.5 rounded-md text-xs font-mono border transition-colors {tasteSettings.lineStyle === ls
+                    ? 'border-accent bg-accent-bg text-accent'
+                    : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                  onclick={() => { tasteSettings = { ...tasteSettings, lineStyle: ls }; }}
+                >{ls}</button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Nodes -->
+          <div>
+            <div class="font-mono text-[10px] uppercase text-fg-muted mb-1.5">Nodes</div>
+            <div class="flex gap-1.5">
+              {#each (['glow', 'dot', 'none'] as const) as ns (ns)}
+                <button type="button"
+                  class="flex-1 px-2 py-1.5 rounded-md text-xs font-mono border transition-colors {tasteSettings.nodeStyle === ns
+                    ? 'border-accent bg-accent-bg text-accent'
+                    : 'border-border-muted text-fg-faint hover:border-accent hover:text-fg'}"
+                  onclick={() => { tasteSettings = { ...tasteSettings, nodeStyle: ns }; }}
+                >{ns}</button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Axis order -->
+          <div>
+            <div class="font-mono text-[10px] uppercase text-fg-muted mb-1.5">Axis order</div>
+            <select
+              bind:value={tasteSettings.order}
+              class="w-full bg-bg-elevated border border-border-muted rounded-md px-2 py-1.5 text-sm text-fg focus:border-accent focus:outline-none transition-colors"
+            >
+              <option value="alt">alt</option>
+              <option value="raw">raw</option>
+              <option value="lyric-last">lyric-last</option>
+              <option value="lyric-first">lyric-first</option>
+            </select>
+          </div>
+
+          <!-- Band + opacity -->
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" bind:checked={tasteSettings.band} class="accent-accent" />
+              <span class="font-mono text-[10px] uppercase text-fg-muted">Band</span>
+            </label>
+            {#if tasteSettings.band}
+              <div class="mt-2">
+                <div class="flex justify-between text-[10px] text-fg-faint mb-1">
+                  <span>Band opacity</span><span>{tasteSettings.bandOpacity.toFixed(2)}</span>
+                </div>
+                <input type="range" min="0" max="0.3" step="0.01"
+                  bind:value={tasteSettings.bandOpacity}
+                  class="w-full accent-accent"
+                />
+              </div>
+            {/if}
+          </div>
+
+          <!-- Amplitude -->
+          <div>
+            <div class="flex justify-between text-[10px] text-fg-faint mb-1">
+              <span class="font-mono uppercase text-fg-muted">Amplitude</span>
+              <span>{tasteSettings.amplitude.toFixed(2)}×</span>
+            </div>
+            <input type="range" min="0.6" max="2.2" step="0.05"
+              bind:value={tasteSettings.amplitude}
+              class="w-full accent-accent"
+            />
+          </div>
+
+        </div>
+      </div>
+
       <!-- Save button -->
       <div class="flex items-center gap-4">
         <button
