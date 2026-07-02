@@ -4,6 +4,7 @@ import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
 import { modelFor, modelForSection } from './modelFor.js';
 import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
+import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -66,6 +67,8 @@ export interface RoundData {
   votes: { voter: string; song: string; points: number; comment: string | null }[];
   chatMentions: { sender: string; raw_message: string; captured_at: string }[];
   relContext: string;
+  /** Auto-fetched league chat over the round window (sprint-task-9). Undefined when no group is mapped. */
+  chatHistory?: string;
 }
 
 // Per-section Generation params (sprint-14 generation-wiring). `id` is the
@@ -231,6 +234,18 @@ export function gatherRoundData(
     ? opts.relContextOverride
     : (db.prepare('SELECT text FROM relationship_contexts WHERE league_id = ?').get(round.league_id) as { text: string } | undefined)?.text ?? '';
 
+  // Auto-fetch league chat over the round window (sprint-task-9).
+  const win = roundChatWindow(db, roundId);
+  let chatHistory: string | undefined;
+  if (win.groupName) {
+    const msgs = getRoundMessages(db, win.groupName, win.fromIso, win.toIso);
+    if (msgs.length) {
+      chatHistory = msgs
+        .map((m) => `[${m.ts}] ${m.sender}: ${m.text.replace(/\s+/g, ' ').trim()}`)
+        .join('\n');
+    }
+  }
+
   return {
     round: { id: round.id, name: round.name, description: round.description },
     league: { id: round.league_id, name: round.league_name },
@@ -250,6 +265,7 @@ export function gatherRoundData(
     votes: voteRows.map(v => ({ voter: v.voter, song: v.song, points: v.points, comment: v.comment })),
     chatMentions: chatRows,
     relContext: resolvedRelContext,
+    chatHistory,
   };
 }
 
@@ -713,6 +729,14 @@ export function buildUserPrompt(
   if (genParams?.pastedChat?.trim()) {
     parts.push(
       `\n# Pasted WhatsApp chat — use THIS as the source for the "chat" section (ignore auto-captured mentions for that section):\n${genParams.pastedChat.trim()}`,
+    );
+  }
+
+  // Auto-fetched league chat (sprint-task-9). Used only when nothing was pasted —
+  // pasted chat always overrides.
+  if (!genParams?.pastedChat?.trim() && data.chatHistory?.trim()) {
+    parts.push(
+      `\n# League chat for this round — use THIS as the source for the "chat" section (ignore auto-captured mentions for that section):\n${data.chatHistory.trim()}`,
     );
   }
 

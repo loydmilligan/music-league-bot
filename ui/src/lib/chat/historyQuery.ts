@@ -163,6 +163,50 @@ export function saveChatSettings(db: Database.Database, settings: ChatSettings):
   tx();
 }
 
+/**
+ * Compute the chat-history window for a given round.
+ *
+ * Mirrors the window formula from the round page server so both callers share
+ * identical logic.  Returns empty strings when the round or its league mapping
+ * is absent — callers should skip fetching when `groupName` is empty.
+ */
+export function roundChatWindow(
+  db: Database.Database,
+  roundId: number,
+): { groupName: string; fromIso: string; toIso: string } {
+  const round = db
+    .prepare(
+      `SELECT r.created_at AS createdAt, l.slug AS slug, r.season_id AS seasonId
+       FROM rounds r
+       JOIN seasons s ON s.id = r.season_id
+       JOIN leagues l ON l.id = s.league_id
+       WHERE r.id = ?`,
+    )
+    .get(roundId) as { createdAt: string; slug: string; seasonId: number } | undefined;
+
+  if (!round) return { groupName: '', fromIso: '', toIso: '' };
+
+  const next = db
+    .prepare(
+      'SELECT created_at AS createdAt FROM rounds WHERE season_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1',
+    )
+    .get(round.seasonId, round.createdAt) as { createdAt: string } | undefined;
+
+  const settings = getChatSettings(db);
+  const groupName = settings.leagueGroupMap[round.slug] ?? '';
+
+  let fromIso = round.createdAt;
+  let toIso = next ? next.createdAt : new Date().toISOString();
+
+  if (settings.roundBoundary === 'buffer') {
+    const buf = settings.bufferDays * 86_400_000;
+    fromIso = new Date(new Date(fromIso).getTime() - buf).toISOString();
+    toIso = new Date(new Date(toIso).getTime() + buf).toISOString();
+  }
+
+  return { groupName, fromIso, toIso };
+}
+
 export function getTotalMessageCount(db: Database.Database, groupName?: string): number {
   if (groupName) {
     const row = db.prepare('SELECT COUNT(*) as n FROM chat_messages WHERE group_name = ?').get(groupName) as { n: number } | undefined;
