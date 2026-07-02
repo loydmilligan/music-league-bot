@@ -19,6 +19,7 @@
   import TasteWaveform from '$lib/taste-waveform/TasteWaveform.svelte';
   import {
     tasteEngine,
+    scopedLeague,
     DEFAULT_TASTE_SETTINGS,
   } from '$lib/taste-waveform/taste-waveform.js';
   import type { TasteSettings, TasteBlock } from '$lib/taste-waveform/taste-waveform.js';
@@ -534,6 +535,42 @@
       ? tasteEngine({ axes: sampleBlock.axes, players: sampleBlock.players }, tasteSettings)
       : null,
   );
+
+  // ---- League → Player picker state (Task 9) ---------------------------------
+  let selectedLeagueId = $state<number | null>(null);
+  let selectedPlayerIdx = $state(0);
+
+  // Players present in the selected league (rows carry leagueId at index 5).
+  const leaguePlayers = $derived(
+    sampleBlock && selectedLeagueId != null
+      ? sampleBlock.players
+          .map((p, i) => ({ p, i }))
+          .filter(({ p }) => p.rows.some((r) => r[5] === selectedLeagueId))
+      : (sampleBlock ? sampleBlock.players.map((p, i) => ({ p, i })) : []),
+  );
+
+  // Engine scoped to the chosen league (or all leagues when none chosen).
+  const previewEng = $derived(
+    sampleBlock
+      ? tasteEngine(
+          scopedLeague(sampleBlock, { ...tasteSettings, scopeAll: selectedLeagueId == null }, selectedLeagueId ?? undefined),
+          tasteSettings,
+        )
+      : null,
+  );
+
+  // Index of the selected player within the scoped engine's player list.
+  const previewPlayerIdx = $derived.by(() => {
+    if (!sampleBlock || !previewEng) return 0;
+    const targetName = sampleBlock.players[selectedPlayerIdx]?.name;
+    for (let i = 0; i < previewEng.nP; i++) if (previewEng.name(i) === targetName) return i;
+    return 0;
+  });
+
+  // Default selectedLeagueId to the first league once data is available.
+  $effect(() => {
+    if (selectedLeagueId == null && data.leagues.length > 0) selectedLeagueId = data.leagues[0].id;
+  });
 
   async function loadTasteSettings() {
     try {
@@ -1941,21 +1978,35 @@
     <div class="lg:w-72 shrink-0">
       <div class="bg-surface border border-border-muted rounded-xl p-5 sticky top-4">
         <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-3">Live preview</div>
-        {#if sampleEng && sampleBlock}
-          <TasteWaveform
-            variant="card"
-            engine={sampleEng}
-            pi={0}
-            settings={tasteSettings}
-            name={sampleBlock.players[0]?.name ?? 'Player'}
-          />
+        {#if sampleBlock}
+          <div class="mb-3 flex gap-2">
+            <select class="flex-1 bg-surface border border-border-muted rounded-md px-2 py-1.5 text-sm"
+              bind:value={selectedLeagueId}>
+              {#each data.leagues as lg (lg.id)}<option value={lg.id}>{lg.name}</option>{/each}
+            </select>
+            <select class="flex-1 bg-surface border border-border-muted rounded-md px-2 py-1.5 text-sm"
+              bind:value={selectedPlayerIdx}>
+              {#each leaguePlayers as lp (lp.i)}<option value={lp.i}>{lp.p.name}</option>{/each}
+            </select>
+          </div>
+          {#if previewEng && previewEng.nP > 0}
+            <TasteWaveform
+              variant="hero"
+              engine={previewEng}
+              pi={previewPlayerIdx}
+              settings={tasteSettings}
+              name={previewEng.name(previewPlayerIdx)}
+            />
+          {:else}
+            <span class="font-mono text-[10px] text-fg-faint">no players in this league yet</span>
+          {/if}
         {:else}
           <div class="flex items-center justify-center h-32 rounded-lg bg-bg-elevated border border-border-muted">
             <span class="font-mono text-[10px] text-fg-faint">loading sample…</span>
           </div>
         {/if}
         <p class="text-[10px] text-fg-faint mt-3">
-          Preview re-renders as you adjust controls. Showing player 1 of the full roster.
+          Preview re-renders as you adjust controls. Select a league and player to see their full sonic signature.
         </p>
       </div>
     </div>
