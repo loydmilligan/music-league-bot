@@ -37,25 +37,30 @@ Verified: the live discoverability API currently returns full payloads for Hip J
 
 **Call site:** invoke `recomputePopularityProxies(db)` at the start of digest generation — inside the `POST /api/digest/[roundId]/draft` handler (`draft/+server.ts:28`) before `gatherRoundData`, and in the prepare endpoint (`prepare/+server.ts`) before building prep-checks — so coverage is always evaluated against fresh proxies. (Cheap enough to run on each prepare/generate; no scheduling needed.)
 
-## Part 2 — Layered popularity fill
+## Part 2 — Regular (percentile) popularity scale, both sources calibrated onto it
 
-Each submission's `popularity_proxy` resolves in priority order:
+**Motivation (measured):** the current `popularity_proxy` (log-normalized listeners/playcount) is severely right-skewed — mean 76.5, 329/632 songs ≥80, almost nothing <30. Since the waveform obscurity axis is `100 - popularity_proxy` (`tasteData.ts:45`), that axis is squashed into a narrow band. We replace the proxy with a **uniform percentile-rank scale** (each song → its rank position in the corpus, 0–100, evenly spread) and translate both sources onto one unified ranking. This regularizes both the Tastemaker coverage/score and the waveform's obscurity axis.
 
-1. **Manual override** — if `popularity_source = 'manual'`, keep the stored value untouched by recompute.
-2. **Last.fm** — log-normalized `listeners`/`playcount` (existing path); `popularity_source = 'lastfm'`.
-3. **Spotify fallback** — for submissions with no usable Last.fm data (no row, or listeners+playcount both 0), fetch `GET /v1/tracks/{id}` and use its `popularity` (0–100) as the proxy; `popularity_source = 'spotify'`. Uses the existing `getSpotifyToken()` / shared client in `ui/src/lib/spotify.ts`. New helper `fetchSpotifyPopularity(uris: string[]): Map<uri, number>` (batchable via `GET /v1/tracks?ids=`). No-ops gracefully when creds are absent (like `playlistIngest`).
-4. **Still missing** — remains null; surfaced in the manual panel (Part 3) for hand entry.
+**New `recomputePopularityProxies(db)` algorithm** (in `ui/src/lib/lastfm.ts`, replacing the old per-pair `computePopularityProxies` log-normalize as the corpus path; the script refactors to call it):
 
-**Schema additions** (`ui/src/lib/db/schema.ts`, `song_popularity`):
-- `popularity_source TEXT` — `'lastfm' | 'spotify' | 'manual'` (nullable; which source set the current proxy).
-- `spotify_popularity INTEGER` — cached raw Spotify popularity (nullable), so the fallback isn't re-fetched every recompute.
-- Added via additive `ALTER TABLE … ADD COLUMN` migration (matches the project's existing additive-migration pattern; no destructive change).
+1. **Ensure raw signals present.** For every corpus song: Last.fm `listeners`/`playcount` (already fetched by the queue) and Spotify `popularity` (fetched corpus-wide, cached in `spotify_popularity`; batched `GET /v1/tracks?ids=` 50/req; no-op without creds).
+2. **Last.fm raw signal** = `log1p(playcount)` (fallback `log1p(listeners)`), for songs with Last.fm data.
+3. **Calibrate Spotify → Last.fm signal (unified ranking, chosen approach).** On the **overlap set** (songs with both a Last.fm signal and a Spotify popularity) build a monotonic quantile map: sort overlap by Spotify popularity and by Last.fm signal; a Spotify value maps to the Last.fm signal at the same quantile. For **Spotify-only** songs (the ones Last.fm couldn't find — systematically more obscure), convert their Spotify popularity to a Last.fm-equivalent signal via this map. This correctly places obscure Spotify-only songs low in the ranking instead of overstating them.
+4. **Unified signal** per song = Last.fm signal if present, else calibrated Last.fm-equivalent from Spotify, else none.
+5. **`popularity_proxy` = percentile rank** of the unified signal across all songs that have one → uniform 0–100. Set `popularity_source` to `'lastfm'` or `'spotify'` accordingly.
+6. **Manual entries** (`popularity_source = 'manual'`) are entered directly on the 0–100 scale and are **left untouched** by recompute (fixed points). Songs with no signal from any source stay null → surfaced in the manual panel.
+
+Idempotent, transactional, fast (~640 rows). Runs at prepare/generate (Part 1).
+
+**Schema additions** (`ui/src/lib/db/schema.ts`, `song_popularity`; additive `ALTER TABLE … ADD COLUMN`, matching the project's migration pattern):
+- `popularity_source TEXT` — `'lastfm' | 'spotify' | 'manual'` (nullable).
+- `spotify_popularity INTEGER` — cached raw Spotify popularity (nullable), so it isn't re-fetched every recompute.
 
 **Manual override API + UI:**
-- `POST /api/songs/[spotifyUri]/popularity` — body `{ popularity_proxy: number (0–100) }`; upserts the row, sets `popularity_source = 'manual'`. `DELETE` clears the manual flag (revert to computed).
-- A small panel on the digest **prepare** screen: lists the round's (and cumulative season's) submissions with null `popularity_proxy`, each with title/artist, a link out to look it up, and a 0–100 input + save. Saving writes via the API and refreshes the coverage indicator. Purely additive to the existing prep UI.
+- `POST /api/songs/[spotifyUri]/popularity` — body `{ popularity_proxy: number (0–100) }`; upserts the row, sets `popularity_source = 'manual'`. `DELETE` clears the manual flag (revert to computed on next recompute).
+- A small panel on the digest **prepare** screen: lists the season-cumulative submissions with null `popularity_proxy`, each with title/artist, a lookup link, and a 0–100 input + save. Saving writes via the API and refreshes the coverage indicator. Additive to the existing prep UI. Manual values are on the same 0–100 percentile scale (interpretable as "sits at the Nth percentile").
 
-**Scale caveat (documented, accepted):** Last.fm proxy is log-normalized across the corpus; Spotify popularity and manual values are their own 0–100 scale. The Tastemaker score is a *percentile across the corpus*, so mixing is acceptable for coverage/ranking. Fallback/manual-filled songs are tagged via `popularity_source` so we can revisit comparability later if needed.
+**Consequence (intended):** every player's waveform obscurity axis re-spreads to the new uniform scale, and existing digests will show different (better-distributed) obscurity once regenerated. The Tastemaker score already re-percentiles internally (`percentileByObscurity`), so it stays sensible; the underlying regularization improves its inputs.
 
 ## Part 3 — Honest prep-checks matrix
 
@@ -85,13 +90,13 @@ In `ui/src/lib/digest/prepChecks.ts`:
 
 ## Testing
 
-- **Unit:** `recomputePopularityProxies` (fills nulls, preserves `manual`, is idempotent); Spotify fallback (mocked `fetch`, maps popularity, no-ops without creds); prepChecks Tastemaker check (null-proxy → not-ok, ≥0.8 proxied → ok) and the new Chat check (mapped+messages → ok, unmapped/empty window → warn); chat-window fetch selects the right messages for a round.
+- **Unit:** `recomputePopularityProxies` — produces a **uniform** proxy distribution (percentile spread, not skewed); the Spotify→Last.fm quantile calibration maps overlap values monotonically and places Spotify-only (obscure) songs low; preserves `manual` entries untouched; is idempotent; leaves signal-less songs null. Spotify fetch helper (mocked `fetch`, batches ids, no-ops without creds). prepChecks Tastemaker check (null-proxy → not-ok, ≥0.8 proxied → ok) and the new Chat check (mapped+messages → ok, unmapped/empty window → warn). Chat-window fetch selects the right messages for a round.
 - **Integration/smoke:** on a real round for Hip Jammers and Second Best — generate, confirm Tastemaker renders, confirm auto-fetched chat appears in the draft, confirm the prep matrix shows accurate Tastemaker coverage and a Chat row.
 - `cd ui && npm run check` clean; `npm run test` for the touched suites.
 
 ## Non-goals
 
-- No change to the 0.8 coverage threshold or the percentile-scoring algorithm.
+- No change to the 0.8 coverage threshold or the Tastemaker scoring function itself (`percentileByObscurity` is unchanged). We DO change the `popularity_proxy` scale (skewed log-norm → uniform percentile) — that is intentional and also re-spreads the waveform obscurity axis.
 - No new scheduled jobs (proxy recompute rides on prepare/generate).
 - No change to how chat is *ingested* (relay/scripts unchanged) — only how digest generation *reads* it.
 - No Tastemaker in the `read_model.json`/bside share surface (out of scope; it remains a round-digest section).
