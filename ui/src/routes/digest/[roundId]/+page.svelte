@@ -830,6 +830,68 @@
     }
   }
 
+  // -------- Missing-popularity panel (prepare stage) ----------
+  // Fetches season-cumulative songs with no popularity_proxy so the user can
+  // fill them in manually before generating a draft. Mirrors the Tastemaker
+  // coverage scope (competitor_id NOT NULL, spotify:track:% URI, same season).
+  type MissingSong = { spotifyUri: string; title: string; artist: string };
+  let missingPop = $state<MissingSong[]>([]);
+  let missingPopLoading = $state(false);
+  // Per-song input values (keyed by spotifyUri) and saving state.
+  let popInputs = $state<Record<string, string>>({});
+  let popSaving = $state<Record<string, boolean>>({});
+
+  async function fetchMissingPop() {
+    missingPopLoading = true;
+    try {
+      const res = await fetch(`/api/digest/${data.roundId}/missing-popularity`);
+      if (!res.ok) throw new Error(`missing-popularity fetch failed (${res.status})`);
+      const body = (await res.json()) as { songs: MissingSong[] };
+      missingPop = body.songs;
+      // Seed inputs for any new songs (don't wipe values the user already typed).
+      for (const s of body.songs) {
+        if (!(s.spotifyUri in popInputs)) popInputs[s.spotifyUri] = '';
+      }
+    } catch (err) {
+      showError(err);
+    } finally {
+      missingPopLoading = false;
+    }
+  }
+
+  async function savePopularity(song: MissingSong) {
+    const raw = popInputs[song.spotifyUri] ?? '';
+    const val = Number(raw);
+    if (!raw || !Number.isFinite(val) || val < 0 || val > 100) {
+      showError('Enter a number between 0 and 100.');
+      return;
+    }
+    popSaving = { ...popSaving, [song.spotifyUri]: true };
+    try {
+      const res = await fetch(`/api/songs/${encodeURIComponent(song.spotifyUri)}/popularity`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ popularity_proxy: val }),
+      });
+      if (!res.ok) throw new Error(`save failed (${res.status})`);
+      // Remove the saved input value then refresh both lists.
+      const { [song.spotifyUri]: _removed, ...rest } = popInputs;
+      popInputs = rest;
+      await Promise.all([fetchMissingPop(), rerunPrepare()]);
+    } catch (err) {
+      showError(err);
+    } finally {
+      popSaving = { ...popSaving, [song.spotifyUri]: false };
+    }
+  }
+
+  // Load missing-popularity list whenever we enter the prepare stage.
+  $effect(() => {
+    if (data.stage === 'prepare') {
+      void fetchMissingPop();
+    }
+  });
+
   // -------- Shared ----------
   let errorToast = $state<string | null>(null);
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1004,6 +1066,56 @@
           <span style="font: 500 11px/1 var(--font-mono); color: var(--fg-quiet);">{check.src}</span>
         </div>
       {/each}
+    </div>
+
+    <!-- Missing-popularity panel: season-cumulative songs lacking a proxy. -->
+    <div class="dg-missing-pop">
+      <header class="dg-missing-pop-hd">
+        <span class="dg-missing-pop-label">
+          Popularity proxies missing
+          {#if missingPopLoading}
+            <span style="color: var(--fg-quiet);">…</span>
+          {:else}
+            · {missingPop.length}
+          {/if}
+        </span>
+        {#if !missingPopLoading && missingPop.length === 0}
+          <span class="dg-missing-pop-ok">✓ all songs covered</span>
+        {/if}
+      </header>
+
+      {#if !missingPopLoading && missingPop.length > 0}
+        <div class="dg-missing-pop-list">
+          {#each missingPop as song (song.spotifyUri)}
+            <div class="dg-missing-pop-row">
+              <span class="dg-missing-pop-title">{song.title}</span>
+              <span class="dg-missing-pop-artist">{song.artist}</span>
+              <a
+                class="dg-missing-pop-lookup"
+                href="https://www.last.fm/search?q={encodeURIComponent(song.artist + ' ' + song.title)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Look up on Last.fm"
+              >Last.fm ↗</a>
+              <input
+                class="dg-missing-pop-input"
+                type="number"
+                min="0"
+                max="100"
+                placeholder="0–100"
+                value={popInputs[song.spotifyUri] ?? ''}
+                oninput={(e) => { popInputs = { ...popInputs, [song.spotifyUri]: (e.currentTarget as HTMLInputElement).value }; }}
+              />
+              <button
+                type="button"
+                class="mash-btn mash-btn--secondary mash-btn--sm"
+                onclick={() => savePopularity(song)}
+                disabled={popSaving[song.spotifyUri]}
+              >{popSaving[song.spotifyUri] ? '…' : 'Save'}</button>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
 
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1441,4 +1553,79 @@
     font: inherit;
   }
   .dg-relctx-link:hover { color: var(--fg); }
+
+  /* Missing-popularity panel (prepare stage) */
+  .dg-missing-pop {
+    background: var(--ink-0);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dg-missing-pop-hd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dg-missing-pop-label {
+    font: 700 11px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .dg-missing-pop-ok {
+    font: 600 11px/1 var(--font-mono);
+    color: var(--moss);
+  }
+  .dg-missing-pop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .dg-missing-pop-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+  }
+  .dg-missing-pop-title {
+    font: 600 12px/1.3 var(--font-body);
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dg-missing-pop-artist {
+    font: 500 11px/1 var(--font-mono);
+    color: var(--fg-quiet);
+    white-space: nowrap;
+  }
+  .dg-missing-pop-lookup {
+    font: 600 10px/1 var(--font-mono);
+    color: var(--mash-pulp, var(--fg));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+  }
+  .dg-missing-pop-lookup:hover { opacity: 0.75; }
+  .dg-missing-pop-input {
+    width: 64px;
+    padding: 5px 7px;
+    font: 600 12px/1 var(--font-mono);
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--line-strong, var(--line));
+    border-radius: var(--r-2);
+    text-align: right;
+  }
+  .dg-missing-pop-input:focus {
+    outline: 2px solid var(--mash-pulp, #d29400);
+    outline-offset: -1px;
+  }
 </style>
