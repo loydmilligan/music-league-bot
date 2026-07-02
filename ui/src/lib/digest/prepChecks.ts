@@ -96,7 +96,8 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
 
   // Tastemaker coverage: cumulative over the season through this round, counting
   // only submissions whose song has a non-null popularity_proxy (matches the
-  // getDiscoverability gate — row existence is NOT enough).
+  // getDiscoverability gate — row existence is NOT enough, and the gate also
+  // requires competitor_id IS NOT NULL and a real spotify:track: URI).
   const cov = db
     .prepare(
       `SELECT COUNT(*) AS total,
@@ -105,7 +106,9 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
        JOIN rounds r ON r.id = s.round_id
        LEFT JOIN song_popularity sp ON sp.spotify_uri = s.spotify_uri
        WHERE r.season_id = (SELECT season_id FROM rounds WHERE id = ?)
-         AND r.id <= ?`,
+         AND r.id <= ?
+         AND s.competitor_id IS NOT NULL
+         AND s.spotify_uri LIKE 'spotify:track:%'`,
     )
     .get(roundId, roundId) as { total: number; covered: number };
   const covRatio = cov.total ? cov.covered / cov.total : 0;

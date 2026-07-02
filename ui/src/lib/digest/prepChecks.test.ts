@@ -120,6 +120,37 @@ describe('Tastemaker check reflects popularity_proxy coverage, not row existence
     expect(tm.count).toBe(5);
     expect(tm.src).toBe('song_popularity · 5/10 proxied');
   });
+
+  it('excludes submissions without a competitor_id or a non-spotify:track: URI from the denominator', () => {
+    seedBase(db);
+    // 2 valid submissions (competitor_id=1, spotify:track:) with proxies → 2/2 = 1.0 ≥ 0.8
+    insertSubmission(db, 1, 'spotify:track:valid1');
+    insertSubmission(db, 1, 'spotify:track:valid2');
+    insertProxy(db, 'spotify:track:valid1', 40);
+    insertProxy(db, 'spotify:track:valid2', 60);
+
+    // 1 submission with a non-track URI (e.g. an episode) — must be excluded from denominator
+    db.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (1, 1, 'spotify:episode:ep1', 'Ep', 'Pod', '2026-06-01T00:00:00Z')`,
+    ).run();
+    insertProxy(db, 'spotify:episode:ep1', 20);
+
+    // 1 submission with NULL competitor_id (anonymous/orphan) — must be excluded
+    db.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (1, NULL, 'spotify:track:orphan1', 'Orphan', 'Nobody', '2026-06-01T00:00:00Z')`,
+    ).run();
+    // no proxy for orphan1 — if counted it would drag total to 3/4 = 0.75 < 0.8
+
+    const checks = runPrepChecks(db, 1);
+    const tm = checks.find((c) => c.name === 'Tastemaker leaderboard')!;
+    expect(tm).toBeDefined();
+    // denominator = 2 (valid only); covered = 2; ratio = 1.0 ≥ 0.8 → ok
+    expect(tm.ok).toBe(true);
+    expect(tm.count).toBe(2);
+    expect(tm.src).toBe('song_popularity · 2/2 proxied');
+  });
 });
 
 // ---------------------------------------------------------------------------
