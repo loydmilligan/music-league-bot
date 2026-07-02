@@ -1855,8 +1855,7 @@
             { key: 'showRead' as const, label: 'Show prose read' },
             { key: 'showChips' as const, label: 'Show taste chips' },
             { key: 'showLeagueAvg' as const, label: 'Show league average overlay' },
-          ] as items}
-            {@const item = items}
+          ] as item}
             <label class="flex items-center gap-3 cursor-pointer group">
               <button
                 type="button"
