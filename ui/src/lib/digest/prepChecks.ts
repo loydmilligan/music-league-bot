@@ -8,6 +8,7 @@
  * If the prepare endpoint ever drifts in scope, reconcile here too.
  */
 import type Database from 'better-sqlite3';
+import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
 
 export interface CheckResult {
   name: string;
@@ -40,6 +41,7 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
       { name: 'Votes', ok: false, src: `export.zip · round ${roundId}` },
       { name: 'Vote comments', ok: false, src: `export.zip · round ${roundId}` },
       { name: 'Chat-window mentions', ok: false, src: 'watcher · —' },
+      { name: 'Chat', ok: false, src: 'chat_messages · league unmapped', count: 0, optional: true },
       { name: 'Album art', ok: false, src: 'spotify api' },
     ];
   }
@@ -92,13 +94,28 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
     )
     .get(roundId) as { n: number }).n;
 
-  const pop_count = (db
+  // Tastemaker coverage: cumulative over the season through this round, counting
+  // only submissions whose song has a non-null popularity_proxy (matches the
+  // getDiscoverability gate — row existence is NOT enough).
+  const cov = db
     .prepare(
-      `SELECT COUNT(*) AS n FROM ml_submissions s
-       JOIN song_popularity p ON p.spotify_uri = s.spotify_uri
-       WHERE s.round_id = ?`,
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN sp.popularity_proxy IS NOT NULL THEN 1 ELSE 0 END) AS covered
+       FROM ml_submissions s
+       JOIN rounds r ON r.id = s.round_id
+       LEFT JOIN song_popularity sp ON sp.spotify_uri = s.spotify_uri
+       WHERE r.season_id = (SELECT season_id FROM rounds WHERE id = ?)
+         AND r.id <= ?`,
     )
-    .get(roundId) as { n: number }).n;
+    .get(roundId, roundId) as { total: number; covered: number };
+  const covRatio = cov.total ? cov.covered / cov.total : 0;
+  const tastemakerOk = cov.total > 0 && covRatio >= 0.8;
+
+  // Chat availability: reuse roundChatWindow (shared with round page) for the window
+  const chatWin = roundChatWindow(db, roundId);
+  const chatCount = chatWin.groupName
+    ? getRoundMessages(db, chatWin.groupName, chatWin.fromIso, chatWin.toIso).length
+    : 0;
 
   const tags_count = (db
     .prepare(
@@ -136,6 +153,15 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
       count: mentions_count,
       optional: true,
     },
+    {
+      name: 'Chat',
+      ok: chatCount > 0,
+      src: chatWin.groupName
+        ? `chat_messages · ${chatWin.groupName}`
+        : 'chat_messages · league unmapped',
+      count: chatCount,
+      optional: true,
+    },
     { name: 'Album art', ok: artOk, src: 'spotify api', count: subs_count },
     {
       name: 'YTM playlist links',
@@ -146,9 +172,9 @@ export function runPrepChecks(db: Database.Database, roundId: number): CheckResu
     },
     {
       name: 'Tastemaker leaderboard',
-      ok: subs_count > 0 && pop_count >= threshold,
-      src: 'song_popularity',
-      count: pop_count,
+      ok: tastemakerOk,
+      src: `song_popularity · ${cov.covered}/${cov.total} proxied`,
+      count: cov.covered,
       optional: true,
     },
     {
