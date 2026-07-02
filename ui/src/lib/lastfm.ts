@@ -11,6 +11,7 @@
  */
 
 import type Database from 'better-sqlite3';
+import { fetchSpotifyPopularity } from './spotify.js';
 
 const LASTFM_ROOT = 'https://ws.audioscrobbler.com/2.0/';
 
@@ -293,4 +294,86 @@ export async function fetchTags(
 	db.prepare(
 		`UPDATE song_popularity SET tags = ? WHERE spotify_uri = ?`
 	).run(tagsJson, spotifyUri);
+}
+
+// ---------------------------------------------------------------------------
+// Corpus-wide popularity recompute
+// ---------------------------------------------------------------------------
+
+interface PopRow {
+	spotify_uri: string; listeners: number | null; playcount: number | null;
+	spotify_popularity: number | null; popularity_source: string | null;
+}
+
+/** Corpus-wide popularity_proxy recompute on a uniform percentile scale.
+ *  Last.fm signal is primary; Spotify popularity is calibrated onto the
+ *  Last.fm ranking via quantile matching; manual entries are fixed points. */
+export async function recomputePopularityProxies(
+	db: Database.Database,
+	opts: { fetchSpotify?: boolean } = {},
+): Promise<{ updated: number; nullRemaining: number }> {
+	const rows = db.prepare(
+		'SELECT spotify_uri, listeners, playcount, spotify_popularity, popularity_source FROM song_popularity',
+	).all() as PopRow[];
+
+	if (opts.fetchSpotify !== false) {
+		const missing = rows.filter((r) => r.spotify_popularity == null).map((r) => r.spotify_uri);
+		if (missing.length) {
+			const sp = await fetchSpotifyPopularity(missing);
+			if (sp.size) {
+				const updSp = db.prepare('UPDATE song_popularity SET spotify_popularity = ? WHERE spotify_uri = ?');
+				db.transaction(() => { for (const [uri, pop] of sp) updSp.run(pop, uri); })();
+				for (const r of rows) { const v = sp.get(r.spotify_uri); if (v != null) r.spotify_popularity = v; }
+			}
+		}
+	}
+
+	const lf = (r: PopRow): number | null => {
+		const pc = r.playcount ?? 0, ls = r.listeners ?? 0;
+		if (pc > 0) return Math.log1p(pc);
+		if (ls > 0) return Math.log1p(ls);
+		return null;
+	};
+
+	// quantile helpers over ascending sorted arrays
+	const quantileOf = (sorted: number[], v: number): number => {
+		if (!sorted.length) return 0.5;
+		let lo = 0, hi = sorted.length;
+		while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] <= v) lo = mid + 1; else hi = mid; }
+		return lo / sorted.length;
+	};
+	const valueAtQuantile = (sorted: number[], q: number): number => {
+		if (!sorted.length) return 0;
+		const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))));
+		return sorted[idx];
+	};
+
+	const overlap = rows.filter((r) => r.popularity_source !== 'manual' && lf(r) !== null && r.spotify_popularity != null);
+	const spSorted = overlap.map((r) => r.spotify_popularity!).sort((a, b) => a - b);
+	const lfSorted = overlap.map((r) => lf(r)!).sort((a, b) => a - b);
+	const spToLf = (sp: number): number => valueAtQuantile(lfSorted, quantileOf(spSorted, sp));
+
+	const unified = new Map<string, { value: number; source: 'lastfm' | 'spotify' }>();
+	for (const r of rows) {
+		if (r.popularity_source === 'manual') continue;
+		const l = lf(r);
+		if (l !== null) unified.set(r.spotify_uri, { value: l, source: 'lastfm' });
+		else if (r.spotify_popularity != null && overlap.length) unified.set(r.spotify_uri, { value: spToLf(r.spotify_popularity), source: 'spotify' });
+	}
+	const vals = [...unified.values()].map((u) => u.value).sort((a, b) => a - b);
+	const pct = (v: number): number => (vals.length ? Math.round(quantileOf(vals, v) * 100) : 0);
+
+	const upd = db.prepare('UPDATE song_popularity SET popularity_proxy = ?, popularity_source = ? WHERE spotify_uri = ?');
+	const clr = db.prepare('UPDATE song_popularity SET popularity_proxy = NULL, popularity_source = NULL WHERE spotify_uri = ?');
+	let updated = 0, nullRemaining = 0;
+	db.transaction(() => {
+		for (const r of rows) {
+			if (r.popularity_source === 'manual') { updated++; continue; }
+			const u = unified.get(r.spotify_uri);
+			if (!u) { clr.run(r.spotify_uri); nullRemaining++; continue; }
+			upd.run(pct(u.value), u.source, r.spotify_uri);
+			updated++;
+		}
+	})();
+	return { updated, nullRemaining };
 }
