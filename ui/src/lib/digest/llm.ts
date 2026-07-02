@@ -362,6 +362,32 @@ export function logLlmCall(
   }
 }
 
+/**
+ * Recover a JSON string from an LLM response. Models (even in jsonMode)
+ * intermittently wrap output in a ```json fence and/or add prose around it, so
+ * an anchored whole-message fence match is not enough. Strategy: prefer the
+ * first fenced block anywhere in the text; otherwise slice from the first `{`/`[`
+ * to the matching last `}`/`]`; fall back to the trimmed input. All digest LLM
+ * calls use jsonMode, so the content is always meant to be JSON.
+ */
+export function extractJsonContent(content: string): string {
+  const s = content.trim();
+  const fence = s.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/i);
+  if (fence && fence[1].trim()) return fence[1].trim();
+  const firstObj = s.indexOf('{');
+  const firstArr = s.indexOf('[');
+  let start = -1;
+  if (firstObj === -1) start = firstArr;
+  else if (firstArr === -1) start = firstObj;
+  else start = Math.min(firstObj, firstArr);
+  if (start >= 0) {
+    const close = s[start] === '{' ? '}' : ']';
+    const end = s.lastIndexOf(close);
+    if (end > start) return s.slice(start, end + 1);
+  }
+  return s;
+}
+
 export async function callOpenRouter(
   messages: OpenRouterMessage[],
   opts: { model?: string; jsonMode?: boolean; meta?: LLMCallMeta } = {},
@@ -424,8 +450,7 @@ export async function callOpenRouter(
   const promptTokens = typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0;
   const completionTokens = typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0;
   const totalTokens = typeof json.usage?.total_tokens === 'number' ? json.usage.total_tokens : 0;
-  const fenced = content.match(/^\s*```(?:json)?\s*\n([\s\S]*?)\n```\s*$/);
-  const finalContent = fenced ? fenced[1] : content;
+  const finalContent = extractJsonContent(content);
 
   const result: LLMResult = { content: finalContent, costUsd, promptTokens, completionTokens, totalTokens, latencyMs };
 
