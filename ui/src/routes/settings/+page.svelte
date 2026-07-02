@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { PageData } from './$types.js';
   import { enhance } from '$app/forms';
-  import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
+  import CollapsiblePanel from '$lib/components/CollapsiblePanel.svelte';
   import EmailPollerPanel from '$lib/email/EmailPollerPanel.svelte';
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
   import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
@@ -544,21 +544,15 @@
 <SettingsTabs />
 
 <!-- ── Email ingestion status panel ──────────────────────────────────────── -->
-<EmailPollerPanel initial={data.emailPoller} />
+<CollapsiblePanel id="app-email-ingestion" title="Email ingestion status">
+  <EmailPollerPanel initial={data.emailPoller} />
+</CollapsiblePanel>
 
 <!-- ── Song Metadata Queue panel ─────────────────────────────────────────── -->
-<section
-  class="bg-surface border border-border-muted rounded-xl p-6 mt-6 mb-6"
-  style="border-left: 3px solid var(--color-accent);"
->
-  <!-- Header -->
-  <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-    <div>
-      <SectionLabel>Enrichment</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Song metadata queue</h2>
-    </div>
+<CollapsiblePanel id="app-metadata-queue" title="Song metadata queue">
+  <div class="flex justify-end mb-4">
     <StatusChip label={overallChip.label} tone={overallChip.tone} />
-  </header>
+  </div>
 
   <!-- Hierarchy navigator (scope drill-down) -->
   <HierarchyNavigator
@@ -798,7 +792,7 @@
       <span class="font-mono text-[10px] tracking-widest uppercase text-fg-muted">Include audio</span>
     </label>
   </div>
-</section>
+</CollapsiblePanel>
 
 <!-- Two-column layout at md+: weights (left) | import + queue (right). -->
 <div class="grid md:grid-cols-2 gap-6 mb-6 items-start mt-6">
@@ -806,14 +800,10 @@
 <div class="flex flex-col gap-4">
 
 <!-- Universal Songcard weights panel (active, editable) -->
-<section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="mb-1 flex items-center gap-3">
-    <div class="flex-1">
-      <SectionLabel>Universal songcard</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Rating weights</h2>
-    </div>
+<CollapsiblePanel id="app-rating-weights" title="Rating weights">
+  <div class="flex justify-end mb-1">
     <StatusChip label="ACTIVE" tone="accent" />
-  </header>
+  </div>
   <p class="text-xs text-fg-dim mb-4">
     Four axes, sums to 100. Score = <code class="font-mono text-fg">Σ(rating × weight) / Σ(weight) × 4</code> → /20.
   </p>
@@ -893,18 +883,15 @@
       </button>
     </div>
   </form>
-</section>
+</CollapsiblePanel>
 
 <!-- Legacy weights panel (frozen, read-only) — hidden once all surfaces migrated -->
 {#if !legacyDeprecated}
-<section class="bg-surface border border-dashed border-border-muted rounded-xl p-6 opacity-60">
-  <header class="mb-1 flex items-center gap-3">
-    <div class="flex-1">
-      <SectionLabel>Legacy cards</SectionLabel>
-      <h2 class="text-lg font-bold text-fg-muted mt-1">Rating weights (legacy)</h2>
-    </div>
+<CollapsiblePanel id="app-rating-weights-legacy" title="Rating weights (legacy)" subtitle="Deprecated — frozen">
+  <div class="opacity-60">
+  <div class="flex justify-end mb-1">
     <StatusChip label="DEPRECATED" tone="muted" />
-  </header>
+  </div>
   <p class="text-xs text-fg-dim mb-4">
     Applies only to pre-unicard surfaces. Frozen — remove this panel once every surface is on the universal songcard.
   </p>
@@ -925,7 +912,8 @@
     {/each}
     <div class="pt-1 text-xs font-mono text-fg-dim">Total: {wLegacyTotal}%</div>
   </div>
-</section>
+  </div>
+</CollapsiblePanel>
 {/if}
 
 </div>
@@ -933,12 +921,8 @@
 <!-- Right column: Import + Queue stacked -->
 <div class="flex flex-col gap-6">
 <!-- Section 2: ZIP Import -->
-<section class="bg-surface border border-border-muted rounded-xl p-6">
-  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-    <div>
-      <SectionLabel>Import</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">ZIP import &amp; rescan</h2>
-    </div>
+<CollapsiblePanel id="app-zip-import" title="ZIP import &amp; rescan">
+  <div class="flex justify-end mb-1">
     {#if hasFailedImport}
       <StatusChip label="LAST IMPORT FAILED" tone="warn" />
     {:else if lastSuccess}
@@ -949,7 +933,7 @@
     {:else}
       <StatusChip label="NO IMPORTS" tone="muted" />
     {/if}
-  </header>
+  </div>
   <p class="text-xs text-fg-dim mb-5">
     Drop a Music League <code class="font-mono text-fg">export.zip</code> or rescan
     <code class="font-mono text-fg">data/&lt;league&gt;/season-N/</code> on disk.
@@ -1054,25 +1038,21 @@
   {:else}
     <p class="text-fg-dim text-sm">No imports yet.</p>
   {/if}
-</section>
+</CollapsiblePanel>
 
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
 
 
 <!-- Debug mode toggle card -->
-<section class="bg-surface border border-border-muted rounded-xl p-6 mt-6">
-  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-    <div>
-      <SectionLabel>Developer</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Debug mode</h2>
-    </div>
+<CollapsiblePanel id="app-debug-mode" title="Debug mode">
+  <div class="flex justify-end mb-1">
     {#if debugEnabled}
       <StatusChip label="ENABLED" tone="warn" />
     {:else}
       <StatusChip label="OFF" tone="muted" />
     {/if}
-  </header>
+  </div>
   <p class="text-xs text-fg-dim mb-5">
     Enables the <a href="/settings/debug" class="text-accent hover:text-accent-strong underline decoration-dotted underline-offset-4 transition-colors">Debug tab</a>
     with a live cost dashboard — today's LLM spend by category, call drilldown, 14-day stacked bar chart, and model value rankings.
@@ -1089,4 +1069,4 @@
       {debugEnabled ? 'Debug mode on — visit /settings/debug' : 'Enable debug mode'}
     </span>
   </label>
-</section>
+</CollapsiblePanel>

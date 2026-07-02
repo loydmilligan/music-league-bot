@@ -1,5 +1,4 @@
 <script lang="ts">
-  import SectionLabel from '$lib/components/SectionLabel.svelte';
   import { statusLine, outcomeGlyph, relativeTime, type PollStatus } from './emailPollerView.js';
   import type { EmailPollerData, RecentEmail } from './emailPollerQuery.js';
 
@@ -46,15 +45,8 @@
   }
 </script>
 
-<section
-  class="bg-surface border border-border-muted rounded-xl p-6 mt-6 mb-6"
-  style="border-left: 3px solid var(--color-accent);"
->
-  <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-    <div>
-      <SectionLabel>Notifications</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Email ingestion</h2>
-    </div>
+<div>
+  <div class="flex justify-end mb-3">
     <button
       type="button"
       onclick={refresh}
@@ -63,7 +55,7 @@
     >
       {refreshing ? 'refreshing…' : '↻ Refresh'}
     </button>
-  </header>
+  </div>
 
   <!-- Large status indicator -->
   <div class="flex items-center gap-3 mb-5 px-3 py-3 rounded-lg bg-bg-elevated border border-border-muted">
@@ -100,4 +92,4 @@
       {/each}
     </ul>
   {/if}
-</section>
+</div>
