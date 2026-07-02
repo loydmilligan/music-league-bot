@@ -39,3 +39,10 @@ it('returns an empty map when creds are absent (no throw)', async () => {
   const out = await fetchSpotifyPopularity(['spotify:track:x']);
   expect(out.size).toBe(0);
 });
+
+it('returns an empty map when the token request rejects (network down)', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down'); }));
+  const { fetchSpotifyPopularity } = await import('./spotify.js');
+  const out = await fetchSpotifyPopularity(['spotify:track:x']);
+  expect(out.size).toBe(0);
+});

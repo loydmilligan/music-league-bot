@@ -98,10 +98,10 @@ export async function fetchPlaylistTracks(
 export async function fetchSpotifyPopularity(uris: string[]): Promise<Map<string, number>> {
 	const out = new Map<string, number>();
 	if (!uris.length) return out;
-	const token = await getSpotifyToken();
-	if (!token) return out;
 	const ids = uris.map((u) => u.split(':').pop()!).filter(Boolean);
 	try {
+		const token = await getSpotifyToken();
+		if (!token) return out;
 		for (let i = 0; i < ids.length; i += 50) {
 			const batch = ids.slice(i, i + 50);
 			const r = await fetch(`https://api.spotify.com/v1/tracks?ids=${batch.join(',')}`, {
