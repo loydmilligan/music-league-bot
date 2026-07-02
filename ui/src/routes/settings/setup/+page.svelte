@@ -583,12 +583,14 @@
     if (selectedLeagueId == null && data.leagues.length > 0) selectedLeagueId = data.leagues[0].id;
   });
 
-  // Reset selectedPlayerIdx when the selected league changes (Task 9 carryover fix).
+  // When the selected league changes, snap the player picker to the first player
+  // ELIGIBLE for that league. Resetting to a bare 0 leaves the <select> blank when
+  // full-list index 0 isn't in the league's filtered option set. leaguePlayers is
+  // derived from selectedLeagueId, so this re-runs on league change but not when the
+  // user picks a different player within the same league.
   $effect(() => {
-    // Reading selectedLeagueId here makes this effect re-run on every league change.
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    selectedLeagueId;
-    selectedPlayerIdx = 0;
+    const first = leaguePlayers[0];
+    if (first) selectedPlayerIdx = first.i;
   });
 
   async function loadTasteSettings() {
