@@ -459,6 +459,10 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (songPopCols.length && !songPopCols.some(c => c.name === 'tags')) {
 		db.exec("ALTER TABLE song_popularity ADD COLUMN tags TEXT");
 	}
+	// sprint-queue Task 2: popularity_source tags which source set popularity_proxy (lastfm|spotify|manual)
+	if (songPopCols.length && !songPopCols.some(c => c.name === 'popularity_source')) {
+		db.exec("ALTER TABLE song_popularity ADD COLUMN popularity_source TEXT");
+	}
 	// sprint-queue Task 12: migrate pending/failed ytm_resolution_queue rows into
 	// song_metadata_queue so no YTM work is lost when the old table is retired.
 	// Guarded: only runs when the old table exists and has pending/failed rows.
