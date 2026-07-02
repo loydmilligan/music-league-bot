@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types.js';
 import { json } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { buildTasteData } from '$lib/dashboard/tasteData.js';
+import { getTasteSettings } from '$lib/db/settings.js';
 
 // GET /api/history/taste — the interaction-level Taste Waveform block for ALL players
 // (research tab is cross-league, so archetypes are relative to the whole roster).
@@ -14,5 +15,6 @@ export const GET: RequestHandler = async () => {
 			 ORDER BY p.name`,
 		)
 		.all() as { player_id: number; name: string }[];
-	return json(buildTasteData(db, members));
+	const tasteSettings = getTasteSettings(db);
+	return json(buildTasteData(db, members, tasteSettings));
 };

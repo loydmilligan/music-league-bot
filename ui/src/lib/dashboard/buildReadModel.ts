@@ -29,6 +29,7 @@ import { runPrediction } from '../predict/predict.js';
 import type { PredictionTask } from '../predict/predict.js';
 import { buildPlayerContext } from '../predict/playerContext.js';
 import { buildTasteData } from './tasteData.js';
+import { getTasteSettings } from '../db/settings.js';
 import {
 	ARCHIVE_DEFAULT_PIPELINE,
 	ARCHIVE_TASK_KINDS,
@@ -168,6 +169,20 @@ export const TasteBlockSchema = z.object({
 			rows: z.array(z.tuple([z.number(), z.number(), z.number(), z.number(), z.number(), z.number()])),
 		}),
 	),
+	settings: z.object({
+		signal: z.enum(['all', 'subs', 'top', 'frac']),
+		votePct: z.number(),
+		negatives: z.boolean(),
+		dnPct: z.number(),
+		lyrWeight: z.number(),
+		spread: z.number(),
+		scopeAll: z.boolean(),
+		showLabels: z.boolean(),
+		showKey: z.boolean(),
+		showRead: z.boolean(),
+		showChips: z.boolean(),
+		showLeagueAvg: z.boolean(),
+	}).passthrough().optional(),
 });
 
 export const ReadModelSchema = z.object({
@@ -789,7 +804,8 @@ export async function buildReadModel(
 		.filter((m): m is Member => m !== null);
 
 	// 13. Taste Waveform input — interaction-level, computed client-side from settings.
-	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })));
+	const tasteSettings = getTasteSettings(db);
+	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })), tasteSettings);
 
 	// 14. Final assembly + zod validation
 	const readModel = {

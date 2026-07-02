@@ -14,11 +14,12 @@
  * computed client-side against these members.
  */
 import type Database from 'better-sqlite3';
+import type { TasteSettings } from '../taste-waveform/taste-waveform.js';
 
 export type SongAxes = [number, number, number, number, number];
 export type TasteRow = [number, number, number, number, number, number];
 export interface TastePlayer { name: string; rows: TasteRow[]; }
-export interface TasteBlock { axes: SongAxes[]; players: TastePlayer[]; }
+export interface TasteBlock { axes: SongAxes[]; players: TastePlayer[]; settings: TasteSettings; }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -52,6 +53,7 @@ function axesFor(m: MetaRow | undefined): SongAxes {
 export function buildTasteData(
 	db: Database.Database,
 	members: { player_id: number; name: string }[],
+	settings: TasteSettings,
 ): TasteBlock {
 	// round → league map (for the scope marker on each row)
 	const roundLeague = new Map<number, number>();
@@ -108,5 +110,5 @@ export function buildTasteData(
 	}
 	const axes: SongAxes[] = uris.map((uri) => axesFor(meta.get(uri)));
 
-	return { axes, players };
+	return { axes, players, settings };
 }

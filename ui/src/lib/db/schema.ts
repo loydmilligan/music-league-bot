@@ -422,4 +422,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_nostalgia: '15',
 	weight_quality: '20',
 	weight_replayability: '10',
+	taste_settings: JSON.stringify({
+		signal: 'frac', votePct: 5, negatives: true, dnPct: 100, lyrWeight: 0.45, spread: 1.15, scopeAll: true,
+		showLabels: true, showKey: true, showRead: true, showChips: true, showLeagueAvg: false,
+	}),
 };

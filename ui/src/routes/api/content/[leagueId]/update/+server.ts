@@ -26,6 +26,7 @@ import { writePublicArtifacts, getSnarkLevel } from '$lib/dashboard/publish.js';
 import { seasonUpdateTask } from '$lib/dashboard/generators/seasonUpdate.js';
 import { computeSeasonSignalsForLeague } from '$lib/dashboard/seasonSignals.js';
 import { buildTasteData } from '$lib/dashboard/tasteData.js';
+import { getTasteSettings } from '$lib/db/settings.js';
 import { z } from 'zod';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
@@ -610,7 +611,8 @@ async function buildUpdatedReadModel(
 		seasonUpdate = r.output;
 	}
 
-	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })));
+	const tasteSettings = getTasteSettings(db);
+	const taste = buildTasteData(db, memberRows.map((m) => ({ player_id: m.player_id, name: m.name })), tasteSettings);
 
 	return ReadModelSchema.parse({
 		league: {

@@ -1,6 +1,17 @@
 import type Database from 'better-sqlite3';
 import type { Settings } from '../types.js';
+import type { TasteSettings } from '../taste-waveform/taste-waveform.js';
 import { DEFAULT_SETTINGS } from './schema.js';
+
+const DEFAULT_TASTE_SETTINGS: TasteSettings = {
+	signal: 'frac', votePct: 5, negatives: true, dnPct: 100, lyrWeight: 0.45, spread: 1.15, scopeAll: true,
+	showLabels: true, showKey: true, showRead: true, showChips: true, showLeagueAvg: false,
+};
+
+export function getTasteSettings(db: Database.Database): TasteSettings {
+	const row = db.prepare("SELECT value FROM settings WHERE key='taste_settings'").get() as { value: string } | undefined;
+	try { return { ...DEFAULT_TASTE_SETTINGS, ...(row ? JSON.parse(row.value) : {}) }; } catch { return { ...DEFAULT_TASTE_SETTINGS }; }
+}
 
 export function getSettings(db: Database.Database): Settings {
   const m = Object.fromEntries(

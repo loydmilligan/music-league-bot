@@ -14,6 +14,20 @@ export interface Playlist { name: string; nudge: string; tracks: PlaylistTrack[]
 export interface TasteBlock {
 	axes: [number, number, number, number, number][];
 	players: { name: string; rows: number[][] }[];
+	settings?: {
+		signal: 'all' | 'subs' | 'top' | 'frac';
+		votePct: number;
+		negatives: boolean;
+		dnPct: number;
+		lyrWeight: number;
+		spread: number;
+		scopeAll: boolean;
+		showLabels: boolean;
+		showKey: boolean;
+		showRead: boolean;
+		showChips: boolean;
+		showLeagueAvg: boolean;
+	};
 }
 
 export interface FullMember {
