@@ -5,6 +5,7 @@
 	import type { SharePayload } from '../types.js';
 	import TasteWaveform from '../taste-waveform/TasteWaveform.svelte';
 	import { DEFAULT_TASTE_SETTINGS } from '../taste-waveform/taste-waveform.js';
+	import { shareCardImage } from '../shareImage.js';
 
 	interface Props {
 		payload: SharePayload | null;
@@ -13,6 +14,8 @@
 		onClose: () => void;
 	}
 	let { payload, leagueName, leagueSeason, onClose }: Props = $props();
+
+	let cardEl: HTMLDivElement | undefined = $state();
 </script>
 
 {#if payload}
@@ -23,7 +26,7 @@
 		</button>
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		{#if payload.kind === 'signature' && payload.engine && payload.pi != null}
-			<div onclick={(e) => e.stopPropagation()}>
+			<div bind:this={cardEl} onclick={(e) => e.stopPropagation()}>
 				<TasteWaveform
 					variant="card"
 					engine={payload.engine}
@@ -32,6 +35,7 @@
 					avatar={payload.initials}
 					league={payload.league ?? leagueName}
 					settings={payload.settings ?? DEFAULT_TASTE_SETTINGS}
+					onshare={() => { if (!cardEl) return; shareCardImage(cardEl, 'sonic-signature-' + (payload?.who || 'me') + '.png'); }}
 				/>
 			</div>
 			<div class="bs-overlay-cap">Screenshot-ready · no login, no app link — just your waveform.</div>
