@@ -567,9 +567,28 @@
     return 0;
   });
 
+  // Separation score derivation (Task 10).
+  const separation = $derived.by(() => {
+    if (!sampleBlock || !previewEng || previewEng.nP < 2) return null;
+    const scope = { ...tasteSettings, scopeAll: selectedLeagueId == null };
+    const lg = scopedLeague(sampleBlock, scope, selectedLeagueId ?? undefined);
+    const score = tasteEngine(lg, tasteSettings).separation();
+    const baseline = tasteEngine(lg, { ...tasteSettings, signal: 'all' }).separation();
+    const mult = baseline > 0 ? score / baseline : 1;
+    return { score, mult };
+  });
+
   // Default selectedLeagueId to the first league once data is available.
   $effect(() => {
     if (selectedLeagueId == null && data.leagues.length > 0) selectedLeagueId = data.leagues[0].id;
+  });
+
+  // Reset selectedPlayerIdx when the selected league changes (Task 9 carryover fix).
+  $effect(() => {
+    // Reading selectedLeagueId here makes this effect re-run on every league change.
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    selectedLeagueId;
+    selectedPlayerIdx = 0;
   });
 
   async function loadTasteSettings() {
@@ -1999,6 +2018,20 @@
             />
           {:else}
             <span class="font-mono text-[10px] text-fg-faint">no players in this league yet</span>
+          {/if}
+          {#if separation}
+            <div class="mt-4 flex items-start justify-between gap-4 border-t border-border-muted pt-3">
+              <div>
+                <div class="font-mono text-[9.5px] tracking-widest uppercase text-fg-faint">Separation score</div>
+                <div class="flex items-baseline gap-2 mt-0.5">
+                  <span class="text-3xl font-extrabold text-fg leading-none">{separation.score.toFixed(1)}</span>
+                  <span class="font-mono text-xs text-fg-muted">{separation.mult.toFixed(2)}× vs all-votes</span>
+                </div>
+              </div>
+              <div class="text-[11px] text-fg-faint max-w-[240px] leading-snug text-right">
+                Mean distance between every pair of fingerprints. Higher = more distinct people.
+              </div>
+            </div>
           {/if}
         {:else}
           <div class="flex items-center justify-center h-32 rounded-lg bg-bg-elevated border border-border-muted">
