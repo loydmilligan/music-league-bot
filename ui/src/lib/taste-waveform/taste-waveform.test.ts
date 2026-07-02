@@ -46,3 +46,47 @@ describe('defaults preserve the current render', () => {
     expect(svg).toContain('stroke-width="4.5"'); // strand stroke unchanged
   });
 });
+
+describe('lineStyle', () => {
+  const base = { chrome: false } as const;
+  it('strand (default) draws the gradient strand at width 4.5', () => {
+    expect(tasteEngine(LG, S({ lineStyle: 'strand' })).buildChart(0, 322, 150, base)).toContain('stroke-width="4.5"');
+  });
+  it('none omits the thick strand', () => {
+    expect(tasteEngine(LG, S({ lineStyle: 'none' })).buildChart(0, 322, 150, base)).not.toContain('stroke-width="4.5"');
+  });
+  it('solid draws a flat above-color line at width 3', () => {
+    const svg = tasteEngine(LG, S({ lineStyle: 'solid', palette: 'cool' })).buildChart(0, 322, 150, base);
+    expect(svg).toContain('stroke-width="3"');
+    expect(svg).toContain('#7fd0ff'); // cool.above, literal (not gradient)
+  });
+});
+
+describe('nodeStyle', () => {
+  it('glow (default) emits the r=8 halo circle', () => {
+    expect(tasteEngine(LG, S({ nodeStyle: 'glow' })).buildChart(0, 322, 150, { chrome: false })).toContain('r="8"');
+  });
+  it('none emits no node circles', () => {
+    const svg = tasteEngine(LG, S({ nodeStyle: 'none' })).buildChart(0, 322, 150, { chrome: false });
+    expect(svg).not.toContain('r="8"');
+    expect(svg).not.toContain('r="3.4"');
+  });
+  it('dot emits a single r=3.4 dot', () => {
+    const svg = tasteEngine(LG, S({ nodeStyle: 'dot' })).buildChart(0, 322, 150, { chrome: false });
+    expect(svg).toContain('r="3.4"');
+    expect(svg).not.toContain('r="8"');
+  });
+});
+
+describe('amplitude + band', () => {
+  it('amplitude changes the geometry', () => {
+    const a = tasteEngine(LG, S({ amplitude: 1.0 })).buildChart(0, 322, 150, { chrome: false });
+    const b = tasteEngine(LG, S({ amplitude: 1.8 })).buildChart(0, 322, 150, { chrome: false });
+    expect(a).not.toBe(b);
+  });
+  it('band draws a filled above-color area at bandOpacity', () => {
+    const svg = tasteEngine(LG, S({ band: true, bandOpacity: 0.04, palette: 'neon' })).buildChart(0, 322, 150, { chrome: false });
+    expect(svg).toContain('fill="#5affd0"');
+    expect(svg).toContain('opacity="0.04"');
+  });
+});

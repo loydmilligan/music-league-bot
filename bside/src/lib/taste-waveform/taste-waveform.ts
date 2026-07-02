@@ -219,7 +219,7 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 	const buildChart = (pi: number, W: number, H: number, opts: BuildChartOpts = {}): string => {
 		const chrome = opts.chrome !== false;
 		const rows = setOf(pi); const kids: string[] = [];
-		const padX = W * 0.06, padY = H * (chrome ? 0.17 : 0.1), cy = H / 2, scale = (H / 2 - padY) / 50;
+		const padX = W * 0.06, padY = H * (chrome ? 0.17 : 0.1), cy = H / 2, scale = (H / 2 - padY) / 50 * (st.amplitude ?? 1);
 		const n = ORDER.length, xk = (k: number): number => padX + k * (W - 2 * padX) / (n - 1), yd = (d: number): number => cy - d * scale;
 		const devAt = (k: number, s: number[]): number => TX(aA(ORDER[k], s[ORDER[k]]));
 		const cm = ORDER.map((_idx, k) => { let m = 8; for (const s of rows) { const a = Math.abs(devAt(k, s)); if (a > m) m = a; } return m; });
@@ -253,6 +253,19 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 			}
 			kids.push(svgEl('line', { x1: padX * 0.5, y1: cy, x2: W - padX * 0.5, y2: cy, stroke: '#3a4451', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.7 }));
 		}
+		if (st.band) {
+			const pctf = (arr: number[], p: number): number => {
+				if (!arr.length) return 0;
+				const a = arr.slice().sort((x, y) => x - y); const i = (a.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
+				return a[lo] + (a[hi] - a[lo]) * (i - lo);
+			};
+			const cols = ORDER.map((_idx, k) => rows.filter((s) => s[5] > 0).map((s) => devAt(k, s)));
+			const p10 = cols.map((c) => pctf(c, 0.1)), p90 = cols.map((c) => pctf(c, 0.9));
+			const top = p90.map((d, k) => ({ x: xk(k), y: yd(d), dev: d }));
+			const bot = p10.map((d, k) => ({ x: xk(k), y: yd(d), dev: d })).reverse();
+			const bandD = seg(top, ORDER).map((s) => s.d).join(' ') + ' L ' + bot.map((p) => p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' L ') + ' Z';
+			kids.push(svgEl('path', { d: bandD, fill: TH.above, opacity: st.bandOpacity }));
+		}
 		let sk = 0; const total = rows.length, N = Math.min(opts.sample || 90, total), step = total / Math.max(1, N), sample: number[][] = [];
 		for (let i = 0; i < N; i++) sample.push(rows[Math.floor(i * step)]);
 		sample.forEach((s) => {
@@ -266,9 +279,23 @@ export function tasteEngine(LG: LeagueData, settings: TasteSettings): TasteEngin
 			seg(laPts, ORDER).forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#5a6773', strokeWidth: 1.5, opacity: 0.5, strokeLinecap: 'round', strokeDasharray: '3 4' })));
 		}
 		const V = sig6(pi); const avgDev = ORDER.map((idx) => TX(aA(idx, V[idx]))); const avgPts = avgDev.map((d, k) => ({ x: xk(k), y: yd(d), dev: d })); const avgSegs = seg(avgPts, ORDER);
-		avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#07090c', strokeWidth: H < 70 ? 4 : 6.5, opacity: 0.45, strokeLinecap: 'round' })));
-		avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: strokeOf(sg), strokeWidth: H < 70 ? 3 : 4.5, opacity: 0.92, strokeLinecap: 'round' })));
-		if (opts.nodes !== false) avgPts.forEach((p, k) => { const c = applyBright(TRAITS[ORDER[k]], Math.min(1, Math.abs(avgDev[k]) / cm[k])); kids.push(svgEl('circle', { cx: p.x, cy: p.y, r: H < 70 ? 5 : 8, fill: c, opacity: 0.15 })); kids.push(svgEl('circle', { cx: p.x, cy: p.y, r: H < 70 ? 1.7 : 2.1, fill: mix(c, '#ffffff', 0.3), opacity: 0.95 })); });
+		if (st.lineStyle === 'strand') {
+			avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#07090c', strokeWidth: H < 70 ? 4 : 6.5, opacity: 0.45, strokeLinecap: 'round' })));
+			avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: strokeOf(sg), strokeWidth: H < 70 ? 3 : 4.5, opacity: 0.92, strokeLinecap: 'round' })));
+		} else if (st.lineStyle === 'solid') {
+			avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: '#07090c', strokeWidth: H < 70 ? 3.5 : 6, opacity: 0.5, strokeLinecap: 'round' })));
+			avgSegs.forEach((sg) => kids.push(svgEl('path', { d: sg.d, fill: 'none', stroke: TH.above, strokeWidth: H < 70 ? 2 : 3, opacity: 0.95, strokeLinecap: 'round' })));
+		}
+		// lineStyle === 'none' → draw nothing
+		if (st.nodeStyle !== 'none') avgPts.forEach((p, k) => {
+			const c = applyBright(TRAITS[ORDER[k]], Math.min(1, Math.abs(avgDev[k]) / cm[k]));
+			if (st.nodeStyle === 'glow') {
+				kids.push(svgEl('circle', { cx: p.x, cy: p.y, r: H < 70 ? 5 : 8, fill: c, opacity: 0.15 }));
+				kids.push(svgEl('circle', { cx: p.x, cy: p.y, r: H < 70 ? 1.7 : 2.1, fill: mix(c, '#ffffff', 0.3), opacity: 0.95 }));
+			} else {
+				kids.push(svgEl('circle', { cx: p.x, cy: p.y, r: 3.4, fill: TRAITS[ORDER[k]], stroke: '#07090c', strokeWidth: 1.4 }));
+			}
+		});
 		kids.push(svgEl('defs', {}, gradDefs));
 		return svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', style: { display: 'block', width: '100%', height: 'auto', maxWidth: W + 'px', overflow: 'visible' } }, kids);
 	};
