@@ -4,9 +4,7 @@
 	import { bsAcc, accentIcon } from '../lib/accents.js';
 	import type { ReadModel, Nav, SharePayload, FullMember } from '../lib/types.js';
 	import TasteWaveform from '../lib/taste-waveform/TasteWaveform.svelte';
-	import { tasteEngine, scopedLeague } from '../lib/taste-waveform/taste-waveform.js';
-	import { tasteSettings } from '../lib/tasteSettings.svelte.js';
-	import TasteSettings from '../lib/atoms/TasteSettings.svelte';
+	import { tasteEngine, scopedLeague, DEFAULT_TASTE_SETTINGS } from '../lib/taste-waveform/taste-waveform.js';
 
 	interface Props { readModel: ReadModel; memberId: string; nav: Nav; }
 	let { readModel, memberId, nav }: Props = $props();
@@ -14,15 +12,15 @@
 	const member = $derived(readModel.members.find((m) => m.id === memberId));
 	const isFull = $derived(member?.tier === 'full');
 
+	const tset = $derived(readModel.taste?.settings ?? DEFAULT_TASTE_SETTINGS);
+
 	// Build the (scope-filtered) league engine, then find this member's player index.
-	const lg = $derived(readModel.taste ? scopedLeague(readModel.taste, tasteSettings, readModel.league.id) : null);
-	const eng = $derived(lg ? tasteEngine(lg, tasteSettings) : null);
+	const lg = $derived(readModel.taste ? scopedLeague(readModel.taste, tset, readModel.league.id) : null);
+	const eng = $derived(lg ? tasteEngine(lg, tset) : null);
 	const pi = $derived(lg && member ? lg.players.findIndex((p) => p.name === member.name) : -1);
 	const waveSub = $derived(
-		tasteSettings.scopeAll ? 'your taste, across all your leagues' : `your taste, in ${readModel.league.name}`,
+		tset.scopeAll ? 'your taste, across all your leagues' : `your taste, in ${readModel.league.name}`,
 	);
-
-	let settingsOpen = $state(false);
 
 	function openWaveShare() {
 		if (!member || !eng || pi < 0) return;
@@ -33,6 +31,7 @@
 			kind: 'signature',
 			engine: eng,
 			pi,
+			settings: tset,
 			league: readModel.league.name,
 		});
 	}
@@ -137,12 +136,11 @@
 		<!-- Sonic Signature — the taste waveform (supersedes the old AI fingerprint) -->
 		{#if eng && pi >= 0}
 			<section class="bs-sec">
-				<TasteWaveform variant="hero" engine={eng} {pi} name={member.name} sub={waveSub} />
+				<TasteWaveform variant="hero" engine={eng} {pi} name={member.name} sub={waveSub} settings={tset} />
 				<div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
 					<button class="bs-share-btn" onclick={openWaveShare}>
 						{@html icons.share} Share your signature
 					</button>
-					<button class="bs-icon-btn" onclick={() => (settingsOpen = true)} aria-label="Signature settings" title="Signature settings">⚙</button>
 				</div>
 			</section>
 		{/if}
@@ -336,5 +334,4 @@
 
 	</div>
 
-	<TasteSettings open={settingsOpen} onClose={() => (settingsOpen = false)} />
 {/if}

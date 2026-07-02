@@ -101,6 +101,7 @@ export interface SharePayload {
 	engine?: import('./taste-waveform/taste-waveform.js').TasteEngine;
 	pi?: number;
 	league?: string;
+	settings?: import('./taste-waveform/taste-waveform.js').TasteSettings;
 }
 
 export interface Nav {

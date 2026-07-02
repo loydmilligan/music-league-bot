@@ -4,6 +4,7 @@
 	import { icons } from '../icons.js';
 	import type { SharePayload } from '../types.js';
 	import TasteWaveform from '../taste-waveform/TasteWaveform.svelte';
+	import { DEFAULT_TASTE_SETTINGS } from '../taste-waveform/taste-waveform.js';
 
 	interface Props {
 		payload: SharePayload | null;
@@ -30,6 +31,7 @@
 					name={payload.who}
 					avatar={payload.initials}
 					league={payload.league ?? leagueName}
+					settings={payload.settings ?? DEFAULT_TASTE_SETTINGS}
 				/>
 			</div>
 			<div class="bs-overlay-cap">Screenshot-ready · no login, no app link — just your waveform.</div>
