@@ -22,6 +22,7 @@
     DEFAULT_TASTE_SETTINGS,
   } from '$lib/taste-waveform/taste-waveform.js';
   import type { TasteSettings, TasteBlock } from '$lib/taste-waveform/taste-waveform.js';
+  import CollapsiblePanel from '$lib/components/CollapsiblePanel.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -643,12 +644,7 @@
 <div class="mt-6">
 
 <!-- ======== LEAGUES & SEASONS ======== -->
-<section class="mb-10">
-  <header class="mb-4">
-    <SectionLabel>Leagues &amp; Seasons</SectionLabel>
-    <h2 class="text-2xl font-bold text-fg mt-1">Leagues &amp; Seasons</h2>
-  </header>
-
+<CollapsiblePanel id="mls-leagues-seasons" title="Leagues & Seasons">
   <div class="flex flex-col gap-6">
     {#each data.leagues as league (league.id)}
       <div class="bg-surface border border-border-muted rounded-xl p-5">
@@ -734,18 +730,10 @@
       </div>
     {/each}
   </div>
-</section>
+</CollapsiblePanel>
 
 <!-- ======== ROUNDS ======== -->
-<section class="mb-10">
-  <header class="mb-4">
-    <SectionLabel>Rounds</SectionLabel>
-    <h2 class="text-2xl font-bold text-fg mt-1">Round management</h2>
-    <p class="text-xs text-fg-dim mt-1">
-      Set round numbers, tags, and theme submitters. Edits save on blur.
-    </p>
-  </header>
-
+<CollapsiblePanel id="mls-round-management" title="Round management" subtitle="Set round numbers, tags, and theme submitters. Edits save on blur.">
   <div class="flex flex-col gap-4">
     {#each data.leagues as league (league.id)}
       {@const leagueRounds = data.leagueRounds[league.id] ?? []}
@@ -1008,18 +996,10 @@
       </div>
     {/each}
   </div>
-</section>
+</CollapsiblePanel>
 
 <!-- ======== COMPETITORS ======== -->
-<section class="mb-10">
-  <header class="mb-4">
-    <SectionLabel>Competitors</SectionLabel>
-    <h2 class="text-2xl font-bold text-fg mt-1">ML competitor roster</h2>
-    <p class="text-xs text-fg-dim mt-1">
-      Link Music League competitor accounts to players. Unlinked competitors are shown first.
-    </p>
-  </header>
-
+<CollapsiblePanel id="mls-competitor-roster" title="ML competitor roster" subtitle="Link Music League competitor accounts to players. Unlinked competitors are shown first.">
   {#if unlinkedCompetitors.length > 0}
     <div class="mb-4 bg-warn/10 border border-warn/40 rounded-xl p-4">
       <div class="font-mono text-[10px] tracking-widest uppercase text-warn mb-3">
@@ -1135,18 +1115,10 @@
       </div>
     </div>
   {/if}
-</section>
+</CollapsiblePanel>
 
 <!-- ======== PLAYERS ======== -->
-<section class="mb-10">
-  <header class="mb-4">
-    <SectionLabel>Players</SectionLabel>
-    <h2 class="text-2xl font-bold text-fg mt-1">Player roster</h2>
-    <p class="text-xs text-fg-dim mt-1">
-      Manage players, identities, relationships, and season memberships.
-    </p>
-  </header>
-
+<CollapsiblePanel id="mls-player-roster" title="Player roster" subtitle="Manage players, identities, relationships, and season memberships.">
   <!-- Add-player card -->
   <div class="bg-surface border border-border-muted rounded-xl p-5 mb-6">
     <div class="font-mono text-[10px] tracking-widest uppercase text-fg-faint mb-3">Add player</div>
@@ -1573,24 +1545,13 @@
       {/each}
     </div>
   {/if}
-</section>
+</CollapsiblePanel>
 
 <!-- ======== AUTO-FILL DEADLINES ======== -->
-<section class="bg-surface border border-border-muted rounded-xl p-6 mb-6">
-  <header class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-    <div>
-      <SectionLabel>Auto-fill</SectionLabel>
-      <h2 class="text-lg font-bold text-fg mt-1">Bulk-set deadlines for a season</h2>
-    </div>
-    {#if afStatus}
-      <StatusChip label={afStatus.label} tone={afStatus.tone} />
-    {/if}
-  </header>
-  <p class="text-xs text-fg-dim mb-5">
-    Picks the first round's start = <span class="font-mono text-fg">start date</span>, then chains
-    <span class="font-mono text-fg">+ days-to-submit</span> →
-    <span class="font-mono text-fg">+ days-to-vote</span> through every round in the season (zero buffer).
-  </p>
+<CollapsiblePanel id="mls-bulk-deadlines" title="Bulk-set deadlines for a season" subtitle="Picks the first round's start = start date, then chains + days-to-submit → + days-to-vote through every round in the season (zero buffer).">
+  {#if afStatus}
+    <div class="mb-3"><StatusChip label={afStatus.label} tone={afStatus.tone} /></div>
+  {/if}
 
   <div class="flex flex-wrap gap-3 items-end">
     <div>
@@ -1663,7 +1624,7 @@
       {afSubmitting ? 'Filling…' : 'Auto-fill deadlines'}
     </button>
   </div>
-</section>
+</CollapsiblePanel>
 
 <!-- ======== ROUND DEADLINES ======== -->
 <details
@@ -1746,21 +1707,8 @@
 </details>
 
 <!-- ======== TASTE WAVEFORM ======== -->
-<section class="mb-10 mt-10">
-  <header class="flex items-start justify-between gap-3 flex-wrap mb-5">
-    <div>
-      <SectionLabel>Taste Waveform</SectionLabel>
-      <h2 class="text-2xl font-bold text-fg mt-1">Sonic Signature settings</h2>
-      <p class="text-xs text-fg-dim mt-1">
-        Controls how the Taste Waveform is computed and displayed. Changes apply to all
-        published dashboards immediately.
-      </p>
-    </div>
-    {#if tasteStatus}
-      <StatusChip label={tasteStatus.label} tone={tasteStatus.tone} />
-    {/if}
-  </header>
-
+<div class="mt-10">
+<CollapsiblePanel id="mls-sonic-signature" title="Sonic Signature settings" subtitle="Controls how the Taste Waveform is computed and displayed. Changes apply to all published dashboards immediately.">
   <div class="flex flex-col lg:flex-row gap-6">
     <!-- Controls column -->
     <div class="flex-1 flex flex-col gap-6">
@@ -1914,6 +1862,7 @@
       </div>
     </div>
   </div>
-</section>
+</CollapsiblePanel>
+</div><!-- /mt-10 sonic wrapper -->
 
 </div><!-- /mt-6 wrapper -->
