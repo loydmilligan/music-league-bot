@@ -20,7 +20,7 @@ roast-y, built to be screenshotted. Never a brutal leaderboard.
   slug** (e.g. `digest.mattmariani.com/fam-jam-a9f3`).
 - **No auth.** Nothing private is exposed. But because the slug is
   unguessable, members of one league don't stumble into another league's
-  site, and nobody reaches the operator app (`mlbot2.mattmariani.com`)
+  site, and nobody reaches the operator app (`mlb37.mattmariani.com`)
   from here.
 - This mirrors the existing digest model exactly — digests are already
   shared at `digest.mattmariani.com` with per-artifact slugs. The

@@ -50,4 +50,4 @@ All committed phases are inner-loop only. Wave-gate when user signals ready:
 ```
 docker compose build bot-ui && docker compose up -d --force-recreate bot-ui
 ```
-Then assert change is in running container. Smoke: mlbot2.mattmariani.com.
+Then assert change is in running container. Smoke: mlb37.mattmariani.com.

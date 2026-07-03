@@ -17,7 +17,7 @@ no build step.
    `chrome://extensions` and click the extension's **Details → Extension
    options**.
 2. In the options page:
-   - **API base URL** — leave at `https://mlb.mattmariani.com` unless you
+   - **API base URL** — leave at `https://mlb37.mattmariani.com` unless you
      run a different instance.
    - **Bearer token** — generate one at
      `<base>/settings/api-tokens` (the link in the options page points

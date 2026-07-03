@@ -1,6 +1,6 @@
 # Content screen — operator side of the b-side — handoff package
 
-This package changes the **music-league-bot operator app** (`mlbot2.mattmariani.com`)
+This package changes the **music-league-bot operator app** (`mlb37.mattmariani.com`)
 to drive the **b-side** consumer sites. It is the operator counterpart to
 the `dashboard-handoff` package (which is the public site itself). Build
 that one too — this package only covers the operator controls that publish

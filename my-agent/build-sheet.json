@@ -26,7 +26,7 @@
   "connectors": [],
   "vault": null,
   "memory_store": null,
-  "app_base_url": "https://mlbot2.mattmariani.com",
+  "app_base_url": "https://mlb37.mattmariani.com",
   "leagues": [
     { "id": "TODO", "name": "TODO", "share_via": "WhatsApp" },
     { "id": "TODO", "name": "TODO", "share_via": "WhatsApp" },

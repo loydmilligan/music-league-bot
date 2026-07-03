@@ -1,7 +1,7 @@
 // MV3 service worker. Handles ingest POSTs on behalf of the popup so the
 // network call survives popup close and so we centralize header/auth logic.
 
-const DEFAULT_BASE_URL = 'https://mlb.mattmariani.com';
+const DEFAULT_BASE_URL = 'https://mlb37.mattmariani.com';
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === 'ingest') {

@@ -5,7 +5,7 @@
 ### 1. Fill in the league config in agent.json
 
 Open `agent.json` and update the LEAGUE CHANNEL CONFIG section with your real league IDs and names.
-Find the IDs from your app: `GET https://mlbot2.mattmariani.com/api/active-rounds`
+Find the IDs from your app: `GET https://mlb37.mattmariani.com/api/active-rounds`
 
 ### 2. Set your Anthropic API key
 

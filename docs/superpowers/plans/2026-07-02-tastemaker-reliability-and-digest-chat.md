@@ -865,7 +865,7 @@ curl -s -o /dev/null -w "prepare %{http_code}\n" http://192.168.4.217:3002/api/d
 # client bundle contains the new prepare panel string (grep a known new UI label)
 docker compose exec -T bot-ui sh -c "grep -rl 'popularity' /app/ui/build/client/_app/immutable | head -1"
 ```
-Then load `mlbot2.mattmariani.com`, open a Hip Jammers round digest, generate, and confirm Tastemaker + auto-chat render and the prep matrix is honest.
+Then load `mlb37.mattmariani.com`, open a Hip Jammers round digest, generate, and confirm Tastemaker + auto-chat render and the prep matrix is honest.
 
 - [ ] **Step 5: Report status** (do not push per policy; surface ahead-of-origin count).
 

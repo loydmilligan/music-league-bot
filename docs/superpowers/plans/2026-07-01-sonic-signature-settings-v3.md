@@ -1080,7 +1080,7 @@ Expected: the new UI string is present in a served/in-container bundle chunk (a 
 
 - [ ] **Step 7: Visual confirm**
 
-Open `mlbot2.mattmariani.com` → Settings → Music League Setup. Confirm panels collapse, look controls work, player picker + separation score render; open a live bside profile and confirm no settings gear.
+Open `mlb37.mattmariani.com` → Settings → Music League Setup. Confirm panels collapse, look controls work, player picker + separation score render; open a live bside profile and confirm no settings gear.
 
 - [ ] **Step 8: Report status** (do not push per policy; surface the ahead-of-origin count).
 

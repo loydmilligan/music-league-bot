@@ -107,7 +107,7 @@ instead of erasing it.
    cache independently (2026-06-25: a stale `COPY ui/`+`npm run build` layer served old client
    JS while the new API routes answered 200; only a bundle grep caught it). If the marker is
    missing → the layer cache served stale; rebuild once with `--no-cache` as the *exception*.
-4. Smoke `mlbot2.mattmariani.com` (→ `192.168.4.217:3002`).
+4. Smoke `mlb37.mattmariani.com` (→ `192.168.4.217:3002`).
 
 With orc-tower retired there is no central gate: coordinate the single deploy lane directly
 with other active lanes, or simply be the only one deploying. Merging to `master` first is

@@ -62,7 +62,7 @@ your project-domain rules below this block.
   ```
   docker compose build bot-ui && docker compose up -d --force-recreate bot-ui
   ```
-  Then smoke `mlbot2.mattmariani.com` (→ `192.168.4.217:3002`).
+  Then smoke `mlb37.mattmariani.com` (→ `192.168.4.217:3002`).
 - **`--no-cache` is dropped.** It was a band-aid for the concurrent-deploy stale-image
   race (review item 6) — the single serialized wave-gate deploy removes that race, so the
   layer cache is safe to use. The Dockerfile's layer order (`package.json` → `npm ci` →

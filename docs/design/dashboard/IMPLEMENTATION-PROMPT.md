@@ -2,7 +2,7 @@
 
 You're adding a **public, no-auth, read-only micro-site — one per league —
 to the music-league-bot stack**. It's the fan-facing flip side of the
-operator app (`mlbot2.mattmariani.com`): league members get a link, never
+operator app (`mlb37.mattmariani.com`): league members get a link, never
 the league HQ.
 
 The brand is **the b-side**, a sibling to `m/l` — same dark Mash Co. shell
@@ -80,7 +80,7 @@ exactly, scoped to a whole league instead of a single round.
   other leagues," no global index. A member of league A given slug A can
   never reach league B.
 - **No path back to the operator app.** Nothing on these pages links to
-  `mlbot2.mattmariani.com`. The footer brand mark is decorative only.
+  `mlb37.mattmariani.com`. The footer brand mark is decorative only.
 
 ```
 robots: noindex, nofollow on every dashboard route — these are
@@ -290,7 +290,7 @@ Implementation notes:
 - **Don't render any win/loss ladder or "last place" anything.** See §6.
 - **Don't add an auth wall, a login, or a league switcher.** The slug is
   the only gate, and one slug = one league.
-- **Don't link to the operator app** (`mlbot2.mattmariani.com`) from any
+- **Don't link to the operator app** (`mlb37.mattmariani.com`) from any
   dashboard route.
 - **Don't index these pages** — `noindex, nofollow` everywhere.
 - **Don't run the LLM or mutate the DB on a page view.** Reads only.

@@ -14,7 +14,7 @@ author: orc (brainstorm with owner + Claude Design handoff packets)
 
 **the b-side** is a public, no-auth, read-only micro-site — **one per league** —
 hosted on `digest.mattmariani.com`. It's the fan-facing flip side of the operator app
-(`mlbot2.mattmariani.com`): league members get a link, never the league HQ. Tone is
+(`mlb37.mattmariani.com`): league members get a link, never the league HQ. Tone is
 **Spotify Wrapped × high-school yearbook** — warm, a little roast-y, screenshot-bait,
 never a brutal leaderboard.
 

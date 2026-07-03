@@ -37,7 +37,7 @@
   "host_permissions": [
     "https://open.spotify.com/*",
     "https://music.youtube.com/*",
-    "https://mlb.mattmariani.com/*"
+    "https://mlb37.mattmariani.com/*"
   ],
   "options_ui": {
     "page": "options.html",

@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'https://mlb.mattmariani.com';
+const DEFAULT_BASE_URL = 'https://mlb37.mattmariani.com';
 
 const baseEl = document.getElementById('base');
 const tokenEl = document.getElementById('token');

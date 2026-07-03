@@ -1,6 +1,6 @@
 # Implementation prompt — Content screen (operator side of the b-side)
 
-You're changing the **music-league-bot operator app** (`mlbot2.mattmariani.com`)
+You're changing the **music-league-bot operator app** (`mlb37.mattmariani.com`)
 so the operator can publish and update each league's **b-side** — the
 public, no-auth consumer site built in the `dashboard-handoff` package.
 This package is **only the operator controls**; the public site is that
