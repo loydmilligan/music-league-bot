@@ -1,0 +1,2250 @@
+{
+  "_note": "Real sample data from the Music League bot DB for Claude Designer mockups of the Theme Research song-metadata surface. Titles/artists/submitters/points and all metadata are actual values.",
+  "coverage_note": "Completed rounds (below) are well-backfilled: popularity_proxy, audio (bpm/key/scale/energy/duration) and lyrics presence are ~fully covered; genre TAGS are only ~30% covered — the real sparse field to design around. A FRESH or in-progress round (e.g. a voting-phase round just imported) starts with NO audio and NO lyrics/tags — only popularity may exist — because those come from background queue jobs that run after import. So design the 'not analyzed yet' state (brief D3) for: (a) rows missing tags, (b) rows missing audio (see partial_coverage_examples), and (c) a brand-new row where audio+lyrics+tags are all pending.",
+  "field_notes": {
+    "obscurity": "0-100, = 100 - popularity_proxy. Higher = more obscure. Buckets below (matches digest Tastemaker).",
+    "energy": "0-100 (energy_pct). energy_0_1 is the same value /100.",
+    "bpm": "beats per minute (float).",
+    "key/scale": "musical key + 'major'/'minor'.",
+    "has_lyrics": "presence-only (true/false/null). Raw lyrics text is not stored; word/line counts exist in DB.",
+    "tags": "top Last.fm genre tags (array) or null when not fetched."
+  },
+  "buckets": {
+    "radioHit": "obscurity <10",
+    "recognizable": "10-19",
+    "curiousCut": "20-29",
+    "rabbitHole": "30+"
+  },
+  "axis_colors": {
+    "obscurity_sky": "#5aa3ff",
+    "themefit_ember": "#e6566c",
+    "quality_moss": "#3ec27a",
+    "replay_amber": "#e8a83a"
+  },
+  "leagues": [
+    {
+      "league": "Second Best",
+      "season": 1,
+      "themes": [
+        {
+          "theme": "Let's Talk about Feelings",
+          "season": 1,
+          "round": "Round 10",
+          "pick_count": 13,
+          "picks": [
+            {
+              "title": "I'd Rather Go Blind",
+              "artist": "Etta James",
+              "submitter": "Sarah S",
+              "points": 14,
+              "spotify_uri": "spotify:track:1kPBT8S2wJFNAyBMnGVZgL",
+              "metadata": {
+                "popularity_proxy": 72,
+                "obscurity": 28,
+                "bucket": "curiousCut",
+                "spotify_popularity": 78,
+                "tags": [
+                  "soul",
+                  "blues",
+                  "female vocalists",
+                  "jazz",
+                  "60s"
+                ],
+                "bpm": 82.7,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.559,
+                "energy_pct": 56,
+                "duration_s": 156.7,
+                "has_lyrics": true,
+                "word_count": 154,
+                "line_count": 18,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Nights Like These",
+              "artist": "Lucero",
+              "submitter": "Joe Quinto",
+              "points": 14,
+              "spotify_uri": "spotify:track:7wdsny4I4vMLY4wCF9FDkr",
+              "metadata": {
+                "popularity_proxy": 28,
+                "obscurity": 72,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 45,
+                "tags": [],
+                "bpm": 75.0,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.731,
+                "energy_pct": 73,
+                "duration_s": 235.7,
+                "has_lyrics": true,
+                "word_count": 203,
+                "line_count": 34,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "All Eyes On Me (Song Only)",
+              "artist": "Bo Burnham",
+              "submitter": "Sarah",
+              "points": 13,
+              "spotify_uri": "spotify:track:47emsK4Cj4dMqctYq18U03",
+              "metadata": {
+                "popularity_proxy": 58,
+                "obscurity": 42,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 54,
+                "tags": [],
+                "bpm": 117.2,
+                "key": "F#",
+                "scale": "major",
+                "energy_0_1": 0.744,
+                "energy_pct": 74,
+                "duration_s": 212.9,
+                "has_lyrics": true,
+                "word_count": 396,
+                "line_count": 61,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Psycho Killer",
+              "artist": "Talking Heads",
+              "submitter": "Jonathan Black",
+              "points": 13,
+              "spotify_uri": "spotify:track:7dSCxR4LqkmxoBrq9MzVSD",
+              "metadata": {
+                "popularity_proxy": 77,
+                "obscurity": 23,
+                "bucket": "curiousCut",
+                "spotify_popularity": 80,
+                "tags": [
+                  "new wave",
+                  "80s",
+                  "post-punk",
+                  "rock",
+                  "alternative"
+                ],
+                "bpm": 125.0,
+                "key": "A",
+                "scale": "minor",
+                "energy_0_1": 0.497,
+                "energy_pct": 50,
+                "duration_s": 263.2,
+                "has_lyrics": true,
+                "word_count": 230,
+                "line_count": 42,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Good Time Boy",
+              "artist": "Prof",
+              "submitter": "Tj",
+              "points": 11,
+              "spotify_uri": "spotify:track:4uYGT9xCkXYSsHxnbnRqGu",
+              "metadata": {
+                "popularity_proxy": 1,
+                "obscurity": 99,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 64,
+                "tags": [],
+                "bpm": 110.3,
+                "key": "D#",
+                "scale": "major",
+                "energy_0_1": 0.6,
+                "energy_pct": 60,
+                "duration_s": 241.0,
+                "has_lyrics": true,
+                "word_count": 524,
+                "line_count": 72,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Teen Idle",
+              "artist": "MARINA",
+              "submitter": "Philip Chapin",
+              "points": 10,
+              "spotify_uri": "spotify:track:5B8N5rPOmTVVGpuBMK2Vby",
+              "metadata": {
+                "popularity_proxy": 76,
+                "obscurity": 24,
+                "bucket": "curiousCut",
+                "spotify_popularity": 67,
+                "tags": [
+                  "pop",
+                  "downtempo",
+                  "art pop",
+                  "synthpop",
+                  "alt-pop"
+                ],
+                "bpm": 122.3,
+                "key": "D",
+                "scale": "minor",
+                "energy_0_1": 0.693,
+                "energy_pct": 69,
+                "duration_s": 254.4,
+                "has_lyrics": true,
+                "word_count": 370,
+                "line_count": 53,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "i hope ur miserable until ur dead",
+              "artist": "Nessa Barrett",
+              "submitter": "jac",
+              "points": 10,
+              "spotify_uri": "spotify:track:4ka1FkKAMde6dQAFFMXKac",
+              "metadata": {
+                "popularity_proxy": 60,
+                "obscurity": 40,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 65,
+                "tags": [],
+                "bpm": 117.2,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.715,
+                "energy_pct": 72,
+                "duration_s": 191.8,
+                "has_lyrics": true,
+                "word_count": 327,
+                "line_count": 38,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Dilate",
+              "artist": "Ani DiFranco",
+              "submitter": "SusieQ",
+              "points": 9,
+              "spotify_uri": "spotify:track:0W8ykUof4RXSQAXvzMc5u2",
+              "metadata": {
+                "popularity_proxy": 28,
+                "obscurity": 72,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 34,
+                "tags": [],
+                "bpm": 104.2,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.378,
+                "energy_pct": 38,
+                "duration_s": 290.0,
+                "has_lyrics": true,
+                "word_count": 364,
+                "line_count": 63,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Get Free",
+              "artist": "Major Lazer",
+              "submitter": "Voltron’s YoungLion",
+              "points": 7,
+              "spotify_uri": "spotify:track:56hYeuutlZO5Pkm99FzLCW",
+              "metadata": {
+                "popularity_proxy": 49,
+                "obscurity": 51,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 57,
+                "tags": [],
+                "bpm": 87.9,
+                "key": "G",
+                "scale": "major",
+                "energy_0_1": 0.391,
+                "energy_pct": 39,
+                "duration_s": 241.4,
+                "has_lyrics": true,
+                "word_count": 279,
+                "line_count": 51,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Guess I'm Doing Fine",
+              "artist": "Beck",
+              "submitter": "Michael Layous",
+              "points": 6,
+              "spotify_uri": "spotify:track:6Pxqd7tcXE0t4mfK7PGDra",
+              "metadata": {
+                "popularity_proxy": 49,
+                "obscurity": 51,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 46,
+                "tags": [],
+                "bpm": 119.7,
+                "key": "E",
+                "scale": "major",
+                "energy_0_1": 0.612,
+                "energy_pct": 61,
+                "duration_s": 289.3,
+                "has_lyrics": true,
+                "word_count": 123,
+                "line_count": 20,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "United States Of Whatever",
+              "artist": "Liam Lynch",
+              "submitter": "missmara",
+              "points": 6,
+              "spotify_uri": "spotify:track:6Jub05dvpbF4Im83NqMCUg",
+              "metadata": {
+                "popularity_proxy": 50,
+                "obscurity": 50,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 57,
+                "tags": [],
+                "bpm": 108.2,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.456,
+                "energy_pct": 46,
+                "duration_s": 88.8,
+                "has_lyrics": true,
+                "word_count": 175,
+                "line_count": 12,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "JU$T (feat. Pharrell Williams & Zack de la Rocha)",
+              "artist": "El-P",
+              "submitter": "Mashew",
+              "points": 4,
+              "spotify_uri": "spotify:track:0YdjfAmUyxF4Dh0HNEhmoI",
+              "metadata": {
+                "popularity_proxy": 5,
+                "obscurity": 95,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 48,
+                "tags": [],
+                "bpm": 133.9,
+                "key": "A#",
+                "scale": "minor",
+                "energy_0_1": 1.0,
+                "energy_pct": 100,
+                "duration_s": 206.1,
+                "has_lyrics": true,
+                "word_count": 735,
+                "line_count": 87,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Livin' On A Prayer",
+              "artist": "Bon Jovi",
+              "submitter": "Mollyjohnson",
+              "points": 3,
+              "spotify_uri": "spotify:track:37ZJ0p5Jm13JPevGcx4SkF",
+              "metadata": {
+                "popularity_proxy": 92,
+                "obscurity": 8,
+                "bucket": "radioHit",
+                "spotify_popularity": 84,
+                "tags": [
+                  "rock",
+                  "80s",
+                  "classic rock",
+                  "hard rock",
+                  "bon jovi"
+                ],
+                "bpm": 122.3,
+                "key": "E",
+                "scale": "minor",
+                "energy_0_1": 0.766,
+                "energy_pct": 77,
+                "duration_s": 248.8,
+                "has_lyrics": true,
+                "word_count": 294,
+                "line_count": 45,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "theme": "New Shit",
+          "season": 1,
+          "round": "Round 1",
+          "pick_count": 12,
+          "picks": [
+            {
+              "title": "Ceiling Granny",
+              "artist": "Mogwai",
+              "submitter": "Voltron’s YoungLion",
+              "points": 6,
+              "spotify_uri": "spotify:track:4EVg8veaPIgAx3m2QioPdV",
+              "metadata": {
+                "popularity_proxy": 23,
+                "obscurity": 77,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 23,
+                "tags": [],
+                "bpm": 76.0,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.869,
+                "energy_pct": 87,
+                "duration_s": 235.7,
+                "has_lyrics": false,
+                "word_count": 0,
+                "line_count": 0,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Back To Oz",
+              "artist": "Sufjan Stevens",
+              "submitter": "Voltron’s YoungLion",
+              "points": 4,
+              "spotify_uri": "spotify:track:6s0F09N7jp4wSqN8vVgMQR",
+              "metadata": {
+                "popularity_proxy": 14,
+                "obscurity": 86,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 49,
+                "tags": [],
+                "bpm": 85.2,
+                "key": "C#",
+                "scale": "minor",
+                "energy_0_1": 0.7,
+                "energy_pct": 70,
+                "duration_s": 253.9,
+                "has_lyrics": true,
+                "word_count": 301,
+                "line_count": 53,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "DEViL",
+              "artist": "IDK",
+              "submitter": "Mashew",
+              "points": 4,
+              "spotify_uri": "spotify:track:5Llanvs8zPL8f6HMY9WWf8",
+              "metadata": {
+                "popularity_proxy": 24,
+                "obscurity": 76,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 52,
+                "tags": [],
+                "bpm": 117.2,
+                "key": "G#",
+                "scale": "minor",
+                "energy_0_1": 0.978,
+                "energy_pct": 98,
+                "duration_s": 133.6,
+                "has_lyrics": false,
+                "word_count": 0,
+                "line_count": 0,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Seanchaí",
+              "artist": "The Scratch",
+              "submitter": "jac",
+              "points": 4,
+              "spotify_uri": "spotify:track:57c0n9yCY10cZ30tXSrxOi",
+              "metadata": {
+                "popularity_proxy": 12,
+                "obscurity": 88,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 39,
+                "tags": [],
+                "bpm": 72.1,
+                "key": "F#",
+                "scale": "major",
+                "energy_0_1": 0.504,
+                "energy_pct": 50,
+                "duration_s": 220.4,
+                "has_lyrics": true,
+                "word_count": 471,
+                "line_count": 39,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "MYSTERY",
+              "artist": "Turnstile",
+              "submitter": "Tj",
+              "points": 3,
+              "spotify_uri": "spotify:track:5iXnD2VizcAbErpkcuNQ6I",
+              "metadata": {
+                "popularity_proxy": 63,
+                "obscurity": 37,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 60,
+                "tags": [],
+                "bpm": 82.7,
+                "key": "E",
+                "scale": "minor",
+                "energy_0_1": 0.657,
+                "energy_pct": 66,
+                "duration_s": 165.3,
+                "has_lyrics": true,
+                "word_count": 106,
+                "line_count": 21,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "new body rhumba (from the film White Noise)",
+              "artist": "LCD Soundsystem",
+              "submitter": "Jonathan Black",
+              "points": 3,
+              "spotify_uri": "spotify:track:2iqA5Na5vlo0bnZUf8KT1N",
+              "metadata": {
+                "popularity_proxy": 35,
+                "obscurity": 65,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 48,
+                "tags": [],
+                "bpm": 137.2,
+                "key": "D",
+                "scale": "minor",
+                "energy_0_1": 0.652,
+                "energy_pct": 65,
+                "duration_s": 445.4,
+                "has_lyrics": true,
+                "word_count": 519,
+                "line_count": 89,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Leaving The Light",
+              "artist": "Genesis Owusu",
+              "submitter": "Mashew",
+              "points": 1,
+              "spotify_uri": "spotify:track:35nOLWeyoXbZvhcczCzQit",
+              "metadata": {
+                "popularity_proxy": 32,
+                "obscurity": 68,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 44,
+                "tags": [],
+                "bpm": 86.5,
+                "key": "C",
+                "scale": "major",
+                "energy_0_1": 0.862,
+                "energy_pct": 86,
+                "duration_s": 187.9,
+                "has_lyrics": true,
+                "word_count": 384,
+                "line_count": 62,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "DArkSide",
+              "artist": "Bring Me The Horizon",
+              "submitter": "jac",
+              "points": 0,
+              "spotify_uri": "spotify:track:7mczLeiFeYKRb7vtiPjuMb",
+              "metadata": {
+                "popularity_proxy": 76,
+                "obscurity": 24,
+                "bucket": "curiousCut",
+                "spotify_popularity": 76,
+                "tags": [
+                  "metalcore",
+                  "alternative metal",
+                  "rock",
+                  "metal",
+                  "post-hardcore"
+                ],
+                "bpm": 85.2,
+                "key": "A",
+                "scale": "minor",
+                "energy_0_1": 0.944,
+                "energy_pct": 94,
+                "duration_s": 165.1,
+                "has_lyrics": true,
+                "word_count": 276,
+                "line_count": 50,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "End of Beginning",
+              "artist": "Djo",
+              "submitter": "Michael Layous",
+              "points": 0,
+              "spotify_uri": "spotify:track:3qhlB30KknSejmIvZZLjOD",
+              "metadata": {
+                "popularity_proxy": 99,
+                "obscurity": 1,
+                "bucket": "radioHit",
+                "spotify_popularity": 97,
+                "tags": [
+                  "metalcore",
+                  "deathcore",
+                  "rock",
+                  "death metal",
+                  "post metal"
+                ],
+                "bpm": 80.4,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.686,
+                "energy_pct": 69,
+                "duration_s": 159.3,
+                "has_lyrics": true,
+                "word_count": 197,
+                "line_count": 26,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Hollywood Baby",
+              "artist": "100 gecs",
+              "submitter": "Michael Layous",
+              "points": 0,
+              "spotify_uri": "spotify:track:0oigSejhoNen2EdNAIFcm5",
+              "metadata": {
+                "popularity_proxy": 67,
+                "obscurity": 33,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 58,
+                "tags": [
+                  "hyperpop",
+                  "pop punk",
+                  "pop",
+                  "alternative rock",
+                  "glitch"
+                ],
+                "bpm": 76.0,
+                "key": "A#",
+                "scale": "major",
+                "energy_0_1": 1.0,
+                "energy_pct": 100,
+                "duration_s": 190.7,
+                "has_lyrics": true,
+                "word_count": 272,
+                "line_count": 47,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "This Is A Photograph",
+              "artist": "Kevin Morby",
+              "submitter": "Jonathan Black",
+              "points": 0,
+              "spotify_uri": "spotify:track:1hj8os1Xxiuo95atpJzfCp",
+              "metadata": {
+                "popularity_proxy": 27,
+                "obscurity": 73,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 43,
+                "tags": [],
+                "bpm": 125.0,
+                "key": "A",
+                "scale": "minor",
+                "energy_0_1": 0.759,
+                "energy_pct": 76,
+                "duration_s": 232.9,
+                "has_lyrics": true,
+                "word_count": 309,
+                "line_count": 54,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "One Of Those Days",
+              "artist": "Dirty Heads",
+              "submitter": "Tj",
+              "points": -1,
+              "spotify_uri": "spotify:track:6dsTMRIpvObTocRwTzf4Uv",
+              "metadata": {
+                "popularity_proxy": 10,
+                "obscurity": 90,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 55,
+                "tags": [],
+                "bpm": 86.5,
+                "key": "G",
+                "scale": "major",
+                "energy_0_1": 0.836,
+                "energy_pct": 84,
+                "duration_s": 189.7,
+                "has_lyrics": true,
+                "word_count": 434,
+                "line_count": 57,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "theme": "The Bones Are Their Money",
+          "season": 1,
+          "round": "Round 7",
+          "pick_count": 12,
+          "picks": [
+            {
+              "title": "Red Right Hand - 2011 Remaster",
+              "artist": "Nick Cave & The Bad Seeds",
+              "submitter": "Philip Chapin",
+              "points": 24,
+              "spotify_uri": "spotify:track:0jVo3e34A15l6MNu1O3cfa",
+              "metadata": {
+                "popularity_proxy": 49,
+                "obscurity": 51,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 67,
+                "tags": [],
+                "bpm": 114.8,
+                "key": "B",
+                "scale": "major",
+                "energy_0_1": 0.639,
+                "energy_pct": 64,
+                "duration_s": 285.8,
+                "has_lyrics": true,
+                "word_count": 291,
+                "line_count": 28,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Shankill Butchers",
+              "artist": "The Decemberists",
+              "submitter": "Jonathan Black",
+              "points": 19,
+              "spotify_uri": "spotify:track:3XnmHCsBIO4cDW73UUrtkA",
+              "metadata": {
+                "popularity_proxy": 46,
+                "obscurity": 54,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 34,
+                "tags": [],
+                "bpm": 81.5,
+                "key": "G#",
+                "scale": "major",
+                "energy_0_1": 0.382,
+                "energy_pct": 38,
+                "duration_s": 279.6,
+                "has_lyrics": true,
+                "word_count": 196,
+                "line_count": 27,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "System Preferences",
+              "artist": "Tera Melos",
+              "submitter": "missmara",
+              "points": 13,
+              "spotify_uri": "spotify:track:3QnCm1WofA1nsWO3CWFu3t",
+              "metadata": {
+                "popularity_proxy": 19,
+                "obscurity": 81,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 19,
+                "tags": [],
+                "bpm": 81.5,
+                "key": "E",
+                "scale": "minor",
+                "energy_0_1": 0.922,
+                "energy_pct": 92,
+                "duration_s": 216.5,
+                "has_lyrics": true,
+                "word_count": 202,
+                "line_count": 22,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Mosquito",
+              "artist": "Model/Actriz",
+              "submitter": "Mashew",
+              "points": 12,
+              "spotify_uri": "spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR",
+              "metadata": {
+                "popularity_proxy": 35,
+                "obscurity": 65,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 37,
+                "tags": [],
+                "bpm": 102.3,
+                "key": "E",
+                "scale": "major",
+                "energy_0_1": 0.976,
+                "energy_pct": 98,
+                "duration_s": 192.8,
+                "has_lyrics": true,
+                "word_count": 272,
+                "line_count": 40,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Westfall",
+              "artist": "Okkervil River",
+              "submitter": "SusieQ",
+              "points": 10,
+              "spotify_uri": "spotify:track:45uW2Ev9c3iUUtpO5yQEOw",
+              "metadata": {
+                "popularity_proxy": 36,
+                "obscurity": 64,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 37,
+                "tags": [],
+                "bpm": 72.1,
+                "key": "G",
+                "scale": "major",
+                "energy_0_1": 0.852,
+                "energy_pct": 85,
+                "duration_s": 354.7,
+                "has_lyrics": true,
+                "word_count": 252,
+                "line_count": 36,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "In Hell I'll Be in Good Company",
+              "artist": "The Dead South",
+              "submitter": "Sarah S",
+              "points": 9,
+              "spotify_uri": "spotify:track:4eMxLQtSdgxdA1Hs6D2YuN",
+              "metadata": {
+                "popularity_proxy": 47,
+                "obscurity": 53,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 71,
+                "tags": [],
+                "bpm": 78.1,
+                "key": "G",
+                "scale": "major",
+                "energy_0_1": 0.319,
+                "energy_pct": 32,
+                "duration_s": 249.6,
+                "has_lyrics": true,
+                "word_count": 226,
+                "line_count": 28,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Run, Rabbit, Run!",
+              "artist": "Flanagan & Allen",
+              "submitter": "jac",
+              "points": 9,
+              "spotify_uri": "spotify:track:0HwSU5GzCClVScJFE6VZpM",
+              "metadata": {
+                "popularity_proxy": 23,
+                "obscurity": 77,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 24,
+                "tags": [],
+                "bpm": 87.9,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.27,
+                "energy_pct": 27,
+                "duration_s": 170.5,
+                "has_lyrics": true,
+                "word_count": 148,
+                "line_count": 20,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Pennywise - 2005 Remaster",
+              "artist": "Pennywise",
+              "submitter": "Tj",
+              "points": 8,
+              "spotify_uri": "spotify:track:1WaEl2RKIUq7gxakfucrch",
+              "metadata": {
+                "popularity_proxy": 50,
+                "obscurity": 50,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 41,
+                "tags": [],
+                "bpm": 97.0,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.72,
+                "energy_pct": 72,
+                "duration_s": 98.0,
+                "has_lyrics": true,
+                "word_count": 182,
+                "line_count": 35,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "The Ghost of Tom Joad",
+              "artist": "Bruce Springsteen",
+              "submitter": "Mollyjohnson",
+              "points": 6,
+              "spotify_uri": "spotify:track:4RaxnzmTN4bojbbEYtvXjk",
+              "metadata": {
+                "popularity_proxy": 41,
+                "obscurity": 59,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 54,
+                "tags": [],
+                "bpm": 87.9,
+                "key": "B",
+                "scale": "minor",
+                "energy_0_1": 0.292,
+                "energy_pct": 29,
+                "duration_s": 263.8,
+                "has_lyrics": true,
+                "word_count": 280,
+                "line_count": 38,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Long Black Veil",
+              "artist": "Mike Ness",
+              "submitter": "Joe Quinto",
+              "points": 5,
+              "spotify_uri": "spotify:track:0csqJEOr3dDVzmXbv9HT79",
+              "metadata": {
+                "popularity_proxy": 16,
+                "obscurity": 84,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 25,
+                "tags": [],
+                "bpm": 106.1,
+                "key": "F",
+                "scale": "major",
+                "energy_0_1": 0.507,
+                "energy_pct": 51,
+                "duration_s": 244.1,
+                "has_lyrics": true,
+                "word_count": 173,
+                "line_count": 22,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Mona Lisa (feat. Kendrick Lamar)",
+              "artist": "Lil Wayne",
+              "submitter": "Sarah",
+              "points": 5,
+              "spotify_uri": "spotify:track:0dbTQYW3Ad1FTzIA9t90E8",
+              "metadata": {
+                "popularity_proxy": 15,
+                "obscurity": 85,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 69,
+                "tags": [],
+                "bpm": 122.3,
+                "key": "E",
+                "scale": "minor",
+                "energy_0_1": 0.757,
+                "energy_pct": 76,
+                "duration_s": 330.9,
+                "has_lyrics": true,
+                "word_count": 1320,
+                "line_count": 161,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Beams",
+              "artist": "Arlo Parks",
+              "submitter": "Michael Layous",
+              "points": 0,
+              "spotify_uri": "spotify:track:4yNK2ybBbO7CiuSyTNvBc8",
+              "metadata": {
+                "popularity_proxy": 23,
+                "obscurity": 77,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 54,
+                "tags": [],
+                "bpm": 86.5,
+                "key": "B",
+                "scale": "major",
+                "energy_0_1": 0.138,
+                "energy_pct": 14,
+                "duration_s": 323.9,
+                "has_lyrics": true,
+                "word_count": 314,
+                "line_count": 35,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "theme": "Drugs Are Good",
+          "season": 1,
+          "round": "Round 8",
+          "pick_count": 12,
+          "picks": [
+            {
+              "title": "Movement",
+              "artist": "LCD Soundsystem",
+              "submitter": "SusieQ",
+              "points": 15,
+              "spotify_uri": "spotify:track:1pJS4rS12iA5MryQSAP2kQ",
+              "metadata": {
+                "popularity_proxy": 48,
+                "obscurity": 52,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 43,
+                "tags": [],
+                "bpm": 98.7,
+                "key": "E",
+                "scale": "major",
+                "energy_0_1": 0.172,
+                "energy_pct": 17,
+                "duration_s": 192.0,
+                "has_lyrics": true,
+                "word_count": 276,
+                "line_count": 50,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Ripple - 2013 Remaster",
+              "artist": "Grateful Dead",
+              "submitter": "Jonathan Black",
+              "points": 14,
+              "spotify_uri": "spotify:track:1OE5l6sedVcIFELMuxQOPI",
+              "metadata": {
+                "popularity_proxy": 43,
+                "obscurity": 57,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 67,
+                "tags": [],
+                "bpm": 127.8,
+                "key": "G",
+                "scale": "major",
+                "energy_0_1": 0.529,
+                "energy_pct": 53,
+                "duration_s": 251.2,
+                "has_lyrics": true,
+                "word_count": 226,
+                "line_count": 30,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Rolling",
+              "artist": "Soul Coughing",
+              "submitter": "missmara",
+              "points": 14,
+              "spotify_uri": "spotify:track:4teAkTVhFZzkZdWEOOW3ci",
+              "metadata": {
+                "popularity_proxy": 31,
+                "obscurity": 69,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 40,
+                "tags": [],
+                "bpm": 92.2,
+                "key": "E",
+                "scale": "major",
+                "energy_0_1": 0.751,
+                "energy_pct": 75,
+                "duration_s": 216.3,
+                "has_lyrics": true,
+                "word_count": 344,
+                "line_count": 41,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Ghost Town",
+              "artist": "Second Best",
+              "submitter": "Voltron’s YoungLion",
+              "points": 13,
+              "spotify_uri": "spotify:track:1kW1cRjYubYQZncmKhuQaE",
+              "metadata": {
+                "popularity_proxy": 2,
+                "obscurity": 98,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 2,
+                "tags": [],
+                "bpm": 122.3,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.711,
+                "energy_pct": 71,
+                "duration_s": 122.2,
+                "has_lyrics": false,
+                "word_count": 0,
+                "line_count": 0,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "6 Underground",
+              "artist": "Sneaker Pimps",
+              "submitter": "Joe Quinto",
+              "points": 11,
+              "spotify_uri": "spotify:track:7KvSuH86lIT2aTl9PBCAfd",
+              "metadata": {
+                "popularity_proxy": 67,
+                "obscurity": 33,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 62,
+                "tags": [
+                  "lush",
+                  "trip-hop",
+                  "chillout",
+                  "electronic",
+                  "trip hop"
+                ],
+                "bpm": 85.2,
+                "key": "F#",
+                "scale": "minor",
+                "energy_0_1": 0.197,
+                "energy_pct": 20,
+                "duration_s": 235.5,
+                "has_lyrics": true,
+                "word_count": 197,
+                "line_count": 49,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "David Bowie Wants Ideas",
+              "artist": "Bongwater",
+              "submitter": "Mashew",
+              "points": 10,
+              "spotify_uri": "spotify:track:5uxZ7bEBWDpZZEtzuo5VB1",
+              "metadata": {
+                "popularity_proxy": 9,
+                "obscurity": 91,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 5,
+                "tags": [],
+                "bpm": 127.8,
+                "key": "E",
+                "scale": "minor",
+                "energy_0_1": 0.502,
+                "energy_pct": 50,
+                "duration_s": 134.0,
+                "has_lyrics": false,
+                "word_count": 0,
+                "line_count": 0,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Goodbye Blue Sky",
+              "artist": "Pink Floyd",
+              "submitter": "jac",
+              "points": 10,
+              "spotify_uri": "spotify:track:0ESdtt9cjGZUkUbaubSrv2",
+              "metadata": {
+                "popularity_proxy": 73,
+                "obscurity": 27,
+                "bucket": "curiousCut",
+                "spotify_popularity": 65,
+                "tags": [],
+                "bpm": 108.2,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.207,
+                "energy_pct": 21,
+                "duration_s": 167.2,
+                "has_lyrics": true,
+                "word_count": 97,
+                "line_count": 20,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Summer Babe - Winter Version",
+              "artist": "Pavement",
+              "submitter": "Michael Layous",
+              "points": 9,
+              "spotify_uri": "spotify:track:1vnKvlb6cj5NLpd1BMJ2jD",
+              "metadata": {
+                "popularity_proxy": 44,
+                "obscurity": 56,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 49,
+                "tags": [],
+                "bpm": 97.0,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.667,
+                "energy_pct": 67,
+                "duration_s": 196.6,
+                "has_lyrics": true,
+                "word_count": 152,
+                "line_count": 27,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Mary Jane's Last Dance",
+              "artist": "Tom Petty and the Heartbreakers",
+              "submitter": "Sarah S",
+              "points": 8,
+              "spotify_uri": "spotify:track:3dmqIB2Qxe2XZobw9gXxJ6",
+              "metadata": {
+                "popularity_proxy": 71,
+                "obscurity": 29,
+                "bucket": "curiousCut",
+                "spotify_popularity": 82,
+                "tags": [
+                  "classic rock",
+                  "rock",
+                  "Tom Petty",
+                  "80s",
+                  "90s"
+                ],
+                "bpm": 85.2,
+                "key": "A#",
+                "scale": "major",
+                "energy_0_1": 0.185,
+                "energy_pct": 18,
+                "duration_s": 280.7,
+                "has_lyrics": true,
+                "word_count": 268,
+                "line_count": 39,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Rescue Me",
+              "artist": "Y&T",
+              "submitter": "Mollyjohnson",
+              "points": 8,
+              "spotify_uri": "spotify:track:5V0AWCNERrcnKoDixpaTqP",
+              "metadata": {
+                "popularity_proxy": 18,
+                "obscurity": 82,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 38,
+                "tags": [],
+                "bpm": 110.3,
+                "key": "A",
+                "scale": "minor",
+                "energy_0_1": 0.763,
+                "energy_pct": 76,
+                "duration_s": 283.4,
+                "has_lyrics": true,
+                "word_count": 274,
+                "line_count": 34,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Don't Take The Money",
+              "artist": "Bleachers",
+              "submitter": "Philip Chapin",
+              "points": 7,
+              "spotify_uri": "spotify:track:3ySU5vwQB33iGulwcUL9qQ",
+              "metadata": {
+                "popularity_proxy": 63,
+                "obscurity": 37,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 66,
+                "tags": [],
+                "bpm": 110.3,
+                "key": "C#",
+                "scale": "major",
+                "energy_0_1": 0.546,
+                "energy_pct": 55,
+                "duration_s": 306.1,
+                "has_lyrics": true,
+                "word_count": 457,
+                "line_count": 72,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Black & White",
+              "artist": "Juice WRLD",
+              "submitter": "Sarah",
+              "points": 1,
+              "spotify_uri": "spotify:track:1fCeXjoRExPP2qwSBh2aST",
+              "metadata": {
+                "popularity_proxy": 76,
+                "obscurity": 24,
+                "bucket": "curiousCut",
+                "spotify_popularity": 74,
+                "tags": [
+                  "emo rap",
+                  "2018",
+                  "Juice WRLD",
+                  "Hip-Hop",
+                  "melodic"
+                ],
+                "bpm": 98.7,
+                "key": "C",
+                "scale": "major",
+                "energy_0_1": 0.664,
+                "energy_pct": 66,
+                "duration_s": 188.4,
+                "has_lyrics": true,
+                "word_count": 384,
+                "line_count": 55,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "league": "Hip Jammers",
+      "season": 3,
+      "themes": [
+        {
+          "theme": "Your Permanent Record",
+          "season": 3,
+          "round": "Your Permanent Record",
+          "pick_count": 9,
+          "picks": [
+            {
+              "title": "Goodbye Yellow Brick Road - Remastered 2014",
+              "artist": "Elton John",
+              "submitter": "lorimariani",
+              "points": 17,
+              "spotify_uri": "spotify:track:4IRHwIZHzlHT1FQpRa5RdE",
+              "metadata": {
+                "popularity_proxy": 81,
+                "obscurity": 19,
+                "bucket": "recognizable",
+                "spotify_popularity": 78,
+                "tags": [],
+                "bpm": 122.3,
+                "key": "F",
+                "scale": "major",
+                "energy_0_1": 0.472,
+                "energy_pct": 47,
+                "duration_s": 192.8,
+                "has_lyrics": true,
+                "word_count": 212,
+                "line_count": 32,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Total Eclipse of the Heart",
+              "artist": "Bonnie Tyler",
+              "submitter": "missmara",
+              "points": 13,
+              "spotify_uri": "spotify:track:7wuJGgpTNzbUyn26IOY6rj",
+              "metadata": {
+                "popularity_proxy": 83,
+                "obscurity": 17,
+                "bucket": "recognizable",
+                "spotify_popularity": 84,
+                "tags": [
+                  "80s",
+                  "pop",
+                  "female vocalists",
+                  "Ballad",
+                  "rock"
+                ],
+                "bpm": 133.9,
+                "key": "G#",
+                "scale": "major",
+                "energy_0_1": 0.324,
+                "energy_pct": 32,
+                "duration_s": 333.9,
+                "has_lyrics": true,
+                "word_count": 629,
+                "line_count": 97,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "(I Can't Get No) Satisfaction - Mono",
+              "artist": "The Rolling Stones",
+              "submitter": "Ronm",
+              "points": 12,
+              "spotify_uri": "spotify:track:2PzU4IB8Dr6mxV3lHuaG34",
+              "metadata": {
+                "popularity_proxy": 62,
+                "obscurity": 38,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 75,
+                "tags": [],
+                "bpm": 137.2,
+                "key": "E",
+                "scale": "major",
+                "energy_0_1": 0.539,
+                "energy_pct": 54,
+                "duration_s": 223.4,
+                "has_lyrics": true,
+                "word_count": 260,
+                "line_count": 37,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Move Along",
+              "artist": "The All-American Rejects",
+              "submitter": "Kristin",
+              "points": 11,
+              "spotify_uri": "spotify:track:58HpsDKeYoLtNhXFQyQmz5",
+              "metadata": {
+                "popularity_proxy": 82,
+                "obscurity": 18,
+                "bucket": "recognizable",
+                "spotify_popularity": 76,
+                "tags": [
+                  "rock",
+                  "alternative",
+                  "pop punk",
+                  "alternative rock",
+                  "emo"
+                ],
+                "bpm": 74.0,
+                "key": "D#",
+                "scale": "major",
+                "energy_0_1": 0.874,
+                "energy_pct": 87,
+                "duration_s": 241.8,
+                "has_lyrics": true,
+                "word_count": 367,
+                "line_count": 53,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "I Have a Date - Originally Performed By The Simpletones",
+              "artist": "The Vandals",
+              "submitter": "Mashew",
+              "points": 10,
+              "spotify_uri": "spotify:track:2PEBsyLqTdWbsb5I6EpqMa",
+              "metadata": {
+                "popularity_proxy": 17,
+                "obscurity": 83,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 36,
+                "tags": [],
+                "bpm": 106.1,
+                "key": "C",
+                "scale": "major",
+                "energy_0_1": 0.551,
+                "energy_pct": 55,
+                "duration_s": 133.5,
+                "has_lyrics": true,
+                "word_count": 231,
+                "line_count": 29,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Air Force Ones",
+              "artist": "Nelly",
+              "submitter": "gregamariani",
+              "points": 9,
+              "spotify_uri": "spotify:track:7kAFSrTIOiVZ0gnHBuAH3l",
+              "metadata": {
+                "popularity_proxy": 7,
+                "obscurity": 93,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 66,
+                "tags": [],
+                "bpm": 82.7,
+                "key": "F#",
+                "scale": "minor",
+                "energy_0_1": 0.555,
+                "energy_pct": 56,
+                "duration_s": 296.0,
+                "has_lyrics": true,
+                "word_count": 922,
+                "line_count": 103,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Careless Whisper",
+              "artist": "George Michael",
+              "submitter": "Sasha Mariana",
+              "points": 9,
+              "spotify_uri": "spotify:track:5WDLRQ3VCdVrKw0njWe5E5",
+              "metadata": {
+                "popularity_proxy": 90,
+                "obscurity": 10,
+                "bucket": "recognizable",
+                "spotify_popularity": 79,
+                "tags": [
+                  "80s",
+                  "pop",
+                  "romantic",
+                  "George Michael",
+                  "Love"
+                ],
+                "bpm": 76.0,
+                "key": "D",
+                "scale": "minor",
+                "energy_0_1": 0.261,
+                "energy_pct": 26,
+                "duration_s": 300.7,
+                "has_lyrics": true,
+                "word_count": 313,
+                "line_count": 45,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Second Hand News - 2004 Remaster",
+              "artist": "Fleetwood Mac",
+              "submitter": "mmariani13",
+              "points": 9,
+              "spotify_uri": "spotify:track:4SZhxF0sIS8nDvwhT0Tt2V",
+              "metadata": {
+                "popularity_proxy": 58,
+                "obscurity": 42,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 56,
+                "tags": [],
+                "bpm": 117.2,
+                "key": "D",
+                "scale": "minor",
+                "energy_0_1": 0.574,
+                "energy_pct": 57,
+                "duration_s": 176.3,
+                "has_lyrics": true,
+                "word_count": 198,
+                "line_count": 33,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Wagon Wheel",
+              "artist": "Darius Rucker",
+              "submitter": "margs",
+              "points": 9,
+              "spotify_uri": "spotify:track:3xdjjKMcMOFgo1eQrfbogM",
+              "metadata": {
+                "popularity_proxy": 61,
+                "obscurity": 39,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 84,
+                "tags": [
+                  "country",
+                  "modern country",
+                  "2013",
+                  "american",
+                  "my favorite"
+                ],
+                "bpm": 74.0,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.265,
+                "energy_pct": 26,
+                "duration_s": 346.4,
+                "has_lyrics": true,
+                "word_count": 346,
+                "line_count": 43,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "theme": "Must be love on the brain",
+          "season": 3,
+          "round": "Must be love on the brain",
+          "pick_count": 9,
+          "picks": [
+            {
+              "title": "Let's Stay Together",
+              "artist": "Al Green",
+              "submitter": "Ronm",
+              "points": 19,
+              "spotify_uri": "spotify:track:63xdwScd1Ai1GigAwQxE8y",
+              "metadata": {
+                "popularity_proxy": 82,
+                "obscurity": 18,
+                "bucket": "recognizable",
+                "spotify_popularity": 79,
+                "tags": [
+                  "soul",
+                  "70s",
+                  "oldies",
+                  "Love",
+                  "Soundtrack"
+                ],
+                "bpm": 102.3,
+                "key": "D",
+                "scale": "minor",
+                "energy_0_1": 0.52,
+                "energy_pct": 52,
+                "duration_s": 200.0,
+                "has_lyrics": true,
+                "word_count": 162,
+                "line_count": 29,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "In My Life - Remastered 2009",
+              "artist": "The Beatles",
+              "submitter": "Sasha Mariana",
+              "points": 17,
+              "spotify_uri": "spotify:track:3KfbEIOC7YIv90FIfNSZpo",
+              "metadata": {
+                "popularity_proxy": 82,
+                "obscurity": 18,
+                "bucket": "recognizable",
+                "spotify_popularity": 80,
+                "tags": [],
+                "bpm": 104.2,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.361,
+                "energy_pct": 36,
+                "duration_s": 146.3,
+                "has_lyrics": true,
+                "word_count": 146,
+                "line_count": 21,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "Harvest Moon",
+              "artist": "Neil Young",
+              "submitter": "lorimariani",
+              "points": 12,
+              "spotify_uri": "spotify:track:5l9c6bJmzvftumhz4TMPgk",
+              "metadata": {
+                "popularity_proxy": 80,
+                "obscurity": 20,
+                "bucket": "curiousCut",
+                "spotify_popularity": 79,
+                "tags": [
+                  "classic rock",
+                  "singer-songwriter",
+                  "folk",
+                  "Neil Young",
+                  "rock"
+                ],
+                "bpm": 112.5,
+                "key": "D",
+                "scale": "major",
+                "energy_0_1": 0.208,
+                "energy_pct": 21,
+                "duration_s": 304.1,
+                "has_lyrics": true,
+                "word_count": 159,
+                "line_count": 28,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Isn't She Lovely",
+              "artist": "Stevie Wonder",
+              "submitter": "margs",
+              "points": 12,
+              "spotify_uri": "spotify:track:3NlLmKBJozwoi0k03Feb1N",
+              "metadata": {
+                "popularity_proxy": 71,
+                "obscurity": 29,
+                "bucket": "curiousCut",
+                "spotify_popularity": 75,
+                "tags": [
+                  "soul",
+                  "70s",
+                  "motown",
+                  "Stevie Wonder",
+                  "pop"
+                ],
+                "bpm": 119.7,
+                "key": "C#",
+                "scale": "minor",
+                "energy_0_1": 0.447,
+                "energy_pct": 45,
+                "duration_s": 199.4,
+                "has_lyrics": true,
+                "word_count": 109,
+                "line_count": 21,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Still into You",
+              "artist": "Paramore",
+              "submitter": "Kristin",
+              "points": 12,
+              "spotify_uri": "spotify:track:3SXXFIZel1VQQ4ENiqozxi",
+              "metadata": {
+                "popularity_proxy": 98,
+                "obscurity": 2,
+                "bucket": "radioHit",
+                "spotify_popularity": 67,
+                "tags": [
+                  "rock",
+                  "pop",
+                  "2013",
+                  "pop rock",
+                  "KICK"
+                ],
+                "bpm": 137.2,
+                "key": "F",
+                "scale": "major",
+                "energy_0_1": 0.857,
+                "energy_pct": 86,
+                "duration_s": 220.1,
+                "has_lyrics": true,
+                "word_count": 330,
+                "line_count": 51,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Do I Wanna Know?",
+              "artist": "Arctic Monkeys",
+              "submitter": "missmara",
+              "points": 11,
+              "spotify_uri": "spotify:track:5FVd6KXrgO9B3JPmC8OPst",
+              "metadata": {
+                "popularity_proxy": 99,
+                "obscurity": 1,
+                "bucket": "radioHit",
+                "spotify_popularity": 90,
+                "tags": [
+                  "indie rock",
+                  "indie",
+                  "alternative",
+                  "rock",
+                  "arctic monkeys"
+                ],
+                "bpm": 85.2,
+                "key": "C",
+                "scale": "major",
+                "energy_0_1": 0.71,
+                "energy_pct": 71,
+                "duration_s": 265.7,
+                "has_lyrics": true,
+                "word_count": 393,
+                "line_count": 48,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "The Joker",
+              "artist": "Steve Miller Band",
+              "submitter": "gregamariani",
+              "points": 8,
+              "spotify_uri": "spotify:track:1bp2IO61zbQrbWNmKKxg3f",
+              "metadata": {
+                "popularity_proxy": 73,
+                "obscurity": 27,
+                "bucket": "curiousCut",
+                "spotify_popularity": 79,
+                "tags": [
+                  "classic rock",
+                  "70s",
+                  "rock",
+                  "steve miller band",
+                  "oldies"
+                ],
+                "bpm": 82.7,
+                "key": "F",
+                "scale": "major",
+                "energy_0_1": 0.344,
+                "energy_pct": 34,
+                "duration_s": 218.6,
+                "has_lyrics": true,
+                "word_count": 267,
+                "line_count": 38,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": true
+                }
+              }
+            },
+            {
+              "title": "Want",
+              "artist": "Jawbreaker",
+              "submitter": "Mashew",
+              "points": 5,
+              "spotify_uri": "spotify:track:4ApwYjaCE3IWWCeh0TWGS4",
+              "metadata": {
+                "popularity_proxy": 36,
+                "obscurity": 64,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 40,
+                "tags": [],
+                "bpm": 100.4,
+                "key": "A",
+                "scale": "major",
+                "energy_0_1": 0.859,
+                "energy_pct": 86,
+                "duration_s": 201.7,
+                "has_lyrics": true,
+                "word_count": 228,
+                "line_count": 45,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            },
+            {
+              "title": "I Need Love",
+              "artist": "LL COOL J",
+              "submitter": "mmariani13",
+              "points": 3,
+              "spotify_uri": "spotify:track:3g7zG6d1MLV5gVVdi1dg9F",
+              "metadata": {
+                "popularity_proxy": 34,
+                "obscurity": 66,
+                "bucket": "rabbitHole",
+                "spotify_popularity": 52,
+                "tags": [],
+                "bpm": 87.9,
+                "key": "A",
+                "scale": "minor",
+                "energy_0_1": 0.343,
+                "energy_pct": 34,
+                "duration_s": 253.9,
+                "has_lyrics": true,
+                "word_count": 565,
+                "line_count": 73,
+                "coverage": {
+                  "popularity": true,
+                  "audio": true,
+                  "lyrics": true,
+                  "tags": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "partial_coverage_examples": {
+    "_note": "Real songs that currently lack audio features (audio queue never ran / failed). Use for the D3 'not analyzed yet' state. A fresh round would look like these but ALSO missing lyrics.",
+    "picks": [
+      {
+        "title": "Trapped In the Drive-Thru (Parody of \"Trapped In The Closet\" by R. Kelly)",
+        "artist": "\"Weird Al\" Yankovic",
+        "spotify_uri": "spotify:track:3hy3Q6eaItpp1ZPRp7Np4e",
+        "metadata": {
+          "popularity_proxy": 19,
+          "obscurity": 81,
+          "bucket": "rabbitHole",
+          "tags": [],
+          "bpm": null,
+          "key": null,
+          "scale": null,
+          "energy_0_1": null,
+          "energy_pct": null,
+          "duration_s": null,
+          "has_lyrics": true,
+          "coverage": {
+            "popularity": true,
+            "audio": false,
+            "lyrics": true,
+            "tags": false
+          }
+        }
+      },
+      {
+        "title": "FDT",
+        "artist": "YG",
+        "spotify_uri": "spotify:track:4nxSEcO1rK0wtYswNpMH2U",
+        "metadata": {
+          "popularity_proxy": 8,
+          "obscurity": 92,
+          "bucket": "rabbitHole",
+          "tags": [],
+          "bpm": null,
+          "key": null,
+          "scale": null,
+          "energy_0_1": null,
+          "energy_pct": null,
+          "duration_s": null,
+          "has_lyrics": true,
+          "coverage": {
+            "popularity": true,
+            "audio": false,
+            "lyrics": true,
+            "tags": false
+          }
+        }
+      },
+      {
+        "title": "The Low Spark Of High-Heeled Boys",
+        "artist": "Traffic",
+        "spotify_uri": "spotify:track:1yW6y8RufwB4WEAQeip0tx",
+        "metadata": {
+          "popularity_proxy": 28,
+          "obscurity": 72,
+          "bucket": "rabbitHole",
+          "tags": [],
+          "bpm": null,
+          "key": null,
+          "scale": null,
+          "energy_0_1": null,
+          "energy_pct": null,
+          "duration_s": null,
+          "has_lyrics": true,
+          "coverage": {
+            "popularity": true,
+            "audio": false,
+            "lyrics": true,
+            "tags": false
+          }
+        }
+      },
+      {
+        "title": "Stop Fucking With My Head",
+        "artist": "Karise Eden",
+        "spotify_uri": "spotify:track:2SwkTlANMqzoEMw6k1YaNU",
+        "metadata": {
+          "popularity_proxy": 6,
+          "obscurity": 94,
+          "bucket": "rabbitHole",
+          "tags": [],
+          "bpm": null,
+          "key": null,
+          "scale": null,
+          "energy_0_1": null,
+          "energy_pct": null,
+          "duration_s": null,
+          "has_lyrics": true,
+          "coverage": {
+            "popularity": true,
+            "audio": false,
+            "lyrics": true,
+            "tags": false
+          }
+        }
+      }
+    ]
+  }
+}
