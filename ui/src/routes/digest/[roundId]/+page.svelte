@@ -682,6 +682,7 @@
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
   // excluded flag loaded from server (persisted in draft) — falls back to false when no draft yet.
   let nextRoundExcluded = $state(data.stage !== 'prepare' ? data.nextRoundMeta.excluded : false);
+  let nextRoundLocked = $state(false);
   const nextRoundAvailable = $derived(
     !!nextRoundData
       && (
@@ -1028,10 +1029,18 @@
     data.stage === 'refine' || data.stage === 'finalize' ? data.sections : [],
   );
   const excludedCount = $derived(
-    sectionsList.filter((s) => sectionStates[s.id] === 'excluded').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'excluded').length
+    + (statsExcluded ? 1 : 0)
+    + (standingsExcluded ? 1 : 0)
+    + (discoverabilityExcluded ? 1 : 0)
+    + (nextRoundExcluded ? 1 : 0),
   );
   const lockedCount = $derived(
-    sectionsList.filter((s) => sectionStates[s.id] === 'locked').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'locked').length
+    + (dataSectionRunState.stats === 'locked' ? 1 : 0)
+    + (dataSectionRunState.standings === 'locked' ? 1 : 0)
+    + (dataSectionRunState.discoverability === 'locked' ? 1 : 0)
+    + (nextRoundLocked ? 1 : 0),
   );
 
   const allChecksOk = $derived(
@@ -1483,6 +1492,7 @@
         initialExcluded={nextRoundExcluded}
         hasOverride={nextRoundHasOverride}
         onExcludedChange={(v) => { nextRoundExcluded = v; }}
+        onLockedChange={(v) => { nextRoundLocked = v; }}
       />
     {/if}
 
