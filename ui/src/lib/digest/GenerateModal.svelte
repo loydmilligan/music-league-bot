@@ -414,41 +414,9 @@
     overflow: auto;
   }
 
-  /* Season-recap mode banner (sprint-21) */
-  .dg-recap {
-    border: 1px solid var(--line-strong);
-    border-radius: var(--r-2);
-    background: var(--ink-0);
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
-  }
-  .dg-recap.is-on {
-    border-color: var(--mash-pulp-edge, var(--mash-pulp));
-    background: var(--mash-pulp-soft);
-  }
-  .dg-recap-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .dg-recap-check {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-  }
-  .dg-recap-check input {
-    width: 15px;
-    height: 15px;
-    accent-color: var(--mash-pulp);
-    cursor: pointer;
-  }
-  .dg-recap-name {
-    font: 700 13px/1.2 var(--font-body);
-    color: var(--fg);
-  }
+  /* Season-recap mode sub-controls (sprint-21) — the wrapper/head/checkbox-label
+     rules were removed once Task 3 merged this into a plain dg-gen-row; these
+     remaining selectors still style the inline expanded controls. */
   .dg-recap-badge {
     font: 700 10px/1 var(--font-mono);
     letter-spacing: 0.06em;
@@ -458,15 +426,6 @@
     border-radius: 999px;
     padding: 3px 8px;
     white-space: nowrap;
-  }
-  .dg-recap-sub {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
   }
   .dg-recap-final {
     display: inline-flex;
