@@ -14,7 +14,7 @@
     type VisualComponent,
   } from './variants.js';
 
-  export type SectionState = 'default' | 'excluded' | 'locked' | 'regenerating';
+  export type SectionState = 'default' | 'excluded' | 'locked' | 'regenerating' | 'queued';
 
   // Generic shape — the LLM is instructed to return per-kind objects but the
   // exact item shape varies. We render defensively: title/body/items if present.
@@ -272,7 +272,8 @@
     'dg-section-wrap' +
       (sectionState === 'excluded' ? ' is-excluded' : '') +
       (sectionState === 'locked' ? ' is-locked' : '') +
-      (sectionState === 'regenerating' ? ' is-regenerating' : ''),
+      (sectionState === 'regenerating' ? ' is-regenerating' : '') +
+      (sectionState === 'queued' ? ' is-queued' : ''),
   );
 
   function itemText(item: unknown): string {
@@ -403,7 +404,9 @@
   {#if sectionState === 'excluded'}
     <div class="dg-excluded-banner">⊘ excluded from final · {label}</div>
   {:else if sectionState === 'locked'}
-    <div class="dg-locked-banner">🔒 locked · whole-draft regen will skip</div>
+    <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
+  {:else if sectionState === 'queued'}
+    <div class="dg-queued-banner">↻ queued for batch regen · {label}</div>
   {:else if sectionState === 'regenerating'}
     <div class="dg-regen-banner">regenerating · {label} · ~ 4s</div>
   {/if}
