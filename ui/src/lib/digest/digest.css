@@ -435,7 +435,7 @@
 
 /* ---- regenerate modal ---- */
 .dg-modal-scrim {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(7,9,12,0.7);
   backdrop-filter: blur(8px);
