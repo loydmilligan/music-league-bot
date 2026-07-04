@@ -648,9 +648,10 @@
       (data.stage === 'refine' || data.stage === 'finalize' ? data.standings : null),
   );
   const StandingsSlot = $derived(VISUAL_COMPONENTS.standings);
-  const showStandings = $derived(
-    !standingsExcluded && !!standingsData && (standingsData.standings?.length ?? 0) > 0,
-  );
+  // Gates on data AVAILABILITY only — excluded sections stay mounted (dimmed +
+  // banner) so the "+" re-include control in DataSectionActions stays reachable,
+  // matching prose sections' behavior. See dataSectionExcluded() for the flag.
+  const showStandings = $derived(!!standingsData && (standingsData.standings?.length ?? 0) > 0);
 
   // --- sprint-17 data-driven sections (each reads data via visualData; the
   //     component self-suppresses, but we also gate the wrap so no empty
@@ -666,7 +667,8 @@
   const statsData = $derived(statsOverride ?? (inDigest ? data.stats : null));
   let statsExcluded = $state(false);
   const statsAvailable = $derived(!!statsData && Object.values(statsData).some((v) => typeof v === 'number'));
-  const showStats = $derived(!statsExcluded && statsAvailable);
+  // Gates on availability only — see showStandings comment above.
+  const showStats = $derived(statsAvailable);
 
   let discoverabilityOverride = $state<typeof data.discoverability>(null);
   const discoverabilityData = $derived(discoverabilityOverride ?? (inDigest ? data.discoverability : null));
@@ -676,7 +678,8 @@
   // is the GenerateModal include toggle (session-scoped — web view).
   let discoverabilityExcluded = $state(false);
   const tastemakerAvailable = $derived((discoverabilityData?.players?.length ?? 0) > 0);
-  const showDiscoverability = $derived(!discoverabilityExcluded && tastemakerAvailable);
+  // Gates on availability only — see showStandings comment above.
+  const showDiscoverability = $derived(tastemakerAvailable);
   const tastemakerCoverage = $derived<'ready' | 'incomplete'>(tastemakerAvailable ? 'ready' : 'incomplete');
 
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
@@ -771,10 +774,14 @@
   function closeModal() { modalTarget = null; }
 
   function toggleExcluded(id: string) {
-    sectionStates[id] = sectionStates[id] === 'excluded' ? 'default' : 'excluded';
+    const next = sectionStates[id] === 'excluded' ? 'default' : 'excluded';
+    sectionStates[id] = next;
+    if (next === 'excluded') dequeueProse(id);
   }
   function toggleLocked(id: string) {
-    sectionStates[id] = sectionStates[id] === 'locked' ? 'default' : 'locked';
+    const next = sectionStates[id] === 'locked' ? 'default' : 'locked';
+    sectionStates[id] = next;
+    if (next === 'locked') dequeueProse(id);
   }
   async function kebabAction(id: string, action: 'edit' | 'up' | 'down' | 'delete') {
     if (action !== 'up' && action !== 'down') {
@@ -812,6 +819,7 @@
     const target = modalTarget;
     modalTarget = null;
     if (!target || (data.stage !== 'refine' && data.stage !== 'finalize')) return;
+    if (target !== 'whole') dequeueProse(target);
 
     const ids: string[] = target === 'whole'
       ? data.sections
@@ -868,9 +876,12 @@
     if (key === 'stats') statsExcluded = !statsExcluded;
     else if (key === 'standings') standingsExcluded = !standingsExcluded;
     else discoverabilityExcluded = !discoverabilityExcluded;
+    if (dataSectionExcluded(key)) dequeueData(key);
   }
   function toggleDataLocked(key: DataSectionKey) {
-    dataSectionRunState[key] = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
+    const next = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
+    dataSectionRunState[key] = next;
+    if (next === 'locked') dequeueData(key);
   }
 
   async function recomputeDataSection(key: DataSectionKey) {
@@ -911,12 +922,33 @@
     dataSectionRunState[key] = 'queued';
     closeDataModal();
   }
+  function dequeueData(key: DataSectionKey) {
+    delete queuedData[key];
+    if (dataSectionRunState[key] === 'queued') dataSectionRunState[key] = 'default';
+  }
 
   const queuedCount = $derived(Object.keys(queuedProse).length + Object.keys(queuedData).length);
 
   async function runBatch() {
-    const ids = Object.keys(queuedProse);
-    const dataKeys = Object.keys(queuedData) as DataSectionKey[];
+    // Belt-and-suspenders: re-read each id/key's CURRENT state right before
+    // firing, in case it was locked/excluded after being queued but the
+    // dequeue call on that transition somehow missed it. Locked/excluded
+    // entries are dropped from the queue without being regenerated.
+    const ids = Object.keys(queuedProse).filter((id) => {
+      const st = sectionStates[id];
+      if (st === 'locked' || st === 'excluded') {
+        delete queuedProse[id];
+        return false;
+      }
+      return true;
+    });
+    const dataKeys = (Object.keys(queuedData) as DataSectionKey[]).filter((key) => {
+      if (dataSectionRunState[key] === 'locked' || dataSectionExcluded(key)) {
+        delete queuedData[key];
+        return false;
+      }
+      return true;
+    });
     if (!ids.length && !dataKeys.length) return;
 
     for (const id of ids) {
@@ -1376,8 +1408,10 @@
     <!-- By-the-numbers stat strip (sprint-17) — synthetic data-driven section,
          near the top. Reads data.stats; self-suppresses when empty. -->
     {#if showStats && StatSlot}
-      <div class="dg-section-wrap" class:is-locked={dataSectionRunState.stats === 'locked'} class:is-queued={dataSectionRunState.stats === 'queued'} class:is-regenerating={dataSectionRunState.stats === 'regenerating'} data-section-kind="stats">
-        {#if dataSectionRunState.stats === 'locked'}
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('stats')} class:is-locked={dataSectionRunState.stats === 'locked'} class:is-queued={dataSectionRunState.stats === 'queued'} class:is-regenerating={dataSectionRunState.stats === 'regenerating'} data-section-kind="stats">
+        {#if dataSectionExcluded('stats')}
+          <div class="dg-excluded-banner">⊘ excluded from final · By the numbers</div>
+        {:else if dataSectionRunState.stats === 'locked'}
           <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
         {:else if dataSectionRunState.stats === 'queued'}
           <div class="dg-queued-banner">↻ queued for batch regen · By the numbers</div>
@@ -1425,8 +1459,10 @@
          so it renders in the web view AND the PDF/PNG export; carries
          data-section-kind="standings" so png-per-section picks it up. -->
     {#if showStandings && StandingsSlot}
-      <div class="dg-section-wrap" class:is-locked={dataSectionRunState.standings === 'locked'} class:is-queued={dataSectionRunState.standings === 'queued'} class:is-regenerating={dataSectionRunState.standings === 'regenerating'} data-section-kind="standings">
-        {#if dataSectionRunState.standings === 'locked'}
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('standings')} class:is-locked={dataSectionRunState.standings === 'locked'} class:is-queued={dataSectionRunState.standings === 'queued'} class:is-regenerating={dataSectionRunState.standings === 'regenerating'} data-section-kind="standings">
+        {#if dataSectionExcluded('standings')}
+          <div class="dg-excluded-banner">⊘ excluded from final · Season standings</div>
+        {:else if dataSectionRunState.standings === 'locked'}
           <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
         {:else if dataSectionRunState.standings === 'queued'}
           <div class="dg-queued-banner">↻ queued for batch regen · Season standings</div>
@@ -1461,8 +1497,10 @@
          self-suppresses on null/empty and renders its static fallback in the
          export path (?export=1). Lives inside .dg-export → web + PNG export. -->
     {#if showDiscoverability && DiscoverabilitySlot}
-      <div class="dg-section-wrap" class:is-locked={dataSectionRunState.discoverability === 'locked'} class:is-queued={dataSectionRunState.discoverability === 'queued'} class:is-regenerating={dataSectionRunState.discoverability === 'regenerating'} data-section-kind="discoverability">
-        {#if dataSectionRunState.discoverability === 'locked'}
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('discoverability')} class:is-locked={dataSectionRunState.discoverability === 'locked'} class:is-queued={dataSectionRunState.discoverability === 'queued'} class:is-regenerating={dataSectionRunState.discoverability === 'regenerating'} data-section-kind="discoverability">
+        {#if dataSectionExcluded('discoverability')}
+          <div class="dg-excluded-banner">⊘ excluded from final · Tastemaker</div>
+        {:else if dataSectionRunState.discoverability === 'locked'}
           <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
         {:else if dataSectionRunState.discoverability === 'queued'}
           <div class="dg-queued-banner">↻ queued for batch regen · Tastemaker</div>
@@ -1561,7 +1599,7 @@
   <DataRegenConfirm
     sectionLabel={DATA_SECTION_LABEL[dataModalTarget]}
     onCancel={closeDataModal}
-    onSubmit={() => { const key = dataModalTarget!; closeDataModal(); void recomputeDataSection(key); }}
+    onSubmit={() => { const key = dataModalTarget!; closeDataModal(); dequeueData(key); void recomputeDataSection(key); }}
     onQueue={() => queueData(dataModalTarget!)}
   />
 {/if}
