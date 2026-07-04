@@ -48,35 +48,40 @@
     buckets?: Record<BucketKey, number>;
     songs?: TastemakerSong[];
   };
+  export type BucketBoundaries = { b1: number; b2: number; b3: number };
+  const DEFAULT_BOUNDARIES: BucketBoundaries = { b1: 10, b2: 20, b3: 30 };
+
   export type TastemakerPayload = {
     scope?: string;
     season?: string;
     players?: TastemakerPlayer[];
+    bucketBoundaries?: BucketBoundaries;
   };
 
   type BucketMeta = { key: BucketKey; label: string; range: string; color: string; icon: string };
   // order = mainstream → obscure (left → right in the bar)
-  const BUCKETS: BucketMeta[] = [
-    {
-      key: 'radioHit', label: 'Radio Hit', range: '<10', color: '#f5762e',
-      icon: '<svg viewBox="0 0 24 24"><path d="M5 9l13-5"/><rect x="3" y="9" width="18" height="11" rx="2"/><circle cx="8" cy="14.5" r="2.5"/><path d="M15 13h3M15 16h3"/></svg>',
-    },
-    {
-      key: 'recognizable', label: 'Recognizable', range: '10–19', color: '#e8a83a',
-      icon: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/></svg>',
-    },
-    {
-      key: 'curiousCut', label: 'Curious Cut', range: '20–29', color: '#5aa3ff',
-      icon: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
-    },
-    {
-      key: 'rabbitHole', label: 'Rabbit Hole', range: '30+', color: '#3ec27a',
-      icon: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="18.5" rx="8" ry="3"/><path d="M12 3v11M8 10l4 4 4-4"/></svg>',
-    },
-  ];
-  const BUCKET_BY_KEY: Record<BucketKey, BucketMeta> = Object.fromEntries(
-    BUCKETS.map((b) => [b.key, b]),
-  ) as Record<BucketKey, BucketMeta>;
+  // range strings are computed at render time from the payload's bucketBoundaries
+  // (falls back to the shipped default 10/20/30 for older cached payloads).
+  function bucketsFor(b: BucketBoundaries): BucketMeta[] {
+    return [
+      {
+        key: 'radioHit', label: 'Radio Hit', range: `<${b.b1}`, color: '#f5762e',
+        icon: '<svg viewBox="0 0 24 24"><path d="M5 9l13-5"/><rect x="3" y="9" width="18" height="11" rx="2"/><circle cx="8" cy="14.5" r="2.5"/><path d="M15 13h3M15 16h3"/></svg>',
+      },
+      {
+        key: 'recognizable', label: 'Recognizable', range: `${b.b1}–${b.b2 - 1}`, color: '#e8a83a',
+        icon: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/></svg>',
+      },
+      {
+        key: 'curiousCut', label: 'Curious Cut', range: `${b.b2}–${b.b3 - 1}`, color: '#5aa3ff',
+        icon: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
+      },
+      {
+        key: 'rabbitHole', label: 'Rabbit Hole', range: `${b.b3}+`, color: '#3ec27a',
+        icon: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="18.5" rx="8" ry="3"/><path d="M12 3v11M8 10l4 4 4-4"/></svg>',
+      },
+    ];
+  }
 </script>
 
 <script lang="ts">
@@ -96,6 +101,7 @@
   const players = $derived(
     [...(payload?.players ?? [])].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)),
   );
+  const BUCKETS = $derived(bucketsFor(payload?.bucketBoundaries ?? DEFAULT_BOUNDARIES));
 
   // Static export (mobile PNG) can't expand → no modal/tap.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');

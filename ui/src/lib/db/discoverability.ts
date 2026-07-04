@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { getBucketBoundaries, type BucketBoundaries } from './settings.js';
 
 // sprint-18 Tastemaker (discoverability v2 / Concept C). Per-player season taste
 // profile: 4 raw-obscurity buckets + a MEDIAN-percentile "tastemaker score".
@@ -10,8 +11,10 @@ import type Database from 'better-sqlite3';
 //                                  songs, 0-100 (de-squashes the bunched scale)
 //   per-player tastemakerScore = MEDIAN of their songs' percentiles (median so a
 //                                single mainstream pick can't tank a maven)
-//   buckets (raw obscurity):   Radio Hit <10 / Recognizable 10-19 / Curious Cut
-//                              20-29 / Rabbit Hole 30+
+//   buckets (raw obscurity):   Radio Hit / Recognizable / Curious Cut / Rabbit
+//                              Hole, split at 3 configurable thresholds
+//                              (Settings → App Settings → Tastemaker buckets;
+//                              default 10/20/30 — see settings.ts).
 //
 // Corpus = the season's rounds cumulative through the digest's round (r.id ≤
 // current). rank = ranking over that corpus; prevRank = the same ranking over the
@@ -45,6 +48,7 @@ export interface TastemakerPayload {
   scope: 'season';
   season: string;
   players: TastemakerPlayer[];
+  bucketBoundaries: BucketBoundaries;
 }
 
 // Minimum fraction of the corpus's real submissions that must have popularity
@@ -52,7 +56,8 @@ export interface TastemakerPayload {
 export const COVERAGE_THRESHOLD = 0.8;
 
 const firstArtist = (a: string): string => (String(a ?? '').split(',')[0] ?? '').trim();
-const bucketOf = (o: number): Bucket => (o < 10 ? 'radioHit' : o < 20 ? 'recognizable' : o < 30 ? 'curiousCut' : 'rabbitHole');
+const bucketOf = (o: number, b: BucketBoundaries): Bucket =>
+  o < b.b1 ? 'radioHit' : o < b.b2 ? 'recognizable' : o < b.b3 ? 'curiousCut' : 'rabbitHole';
 
 function median(xs: number[]): number {
   if (!xs.length) return 0;
@@ -100,7 +105,7 @@ function corpusSongs(db: Database.Database, seasonId: number, roundId: number, i
 interface Built { name: string; tastemakerScore: number; avgPoints: number; submissionCount: number; buckets: TastemakerPlayer['buckets']; songs: TastemakerSong[] }
 
 /** Build per-player detail (no rank) from a corpus of songs. Only players with ≥1 scored song. */
-function buildPlayers(songs: RawSong[], roundLabel: Map<number, string>): Built[] {
+function buildPlayers(songs: RawSong[], roundLabel: Map<number, string>, boundaries: BucketBoundaries): Built[] {
   const scoredObsc = songs.filter((s) => s.proxy != null).map((s) => 100 - (s.proxy as number));
   const pmap = percentileByObscurity(scoredObsc);
 
@@ -108,7 +113,7 @@ function buildPlayers(songs: RawSong[], roundLabel: Map<number, string>): Built[
   for (const s of songs) {
     const obsc = s.proxy != null ? 100 - s.proxy : null;
     const pct = obsc != null ? pmap.get(obsc)! : null;
-    const bucket = obsc != null ? bucketOf(obsc) : null;
+    const bucket = obsc != null ? bucketOf(obsc, boundaries) : null;
     const e = byName.get(s.player) ?? { songs: [], pct: [], points: [], buckets: { radioHit: 0, recognizable: 0, curiousCut: 0, rabbitHole: 0 } };
     e.songs.push({ round: roundLabel.get(s.roundId) ?? '', artist: firstArtist(s.artists), title: s.title, obscurity: obsc, discoveryPercentile: pct, bucket, points: s.points });
     e.points.push(s.points);
@@ -169,11 +174,12 @@ export function getDiscoverability(db: Database.Database, roundId: number): Tast
     .prepare(`SELECT l.name AS league, s.season_number AS sn FROM seasons s JOIN leagues l ON l.id = s.league_id WHERE s.id = ?`)
     .get(round.season_id) as { league: string; sn: number };
 
-  const current = buildPlayers(corpusSongs(db, round.season_id, roundId, true), roundLabel);
+  const boundaries = getBucketBoundaries(db);
+  const current = buildPlayers(corpusSongs(db, round.season_id, roundId, true), roundLabel, boundaries);
   if (!current.length) return null;
 
   const curRank = rankMap(current);
-  const prevRank = rankMap(buildPlayers(corpusSongs(db, round.season_id, roundId, false), roundLabel));
+  const prevRank = rankMap(buildPlayers(corpusSongs(db, round.season_id, roundId, false), roundLabel, boundaries));
 
   const players: TastemakerPlayer[] = current
     .map((p) => ({
@@ -188,5 +194,5 @@ export function getDiscoverability(db: Database.Database, roundId: number): Tast
     }))
     .sort((a, b) => a.rank - b.rank);
 
-  return { scope: 'season', season: `${meta.league} S${meta.sn}`, players };
+  return { scope: 'season', season: `${meta.league} S${meta.sn}`, players, bucketBoundaries: boundaries };
 }

@@ -51,6 +51,60 @@
     }
   }
 
+  // Tastemaker bucket boundaries — obscurity thresholds for the 4 archetypes
+  // (Radio Hit / Recognizable / Curious Cut / Rabbit Hole). Fetches on mount, PUTs on save.
+  const BUCKET_DEFAULTS = { b1: 10, b2: 20, b3: 30 };
+  let buckets = $state({ ...BUCKET_DEFAULTS });
+  let bucketsLoading = $state(false);
+  let bucketsSaved = $state(false);
+  let bucketsError = $state('');
+  const bucketsValid = $derived(
+    Number.isInteger(buckets.b1) && Number.isInteger(buckets.b2) && Number.isInteger(buckets.b3) &&
+    buckets.b1 >= 1 && buckets.b1 < buckets.b2 && buckets.b2 < buckets.b3 && buckets.b3 <= 100
+  );
+
+  async function loadBucketBoundaries() {
+    try {
+      const r = await fetch('/api/settings/tastemaker-buckets');
+      if (r.ok) {
+        const body = await r.json() as { boundaries: { b1: number; b2: number; b3: number } };
+        buckets = { ...body.boundaries };
+      }
+    } catch { /* silently ignore — stays at shipped defaults */ }
+  }
+
+  async function saveBucketBoundaries() {
+    if (!bucketsValid) return;
+    bucketsLoading = true;
+    bucketsError = '';
+    bucketsSaved = false;
+    try {
+      const r = await fetch('/api/settings/tastemaker-buckets', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boundaries: buckets }),
+      });
+      if (r.ok) {
+        const body = await r.json() as { boundaries: { b1: number; b2: number; b3: number } };
+        buckets = { ...body.boundaries };
+        bucketsSaved = true;
+      } else {
+        const err = await r.json().catch(() => null) as { message?: string } | null;
+        bucketsError = err?.message ?? 'Failed to save';
+      }
+    } catch {
+      bucketsError = 'Failed to save';
+    } finally {
+      bucketsLoading = false;
+    }
+  }
+
+  function resetBucketBoundaries() {
+    buckets = { ...BUCKET_DEFAULTS };
+    bucketsSaved = false;
+    bucketsError = '';
+  }
+
   // Debug mode toggle — fetches current state on mount, PUTs on change
   let debugEnabled = $state(false);
   let debugLoading = $state(false);
@@ -428,6 +482,7 @@
   $effect(() => {
     loadDebugMode();
     loadAutoAnalyze();
+    loadBucketBoundaries();
   });
 
   // Legacy weights (read-only — frozen once all surfaces migrate)
@@ -1043,6 +1098,83 @@
 </div><!-- /right column -->
 </div><!-- /two-column grid -->
 
+
+<!-- Tastemaker bucket boundaries -->
+<CollapsiblePanel id="app-tastemaker-buckets" title="Tastemaker buckets">
+  <p class="text-xs text-fg-dim mb-5">
+    Obscurity thresholds that split each song into one of 4 archetypes in the weekly digest's
+    Tastemaker section — <span class="text-sky">Radio Hit</span>, <span class="text-amber">Recognizable</span>,
+    <span class="text-accent">Curious Cut</span>, <span class="text-moss">Rabbit Hole</span>. Obscurity runs
+    0–100 (higher = more obscure); each boundary must be strictly greater than the last.
+  </p>
+
+  <div class="space-y-4">
+    <div class="flex items-center gap-4">
+      <label class="w-52 text-sm text-fg-muted" for="bucket-b1">Radio Hit / Recognizable</label>
+      <input
+        id="bucket-b1"
+        type="number"
+        min="1"
+        max="98"
+        bind:value={buckets.b1}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg"
+      />
+      <span class="text-xs text-fg-dim">obscurity &lt; {buckets.b1}</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <label class="w-52 text-sm text-fg-muted" for="bucket-b2">Recognizable / Curious Cut</label>
+      <input
+        id="bucket-b2"
+        type="number"
+        min="2"
+        max="99"
+        bind:value={buckets.b2}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg"
+      />
+      <span class="text-xs text-fg-dim">obscurity {buckets.b1}–{buckets.b2 - 1}</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <label class="w-52 text-sm text-fg-muted" for="bucket-b3">Curious Cut / Rabbit Hole</label>
+      <input
+        id="bucket-b3"
+        type="number"
+        min="3"
+        max="100"
+        bind:value={buckets.b3}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg"
+      />
+      <span class="text-xs text-fg-dim">obscurity {buckets.b2}–{buckets.b3 - 1}, Rabbit Hole {buckets.b3}+</span>
+    </div>
+
+    {#if !bucketsValid}
+      <p class="text-xs text-ember">Boundaries must be whole numbers with b1 &lt; b2 &lt; b3 (1–100).</p>
+    {/if}
+    {#if bucketsError}
+      <p class="text-xs text-ember">{bucketsError}</p>
+    {/if}
+
+    <div class="flex items-center gap-4 pt-2">
+      <button
+        type="button"
+        onclick={resetBucketBoundaries}
+        class="font-mono text-[11px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors"
+      >
+        Reset defaults (10 / 20 / 30)
+      </button>
+      {#if bucketsSaved}
+        <StatusChip label="SAVED" tone="accent" />
+      {/if}
+      <button
+        type="button"
+        onclick={saveBucketBoundaries}
+        disabled={!bucketsValid || bucketsLoading}
+        class="ml-auto bg-accent hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+      >
+        {bucketsLoading ? 'Saving…' : 'Save boundaries'}
+      </button>
+    </div>
+  </div>
+</CollapsiblePanel>
 
 <!-- Debug mode toggle card -->
 <CollapsiblePanel id="app-debug-mode" title="Debug mode">

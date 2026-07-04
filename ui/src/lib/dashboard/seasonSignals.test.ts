@@ -70,6 +70,7 @@ function tm(season: string, players: Array<[string, number]>): TastemakerPayload
       name, rank: i + 1, prevRank: null, tastemakerScore, avgPoints: 0, submissionCount: 1,
       buckets: { radioHit: 0, recognizable: 0, curiousCut: 0, rabbitHole: 0 }, songs: [],
     })),
+    bucketBoundaries: { b1: 10, b2: 20, b3: 30 },
   };
 }
 
