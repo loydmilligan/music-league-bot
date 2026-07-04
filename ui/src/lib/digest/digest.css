@@ -625,6 +625,12 @@
 }
 .dg-page-actions-spacer { flex: 1; }
 
+.dg-regen-all--queued {
+  border-color: var(--ember) !important;
+  color: var(--ember) !important;
+  box-shadow: 0 0 0 3px rgba(255, 91, 46, 0.12);
+}
+
 .dg-rel-field {
   background: var(--surface);
   border: 1px solid var(--line);

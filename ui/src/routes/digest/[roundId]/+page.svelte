@@ -514,6 +514,18 @@
   let lastInstructions = $state<Record<string, string>>({});
   let lastChips = $state<Record<string, string[]>>({});
 
+  // Batch-regen queue (prose sections only in this task; Task 7 adds DATA
+  // sections to the same execution path via a separate small map).
+  let queuedProse = $state<Record<string, { chips: string[]; instructions: string }>>({});
+  function queueProse(id: string, chips: string[], instructions: string) {
+    queuedProse[id] = { chips, instructions };
+    sectionStates[id] = 'queued';
+  }
+  function dequeueProse(id: string) {
+    delete queuedProse[id];
+    if (sectionStates[id] === 'queued') sectionStates[id] = 'default';
+  }
+
   // -------- Cover A/B data (sprint-44 b1-cover-data-fetch + b3-page-pick-wire) ----------
   // Lazy per-section fetch: coverDataMap is populated when a section is first visible.
   // cover data is optional enrichment — the page renders without it; the A/B block
@@ -830,6 +842,41 @@
     }
   }
 
+  const queuedCount = $derived(Object.keys(queuedProse).length);
+
+  async function runBatch() {
+    const ids = Object.keys(queuedProse);
+    if (!ids.length) return;
+
+    for (const id of ids) {
+      lastChips[id] = queuedProse[id].chips;
+      lastInstructions[id] = queuedProse[id].instructions;
+      sectionStates[id] = 'regenerating';
+    }
+
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const res = await fetch(`/api/digest/${data.roundId}/sections/${id}/regenerate`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(queuedProse[id]),
+          });
+          if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`regen failed (${res.status}) ${text.slice(0, 200)}`);
+          }
+          delete queuedProse[id];
+        } catch (err) {
+          showError(err);
+          sectionStates[id] = 'default';
+        }
+      }),
+    );
+
+    await invalidateAll();
+  }
+
   // -------- Missing-popularity panel (prepare stage) ----------
   // Fetches season-cumulative songs with no popularity_proxy so the user can
   // fill them in manually before generating a draft. Mirrors the Tastemaker
@@ -1140,8 +1187,14 @@
   </section>
 {:else if data.stage === 'refine' || data.stage === 'finalize'}
   <div class="dg-page-actions">
-    <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen} disabled={finalizing}>
-      ↻ Regenerate whole draft
+    <button
+      type="button"
+      class="mash-btn mash-btn--secondary"
+      class:dg-regen-all--queued={queuedCount > 0}
+      onclick={queuedCount > 0 ? runBatch : openWholeRegen}
+      disabled={finalizing}
+    >
+      {queuedCount > 0 ? `↻ Regenerate ${queuedCount} queued` : '↻ Regenerate whole draft'}
     </button>
     <button type="button" class="mash-btn mash-btn--secondary" onclick={openGenerate} disabled={finalizing || drafting}>
       ✎ Regenerate with options…
@@ -1369,6 +1422,11 @@
     initialInstructions={modalInitialInstructions}
     onCancel={closeModal}
     onSubmit={submitRegen}
+    onQueue={(payload) => {
+      const target = modalTarget;
+      closeModal();
+      if (target && target !== 'whole') queueProse(target, payload.chips, payload.instructions);
+    }}
   />
 {/if}
 

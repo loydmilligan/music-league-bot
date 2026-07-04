@@ -6,6 +6,7 @@
     initialInstructions?: string;
     onCancel: () => void;
     onSubmit: (payload: { chips: string[]; instructions: string }) => void;
+    onQueue: (payload: { chips: string[]; instructions: string }) => void;
   };
   let {
     sectionLabel,
@@ -14,6 +15,7 @@
     initialInstructions = '',
     onCancel,
     onSubmit,
+    onQueue,
   }: Props = $props();
 
   const REGEN_CHIPS = [
@@ -43,6 +45,9 @@
 
   function submit() {
     onSubmit({ chips: activeChips, instructions });
+  }
+  function queue() {
+    onQueue({ chips: activeChips, instructions });
   }
 </script>
 
@@ -93,7 +98,8 @@
       <span class="cost">~ 280 tokens · ~ 4¢ · cached after this run</span>
       <div style="display: flex; gap: 8px;">
         <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={onCancel}>Cancel</button>
-        <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" onclick={submit}>↻ Regenerate</button>
+        <button type="button" class="mash-btn mash-btn--secondary mash-btn--sm" onclick={queue} title="Add to the batch — runs when you press the master regen button">+ Add to batch</button>
+        <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" onclick={submit}>↻ Regenerate now</button>
       </div>
     </footer>
   </div>
