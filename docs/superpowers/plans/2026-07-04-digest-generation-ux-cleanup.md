@@ -601,16 +601,17 @@ StandingsChart, not Tastemaker). No control remains in a bottom misc area."
 
 ---
 
-### Task 4: RegenModal — add "Add to batch" alongside "Regenerate now"
+### Task 4: RegenModal batch-queue support + wiring into `+page.svelte`
 
 **Files:**
 - Modify: `ui/src/lib/digest/RegenModal.svelte`
+- Modify: `ui/src/routes/digest/[roundId]/+page.svelte`
 
 **Interfaces:**
-- Consumes: nothing new.
-- Produces: `onSubmit` prop is renamed in spirit but kept structurally compatible — a new `onQueue` callback prop is added alongside the existing `onSubmit`, both with the same `{ chips: string[]; instructions: string }` payload shape. Task 6 wires `onQueue`.
+- Consumes: `SectionState` (now includes `'queued'`, from Task 2).
+- Produces: `RegenModal`'s new `onQueue: (payload: { chips: string[]; instructions: string }) => void` prop (alongside existing `onSubmit`); `queueProse(sectionId, chips, instructions)`, `dequeueProse(sectionId)`, `runBatch()`, `queuedCount: number` (derived) on the page. Task 7 extends `runBatch` to also cover queued DATA sections; Task 8 does not touch this file's queue model (NextRound doesn't participate, per spec).
 
-- [ ] **Step 1: Add the `onQueue` prop**
+- [ ] **Step 1: Add the `onQueue` prop to RegenModal**
 
 In `ui/src/lib/digest/RegenModal.svelte`, change the `Props` type (lines 2-9):
 
@@ -714,36 +715,7 @@ to:
 </footer>
 ```
 
-- [ ] **Step 4: Run svelte-check**
-
-```bash
-cd ui && npm run check
-```
-Expected: a new error at every call site of `<RegenModal>` missing the now-required `onQueue` prop — this is expected until Task 6 wires it. Confirm the error text specifically names `onQueue` as missing (proves the prop threading is correct); do not treat this as a failure to fix within this task — Task 6 closes it.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add ui/src/lib/digest/RegenModal.svelte
-git commit -m "feat(digest): RegenModal gains 'Add to batch' alongside 'Regenerate now'
-
-onQueue is a new required prop alongside onSubmit — the parent page wires
-it to the batch queue in the next commit. svelte-check will show a missing-
-prop error at the call site until then; expected."
-```
-
----
-
-### Task 5: Batch queue state model + master button in `+page.svelte`
-
-**Files:**
-- Modify: `ui/src/routes/digest/[roundId]/+page.svelte`
-
-**Interfaces:**
-- Consumes: `SectionState` (now includes `'queued'`, from Task 2), `RegenModal`'s new `onQueue` prop (from Task 4).
-- Produces: `queueProse(sectionId, chips, instructions)`, `dequeueProse(sectionId)`, `runBatch()`, `queuedCount: number` (derived) — Task 8 extends `runBatch` to also cover queued DATA sections; Task 9 will not touch this file's queue model (NextRound doesn't participate, per spec).
-
-- [ ] **Step 1: Add a prose-section queue map alongside the existing `lastChips`/`lastInstructions`**
+- [ ] **Step 4: Add a prose-section queue map in `+page.svelte`**
 
 Change (lines 514-515):
 
@@ -758,7 +730,7 @@ to:
 let lastInstructions = $state<Record<string, string>>({});
 let lastChips = $state<Record<string, string[]>>({});
 
-// Batch-regen queue (prose sections only in this task; Task 8 adds DATA
+// Batch-regen queue (prose sections only in this task; Task 7 adds DATA
 // sections to the same execution path via a separate small map).
 let queuedProse = $state<Record<string, { chips: string[]; instructions: string }>>({});
 function queueProse(id: string, chips: string[], instructions: string) {
@@ -771,7 +743,7 @@ function dequeueProse(id: string) {
 }
 ```
 
-- [ ] **Step 2: Wire `RegenModal`'s new `onQueue` prop**
+- [ ] **Step 5: Wire RegenModal's new `onQueue` prop on the page**
 
 Find the `<RegenModal>` mount (around lines 1364-1373):
 
@@ -788,7 +760,7 @@ Find the `<RegenModal>` mount (around lines 1364-1373):
 {/if}
 ```
 
-Add the `onQueue` handler (only meaningful for a single-section target — batch-queuing "whole" doesn't apply, since "whole" already means "everything unlocked," so the `onQueue` button in that case queues nothing new and just closes, which we guard against by hiding it — that guard belongs in Task 4's modal but is a one-line addition here instead, since RegenModal doesn't know about `modalTarget === 'whole'`; simplest is to make queueing a no-op for `'whole'` and just close):
+Add the `onQueue` handler. It's a no-op for `modalTarget === 'whole'` (batch-queuing "the whole draft" isn't a meaningful concept — "whole" already means "everything unlocked"):
 
 ```svelte
 {#if modalTarget !== null}
@@ -808,7 +780,7 @@ Add the `onQueue` handler (only meaningful for a single-section target — batch
 {/if}
 ```
 
-- [ ] **Step 3: Add `runBatch()` and a `queuedCount` derived value**
+- [ ] **Step 6: Add `runBatch()` and a `queuedCount` derived value**
 
 Add after `submitRegen` (after line 831, right before the "Missing-popularity panel" comment):
 
@@ -849,7 +821,7 @@ async function runBatch() {
 }
 ```
 
-- [ ] **Step 4: Relabel and glow the master button**
+- [ ] **Step 7: Relabel and glow the master button**
 
 Find the master regen button (around line 1143):
 
@@ -873,7 +845,7 @@ Change to:
 </button>
 ```
 
-- [ ] **Step 5: Add the glow style for the master button**
+- [ ] **Step 8: Add the glow style for the master button**
 
 Add to `ui/src/lib/digest/digest.css`, near the other `dg-page-actions`-adjacent rules (search `grep -n "dg-page-actions" ui/src/lib/digest/digest.css` to find the right neighborhood):
 
@@ -885,14 +857,14 @@ Add to `ui/src/lib/digest/digest.css`, near the other `dg-page-actions`-adjacent
 }
 ```
 
-- [ ] **Step 6: Run svelte-check**
+- [ ] **Step 9: Run svelte-check**
 
 ```bash
 cd ui && npm run check
 ```
-Expected: the missing-`onQueue`-prop error from Task 4 is now gone (0 errors from this file). Confirm no new errors.
+Expected: 0 errors.
 
-- [ ] **Step 7: Manual smoke test**
+- [ ] **Step 10: Manual smoke test**
 
 ```bash
 cd ui && npm run dev -- --host --port 5180
@@ -905,30 +877,31 @@ On a digest page in refine/finalize stage: click ↻ on any prose section (podiu
 
 Kill the dev server after.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add ui/src/routes/digest/\[roundId\]/+page.svelte ui/src/lib/digest/digest.css
+git add ui/src/lib/digest/RegenModal.svelte ui/src/routes/digest/\[roundId\]/+page.svelte ui/src/lib/digest/digest.css
 git commit -m "feat(digest): per-section batch regen queue for prose sections
 
-RegenModal's 'Add to batch' queues a section (red glow, queued banner)
-instead of firing immediately. The master button relabels to 'Regenerate
-N queued' and glows red once anything's queued; pressing it runs every
-queued section's regen in parallel. With nothing queued it behaves exactly
-as before — 'Regenerate whole draft' fires every unlocked, non-excluded
-section immediately."
+RegenModal gains 'Add to batch' alongside 'Regenerate now'. Queuing a
+section shows a red glow + queued banner instead of firing immediately.
+The master button relabels to 'Regenerate N queued' and glows red once
+anything's queued; pressing it runs every queued section's regen in
+parallel. With nothing queued it behaves exactly as before —
+'Regenerate whole draft' fires every unlocked, non-excluded section
+immediately."
 ```
 
 ---
 
-### Task 6: New `DataRegenConfirm.svelte` — minimal regen choice for non-LLM DATA sections
+### Task 5: New `DataRegenConfirm.svelte` — minimal regen choice for non-LLM DATA sections
 
 **Files:**
 - Create: `ui/src/lib/digest/DataRegenConfirm.svelte`
 
 **Interfaces:**
 - Consumes: `.dg-modal-scrim` / `.dg-modal` / `.dg-modal-head` / `.dg-modal-foot` CSS classes (already defined in `digest.css`, fixed in Task 1).
-- Produces: a component with props `{ sectionLabel: string; onCancel: () => void; onSubmit: () => void; onQueue: () => void }` — Task 8 mounts this for Stats/Standings/Tastemaker instead of the full `RegenModal` (which has chips/instructions that make no sense for a data recompute).
+- Produces: a component with props `{ sectionLabel: string; onCancel: () => void; onSubmit: () => void; onQueue: () => void }` — Task 7 mounts this for Stats/Standings/Tastemaker instead of the full `RegenModal` (which has chips/instructions that make no sense for a data recompute).
 
 - [ ] **Step 1: Write the component**
 
@@ -989,7 +962,7 @@ section immediately."
 ```bash
 cd ui && npm run check
 ```
-Expected: 0 errors (this component isn't mounted anywhere yet, so it can't cause call-site errors — it will only be exercised once Task 8 imports it).
+Expected: 0 errors (this component isn't mounted anywhere yet, so it can't cause call-site errors — it will only be exercised once Task 7 imports it).
 
 - [ ] **Step 3: Commit**
 
@@ -1005,13 +978,13 @@ add to the same batch queue prose sections use."
 
 ---
 
-### Task 7: New `DataSectionActions.svelte` — shared exclude/lock/regen bar for DATA sections
+### Task 6: New `DataSectionActions.svelte` — shared exclude/lock/regen bar for DATA sections
 
 **Files:**
 - Create: `ui/src/lib/digest/DataSectionActions.svelte`
 
 **Interfaces:**
-- Produces: a component with props `{ excluded: boolean; state: 'default' | 'locked' | 'queued' | 'regenerating'; onToggleExcluded: () => void; onToggleLocked: () => void; onRegen: () => void }` — renders the same 3-button visual language as `DigestSection.svelte`'s action bar (exclude/regen/lock only — no delight, no variant switch, no kebab, since none of those apply to a DATA section). Task 8 mounts one per DATA section block in `+page.svelte`.
+- Produces: a component with props `{ excluded: boolean; state: 'default' | 'locked' | 'queued' | 'regenerating'; onToggleExcluded: () => void; onToggleLocked: () => void; onRegen: () => void }` — renders the same 3-button visual language as `DigestSection.svelte`'s action bar (exclude/regen/lock only — no delight, no variant switch, no kebab, since none of those apply to a DATA section). Task 7 mounts one per DATA section block in `+page.svelte`.
 
 - [ ] **Step 1: Write the component**
 
@@ -1075,14 +1048,14 @@ computed DATA section — no delight, variant switch, or kebab."
 
 ---
 
-### Task 8: Wire Stats, Standings, and Tastemaker into the shared action bar + batch queue
+### Task 7: Wire Stats, Standings, and Tastemaker into the shared action bar + batch queue
 
 **Files:**
 - Modify: `ui/src/routes/digest/[roundId]/+page.svelte`
 
 **Interfaces:**
-- Consumes: `DataSectionActions` (Task 7), `DataRegenConfirm` (Task 6), `SectionState` (Task 2).
-- Produces: `dataSectionRunState: Record<'stats'|'standings'|'discoverability', 'default'|'locked'|'queued'|'regenerating'>`, `queuedData: Record<'stats'|'standings'|'discoverability', true>` — Task 5's `runBatch()` is extended here to also execute these.
+- Consumes: `DataSectionActions` (Task 6), `DataRegenConfirm` (Task 5), `SectionState` (Task 2).
+- Produces: `dataSectionRunState: Record<'stats'|'standings'|'discoverability', 'default'|'locked'|'queued'|'regenerating'>`, `queuedData: Record<'stats'|'standings'|'discoverability', true>` — Task 4's `runBatch()` is extended here to also execute these.
 
 - [ ] **Step 1: Add overrides for Stats and Tastemaker (mirroring the existing `standingsOverride` pattern)**
 
@@ -1128,7 +1101,7 @@ const tastemakerCoverage = $derived<'ready' | 'incomplete'>(tastemakerAvailable 
 
 - [ ] **Step 2: Add the DATA-section run-state map, regen-confirm modal target, and recompute functions**
 
-Add after the `runBatch()` function from Task 5:
+Add after the `runBatch()` function from Task 4:
 
 ```ts
 type DataSectionKey = 'stats' | 'standings' | 'discoverability';
@@ -1199,11 +1172,11 @@ function queueData(key: DataSectionKey) {
 const queuedCount = $derived(Object.keys(queuedProse).length + Object.keys(queuedData).length);
 ```
 
-(Note: this replaces the `queuedCount` derived value added in Task 5, Step 3 — remove the earlier `const queuedCount = $derived(Object.keys(queuedProse).length);` line since this one supersedes it with the combined prose+data count.)
+(Note: this replaces the `queuedCount` derived value added in Task 4, Step 6 — remove the earlier `const queuedCount = $derived(Object.keys(queuedProse).length);` line since this one supersedes it with the combined prose+data count.)
 
 - [ ] **Step 3: Extend `runBatch()` to also run queued DATA sections**
 
-Change the `runBatch` function from Task 5 (append DATA handling at the end, before the final `await invalidateAll();`):
+Change the `runBatch` function from Task 4 (append DATA handling at the end, before the final `await invalidateAll();`):
 
 ```ts
 async function runBatch() {
@@ -1343,7 +1316,7 @@ flow. Batch queue now covers prose and DATA sections through one runBatch()."
 
 ---
 
-### Task 9: Add lock (cosmetic) to `NextRoundSection.svelte` and fold into page tallies
+### Task 8: Add lock (cosmetic) to `NextRoundSection.svelte` and fold into page tallies
 
 **Files:**
 - Modify: `ui/src/lib/digest/NextRoundSection.svelte`
@@ -1541,7 +1514,7 @@ operation since none touches next-round."
 
 ---
 
-### Task 10: Full regression pass
+### Task 9: Full regression pass
 
 **Files:** none (verification only)
 
