@@ -1,7 +1,7 @@
 # Digest generation/regen UX cleanup
 
 Date: 2026-07-04
-Status: approved, ready for implementation planning
+Status: implemented
 
 ## Context
 
@@ -100,9 +100,16 @@ only what's meaningful per section:
 |---|---|---|---|---|---|---|
 | Stats ("By the numbers") | ✅ | ✅ | ✅ (re-runs the computation, not an LLM call) | ❌ (no prose) | ❌ | ❌ (no free-text to edit) |
 | Standings | ✅ | ✅ | ✅ (re-runs the computation) | ❌ | ❌ | ✅ — existing bespoke "✎ edit figures" modal, kept as-is |
-| Sonic Signatures | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Tastemaker / Discoverability | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Next-round preview | ✅ | ✅ | ❌ (nothing to regenerate — it's a preview of the *next* round's theme/deadline, not generated content) | ❌ | ❌ | ✅ — existing bespoke inline theme/deadline editor, kept as-is |
+
+**Sonic Signatures is excluded from this table — correction found during implementation
+planning.** Its `sonicSignaturesInclude` checkbox in `GenerateModal` is not wired to the draft
+POST endpoint and has no corresponding render block anywhere on the acceptance screen (confirmed:
+zero references outside the modal and one settings page). It is unfinished/dead functionality,
+not a section that exists to attach an action bar to. Section 2's reorganization still applies to
+its GenerateModal checkbox (it becomes a plain list-item like everything else), but no
+acceptance-screen action-bar work is in scope for it — building that out is a separate feature.
 
 **Note on what "regenerate" means for computed sections:** today, none of the 5 DATA sections
 have a regenerate endpoint at all — they're recomputed automatically whenever `invalidateAll()`

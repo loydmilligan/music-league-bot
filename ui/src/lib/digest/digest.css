@@ -265,9 +265,9 @@
   border-color: var(--mash-pulp-edge);
 }
 .dg-sa-btn.is-locked {
-  background: var(--amber-soft);
-  color: var(--amber);
-  border-color: #4d3f1c;
+  background: var(--moss-soft);
+  color: var(--moss);
+  border-color: var(--moss);
 }
 .dg-sa-btn--primary {
   background: var(--mash-pulp);
@@ -314,7 +314,7 @@
 }
 
 .dg-section-wrap.is-locked .dg-section {
-  outline: 1px dashed var(--amber);
+  outline: 1px dashed var(--moss);
   outline-offset: -1px;
 }
 .dg-locked-banner {
@@ -327,13 +327,37 @@
   gap: 6px;
   padding: 5px 10px;
   border-radius: var(--r-2);
-  background: var(--amber-soft);
-  border: 1px solid #4d3f1c;
-  color: var(--amber);
+  background: var(--moss-soft);
+  border: 1px solid var(--moss);
+  color: var(--moss);
   font: 700 10px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.dg-section-wrap.is-queued .dg-section {
+  outline: 1px solid var(--ember);
+  outline-offset: -1px;
+  box-shadow: 0 0 0 3px rgba(255, 91, 46, 0.12);
+}
+.dg-queued-banner {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--r-2);
+  background: var(--ember-soft);
+  border: 1px solid var(--ember);
+  color: var(--ember);
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 
 .dg-section-wrap.is-regenerating .dg-section {
   position: relative;
@@ -435,7 +459,7 @@
 
 /* ---- regenerate modal ---- */
 .dg-modal-scrim {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(7,9,12,0.7);
   backdrop-filter: blur(8px);
@@ -600,6 +624,12 @@
   border-radius: var(--r-3);
 }
 .dg-page-actions-spacer { flex: 1; }
+
+.dg-regen-all--queued {
+  border-color: var(--ember) !important;
+  color: var(--ember) !important;
+  box-shadow: 0 0 0 3px rgba(255, 91, 46, 0.12);
+}
 
 .dg-rel-field {
   background: var(--surface);

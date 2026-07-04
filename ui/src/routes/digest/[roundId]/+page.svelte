@@ -18,6 +18,8 @@
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
   import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
+  import DataSectionActions from '$lib/digest/DataSectionActions.svelte';
+  import DataRegenConfirm from '$lib/digest/DataRegenConfirm.svelte';
   import type { Reconcile, StandingsResult } from '$lib/db/standings.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -514,6 +516,18 @@
   let lastInstructions = $state<Record<string, string>>({});
   let lastChips = $state<Record<string, string[]>>({});
 
+  // Batch-regen queue (prose sections only in this task; Task 7 adds DATA
+  // sections to the same execution path via a separate small map).
+  let queuedProse = $state<Record<string, { chips: string[]; instructions: string }>>({});
+  function queueProse(id: string, chips: string[], instructions: string) {
+    queuedProse[id] = { chips, instructions };
+    sectionStates[id] = 'queued';
+  }
+  function dequeueProse(id: string) {
+    delete queuedProse[id];
+    if (sectionStates[id] === 'queued') sectionStates[id] = 'default';
+  }
+
   // -------- Cover A/B data (sprint-44 b1-cover-data-fetch + b3-page-pick-wire) ----------
   // Lazy per-section fetch: coverDataMap is populated when a section is first visible.
   // cover data is optional enrichment — the page renders without it; the A/B block
@@ -634,9 +648,10 @@
       (data.stage === 'refine' || data.stage === 'finalize' ? data.standings : null),
   );
   const StandingsSlot = $derived(VISUAL_COMPONENTS.standings);
-  const showStandings = $derived(
-    !standingsExcluded && !!standingsData && (standingsData.standings?.length ?? 0) > 0,
-  );
+  // Gates on data AVAILABILITY only — excluded sections stay mounted (dimmed +
+  // banner) so the "+" re-include control in DataSectionActions stays reachable,
+  // matching prose sections' behavior. See dataSectionExcluded() for the flag.
+  const showStandings = $derived(!!standingsData && (standingsData.standings?.length ?? 0) > 0);
 
   // --- sprint-17 data-driven sections (each reads data via visualData; the
   //     component self-suppresses, but we also gate the wrap so no empty
@@ -648,24 +663,29 @@
   // sprint-21 season-recap: data-section framing when the active draft is a recap.
   const recap = $derived(inDigest ? data.recap : null);
 
-  const statsData = $derived(inDigest ? data.stats : null);
+  let statsOverride = $state<typeof data.stats>(null);
+  const statsData = $derived(statsOverride ?? (inDigest ? data.stats : null));
   let statsExcluded = $state(false);
   const statsAvailable = $derived(!!statsData && Object.values(statsData).some((v) => typeof v === 'number'));
-  const showStats = $derived(!statsExcluded && statsAvailable);
+  // Gates on availability only — see showStandings comment above.
+  const showStats = $derived(statsAvailable);
 
-  const discoverabilityData = $derived(inDigest ? data.discoverability : null);
+  let discoverabilityOverride = $state<typeof data.discoverability>(null);
+  const discoverabilityData = $derived(discoverabilityOverride ?? (inDigest ? data.discoverability : null));
   // v2 payload is a TastemakerPayload object (`.players`), not the v1 row array.
   // The backend self-suppresses to null on absent/partial (<80%) coverage, so a
   // non-null payload with players = "coverage ready". `discoverabilityExcluded`
   // is the GenerateModal include toggle (session-scoped — web view).
   let discoverabilityExcluded = $state(false);
   const tastemakerAvailable = $derived((discoverabilityData?.players?.length ?? 0) > 0);
-  const showDiscoverability = $derived(!discoverabilityExcluded && tastemakerAvailable);
+  // Gates on availability only — see showStandings comment above.
+  const showDiscoverability = $derived(tastemakerAvailable);
   const tastemakerCoverage = $derived<'ready' | 'incomplete'>(tastemakerAvailable ? 'ready' : 'incomplete');
 
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
   // excluded flag loaded from server (persisted in draft) — falls back to false when no draft yet.
   let nextRoundExcluded = $state(data.stage !== 'prepare' ? data.nextRoundMeta.excluded : false);
+  let nextRoundLocked = $state(false);
   const nextRoundAvailable = $derived(
     !!nextRoundData
       && (
@@ -754,10 +774,14 @@
   function closeModal() { modalTarget = null; }
 
   function toggleExcluded(id: string) {
-    sectionStates[id] = sectionStates[id] === 'excluded' ? 'default' : 'excluded';
+    const next = sectionStates[id] === 'excluded' ? 'default' : 'excluded';
+    sectionStates[id] = next;
+    if (next === 'excluded') dequeueProse(id);
   }
   function toggleLocked(id: string) {
-    sectionStates[id] = sectionStates[id] === 'locked' ? 'default' : 'locked';
+    const next = sectionStates[id] === 'locked' ? 'default' : 'locked';
+    sectionStates[id] = next;
+    if (next === 'locked') dequeueProse(id);
   }
   async function kebabAction(id: string, action: 'edit' | 'up' | 'down' | 'delete') {
     if (action !== 'up' && action !== 'down') {
@@ -795,6 +819,7 @@
     const target = modalTarget;
     modalTarget = null;
     if (!target || (data.stage !== 'refine' && data.stage !== 'finalize')) return;
+    if (target !== 'whole') dequeueProse(target);
 
     const ids: string[] = target === 'whole'
       ? data.sections
@@ -828,6 +853,136 @@
         if (sectionStates[id] === 'regenerating') sectionStates[id] = 'default';
       }
     }
+  }
+
+  type DataSectionKey = 'stats' | 'standings' | 'discoverability';
+  let dataSectionRunState = $state<Record<DataSectionKey, 'default' | 'locked' | 'queued' | 'regenerating'>>({
+    stats: 'default',
+    standings: 'default',
+    discoverability: 'default',
+  });
+  const DATA_SECTION_LABEL: Record<DataSectionKey, string> = {
+    stats: 'By the numbers',
+    standings: 'Season standings',
+    discoverability: 'Tastemaker',
+  };
+
+  function dataSectionExcluded(key: DataSectionKey): boolean {
+    if (key === 'stats') return statsExcluded;
+    if (key === 'standings') return standingsExcluded;
+    return discoverabilityExcluded;
+  }
+  function toggleDataExcluded(key: DataSectionKey) {
+    if (key === 'stats') statsExcluded = !statsExcluded;
+    else if (key === 'standings') standingsExcluded = !standingsExcluded;
+    else discoverabilityExcluded = !discoverabilityExcluded;
+    if (dataSectionExcluded(key)) dequeueData(key);
+  }
+  function toggleDataLocked(key: DataSectionKey) {
+    const next = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
+    dataSectionRunState[key] = next;
+    if (next === 'locked') dequeueData(key);
+  }
+
+  async function recomputeDataSection(key: DataSectionKey) {
+    dataSectionRunState[key] = 'regenerating';
+    try {
+      if (key === 'stats') {
+        const res = await fetch(`/api/digest/${data.roundId}/stats`);
+        if (!res.ok) throw new Error(`stats recompute failed (${res.status})`);
+        const body = (await res.json()) as { stats: typeof data.stats };
+        statsOverride = body.stats;
+      } else if (key === 'standings') {
+        const res = await fetch(`/api/digest/${data.roundId}/standings`);
+        if (!res.ok) throw new Error(`standings recompute failed (${res.status})`);
+        const body = (await res.json()) as StandingsResult;
+        standingsOverride = body;
+      } else {
+        const res = await fetch(`/api/digest/${data.roundId}/discoverability`);
+        if (!res.ok) throw new Error(`tastemaker recompute failed (${res.status})`);
+        const body = (await res.json()) as { discoverability: typeof data.discoverability };
+        discoverabilityOverride = body.discoverability;
+      }
+    } catch (err) {
+      showError(err);
+    } finally {
+      dataSectionRunState[key] = dataSectionRunState[key] === 'regenerating' ? 'default' : dataSectionRunState[key];
+    }
+  }
+
+  // Regen-confirm modal target for DATA sections (separate from prose modalTarget
+  // since it mounts DataRegenConfirm, not RegenModal).
+  let dataModalTarget = $state<DataSectionKey | null>(null);
+  function openDataRegen(key: DataSectionKey) { dataModalTarget = key; }
+  function closeDataModal() { dataModalTarget = null; }
+
+  let queuedData = $state<Partial<Record<DataSectionKey, true>>>({});
+  function queueData(key: DataSectionKey) {
+    queuedData[key] = true;
+    dataSectionRunState[key] = 'queued';
+    closeDataModal();
+  }
+  function dequeueData(key: DataSectionKey) {
+    delete queuedData[key];
+    if (dataSectionRunState[key] === 'queued') dataSectionRunState[key] = 'default';
+  }
+
+  const queuedCount = $derived(Object.keys(queuedProse).length + Object.keys(queuedData).length);
+
+  async function runBatch() {
+    // Belt-and-suspenders: re-read each id/key's CURRENT state right before
+    // firing, in case it was locked/excluded after being queued but the
+    // dequeue call on that transition somehow missed it. Locked/excluded
+    // entries are dropped from the queue without being regenerated.
+    const ids = Object.keys(queuedProse).filter((id) => {
+      const st = sectionStates[id];
+      if (st === 'locked' || st === 'excluded') {
+        delete queuedProse[id];
+        return false;
+      }
+      return true;
+    });
+    const dataKeys = (Object.keys(queuedData) as DataSectionKey[]).filter((key) => {
+      if (dataSectionRunState[key] === 'locked' || dataSectionExcluded(key)) {
+        delete queuedData[key];
+        return false;
+      }
+      return true;
+    });
+    if (!ids.length && !dataKeys.length) return;
+
+    for (const id of ids) {
+      lastChips[id] = queuedProse[id].chips;
+      lastInstructions[id] = queuedProse[id].instructions;
+      sectionStates[id] = 'regenerating';
+    }
+    for (const key of dataKeys) dataSectionRunState[key] = 'regenerating';
+
+    await Promise.all([
+      ...ids.map(async (id) => {
+        try {
+          const res = await fetch(`/api/digest/${data.roundId}/sections/${id}/regenerate`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(queuedProse[id]),
+          });
+          if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`regen failed (${res.status}) ${text.slice(0, 200)}`);
+          }
+          delete queuedProse[id];
+        } catch (err) {
+          showError(err);
+          sectionStates[id] = 'default';
+        }
+      }),
+      ...dataKeys.map(async (key) => {
+        await recomputeDataSection(key);
+        delete queuedData[key];
+      }),
+    ]);
+
+    await invalidateAll();
   }
 
   // -------- Missing-popularity panel (prepare stage) ----------
@@ -906,10 +1061,18 @@
     data.stage === 'refine' || data.stage === 'finalize' ? data.sections : [],
   );
   const excludedCount = $derived(
-    sectionsList.filter((s) => sectionStates[s.id] === 'excluded').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'excluded').length
+    + (statsExcluded ? 1 : 0)
+    + (standingsExcluded ? 1 : 0)
+    + (discoverabilityExcluded ? 1 : 0)
+    + (nextRoundExcluded ? 1 : 0),
   );
   const lockedCount = $derived(
-    sectionsList.filter((s) => sectionStates[s.id] === 'locked').length,
+    sectionsList.filter((s) => sectionStates[s.id] === 'locked').length
+    + (dataSectionRunState.stats === 'locked' ? 1 : 0)
+    + (dataSectionRunState.standings === 'locked' ? 1 : 0)
+    + (dataSectionRunState.discoverability === 'locked' ? 1 : 0)
+    + (nextRoundLocked ? 1 : 0),
   );
 
   const allChecksOk = $derived(
@@ -1140,8 +1303,14 @@
   </section>
 {:else if data.stage === 'refine' || data.stage === 'finalize'}
   <div class="dg-page-actions">
-    <button type="button" class="mash-btn mash-btn--secondary" onclick={openWholeRegen} disabled={finalizing}>
-      ↻ Regenerate whole draft
+    <button
+      type="button"
+      class="mash-btn mash-btn--secondary"
+      class:dg-regen-all--queued={queuedCount > 0}
+      onclick={queuedCount > 0 ? runBatch : openWholeRegen}
+      disabled={finalizing}
+    >
+      {queuedCount > 0 ? `↻ Regenerate ${queuedCount} queued` : '↻ Regenerate whole draft'}
     </button>
     <button type="button" class="mash-btn mash-btn--secondary" onclick={openGenerate} disabled={finalizing || drafting}>
       ✎ Regenerate with options…
@@ -1239,7 +1408,23 @@
     <!-- By-the-numbers stat strip (sprint-17) — synthetic data-driven section,
          near the top. Reads data.stats; self-suppresses when empty. -->
     {#if showStats && StatSlot}
-      <div class="dg-section-wrap" data-section-kind="stats">
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('stats')} class:is-locked={dataSectionRunState.stats === 'locked'} class:is-queued={dataSectionRunState.stats === 'queued'} class:is-regenerating={dataSectionRunState.stats === 'regenerating'} data-section-kind="stats">
+        {#if dataSectionExcluded('stats')}
+          <div class="dg-excluded-banner">⊘ excluded from final · By the numbers</div>
+        {:else if dataSectionRunState.stats === 'locked'}
+          <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
+        {:else if dataSectionRunState.stats === 'queued'}
+          <div class="dg-queued-banner">↻ queued for batch regen · By the numbers</div>
+        {:else if dataSectionRunState.stats === 'regenerating'}
+          <div class="dg-regen-banner">regenerating · By the numbers · ~ 1s</div>
+        {/if}
+        <DataSectionActions
+          excluded={dataSectionExcluded('stats')}
+          state={dataSectionRunState.stats}
+          onToggleExcluded={() => toggleDataExcluded('stats')}
+          onToggleLocked={() => toggleDataLocked('stats')}
+          onRegen={() => openDataRegen('stats')}
+        />
         <section class="dg-section">
           <p class="dg-section-eyebrow">{recap ? 'By the numbers · season' : 'By the numbers'}</p>
           <StatSlot kind="stats" content={{}} data={statsData} variant="visual" />
@@ -1274,7 +1459,23 @@
          so it renders in the web view AND the PDF/PNG export; carries
          data-section-kind="standings" so png-per-section picks it up. -->
     {#if showStandings && StandingsSlot}
-      <div class="dg-section-wrap" data-section-kind="standings">
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('standings')} class:is-locked={dataSectionRunState.standings === 'locked'} class:is-queued={dataSectionRunState.standings === 'queued'} class:is-regenerating={dataSectionRunState.standings === 'regenerating'} data-section-kind="standings">
+        {#if dataSectionExcluded('standings')}
+          <div class="dg-excluded-banner">⊘ excluded from final · Season standings</div>
+        {:else if dataSectionRunState.standings === 'locked'}
+          <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
+        {:else if dataSectionRunState.standings === 'queued'}
+          <div class="dg-queued-banner">↻ queued for batch regen · Season standings</div>
+        {:else if dataSectionRunState.standings === 'regenerating'}
+          <div class="dg-regen-banner">regenerating · Season standings · ~ 1s</div>
+        {/if}
+        <DataSectionActions
+          excluded={dataSectionExcluded('standings')}
+          state={dataSectionRunState.standings}
+          onToggleExcluded={() => toggleDataExcluded('standings')}
+          onToggleLocked={() => toggleDataLocked('standings')}
+          onRegen={() => openDataRegen('standings')}
+        />
         <section class="dg-section">
           <div class="dg-standings-head">
             <p class="dg-section-eyebrow" style="margin: 0;">{recap ? (recap.final ? `Final standings${recap.champion ? ` · Champion: ${recap.champion}` : ''}` : `Standings through R${recap.throughRound}`) : 'Season standings'}</p>
@@ -1296,7 +1497,23 @@
          self-suppresses on null/empty and renders its static fallback in the
          export path (?export=1). Lives inside .dg-export → web + PNG export. -->
     {#if showDiscoverability && DiscoverabilitySlot}
-      <div class="dg-section-wrap" data-section-kind="discoverability">
+      <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('discoverability')} class:is-locked={dataSectionRunState.discoverability === 'locked'} class:is-queued={dataSectionRunState.discoverability === 'queued'} class:is-regenerating={dataSectionRunState.discoverability === 'regenerating'} data-section-kind="discoverability">
+        {#if dataSectionExcluded('discoverability')}
+          <div class="dg-excluded-banner">⊘ excluded from final · Tastemaker</div>
+        {:else if dataSectionRunState.discoverability === 'locked'}
+          <div class="dg-locked-banner">🔒 locked · batch regen will skip</div>
+        {:else if dataSectionRunState.discoverability === 'queued'}
+          <div class="dg-queued-banner">↻ queued for batch regen · Tastemaker</div>
+        {:else if dataSectionRunState.discoverability === 'regenerating'}
+          <div class="dg-regen-banner">regenerating · Tastemaker · ~ 1s</div>
+        {/if}
+        <DataSectionActions
+          excluded={dataSectionExcluded('discoverability')}
+          state={dataSectionRunState.discoverability}
+          onToggleExcluded={() => toggleDataExcluded('discoverability')}
+          onToggleLocked={() => toggleDataLocked('discoverability')}
+          onRegen={() => openDataRegen('discoverability')}
+        />
         <section class="dg-section">
           <p class="dg-section-eyebrow">{recap ? (recap.final ? 'Tastemaker · final season' : 'Tastemaker · season so far') : 'Tastemaker'}</p>
           <DiscoverabilitySlot kind="discoverability" content={{}} data={discoverabilityData} variant="visual" />
@@ -1313,6 +1530,7 @@
         initialExcluded={nextRoundExcluded}
         hasOverride={nextRoundHasOverride}
         onExcludedChange={(v) => { nextRoundExcluded = v; }}
+        onLockedChange={(v) => { nextRoundLocked = v; }}
       />
     {/if}
 
@@ -1369,6 +1587,20 @@
     initialInstructions={modalInitialInstructions}
     onCancel={closeModal}
     onSubmit={submitRegen}
+    onQueue={(payload) => {
+      const target = modalTarget;
+      closeModal();
+      if (target && target !== 'whole') queueProse(target, payload.chips, payload.instructions);
+    }}
+  />
+{/if}
+
+{#if dataModalTarget !== null}
+  <DataRegenConfirm
+    sectionLabel={DATA_SECTION_LABEL[dataModalTarget]}
+    onCancel={closeDataModal}
+    onSubmit={() => { const key = dataModalTarget!; closeDataModal(); dequeueData(key); void recomputeDataSection(key); }}
+    onQueue={() => queueData(dataModalTarget!)}
   />
 {/if}
 

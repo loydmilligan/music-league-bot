@@ -24,15 +24,22 @@
     initialExcluded = false,
     hasOverride = false,
     onExcludedChange,
+    onLockedChange,
   } = $props<{
     roundId: number;
     data: NextRound | null;
     initialExcluded?: boolean;
     hasOverride?: boolean;
     onExcludedChange?: (excluded: boolean) => void;
+    onLockedChange?: (locked: boolean) => void;
   }>();
 
   let excluded = $state(initialExcluded);
+  let locked = $state(false);
+  function toggleLocked() {
+    locked = !locked;
+    onLockedChange?.(locked);
+  }
   let editing = $state(false);
   let saving = $state(false);
   let kebabOpen = $state(false);
@@ -128,10 +135,13 @@
 <div
   class="dg-section-wrap"
   class:is-excluded={excluded}
+  class:is-locked={locked}
   data-section-kind="nextRound"
 >
   {#if excluded}
     <div class="dg-excluded-banner">⊘ excluded from final · Next Round Up</div>
+  {:else if locked}
+    <div class="dg-locked-banner">🔒 locked · Next Round Up</div>
   {/if}
 
   <div class="dg-section-actions">
@@ -142,6 +152,15 @@
       title={excluded ? 'Include in final' : 'Exclude from final'}
       aria-pressed={!excluded}
     >{excluded ? '+' : '⊘'}</button>
+
+    <button
+      type="button"
+      class="dg-sa-btn"
+      class:is-locked={locked}
+      onclick={toggleLocked}
+      title={locked ? 'Unlock' : 'Lock'}
+      aria-pressed={locked}
+    >{locked ? '🔒' : '🔓'}</button>
 
     <span class="dg-sa-divider"></span>
 

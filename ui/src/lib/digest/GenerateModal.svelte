@@ -172,38 +172,38 @@
     </header>
 
     <div class="dg-modal-body">
-      <!-- Season-recap mode (sprint-21) — re-renders every section at season scope. -->
-      <div class="dg-recap" class:is-on={recapEnabled}>
-        <div class="dg-recap-head">
-          <label class="dg-recap-check">
-            <input type="checkbox" bind:checked={recapEnabled} />
-            <span class="dg-recap-name">Season recap</span>
-          </label>
-          {#if recapEnabled}
-            <span class="dg-recap-badge">{recapBadge}</span>
-          {/if}
-        </div>
-        {#if recapEnabled}
-          <div class="dg-recap-sub">
-            <label class="dg-recap-final" title="Final = definitive full-season framing; off = mid-season ‘so far’">
-              <input type="checkbox" bind:checked={recapFinal} />
-              <span>Final recap</span>
-            </label>
-            <span class="dg-recap-hint">
-              {recapFinal
-                ? 'Definitive full-season framing — champion, past tense.'
-                : 'Mid-season framing — “the season so far”, current leader.'}
-            </span>
-          </div>
-          <p class="dg-recap-note">
-            Re-renders every section across the whole season (rounds up to this one). Next-round preview is
-            dropped; chat uses the paste box below.
-          </p>
-        {/if}
-      </div>
-
       <span class="dg-modal-eyebrow">Sections · check to include · expand for style / context / layout</span>
       <div class="dg-gen-sections">
+        <!-- Season recap — re-renders every section at season scope. Same row shell as
+             every other section; its own sub-controls (final toggle, note) live inline. -->
+        <div class="dg-gen-row" class:is-off={!recapEnabled}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={recapEnabled} />
+              <span class="dg-gen-name">Season recap</span>
+            </label>
+            {#if recapEnabled}
+              <span class="dg-recap-badge">{recapBadge}</span>
+            {/if}
+          </div>
+          {#if recapEnabled}
+            <div class="dg-gen-controls">
+              <label class="dg-recap-final" title="Final = definitive full-season framing; off = mid-season 'so far'">
+                <input type="checkbox" bind:checked={recapFinal} />
+                <span>Final recap</span>
+              </label>
+              <span class="dg-recap-hint">
+                {recapFinal
+                  ? 'Definitive full-season framing — champion, past tense.'
+                  : 'Mid-season framing — "the season so far", current leader.'}
+              </span>
+              <p class="dg-recap-note">
+                Re-renders every section across the whole season (rounds up to this one). Next-round
+                preview is dropped; chat uses its paste box below.
+              </p>
+            </div>
+          {/if}
+        </div>
         {#each sections as s (s.id)}
           {@const canVisual = VISUAL_CAPABLE[s.id]}
           <div class="dg-gen-row" class:is-off={!s.enabled}>
@@ -268,6 +268,16 @@
                 {:else}
                   <p class="dg-gen-note">{VARIANT_ICON.textual} textual only — this section has no visual form</p>
                 {/if}
+
+                {#if s.id === 'chat'}
+                  <span class="dg-gen-label">paste whatsapp chat · optional</span>
+                  <textarea
+                    class="dg-modal-textarea dg-gen-context"
+                    bind:value={pastedChat}
+                    placeholder="Paste the round's WhatsApp chat here. Used as this section's source (overrides the flaky auto-capture)."
+                    disabled={!s.enabled}
+                  ></textarea>
+                {/if}
               </div>
             {/if}
           </div>
@@ -311,9 +321,13 @@
           </div>
           <p class="dg-gen-note">
             Computed from votes, not written by the LLM — auto-reconciled against the stored table on
-            generate (a mismatch pops the reconcile modal). “Recompute” overwrites the gospel with the
+            generate (a mismatch pops the reconcile modal). "Recompute" overwrites the gospel with the
             fresh computed values.
           </p>
+          <label class="dg-av-regen" style="padding: 0 12px 10px;">
+            <input type="checkbox" bind:checked={regenAvatars} />
+            <span>Regenerate themed avatars for this round · avatars render here, in Standings</span>
+          </label>
         </div>
 
         <!-- Sonic Signatures: embed each player's taste waveform in their digest card. -->
@@ -374,16 +388,6 @@
         </div>
       </div>
 
-      <span class="dg-modal-eyebrow">Paste WhatsApp chat · feeds the back-cover chat section</span>
-      <textarea
-        class="dg-modal-textarea"
-        bind:value={pastedChat}
-        placeholder="Paste the round's WhatsApp chat here. Used as the chat section's source (overrides the flaky auto-capture)."
-      ></textarea>
-      <label class="dg-av-regen">
-        <input type="checkbox" bind:checked={regenAvatars} />
-        <span>Regenerate themed avatars for this round</span>
-      </label>
       <p class="dg-modal-hint">
         Unchecked sections are skipped. Style words + context steer each section. The full source data (votes, comments) is always passed alongside.
       </p>
@@ -410,41 +414,9 @@
     overflow: auto;
   }
 
-  /* Season-recap mode banner (sprint-21) */
-  .dg-recap {
-    border: 1px solid var(--line-strong);
-    border-radius: var(--r-2);
-    background: var(--ink-0);
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
-  }
-  .dg-recap.is-on {
-    border-color: var(--mash-pulp-edge, var(--mash-pulp));
-    background: var(--mash-pulp-soft);
-  }
-  .dg-recap-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .dg-recap-check {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-  }
-  .dg-recap-check input {
-    width: 15px;
-    height: 15px;
-    accent-color: var(--mash-pulp);
-    cursor: pointer;
-  }
-  .dg-recap-name {
-    font: 700 13px/1.2 var(--font-body);
-    color: var(--fg);
-  }
+  /* Season-recap mode sub-controls (sprint-21) — the wrapper/head/checkbox-label
+     rules were removed once Task 3 merged this into a plain dg-gen-row; these
+     remaining selectors still style the inline expanded controls. */
   .dg-recap-badge {
     font: 700 10px/1 var(--font-mono);
     letter-spacing: 0.06em;
@@ -454,15 +426,6 @@
     border-radius: 999px;
     padding: 3px 8px;
     white-space: nowrap;
-  }
-  .dg-recap-sub {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
   }
   .dg-recap-final {
     display: inline-flex;
