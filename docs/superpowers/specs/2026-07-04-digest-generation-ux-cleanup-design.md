@@ -1,7 +1,7 @@
 # Digest generation/regen UX cleanup
 
 Date: 2026-07-04
-Status: approved, ready for implementation planning
+Status: implemented
 
 ## Context
 
