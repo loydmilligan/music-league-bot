@@ -37,7 +37,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
            FROM rounds r
            JOIN seasons s ON s.id = r.season_id
            JOIN leagues l ON l.id = s.league_id
-           WHERE l.slug = ? AND s.season_number = ? AND r.name = ?`,
+           WHERE l.slug = ? AND s.season_number = ? AND LOWER(r.name) = LOWER(?)`,
         )
         .get(leagueSlug, Number(seasonNumber), roundName);
 

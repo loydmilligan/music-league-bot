@@ -58,3 +58,10 @@ it('returns 400 when neither roundNumber nor roundName is given', async () => {
     status: 400,
   });
 });
+
+it('resolves by roundName case-insensitively', async () => {
+  const res = await GET(mkEvent({ leagueSlug: 'hip-jammers', seasonNumber: '3', roundName: 'test round' }));
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.name).toBe('Test Round');
+});
