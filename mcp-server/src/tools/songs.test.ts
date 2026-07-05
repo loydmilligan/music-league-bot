@@ -62,7 +62,7 @@ it('removeSongFromRound PATCHes with removedReason=user_removed', async () => {
   );
 
   const callArgs = vi.mocked(botUiFetch).mock.calls[0];
-  const body = JSON.parse(callArgs[1].body as string);
+  const body = JSON.parse(callArgs[1]!.body as string);
   expect(body).toEqual({
     id: 7,
     removedReason: 'user_removed',

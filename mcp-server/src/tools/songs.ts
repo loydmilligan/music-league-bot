@@ -26,7 +26,12 @@ export interface AddSongToRoundInput {
   ratings?: RatingsInput;
 }
 
-export async function addSongToRound(input: AddSongToRoundInput) {
+export interface AddSongToRoundResult {
+  shortlistSongId: string;
+  researchSongId: number;
+}
+
+export async function addSongToRound(input: AddSongToRoundInput): Promise<AddSongToRoundResult> {
   return botUiFetch(`/api/rounds/${input.roundId}/research-songs`, {
     method: 'POST',
     body: JSON.stringify({
