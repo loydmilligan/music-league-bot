@@ -40,18 +40,20 @@ of that. This phase adds the discovery/lookup layer Phase 1 was missing.
   lists leagues by slug or rounds by slug+season — `/api/leagues/[leagueId]/rounds`
   is POST-only (create), keyed by numeric `leagueId`, and does something entirely
   different.
-- **Retrofit auth onto every pre-existing route this phase makes MCP-reachable.**
-  `/api/spotify/search`, `/api/active-rounds`, and
-  `/api/digest/:roundId/import-export-zip` all predate this project and have no
-  `requireBearerToken` check. Now that the MCP server is a real (potentially
-  remote) consumer of them, they get the same bearer-token gate every other
-  MCP-facing route in this project has. This is a deliberate, scoped behavior
-  change to existing routes — noted explicitly since Phase 1's plan called out
-  the opposite convention (reused routes NOT touched for auth); that convention
-  was for routes with pre-existing, established call sites (the digest
-  prepare/draft flow, shortlist, research). These three routes have no other
-  established caller pattern this would break — they're UI-only, same-origin
-  today.
+- **`/api/spotify/search`, `/api/active-rounds`, and
+  `/api/digest/:roundId/import-export-zip` are reused as-is — NOT retrofitted
+  with auth.** *(Correction, made while writing the implementation plan: this
+  spec originally called for adding `requireBearerToken` to all three, on the
+  unverified assumption that they had no established caller. That assumption
+  was checked and was wrong — all three have real, unauthenticated production
+  Svelte callers: `SearchBar.svelte`/`ResearchList.svelte`/`SongSearchTab.svelte`
+  (search), `ShortlistStrip.svelte`/`SongSearchTab.svelte`/`ActiveRounds.svelte`
+  (active-rounds), and the digest page's "Import from CLI" button
+  (import-export-zip). Adding auth would have 401'd all three live UI flows.
+  Per the human's decision, this plan instead follows Phase 1's original
+  convention for routes with an established caller: reuse as-is, don't touch
+  for auth. See the implementation plan's Design Correction section for the
+  full record.)*
 - **`import_round_data` triggers a host-side CLI shell-out.** This is more
   consequential than a read (it runs an external process and writes DB rows),
   but it's the exact same action the existing "Import from CLI" button already
@@ -73,17 +75,10 @@ list every round across every season for that league). Returns:
 ```
 Ordered by season, then round id.
 
-### Auth added to `GET /api/spotify/search?q=`
-No response shape change — adds `requireBearerToken(request, db)` as the first
-line, matching every other MCP-facing route.
-
-### Auth added to `GET /api/active-rounds`
-No response shape change — adds `requireBearerToken(request, db)` as the first
-line.
-
-### Auth added to `POST /api/digest/:roundId/import-export-zip`
-No response shape change — adds `requireBearerToken(request, db)` as the first
-line.
+### `GET /api/spotify/search?q=`, `GET /api/active-rounds`, `POST /api/digest/:roundId/import-export-zip`
+All three are pre-existing, unauthenticated routes with real production UI
+callers — left completely unchanged. See the Decisions section's correction
+note above.
 
 ## Query change
 
