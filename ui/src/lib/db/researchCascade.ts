@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { randomUUID } from 'node:crypto';
+import { addShortlistSong, assignToRound } from '../shortlist/shortlist.js';
 
 export interface CascadeAddInput {
   roundId: number;
@@ -29,39 +29,22 @@ export interface CascadeAddResult {
 // row in the same step.
 export function addSongToRoundWithShortlistCascade(db: Database.Database, input: CascadeAddInput): CascadeAddResult {
   const tx = db.transaction((i: CascadeAddInput): CascadeAddResult => {
-    let shortlistRow = db
-      .prepare('SELECT id FROM shortlist_songs WHERE spotify_uri = ?')
-      .get(i.spotifyUri) as { id: string } | undefined;
+    // Use helper functions to find-or-create shortlist_songs and assign to round
+    const shortlistSong = addShortlistSong(db, {
+      spotifyUri: i.spotifyUri,
+      title: i.title,
+      artist: i.artist,
+      album: i.album,
+    });
 
-    let shortlistSongId: string;
-    if (shortlistRow) {
-      shortlistSongId = shortlistRow.id;
-    } else {
-      shortlistSongId = randomUUID();
-      db.prepare(
-        `INSERT INTO shortlist_songs (id, spotify_uri, title, artist, album, added_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(shortlistSongId, i.spotifyUri, i.title, i.artist, i.album ?? null, new Date().toISOString());
-    }
+    assignToRound(db, shortlistSong.id, i.roundId);
 
-    db.prepare(
-      `INSERT OR IGNORE INTO shortlist_assignments (shortlist_song_id, round_id) VALUES (?, ?)`,
-    ).run(shortlistSongId, i.roundId);
-
-    let researchRow = db
+    // Get the research_song row that was created by assignToRound
+    const researchRow = db
       .prepare('SELECT id FROM research_songs WHERE round_id = ? AND spotify_uri = ?')
-      .get(i.roundId, i.spotifyUri) as { id: number } | undefined;
+      .get(i.roundId, i.spotifyUri) as { id: number };
 
-    if (!researchRow) {
-      db.prepare(
-        `INSERT INTO research_songs (round_id, spotify_uri, title, artist, album, added_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(i.roundId, i.spotifyUri, i.title, i.artist, i.album ?? null, new Date().toISOString());
-      researchRow = db
-        .prepare('SELECT id FROM research_songs WHERE round_id = ? AND spotify_uri = ?')
-        .get(i.roundId, i.spotifyUri) as { id: number };
-    }
-
+    // Apply notes and ratings to the research_songs row
     const sets: string[] = [];
     const vals: unknown[] = [];
     if (i.notes !== undefined) { sets.push('notes = ?'); vals.push(i.notes); }
@@ -74,7 +57,7 @@ export function addSongToRoundWithShortlistCascade(db: Database.Database, input:
       db.prepare(`UPDATE research_songs SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
     }
 
-    return { shortlistSongId, researchSongId: researchRow.id };
+    return { shortlistSongId: shortlistSong.id, researchSongId: researchRow.id };
   });
 
   return tx(input);
