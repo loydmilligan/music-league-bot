@@ -73,6 +73,18 @@ export const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_h2h_round_created
     ON head_to_head_matches(round_id, created_at);
+  -- Phase 1 MCP: the currently-proposed random-mode pairing for a round.
+  -- One row per round (round_id is the PK) — king-of-the-hill mode needs no
+  -- equivalent since it's fully re-derived from match history on every read;
+  -- a random pairing is arbitrary and must be persisted to survive a reshuffle
+  -- or a later "select winner" call.
+  CREATE TABLE IF NOT EXISTS h2h_pending_matchup (
+    round_id INTEGER PRIMARY KEY REFERENCES rounds(id),
+    song_a_id INTEGER NOT NULL REFERENCES research_songs(id),
+    song_b_id INTEGER NOT NULL REFERENCES research_songs(id),
+    mode TEXT NOT NULL DEFAULT 'random',
+    created_at TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS ytm_link_cache (
     spotify_uri TEXT PRIMARY KEY, ytm_url TEXT, resolved_at TEXT NOT NULL
   );

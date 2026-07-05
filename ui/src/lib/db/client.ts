@@ -169,6 +169,19 @@ export function openLeagueDb(path?: string): Database.Database {
 		db.exec("ALTER TABLE research_songs ADD COLUMN replayability INTEGER CHECK(replayability BETWEEN 0 AND 5)");
 	}
 
+	// Phase 1 MCP: soft-removal tracking (replaces the old implicit "retired"
+	// derivation for the new random H2H mode — see h2hRandom.ts).
+	const rsCols3 = db.prepare("PRAGMA table_info(research_songs)").all() as { name: string }[];
+	if (!rsCols3.some(c => c.name === 'removed_reason')) {
+		db.exec("ALTER TABLE research_songs ADD COLUMN removed_reason TEXT");
+	}
+	if (!rsCols3.some(c => c.name === 'removed_by_song_id')) {
+		db.exec("ALTER TABLE research_songs ADD COLUMN removed_by_song_id INTEGER REFERENCES research_songs(id)");
+	}
+	if (!rsCols3.some(c => c.name === 'removed_at')) {
+		db.exec("ALTER TABLE research_songs ADD COLUMN removed_at TEXT");
+	}
+
 	// sonic-signature lyrical-density: capture word/line counts (wordiness) on
 	// existing DBs. Nullable — NULL means "not yet computed" (re-run the lyrics
 	// job to backfill); 0 with has_lyrics=0 means a genuine instrumental.
