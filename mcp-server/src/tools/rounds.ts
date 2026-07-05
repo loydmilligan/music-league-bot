@@ -28,6 +28,34 @@ export async function resolveRound(input: ResolveRoundInput): Promise<ResolvedRo
   return botUiFetch<ResolvedRound>(`/api/rounds/resolve?${params.toString()}`);
 }
 
+export interface LeagueSummary {
+  slug: string;
+  name: string;
+}
+
+export async function listLeagues(): Promise<LeagueSummary[]> {
+  return botUiFetch<LeagueSummary[]>('/api/leagues');
+}
+
+export interface ListRoundsInput {
+  leagueSlug: string;
+  seasonNumber?: number;
+}
+
+export interface RoundSummary {
+  id: number;
+  name: string;
+  roundNumber: number | null;
+  phase: string;
+  seasonNumber: number;
+}
+
+export async function listRounds(input: ListRoundsInput): Promise<RoundSummary[]> {
+  const params = new URLSearchParams({ leagueSlug: input.leagueSlug });
+  if (input.seasonNumber !== undefined) params.set('seasonNumber', String(input.seasonNumber));
+  return botUiFetch<RoundSummary[]>(`/api/rounds/list?${params.toString()}`);
+}
+
 export function registerRoundTools(server: McpServer): void {
   server.tool(
     'resolve_round',
@@ -42,5 +70,19 @@ export function registerRoundTools(server: McpServer): void {
       const round = await resolveRound(input);
       return { content: [{ type: 'text', text: JSON.stringify(round) }] };
     },
+  );
+
+  server.tool(
+    'list_leagues',
+    'List every league (slug + name) — use this to discover league slugs before calling list_rounds or resolve_round.',
+    {},
+    async () => ({ content: [{ type: 'text', text: JSON.stringify(await listLeagues()) }] }),
+  );
+
+  server.tool(
+    'list_rounds',
+    "List a league's rounds (id, name, round number, phase, season number). Omit seasonNumber to list every round across every season for that league.",
+    { leagueSlug: z.string(), seasonNumber: z.number().int().optional() },
+    async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await listRounds(input)) }] }),
   );
 }

@@ -3,7 +3,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../httpClient.js', () => ({ botUiFetch: vi.fn() }));
 
 import { botUiFetch } from '../httpClient.js';
-import { resolveRound } from './rounds.js';
+import { resolveRound, listLeagues, listRounds } from './rounds.js';
 
 beforeEach(() => { vi.mocked(botUiFetch).mockReset(); });
 
@@ -26,4 +26,23 @@ it('resolveRound supports roundName instead of roundNumber', async () => {
   expect(botUiFetch).toHaveBeenCalledWith(
     '/api/rounds/resolve?leagueSlug=hip-jammers&seasonNumber=3&roundName=Round+X',
   );
+});
+
+it('listLeagues GETs /api/leagues', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue([{ slug: 'hip-jammers', name: 'Hip Jammers' }]);
+  const result = await listLeagues();
+  expect(botUiFetch).toHaveBeenCalledWith('/api/leagues');
+  expect(result).toEqual([{ slug: 'hip-jammers', name: 'Hip Jammers' }]);
+});
+
+it('listRounds GETs /api/rounds/list with leagueSlug only when seasonNumber is omitted', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue([]);
+  await listRounds({ leagueSlug: 'hip-jammers' });
+  expect(botUiFetch).toHaveBeenCalledWith('/api/rounds/list?leagueSlug=hip-jammers');
+});
+
+it('listRounds includes seasonNumber when given', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue([]);
+  await listRounds({ leagueSlug: 'hip-jammers', seasonNumber: 3 });
+  expect(botUiFetch).toHaveBeenCalledWith('/api/rounds/list?leagueSlug=hip-jammers&seasonNumber=3');
 });
