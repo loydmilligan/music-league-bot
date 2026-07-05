@@ -3,7 +3,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../httpClient.js', () => ({ botUiFetch: vi.fn() }));
 
 import { botUiFetch } from '../httpClient.js';
-import { resolveRound, listLeagues, listRounds } from './rounds.js';
+import { resolveRound, listLeagues, listRounds, getActiveRounds } from './rounds.js';
 
 beforeEach(() => { vi.mocked(botUiFetch).mockReset(); });
 
@@ -45,4 +45,11 @@ it('listRounds includes seasonNumber when given', async () => {
   vi.mocked(botUiFetch).mockResolvedValue([]);
   await listRounds({ leagueSlug: 'hip-jammers', seasonNumber: 3 });
   expect(botUiFetch).toHaveBeenCalledWith('/api/rounds/list?leagueSlug=hip-jammers&seasonNumber=3');
+});
+
+it('getActiveRounds GETs /api/active-rounds', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue({ leagues: [] });
+  const result = await getActiveRounds();
+  expect(botUiFetch).toHaveBeenCalledWith('/api/active-rounds');
+  expect(result).toEqual({ leagues: [] });
 });

@@ -102,6 +102,23 @@ export async function listRoundSongs(input: ListRoundSongsInput) {
   return botUiFetch(`/api/research/${input.roundId}${query}`);
 }
 
+export interface SpotifySearchResult {
+  uri: string;
+  name: string;
+  artists: string;
+  album: string;
+  year: string;
+  imageUrl: string | null;
+}
+
+export interface SearchSpotifyInput {
+  query: string;
+}
+
+export async function searchSpotify(input: SearchSpotifyInput): Promise<SpotifySearchResult[]> {
+  return botUiFetch<SpotifySearchResult[]>(`/api/spotify/search?q=${encodeURIComponent(input.query)}`);
+}
+
 export function registerSongTools(server: McpServer): void {
   server.tool(
     'add_song_to_round',
@@ -143,5 +160,12 @@ export function registerSongTools(server: McpServer): void {
     "List a round's research/candidate songs.",
     { roundId: z.number().int(), includeRemoved: z.boolean().optional() },
     async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await listRoundSongs(input)) }] }),
+  );
+
+  server.tool(
+    'search_spotify',
+    "Search Spotify's public catalog (client-credentials search — this league's own submission/vote data is not searched here) for a track. Use the returned uri with add_song_to_round or add_song_to_shortlist.",
+    { query: z.string() },
+    async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await searchSpotify(input)) }] }),
   );
 }

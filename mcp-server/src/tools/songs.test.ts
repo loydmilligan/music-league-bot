@@ -3,7 +3,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../httpClient.js', () => ({ botUiFetch: vi.fn() }));
 
 import { botUiFetch } from '../httpClient.js';
-import { addSongToRound, addSongToShortlist, updateSong, removeSongFromRound, listRoundSongs } from './songs.js';
+import { addSongToRound, addSongToShortlist, updateSong, removeSongFromRound, listRoundSongs, searchSpotify } from './songs.js';
 
 beforeEach(() => { vi.mocked(botUiFetch).mockReset(); });
 
@@ -84,4 +84,13 @@ it('listRoundSongs defaults includeRemoved to false (omitted from the query stri
   await listRoundSongs({ roundId: 1 });
 
   expect(botUiFetch).toHaveBeenCalledWith('/api/research/1');
+});
+
+it('searchSpotify GETs /api/spotify/search with the query URL-encoded', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue([
+    { uri: 'spotify:track:abc', name: 'Cotton', artists: 'Vince Staples', album: 'Cotton', year: '2026', imageUrl: null },
+  ]);
+  const result = await searchSpotify({ query: 'Cotton Vince Staples' });
+  expect(botUiFetch).toHaveBeenCalledWith('/api/spotify/search?q=Cotton%20Vince%20Staples');
+  expect(result[0].uri).toBe('spotify:track:abc');
 });

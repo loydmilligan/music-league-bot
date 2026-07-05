@@ -56,6 +56,44 @@ export async function listRounds(input: ListRoundsInput): Promise<RoundSummary[]
   return botUiFetch<RoundSummary[]>(`/api/rounds/list?${params.toString()}`);
 }
 
+export interface ActiveRoundView {
+  id: number;
+  name: string;
+  theme: string | null;
+  submissionDeadline: string | null;
+  votingDeadline: string | null;
+  phase: string;
+  source: 'manual' | 'derived';
+}
+
+export interface AvailableRound {
+  id: number;
+  name: string;
+  phase: string;
+  submissionDeadline: string | null;
+  votingDeadline: string | null;
+}
+
+export interface LeagueActiveRound {
+  leagueId: number;
+  slug: string;
+  name: string;
+  isActive: boolean;
+  manuallyActive: boolean;
+  activeSeasonId: number | null;
+  needsNextRound: boolean;
+  activeRound: ActiveRoundView | null;
+  availableRounds: AvailableRound[];
+}
+
+export interface ActiveRoundsResponse {
+  leagues: LeagueActiveRound[];
+}
+
+export async function getActiveRounds(): Promise<ActiveRoundsResponse> {
+  return botUiFetch<ActiveRoundsResponse>('/api/active-rounds');
+}
+
 export function registerRoundTools(server: McpServer): void {
   server.tool(
     'resolve_round',
@@ -84,5 +122,12 @@ export function registerRoundTools(server: McpServer): void {
     "List a league's rounds (id, name, round number, phase, season number). Omit seasonNumber to list every round across every season for that league.",
     { leagueSlug: z.string(), seasonNumber: z.number().int().optional() },
     async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await listRounds(input)) }] }),
+  );
+
+  server.tool(
+    'get_active_rounds',
+    "Get each active league's currently-active round (or null) plus the rest of that season's rounds — a fast \"what should I work on\" starting point without needing to know league slugs upfront.",
+    {},
+    async () => ({ content: [{ type: 'text', text: JSON.stringify(await getActiveRounds()) }] }),
   );
 }
