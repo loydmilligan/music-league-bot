@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { recordH2HMatch } from './headToHead.js';
+import { updateResearchSong } from './research.js';
 
 export interface ActiveResearchSong {
   id: number;
@@ -78,18 +79,24 @@ export function selectH2HWinner(db: Database.Database, roundId: number, winnerSo
   }
   const loserSongId = winnerSongId === pending.songAId ? pending.songBId : pending.songAId;
 
-  recordH2HMatch(db, roundId, winnerSongId, loserSongId);
-  db.prepare(
-    `UPDATE research_songs SET removed_reason = 'h2h_loss', removed_by_song_id = ?, removed_at = ? WHERE id = ?`,
-  ).run(winnerSongId, new Date().toISOString(), loserSongId);
+  const tx = db.transaction((args: { roundId: number; winnerSongId: number; loserSongId: number }): SelectWinnerResult => {
+    recordH2HMatch(db, args.roundId, args.winnerSongId, args.loserSongId);
+    updateResearchSong(db, args.loserSongId, {
+      removedReason: 'h2h_loss',
+      removedBySongId: args.winnerSongId,
+      removedAt: new Date().toISOString(),
+    });
 
-  const pool = getActiveResearchSongs(db, roundId);
-  const remaining = pool.filter((s) => s.id !== winnerSongId);
-  if (!remaining.length) {
-    db.prepare('DELETE FROM h2h_pending_matchup WHERE round_id = ?').run(roundId);
-    return { songAId: winnerSongId, songBId: null };
-  }
-  const challenger = remaining[Math.floor(Math.random() * remaining.length)];
-  setPendingMatchup(db, roundId, winnerSongId, challenger.id);
-  return { songAId: winnerSongId, songBId: challenger.id };
+    const pool = getActiveResearchSongs(db, args.roundId);
+    const remaining = pool.filter((s) => s.id !== args.winnerSongId);
+    if (!remaining.length) {
+      db.prepare('DELETE FROM h2h_pending_matchup WHERE round_id = ?').run(args.roundId);
+      return { songAId: args.winnerSongId, songBId: null };
+    }
+    const challenger = remaining[Math.floor(Math.random() * remaining.length)];
+    setPendingMatchup(db, args.roundId, args.winnerSongId, challenger.id);
+    return { songAId: args.winnerSongId, songBId: challenger.id };
+  });
+
+  return tx({ roundId, winnerSongId, loserSongId });
 }
