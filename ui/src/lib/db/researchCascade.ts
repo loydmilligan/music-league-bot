@@ -44,18 +44,20 @@ export function addSongToRoundWithShortlistCascade(db: Database.Database, input:
       .prepare('SELECT id FROM research_songs WHERE round_id = ? AND spotify_uri = ?')
       .get(i.roundId, i.spotifyUri) as { id: number };
 
-    // Apply notes and ratings to the research_songs row
-    const sets: string[] = [];
+    // Apply notes and ratings to the research_songs row. Also unconditionally
+    // clear any soft-removal state: adding a song to a round's active list
+    // should always make it active, regardless of whether it was previously
+    // soft-removed by a user action or an H2H loss (removal is otherwise a
+    // silent no-op via assignToRound's INSERT OR IGNORE).
+    const sets: string[] = ['removed_reason = NULL', 'removed_by_song_id = NULL', 'removed_at = NULL'];
     const vals: unknown[] = [];
     if (i.notes !== undefined) { sets.push('notes = ?'); vals.push(i.notes); }
     if (i.ratings?.discoveryPotential !== undefined) { sets.push('discovery_potential = ?'); vals.push(i.ratings.discoveryPotential); }
     if (i.ratings?.themeFit !== undefined) { sets.push('theme_fit = ?'); vals.push(i.ratings.themeFit); }
     if (i.ratings?.quality !== undefined) { sets.push('quality = ?'); vals.push(i.ratings.quality); }
     if (i.ratings?.replayability !== undefined) { sets.push('replayability = ?'); vals.push(i.ratings.replayability); }
-    if (sets.length) {
-      vals.push(researchRow.id);
-      db.prepare(`UPDATE research_songs SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
-    }
+    vals.push(researchRow.id);
+    db.prepare(`UPDATE research_songs SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
 
     return { shortlistSongId: shortlistSong.id, researchSongId: researchRow.id };
   });

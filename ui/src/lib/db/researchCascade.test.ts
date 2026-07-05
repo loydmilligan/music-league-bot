@@ -57,3 +57,28 @@ it('is idempotent for the same round + song — second call updates notes/rating
   const researchRow = db.prepare('SELECT notes FROM research_songs WHERE id=?').get(first.researchSongId) as { notes: string };
   expect(researchRow.notes).toBe('v2');
 });
+
+it('clears soft-removal fields when re-adding a previously removed song', () => {
+  const first = addSongToRoundWithShortlistCascade(db, {
+    roundId, spotifyUri: 'spotify:track:readd', title: 'Song', artist: 'Artist',
+  });
+  const winner = addSongToRoundWithShortlistCascade(db, {
+    roundId, spotifyUri: 'spotify:track:readd-winner', title: 'Winner', artist: 'Artist',
+  });
+
+  db.prepare("UPDATE research_songs SET removed_reason=?, removed_by_song_id=?, removed_at=? WHERE id=?")
+    .run('h2h_loss', winner.researchSongId, '2026-01-02T00:00:00Z', first.researchSongId);
+
+  const removedRow = db.prepare('SELECT removed_reason, removed_by_song_id, removed_at FROM research_songs WHERE id=?').get(first.researchSongId) as any;
+  expect(removedRow.removed_reason).toBe('h2h_loss');
+
+  const second = addSongToRoundWithShortlistCascade(db, {
+    roundId, spotifyUri: 'spotify:track:readd', title: 'Song', artist: 'Artist',
+  });
+
+  expect(second.researchSongId).toBe(first.researchSongId);
+  const researchRow = db.prepare('SELECT removed_reason, removed_by_song_id, removed_at FROM research_songs WHERE id=?').get(first.researchSongId) as any;
+  expect(researchRow.removed_reason).toBeNull();
+  expect(researchRow.removed_by_song_id).toBeNull();
+  expect(researchRow.removed_at).toBeNull();
+});
