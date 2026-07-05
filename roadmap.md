@@ -1069,3 +1069,18 @@ summary: >-
   Explore. A second model co-appearing in one section (a duet), vs Cover which just picks
   the better single take. Needs a content-format decision + proof it beats Cover. Parked
   until a concrete creative use justifies it.
+---
+id: cli-import-chat-autofetch
+title: Auto-fetch WhatsApp chat during CLI import
+stage: idea
+effort: small
+source: owner (2026-07-05)
+summary: >-
+  Digest generation still requires manually pasting WhatsApp chat text into the
+  generate modal. Chat now also arrives into mlb via GroupRelay (the notification-
+  capture appliance), so the "Import from CLI" action (POST
+  /api/digest/:roundId/import-export-zip, which already pulls submissions/votes/
+  vote-comments from export.zip) could additionally pull the round's chat window
+  from the GroupRelay-ingested chat_messages table on the same trigger, removing
+  the manual paste step. Surfaced while wiring the same import route into the MCP
+  server's import_round_data tool.
