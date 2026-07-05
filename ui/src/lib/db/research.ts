@@ -10,11 +10,21 @@ function row(r: any): ResearchSong {
     quality: r.quality ?? null, replayability: r.replayability ?? null,
     saveForFuture: !!r.save_for_future, submittedByMe: !!r.submitted_by_me,
     submittedByOther: !!r.submitted_by_other, otherSubmissionVotes: r.other_submission_votes,
+    removedReason: r.removed_reason ?? null,
+    removedBySongId: r.removed_by_song_id ?? null,
+    removedAt: r.removed_at ?? null,
   };
 }
 
-export function getResearchSongs(db: Database.Database, roundId: number): ResearchSong[] {
-  return (db.prepare('SELECT * FROM research_songs WHERE round_id=? ORDER BY added_at').all(roundId) as any[]).map(row);
+export function getResearchSongs(
+  db: Database.Database,
+  roundId: number,
+  opts: { includeRemoved?: boolean } = {},
+): ResearchSong[] {
+  const sql = opts.includeRemoved
+    ? 'SELECT * FROM research_songs WHERE round_id=? ORDER BY added_at'
+    : 'SELECT * FROM research_songs WHERE round_id=? AND removed_reason IS NULL ORDER BY added_at';
+  return (db.prepare(sql).all(roundId) as any[]).map(row);
 }
 
 export function addResearchSong(db: Database.Database, s: {
@@ -51,6 +61,7 @@ export function updateResearchSong(db: Database.Database, id: number, patch: Par
     quality: 'quality', replayability: 'replayability',
     saveForFuture: 'save_for_future', submittedByMe: 'submitted_by_me',
     submittedByOther: 'submitted_by_other', otherSubmissionVotes: 'other_submission_votes',
+    removedReason: 'removed_reason', removedBySongId: 'removed_by_song_id', removedAt: 'removed_at',
   };
   for (const [k, col] of Object.entries(map)) {
     if (k in patch) { fields.push(`${col}=?`); vals.push((patch as any)[k] === true ? 1 : (patch as any)[k] === false ? 0 : (patch as any)[k]); }

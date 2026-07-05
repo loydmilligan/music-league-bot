@@ -21,6 +21,9 @@ export interface ResearchSong {
   quality: number | null; replayability: number | null;
   saveForFuture: boolean; submittedByMe: boolean; submittedByOther: boolean;
   otherSubmissionVotes: number | null; score?: number | null;
+  removedReason: 'user_removed' | 'h2h_loss' | null;
+  removedBySongId: number | null;
+  removedAt: string | null;
 }
 export interface Settings {
   weightDiscovery: number; weightThemeFit: number; weightPersonal: number; weightNostalgia: number;

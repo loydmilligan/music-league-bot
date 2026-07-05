@@ -6,9 +6,10 @@ import { getSettings } from '$lib/db/settings.js';
 import { computeScore } from '$lib/scoring.js';
 import { attachYtmLinks } from '$lib/db/ytmLinks.js';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
   const db = getDb(); const settings = getSettings(db);
-  const songs = getResearchSongs(db, Number(params.roundId)).map(s => ({ ...s, score: computeScore(s, settings) }));
+  const includeRemoved = url.searchParams.get('includeRemoved') === 'true';
+  const songs = getResearchSongs(db, Number(params.roundId), { includeRemoved }).map(s => ({ ...s, score: computeScore(s, settings) }));
   return json(attachYtmLinks(db, songs));
 };
 
