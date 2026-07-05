@@ -36,7 +36,11 @@ Add to your Claude Code MCP config:
 
 | Tool | Purpose |
 |---|---|
+| `list_leagues` | List every league (slug + name) |
+| `list_rounds` | Browse a league's rounds by id/name/round number/phase |
+| `get_active_rounds` | Get each active league's currently-active round + season rounds |
 | `resolve_round` | Look up a round's id by league/season/round number or name |
+| `search_spotify` | Search Spotify's catalog for a track (returns a uri to use with add_song_to_round) |
 | `add_song_to_round` | Add a song to a round's research list (cascades to the global shortlist) |
 | `add_song_to_shortlist` | Add a song to the global shortlist only |
 | `update_song` | Update a round research entry's notes/ratings |
@@ -47,6 +51,7 @@ Add to your Claude Code MCP config:
 | `select_h2h_winner` | Record a matchup winner; loser is removed, a new challenger is picked |
 | `get_current_matchup` | Get the currently-pending pairing |
 | `check_digest_readiness` | Check a round's digest generation prerequisites |
+| `import_round_data` | Trigger a host-side CLI import of submissions/votes/vote-comments |
 | `generate_digest` | Generate (or fetch cached) a round's digest draft |
 
 ## Architecture
