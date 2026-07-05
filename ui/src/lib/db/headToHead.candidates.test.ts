@@ -75,3 +75,18 @@ it('scopes results to the requested round', () => {
   expect(getH2HCandidates(db, roundA).map(c => c.spotifyUri)).toEqual(['spotify:track:aaa']);
   expect(getH2HCandidates(db, roundB).map(c => c.spotifyUri)).toEqual(['spotify:track:bbb']);
 });
+
+it('weightedScore is computed from quality/replayability (Unicard), not personal/nostalgia (legacy)', () => {
+  const roundId = mkRound(db, 'unicard-scoring-test');
+  const row = addResearchSong(db, { roundId, spotifyUri: 'spotify:track:unicard', title: 'U', artist: 'X', album: null });
+  updateResearchSong(db, row.id, {
+    themeFit: 5, discoveryPotential: 5, quality: 5, replayability: 5,
+    // Explicitly no personalRating/nostalgiaPotential — under the legacy
+    // formula (computeScore) this song would score null since neither of
+    // its two required dims (personal/nostalgia) has a value.
+  });
+  const candidates = getH2HCandidates(db, roundId);
+  const scored = candidates.find(c => c.spotifyUri === 'spotify:track:unicard')!;
+  expect(scored.weightedScore).not.toBeNull();
+  expect(scored.weightedScore).toBe(20); // max score: all 4 Unicard dims rated 5/5
+});

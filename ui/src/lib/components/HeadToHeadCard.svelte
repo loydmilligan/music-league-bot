@@ -6,13 +6,13 @@
 
   Sprint-5 h2h-rate-and-spotify additions:
     - Inline rating editor (4 × 5 dots) PATCHes /api/research/[roundId] and
-      recomputes the weighted score locally via computeScore.
+      recomputes the weighted score locally via computeUnicardScore.
     - Lazy Spotify embed toggled by a Play button; iframe is only rendered
       after the user clicks Play.
 -->
 <script lang="ts">
   import SectionLabel from '$lib/components/SectionLabel.svelte';
-  import { computeScore } from '$lib/scoring.js';
+  import { computeUnicardScore } from '$lib/scoring.js';
   import type { Settings } from '$lib/types.js';
 
   export type H2HCardSong = {
@@ -22,8 +22,8 @@
     spotifyUri?: string | null;
     themeFit: number | null;
     discoveryPotential: number | null;
-    nostalgiaPotential: number | null;
-    personalRating: number | null;
+    quality: number | null;
+    replayability: number | null;
     notes: string | null;
     weightedScore: number | null;
   };
@@ -49,10 +49,10 @@
   let saving = $state<string | null>(null);
 
   const dims = [
-    { key: 'themeFit',           label: 'Theme'     },
-    { key: 'discoveryPotential', label: 'Discovery' },
-    { key: 'nostalgiaPotential', label: 'Nostalgia' },
-    { key: 'personalRating',     label: 'Personal'  },
+    { key: 'themeFit',           label: 'Theme'       },
+    { key: 'discoveryPotential', label: 'Discovery'   },
+    { key: 'quality',            label: 'Quality'     },
+    { key: 'replayability',      label: 'Replayability' },
   ] as const;
 
   type DimKey = typeof dims[number]['key'];
@@ -77,7 +77,14 @@
     const next = current === n ? null : n; // click same value clears
     const prev = local;
     const optimistic: H2HCardSong = { ...local, [key]: next };
-    if (weights) optimistic.weightedScore = computeScore(optimistic, weights);
+    if (weights) {
+      optimistic.weightedScore = computeUnicardScore({
+        discovery: optimistic.discoveryPotential,
+        themeFit: optimistic.themeFit,
+        quality: optimistic.quality,
+        replayability: optimistic.replayability,
+      }, weights);
+    }
     local = optimistic;
     saving = key;
     try {
@@ -94,13 +101,18 @@
           ...local,
           themeFit: body.themeFit ?? local.themeFit,
           discoveryPotential: body.discoveryPotential ?? local.discoveryPotential,
-          nostalgiaPotential: body.nostalgiaPotential ?? local.nostalgiaPotential,
-          personalRating: body.personalRating ?? local.personalRating,
+          quality: body.quality ?? local.quality,
+          replayability: body.replayability ?? local.replayability,
           weightedScore:
             typeof body.score === 'number'
               ? body.score
               : weights
-              ? computeScore(local, weights)
+              ? computeUnicardScore({
+                  discovery: local.discoveryPotential,
+                  themeFit: local.themeFit,
+                  quality: local.quality,
+                  replayability: local.replayability,
+                }, weights)
               : local.weightedScore,
         };
       }

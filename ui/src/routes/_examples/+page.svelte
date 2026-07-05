@@ -19,8 +19,8 @@
     title: 'Hold On',
     themeFit: 5,
     discoveryPotential: 3,
-    nostalgiaPotential: 4,
-    personalRating: 5,
+    quality: 4,
+    replayability: 5,
     notes: 'Cuts straight to the bone — sparse arrangement, lyric does the work. Built for a round about resilience or perseverance; lands hard without ever overplaying its hand.',
     weightedScore: 4.35,
   };
@@ -31,8 +31,8 @@
     title: 'Sparrow',
     themeFit: 4,
     discoveryPotential: 5,
-    nostalgiaPotential: 2,
-    personalRating: 4,
+    quality: 2,
+    replayability: 4,
     notes: 'Newer entry, leans on discovery. Adrianne Lenker doing what Adrianne Lenker does — feels like a contender on theme but I keep coming back to whether the production reads on a small speaker.',
     weightedScore: 3.95,
   };

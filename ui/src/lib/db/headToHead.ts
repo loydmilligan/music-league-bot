@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { H2HCandidate, H2HMatch, H2HState } from '../types.js';
-import { computeScore } from '../scoring.js';
+import { computeUnicardScore } from '../scoring.js';
 import { getSettings } from './settings.js';
 
 const ELIGIBLE_STATUS = 'reviewing';
@@ -34,11 +34,11 @@ export function getH2HCandidates(db: Database.Database, roundId: number): H2HCan
   `).all(roundId, ELIGIBLE_STATUS) as any[];
   const weights = getSettings(db);
   return rows
-    .map(r => candidateRow(r, computeScore({
-      discoveryPotential: r.discovery_potential,
+    .map(r => candidateRow(r, computeUnicardScore({
+      discovery: r.discovery_potential,
       themeFit: r.theme_fit,
-      personalRating: r.personal_rating,
-      nostalgiaPotential: r.nostalgia_potential,
+      quality: r.quality,
+      replayability: r.replayability,
     }, weights)))
     .sort((a, b) => (b.weightedScore ?? -Infinity) - (a.weightedScore ?? -Infinity));
 }
