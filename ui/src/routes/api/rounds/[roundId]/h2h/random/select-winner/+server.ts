@@ -14,6 +14,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
   try {
     return json(selectH2HWinner(db, roundId, body.winnerSongId));
   } catch (e) {
-    return json({ message: (e as Error).message }, { status: 400 });
+    throw error(400, (e as Error).message);
   }
 };

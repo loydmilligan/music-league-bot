@@ -74,6 +74,29 @@ it('POST select-winner advances the matchup', async () => {
 
 it('POST select-winner with an invalid id returns 400', async () => {
   await startPost(mkEvent(roundId));
-  const res = await selectWinnerPost(mkEvent(roundId, { winnerSongId: 999999 }));
-  expect(res.status).toBe(400);
+  await expect(selectWinnerPost(mkEvent(roundId, { winnerSongId: 999999 }))).rejects.toMatchObject({ status: 400 });
+});
+
+it('POST reshuffle with fewer than 2 active songs (excluding current pair) returns 400', async () => {
+  // Start a matchup (picks 2 from 5, leaving 3 in the pool)
+  const started = await (await startPost(mkEvent(roundId))).json();
+
+  // Get all active songs
+  const allSongs = db
+    .prepare(`SELECT id FROM research_songs WHERE round_id = ? AND removed_reason IS NULL`)
+    .all(roundId) as { id: number }[];
+
+  // Remove all songs except the current pair
+  const currentPair = [started.songAId, started.songBId];
+  for (const song of allSongs) {
+    if (!currentPair.includes(song.id)) {
+      db.prepare(`UPDATE research_songs SET removed_reason = 'h2h_loss', removed_at = ? WHERE id = ?`).run(
+        new Date().toISOString(),
+        song.id,
+      );
+    }
+  }
+
+  // Try to reshuffle — should fail because only the current pair remains
+  await expect(reshufflePost(mkEvent(roundId))).rejects.toMatchObject({ status: 400 });
 });

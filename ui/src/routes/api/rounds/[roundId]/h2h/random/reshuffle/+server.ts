@@ -12,6 +12,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
   try {
     return json(reshuffleRandomMatchup(db, roundId));
   } catch (e) {
-    return json({ message: (e as Error).message }, { status: 400 });
+    throw error(400, (e as Error).message);
   }
 };
