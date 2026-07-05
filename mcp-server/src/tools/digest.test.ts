@@ -3,7 +3,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../httpClient.js', () => ({ botUiFetch: vi.fn() }));
 
 import { botUiFetch } from '../httpClient.js';
-import { checkDigestReadiness, generateDigest } from './digest.js';
+import { checkDigestReadiness, generateDigest, importRoundData } from './digest.js';
 
 beforeEach(() => { vi.mocked(botUiFetch).mockReset(); });
 
@@ -36,4 +36,11 @@ it('generateDigest passes through sections/pastedChat/recap when given', async (
       recap: { enabled: true, final: false },
     }),
   });
+});
+
+it('importRoundData POSTs to the import-export-zip route', async () => {
+  vi.mocked(botUiFetch).mockResolvedValue({ ok: true, imported: { submissions: 12, votes: 40, voteComments: 8 } });
+  const result = await importRoundData({ roundId: 5 });
+  expect(botUiFetch).toHaveBeenCalledWith('/api/digest/5/import-export-zip', { method: 'POST' });
+  expect(result.ok).toBe(true);
 });

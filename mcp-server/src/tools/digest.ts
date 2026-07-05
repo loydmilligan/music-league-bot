@@ -26,6 +26,17 @@ export async function generateDigest(input: GenerateDigestInput) {
   return botUiFetch(`/api/digest/${roundId}/draft`, { method: 'POST', body: JSON.stringify(genParams) });
 }
 
+export interface ImportRoundDataResult {
+  ok: boolean;
+  imported?: { submissions: number; votes: number; voteComments: number };
+  reason?: string;
+  stage?: 'auth' | 'cli' | 'download' | 'import' | 'other';
+}
+
+export async function importRoundData(input: { roundId: number }): Promise<ImportRoundDataResult> {
+  return botUiFetch(`/api/digest/${input.roundId}/import-export-zip`, { method: 'POST' });
+}
+
 const sectionShape = z.object({
   id: z.string(),
   enabled: z.boolean().optional(),
@@ -52,5 +63,12 @@ export function registerDigestTools(server: McpServer): void {
       recap: z.object({ enabled: z.boolean(), final: z.boolean().optional() }).optional(),
     },
     async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await generateDigest(input)) }] }),
+  );
+
+  server.tool(
+    'import_round_data',
+    "Trigger a host-side CLI export+import of a round's submissions/votes/vote-comments from Music League — the same action as the app's \"Import from CLI\" button. Use when check_digest_readiness shows Submissions/Votes/Vote comments failing. Can take noticeably longer than other tools (shells out to a CLI process on the host). A stage:'auth' failure means Music League auth has expired and needs manual re-login — this tool cannot self-heal that case.",
+    { roundId: z.number().int() },
+    async (input) => ({ content: [{ type: 'text', text: JSON.stringify(await importRoundData(input)) }] }),
   );
 }
