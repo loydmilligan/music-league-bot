@@ -1,0 +1,59 @@
+{
+  "tool": "claude-code",
+  "golden_version": "0.4.0",
+  "features": [
+    "drawio",
+    "playwright",
+    "subagents"
+  ],
+  "bespoke": [
+    {
+      "file": "PSI_INDEX.md",
+      "why": "entry point for project-scoped items"
+    },
+    {
+      "file": "docs/agent-conventions.md",
+      "why": "git-workflow + deploy conventions preserved from pre-ACM CLAUDE.md (P3/P7)"
+    },
+    {
+      "file": "docs/dev-loop-playbook.md",
+      "why": "full prod deploy playbook (P3/P7)"
+    },
+    {
+      "file": ".claude/skills/musicleague-cli",
+      "why": "custom musicleague-cli skill (P3, machine-local)"
+    },
+    {
+      "file": "mcp-server",
+      "why": "project stdio MCP server; overlay launch config (P2/P3)"
+    },
+    {
+      "file": "my-agent",
+      "why": "launch-your-agent build kit (P3)"
+    },
+    {
+      "file": "tools",
+      "why": "bespoke theme-rating tool (P3)"
+    },
+    {
+      "file": "musicleague/agent-harness",
+      "why": "eval/CLI agent harness (P3)"
+    },
+    {
+      "file": ".env",
+      "why": "secrets pointer; value local only (P8)"
+    },
+    {
+      "file": "README.md",
+      "why": "project overview entry point (P3)"
+    },
+    {
+      "file": "QUICKSTART.md",
+      "why": "getting-started guide (P3)"
+    },
+    {
+      "file": "roadmap.md",
+      "why": "project roadmap (P3)"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "music-league": {
+      "command": "node",
+      "args": [
+        "/home/loydmilligan/Projects/music-league-bot/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "BOT_UI_BASE_URL": "${BOT_UI_BASE_URL}",
+        "BOT_UI_API_TOKEN": "${BOT_UI_API_TOKEN}"
+      }
+    }
+  }
+}
