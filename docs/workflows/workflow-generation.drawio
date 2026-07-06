@@ -1,0 +1,388 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="ZFCKKngNQpuGR5s6Glbs">
+    <mxGraphModel dx="1763" dy="707" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1360" pageHeight="2160" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="Digest Generation Flow  (currently manual)  —  /digest/[roundId]" tags="meta" id="title">
+          <mxCell parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=left;verticalAlign=middle;" vertex="1">
+            <mxGeometry height="40" width="900" x="40" y="20" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="LEGEND" tags="meta" id="LG">
+          <mxCell parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b3b3b3;verticalAlign=top;align=left;fontSize=12;fontStyle=1;spacingLeft=8;spacingTop=4;" vertex="1">
+            <mxGeometry height="232" width="340" x="980" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="meta" id="LG1">
+          <mxCell parent="1" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1">
+            <mxGeometry height="20" width="30" x="996" y="102" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Manual admin action" tags="meta" id="LG1t">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1">
+            <mxGeometry height="20" width="280" x="1034" y="102" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="meta" id="LG2">
+          <mxCell parent="1" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1">
+            <mxGeometry height="20" width="30" x="996" y="130" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="System step (automatic within request)" tags="meta" id="LG2t">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1">
+            <mxGeometry height="20" width="280" x="1034" y="130" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="meta" id="LG3">
+          <mxCell parent="1" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
+            <mxGeometry height="20" width="30" x="996" y="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="LLM call (Claude / OpenRouter)" tags="meta" id="LG3t">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1">
+            <mxGeometry height="20" width="280" x="1034" y="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="meta" id="LG4">
+          <mxCell parent="1" style="rhombus;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
+            <mxGeometry height="20" width="30" x="996" y="186" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Decision / branch" tags="meta" id="LG4t">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1">
+            <mxGeometry height="20" width="280" x="1034" y="186" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="meta" id="LG5">
+          <mxCell parent="1" style="rounded=1;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;" vertex="1">
+            <mxGeometry height="20" width="30" x="996" y="214" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Manual — TARGET TO AUTOMATE" tags="meta" id="LG5t">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;" vertex="1">
+            <mxGeometry height="20" width="290" x="1034" y="214" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="- - - -&gt;  loop / iterate back" tags="meta" id="LG6">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;fontColor=#666666;" vertex="1">
+            <mxGeometry height="20" width="320" x="996" y="244" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="TAG AXES  (Edit ▸ Find/Replace ▸ Tags  to show / hide / select)&#xa;• section: Prepare · Generate · Draft · Refine · FInalizeAndExport · Share&#xa;• type: manual · system · llm · decision · terminal&#xa;• automation: auto-done · auto-target · auto-hard · keep-manual&#xa;• integration: whatsapp · spotify · llm-api · ml-cli · db · puppeteer&#xa;• checkpoint (human gate) · optional · llm-cost · flaky · loop&#xa;Box id = custom data field &#39;ref&#39; (shown via %ref%) — edit via Ctrl/Cmd+M" tags="meta" id="TAGLG">
+          <mxCell parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#b3b3b3;verticalAlign=top;align=left;fontSize=11;spacingLeft=8;spacingTop=6;" vertex="1">
+            <mxGeometry height="180" width="340" x="980" y="318" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="1 · PREPARE" tags="Prepare meta" id="band1">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;rotation=0;" vertex="1">
+            <mxGeometry height="24" width="140" x="30" y="180" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="2 · GENERATE&#xa;(decisions)" tags="Generate meta" id="band2">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;" vertex="1">
+            <mxGeometry height="34" width="140" x="30" y="520" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="3 · DRAFT&#xa;(system + LLM)" tags="Draft meta" id="band3">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;" vertex="1">
+            <mxGeometry height="34" width="140" x="30" y="880" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="4 · REFINE&#xa;review / iterate" tags="Refine meta" id="band4">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;" vertex="1">
+            <mxGeometry height="34" width="140" x="30" y="1330" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="5 · FINALIZE&#xa;&amp; EXPORT" tags="meta" id="band5">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;" vertex="1">
+            <mxGeometry height="34" width="140" x="30" y="1700" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="6 · SHARE" tags="Share meta" id="band6">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#777777;" vertex="1">
+            <mxGeometry height="24" width="140" x="30" y="2000" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;div&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;%ref%&lt;/b&gt;&lt;/div&gt;Admin opens /digest/[roundId]" tags="Prepare manual auto-target Draft Generate Refine Share" ref="1.1.1" placeholders="1" id="start">
+          <mxCell parent="1" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#e8e8e8;strokeColor=#666666;fontSize=12;fontStyle=0;placeholders=1;" vertex="1">
+            <mxGeometry height="54" width="280" x="298" y="78" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System runs 6 readiness checks&#xa;metadata · submissions · votes · vote comments · chat mentions · album art" tags="Prepare system auto-done db spotify" ref="1.2.1" placeholders="1" id="pchecks">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="74" width="360" x="258" y="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;All checks pass?" tags="Prepare decision auto-done" ref="1.3.1" placeholders="1" id="dpass">
+          <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;placeholders=1;" vertex="1">
+            <mxGeometry height="90" width="150" x="363" y="268" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: Import from CLI&#xa;POST import-export-zip&#xa;→ downloads export.zip, imports subs/votes/comments" tags="Prepare manual auto-target optional ml-cli db" ref="1.3.2" placeholders="1" id="pimport">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;placeholders=1;" vertex="1">
+            <mxGeometry height="111" width="267" x="581" y="257.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: click &quot;Generate draft…&quot;" tags="Prepare manual auto-target" ref="1.4.1" placeholders="1" id="pgen">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="56" width="260" x="308" y="399" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: Generate modal — decisions&#xa;• enable LLM sections: podium · villain · flow · consensus · quotes · chat&#xa;• per-section: style tags (mean/nice/funny/factual…) + context + layout (textual/visual/both)&#xa;• include data sections: standings · stats · tastemaker · next-round&#xa;• season recap?  ·  regenerate themed avatars?" tags="Generate manual auto-hard" ref="2.1.1" placeholders="1" id="gdec">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;placeholders=1;" vertex="1">
+            <mxGeometry height="140" width="440" x="220" y="488" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: paste WhatsApp chat into textarea&#xa;(feeds the chat section&#39;s LLM prompt; overrides flaky auto-capture)" tags="Generate manual auto-hard whatsapp flaky" ref="2.2.1" placeholders="1" id="gpaste">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;fontSize=11;align=left;verticalAlign=middle;spacingLeft=8;placeholders=1;" vertex="1">
+            <mxGeometry height="66" width="440" x="218" y="652" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: click Generate → POST /draft" tags="Generate manual auto-target" ref="2.3.1" placeholders="1" id="gsubmit">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="54" width="260" x="308" y="745" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System: gatherRoundData — submissions, votes + comments, chat, rel-context, prior-round bundle" tags="Draft system auto-done db" ref="3.1.1" placeholders="1" id="drgather">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="360" x="258" y="822" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;LLM (Claude Sonnet 4.5 via OpenRouter)&#xa;generate sections: podium · villain · flow · consensus · quotes · chat&#xa;(+ optional cover A/B candidates) · cost logged" tags="Draft llm auto-done llm-api llm-cost" ref="3.2.1" placeholders="1" id="drllm">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="90" width="360" x="258" y="910" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System: compute data sections — standings · stats · tastemaker · next-round" tags="Draft system auto-done db lastfm" ref="3.3.1" placeholders="1" id="drdata">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="60" width="360" x="258" y="1020" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System: writeDraft → digest_drafts + digest_sections; page → Refine" tags="Draft system auto-done db" ref="3.4.1" placeholders="1" id="drwrite">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="60" width="360" x="258" y="1107" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;Standings mismatch vs gospel?" tags="Draft decision auto-done optional" ref="3.5.1" placeholders="1" id="drecon">
+          <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;placeholders=1;" vertex="1">
+            <mxGeometry height="90" width="170" x="142" y="1197" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: Reconciliation modal&#xa;adopt computed / keep stored gospel" tags="Draft manual checkpoint optional keep-manual" ref="3.5.2" placeholders="1" id="rrecon">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacingLeft=6;placeholders=1;" vertex="1">
+            <mxGeometry height="80" width="320" x="744" y="1202" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: review rendered digest (.dg-export)" tags="Refine manual checkpoint keep-manual" ref="4.1.1" placeholders="1" id="rfreview">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="56" width="320" x="368" y="1266" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: review &amp; iterate (loop)&#xa;• ↻ Regenerate whole draft   → LLM&#xa;• ↻ Per-section regen — steer chips + instructions   → LLM&#xa;• Pick cover A/B (original vs alt take)&#xa;• ✎ Inline edit prose (no LLM) · Lock / Exclude / Reorder&#xa;• ✎ Edit standings figures · next-round theme &amp; deadlines" tags="Refine manual auto-hard optional llm-api llm-cost" ref="4.2.1" placeholders="1" id="rfiter">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;placeholders=1;" vertex="1">
+            <mxGeometry height="162" width="460" x="298" y="1342" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;Happy with draft?" tags="Refine decision checkpoint keep-manual" ref="4.3.1" placeholders="1" id="dhappy">
+          <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;placeholders=1;" vertex="1">
+            <mxGeometry height="90" width="170" x="443" y="1524" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;Export format?" tags="decision auto-target" ref="5.1.1" placeholders="1" id="dformat">
+          <mxCell parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;placeholders=1;" vertex="1">
+            <mxGeometry height="96" width="180" x="613" y="1643" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: Finalize &amp; export&#xa;(PDF · PNG · Wide · Sections) → POST /finalize" tags="manual auto-target puppeteer" ref="5.2.1" placeholders="1" id="fnfinal">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacingLeft=6;placeholders=1;" vertex="1">
+            <mxGeometry height="72" width="320" x="180" y="1655" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System: Puppeteer render · set finalized_at (idempotent) · stamp sections &#39;passed&#39; · LLM rel-context update (optional diff modal)" tags="system auto-done puppeteer llm-api llm-cost db" ref="5.3.1" placeholders="1" id="fnsys">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=middle;spacingLeft=6;placeholders=1;" vertex="1">
+            <mxGeometry height="100" width="320" x="180" y="1744" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;System: browser auto-downloads file(s)" tags="system auto-done" ref="5.4.1" placeholders="1" id="fndl">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="52" width="260" x="210" y="1864" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: Publish share link&#xa;POST export?format=html → renders interactive HTML&#xa;→ digest.mattmariani.com/d/{slug} (re-publish overwrites in place)" tags="manual auto-target puppeteer" ref="5.2.2" placeholders="1" id="fnpub">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacingLeft=6;placeholders=1;" vertex="1">
+            <mxGeometry height="92" width="360" x="896" y="1645" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;MANUAL: ⧉ Copy share URL" tags="manual auto-target" ref="5.3.2" placeholders="1" id="fncopy">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="56" width="300" x="843" y="1860" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;&#xa;⚠ MANUAL — TARGET TO AUTOMATE&#xa;Open WhatsApp, paste the PNG / PDF or share URL into the league chat" tags="Share manual auto-target whatsapp" ref="6.1.1" placeholders="1" id="shareend">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontSize=12;fontStyle=0;align=center;verticalAlign=middle;placeholders=1;" vertex="1">
+            <mxGeometry height="92" width="440" x="460" y="1968" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Prepare" id="e1">
+          <mxCell edge="1" parent="1" source="start" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="pchecks">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Prepare" id="e2">
+          <mxCell edge="1" parent="1" source="pchecks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="dpass">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="no" tags="Prepare" id="e3">
+          <mxCell edge="1" parent="1" source="dpass" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#b85450;strokeWidth=1.5;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="pimport">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="re-check" tags="Prepare loop" id="e4">
+          <mxCell edge="1" parent="1" source="pimport" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#b85450;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="pchecks">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="yes" tags="Prepare" id="e5">
+          <mxCell edge="1" parent="1" source="dpass" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;" target="pgen">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Generate" id="e6">
+          <mxCell edge="1" parent="1" source="pgen" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="gdec">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Generate" id="e7">
+          <mxCell edge="1" parent="1" source="gdec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="gpaste">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Generate" id="e8">
+          <mxCell edge="1" parent="1" source="gpaste" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="gsubmit">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Draft" id="e9">
+          <mxCell edge="1" parent="1" source="gsubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="drgather">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Draft" id="e10">
+          <mxCell edge="1" parent="1" source="drgather" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="drllm">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Draft" id="e11">
+          <mxCell edge="1" parent="1" source="drllm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="drdata">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Draft" id="e12">
+          <mxCell edge="1" parent="1" source="drdata" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="drwrite">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Draft" id="e13">
+          <mxCell edge="1" parent="1" source="drwrite" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="drecon">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="yes" tags="Draft" id="e14">
+          <mxCell edge="1" parent="1" source="drecon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="rrecon">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="adopt / keep" tags="Refine" id="e15">
+          <mxCell edge="1" parent="1" source="rrecon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#333333;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="rfreview">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="no" tags="Refine" id="e16">
+          <mxCell edge="1" parent="1" source="drecon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;" target="rfreview">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Refine" id="e17">
+          <mxCell edge="1" parent="1" source="rfreview" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="rfiter">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Refine" id="e18">
+          <mxCell edge="1" parent="1" source="rfiter" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="dhappy">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="no · iterate" tags="Refine loop" id="e19">
+          <mxCell edge="1" parent="1" source="dhappy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#d79b00;strokeWidth=1.5;fontSize=10;fontColor=#a06000;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="rfreview">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="269" y="1574" />
+                <mxPoint x="269" y="1294" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="yes" tags="" id="e20">
+          <mxCell edge="1" parent="1" source="dhappy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;" target="dformat">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="PDF / PNG / &lt;br&gt;Wide / Sections" tags="" id="e21">
+          <mxCell edge="1" parent="1" source="dformat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" target="fnfinal">
+            <mxGeometry relative="1" x="-0.1845" as="geometry">
+              <mxPoint as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Share (HTML)" tags="" id="e22">
+          <mxCell edge="1" parent="1" source="dformat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="fnpub">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="" id="e23">
+          <mxCell edge="1" parent="1" source="fnfinal" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="fnsys">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="" id="e24">
+          <mxCell edge="1" parent="1" source="fnsys" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="fndl">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="" id="e25">
+          <mxCell edge="1" parent="1" source="fnpub" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;" target="fncopy">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Share" id="e26">
+          <mxCell edge="1" parent="1" source="fndl" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="shareend">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" tags="Share" id="e27">
+          <mxCell edge="1" parent="1" source="fncopy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="shareend">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="↩ Unfinalize / re-export → iterate" tags="loop" id="e28">
+          <mxCell edge="1" parent="1" source="shareend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#d79b00;strokeWidth=1.5;fontSize=10;fontColor=#a06000;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" target="rfiter">
+            <mxGeometry relative="1" x="-0.0127" y="54" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="161" y="2014" />
+                <mxPoint x="161" y="1504" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Sources: ui/src/routes/digest/[roundId]/+page.svelte · GenerateModal.svelte · RegenModal.svelte · ui/src/lib/digest/llm.ts (Claude/OpenRouter) · api/digest/[roundId]/{prepare,draft,regenerate,sections,standings,next-round,finalize,export,unfinalize,import-export-zip}" tags="meta" id="footnote">
+          <mxCell parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#888888;fontStyle=2;" vertex="1">
+            <mxGeometry height="36" width="1280" x="40" y="2080" as="geometry" />
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

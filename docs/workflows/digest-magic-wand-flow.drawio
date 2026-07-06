@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="magic-wand" id="magicwand01">
+    <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1240" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="Digest — &lt;b&gt;Magic-Wand Flow&lt;/b&gt; (ideal: fully automated, LLM-edited, top-tier, zero human touch)" tags="meta" id="mw_title">
+          <mxCell parent="1" style="text;html=1;fontSize=18;fontStyle=0;align=left;verticalAlign=middle;" vertex="1">
+            <mxGeometry height="40" width="820" x="40" y="24" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Legend:  🔵 trigger   🟢 automated step   🟣 LLM   🟦 outcome" tags="meta" id="mw_legend">
+          <mxCell parent="1" style="text;html=1;fontSize=11;align=left;verticalAlign=middle;fontColor=#666666;" vertex="1">
+            <mxGeometry height="20" width="820" x="40" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Round ends — Music League &quot;Votes Are In&quot; email arrives" tags="magic-wand trigger" ref="1" placeholders="1" id="mw1">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="100" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Phase auto-iterates in mlbot  (voting → complete)" tags="magic-wand auto" ref="2" placeholders="1" id="mw2">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="196" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Round data auto-captured — submissions · votes · vote comments" tags="magic-wand auto" ref="3" placeholders="1" id="mw3">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="292" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Round chat auto-captured — WhatsApp window for the round" tags="magic-wand auto whatsapp" ref="4" placeholders="1" id="mw4">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="388" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Song metadata auto-enriched — YouTube-Music · Last.fm · audio · lyrics" tags="magic-wand auto" ref="5" placeholders="1" id="mw5">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="484" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Digest auto-generated — LLM drafts all sections in the league's learned house style" tags="magic-wand llm" ref="6" placeholders="1" id="mw6">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="580" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  LLM self-critiques &amp; edits to top-tier — multi-pass, no human" tags="magic-wand llm" ref="7" placeholders="1" id="mw7">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="676" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Standings &amp; data sections auto-reconciled — gospel verified" tags="magic-wand auto" ref="8" placeholders="1" id="mw8">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="772" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Digest auto-finalized — share card + interactive HTML published" tags="magic-wand auto" ref="9" placeholders="1" id="mw9">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="868" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;b&gt;%ref%&lt;/b&gt;  Auto-posted to the league's WhatsApp chat with share card 🎉" tags="magic-wand outcome whatsapp" ref="10" placeholders="1" id="mw10">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=12;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=10;placeholders=1;" vertex="1">
+            <mxGeometry height="64" width="460" x="220" y="964" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="mwe1" edge="1" parent="1" source="mw1" target="mw2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe2" edge="1" parent="1" source="mw2" target="mw3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe3" edge="1" parent="1" source="mw3" target="mw4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe4" edge="1" parent="1" source="mw4" target="mw5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe5" edge="1" parent="1" source="mw5" target="mw6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe6" edge="1" parent="1" source="mw6" target="mw7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe7" edge="1" parent="1" source="mw7" target="mw8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe8" edge="1" parent="1" source="mw8" target="mw9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="mwe9" edge="1" parent="1" source="mw9" target="mw10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#333333;strokeWidth=1.5;"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
