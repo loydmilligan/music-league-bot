@@ -54,5 +54,19 @@ bside/public/*/
 
 # Taste Waveform design handoff package (large; not source)
 taste-waveform-package/
+/taste-waveform-package.zip
 docs/design_handoff_sonic_signature/*.png
 docs/design_handoff_sonic_signature/*.html
+
+# Local avatar exports — avatars are served from R2 (see ui api/avatars/*), not the repo.
+/avatars/
+
+# Unzipped design-handoff / prototype dumps (curated briefs live in docs/design-briefs/).
+/chat-content-handoff/
+docs/design_handoff_universal_songcard/
+docs/racecard/
+docs/racecard-mobile/
+
+# Design-handoff binaries & generated digest exports.
+docs/design/*.zip
+docs/r-*-digest-*.pdf
