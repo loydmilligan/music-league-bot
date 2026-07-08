@@ -6,6 +6,7 @@ import {
   normalizeGenre,
   topGenres,
   tornadoBars,
+  aggregateGenre,
   DRIFT_W,
   DRIFT_H,
   type Matrix,
@@ -136,6 +137,24 @@ describe('topGenres', () => {
     const sub = { rock: 5, pop: 1, metal: 0 };
     const vote = { 'hip-hop': 4, pop: 2, metal: 1 };
     expect(topGenres(sub, vote, 3)).toEqual(['rock', 'hip-hop', 'pop']);
+  });
+});
+
+describe('aggregateGenre', () => {
+  it('sums submit/vote counts and totals across players', () => {
+    const agg = aggregateGenre({
+      A: { submitCounts: { rock: 2 }, submitTotal: 5, voteCounts: { pop: 1 }, voteTotal: 3 },
+      B: { submitCounts: { rock: 1, pop: 1 }, submitTotal: 4, voteCounts: { pop: 2 }, voteTotal: 6 },
+    });
+    expect(agg).toEqual({
+      submitCounts: { rock: 3, pop: 1 },
+      submitTotal: 9,
+      voteCounts: { pop: 3 },
+      voteTotal: 9,
+    });
+  });
+  it('is empty for no players', () => {
+    expect(aggregateGenre({})).toEqual({ submitCounts: {}, submitTotal: 0, voteCounts: {}, voteTotal: 0 });
   });
 });
 

@@ -1,14 +1,11 @@
 <script lang="ts">
   // D3 — diverging/tornado genre bars: submit-share (accent, left) vs vote-share
   // (sky, right) per normalized top genre. Player picked from the roster.
-  import { topGenres, tornadoBars } from '$lib/league-research/viz';
+  import { topGenres, tornadoBars, aggregateGenre, type GenreTally } from '$lib/league-research/viz';
 
-  interface PlayerGenre {
-    submitCounts: Record<string, number>;
-    submitTotal: number;
-    voteCounts: Record<string, number>;
-    voteTotal: number;
-  }
+  // Sentinel player value for the league-wide aggregate (kept in sync with the
+  // reset guard in LeagueResearchTab.svelte).
+  const ALL_PLAYERS = 'All players';
 
   let {
     roster,
@@ -17,13 +14,14 @@
     onselectplayer,
   }: {
     roster: string[];
-    genreByPlayer: Record<string, PlayerGenre>;
+    genreByPlayer: Record<string, GenreTally>;
     player: string;
     onselectplayer: (p: string) => void;
   } = $props();
 
+  const EMPTY: GenreTally = { submitCounts: {}, submitTotal: 0, voteCounts: {}, voteTotal: 0 };
   const g = $derived(
-    genreByPlayer[player] ?? { submitCounts: {}, submitTotal: 0, voteCounts: {}, voteTotal: 0 },
+    player === ALL_PLAYERS ? aggregateGenre(genreByPlayer) : (genreByPlayer[player] ?? EMPTY),
   );
   const tags = $derived(topGenres(g.submitCounts, g.voteCounts, 8));
   const bars = $derived(tornadoBars(tags, g.submitCounts, g.submitTotal, g.voteCounts, g.voteTotal));
@@ -37,6 +35,7 @@
       value={player}
       onchange={(e) => onselectplayer(e.currentTarget.value)}
     >
+      <option value={ALL_PLAYERS}>{ALL_PLAYERS}</option>
       {#each roster as p}
         <option value={p}>{p}</option>
       {/each}

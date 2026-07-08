@@ -54,7 +54,8 @@
       const d: LeagueResearch = await res.json();
       if (token !== loadToken) return; // a newer scope won the race
       data = d;
-      if (!d.roster.includes(genrePlayer)) genrePlayer = d.roster[0] ?? '';
+      // Keep the current pick when possible; 'All players' is a valid non-roster sentinel.
+      if (genrePlayer !== 'All players' && !d.roster.includes(genrePlayer)) genrePlayer = d.roster[0] ?? '';
     } catch (e) {
       if (token !== loadToken) return;
       error = e instanceof Error ? e.message : 'Failed to load league research';

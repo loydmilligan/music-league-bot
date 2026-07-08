@@ -150,6 +150,25 @@ export function topGenres(
     .slice(0, n);
 }
 
+export interface GenreTally {
+  submitCounts: Record<string, number>;
+  submitTotal: number;
+  voteCounts: Record<string, number>;
+  voteTotal: number;
+}
+
+/** Sum every player's genre tallies into one league-wide "All players" tally. */
+export function aggregateGenre(byPlayer: Record<string, GenreTally>): GenreTally {
+  const out: GenreTally = { submitCounts: {}, submitTotal: 0, voteCounts: {}, voteTotal: 0 };
+  for (const g of Object.values(byPlayer)) {
+    out.submitTotal += g.submitTotal;
+    out.voteTotal += g.voteTotal;
+    for (const [k, v] of Object.entries(g.submitCounts)) out.submitCounts[k] = (out.submitCounts[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(g.voteCounts)) out.voteCounts[k] = (out.voteCounts[k] ?? 0) + v;
+  }
+  return out;
+}
+
 export interface TornadoBar {
   label: string;
   submitPct: number;

@@ -57,10 +57,19 @@
 <style>
   .lr-mx-scroll {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* .dgA-matrix ships overflow:hidden (rounded-corner clip) which would clip the
+     wide grid instead of letting the wrapper scroll. Let it grow to content width
+     so .lr-mx-scroll gets real horizontal overflow to scroll on mobile. */
+  .lr-mx-scroll :global(.dgA-matrix) {
+    width: max-content;
+    max-width: none;
   }
   .lr-mx-grid {
     display: grid;
-    min-width: 520px;
+    width: max-content;
+    min-width: 100%;
   }
   /* Compact the shared .dgA-mx-cell for a wide roster (scoped → wins specificity). */
   .lr-mx-grid :global(.dgA-mx-cell) {
