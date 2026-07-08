@@ -1,0 +1,793 @@
+season,round_number,voter,submitter,points,title,artist,submitted_obscurity,submitted_energy_pct,submitted_top_tag,spotify_uri
+1,1,"Jonathan Black",Mashew,1,"Leaving The Light","Genesis Owusu",68,86,,spotify:track:35nOLWeyoXbZvhcczCzQit
+1,1,"Jonathan Black",Mashew,1,DEViL,IDK,77,98,,spotify:track:5Llanvs8zPL8f6HMY9WWf8
+1,1,"Jonathan Black","Michael Layous",-1,"Hollywood Baby","100 gecs",33,100,hyperpop,spotify:track:0oigSejhoNen2EdNAIFcm5
+1,1,"Jonathan Black","Michael Layous",0,"End of Beginning",Djo,1,69,metalcore,spotify:track:3qhlB30KknSejmIvZZLjOD
+1,1,"Jonathan Black","Voltron’s YoungLion",1,"Ceiling Granny",Mogwai,77,87,,spotify:track:4EVg8veaPIgAx3m2QioPdV
+1,1,"Jonathan Black","Voltron’s YoungLion",1,"Back To Oz","Sufjan Stevens, Angelo De Augustine",86,70,,spotify:track:6s0F09N7jp4wSqN8vVgMQR
+1,1,"Jonathan Black",jac,1,"Seanchaí","The Scratch",88,50,,spotify:track:57c0n9yCY10cZ30tXSrxOi
+1,1,Mashew,"Jonathan Black",-1,"This Is A Photograph","Kevin Morby",73,76,,spotify:track:1hj8os1Xxiuo95atpJzfCp
+1,1,Mashew,"Jonathan Black",1,"new body rhumba (from the film White Noise)","LCD Soundsystem",65,65,,spotify:track:2iqA5Na5vlo0bnZUf8KT1N
+1,1,Mashew,"Michael Layous",1,"Hollywood Baby","100 gecs",33,100,hyperpop,spotify:track:0oigSejhoNen2EdNAIFcm5
+1,1,Mashew,"Voltron’s YoungLion",2,"Ceiling Granny",Mogwai,77,87,,spotify:track:4EVg8veaPIgAx3m2QioPdV
+1,1,Mashew,jac,1,"Seanchaí","The Scratch",88,50,,spotify:track:57c0n9yCY10cZ30tXSrxOi
+1,1,"Michael Layous",Mashew,1,DEViL,IDK,77,98,,spotify:track:5Llanvs8zPL8f6HMY9WWf8
+1,1,"Michael Layous",Tj,1,MYSTERY,Turnstile,37,66,,spotify:track:5iXnD2VizcAbErpkcuNQ6I
+1,1,"Michael Layous",Tj,-1,"One Of Those Days","Dirty Heads",91,84,,spotify:track:6dsTMRIpvObTocRwTzf4Uv
+1,1,"Michael Layous","Voltron’s YoungLion",1,"Ceiling Granny",Mogwai,77,87,,spotify:track:4EVg8veaPIgAx3m2QioPdV
+1,1,"Michael Layous","Voltron’s YoungLion",1,"Back To Oz","Sufjan Stevens, Angelo De Augustine",86,70,,spotify:track:6s0F09N7jp4wSqN8vVgMQR
+1,1,"Michael Layous",jac,1,DArkSide,"Bring Me The Horizon",24,94,metalcore,spotify:track:7mczLeiFeYKRb7vtiPjuMb
+1,1,Tj,"Jonathan Black",1,"This Is A Photograph","Kevin Morby",73,76,,spotify:track:1hj8os1Xxiuo95atpJzfCp
+1,1,Tj,"Jonathan Black",1,"new body rhumba (from the film White Noise)","LCD Soundsystem",65,65,,spotify:track:2iqA5Na5vlo0bnZUf8KT1N
+1,1,Tj,"Michael Layous",-1,"Hollywood Baby","100 gecs",33,100,hyperpop,spotify:track:0oigSejhoNen2EdNAIFcm5
+1,1,Tj,"Voltron’s YoungLion",1,"Ceiling Granny",Mogwai,77,87,,spotify:track:4EVg8veaPIgAx3m2QioPdV
+1,1,Tj,"Voltron’s YoungLion",1,"Back To Oz","Sufjan Stevens, Angelo De Augustine",86,70,,spotify:track:6s0F09N7jp4wSqN8vVgMQR
+1,1,Tj,jac,1,"Seanchaí","The Scratch",88,50,,spotify:track:57c0n9yCY10cZ30tXSrxOi
+1,1,"Voltron’s YoungLion","Jonathan Black",1,"This Is A Photograph","Kevin Morby",73,76,,spotify:track:1hj8os1Xxiuo95atpJzfCp
+1,1,"Voltron’s YoungLion","Jonathan Black",1,"new body rhumba (from the film White Noise)","LCD Soundsystem",65,65,,spotify:track:2iqA5Na5vlo0bnZUf8KT1N
+1,1,"Voltron’s YoungLion",Mashew,1,DEViL,IDK,77,98,,spotify:track:5Llanvs8zPL8f6HMY9WWf8
+1,1,"Voltron’s YoungLion","Michael Layous",0,"Hollywood Baby","100 gecs",33,100,hyperpop,spotify:track:0oigSejhoNen2EdNAIFcm5
+1,1,"Voltron’s YoungLion",Tj,1,MYSTERY,Turnstile,37,66,,spotify:track:5iXnD2VizcAbErpkcuNQ6I
+1,1,"Voltron’s YoungLion",jac,1,"Seanchaí","The Scratch",88,50,,spotify:track:57c0n9yCY10cZ30tXSrxOi
+1,1,"Voltron’s YoungLion",jac,-1,DArkSide,"Bring Me The Horizon",24,94,metalcore,spotify:track:7mczLeiFeYKRb7vtiPjuMb
+1,1,jac,"Jonathan Black",-1,"This Is A Photograph","Kevin Morby",73,76,,spotify:track:1hj8os1Xxiuo95atpJzfCp
+1,1,jac,Mashew,1,DEViL,IDK,77,98,,spotify:track:5Llanvs8zPL8f6HMY9WWf8
+1,1,jac,"Michael Layous",1,"Hollywood Baby","100 gecs",33,100,hyperpop,spotify:track:0oigSejhoNen2EdNAIFcm5
+1,1,jac,Tj,1,MYSTERY,Turnstile,37,66,,spotify:track:5iXnD2VizcAbErpkcuNQ6I
+1,1,jac,Tj,0,"One Of Those Days","Dirty Heads",91,84,,spotify:track:6dsTMRIpvObTocRwTzf4Uv
+1,1,jac,"Voltron’s YoungLion",1,"Ceiling Granny",Mogwai,77,87,,spotify:track:4EVg8veaPIgAx3m2QioPdV
+1,1,jac,"Voltron’s YoungLion",1,"Back To Oz","Sufjan Stevens, Angelo De Augustine",86,70,,spotify:track:6s0F09N7jp4wSqN8vVgMQR
+1,1,jac,jac,0,DArkSide,"Bring Me The Horizon",24,94,metalcore,spotify:track:7mczLeiFeYKRb7vtiPjuMb
+1,2,"Jonathan Black",Mashew,-1,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,"Jonathan Black","Philip Chapin",1,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,"Jonathan Black","Sarah S",1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,"Jonathan Black",Tj,2,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,"Jonathan Black","Voltron’s YoungLion",0,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,"Jonathan Black",jac,1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,"Jonathan Black",missmara,3,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,Mashew,"Jonathan Black",0,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,Mashew,"Philip Chapin",3,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,Mashew,"Sarah S",-1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,Mashew,Tj,1,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,Mashew,"Voltron’s YoungLion",1,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,Mashew,jac,1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,Mashew,missmara,2,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,"Michael Layous","Jonathan Black",1,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,"Michael Layous",Mashew,1,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,"Michael Layous","Philip Chapin",1,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,"Michael Layous",SusieQ,-1,"I Think I'm Going To Hell - Live","My Morning Jacket",76,26,,spotify:track:4geRP2dEYVngPcQR6XGBxF
+1,2,"Michael Layous",Tj,1,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,"Michael Layous","Voltron’s YoungLion",1,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,"Michael Layous",jac,3,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,"Philip Chapin",Mashew,3,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,"Philip Chapin","Sarah S",-1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,"Philip Chapin",Tj,2,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,"Philip Chapin",jac,2,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,"Philip Chapin",missmara,1,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,"Sarah S","Jonathan Black",1,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,"Sarah S",Mashew,1,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,"Sarah S","Philip Chapin",1,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,"Sarah S",SusieQ,-1,"I Think I'm Going To Hell - Live","My Morning Jacket",76,26,,spotify:track:4geRP2dEYVngPcQR6XGBxF
+1,2,"Sarah S",Tj,1,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,"Sarah S",jac,1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,"Sarah S",missmara,3,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,SusieQ,"Jonathan Black",1,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,SusieQ,"Michael Layous",1,"Independence Day","Elliott Smith",39,57,,spotify:track:3pM7gfel0ho7yVJw4KK5Eq
+1,2,SusieQ,"Philip Chapin",2,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,SusieQ,"Sarah S",1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,SusieQ,Tj,1,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,SusieQ,jac,-1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,SusieQ,missmara,2,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,Tj,"Jonathan Black",1,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,Tj,Mashew,3,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,Tj,"Philip Chapin",1,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,Tj,"Voltron’s YoungLion",2,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,Tj,jac,-1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,Tj,missmara,1,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,"Voltron’s YoungLion",Mashew,1,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,"Voltron’s YoungLion","Michael Layous",3,"Independence Day","Elliott Smith",39,57,,spotify:track:3pM7gfel0ho7yVJw4KK5Eq
+1,2,"Voltron’s YoungLion","Philip Chapin",2,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,"Voltron’s YoungLion","Sarah S",-1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,"Voltron’s YoungLion",SusieQ,1,"I Think I'm Going To Hell - Live","My Morning Jacket",76,26,,spotify:track:4geRP2dEYVngPcQR6XGBxF
+1,2,"Voltron’s YoungLion",jac,1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,2,jac,"Jonathan Black",1,"When You're Gone","The Cranberries",30,58,rock,spotify:track:3EXrtClWmgsM7dw75Mw2M1
+1,2,jac,Mashew,1,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,jac,"Michael Layous",1,"Independence Day","Elliott Smith",39,57,,spotify:track:3pM7gfel0ho7yVJw4KK5Eq
+1,2,jac,"Philip Chapin",-1,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,jac,"Sarah S",1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,jac,SusieQ,1,"I Think I'm Going To Hell - Live","My Morning Jacket",76,26,,spotify:track:4geRP2dEYVngPcQR6XGBxF
+1,2,jac,Tj,1,Blink,"88 Fingers Louie",80,61,,spotify:track:2zRfQKGRrDI0RRo7bVamAC
+1,2,jac,"Voltron’s YoungLion",1,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,jac,missmara,1,"French Disko",Stereolab,52,31,,spotify:track:4Zb88sF1Qj778KV5lstVxT
+1,2,missmara,Mashew,3,"Shimmy Shimmy Ya","Ol' Dirty Bastard",40,86,,spotify:track:3ABG1UQTk0eLYUAeWkmfMi
+1,2,missmara,"Philip Chapin",2,"Paranoid Android",Radiohead,2,15,"alternative rock",spotify:track:6LgJvl0Xdtc73RJ1mmpotq
+1,2,missmara,"Sarah S",-1,Sandstorm,Darude,29,15,trance,spotify:track:3dxDj8pDPlIHCIrUPXuCeG
+1,2,missmara,SusieQ,1,"I Think I'm Going To Hell - Live","My Morning Jacket",76,26,,spotify:track:4geRP2dEYVngPcQR6XGBxF
+1,2,missmara,"Voltron’s YoungLion",1,"Crown Of The Valley","Jets To Brazil",71,78,,spotify:track:0ANIURXWEceAlBhklvA2Tg
+1,2,missmara,jac,1,"Mr. Bill Collector","Bone Thugs-N-Harmony",72,59,,spotify:track:26RiiHb1dcwbMRITBuUQGw
+1,3,"Jonathan Black","Michael Layous",1,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,"Jonathan Black","Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,"Jonathan Black","Sarah S",1,Starman,"Seu Jorge",60,65,,spotify:track:1bcoI2VWqABMDhwoZHf5dp
+1,3,"Jonathan Black",SusieQ,3,"El Matador","Los Fabulosos Cadillacs",62,41,,spotify:track:3EsjrObXPhXA79Cr4QixY8
+1,3,"Jonathan Black",Tj,0,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,"Jonathan Black","Voltron’s YoungLion",0,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,"Jonathan Black",jac,-1,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,3,"Jonathan Black",missmara,2,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,Mashew,"Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,Mashew,Tj,2,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,Mashew,"Voltron’s YoungLion",1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,Mashew,jac,-1,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,3,Mashew,missmara,4,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,"Michael Layous","Jonathan Black",3,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,"Michael Layous",Mashew,1,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,"Michael Layous","Philip Chapin",3,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,"Michael Layous",SusieQ,1,"El Matador","Los Fabulosos Cadillacs",62,41,,spotify:track:3EsjrObXPhXA79Cr4QixY8
+1,3,"Michael Layous","Voltron’s YoungLion",-1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,"Philip Chapin","Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,"Philip Chapin",Mashew,1,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,"Philip Chapin","Michael Layous",1,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,"Philip Chapin",SusieQ,2,"El Matador","Los Fabulosos Cadillacs",62,41,,spotify:track:3EsjrObXPhXA79Cr4QixY8
+1,3,"Philip Chapin",Tj,1,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,"Philip Chapin","Voltron’s YoungLion",-1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,"Philip Chapin",jac,1,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,3,"Philip Chapin",missmara,1,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,"Sarah S","Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,"Sarah S",Mashew,-1,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,"Sarah S","Michael Layous",1,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,"Sarah S","Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,"Sarah S",SusieQ,2,"El Matador","Los Fabulosos Cadillacs",62,41,,spotify:track:3EsjrObXPhXA79Cr4QixY8
+1,3,"Sarah S",Tj,1,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,"Sarah S","Voltron’s YoungLion",1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,"Sarah S",jac,0,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,3,"Sarah S",missmara,1,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,SusieQ,"Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,SusieQ,Mashew,2,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,SusieQ,"Michael Layous",1,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,SusieQ,"Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,SusieQ,"Sarah S",1,Starman,"Seu Jorge",60,65,,spotify:track:1bcoI2VWqABMDhwoZHf5dp
+1,3,SusieQ,Tj,1,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,SusieQ,"Voltron’s YoungLion",-1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,SusieQ,missmara,1,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,Tj,"Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,Tj,Mashew,2,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,Tj,"Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,Tj,"Sarah S",2,Starman,"Seu Jorge",60,65,,spotify:track:1bcoI2VWqABMDhwoZHf5dp
+1,3,Tj,"Voltron’s YoungLion",-1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,Tj,jac,1,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,3,Tj,missmara,1,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,jac,"Jonathan Black",-1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,jac,Mashew,1,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,jac,"Michael Layous",1,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,jac,"Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,jac,"Sarah S",1,Starman,"Seu Jorge",60,65,,spotify:track:1bcoI2VWqABMDhwoZHf5dp
+1,3,jac,SusieQ,1,"El Matador","Los Fabulosos Cadillacs",62,41,,spotify:track:3EsjrObXPhXA79Cr4QixY8
+1,3,jac,Tj,1,"99 Luftballons",Nena,22,21,80s,spotify:track:2IJftBfq7pJ43tfnOR0RB3
+1,3,jac,"Voltron’s YoungLion",1,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,jac,missmara,1,"Hit Sale","Therapie TAXI, Roméo Elvis",92,55,,spotify:track:3yndKI4zWEyC36BQYrdKBA
+1,3,missmara,"Jonathan Black",1,"Весна",Dolphin,71,43,,spotify:track:5vfg8mxKVeKIHMEvhcAEDN
+1,3,missmara,Mashew,2,Abissama,"Incredible Polo",81,50,,spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl
+1,3,missmara,"Michael Layous",3,"Место наших встреч","Англия",80,84,,spotify:track:1m3cn9F4ROKoOr2uMGqmEh
+1,3,missmara,"Philip Chapin",1,Gitana,"Derby Motoreta’s Burrito Kachimba",85,75,,spotify:track:3zG1Xt4ikeUWb8lDRogLx9
+1,3,missmara,"Sarah S",1,Starman,"Seu Jorge",60,65,,spotify:track:1bcoI2VWqABMDhwoZHf5dp
+1,3,missmara,"Voltron’s YoungLion",0,"Du hast",Rammstein,11,53,"industrial metal",spotify:track:6uEvFCaOqXyEidoO8BZbyh
+1,3,missmara,jac,-1,"Malagueña","Lucas Imbiriba",93,40,,spotify:track:56K2S3d7eZZStjaSKSTgXm
+1,4,"Jonathan Black","Jonathan Black",0,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,"Jonathan Black",Mashew,1,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,"Jonathan Black","Michael Layous",0,"Slow Burn","Kacey Musgraves",34,61,,spotify:track:6ET9kf9riLETWs9lePUEAI
+1,4,"Jonathan Black","Philip Chapin",1,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,"Jonathan Black","Sarah S",5,"Por Un Amor","Linda Ronstadt",85,36,,spotify:track:0Roy7wwiH17bJT5CsZTMtP
+1,4,"Jonathan Black",SusieQ,-1,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,"Jonathan Black","Voltron’s YoungLion",0,"Stoned at the Nail Salon",Lorde,22,23,,spotify:track:38Zs2b75JPNB2tS7O7JQnS
+1,4,"Jonathan Black",missmara,1,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,Mashew,"Michael Layous",1,"Slow Burn","Kacey Musgraves",34,61,,spotify:track:6ET9kf9riLETWs9lePUEAI
+1,4,Mashew,"Philip Chapin",2,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,Mashew,SusieQ,-1,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,Mashew,"Voltron’s YoungLion",1,"Stoned at the Nail Salon",Lorde,22,23,,spotify:track:38Zs2b75JPNB2tS7O7JQnS
+1,4,Mashew,jac,1,"Keep on Loving You","REO Speedwagon",37,41,,spotify:track:4rcHWl68ai6KvpXlc8vbnE
+1,4,Mashew,missmara,3,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,"Michael Layous","Jonathan Black",1,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,"Michael Layous",Mashew,2,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,"Michael Layous","Philip Chapin",0,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,"Michael Layous","Sarah S",-1,"Por Un Amor","Linda Ronstadt",85,36,,spotify:track:0Roy7wwiH17bJT5CsZTMtP
+1,4,"Michael Layous",SusieQ,1,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,"Michael Layous",Tj,2,"I Believe in a Thing Called Love","The Darkness",24,90,rock,spotify:track:756CJtQRFSxEx9jV4P9hpA
+1,4,"Michael Layous","Voltron’s YoungLion",1,"Stoned at the Nail Salon",Lorde,22,23,,spotify:track:38Zs2b75JPNB2tS7O7JQnS
+1,4,"Michael Layous",missmara,1,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,"Philip Chapin","Jonathan Black",-1,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,"Philip Chapin",Mashew,1,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,"Philip Chapin","Sarah S",1,"Por Un Amor","Linda Ronstadt",85,36,,spotify:track:0Roy7wwiH17bJT5CsZTMtP
+1,4,"Philip Chapin",Tj,3,"I Believe in a Thing Called Love","The Darkness",24,90,rock,spotify:track:756CJtQRFSxEx9jV4P9hpA
+1,4,"Philip Chapin",jac,2,"Keep on Loving You","REO Speedwagon",37,41,,spotify:track:4rcHWl68ai6KvpXlc8vbnE
+1,4,"Philip Chapin",missmara,1,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,"Sarah S","Jonathan Black",-1,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,"Sarah S","Philip Chapin",2,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,"Sarah S",SusieQ,2,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,"Sarah S",Tj,2,"I Believe in a Thing Called Love","The Darkness",24,90,rock,spotify:track:756CJtQRFSxEx9jV4P9hpA
+1,4,"Sarah S",jac,2,"Keep on Loving You","REO Speedwagon",37,41,,spotify:track:4rcHWl68ai6KvpXlc8vbnE
+1,4,SusieQ,"Jonathan Black",1,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,SusieQ,Mashew,4,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,SusieQ,"Michael Layous",2,"Slow Burn","Kacey Musgraves",34,61,,spotify:track:6ET9kf9riLETWs9lePUEAI
+1,4,SusieQ,"Philip Chapin",1,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,SusieQ,missmara,-1,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,Tj,"Jonathan Black",1,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,Tj,Mashew,2,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,Tj,"Philip Chapin",0,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,Tj,"Sarah S",-1,"Por Un Amor","Linda Ronstadt",85,36,,spotify:track:0Roy7wwiH17bJT5CsZTMtP
+1,4,Tj,SusieQ,3,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,Tj,"Voltron’s YoungLion",1,"Stoned at the Nail Salon",Lorde,22,23,,spotify:track:38Zs2b75JPNB2tS7O7JQnS
+1,4,Tj,missmara,1,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,"Voltron’s YoungLion",Mashew,1,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,"Voltron’s YoungLion","Michael Layous",4,"Slow Burn","Kacey Musgraves",34,61,,spotify:track:6ET9kf9riLETWs9lePUEAI
+1,4,"Voltron’s YoungLion","Philip Chapin",-1,"Just Kiss Me","Harry Connick, Jr.",86,37,,spotify:track:4r8thRU9mwxBvb1LlXma1p
+1,4,"Voltron’s YoungLion",Tj,1,"I Believe in a Thing Called Love","The Darkness",24,90,rock,spotify:track:756CJtQRFSxEx9jV4P9hpA
+1,4,"Voltron’s YoungLion",missmara,2,DUMB,"Noga Erez",82,75,,spotify:track:2Pul6SaLL8e0sQhJDBVOr1
+1,4,missmara,"Jonathan Black",2,"Low (feat. T-Pain)","Flo Rida, T-Pain",20,53,Hip-Hop,spotify:track:0CAfXk7DXMnon4gLudAp7J
+1,4,missmara,Mashew,2,Hideaway,Kiesza,35,31,,spotify:track:0c6xIDDpzE81m2q797ordA
+1,4,missmara,"Michael Layous",-1,"Slow Burn","Kacey Musgraves",34,61,,spotify:track:6ET9kf9riLETWs9lePUEAI
+1,4,missmara,SusieQ,1,Weak,SWV,44,29,,spotify:track:71EHOyEOhNx1SzTebRRyng
+1,4,missmara,Tj,2,"I Believe in a Thing Called Love","The Darkness",24,90,rock,spotify:track:756CJtQRFSxEx9jV4P9hpA
+1,4,missmara,jac,1,"Keep on Loving You","REO Speedwagon",37,41,,spotify:track:4rcHWl68ai6KvpXlc8vbnE
+1,5,"Jonathan Black",Mashew,0,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,"Jonathan Black","Michael Layous",-1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,"Jonathan Black","Philip Chapin",1,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,"Jonathan Black","Sarah S",3,"Paradise By the Dashboard Light","Meat Loaf",48,33,,spotify:track:2g7gviEeJr6pyxO7G35EWQ
+1,5,"Jonathan Black",SusieQ,2,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,"Jonathan Black",Tj,0,"Roller Skates","Steel Pulse",69,23,,spotify:track:3ciMXKwXlLCFcQCyhKblZs
+1,5,"Jonathan Black","Voltron’s YoungLion",2,"Mr. Shorty","Marty Robbins",78,35,,spotify:track:1I6883eWftxG6oq5SYWPXd
+1,5,"Jonathan Black",jac,0,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,"Jonathan Black",missmara,0,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,Mashew,"Michael Layous",2,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,Mashew,"Philip Chapin",1,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,Mashew,"Sarah S",1,"Paradise By the Dashboard Light","Meat Loaf",48,33,,spotify:track:2g7gviEeJr6pyxO7G35EWQ
+1,5,Mashew,"Voltron’s YoungLion",-1,"Mr. Shorty","Marty Robbins",78,35,,spotify:track:1I6883eWftxG6oq5SYWPXd
+1,5,Mashew,jac,1,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,Mashew,missmara,3,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,"Michael Layous","Jonathan Black",-1,"30,000 Pounds of Bananas - Live; 1975","Harry Chapin",85,24,,spotify:track:1jXky83x0PR5nrRbAleiJC
+1,5,"Michael Layous","Philip Chapin",1,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,"Michael Layous","Sarah S",2,"Paradise By the Dashboard Light","Meat Loaf",48,33,,spotify:track:2g7gviEeJr6pyxO7G35EWQ
+1,5,"Michael Layous",SusieQ,1,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,"Michael Layous",Tj,2,"Roller Skates","Steel Pulse",69,23,,spotify:track:3ciMXKwXlLCFcQCyhKblZs
+1,5,"Michael Layous",missmara,2,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,"Philip Chapin",Mashew,1,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,"Philip Chapin","Michael Layous",-1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,"Philip Chapin",SusieQ,2,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,"Philip Chapin",Tj,2,"Roller Skates","Steel Pulse",69,23,,spotify:track:3ciMXKwXlLCFcQCyhKblZs
+1,5,"Philip Chapin",jac,2,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,"Philip Chapin",missmara,1,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,"Sarah S","Jonathan Black",2,"30,000 Pounds of Bananas - Live; 1975","Harry Chapin",85,24,,spotify:track:1jXky83x0PR5nrRbAleiJC
+1,5,"Sarah S",Mashew,1,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,"Sarah S","Philip Chapin",1,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,"Sarah S",SusieQ,2,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,"Sarah S",Tj,1,"Roller Skates","Steel Pulse",69,23,,spotify:track:3ciMXKwXlLCFcQCyhKblZs
+1,5,"Sarah S",jac,-1,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,"Sarah S",missmara,1,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,SusieQ,"Jonathan Black",3,"30,000 Pounds of Bananas - Live; 1975","Harry Chapin",85,24,,spotify:track:1jXky83x0PR5nrRbAleiJC
+1,5,SusieQ,"Michael Layous",1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,SusieQ,"Philip Chapin",2,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,SusieQ,"Sarah S",2,"Paradise By the Dashboard Light","Meat Loaf",48,33,,spotify:track:2g7gviEeJr6pyxO7G35EWQ
+1,5,SusieQ,jac,-1,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,Tj,Mashew,2,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,Tj,"Michael Layous",1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,Tj,"Philip Chapin",1,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,Tj,"Sarah S",-1,"Paradise By the Dashboard Light","Meat Loaf",48,33,,spotify:track:2g7gviEeJr6pyxO7G35EWQ
+1,5,Tj,SusieQ,1,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,Tj,"Voltron’s YoungLion",1,"Mr. Shorty","Marty Robbins",78,35,,spotify:track:1I6883eWftxG6oq5SYWPXd
+1,5,Tj,jac,1,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,5,Tj,missmara,1,"Check the Lock",clipping.,63,85,,spotify:track:6VWsWgliFma9IFL2NlQ1H7
+1,5,jac,"Jonathan Black",-1,"30,000 Pounds of Bananas - Live; 1975","Harry Chapin",85,24,,spotify:track:1jXky83x0PR5nrRbAleiJC
+1,5,jac,Mashew,1,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,jac,"Michael Layous",1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,jac,"Philip Chapin",3,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,jac,SusieQ,2,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,jac,"Voltron’s YoungLion",1,"Mr. Shorty","Marty Robbins",78,35,,spotify:track:1I6883eWftxG6oq5SYWPXd
+1,5,missmara,"Jonathan Black",-1,"30,000 Pounds of Bananas - Live; 1975","Harry Chapin",85,24,,spotify:track:1jXky83x0PR5nrRbAleiJC
+1,5,missmara,Mashew,2,"Long Legged Larry","Aesop Rock",75,38,,spotify:track:0OX9lzZxKlbtn3c2d97uqz
+1,5,missmara,"Michael Layous",1,"For Nancy ('Cos It Already Is)","Pete Yorn",73,40,,spotify:track:2Vin9asYhJvyvBvGMAyi0f
+1,5,missmara,"Philip Chapin",2,"Father and Son - Live in London","Flight of the Conchords, Jemaine Clement, Bret McKenzie",98,10,,spotify:track:37ZpnrZEiA9roiTZDBz6dw
+1,5,missmara,SusieQ,1,Galahad,"Josh Ritter",84,22,,spotify:track:2lWY3EmnZuH2b1f3Sjh5J8
+1,5,missmara,Tj,1,"Roller Skates","Steel Pulse",69,23,,spotify:track:3ciMXKwXlLCFcQCyhKblZs
+1,5,missmara,jac,1,Regulate,"Warren G, Nate Dogg",30,69,Hip-Hop,spotify:track:7nYvUtkQMx1v80S2FH2s9J
+1,6,"Jonathan Black",Mashew,0,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,"Jonathan Black","Michael Layous",0,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,"Jonathan Black","Philip Chapin",2,"Stop Fucking With My Head","Karise Eden",94,,,spotify:track:2SwkTlANMqzoEMw6k1YaNU
+1,6,"Jonathan Black","Sarah S",1,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,"Jonathan Black",SusieQ,3,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,"Jonathan Black",Tj,0,"When I Come To You","Jonny Lang",83,43,,spotify:track:2he2lkInF7eCoIlsyZsUMC
+1,6,"Jonathan Black",jac,2,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,"Jonathan Black",missmara,-1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,Mashew,"Michael Layous",2,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,Mashew,"Philip Chapin",1,"Stop Fucking With My Head","Karise Eden",94,,,spotify:track:2SwkTlANMqzoEMw6k1YaNU
+1,6,Mashew,"Sarah S",-1,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,Mashew,SusieQ,2,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,Mashew,missmara,3,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,"Michael Layous","Jonathan Black",1,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,"Michael Layous",Mashew,4,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,"Michael Layous",jac,3,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,"Michael Layous",missmara,-1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,"Philip Chapin","Jonathan Black",1,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,"Philip Chapin",Mashew,1,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,"Philip Chapin","Michael Layous",2,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,"Philip Chapin","Sarah S",1,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,"Philip Chapin",SusieQ,1,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,"Philip Chapin",Tj,-1,"When I Come To You","Jonny Lang",83,43,,spotify:track:2he2lkInF7eCoIlsyZsUMC
+1,6,"Philip Chapin",jac,1,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,"Philip Chapin",missmara,1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,"Sarah S","Jonathan Black",4,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,"Sarah S",SusieQ,4,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,"Sarah S",missmara,-1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,SusieQ,"Jonathan Black",2,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,SusieQ,"Michael Layous",2,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,SusieQ,"Sarah S",2,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,SusieQ,jac,2,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,SusieQ,missmara,-1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,Tj,"Jonathan Black",1,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,Tj,Mashew,-1,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,Tj,"Michael Layous",2,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,Tj,"Sarah S",3,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,Tj,SusieQ,1,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,Tj,jac,1,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,jac,"Jonathan Black",1,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,jac,Mashew,1,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,jac,"Michael Layous",1,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,jac,"Philip Chapin",-1,"Stop Fucking With My Head","Karise Eden",94,,,spotify:track:2SwkTlANMqzoEMw6k1YaNU
+1,6,jac,"Sarah S",2,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,jac,SusieQ,1,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,jac,Tj,1,"When I Come To You","Jonny Lang",83,43,,spotify:track:2he2lkInF7eCoIlsyZsUMC
+1,6,jac,missmara,1,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,6,missmara,"Jonathan Black",1,"Going Down","Freddie King",62,61,,spotify:track:2wnjZXcAT3rCjjqxLeHjv7
+1,6,missmara,Mashew,4,"Where's The Catch? (feat. André 3000)","James Blake, André 3000",90,77,,spotify:track:7omij53d6AvXefx13NNyfn
+1,6,missmara,"Michael Layous",1,"He Can Only Hold Her","Amy Winehouse",20,89,soul,spotify:track:0sSdFMuYrn3N9moumV466B
+1,6,missmara,"Philip Chapin",0,"Stop Fucking With My Head","Karise Eden",94,,,spotify:track:2SwkTlANMqzoEMw6k1YaNU
+1,6,missmara,"Sarah S",-1,"Welcome to Hard Times","Charley Crockett",67,46,,spotify:track:0tij6loXatN15kmrAjWWRr
+1,6,missmara,SusieQ,1,"You Ain't Alone","Alabama Shakes",58,38,,spotify:track:6QYVVHpGvyl77uqfPGZDSu
+1,6,missmara,Tj,0,"When I Come To You","Jonny Lang",83,43,,spotify:track:2he2lkInF7eCoIlsyZsUMC
+1,6,missmara,jac,1,"Dust in My Bones","Cottonfield Blues, Lyra Stone, Reid Hollis",98,39,,spotify:track:2pcqcTamItjb6XOmhZ9dDr
+1,6,missmara,missmara,0,i,"Kendrick Lamar",13,33,rap,spotify:track:7wdzLe2Gsx1RGqbvYZHASz
+1,7,"Joe Quinto","Jonathan Black",1,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,"Joe Quinto",Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,"Joe Quinto","Michael Layous",0,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,"Joe Quinto",Mollyjohnson,2,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,"Joe Quinto","Philip Chapin",4,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,"Joe Quinto",Sarah,-1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,"Joe Quinto","Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,"Joe Quinto",SusieQ,0,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,"Joe Quinto",Tj,1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,"Joe Quinto",jac,0,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,"Joe Quinto",missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,"Jonathan Black","Joe Quinto",0,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,"Jonathan Black",Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,"Jonathan Black","Michael Layous",-1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,"Jonathan Black",Mollyjohnson,1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,"Jonathan Black","Philip Chapin",3,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,"Jonathan Black",Sarah,0,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,"Jonathan Black","Sarah S",2,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,"Jonathan Black",SusieQ,2,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,"Jonathan Black",Tj,1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,"Jonathan Black",jac,0,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,"Jonathan Black",missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,Mashew,"Michael Layous",-1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,Mashew,"Philip Chapin",3,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,Mashew,Sarah,2,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,Mashew,"Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,Mashew,Tj,2,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,Mashew,missmara,3,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,"Michael Layous","Jonathan Black",1,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,"Michael Layous",Mollyjohnson,1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,"Michael Layous","Philip Chapin",2,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,"Michael Layous",Sarah,3,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,"Michael Layous",SusieQ,3,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,"Michael Layous",Tj,-1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,"Michael Layous",missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,Mollyjohnson,"Joe Quinto",1,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,Mollyjohnson,"Jonathan Black",2,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,Mollyjohnson,Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,Mollyjohnson,"Philip Chapin",1,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,Mollyjohnson,Sarah,-1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,Mollyjohnson,"Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,Mollyjohnson,SusieQ,1,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,Mollyjohnson,Tj,2,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,Mollyjohnson,jac,1,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,Mollyjohnson,missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,"Philip Chapin","Joe Quinto",1,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,"Philip Chapin","Jonathan Black",3,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,"Philip Chapin",Mashew,2,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,"Philip Chapin","Michael Layous",1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,"Philip Chapin","Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,"Philip Chapin",Tj,-1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,"Philip Chapin",jac,3,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,Sarah,"Joe Quinto",-1,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,Sarah,"Jonathan Black",3,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,Sarah,"Michael Layous",1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,Sarah,Mollyjohnson,1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,Sarah,"Philip Chapin",1,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,Sarah,SusieQ,1,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,Sarah,Tj,1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,Sarah,jac,1,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,Sarah,missmara,2,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,"Sarah S","Jonathan Black",3,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,"Sarah S",Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,"Sarah S","Philip Chapin",3,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,"Sarah S",Sarah,-1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,"Sarah S",SusieQ,1,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,"Sarah S",jac,2,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,"Sarah S",missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,SusieQ,"Joe Quinto",1,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,SusieQ,"Jonathan Black",3,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,SusieQ,Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,SusieQ,Mollyjohnson,1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,SusieQ,"Philip Chapin",3,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,SusieQ,Sarah,-1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,SusieQ,"Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,SusieQ,jac,1,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,Tj,"Joe Quinto",2,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,Tj,"Jonathan Black",1,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,Tj,Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,Tj,"Michael Layous",1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,Tj,Mollyjohnson,-1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,Tj,"Philip Chapin",1,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,Tj,Sarah,1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,Tj,"Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,Tj,SusieQ,1,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,Tj,jac,1,"Run, Rabbit, Run!","Flanagan & Allen",78,27,,spotify:track:0HwSU5GzCClVScJFE6VZpM
+1,7,Tj,missmara,1,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,jac,"Joe Quinto",1,"Long Black Veil","Mike Ness",84,51,,spotify:track:0csqJEOr3dDVzmXbv9HT79
+1,7,jac,"Jonathan Black",2,"Shankill Butchers","The Decemberists",54,38,,spotify:track:3XnmHCsBIO4cDW73UUrtkA
+1,7,jac,Mashew,1,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,jac,Mollyjohnson,1,"The Ghost of Tom Joad","Bruce Springsteen",60,29,,spotify:track:4RaxnzmTN4bojbbEYtvXjk
+1,7,jac,"Philip Chapin",1,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,jac,Sarah,-1,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,jac,"Sarah S",1,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,jac,SusieQ,1,Westfall,"Okkervil River",65,85,,spotify:track:45uW2Ev9c3iUUtpO5yQEOw
+1,7,jac,Tj,1,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,7,jac,missmara,2,"System Preferences","Tera Melos",81,92,,spotify:track:3QnCm1WofA1nsWO3CWFu3t
+1,7,missmara,Mashew,3,Mosquito,Model/Actriz,66,98,,spotify:track:3SsXEH9Z7JZ0mdcn5gF4oR
+1,7,missmara,"Michael Layous",-1,Beams,"Arlo Parks",77,14,,spotify:track:4yNK2ybBbO7CiuSyTNvBc8
+1,7,missmara,"Philip Chapin",2,"Red Right Hand - 2011 Remaster","Nick Cave & The Bad Seeds",51,64,,spotify:track:0jVo3e34A15l6MNu1O3cfa
+1,7,missmara,Sarah,4,"Mona Lisa (feat. Kendrick Lamar)","Lil Wayne, Kendrick Lamar",85,76,,spotify:track:0dbTQYW3Ad1FTzIA9t90E8
+1,7,missmara,"Sarah S",0,"In Hell I'll Be in Good Company","The Dead South",53,32,,spotify:track:4eMxLQtSdgxdA1Hs6D2YuN
+1,7,missmara,Tj,2,"Pennywise - 2005 Remaster",Pennywise,50,72,,spotify:track:1WaEl2RKIUq7gxakfucrch
+1,8,"Joe Quinto","Jonathan Black",4,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,"Joe Quinto","Michael Layous",0,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,"Joe Quinto",Sarah,-1,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,"Joe Quinto","Sarah S",1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,"Joe Quinto",SusieQ,2,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Joe Quinto","Voltron’s YoungLion",0,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,"Joe Quinto",jac,3,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Joe Quinto",missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,"Jonathan Black","Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,"Jonathan Black",Mashew,2,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,"Jonathan Black","Michael Layous",1,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,"Jonathan Black",Mollyjohnson,-1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,"Jonathan Black","Philip Chapin",1,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,"Jonathan Black",Sarah,0,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,"Jonathan Black","Sarah S",1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,"Jonathan Black",SusieQ,2,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Jonathan Black","Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,"Jonathan Black",jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Jonathan Black",missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,Mashew,"Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,Mashew,"Jonathan Black",-1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,Mashew,Mollyjohnson,1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,Mashew,"Philip Chapin",2,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,Mashew,"Sarah S",1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,Mashew,SusieQ,1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,Mashew,"Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,Mashew,jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,Mashew,missmara,3,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,"Michael Layous","Joe Quinto",-1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,"Michael Layous","Jonathan Black",1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,"Michael Layous",Mollyjohnson,1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,"Michael Layous","Philip Chapin",1,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,"Michael Layous",Sarah,2,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,"Michael Layous",SusieQ,2,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Michael Layous",jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Michael Layous",missmara,3,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,Mollyjohnson,"Joe Quinto",2,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,Mollyjohnson,"Jonathan Black",4,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,Mollyjohnson,"Sarah S",-1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,Mollyjohnson,SusieQ,3,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,Mollyjohnson,"Voltron’s YoungLion",2,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,"Philip Chapin","Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,"Philip Chapin","Michael Layous",1,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,"Philip Chapin",Mollyjohnson,2,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,"Philip Chapin",Sarah,-1,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,"Philip Chapin","Sarah S",3,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,"Philip Chapin",SusieQ,1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Philip Chapin","Voltron’s YoungLion",2,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,"Philip Chapin",missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,Sarah,"Jonathan Black",1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,Sarah,Mashew,2,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,Sarah,Mollyjohnson,1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,Sarah,"Philip Chapin",4,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,Sarah,SusieQ,-1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,Sarah,"Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,Sarah,jac,2,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Sarah S","Joe Quinto",2,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,"Sarah S","Jonathan Black",1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,"Sarah S",Mashew,1,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,"Sarah S","Michael Layous",1,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,"Sarah S",Mollyjohnson,1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,"Sarah S","Philip Chapin",-1,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,"Sarah S",SusieQ,2,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Sarah S","Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,"Sarah S",jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Sarah S",missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,SusieQ,"Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,SusieQ,"Jonathan Black",2,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,SusieQ,"Michael Layous",2,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,SusieQ,Sarah,-1,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,SusieQ,"Sarah S",1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,SusieQ,"Voltron’s YoungLion",3,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,SusieQ,jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,SusieQ,missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,"Voltron’s YoungLion","Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,"Voltron’s YoungLion","Jonathan Black",1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,"Voltron’s YoungLion",Mashew,1,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,"Voltron’s YoungLion","Michael Layous",1,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,"Voltron’s YoungLion",Mollyjohnson,1,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,"Voltron’s YoungLion","Philip Chapin",1,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,"Voltron’s YoungLion",Sarah,1,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,"Voltron’s YoungLion","Sarah S",2,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,"Voltron’s YoungLion",SusieQ,1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,"Voltron’s YoungLion",jac,-1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,8,"Voltron’s YoungLion",missmara,1,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,jac,"Joe Quinto",1,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,jac,"Jonathan Black",1,"Ripple - 2013 Remaster","Grateful Dead",57,53,,spotify:track:1OE5l6sedVcIFELMuxQOPI
+1,8,jac,Mashew,1,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,jac,"Michael Layous",1,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,jac,Mollyjohnson,2,"Rescue Me",Y&T,82,76,,spotify:track:5V0AWCNERrcnKoDixpaTqP
+1,8,jac,"Philip Chapin",-1,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,jac,"Sarah S",1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,jac,SusieQ,1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,jac,"Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,jac,missmara,2,Rolling,"Soul Coughing",69,75,,spotify:track:4teAkTVhFZzkZdWEOOW3ci
+1,8,missmara,"Joe Quinto",2,"6 Underground","Sneaker Pimps",33,20,lush,spotify:track:7KvSuH86lIT2aTl9PBCAfd
+1,8,missmara,Mashew,3,"David Bowie Wants Ideas",Bongwater,91,50,,spotify:track:5uxZ7bEBWDpZZEtzuo5VB1
+1,8,missmara,"Michael Layous",2,"Summer Babe - Winter Version",Pavement,57,67,,spotify:track:1vnKvlb6cj5NLpd1BMJ2jD
+1,8,missmara,"Philip Chapin",0,"Don't Take The Money",Bleachers,37,55,,spotify:track:3ySU5vwQB33iGulwcUL9qQ
+1,8,missmara,Sarah,1,"Black & White","Juice WRLD",23,66,"emo rap",spotify:track:1fCeXjoRExPP2qwSBh2aST
+1,8,missmara,"Sarah S",-1,"Mary Jane's Last Dance","Tom Petty and the Heartbreakers",28,19,"classic rock",spotify:track:3dmqIB2Qxe2XZobw9gXxJ6
+1,8,missmara,SusieQ,1,Movement,"LCD Soundsystem",52,17,,spotify:track:1pJS4rS12iA5MryQSAP2kQ
+1,8,missmara,"Voltron’s YoungLion",1,"Ghost Town","Second Best",97,71,,spotify:track:1kW1cRjYubYQZncmKhuQaE
+1,8,missmara,jac,1,"Goodbye Blue Sky","Pink Floyd",27,21,,spotify:track:0ESdtt9cjGZUkUbaubSrv2
+1,9,"Joe Quinto","Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,"Joe Quinto",Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,"Joe Quinto","Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,"Joe Quinto",Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Joe Quinto","Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,"Joe Quinto",Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,"Joe Quinto","Sarah S",0,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,"Joe Quinto",Tj,2,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,"Joe Quinto","Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,"Joe Quinto",hanhquach,1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,"Joe Quinto",jac,1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,"Joe Quinto",missmara,-1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,"Jonathan Black","Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,"Jonathan Black",Mashew,2,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,"Jonathan Black","Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,"Jonathan Black",Mollyjohnson,0,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Jonathan Black","Philip Chapin",-1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,"Jonathan Black",Sarah,0,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,"Jonathan Black","Sarah S",2,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,"Jonathan Black",SusieQ,1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,"Jonathan Black",Tj,0,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,"Jonathan Black","Voltron’s YoungLion",2,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,"Jonathan Black",hanhquach,1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,"Jonathan Black",jac,0,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,"Jonathan Black",missmara,1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,Mashew,"Jonathan Black",2,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,Mashew,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,Mashew,"Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,Mashew,"Sarah S",1,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,Mashew,Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,Mashew,"Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,Mashew,hanhquach,-1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,Mashew,jac,1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,Mashew,missmara,3,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,"Michael Layous","Joe Quinto",-1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,"Michael Layous","Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,"Michael Layous",Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,"Michael Layous",Mollyjohnson,2,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Michael Layous","Philip Chapin",2,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,"Michael Layous",Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,"Michael Layous","Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,"Michael Layous",missmara,3,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,Mollyjohnson,"Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,Mollyjohnson,"Jonathan Black",2,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,Mollyjohnson,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,Mollyjohnson,"Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,Mollyjohnson,Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,Mollyjohnson,SusieQ,2,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,Mollyjohnson,jac,3,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,Mollyjohnson,missmara,-1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,"Philip Chapin",Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,"Philip Chapin","Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,"Philip Chapin",Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Philip Chapin",Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,"Philip Chapin",SusieQ,3,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,"Philip Chapin",Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,"Philip Chapin","Voltron’s YoungLion",-1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,"Philip Chapin",jac,1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,"Philip Chapin",missmara,2,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,Sarah,Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,Sarah,Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,Sarah,"Philip Chapin",2,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,Sarah,Tj,-1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,Sarah,"Voltron’s YoungLion",3,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,Sarah,hanhquach,2,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,Sarah,jac,2,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,"Sarah S","Joe Quinto",3,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,"Sarah S","Jonathan Black",3,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,"Sarah S","Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,"Sarah S",Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Sarah S","Philip Chapin",-1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,"Sarah S",Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,"Sarah S",hanhquach,2,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,SusieQ,"Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,SusieQ,"Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,SusieQ,Mollyjohnson,3,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,SusieQ,Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,SusieQ,"Sarah S",2,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,SusieQ,"Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,SusieQ,hanhquach,1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,SusieQ,jac,-1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,SusieQ,missmara,1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,Tj,"Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,Tj,Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,Tj,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,Tj,Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,Tj,"Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,Tj,Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,Tj,"Sarah S",1,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,Tj,SusieQ,1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,Tj,"Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,Tj,hanhquach,1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,Tj,jac,1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,Tj,missmara,-1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,"Voltron’s YoungLion","Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,"Voltron’s YoungLion","Jonathan Black",0,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,"Voltron’s YoungLion",Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,"Voltron’s YoungLion","Michael Layous",2,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,"Voltron’s YoungLion",Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,"Voltron’s YoungLion","Philip Chapin",3,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,"Voltron’s YoungLion",Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,"Voltron’s YoungLion","Sarah S",1,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,"Voltron’s YoungLion",SusieQ,-1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,"Voltron’s YoungLion",hanhquach,1,"Seven Nation Army - Remasterisée","Ben L'Oncle Soul",66,,,spotify:track:4LDNKV0SYy8m9MRyhLkXv7
+1,9,"Voltron’s YoungLion",jac,0,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,"Voltron’s YoungLion",missmara,0,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,hanhquach,"Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,hanhquach,"Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,hanhquach,Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,hanhquach,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,hanhquach,Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,hanhquach,"Philip Chapin",-1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,hanhquach,Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,hanhquach,"Sarah S",1,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,hanhquach,SusieQ,1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,hanhquach,Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,hanhquach,jac,1,"For Whom the Bell Tolls (Live)","Metallica, San Francisco Symphony",23,,,spotify:track:5YPzY1EmlXP7RoPz3dvhY8
+1,9,hanhquach,missmara,1,"Them Changes",Thundercat,13,57,funk,spotify:track:7CH99b2i1TXS5P8UUyWtnM
+1,9,jac,"Joe Quinto",2,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,jac,"Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,jac,Mashew,1,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,jac,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,jac,Mollyjohnson,1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,jac,"Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,jac,Sarah,-1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,jac,"Sarah S",1,"Glory Box",Portishead,9,,trip-hop,spotify:track:3Ty7OTBNSigGEpeW2PqcsC
+1,9,jac,SusieQ,1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,jac,Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,jac,"Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,9,missmara,"Joe Quinto",1,"Give Up The Funk (Tear The Roof Off The Sucker)",Parliament,52,,,spotify:track:4XRkQloZFcRrCONN7ZQ49Y
+1,9,missmara,"Jonathan Black",1,"Add It Up","Violent Femmes",47,,,spotify:track:61QW3AcU1jm5ttPOn8eZhn
+1,9,missmara,Mashew,3,"Figure It Out","Royal Blood",28,,rock,spotify:track:6V0A3jkb9ntudO0kmcJ1xd
+1,9,missmara,"Michael Layous",1,"Dean Town",Vulfpeck,54,,,spotify:track:1dyUxu73YVV4661xsoib5b
+1,9,missmara,Mollyjohnson,-1,"A Forest - 2006 Remaster","The Cure",19,,"new wave",spotify:track:3O4TPMOgChXOerSdB5WENH
+1,9,missmara,"Philip Chapin",1,"Punk Rock Loser","Viagra Boys",51,91,,spotify:track:2pqoh1jUQoppztoQRRGyKK
+1,9,missmara,Sarah,1,"Under Pressure - Remastered 2011","Queen, David Bowie",94,49,,spotify:track:11IzgLRXV7Cgek3tEgGgjw
+1,9,missmara,SusieQ,1,"Wide Awake","Parquet Courts",55,,,spotify:track:26UinddFbmPE2woBqQ246S
+1,9,missmara,Tj,1,"Super Bon Bon","Soul Coughing",63,,,spotify:track:4H1ttBCmT7cqvGJLqfHbED
+1,9,missmara,"Voltron’s YoungLion",1,"Journey to the End of the East Bay","Tim Timebomb",90,,,spotify:track:45Qa5mIlVoSlRdSoLsSnLz
+1,10,"Joe Quinto","Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,"Joe Quinto",Mashew,-1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,"Joe Quinto","Michael Layous",0,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,"Joe Quinto",Mollyjohnson,3,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,"Joe Quinto","Sarah S",2,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,"Joe Quinto",SusieQ,4,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,"Joe Quinto",jac,1,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,"Joe Quinto",missmara,0,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,"Jonathan Black","Joe Quinto",2,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,"Jonathan Black",Mashew,1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,"Jonathan Black","Michael Layous",-1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,"Jonathan Black",Mollyjohnson,0,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,"Jonathan Black","Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,"Jonathan Black",Sarah,0,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,"Jonathan Black","Sarah S",3,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,"Jonathan Black",SusieQ,0,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,"Jonathan Black",Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,"Jonathan Black","Voltron’s YoungLion",1,"Get Free","Major Lazer, Amber Coffman",50,39,,spotify:track:56hYeuutlZO5Pkm99FzLCW
+1,10,"Jonathan Black",jac,1,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,"Jonathan Black",missmara,1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,Mashew,"Joe Quinto",1,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,Mashew,"Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,Mashew,"Michael Layous",1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,Mashew,Sarah,1,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,Mashew,"Sarah S",-1,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,Mashew,Tj,2,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,Mashew,jac,3,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,Mashew,missmara,2,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,"Michael Layous","Joe Quinto",3,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,"Michael Layous","Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,"Michael Layous",Mollyjohnson,-1,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,"Michael Layous","Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,"Michael Layous",Sarah,1,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,"Michael Layous","Sarah S",1,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,"Michael Layous",Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,"Michael Layous","Voltron’s YoungLion",3,"Get Free","Major Lazer, Amber Coffman",50,39,,spotify:track:56hYeuutlZO5Pkm99FzLCW
+1,10,Mollyjohnson,"Joe Quinto",3,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,Mollyjohnson,"Jonathan Black",2,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,Mollyjohnson,"Philip Chapin",2,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,Mollyjohnson,"Sarah S",2,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,Mollyjohnson,jac,2,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,Mollyjohnson,missmara,-1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,"Philip Chapin","Joe Quinto",1,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,"Philip Chapin","Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,"Philip Chapin",Mashew,-1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,"Philip Chapin","Michael Layous",1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,"Philip Chapin",Sarah,1,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,"Philip Chapin","Sarah S",2,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,"Philip Chapin",SusieQ,1,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,"Philip Chapin",Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,"Philip Chapin","Voltron’s YoungLion",1,"Get Free","Major Lazer, Amber Coffman",50,39,,spotify:track:56hYeuutlZO5Pkm99FzLCW
+1,10,"Philip Chapin",jac,1,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,"Philip Chapin",missmara,1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,Sarah,"Joe Quinto",1,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,Sarah,Mashew,3,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,Sarah,Mollyjohnson,-1,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,Sarah,"Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,Sarah,"Sarah S",1,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,Sarah,SusieQ,1,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,Sarah,Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,Sarah,jac,1,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,Sarah,missmara,2,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,"Sarah S","Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,"Sarah S",Mashew,2,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,"Sarah S",Mollyjohnson,1,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,"Sarah S","Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,"Sarah S",Sarah,2,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,"Sarah S",SusieQ,2,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,"Sarah S",Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,"Sarah S","Voltron’s YoungLion",1,"Get Free","Major Lazer, Amber Coffman",50,39,,spotify:track:56hYeuutlZO5Pkm99FzLCW
+1,10,"Sarah S",missmara,-1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,SusieQ,"Joe Quinto",3,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,SusieQ,"Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,SusieQ,Mashew,-1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,SusieQ,"Michael Layous",1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,SusieQ,Mollyjohnson,1,"Livin' On A Prayer","Bon Jovi",7,77,rock,spotify:track:37ZJ0p5Jm13JPevGcx4SkF
+1,10,SusieQ,"Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,SusieQ,"Sarah S",3,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,SusieQ,jac,1,"i hope ur miserable until ur dead","Nessa Barrett",40,72,,spotify:track:4ka1FkKAMde6dQAFFMXKac
+1,10,"Voltron’s YoungLion","Jonathan Black",1,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,"Voltron’s YoungLion",Mashew,-1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,"Voltron’s YoungLion","Michael Layous",1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,"Voltron’s YoungLion","Philip Chapin",2,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,"Voltron’s YoungLion",Sarah,6,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,"Voltron’s YoungLion",missmara,1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,jac,"Joe Quinto",1,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,jac,"Jonathan Black",2,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,jac,Mashew,-1,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,jac,"Michael Layous",1,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,jac,"Philip Chapin",1,"Teen Idle",MARINA,24,69,pop,spotify:track:5B8N5rPOmTVVGpuBMK2Vby
+1,10,jac,Sarah,1,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,jac,"Sarah S",1,"I'd Rather Go Blind","Etta James",27,56,soul,spotify:track:1kPBT8S2wJFNAyBMnGVZgL
+1,10,jac,SusieQ,1,Dilate,"Ani DiFranco",72,38,,spotify:track:0W8ykUof4RXSQAXvzMc5u2
+1,10,jac,Tj,1,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
+1,10,jac,"Voltron’s YoungLion",1,"Get Free","Major Lazer, Amber Coffman",50,39,,spotify:track:56hYeuutlZO5Pkm99FzLCW
+1,10,jac,missmara,1,"United States Of Whatever","Liam Lynch",50,46,,spotify:track:6Jub05dvpbF4Im83NqMCUg
+1,10,missmara,"Joe Quinto",-1,"Nights Like These",Lucero,72,73,,spotify:track:7wdsny4I4vMLY4wCF9FDkr
+1,10,missmara,"Jonathan Black",2,"Psycho Killer","Talking Heads",23,50,"new wave",spotify:track:7dSCxR4LqkmxoBrq9MzVSD
+1,10,missmara,Mashew,3,"JU$T (feat. Pharrell Williams & Zack de la Rocha)","El-P, Killer Mike, Run The Jewels, Zack De La Rocha, Pharrell Williams",95,100,,spotify:track:0YdjfAmUyxF4Dh0HNEhmoI
+1,10,missmara,"Michael Layous",2,"Guess I'm Doing Fine",Beck,51,61,,spotify:track:6Pxqd7tcXE0t4mfK7PGDra
+1,10,missmara,Sarah,1,"All Eyes On Me (Song Only)","Bo Burnham",41,74,,spotify:track:47emsK4Cj4dMqctYq18U03
+1,10,missmara,Tj,3,"Good Time Boy","Prof, Fueled by 808",99,60,,spotify:track:4uYGT9xCkXYSsHxnbnRqGu
