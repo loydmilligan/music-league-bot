@@ -9,8 +9,9 @@
   import SongSearchTab from '$lib/components/SongSearchTab.svelte';
   import ThemeResearchTab from '$lib/components/ThemeResearchTab.svelte';
   import PlayerResearchTab from '$lib/components/PlayerResearchTab.svelte';
+  import LeagueResearchTab from '$lib/components/LeagueResearchTab.svelte';
 
-  type TabKey = 'songs' | 'themes' | 'players';
+  type TabKey = 'songs' | 'themes' | 'players' | 'league';
   type Tab = { key: TabKey; label: string; glyph: string; blurb: string };
 
   const TABS: Tab[] = [
@@ -35,10 +36,17 @@
       blurb:
         'Per-player summaries for everyone we have played with — songs submitted, votes given, comment counts, placements. Numbers-only to start; read their tendencies.',
     },
+    {
+      key: 'league',
+      label: 'League research',
+      glyph: '▦',
+      blurb:
+        'One league at a time: who rewards whom (points heatmap), how obscure its picks run over time (drift), and each player’s submit-vs-vote genre split.',
+    },
   ];
 
   function isTab(v: string | null): v is TabKey {
-    return v === 'songs' || v === 'themes' || v === 'players';
+    return v === 'songs' || v === 'themes' || v === 'players' || v === 'league';
   }
 
   // Tab is driven by the URL so it survives refresh / back-forward and is shareable.
@@ -114,8 +122,10 @@
       <SongSearchTab />
     {:else if activeTab === 'themes'}
       <ThemeResearchTab />
-    {:else}
+    {:else if activeTab === 'players'}
       <PlayerResearchTab />
+    {:else}
+      <LeagueResearchTab />
     {/if}
   </section>
 </div>
