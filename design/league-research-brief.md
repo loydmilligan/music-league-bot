@@ -165,8 +165,8 @@ decision; (5) produce the **full design** for the feature, fitted to the existin
   corpus-wide matrix would be). Native `title=` tooltip shows raw numbers (points, song count,
   attribute value). Attribute sources: obscurity = `100 − popularity_proxy`, energy from audio
   features, era from release metadata (exclude songs lacking a year).
-- **Open questions:** How to express the lens visually (see D2). How large can a roster get (some
-  leagues may have 15–20+ players → matrix legibility).
+- **Open questions:** How to express the lens visually (see D2). Rosters run **8–15 players**, so
+  the matrix is comfortably small — legibility is not a major risk.
 
 ### Idea B — Obscurity drift
 - **The idea:** Line chart, x = rounds in chronological order (spanning seasons under "All
@@ -250,7 +250,7 @@ decision; (5) produce the **full design** for the feature, fitted to the existin
 
 > These are the "let's see the options visually" asks. D1–D3 especially want an in-context canvas —
 > the visual shown **inside the real `/history` shell**, dark Mash Co. styling, on realistic league
-> data (10–20 players, several rounds).
+> data (8–15 players, several rounds).
 
 ---
 
@@ -289,8 +289,8 @@ decision; (5) produce the **full design** for the feature, fitted to the existin
      glance; denser.
   3. **Bivariate cells** — cell *size* = points, cell *hue* = attribute; one grid encodes both at
      once; richest but hardest to read.
-- **Constraints:** raw-SVG grid; native `title=` tooltips; single-league roster (bounded size, but
-  15–20+ players stresses legibility); use the axis palette for the color scale.
+- **Constraints:** raw-SVG grid; native `title=` tooltips; single-league roster is small (**8–15
+  players**, so up to a ~15×15 matrix); use the axis palette for the color scale.
 - **What CD should put on the canvas:** the same real matrix rendered all three ways, at a realistic
   roster size, with the `Points` baseline shown alongside.
 - **How we'll decide:** does the "A rewards B for obscure picks" insight pop out without reading the
@@ -350,9 +350,9 @@ decision; (5) produce the **full design** for the feature, fitted to the existin
 - **Accessibility bar:** match existing behavior — roving-tabindex tablist already handled at the
   page; keyboard-reachable controls; sufficient contrast on the dark palette; do not rely on color
   alone for the heatmap (tooltips carry raw numbers).
-- **Risks / past problems:** (assumption) genre-tag normalization will be noisy; (assumption) large
-  rosters could make the heatmap cramped; the winning-song obscurity line depends on release-year
-  coverage which is partial (era mode must degrade gracefully).
+- **Risks / past problems:** (assumption) genre-tag normalization will be noisy; rosters are small
+  (8–15 players) so heatmap legibility is low-risk; the winning-song obscurity line depends on
+  release-year coverage which is partial (era mode must degrade gracefully).
 
 ---
 
@@ -386,7 +386,7 @@ decision; (5) produce the **full design** for the feature, fitted to the existin
 ## 13. Open questions & unknowns
 
 - Genre-tag normalization approach (casing/near-dupes) — how aggressive, and picked by whom? *(unknown — needs decision)*
-- Maximum realistic league roster size, which drives heatmap legibility. *(unknown — CD should design for ~15–20)*
+- League roster size is **8–15 players** (confirmed) — design the heatmap for up to a ~15×15 matrix.
 - Release-year coverage for the heatmap "Era" mode and the drift winning-song line. *(assumption: partial; degrade gracefully)*
 - Whether scope selection should persist across tab switches / reloads (deep-link vs local state). *(unknown — Open area 1)*
 - Minimum data thresholds before each visual renders vs. shows a "not enough data" line. *(unknown — Open area 2)*
