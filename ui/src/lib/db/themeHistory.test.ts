@@ -43,7 +43,67 @@ it('returns theme=prompt, round=title, season, and its picks', () => {
   const out = getThemeHistory(db);
   expect(out).toHaveLength(1);
   expect(out[0]).toMatchObject({ theme: 'Songs with weather-related lyrics.', season: 1, round: 'Weatherbug' });
-  expect(out[0].picks).toEqual([{ title: 'Rain', artist: 'The Beatles', submitter: 'Me', points: 7 }]);
+  // Unenriched song → identity + points, every metadata field null, tags empty.
+  expect(out[0].picks).toEqual([
+    {
+      title: 'Rain',
+      artist: 'The Beatles',
+      submitter: 'Me',
+      points: 7,
+      albumArtUrl: null,
+      popularityProxy: null,
+      obscurity: null,
+      obscurityBucket: null,
+      energy: null,
+      hasLyrics: null,
+      bpm: null,
+      musicalKey: null,
+      scale: null,
+      durationS: null,
+      tags: [],
+    },
+  ]);
+});
+
+it('populates enrichment fields and the obscurity bucket when analysis rows exist', () => {
+  const me = competitor('me', 'Me');
+  const r = round(1, 'Deep Cuts', 'A song.');
+  submit(r, me, 'spotify:track:x', 'Song X', 'Artist X');
+  vote(r, me, 'spotify:track:x', 5);
+  db.prepare(
+    `INSERT INTO song_popularity (spotify_uri, artist, title, popularity_proxy, tags, fetched_at)
+     VALUES (?,?,?,?,?,?)`,
+  ).run('spotify:track:x', 'Artist X', 'Song X', 28, JSON.stringify(['indie', 'lo-fi']), new Date().toISOString());
+  db.prepare(
+    `INSERT INTO song_audio_features (spotify_uri, bpm, key, scale, energy, duration_s, analyzed_at)
+     VALUES (?,?,?,?,?,?,?)`,
+  ).run('spotify:track:x', 82.7, 'A', 'major', 56, 235.6, new Date().toISOString());
+  db.prepare(
+    `INSERT INTO song_lyrics_metrics (spotify_uri, has_lyrics, fetched_at) VALUES (?,?,?)`,
+  ).run('spotify:track:x', 1, new Date().toISOString());
+
+  const [pick] = getThemeHistory(db)[0].picks;
+  expect(pick).toMatchObject({
+    points: 5,
+    popularityProxy: 28,
+    obscurity: 72, // 100 − 28
+    obscurityBucket: 'Rabbit Hole', // obsc 72 is the top bucket (≥ b3 under any boundaries)
+    energy: 56,
+    hasLyrics: true,
+    bpm: 82.7,
+    musicalKey: 'A',
+    scale: 'major',
+    durationS: 235.6,
+    tags: ['indie', 'lo-fi'],
+  });
+});
+
+it('reports points=null for a round with no votes yet (fresh/pending)', () => {
+  const me = competitor('me', 'Me');
+  const r = round(1, 'In Progress', 'A song.');
+  submit(r, me, 'spotify:track:fresh', 'Fresh', 'New Artist'); // no votes cast anywhere
+  const [pick] = getThemeHistory(db)[0].picks;
+  expect(pick.points).toBeNull();
 });
 
 it('strips the "Theme provided by" attribution from the prompt', () => {
