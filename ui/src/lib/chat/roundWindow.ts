@@ -58,12 +58,15 @@ export function buildRoundWindows(rounds: RoundWindowInput[], nowIso: string): R
     // its own resolved start.
     const fromIso = i === 0 ? resolveStart(r, nowIso) : ends[i - 1];
     const toIso = ends[i];
-    // The last round is live until it actually ends: either the poller recorded
-    // a voting end, or its voting deadline has passed. A deadline still in the
-    // future means the round is running now.
+    // The last round is live once it has actually opened and until it ends —
+    // either the poller recorded a voting end, or its deadline passed. Leagues
+    // pre-schedule whole slates, so the last round is often months out: it has
+    // a future deadline but its window has not started, which is scheduled, not
+    // live.
     const isLive =
       !sorted[i + 1] &&
       !r.votingEndedAt &&
+      Date.parse(fromIso) <= Date.parse(nowIso) &&
       (!r.votingDeadline || Date.parse(r.votingDeadline) > Date.parse(nowIso));
     return { id: r.id, name: r.name, seasonNumber: r.seasonNumber, fromIso, toIso, isLive };
   });

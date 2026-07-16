@@ -76,6 +76,7 @@
   {#if tab === 'history'}
     <HistoryView
       rounds={data.historyRounds}
+      seasonTotals={data.seasonTotals}
       groups={data.chatGroups}
       senders={data.allSenders}
       sendersByGroup={data.sendersByGroup}

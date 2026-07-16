@@ -51,6 +51,11 @@ export const load: PageServerLoad = async ({ url }) => {
     snippet: string | null;
   }
   const historyRounds: HistoryRound[] = [];
+  // True round count per group+season, so the season header can report real
+  // coverage ("5 of 43") instead of counting only the rounds that survived the
+  // filter below. Season numbers repeat across leagues, so the group name has
+  // to be part of the key.
+  const seasonTotals: Record<string, number> = {};
 
   for (const league of leagues) {
     const groupName = chatSettings.leagueGroupMap[league.slug] ?? '';
@@ -85,6 +90,8 @@ export const load: PageServerLoad = async ({ url }) => {
         new Date().toISOString(),
       );
 
+      seasonTotals[`${groupName}::${season.seasonNumber}`] = windows.length;
+
       for (const w of windows) {
         // Buffer adjustment
         let qFrom = w.fromIso;
@@ -111,9 +118,12 @@ export const load: PageServerLoad = async ({ url }) => {
     }
   }
 
-  // Newest-first within each league; only show rounds with messages
+  // Newest-first within each league. Rounds that captured no chat are hidden —
+  // most leagues predate capture, so they are noise. A *live* round is the
+  // exception: zero messages there means capture may be broken right now, and
+  // dropping it takes the whole league off the page with no way to tell.
   historyRounds.reverse();
-  const historyRoundsWithMessages = historyRounds.filter(r => r.messageCount > 0);
+  const historyRoundsWithMessages = historyRounds.filter(r => r.messageCount > 0 || r.isLive);
 
   // Only expose groups that are actually mapped to a league (active links)
   const linkedGroupNames = new Set(Object.values(chatSettings.leagueGroupMap).filter(Boolean));
@@ -141,6 +151,7 @@ export const load: PageServerLoad = async ({ url }) => {
     sendersByGroup,
     selfNames: chatSettings.selfNames,
     historyRounds: historyRoundsWithMessages,
+    seasonTotals,
     roundBoundary: chatSettings.roundBoundary,
     bufferDays: chatSettings.bufferDays,
     hasUnlinkedLeagues: leagues.some(l => !chatSettings.leagueGroupMap[l.slug]),

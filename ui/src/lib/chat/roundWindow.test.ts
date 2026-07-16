@@ -112,6 +112,28 @@ describe('buildRoundWindows', () => {
     expect(w[0].isLive).toBe(true);
   });
 
+  it('does not treat a scheduled round that has not started as live', () => {
+    // Fam-Jam pre-schedules a whole slate of rounds. The furthest-out one is
+    // "last" and its deadline is in the future, but its window has not opened —
+    // it is scheduled, not running. Calling it live would surface an empty
+    // August round today as if its capture were broken.
+    // A whole slate is pre-scheduled at once, so the last round's window is
+    // chained past the intervening ones and opens well after today.
+    const w = buildRoundWindows(
+      [
+        r({ id: 124, votingStartedAt: '2026-07-11T19:00:00Z', votingEndedAt: '2026-07-15T19:00:00Z' }),
+        r({ id: 128, submissionDeadline: '2026-08-15T19:00:00Z', votingDeadline: '2026-08-19T19:00:00Z',
+            createdAt: '2026-07-16T05:17:50Z' }),
+        r({ id: 129, submissionDeadline: '2026-08-22T19:00:00Z', votingDeadline: '2026-08-26T19:00:00Z',
+            createdAt: '2026-07-16T05:17:51Z' }),
+      ],
+      '2026-07-16T20:00:00.000Z',
+    );
+    const scheduled = w.find(x => x.id === 129)!;
+    expect(Date.parse(scheduled.fromIso)).toBeGreaterThan(Date.parse('2026-07-16T20:00:00.000Z'));
+    expect(scheduled.isLive).toBe(false);
+  });
+
   it('does not treat a last round whose voting deadline has passed as live', () => {
     const w = buildRoundWindows(
       [r({ id: 9, votingDeadline: '2026-05-05T00:00:00Z', createdAt: '2026-05-01T00:00:00Z' })],

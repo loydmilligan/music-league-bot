@@ -13,6 +13,7 @@ let load: typeof import('./+page.server.js').load;
 interface HistoryRound {
   id: number;
   messageCount: number;
+  isLive: boolean;
   lastTs: string | null;
   snippet: string | null;
 }
@@ -59,42 +60,74 @@ function mkEvent() {
   } as Parameters<typeof load>[0];
 }
 
+/**
+ * Season 3 of a single league:
+ *   101 — has chat, finished              → shown
+ *   102 — no chat, finished               → hidden (historical noise)
+ *   103 — no chat, still running (isLive) → shown (a live gap is a signal)
+ */
+function seedSeason() {
+  db.prepare(`INSERT INTO leagues (id, slug, name) VALUES (1, 'test-league', 'Test League')`).run();
+  db.prepare(
+    `INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 3, 'active')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO rounds (
+      id, season_id, ml_round_id, name, created_at, submission_deadline, voting_deadline
+    ) VALUES
+      (101, 1, 'ml-r1', 'Round 1', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', '2026-01-07T00:00:00Z'),
+      (102, 1, 'ml-r2', 'Round 2', '2026-01-08T00:00:00Z', '2026-01-08T00:00:00Z', '2026-01-14T00:00:00Z'),
+      (103, 1, 'ml-r3', 'Round 3', '2026-01-15T00:00:00Z', '2026-01-15T00:00:00Z', NULL)`,
+  ).run();
+  db.prepare(
+    `INSERT INTO settings (key, value) VALUES ('chat_league_group_map', '{"test-league":"Test Group"}')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO chat_messages (id, platform, group_name, sender, text, ts)
+     VALUES ('m1', 'whatsapp', 'Test Group', 'Matt', 'hello round one', '2026-01-03T12:00:00Z')`,
+  ).run();
+}
+
 describe('chat page loader', () => {
-  it('keeps zero-message rounds in history so season counts reflect all rounds', async () => {
-    db.prepare(`INSERT INTO leagues (id, slug, name) VALUES (1, 'test-league', 'Test League')`).run();
-    db.prepare(
-      `INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 3, 'active')`,
-    ).run();
-    db.prepare(
-      `INSERT INTO rounds (
-        id, season_id, ml_round_id, name, created_at, submission_deadline, voting_deadline
-      ) VALUES
-        (101, 1, 'ml-r1', 'Round 1', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', '2026-01-07T00:00:00Z'),
-        (102, 1, 'ml-r2', 'Round 2', '2026-01-08T00:00:00Z', '2026-01-08T00:00:00Z', '2026-01-14T00:00:00Z')`,
-    ).run();
-    db.prepare(
-      `INSERT INTO settings (key, value) VALUES ('chat_league_group_map', '{"test-league":"Test Group"}')`,
-    ).run();
-    db.prepare(
-      `INSERT INTO chat_messages (id, platform, group_name, sender, text, ts)
-       VALUES ('m1', 'whatsapp', 'Test Group', 'Matt', 'hello round one', '2026-01-03T12:00:00Z')`,
-    ).run();
+  it('hides finished rounds that captured no chat', async () => {
+    seedSeason();
+    const data = (await load(mkEvent())) as { historyRounds: HistoryRound[] };
 
-    const data = await load(mkEvent()) as { historyRounds: HistoryRound[] };
-
-    expect(data.historyRounds).toHaveLength(2);
-    expect(data.historyRounds.map((round: HistoryRound) => round.id)).toEqual([102, 101]);
-    expect(data.historyRounds[0]).toMatchObject({
-      id: 102,
-      messageCount: 0,
-      lastTs: null,
-      snippet: null,
-    });
-    expect(data.historyRounds[1]).toMatchObject({
-      id: 101,
+    // 102 finished with nothing captured — noise, and nothing to act on.
+    expect(data.historyRounds.map((r) => r.id)).not.toContain(102);
+    expect(data.historyRounds.find((r) => r.id === 101)).toMatchObject({
       messageCount: 1,
-      lastTs: '2026-01-03T12:00:00Z',
       snippet: 'Matt: hello round one',
     });
+  });
+
+  it('keeps a live round with zero messages so a broken capture is visible', async () => {
+    seedSeason();
+    const data = (await load(mkEvent())) as { historyRounds: HistoryRound[] };
+
+    // A live round with no chat means capture may be broken (bad group mapping,
+    // relay down, wrong window). Dropping it hides the league entirely and the
+    // failure reads as "nothing is wrong" — the boarz-ii-men bug.
+    const live = data.historyRounds.find((r) => r.id === 103);
+    expect(live).toBeDefined();
+    expect(live).toMatchObject({ messageCount: 0, isLive: true });
+  });
+
+  it('reports true season totals, not the filtered count', async () => {
+    seedSeason();
+    const data = (await load(mkEvent())) as {
+      historyRounds: HistoryRound[];
+      seasonTotals: Record<string, number>;
+    };
+
+    // Two of three rounds render, but the season really has three.
+    expect(data.historyRounds).toHaveLength(2);
+    expect(data.seasonTotals['Test Group::3']).toBe(3);
+  });
+
+  it('newest round first', async () => {
+    seedSeason();
+    const data = (await load(mkEvent())) as { historyRounds: HistoryRound[] };
+    expect(data.historyRounds.map((r) => r.id)).toEqual([103, 101]);
   });
 });

@@ -43,6 +43,9 @@
 
   interface Props {
     rounds: RoundWithStats[];
+    // True rounds-per-season, keyed `${groupName}::${seasonNumber}`. `rounds` is
+    // already filtered, so its length understates a season.
+    seasonTotals?: Record<string, number>;
     groups: { group_name: string; platform: string }[];
     senders: string[];
     sendersByGroup?: Record<string, string[]>;
@@ -58,6 +61,7 @@
 
   let {
     rounds,
+    seasonTotals = {},
     groups,
     senders,
     sendersByGroup = {},
@@ -108,6 +112,7 @@
   interface SeasonGroup {
     seasonNumber: number;
     rounds: RoundWithStats[];
+    total: number;
   }
 
   const filteredRounds = $derived.by(() => {
@@ -133,7 +138,15 @@
       map.set(r.seasonNumber, existing);
     }
     const sorted = [...map.entries()].sort((a, b) => b[0] - a[0]);
-    return sorted.map(([seasonNumber, rs]) => ({ seasonNumber, rounds: rs }));
+    return sorted.map(([seasonNumber, rs]) => {
+      // A season heading can span several leagues when no group is selected, so
+      // sum the totals of the groups actually represented in it. Fall back to
+      // the visible count when a total is missing.
+      const seen = new Set(rs.map(r => r.groupName));
+      let total = 0;
+      for (const g of seen) total += seasonTotals[`${g}::${seasonNumber}`] ?? rs.filter(r => r.groupName === g).length;
+      return { seasonNumber, rounds: rs, total };
+    });
   });
 
   let viewerEl = $state<HTMLDivElement | null>(null);
@@ -384,7 +397,14 @@
           {/if}
         {:else}
           {#each seasonGroups as sg (sg.seasonNumber)}
-            <div class="ch-season-sep">Season {sg.seasonNumber} · {sg.rounds.length} round{sg.rounds.length === 1 ? '' : 's'}</div>
+            <div class="ch-season-sep">
+              Season {sg.seasonNumber} ·
+              {#if sg.total > sg.rounds.length}
+                {sg.rounds.length} of {sg.total} rounds with chat
+              {:else}
+                {sg.rounds.length} round{sg.rounds.length === 1 ? '' : 's'}
+              {/if}
+            </div>
             {#each sg.rounds as round (round.id)}
               <RoundCard
                 roundId={round.id}
