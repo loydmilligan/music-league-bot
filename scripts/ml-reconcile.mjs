@@ -24,7 +24,8 @@ const APPLY = process.argv.includes('--apply');
 // Tracks", S4) so the name substring below can't match the wrong season. This
 // script reconciles a league's max-season_number, which for fam-jam is now S4.
 const SLUG_TO_ML_ID = {
-	'fam-jam': 'd3d3b2046a2c4c639976ca2621a8afa3' // Fam Jam IV: Uncharted Tracks (S4)
+	'fam-jam': 'd3d3b2046a2c4c639976ca2621a8afa3', // Fam Jam IV: Uncharted Tracks (S4)
+	'second-best': '78b2e6400520468e8d726e8793127fb0' // Second Second Best (S2)
 };
 
 // Slug → ML league name pattern (substring match, lowercase) — fallback for any
@@ -33,7 +34,8 @@ const SLUG_TO_ML_NAME = {
 	'nostalgia-pit': 'nostalgia pit',
 	'hip-jammers':   'hip jammers',
 	'second-best':   'second best',
-	'fam-jam':       'fam jam'
+	'fam-jam':       'fam jam',
+	'boarz-ii-men':  'boarz ii men'
 };
 
 const db = new Database(DB_PATH, { readonly: !APPLY });

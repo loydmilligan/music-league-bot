@@ -7,6 +7,7 @@ const SEED = [
   { slug: 'fam-jam',      name: 'Fam-Jam',      exclude: 0 },
   { slug: 'second-best',  name: 'Second Best',  exclude: 0 },
   { slug: 'nostalgia-pit',name: 'Nostalgia Pit',exclude: 1 },
+  { slug: 'boarz-ii-men', name: 'Boarz II Men', exclude: 0 },
 ];
 
 export function seedLeagues(db: Database.Database): void {

@@ -5,16 +5,19 @@ import { upsertRound, updateDeadlines } from './rounds.js';
 
 const mk = () => openLeagueDb(':memory:');
 
-it('seeds 4 leagues, nostalgia-pit excluded', () => {
+it('seeds 5 leagues, nostalgia-pit excluded', () => {
   const db = mk(); seedLeagues(db);
   const leagues = getAllLeagues(db);
-  expect(leagues).toHaveLength(4);
+  expect(leagues).toHaveLength(5);
   expect(leagues.find(l => l.slug === 'nostalgia-pit')?.excludeFromCombined).toBe(true);
+  // boarz-ii-men is a separate friend group but combines like the other active
+  // leagues — only the retired nostalgia-pit experiment is excluded.
+  expect(leagues.find(l => l.slug === 'boarz-ii-men')?.excludeFromCombined).toBe(false);
 });
 
 it('seed idempotent', () => {
   const db = mk(); seedLeagues(db); seedLeagues(db);
-  expect(getAllLeagues(db)).toHaveLength(4);
+  expect(getAllLeagues(db)).toHaveLength(5);
 });
 
 it('getActiveSeasonsWithLeague', () => {
