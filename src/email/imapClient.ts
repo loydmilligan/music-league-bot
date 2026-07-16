@@ -35,6 +35,16 @@ export async function fetchMusicLeagueEmails(
     logger: false,
   });
 
+  // ImapFlow can emit 'error' asynchronously — a socket timeout fires from a
+  // timer, outside any pending await — so the caller's try/catch never sees it.
+  // With no listener attached, Node escalates that emit to an uncaught
+  // exception and kills the process; this crash-looped the api service (which
+  // also serves /webhooks/relay) until it wedged. The connect()/fetch()
+  // promises still reject, so the caller's catch stays the real error path.
+  client.on('error', (err: unknown) => {
+    console.error('[imap] client error:', err instanceof Error ? err.message : String(err));
+  });
+
   const out: FetchedEmail[] = [];
   await client.connect();
   const lock = await client.getMailboxLock('INBOX');
