@@ -29,16 +29,25 @@ export interface RoundWindow {
   isLive: boolean;
 }
 
-export function resolveStart(r: RoundWindowInput): string {
-  return r.votingStartedAt ?? r.submissionDeadline ?? r.createdAt;
+export function resolveStart(r: RoundWindowInput, nowIso?: string): string {
+  if (r.votingStartedAt) return r.votingStartedAt;
+  // submission_deadline is only a stand-in for "when voting started" once it has
+  // passed. A round still taking submissions has one in the future — using it
+  // would start the window ahead of now and hide the round's live chat.
+  if (r.submissionDeadline && (!nowIso || Date.parse(r.submissionDeadline) <= Date.parse(nowIso))) {
+    return r.submissionDeadline;
+  }
+  return r.createdAt;
 }
 
 export function buildRoundWindows(rounds: RoundWindowInput[], nowIso: string): RoundWindow[] {
-  const sorted = [...rounds].sort((a, b) => Date.parse(resolveStart(a)) - Date.parse(resolveStart(b)));
+  const sorted = [...rounds].sort(
+    (a, b) => Date.parse(resolveStart(a, nowIso)) - Date.parse(resolveStart(b, nowIso)),
+  );
   // Each round's END from the best available signal.
   const ends = sorted.map((r, i) => {
     const next = sorted[i + 1];
-    return r.votingEndedAt ?? r.votingDeadline ?? (next ? resolveStart(next) : nowIso);
+    return r.votingEndedAt ?? r.votingDeadline ?? (next ? resolveStart(next, nowIso) : nowIso);
   });
   return sorted.map((r, i) => {
     // Chain each round's START to the previous round's END so windows are
@@ -47,9 +56,15 @@ export function buildRoundWindows(rounds: RoundWindowInput[], nowIso: string): R
     // this round's voting-start. Without this, that submission-phase chat lands
     // in a gap between windows and shows under no round. The first round keeps
     // its own resolved start.
-    const fromIso = i === 0 ? resolveStart(r) : ends[i - 1];
+    const fromIso = i === 0 ? resolveStart(r, nowIso) : ends[i - 1];
     const toIso = ends[i];
-    const isLive = !r.votingEndedAt && !r.votingDeadline && !sorted[i + 1];
+    // The last round is live until it actually ends: either the poller recorded
+    // a voting end, or its voting deadline has passed. A deadline still in the
+    // future means the round is running now.
+    const isLive =
+      !sorted[i + 1] &&
+      !r.votingEndedAt &&
+      (!r.votingDeadline || Date.parse(r.votingDeadline) > Date.parse(nowIso));
     return { id: r.id, name: r.name, seasonNumber: r.seasonNumber, fromIso, toIso, isLive };
   });
 }

@@ -18,6 +18,18 @@ describe('resolveStart — priority order', () => {
     expect(resolveStart(r({ submissionDeadline: '2026-05-02T00:00:00Z' }))).toBe('2026-05-02T00:00:00Z');
     expect(resolveStart(r({}))).toBe('2026-06-12T00:00:00Z');
   });
+
+  it('ignores a submission_deadline that has not passed yet', () => {
+    // submission_deadline stands in for "when voting started" — that only holds
+    // once it is in the past. A round still taking submissions has a deadline in
+    // the future, which would put its window start ahead of "now".
+    expect(
+      resolveStart(
+        r({ submissionDeadline: '2026-07-23T07:00:00Z', createdAt: '2026-07-16T16:59:15Z' }),
+        '2026-07-16T20:00:00Z',
+      ),
+    ).toBe('2026-07-16T16:59:15Z');
+  });
 });
 
 describe('buildRoundWindows', () => {
@@ -66,6 +78,46 @@ describe('buildRoundWindows', () => {
     const w = buildRoundWindows(rounds, '2026-07-01T00:00:00Z');
     expect(w[0]).toMatchObject({ id: 8, fromIso: '2026-06-19T00:00:00Z', toIso: '2026-06-23T00:00:00Z' });
     expect(w[1]).toMatchObject({ id: 10, fromIso: '2026-06-23T00:00:00Z', toIso: '2026-06-30T00:00:00Z' });
+  });
+
+  it('windows a new season\'s first round from created_at when its deadline is still out', () => {
+    // Real values from boarz-ii-men round 135. A brand-new league's opening round
+    // has no voting_started_at and a deliberately far-out submission_deadline (set
+    // so players have time to join). It is also the first round, so there is no
+    // previous round end to chain from — the case that hid the league's chat.
+    const w = buildRoundWindows(
+      [r({
+        id: 135, name: 'I Heard It Through the Napster',
+        submissionDeadline: '2026-07-23T07:00:00.000Z',
+        votingDeadline: '2026-07-27T07:00:00.000Z',
+        createdAt: '2026-07-16T16:59:15.873Z',
+      })],
+      '2026-07-16T20:00:00.000Z',
+    );
+    // Must start at creation, not a week out, or same-day chat falls outside it.
+    expect(w[0].fromIso).toBe('2026-07-16T16:59:15.873Z');
+    expect(Date.parse(w[0].fromIso)).toBeLessThanOrEqual(Date.parse('2026-07-16T20:00:00.000Z'));
+  });
+
+  it('treats a last round whose voting deadline has not passed as live', () => {
+    const w = buildRoundWindows(
+      [r({
+        id: 135,
+        submissionDeadline: '2026-07-23T07:00:00.000Z',
+        votingDeadline: '2026-07-27T07:00:00.000Z',
+        createdAt: '2026-07-16T16:59:15.873Z',
+      })],
+      '2026-07-16T20:00:00.000Z',
+    );
+    expect(w[0].isLive).toBe(true);
+  });
+
+  it('does not treat a last round whose voting deadline has passed as live', () => {
+    const w = buildRoundWindows(
+      [r({ id: 9, votingDeadline: '2026-05-05T00:00:00Z', createdAt: '2026-05-01T00:00:00Z' })],
+      '2026-07-01T00:00:00Z',
+    );
+    expect(w[0].isLive).toBe(false);
   });
 
   it('produces contiguous windows (no inter-round gaps that orphan chat)', () => {
