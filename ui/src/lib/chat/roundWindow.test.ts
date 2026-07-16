@@ -142,6 +142,45 @@ describe('buildRoundWindows', () => {
     expect(w[0].isLive).toBe(false);
   });
 
+  it('the live round is the one whose window contains now, not the last one', () => {
+    // Fam-Jam's real shape: one round running today, a slate of rounds already
+    // scheduled behind it. "Last round" would pick the August one and leave the
+    // round actually being played unprotected by the empty-round exemption.
+    const rounds = [
+      r({ id: 123, votingStartedAt: '2026-07-08T02:20:12Z', votingEndedAt: '2026-07-15T14:19:24Z' }),
+      r({ id: 124, submissionDeadline: '2026-07-18T19:00:00Z', votingDeadline: '2026-07-22T19:00:00Z',
+          createdAt: '2026-07-16T05:17:50Z' }),
+      r({ id: 125, submissionDeadline: '2026-07-25T19:00:00Z', votingDeadline: '2026-07-29T19:00:00Z',
+          createdAt: '2026-07-16T05:17:51Z' }),
+      r({ id: 129, submissionDeadline: '2026-08-22T19:00:00Z', votingDeadline: '2026-08-26T19:00:00Z',
+          createdAt: '2026-07-16T05:17:52Z' }),
+    ];
+    const w = buildRoundWindows(rounds, '2026-07-16T20:00:00.000Z');
+    expect(w.filter(x => x.isLive).map(x => x.id)).toEqual([124]);
+  });
+
+  it('never marks more than one round live', () => {
+    const rounds = [
+      r({ id: 1, votingStartedAt: '2026-07-01T00:00:00Z', votingEndedAt: '2026-07-08T00:00:00Z' }),
+      r({ id: 2, submissionDeadline: '2026-07-18T00:00:00Z', votingDeadline: '2026-07-22T00:00:00Z',
+          createdAt: '2026-07-10T00:00:00Z' }),
+      r({ id: 3, submissionDeadline: '2026-07-25T00:00:00Z', votingDeadline: '2026-07-29T00:00:00Z',
+          createdAt: '2026-07-10T00:00:01Z' }),
+    ];
+    const w = buildRoundWindows(rounds, '2026-07-16T20:00:00.000Z');
+    expect(w.filter(x => x.isLive)).toHaveLength(1);
+  });
+
+  it('allows zero live rounds once a season has ended', () => {
+    // Hip Jammers: last round finished days ago, nothing scheduled after it.
+    const rounds = [
+      r({ id: 1, votingStartedAt: '2026-07-01T00:00:00Z', votingEndedAt: '2026-07-08T00:00:00Z' }),
+      r({ id: 2, votingStartedAt: '2026-07-03T22:49:59Z', votingEndedAt: '2026-07-11T05:26:12Z' }),
+    ];
+    const w = buildRoundWindows(rounds, '2026-07-16T20:00:00.000Z');
+    expect(w.filter(x => x.isLive)).toHaveLength(0);
+  });
+
   it('produces contiguous windows (no inter-round gaps that orphan chat)', () => {
     const rounds = [
       r({ id: 1, votingStartedAt: '2026-05-03T00:00:00Z', votingEndedAt: '2026-05-07T00:00:00Z' }),
