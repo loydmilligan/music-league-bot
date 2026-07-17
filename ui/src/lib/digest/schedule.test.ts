@@ -34,8 +34,8 @@ function addRound(
   );
 }
 
-/** A round that would pass every readiness check. */
-function makeComplete(db: Database.Database, roundId: number) {
+/** A round that would pass every readiness check, including a finalized digest. */
+function makeComplete(db: Database.Database, roundId: number, finalized = true) {
   db.prepare(
     `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
      VALUES (?, 1, ?, 'Title', 'Artist', '2026-06-01T00:00:00Z')`,
@@ -44,6 +44,14 @@ function makeComplete(db: Database.Database, roundId: number) {
     `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
      VALUES (?, 2, ?, 5, 'nice', '2026-06-01T00:00:00Z')`,
   ).run(roundId, `spotify:track:s${roundId}`);
+  addDraft(db, roundId, finalized);
+}
+
+function addDraft(db: Database.Database, roundId: number, finalized: boolean) {
+  db.prepare(
+    `INSERT INTO digest_drafts (id, round_id, finalized_at, rel_context, prep_checks)
+     VALUES (?, ?, ?, '{}', '[]')`,
+  ).run(`d${roundId}`, roundId, finalized ? '2026-07-12T00:00:00Z' : null);
 }
 
 let db: Database.Database;
@@ -149,6 +157,29 @@ describe('readiness gating', () => {
     const d = resolveScheduledDigest(db, 1, NOW);
     expect(d).toMatchObject({ action: 'hold', roundId: 1 });
     expect(d.reason).toMatch(/submission/i);
+  });
+
+  it('holds when no digest has been generated for the round', () => {
+    // The digest body is LLM-written prose. Nothing may be posted that a human
+    // has not looked at, so an absent draft is a hold, never an auto-generate.
+    addRound(db, { id: 1, votingDeadline: PAST });
+    addRound(db, { id: 2, votingDeadline: FUTURE });
+    makeComplete(db, 1, false);
+    db.prepare('DELETE FROM digest_drafts WHERE round_id = 1').run();
+
+    const d = resolveScheduledDigest(db, 1, NOW);
+    expect(d).toMatchObject({ action: 'hold', roundId: 1 });
+    expect(d.reason).toMatch(/digest/i);
+  });
+
+  it('holds when the digest exists but has not been finalized', () => {
+    addRound(db, { id: 1, votingDeadline: PAST });
+    addRound(db, { id: 2, votingDeadline: FUTURE });
+    makeComplete(db, 1, false);
+
+    const d = resolveScheduledDigest(db, 1, NOW);
+    expect(d).toMatchObject({ action: 'hold', roundId: 1 });
+    expect(d.reason).toMatch(/finali[sz]ed/i);
   });
 
   it('holds when the round has no theme description', () => {
