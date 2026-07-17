@@ -1,126 +1,178 @@
 # Backlog
 
-## What this bot is for
+> Triaged 2026-07-16 against the actual source. Every item below was checked
+> against code, git history, or the live DB — not carried forward on faith.
+> Items that shipped or were overtaken have been deleted; see the triage report
+> in that session for what was removed and why.
 
-This bot is a **passive music capture layer** for a WhatsApp group that plays Music League. The official Music League app handles actual submissions. This bot captures everything else — songs mentioned in conversation, songs people considered but didn't submit, songs from previous seasons, tangents, rabbit holes.
+## What this project is
 
-The goal is zero friction. No commands required. The bot listens, recognises music links from any platform, and quietly builds playlists in the background. Participants get value (playlists, history) without having to interact with the bot at all.
+It started as a passive music-capture layer for a WhatsApp group. It is now four
+surfaces, and the backlog should be read against all of them:
 
----
+- **WhatsApp bot** (`src/`, container `bot`) — still live. Auto-captures music
+  URLs from the group into `chat_songs` + the master Spotify playlist. `!song`
+  is the only command it has ever parsed (`src/parser/parseMessage.ts:12`).
+- **Chat relay** (`POST /webhooks/relay` → `chat_messages`) — Android relay
+  feeds WhatsApp + Google Chat history. Separate pipeline from the bot.
+- **Dashboard** (`ui/`) — the operator surface: research, history, digest,
+  settings. Where most new work lands.
+- **MCP server** (`mcp-server/`) — agent-facing tools over the same data.
 
-## Core: Auto-capture (replaces !song)
-
-**Replace command-based submission with passive URL detection.**
-
-Any message in the group containing a music URL is automatically captured — no `!song` prefix, no command needed. Supported platforms:
-
-- Spotify track URLs (`open.spotify.com/track/...`)
-- YouTube / YouTube Music URLs (`youtube.com/watch`, `youtu.be/`, `music.youtube.com/...`)
-- Apple Music URLs (`music.apple.com/.../album/...`)
-
-On capture: resolve to a Spotify track (via search if not a Spotify URL), store in DB with submitter, source platform, and original URL. Silent — no group reply unless resolution fails and `onFailure` is configured.
-
-The `!song` command can remain as an explicit force-add (useful if a URL doesn't auto-resolve correctly), but it should no longer be the primary mechanism.
-
----
-
-## Weekly digest
-
-Once per week (configurable day/time), bot posts to the group:
-
-1. **This week's mentions** — a Spotify playlist of every track captured in the last 7 days, in chronological order. Name: "Music League Mentions — Week of May 5"
-2. **Master playlist** — a running Spotify playlist of every track ever captured in this group. Updated automatically on each capture, not just on digest day. Name: "Music League — All Mentions"
-
-Digest is posted as a group message with both playlist links. No noise the rest of the week.
-
-Owner can trigger manually with `!digest` if they want one outside the schedule.
+The old "zero friction, no commands" framing is obsolete: the command surface was
+never built beyond `!song`, and the product moved to the dashboard and MCP. Do
+not add `!command` items without deciding that question first.
 
 ---
 
-## Spotify → YouTube playlist converter
+## Ranked
 
-When Music League publishes its weekly playlist (Spotify), participants who prefer YouTube Music get left out. 
+### 1. Live submission / vote counts
 
-Feature: owner pastes a Spotify playlist URL into the group (or sends `!convert <spotify-playlist-url>`). Bot:
-1. Fetches all tracks from the Spotify playlist
-2. For each track, generates a YouTube search URL (`https://music.youtube.com/search?q=Artist+Title`) or searches via YouTube Data API if available
-3. Posts back to the group: a YouTube Music playlist link (if YouTube API available) or a formatted list of per-song YouTube Music search links
+Who has and hasn't submitted or voted in the current round. This is the want
+behind the old "email ingestion via n8n" item, which is deleted — but the want
+itself was never met, so it is restated here rather than lost.
 
-Requires either: YouTube Data API key (proper solution, creates actual playlist) or just search link generation (no API key, zero-friction fallback).
+**The email channel provably cannot supply this.** `src/email/emailParser.ts:26`
+classifies exactly four types (`round_starting | new_playlist | votes_are_in |
+other`) and `ParsedEmail` carries no count fields. ML's "votes are in" email
+announces that the phase ended; it carries no tally. Any implementation needs a
+different source.
 
----
+**Cheap now:** `cli-web-musicleague` already covers exactly this ("who has/hasn't
+submitted, who has/hasn't voted, vote totals"). The capability exists and is not
+wired into the dashboard. This is plumbing, not research.
 
-## Privacy / Infrastructure
+### 2. YTM links never reach the digest
 
-- **Message log scope** — `message_create` fires for ALL WhatsApp chats. Move the debug log line inside the group-ID filter so personal conversations don't appear in the terminal. Low effort, do this soon.
+`ui/src/lib/digest/prepChecks.ts:170` defines an optional readiness check named
+**"YTM playlist links"**, which passes only when 100% of a round's submissions
+have a `ytm_link_cache` row (`prepChecks.ts:92`). But no digest section renders
+`ytmUrl` — grep for `ytm` across `ui/src/lib/digest/` hits only `prepChecks.ts`.
 
----
+So the gate exists, the cache is populated, and `attachYtmLinks()`
+(`ui/src/lib/db/ytmLinks.ts:42`) already batch-enriches song payloads — the links
+just never surface in the output. This is the surviving kernel of the deleted
+"Spotify → YouTube converter" item: YouTube-Music listeners still get left out of
+the weekly playlist. Nearly built; needs a render.
 
-## Commands (lightweight, non-intrusive)
+Decide first whether the check name reflects abandoned intent or a dropped wire.
 
-Keep commands minimal. Participants should never need to use them. Owner-facing only unless noted.
+### 3. Chat-capture health signal
 
-- **`!digest`** — Manually trigger the weekly digest post (owner only)
-- **`!convert <spotify-url>`** — Convert a Spotify playlist to YouTube Music links (owner only)
-- **`!mysongs`** — Anyone can DM the bot to get their personal capture history (participant-facing, DM only — no group noise)
-- **`!count`** — Posts current week's capture count to the group ("14 songs captured this week so far")
+There is no signal anywhere for "is chat capture still working." The watcher
+widget exposes the email poller's `lastPollAt`, `uptimeMs`, `dbSizeBytes`
+(`ui/src/lib/db/layout.ts:168-170`) and nothing for the relay.
 
----
+This has now bitten twice. The relay outage where `docker ps` reported "Up N
+hours" while the process was a zombie; and the 2026-07-16 window bug, where a
+brand-new league captured 27 messages that were silently invisible for hours.
+Both were found by hand, late.
 
-## Mention List (owner-only, private)
+**Cheap:** `chat_messages.captured_at` already exists, and the watcher widget is
+already there to hang a per-group "last captured" on. The live-round exemption
+shipped 2026-07-16 makes an empty live round *visible* on the Chat Content page,
+but only to someone who looks — this is the push version.
 
-A personal song queue for the owner — separate from the group capture stream. Owner builds up a list of songs they're considering (for Music League submissions, personal use, etc.) and flushes it to a playlist when ready.
+### 4. `new_playlist` emails mostly fail to map to a round
 
-- **URL drop in DM** — Owner sends song URLs to the bot directly; bot appends to mention list
-- **`!mention list`** — Bot DMs owner the current queue with titles/artists
-- **`!mention process`** — Resolves all queued songs, adds to a private "mega mention" playlist, clears the queue. No group notification.
+46 `new_playlist` rows sit at `unmapped` vs 27 mapped — roughly **63% of playlist
+emails drop their Spotify playlist URL on the floor**. Unlike the other two email
+types, `new_playlist` carries no ML round id, so it falls back to name matching
+(`src/email/emailIngest.ts:80-95`) and usually misses.
 
----
+Data loss, not a feature gap. Worth a look before building anything on top of the
+email pipeline.
 
-## Bracket Tournament Integration
+### 5. My-standing query
 
-Integration between the March Madness bracket web app (`song-tournament-bracket` repo) and Spotify. No WhatsApp involved — purely an HTTP API endpoint.
+`My place: —` and `Finished: —/N` have rendered as literal em-dashes on the home
+cards since sprint-4 (`ui/src/routes/+page.svelte:249,318`, TODO still at `:247`).
+`getMyStanding` does not exist anywhere.
 
-- `POST /bracket/round` — takes ordered Spotify URIs (paired as matchups), creates a Spotify playlist, returns playlist ID + URL
-- `DELETE /bracket/playlist/:id` — deletes a round playlist
-- Auto-delete previous round playlist when new round is pushed
-- The bracket app calls these endpoints; music-league-bot handles Spotify auth
+`MY_COMPETITOR_ID` is already wired and live (`.env.example:38`, set in prod), so
+the dependency is satisfied — this is the standings aggregation plus wiring. It is
+the first thing on the landing page, and it has been visibly broken for two
+months. Keep the loader server-side; sprint-24 deliberately dropped `$env` from
+client paths.
 
-See `song-tournament-bracket/docs/spotify-integration-plan.md` for the full frontend spec.
+### 6. Show the theme submitter on the round detail page
 
----
+The set-UI shipped: two "submitted by" dropdowns write `rounds.theme_submitted_by`
+via `PATCH /api/rounds/:roundId` (`ui/src/routes/settings/setup/+page.svelte:883,961`),
+and 10 of 85 rounds are populated. The round detail page never displays it.
 
-## Future
+Small, and half the work is already done.
 
-- Per-platform stats: "Most links this week came from YouTube (8) vs Spotify (4)"
-- Apple Music → Spotify resolution (requires Apple Music API or scraping)
-- YouTube Music → Spotify resolution (search-based)
-- Duplicate detection across the master playlist (flag but don't block)
-- `!history <artist>` — search the capture history for a given artist
+**Note the column:** the old backlog named `theme_chooser_id`. That column is dead
+— 0 of 85 rows, referenced only by its own migration and a one-way backfill *out*
+of it (`ui/src/lib/db/client.ts:316-322`). `theme_submitted_by` (FK → `players`)
+superseded it. Dropping `theme_chooser_id` is a cleanup worth folding in here.
 
----
+### 7. Small cleanups
 
-# SvelteKit Dashboard (ui/) — Backlog
+- **`--color-rating-voting` token** — voting-phase rating dots still use stock
+  Tailwind blue inline (`round/[roundId]/+page.svelte:477,539`) while every
+  neighbouring branch uses project tokens. Promote it in `ui/src/app.css`.
+  *Latent conflict:* `DotIndicator.svelte:15` maps its own `voting` status to
+  `bg-warn` (amber) — same word, different colour. Decide whether the token
+  unifies these or stays scoped to rating dots.
+- **Per-platform stats** — "most links this week came from YouTube (8) vs
+  Spotify (4)". `source_platform` is captured on every submission
+  (`src/bot/handler.ts:235`) and shown per-row, but no aggregate query exists.
+  Data is there; only the rollup is missing.
+- **League-scope the theme-submitter dropdown** — it iterates the global
+  `data.players` list (`settings/setup/+page.svelte:889,966`) rather than the
+  league's members. This is the piece that would actually need item 9.
 
-These items are for the dashboard surface, captured during sprint orchestration as items deferred from the active sprint. Distinct from the WhatsApp-bot backlog above — but both ship in the same repo.
+### 8. Research upsert by `spotify_uri`
 
-## Schema + data layer
+Consolidate the POST-then-PATCH dance into one atomic call.
 
-- **Add-round endpoint (`POST /api/rounds`)** — sprint-5 added PATCH for editing existing rounds but no create path. Surfaced 2026-05-16 when a real Music League season needed rounds 8 & 9 added by hand. Endpoint should accept `{ season_id, ml_round_id, name, theme?, submission_deadline?, voting_deadline?, theme_chooser_id?, spotify_playlist_url? }` and return the new row + derived phase. Update `round-edit-modal` to optionally include a "+ Add round" mode in the same component.
-- **League ↔ competitor linkage** — `competitors` table is currently flat (`id, ml_competitor_id, name`) with no per-league membership. ML export ingest populates competitors globally. Need either a `league_competitors(league_id, competitor_id)` join table OR a `league_id` column on competitors if a competitor is always scoped to one league. Decide which based on whether the same person appears across leagues with the same `ml_competitor_id` (likely yes — Music League IDs are global). Surfaced 2026-05-16 alongside the theme-chooser work.
-- **Theme-chooser surfacing** — `rounds.theme_chooser_id` column added 2026-05-16 (nullable FK to competitors). Currently no UI to set or display it. Next: extend `round-edit-modal` with a "Theme chosen by" dropdown sourced from competitors in the round's league; show the chooser on the round detail page header alongside the theme.
-- **Round-edit modal: add competitor field for theme-chooser** — depends on the above schema + the league↔competitor linkage so the dropdown can be scoped correctly.
-- **My-standing query** — sprint-4 shipped `My place: —` and `Finished: —/N` placeholder slots on home cards. Need a `getMyStanding(leagueSlug, seasonNumber)` loader that uses `MY_COMPETITOR_ID` env var + votes/submissions tables to compute current rank in active season, final rank in archived seasons.
+**The old item's diagnosis was wrong** and should not be trusted by whoever picks
+this up: POST already keys by `spotify_uri` (`INSERT OR IGNORE` against
+`UNIQUE(round_id, spotify_uri)`, `ui/src/lib/db/research.ts:45-50`). The real
+problem is that it upserts *identity only* — ratings are discarded on conflict —
+so callers POST to get an id, then PATCH ratings by that id
+(`round/[roundId]/+page.svelte:206-223`, whose own comments narrate the
+workaround). Two round-trips, non-atomic.
 
-## Carryover from sprint-4 / sprint-5 deferred sections
+Precedent exists: `POST /api/rounds/[roundId]/research-songs` accepts `ratings` in
+one shot, but it is bearer-auth'd for MCP and unused by these UI surfaces.
 
-- **BIG LIST overview** — unified Spotify playlist of every song across all participated leagues. Landing-page-as-Music-League-career-overview concept. Big feature; needs Spotify playlist creation API.
-- **Email ingestion via n8n** — live submission/vote counts from Music League notification emails (user had this working before).
-- **Manual submit/vote entry** — UI path since Music League doesn't notify users about their own actions; depends on tracking schema decisions.
-- **Historical card fun facts** — total songs, players, genre breakdown, "biggest procrastinator," rotating fun facts on archive cards. Needs new aggregation queries.
-- **CRUD UI for league + season metadata** — sprint-5 shipped round-edit only. League and season editing modals.
+### 9. League ↔ competitor linkage
 
-## Process / dev experience
+`competitors` is still flat (`id, ml_competitor_id, name, player_id`); no
+`league_id`, no join table.
 
-- **POST `/api/research/[roundId]` upsert by spotify_uri** — sprint-5 `rate-anonymous-ml` and `h2h-rate-and-spotify` both consume `research_songs` from new UI surfaces; the current API may key by id only. If agents handled it via two-step POST-or-PUT, consolidate into a true upsert endpoint.
-- **`--color-rating-voting` design token** — sprint-5 `rate-anonymous-ml` used inline blue for voting-phase rating dots; promote to a proper Tailwind token in `app.css` alongside `--color-accent`, `--color-health`, etc.
+**The live data settles the design question the old item left open: a `league_id`
+column would be wrong.** The same `ml_competitor_id` appears across multiple
+leagues — Mashew and missmara in 3 each, Sarah in 2. ML ids are global. It needs
+a `league_competitors` join table.
+
+`player_identities` does *not* supersede this: it has the right shape but **zero
+rows** with `identity_type='music-league'` (24 whatsapp, 11 google-chat). It is a
+chat-identity store in practice.
+
+**Priority caveat:** league scoping is already derivable via
+`competitors → ml_submissions → rounds → seasons → leagues`. This is a
+denormalisation for convenience, not a capability unlock — which is why it sits
+here rather than higher.
+
+### 10. Bigger / unscoped
+
+- **CRUD UI for league + season metadata** — round editing shipped; league and
+  season did not. More than a UI gap: season PATCH hard-rejects anything but
+  `status` (`api/leagues/[leagueId]/seasons/[seasonId]/+server.ts:20-22`), and
+  league PATCH is limited to `/active` and `/rel-context`. Needs API work first.
+- **Historical card fun facts** — total songs, players, genre breakdown,
+  "biggest procrastinator" on the archive cards (`ui/src/routes/+page.svelte:290-325`).
+  *Not* covered by the League Research tab, which is a different route, component,
+  and intent (analyst deep-dive vs. glanceable garnish). `3c8607b` did build genre
+  aggregation, so part of the query work may be reusable.
+- **BIG LIST overview** — unified Spotify playlist across all leagues;
+  landing-page-as-career-overview. Its stated blocker is gone: `createPlaylist`
+  exists (`src/spotify/adapter.ts:98`) and is already wired. Still a big feature.
+- **Manual submit/vote entry** — no UI path; `submitted_by_me` is derived
+  read-only (`ui/src/lib/db/research.ts:34-39`). **Re-scope after item 1** — if
+  ML data can be read directly, most of this want may evaporate.
