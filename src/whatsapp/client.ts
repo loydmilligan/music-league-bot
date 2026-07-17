@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import type { Client as ClientType, Message, Chat } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
+import { formatGroupList, type ChatLike } from './listGroups.js';
 
 const _require = createRequire(import.meta.url);
 const { Client, LocalAuth } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
@@ -29,7 +30,17 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     qrcode.generate(qr, { small: true });
   });
 
-  client.on('ready', () => console.log('[whatsapp] Client ready'));
+  client.on('ready', () => {
+    console.log('[whatsapp] Client ready');
+    // LOG_GROUPS=1 prints group ids next to their names. The only way to learn a
+    // group's JID — nothing else persists it. Read-only; never sends.
+    if (process.env.LOG_GROUPS === '1') {
+      void client
+        .getChats()
+        .then((chats) => console.log(formatGroupList(chats as unknown as ChatLike[])))
+        .catch((err) => console.error('[groups] failed to list chats:', err));
+    }
+  });
 
   client.on('disconnected', (reason) => {
     console.error('[whatsapp] Disconnected:', reason);
