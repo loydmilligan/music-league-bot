@@ -205,6 +205,18 @@ export const SCHEMA = `
   -- sprint-20 html-share: stable, unguessable slug per round for the public
   -- digest.mattmariani.com/d/<slug> artifact. One row per round (PK = round_id)
   -- so a round always resolves to the SAME slug; re-export overwrites in place.
+  -- Auto-post idempotency. One row per round, claimed BEFORE the send so a
+  -- crash or a double-tick cannot post twice. sent_at NULL = claimed but not
+  -- confirmed; a post-send failure keeps the claim (see digest/sendLog.ts).
+  CREATE TABLE IF NOT EXISTS digest_sends (
+    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id  INTEGER NOT NULL REFERENCES leagues(id),
+    claimed_at TEXT NOT NULL,
+    sent_at    TEXT,
+    target     TEXT,
+    url        TEXT,
+    error      TEXT
+  );
   CREATE TABLE IF NOT EXISTS digest_shares (
     round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
     slug       TEXT NOT NULL UNIQUE,
