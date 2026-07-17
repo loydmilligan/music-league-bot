@@ -7,6 +7,8 @@ import { openDb } from './storage/db.js';
 import { createClient, makeSendDm } from './whatsapp/client.js';
 import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
+import { resolvePing } from './digest/ping.js';
+import { guardedSend } from './whatsapp/sendGuard.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -46,10 +48,24 @@ client.initialize();
 
 // Digest auto-post. Fails closed: without DIGEST_SEND_MODE=live and a
 // DIGEST_SEND_TARGETS entry for a league, this polls and posts nothing.
+// `ready` can fire more than once (reconnects), so guard the one-time wiring.
+let started = false;
 client.on('ready', () => {
+  if (started) return;
+  started = true;
+
   startDigestPoller({
     baseUrl: process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002',
     send: (target, text) => makeSendDm(client)(target, text),
     notifyOwner: (msg) => makeSendDm(client)(ownerPhone, msg),
   });
+
+  // One-shot send test. Only when DIGEST_PING_TARGET is set; confirms sendMessage
+  // works (Store methods are broken in this wwebjs build) before any real digest.
+  const ping = resolvePing(process.env);
+  if (ping) {
+    void guardedSend(ping.env, ping.leagueSlug, ping.text, (t, text) => makeSendDm(client)(t, text))
+      .then((r) => console.log(`[ping] ${r.sent ? 'SENT' : 'blocked'} — ${r.reason}`))
+      .catch((err) => console.error('[ping] threw:', err));
+  }
 });
