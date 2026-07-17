@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import type { Client as ClientType, Message, Chat } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
-import { formatGroupSighting, type ChatLike } from './listGroups.js';
+import { formatEnvelope } from './listGroups.js';
 
 const _require = createRequire(import.meta.url);
 const { Client, LocalAuth } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
@@ -46,6 +46,21 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     const chatId = raw.from;
     const timeMs = raw.timestamp * 1000;
 
+    // LOG_GROUPS=1: dump the message's whole raw payload plus the address
+    // envelope. Plain fields only — no Store call (every Store method throws
+    // `r: r` in this wwebjs version). Post in a chat to find its @g.us id.
+    if (process.env.LOG_GROUPS === '1') {
+      console.log(
+        formatEnvelope({ from: raw.from, to: raw.to, author: raw.author, fromMe: raw.fromMe }),
+      );
+      try {
+        // _data is the raw WhatsApp payload — every field in one place.
+        console.log('[groups] raw._data:', JSON.stringify((raw as { _data?: unknown })._data));
+      } catch (err) {
+        console.log('[groups] could not stringify _data:', String(err));
+      }
+    }
+
     const priors = (chatBuffer.get(chatId) ?? []).slice(-3);
 
     pushToBuffer(chatId, {
@@ -58,11 +73,6 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     try {
       const chat: Chat = await raw.getChat();
       chatName = chat.name || chatId;
-      // LOG_GROUPS=1: report the REAL chat id (getChat resolves the group even
-      // for your own messages, where raw.from is your LID, not the group).
-      if (process.env.LOG_GROUPS === '1') {
-        console.log(formatGroupSighting(chat as unknown as ChatLike));
-      }
     } catch { /* fallback to chatId */ }
 
     const wrapped: WhatsAppMessage = {

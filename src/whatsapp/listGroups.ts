@@ -1,25 +1,30 @@
 /**
- * Read-only diagnostic: report the true chat id + name of each message the bot
- * sees, so a group's JID can be learned by posting in it.
+ * Read-only diagnostic: report a message's raw address envelope so a group's
+ * @g.us id can be learned by posting in it. Enabled by LOG_GROUPS=1.
  *
- * Why per-message and not a bulk list: getChats() (the bulk list) is broken in
- * this whatsapp-web.js version (`r: r` from inside the web store). getChat() on a
- * single message still works. And crucially, msg.from is NOT the group for your
- * own messages — WhatsApp reports the sender's LID there, identically across
- * every group you post in. Only the resolved Chat carries the real @g.us id. A
- * group that is just you + bot never receives anyone else's message, so its id
- * can ONLY be learned this way.
+ * Why the envelope and not a Store lookup: EVERY Store method in this
+ * whatsapp-web.js version is broken (`r: r` from inside the web page) —
+ * getChats() AND getChat(). So neither the bulk list nor per-message chat
+ * resolution works.
  *
- * Enabled by LOG_GROUPS=1. Reads; never sends.
+ * The envelope fields (from/to/author) are plain properties on the message, not
+ * Store calls, so they can't throw. And they carry the group id: msg.from is
+ * your LID for your OWN messages (identical across every group), but msg.to is
+ * then the destination — the group. For someone else's message it's reversed.
+ * Checking both from and to for an @g.us finds the group either way.
+ *
+ * Reads; never sends.
  */
 
-export interface ChatLike {
-  id: { _serialized: string };
-  name: string;
-  isGroup: boolean;
+export interface MsgEnvelope {
+  from: string;
+  to: string;
+  author?: string;
+  fromMe: boolean;
 }
 
-export function formatGroupSighting(chat: ChatLike): string {
-  const kind = chat.isGroup ? 'GROUP' : 'not a group (DM)';
-  return `[groups] ${chat.id._serialized}  "${chat.name || '(unnamed)'}"  ${kind}`;
+export function formatEnvelope(e: MsgEnvelope): string {
+  const groupId = [e.from, e.to].find((x) => x?.endsWith('@g.us'));
+  const tag = groupId ? `group=${groupId}` : 'no @g.us id in this envelope';
+  return `[groups] ${tag}  (from=${e.from} to=${e.to || '-'} author=${e.author ?? '-'} fromMe=${e.fromMe})`;
 }
