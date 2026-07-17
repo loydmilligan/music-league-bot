@@ -65,7 +65,13 @@ export function makeDeps(opts: PollerOpts): AutoPostDeps {
   };
 }
 
-export function startDigestPoller(opts: PollerOpts): NodeJS.Timeout {
+export interface PollerHandle {
+  timer: NodeJS.Timeout;
+  /** Run one scheduled tick now (used by the control server's /trigger). */
+  runOnce: () => Promise<void>;
+}
+
+export function startDigestPoller(opts: PollerOpts): PollerHandle {
   const ms = Number(process.env.DIGEST_POLL_MS) || DEFAULT_POLL_MS;
   const deps = makeDeps(opts);
 
@@ -77,9 +83,10 @@ export function startDigestPoller(opts: PollerOpts): NodeJS.Timeout {
     }`,
   );
 
+  const runOnce = () => runDigestTick(deps);
   const timer = setInterval(() => {
-    void runDigestTick(deps).catch((err) => console.error('[autopost] tick threw:', err));
+    void runOnce().catch((err) => console.error('[autopost] tick threw:', err));
   }, ms);
   timer.unref?.();
-  return timer;
+  return { timer, runOnce };
 }

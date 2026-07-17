@@ -37,8 +37,8 @@ export interface AutoPostDeps {
   notifyOwner: (msg: string) => Promise<void>;
 }
 
-export function formatDigestMessage(entry: ScheduleEntry, url: string): string {
-  return `🎧 ${entry.roundName} — the digest is up\n${url}`;
+export function formatDigestMessage(roundName: string, url: string): string {
+  return `🎧 ${roundName} — the digest is up\n${url}`;
 }
 
 export async function runDigestTick(deps: AutoPostDeps): Promise<void> {
@@ -95,7 +95,7 @@ async function postOne(deps: AutoPostDeps, entry: ScheduleEntry): Promise<void> 
     return;
   }
 
-  const text = formatDigestMessage(entry, claim.url);
+  const text = formatDigestMessage(entry.roundName, claim.url);
 
   try {
     const result = await guardedSend(deps.env, entry.leagueSlug, text, deps.send);

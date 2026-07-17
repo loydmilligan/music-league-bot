@@ -9,6 +9,8 @@ import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
 import { guardedSend } from './whatsapp/sendGuard.js';
+import { runManualSend } from './digest/manualSend.js';
+import { startControlServer } from './control/server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -54,10 +56,30 @@ client.on('ready', () => {
   if (started) return;
   started = true;
 
-  startDigestPoller({
-    baseUrl: process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002',
+  const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002';
+  const { runOnce } = startDigestPoller({
+    baseUrl,
     send: (target, text) => makeSendDm(client)(target, text),
     notifyOwner: (msg) => makeSendDm(client)(ownerPhone, msg),
+  });
+
+  // Local control plane (container-local only): trigger a poll, or send any
+  // round's digest to any group. See src/control/server.ts.
+  startControlServer({
+    onTrigger: runOnce,
+    onSend: (req) =>
+      runManualSend(
+        {
+          render: async (roundId) => {
+            const res = await fetch(`${baseUrl}/api/digest/${roundId}/render`, { method: 'POST' });
+            if (!res.ok) throw new Error(`render → ${res.status} ${await res.text().catch(() => '')}`);
+            return (await res.json()) as { name: string; url: string };
+          },
+          send: (target, text) => makeSendDm(client)(target, text),
+          log: (msg) => console.log(msg),
+        },
+        req,
+      ),
   });
 
   // One-shot send test. Only when DIGEST_PING_TARGET is set; confirms sendMessage
