@@ -6,6 +6,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import { createClient, makeSendDm } from './whatsapp/client.js';
 import { handleMessage } from './bot/handler.js';
+import { startDigestPoller } from './digest/poller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -42,3 +43,13 @@ const client = createClient(async (msg) => {
 
 console.log('[bot] Starting WhatsApp client...');
 client.initialize();
+
+// Digest auto-post. Fails closed: without DIGEST_SEND_MODE=live and a
+// DIGEST_SEND_TARGETS entry for a league, this polls and posts nothing.
+client.on('ready', () => {
+  startDigestPoller({
+    baseUrl: process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002',
+    send: (target, text) => makeSendDm(client)(target, text),
+    notifyOwner: (msg) => makeSendDm(client)(ownerPhone, msg),
+  });
+});

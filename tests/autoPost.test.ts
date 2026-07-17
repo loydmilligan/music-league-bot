@@ -22,6 +22,7 @@ function deps(over: Partial<AutoPostDeps> = {}): AutoPostDeps {
     confirm: vi.fn().mockResolvedValue(undefined),
     fail: vi.fn().mockResolvedValue(undefined),
     log: vi.fn(),
+    notifyOwner: vi.fn().mockResolvedValue(undefined),
     ...over,
   };
 }
@@ -113,6 +114,30 @@ describe('send failures', () => {
 
     expect(d.fail).toHaveBeenCalledWith(123, expect.stringContaining('timed out'));
     expect(d.confirm).not.toHaveBeenCalled();
+  });
+
+  it('DMs the owner — a failed send must not be log-only', async () => {
+    const d = deps({ send: vi.fn().mockRejectedValue(new Error('sendMessage timed out')) });
+    await runDigestTick(d);
+
+    expect(d.notifyOwner).toHaveBeenCalledWith(expect.stringContaining('fam-jam'));
+  });
+
+  it('does not DM the owner on a healthy tick', async () => {
+    const d = deps();
+    await runDigestTick(d);
+
+    expect(d.notifyOwner).not.toHaveBeenCalled();
+  });
+
+  it('survives the owner DM itself failing', async () => {
+    const d = deps({
+      send: vi.fn().mockRejectedValue(new Error('boom')),
+      notifyOwner: vi.fn().mockRejectedValue(new Error('DM failed too')),
+    });
+
+    await expect(runDigestTick(d)).resolves.toBeUndefined();
+    expect(d.fail).toHaveBeenCalled();
   });
 
   it('keeps going when one league fails', async () => {

@@ -32,6 +32,9 @@ export interface AutoPostDeps {
   confirm: (roundId: number, target: string, url: string) => Promise<void>;
   fail: (roundId: number, error: string) => Promise<void>;
   log: (msg: string) => void;
+  /** DM the owner. Reserved for failures a human must act on — this project has
+   *  no other alerting, and a weekly job that fails into docker logs fails silently. */
+  notifyOwner: (msg: string) => Promise<void>;
 }
 
 export function formatDigestMessage(entry: ScheduleEntry, url: string): string {
@@ -54,6 +57,15 @@ export async function runDigestTick(deps: AutoPostDeps): Promise<void> {
       // One league's problem must not stop the others.
       deps.log(`[autopost] ${entry.leagueSlug}: unexpected failure: ${String(err)}`);
     }
+  }
+}
+
+/** Notifying must never be the thing that breaks the tick. */
+async function notify(deps: AutoPostDeps, msg: string): Promise<void> {
+  try {
+    await deps.notifyOwner(msg);
+  } catch (err) {
+    deps.log(`[autopost] could not DM the owner: ${String(err)}`);
   }
 }
 
@@ -97,6 +109,11 @@ async function postOne(deps: AutoPostDeps, entry: ScheduleEntry): Promise<void> 
     const msg = err instanceof Error ? err.message : String(err);
     deps.log(`[autopost] ${entry.leagueSlug}: SEND FAILED for round ${entry.roundId}: ${msg}`);
     await deps.fail(entry.roundId, msg);
+    // The round stays claimed, so this will not retry itself — it needs a human.
+    await notify(
+      deps,
+      `Digest auto-post FAILED\nleague: ${entry.leagueSlug}\nround: ${entry.roundId} (${entry.roundName})\nerror: ${msg}\n\nThe round stays claimed, so it will not retry. Check whether the message actually landed before re-sending.`,
+    );
     return;
   }
 
