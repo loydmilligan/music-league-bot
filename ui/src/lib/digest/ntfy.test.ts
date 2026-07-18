@@ -69,7 +69,8 @@ describe('publish', () => {
       { title: 'T', message: 'M' }, fetchFn as unknown as typeof fetch);
     expect(ok).toBe(true);
     const [url, init] = fetchFn.mock.calls[0];
-    expect(url).toBe('https://n/t');
+    // ntfy JSON publish posts to the ROOT url; the topic travels in the body.
+    expect(url).toBe('https://n');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer k');
     expect(JSON.parse(init.body as string)).toMatchObject({ topic: 't', title: 'T', message: 'M' });
   });

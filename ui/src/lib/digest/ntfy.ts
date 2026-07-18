@@ -83,7 +83,10 @@ export function buildFailureNotification(o: { stage: string; reason: string; rou
 
 export async function publish(cfg: NtfyConfig, n: Notification, fetchFn: typeof fetch = fetch): Promise<boolean> {
   try {
-    const res = await fetchFn(`${cfg.url}/${cfg.topic}`, {
+    // ntfy's JSON publish format requires POSTing to the ROOT url with `topic`
+    // in the body. POSTing JSON to the topic path instead makes ntfy treat the
+    // whole JSON as the literal message text (no title/actions rendered).
+    const res = await fetchFn(cfg.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
