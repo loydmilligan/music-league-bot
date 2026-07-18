@@ -593,6 +593,13 @@
     >
       → API tokens (extension auth)
     </a>
+    <a
+      href="/settings/notifications"
+      class="text-accent hover:text-accent-strong underline decoration-dotted underline-offset-4 transition-colors"
+      title="Channels + routing for pipeline alerts and the approval gate."
+    >
+      → Notifications
+    </a>
   </nav>
 </div>
 
