@@ -18,7 +18,7 @@ import { generateApprovalToken, setAwaitingApproval, setAwaitingReview } from '.
 import { ntfyConfigFromEnv, publish, buildApprovalNotification, buildReviewNotification, buildFailureNotification } from './ntfy.js';
 
 const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
-const appBase = process.env.PUBLIC_APP_URL ?? 'https://mlb37.mattmariani.com';
+const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb37.mattmariani.com';
 
 function names(roundId: number, leagueId: number): { league: string; round: string } {
   const db = getDb();
