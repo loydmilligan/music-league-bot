@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { getDb } from '$lib/db/client.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
 import { startQueueWorker } from '$lib/queueWorker.js';
+import { startDigestRunner } from '$lib/digest/runnerLoop.js';
 import { startMlAuthHeartbeat } from '$lib/mlAuth.js';
 
 process.env.DATA_DIR ??= resolve(process.cwd(), '../data');
@@ -13,4 +14,5 @@ runStartupImport(db, DATA_DIR).catch((err) =>
 );
 
 startQueueWorker();
+startDigestRunner();
 startMlAuthHeartbeat();
