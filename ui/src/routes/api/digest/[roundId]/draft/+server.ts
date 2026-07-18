@@ -16,6 +16,7 @@ import {
 } from '$lib/digest/llm.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
 import { getStandings } from '$lib/db/standings.js';
+import { shouldRegenerate } from '$lib/digest/draftForce.js';
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { recomputePopularityProxies } from '$lib/lastfm.js';
 
@@ -34,7 +35,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const round = db.prepare('SELECT id FROM rounds WHERE id = ?').get(roundId);
   if (!round) throw error(404, `round not found: ${roundId}`);
 
-  const genParams = parseGenParams(await readBody(request));
+  const body = await readBody(request);
+  const force = !!(body && typeof body === 'object' && (body as { force?: unknown }).force === true);
+  const genParams = parseGenParams(body);
+  const regenerate = shouldRegenerate(genParams, force);
 
   // Resolve + cache per-song album art (sprint-15 podium-thumbnails). Best-effort:
   // a Spotify failure must not block generation — the podium falls back to glyphs.
@@ -52,7 +56,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const cached = getActiveDraftForRound(db, roundId);
   // Cached path only when the caller did NOT supply generation params — a
   // params request always (re)generates so the modal's choices take effect.
-  if (cached && !genParams) {
+  if (cached && !regenerate) {
     // Backfill album art into an already-generated podium (older drafts predate
     // podium-thumbnails) without regenerating prose — additive coverUrl only.
     const sections = backfillPodiumArt(db, roundId, getSectionsForDraft(db, cached.id));
@@ -79,7 +83,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   // A params-driven regeneration replaces prior drafts for this round so the
   // active draft cleanly reflects the latest modal choices (sections cascade).
-  if (genParams) {
+  if (regenerate) {
     db.prepare('DELETE FROM digest_drafts WHERE round_id = ?').run(roundId);
   }
 
