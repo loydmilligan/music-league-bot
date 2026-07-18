@@ -7,6 +7,7 @@
   let { data }: { data: PageData } = $props();
 
   let config = $state(structuredClone(data.config));
+  let hasNtfyToken = $state(data.hasNtfyToken);
   let testResult = $state<Record<string, string>>({});
 
   let saving = $state(false);
@@ -45,10 +46,13 @@
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (res.ok && body.ok) {
         flashToast('health', 'Saved.');
-        // Reload the config from the server so the masked token field reflects
-        // what's actually stored (blank input never round-trips as the secret).
-        const fresh = await fetch('/api/notifications').then((r) => r.json()) as { config: typeof data.config };
+        // Reload from the server so local state reflects what's actually stored.
+        // The ntfy token itself never comes back — the GET endpoint redacts it —
+        // so the token input stays blank; hasNtfyToken drives the placeholder.
+        const fresh = await fetch('/api/notifications').then((r) => r.json()) as
+          { config: typeof data.config; hasNtfyToken: boolean };
         config = structuredClone(fresh.config);
+        hasNtfyToken = fresh.hasNtfyToken;
       } else {
         flashToast('warn', body.reason ?? 'Save failed');
       }
@@ -148,7 +152,7 @@
         <input
           type="password"
           bind:value={config.channels.ntfy.token}
-          placeholder="••••••••"
+          placeholder={hasNtfyToken ? '•••••• (stored — leave blank to keep)' : 'no token set'}
           class="w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-2 text-sm text-fg placeholder-fg-faint outline-none transition-colors font-mono"
         />
         <span class="text-[11px] text-fg-dim mt-1 block">Leave blank to keep the currently stored token.</span>

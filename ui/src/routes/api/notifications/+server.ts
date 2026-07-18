@@ -1,11 +1,12 @@
 import type { RequestHandler } from './$types.js';
 import { json } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
-import { getNotificationsConfig, setNotificationsConfig, type NotificationsConfig } from '$lib/notifications/config.js';
+import { getNotificationsConfig, setNotificationsConfig, redactSecrets, type NotificationsConfig } from '$lib/notifications/config.js';
 import { mergePreservingSecrets } from '$lib/notifications/testSend.js';
 
 export const GET: RequestHandler = async () => {
-  return json({ config: getNotificationsConfig(getDb()) });
+  // Never ship the real ntfy token to the client — redact before serializing.
+  return json(redactSecrets(getNotificationsConfig(getDb())));
 };
 
 export const POST: RequestHandler = async ({ request }) => {

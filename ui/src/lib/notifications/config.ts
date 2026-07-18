@@ -61,3 +61,20 @@ export function getNotificationsConfig(
 export function setNotificationsConfig(db: Database.Database, cfg: NotificationsConfig): void {
   db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(KEY, JSON.stringify(cfg));
 }
+
+/**
+ * Strip the ntfy secret before a config leaves the server (SSR load props, GET
+ * response body, etc). Never mutates the input. `hasNtfyToken` lets the client
+ * show "a token is stored" without ever seeing it.
+ */
+export function redactSecrets(cfg: NotificationsConfig): { config: NotificationsConfig; hasNtfyToken: boolean } {
+  const hasNtfyToken = cfg.channels.ntfy.token.trim() !== '';
+  const config: NotificationsConfig = {
+    channels: {
+      ntfy: { ...cfg.channels.ntfy, token: '' },
+      whatsapp: { ...cfg.channels.whatsapp },
+    },
+    routing: cfg.routing,
+  };
+  return { config, hasNtfyToken };
+}

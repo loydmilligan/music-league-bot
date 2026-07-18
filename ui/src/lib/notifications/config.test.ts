@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { getNotificationsConfig, setNotificationsConfig, ALERT_TYPES, CHANNEL_IDS } from './config.js';
+import { getNotificationsConfig, setNotificationsConfig, redactSecrets, ALERT_TYPES, CHANNEL_IDS } from './config.js';
 
 function db(): Database.Database {
   const d = new Database(':memory:');
@@ -40,5 +40,25 @@ describe('notifications config', () => {
     const cfg = getNotificationsConfig(d, ENV);
     expect(cfg.channels.whatsapp.ownerNumber).toBe('111@c.us'); // filled from env
     expect(cfg.routing.digest_ready.ntfy).toBe(true);            // filled from default
+  });
+});
+
+describe('redactSecrets', () => {
+  it('strips the ntfy token and reports whether one was stored, without mutating the input', () => {
+    const cfg = getNotificationsConfig(db(), ENV);
+    const original = structuredClone(cfg);
+    const { config, hasNtfyToken } = redactSecrets(cfg);
+    expect(config.channels.ntfy.token).toBe('');
+    expect(hasNtfyToken).toBe(true);
+    expect(config.channels.ntfy.url).toBe(original.channels.ntfy.url);
+    expect(config.channels.ntfy.topic).toBe(original.channels.ntfy.topic);
+    expect(config.channels.whatsapp.ownerNumber).toBe(original.channels.whatsapp.ownerNumber);
+    expect(cfg).toEqual(original); // input untouched
+  });
+  it('reports hasNtfyToken false when no token is stored', () => {
+    const cfg = getNotificationsConfig(db(), { ...ENV, NTFY_TOKEN: '' });
+    const { config, hasNtfyToken } = redactSecrets(cfg);
+    expect(hasNtfyToken).toBe(false);
+    expect(config.channels.ntfy.token).toBe('');
   });
 });
