@@ -44,4 +44,9 @@ describe('runOneJob', () => {
     await expect(runOneJob(d)).resolves.toBe('failed');
     expect(d.fail).toHaveBeenCalledWith(7, expect.stringContaining('llm down'), expect.any(String));
   });
+  it('a synchronous claim() throw becomes failed, not a rejection', async () => {
+    const d = deps({ claim: vi.fn(() => { throw new Error('db locked'); }) });
+    await expect(runOneJob(d)).resolves.toBe('failed');
+    expect(d.fail).not.toHaveBeenCalled(); // no job/roundId to fail
+  });
 });

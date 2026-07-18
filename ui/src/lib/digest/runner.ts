@@ -13,7 +13,13 @@ export interface RunnerDeps {
 }
 
 export async function runOneJob(deps: RunnerDeps): Promise<'idle' | 'ok' | 'failed' | 'held'> {
-  const job = deps.claim();
+  let job;
+  try {
+    job = deps.claim();
+  } catch (err) {
+    deps.log(`[digest-runner] claim failed: ${err instanceof Error ? err.message : String(err)}`);
+    return 'failed';
+  }
   if (!job) return 'idle';
   const { roundId, leagueId } = job;
   try {
