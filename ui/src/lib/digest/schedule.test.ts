@@ -136,6 +136,19 @@ describe('round selection', () => {
   });
 });
 
+describe('voting_ended_at recognized as complete', () => {
+  it('treats a round with voting_ended_at set as complete even if voting_deadline is null', () => {
+    db.prepare(
+      `INSERT INTO rounds (id, season_id, ml_round_id, name, description, voting_deadline, voting_ended_at, created_at)
+       VALUES (1, 1, 'r1', 'Round 1', 'A theme', NULL, ?, '2026-06-01T00:00:00Z')`,
+    ).run(PAST);
+    addRound(db, { id: 2, votingDeadline: FUTURE });
+    makeComplete(db, 1);
+
+    expect(resolveScheduledDigest(db, 1, NOW)).toMatchObject({ action: 'send', roundId: 1 });
+  });
+});
+
 describe('readiness gating', () => {
   it('holds when the completed round has no votes', () => {
     addRound(db, { id: 1, votingDeadline: PAST });

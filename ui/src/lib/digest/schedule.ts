@@ -42,8 +42,7 @@ function latestCompletedRound(
          FROM rounds r
          JOIN seasons s ON s.id = r.season_id
         WHERE s.league_id = ?
-          AND r.voting_deadline IS NOT NULL
-          AND r.voting_deadline <= ?
+          AND ((r.voting_deadline IS NOT NULL AND r.voting_deadline <= ?) OR r.voting_ended_at IS NOT NULL)
         ORDER BY s.season_number DESC, r.id DESC
         LIMIT 1`,
     )
