@@ -9,7 +9,7 @@
  */
 
 import { getDb } from '$lib/db/client.js';
-import { claimNextJob, transitionJob, failJob } from './jobs.js';
+import { claimNextJob, transitionJob, failOrRetry } from './jobs.js';
 import { captureRoundData } from './capture.js';
 import { getLeagueDigestConfig } from './leagueDigestConfig.js';
 import { type RunnerDeps, runOneJob } from './runner.js';
@@ -32,9 +32,11 @@ export function buildRunnerDeps(): RunnerDeps {
     claim: () => claimNextJob(getDb(), new Date().toISOString()),
     transition: (roundId, status, now) => transitionJob(getDb(), roundId, status, now),
     fail: (roundId, error, now) => {
-      failJob(getDb(), roundId, error, now);
-      const cfg = ntfyConfigFromEnv(process.env);
-      if (cfg) void publish(cfg, buildFailureNotification({ stage: 'runner', reason: error, roundId }));
+      const outcome = failOrRetry(getDb(), roundId, error, now);
+      if (outcome === 'failed') {
+        const cfg = ntfyConfigFromEnv(process.env);
+        if (cfg) void publish(cfg, buildFailureNotification({ stage: 'runner', reason: error, roundId }));
+      }
     },
     capture: (roundId) => captureRoundData(roundId),
     generate: async (roundId, genParams) => {

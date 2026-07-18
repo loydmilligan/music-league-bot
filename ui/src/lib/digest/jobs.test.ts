@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type Database from 'better-sqlite3';
+import Database from 'better-sqlite3';
 import { openLeagueDb } from '$lib/db/client.js';
-import { enqueueJob, claimNextJob, transitionJob, failJob, getJob } from './jobs.js';
+import { enqueueJob, claimNextJob, transitionJob, failJob, getJob, failOrRetry, requeueJob } from './jobs.js';
 
 let db: Database.Database;
 beforeEach(() => { db = openLeagueDb(':memory:'); });
@@ -44,5 +44,43 @@ describe('job queue', () => {
     expect(getJob(db, 7)?.status).toBe('generating');
     failJob(db, 7, 'boom', NOW);
     expect(getJob(db, 7)).toMatchObject({ status: 'failed', error: 'boom' });
+  });
+});
+
+function seedJob(): Database.Database {
+  const db = new Database(':memory:');
+  db.exec(`CREATE TABLE digest_jobs (
+    round_id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL, status TEXT NOT NULL,
+    gen_params TEXT, error TEXT, approval_token TEXT, decision TEXT, decided_at TEXT,
+    review_url TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+  );`);
+  db.prepare(`INSERT INTO digest_jobs (round_id, league_id, status, attempts, created_at, updated_at)
+              VALUES (7, 1, 'capturing', 0, 'NOW', 'NOW')`).run();
+  return db;
+}
+
+describe('failOrRetry', () => {
+  it('retries (status pending, attempts incremented) below the cap', () => {
+    const db = seedJob(); // helper that inserts a job at round_id=7, status 'capturing', attempts 0
+    expect(failOrRetry(db, 7, 'boom', 'NOW', 3)).toBe('retry');
+    const row = db.prepare('SELECT status, attempts FROM digest_jobs WHERE round_id=7').get() as { status: string; attempts: number };
+    expect(row.status).toBe('pending'); expect(row.attempts).toBe(1);
+  });
+  it('fails terminally at the cap', () => {
+    const db = seedJob();
+    failOrRetry(db, 7, 'boom', 'NOW', 2); // attempts→1, retry
+    expect(failOrRetry(db, 7, 'boom', 'NOW', 2)).toBe('failed'); // attempts→2, cap
+    const row = db.prepare('SELECT status, attempts FROM digest_jobs WHERE round_id=7').get() as { status: string; attempts: number };
+    expect(row.status).toBe('failed'); expect(row.attempts).toBe(2);
+  });
+});
+
+describe('requeueJob', () => {
+  it('resets a failed job to pending with attempts 0', () => {
+    const db = seedJob();
+    db.prepare("UPDATE digest_jobs SET status='failed', attempts=3, error='x' WHERE round_id=7").run();
+    requeueJob(db, 7, 'NOW');
+    const row = db.prepare('SELECT status, attempts, error FROM digest_jobs WHERE round_id=7').get() as { status: string; attempts: number; error: string | null };
+    expect(row).toMatchObject({ status: 'pending', attempts: 0, error: null });
   });
 });

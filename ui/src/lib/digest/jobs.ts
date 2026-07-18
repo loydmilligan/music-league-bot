@@ -36,3 +36,23 @@ export function getJob(db: Database.Database, roundId: number): { status: string
   return db.prepare(`SELECT status, error FROM digest_jobs WHERE round_id=?`).get(roundId) as
     { status: string; error: string | null } | undefined;
 }
+
+export function failOrRetry(
+  db: Database.Database, roundId: number, error: string, nowIso: string, maxAttempts = 3,
+): 'retry' | 'failed' {
+  const row = db.prepare('SELECT attempts FROM digest_jobs WHERE round_id=?').get(roundId) as { attempts: number } | undefined;
+  const attempts = (row?.attempts ?? 0) + 1;
+  if (attempts < maxAttempts) {
+    db.prepare(`UPDATE digest_jobs SET status='pending', attempts=?, error=?, updated_at=? WHERE round_id=?`)
+      .run(attempts, error, nowIso, roundId);
+    return 'retry';
+  }
+  db.prepare(`UPDATE digest_jobs SET status='failed', attempts=?, error=?, updated_at=? WHERE round_id=?`)
+    .run(attempts, error, nowIso, roundId);
+  return 'failed';
+}
+
+export function requeueJob(db: Database.Database, roundId: number, nowIso: string): void {
+  db.prepare(`UPDATE digest_jobs SET status='pending', attempts=0, error=NULL, updated_at=? WHERE round_id=?`)
+    .run(nowIso, roundId);
+}
