@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import {
   generateApprovalToken, setAwaitingApproval, setAwaitingReview,
-  resolveJobByToken, approveJob, denyJob,
+  resolveJobByToken, approveJob, denyJob, claimApproval, completeApproval,
 } from './approvals.js';
 
 function makeDb(): Database.Database {
@@ -94,6 +94,60 @@ describe('approveJob', () => {
     expect(row.status).toBe('failed');
     expect(row.error).toContain('finalize 500');
     expect(row.approval_token).toBeNull();
+  });
+});
+
+describe('claimApproval (fast-ack half)', () => {
+  it('consumes the token and marks finalizing WITHOUT any side effect', () => {
+    const db = makeDb();
+    setAwaitingApproval(db, 7, 'tok', 'https://d/x', NOW);
+    const res = claimApproval(db, 'tok', () => NOW);
+    expect(res).toEqual({ ok: true, roundId: 7 });
+    const row = db.prepare('SELECT status, decision, approval_token FROM digest_jobs WHERE round_id=7').get() as { status: string; decision: string; approval_token: string | null };
+    expect(row.status).toBe('finalizing');
+    expect(row.decision).toBe('approved');
+    expect(row.approval_token).toBeNull();
+  });
+  it('rejects an unknown token', () => {
+    expect(claimApproval(makeDb(), 'bad', () => NOW).ok).toBe(false);
+  });
+  it('rejects a token not in awaiting_approval', () => {
+    const db = makeDb();
+    setAwaitingReview(db, 7, 'tok', 'https://d/x', NOW);
+    expect(claimApproval(db, 'tok', () => NOW).ok).toBe(false);
+  });
+  it('a second claim with the consumed token is rejected', () => {
+    const db = makeDb();
+    setAwaitingApproval(db, 7, 'tok', 'https://d/x', NOW);
+    claimApproval(db, 'tok', () => NOW);
+    expect(claimApproval(db, 'tok', () => NOW).ok).toBe(false);
+  });
+});
+
+describe('completeApproval (background half)', () => {
+  it('finalizes, triggers send, marks done', async () => {
+    const db = makeDb();
+    setAwaitingApproval(db, 7, 'tok', 'https://d/x', NOW);
+    claimApproval(db, 'tok', () => NOW);
+    const finalize = vi.fn().mockResolvedValue(undefined);
+    const triggerSend = vi.fn().mockResolvedValue(undefined);
+    await completeApproval(db, 7, { finalize, triggerSend, now: () => NOW });
+    expect(finalize).toHaveBeenCalledWith(7);
+    expect(triggerSend).toHaveBeenCalledTimes(1);
+    expect(status(db)).toBe('done');
+  });
+  it('on a finalize throw: marks the job failed with the error, and rethrows, without calling triggerSend', async () => {
+    const db = makeDb();
+    setAwaitingApproval(db, 7, 'tok', 'https://d/x', NOW);
+    claimApproval(db, 'tok', () => NOW);
+    const triggerSend = vi.fn().mockResolvedValue(undefined);
+    await expect(completeApproval(db, 7, {
+      finalize: vi.fn().mockRejectedValue(new Error('finalize 500')), triggerSend, now: () => NOW,
+    })).rejects.toThrow('finalize 500');
+    expect(triggerSend).not.toHaveBeenCalled();
+    const row = db.prepare('SELECT status, error FROM digest_jobs WHERE round_id=7').get() as { status: string; error: string | null };
+    expect(row.status).toBe('failed');
+    expect(row.error).toContain('finalize 500');
   });
 });
 
