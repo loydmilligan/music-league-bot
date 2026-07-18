@@ -170,9 +170,11 @@ New module `ui/src/lib/digest/ntfy.ts`:
 
 ## Infra
 
-- **ntfy** — already stood up by the user on a Cloudflare tunnel (`ntfy.mattmariani.com`),
-  reachable and publish-capable. Phase 2 consumes it via `NTFY_URL` / `NTFY_TOPIC`
-  / `NTFY_TOKEN` env.
+- **ntfy** — already stood up by the user on a Cloudflare tunnel and publish-capable.
+  Env is set in the top-level `.env` (loaded by every compose service via
+  `env_file: .env`): `NTFY_URL=https://ntfy.mattmariani.com`, `NTFY_TOPIC=mlb-digest`,
+  `NTFY_TOKEN=<set>`. The one env still to add is `BOT_CONTROL_URL=http://bot:3003`
+  (bot-ui → bot control), landing with build step 4.
 - **Approve/deny endpoints** — served by bot-ui over the existing public
   `mlb37.mattmariani.com` tunnel (no Cloudflare Access today). The single-use token
   is the auth. No new tunnel required.
