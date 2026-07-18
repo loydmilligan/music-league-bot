@@ -7,7 +7,11 @@ export const SCHEMA = `
     -- (one per league, nullable). Resolution falls back to derived current-round
     -- when the slot is empty/dangling — see db/activeRound.ts.
     is_active INTEGER NOT NULL DEFAULT 0,
-    active_round_id INTEGER REFERENCES rounds(id)
+    active_round_id INTEGER REFERENCES rounds(id),
+    -- digest auto-pipeline (task 4): per-league mode ('auto'|'hil'|'off',
+    -- anything else defaults to 'off') and JSON-serialized default GenParams.
+    digest_mode TEXT,
+    digest_gen_params TEXT
   );
   CREATE TABLE IF NOT EXISTS seasons (
     id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL REFERENCES leagues(id),

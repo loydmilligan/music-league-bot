@@ -23,6 +23,11 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (!roundsCols.some(c => c.name === 'theme_chooser_id')) {
 		db.exec("ALTER TABLE rounds ADD COLUMN theme_chooser_id INTEGER REFERENCES competitors(id)");
 	}
+	// digest auto-pipeline (task 4): per-league mode + default gen params.
+	const leaguesCols = db.prepare("PRAGMA table_info(leagues)").all() as { name: string }[];
+	for (const col of ['digest_mode', 'digest_gen_params']) {
+		if (!leaguesCols.some(c => c.name === col)) db.exec(`ALTER TABLE leagues ADD COLUMN ${col} TEXT`);
+	}
 	// Relax ml_submissions.competitor_id NOT NULL → nullable so anonymous
 	// playlist-ingest rows (sprint-5 D2) can use competitor_id IS NULL.
 	// SQLite has no ALTER COLUMN; one-time table rebuild preserving every row.
