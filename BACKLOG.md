@@ -176,3 +176,40 @@ here rather than higher.
 - **Manual submit/vote entry** — no UI path; `submitted_by_me` is derived
   read-only (`ui/src/lib/db/research.ts:34-39`). **Re-scope after item 1** — if
   ML data can be read directly, most of this want may evaporate.
+
+### 11. Digest auto-pipeline follow-ups
+
+Four items surfaced by the `feat/digest-auto-pipeline` work (Plan 1 = spine →
+auto-send). The first three are the whole-branch review's Minor findings (logged
+in `.superpowers/sdd/progress.md`); the fourth is a behavior the live smoke
+exposed. None block the pipeline — all fail closed — but revisit before relying on
+it unattended at scale. Several fold naturally into Plan 2 (the ntfy approval gate).
+
+- **Failed jobs are terminal — no retry.** `digest_jobs.round_id` is PK and
+  enqueue is `INSERT OR IGNORE` (`ui/src/lib/digest/jobs.ts`), so a transient
+  capture/LLM failure parks the row at `failed` and re-ingesting the same
+  `voting_ended` email will not retry it. Recovery today is a manual row delete.
+  Fail-closed but silent — wants a retry/backoff, or at minimum an alert plus a
+  "requeue" path.
+
+- **Runner auto-finalizes rounds the poller will deliberately HOLD.** `runOneJob`
+  (`ui/src/lib/digest/runner.ts`) finalizes any auto-mode round without consulting
+  `resolveScheduledDigest`, so a season-final round (or one with no description /
+  no votes) still gets finalized — spending the rel-context LLM call and stamping
+  `finalized_at` — even though the poller then holds it and never posts. Harmless
+  but wasteful and surprising. Gate the runner's finalize on resolver eligibility;
+  belongs with Plan 2's approval gate.
+
+- **No overlap guard on the runner interval.** The runner is a 60s `setInterval`
+  (`ui/src/lib/digest/runnerLoop.ts`). Same-job double-processing is prevented
+  (claim only takes `pending`), but two *different* rounds ending close together
+  could run concurrent ML CLI exports racing on the shared `export.zip` path. Low
+  likelihood; a simple "one job in flight" guard closes it.
+
+- **Auto-generate reuses a cached draft instead of regenerating.** Found in the
+  live smoke: the runner's generate step POSTs `/draft` with the empty default
+  `GenParams`, which `parseGenParams` treats as "no params" → returns the existing
+  cached draft if one exists (no LLM call). So a round already drafted (e.g.
+  hand-started) is reused, not regenerated. Fine if intended, but decide
+  explicitly — if the auto-pipeline should always produce a fresh draft, the
+  generate step must force regeneration.
