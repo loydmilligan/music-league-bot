@@ -1,7 +1,9 @@
 /**
- * Local control server for the bot. Binds to 127.0.0.1 INSIDE the container only
- * — it is a send-capable surface, so it is never exposed to the host or network.
- * Invoke it with `docker exec <bot> node -e "fetch('http://127.0.0.1:PORT/...')"`.
+ * Local control server for the bot. Binds to 0.0.0.0 so it is reachable by
+ * sibling compose containers (e.g. bot-ui POSTing /trigger) — it is a
+ * send-capable surface, so it is never published to the host (no `ports:` on
+ * the `bot` service in docker-compose.yml), only reachable within the
+ * internal compose network.
  *
  * Routes (see router.ts):
  *   POST /trigger                       run one scheduled poll now
@@ -17,7 +19,11 @@ export interface ControlHandlers {
   onSend: (req: ManualSendReq) => Promise<ManualSendResult>;
 }
 
-const CONTROL_HOST = '127.0.0.1';
+// Bind on the compose network so bot-ui (a sibling container) can POST /trigger
+// for immediate sends. NOT published to the host — see docker-compose.yml (`bot`
+// has no `ports:`), so only sibling containers can reach it. /send stays dry-run
+// by default and sendGuard stays fail-closed.
+const CONTROL_HOST = process.env.BOT_CONTROL_HOST ?? '0.0.0.0';
 const DEFAULT_CONTROL_PORT = 3003;
 
 async function readBody(req: http.IncomingMessage): Promise<unknown> {
@@ -60,7 +66,7 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
   });
 
   server.listen(port, CONTROL_HOST, () => {
-    console.log(`[control] listening on ${CONTROL_HOST}:${port} (container-local only)`);
+    console.log(`[control] listening on ${CONTROL_HOST}:${port} (reachable by sibling compose containers)`);
   });
   server.unref();
   return server;

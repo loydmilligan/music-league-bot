@@ -561,6 +561,20 @@ export function openLeagueDb(path?: string): Database.Database {
 	// (in years) applied when prompting image generation, allowing the operator
 	// to skew all avatars younger or older than the stored player age.
 	upsert.run('avatar_age_shift', '0');
+	// digest approval gate: approval_token/decision/decided_at/review_url +
+	// attempts retry counter on digest_jobs.
+	const digestJobsCols = db.prepare("PRAGMA table_info(digest_jobs)").all() as { name: string }[];
+	for (const [col, ddl] of [
+		['approval_token', 'TEXT'],
+		['decision', 'TEXT'],
+		['decided_at', 'TEXT'],
+		['review_url', 'TEXT'],
+		['attempts', "INTEGER NOT NULL DEFAULT 0"],
+	] as const) {
+		if (!digestJobsCols.some((c) => c.name === col)) {
+			db.exec(`ALTER TABLE digest_jobs ADD COLUMN ${col} ${ddl}`);
+		}
+	}
 	return db;
 }
 

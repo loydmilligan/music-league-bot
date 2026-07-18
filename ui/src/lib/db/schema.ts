@@ -222,13 +222,18 @@ export const SCHEMA = `
     error      TEXT
   );
   CREATE TABLE IF NOT EXISTS digest_jobs (
-    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
-    league_id  INTEGER NOT NULL REFERENCES leagues(id),
-    status     TEXT NOT NULL,
-    gen_params TEXT,
-    error      TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    round_id       INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id      INTEGER NOT NULL REFERENCES leagues(id),
+    status         TEXT NOT NULL,
+    gen_params     TEXT,
+    error          TEXT,
+    approval_token TEXT,
+    decision       TEXT,
+    decided_at     TEXT,
+    review_url     TEXT,
+    attempts       INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS digest_shares (
     round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
