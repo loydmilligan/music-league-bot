@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { openLeagueDb } from '$lib/db/client.js';
-import { enqueueJob, claimNextJob, transitionJob, failJob, getJob, failOrRetry, requeueJob } from './jobs.js';
+import { enqueueJob, claimNextJob, transitionJob, failJob, getJob, failOrRetry, requeueJob, hasActiveJob } from './jobs.js';
 
 let db: Database.Database;
 beforeEach(() => { db = openLeagueDb(':memory:'); });
@@ -82,5 +82,28 @@ describe('requeueJob', () => {
     requeueJob(db, 7, 'NOW');
     const row = db.prepare('SELECT status, attempts, error FROM digest_jobs WHERE round_id=7').get() as { status: string; attempts: number; error: string | null };
     expect(row).toMatchObject({ status: 'pending', attempts: 0, error: null });
+  });
+});
+
+describe('hasActiveJob', () => {
+  function db2(status: string): Database.Database {
+    const db = new Database(':memory:');
+    db.exec(`CREATE TABLE digest_jobs (round_id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL, status TEXT NOT NULL,
+      gen_params TEXT, error TEXT, approval_token TEXT, decision TEXT, decided_at TEXT, review_url TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`);
+    db.prepare(`INSERT INTO digest_jobs (round_id, league_id, status, created_at, updated_at) VALUES (7,1,?, 'N','N')`).run(status);
+    return db;
+  }
+  it('true while a job is capturing/generating/finalizing', () => {
+    expect(hasActiveJob(db2('capturing'))).toBe(true);
+    expect(hasActiveJob(db2('generating'))).toBe(true);
+    expect(hasActiveJob(db2('finalizing'))).toBe(true);
+  });
+  it('false for pending/done/failed and (critically) awaiting_* human waits', () => {
+    expect(hasActiveJob(db2('pending'))).toBe(false);
+    expect(hasActiveJob(db2('done'))).toBe(false);
+    expect(hasActiveJob(db2('failed'))).toBe(false);
+    expect(hasActiveJob(db2('awaiting_approval'))).toBe(false);
+    expect(hasActiveJob(db2('awaiting_review'))).toBe(false);
   });
 });

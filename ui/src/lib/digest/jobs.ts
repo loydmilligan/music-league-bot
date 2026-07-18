@@ -56,3 +56,10 @@ export function requeueJob(db: Database.Database, roundId: number, nowIso: strin
   db.prepare(`UPDATE digest_jobs SET status='pending', attempts=0, error=NULL, updated_at=? WHERE round_id=?`)
     .run(nowIso, roundId);
 }
+
+export function hasActiveJob(db: Database.Database): boolean {
+  const row = db.prepare(
+    `SELECT COUNT(*) AS n FROM digest_jobs WHERE status IN ('capturing','generating','finalizing')`,
+  ).get() as { n: number };
+  return row.n > 0;
+}

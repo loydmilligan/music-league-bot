@@ -9,7 +9,7 @@
  */
 
 import { getDb } from '$lib/db/client.js';
-import { claimNextJob, transitionJob, failOrRetry } from './jobs.js';
+import { claimNextJob, transitionJob, failOrRetry, hasActiveJob } from './jobs.js';
 import { captureRoundData } from './capture.js';
 import { getLeagueDigestConfig } from './leagueDigestConfig.js';
 import { type RunnerDeps, runOneJob } from './runner.js';
@@ -29,7 +29,7 @@ function names(roundId: number, leagueId: number): { league: string; round: stri
 
 export function buildRunnerDeps(): RunnerDeps {
   return {
-    claim: () => claimNextJob(getDb(), new Date().toISOString()),
+    claim: () => (hasActiveJob(getDb()) ? null : claimNextJob(getDb(), new Date().toISOString())),
     transition: (roundId, status, now) => transitionJob(getDb(), roundId, status, now),
     fail: (roundId, error, now) => {
       const outcome = failOrRetry(getDb(), roundId, error, now);
