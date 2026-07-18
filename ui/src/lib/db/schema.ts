@@ -217,6 +217,15 @@ export const SCHEMA = `
     url        TEXT,
     error      TEXT
   );
+  CREATE TABLE IF NOT EXISTS digest_jobs (
+    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id  INTEGER NOT NULL REFERENCES leagues(id),
+    status     TEXT NOT NULL,
+    gen_params TEXT,
+    error      TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS digest_shares (
     round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
     slug       TEXT NOT NULL UNIQUE,
