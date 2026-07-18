@@ -24,6 +24,19 @@ describe('whatsappChannel', () => {
     expect(body.text).toContain('Digest ready.');
     expect(body.text).toContain('https://d/x');
   });
+  it('includes the review reason in the composed text when approval.kind is review', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({ ok: true });
+    const p: AlertPayload = {
+      alertType: 'digest_ready',
+      title: 'Hip Jammers — R7',
+      message: 'Needs review',
+      approval: { kind: 'review', token: 'tok', denyUrl: 'https://d', editUrl: 'https://e', reviewReason: 'season-final round' },
+    };
+    await whatsappChannel.sendAlert({ ownerNumber: '1@c.us' }, p, { fetchFn, botControlUrl: 'http://bot:3003' });
+    const body = JSON.parse(fetchFn.mock.calls[0][1].body);
+    expect(body.text).toContain('season-final round');
+    expect(body.text).toContain('Hip Jammers — R7');
+  });
   it('returns ok:false (never throws) when the control POST fails or rejects', async () => {
     expect((await whatsappChannel.sendAlert({ ownerNumber: '1@c.us' }, { alertType: 'digest_sent', title: 'T', message: 'M' }, { fetchFn: vi.fn().mockResolvedValue({ ok: false, status: 500 }), botControlUrl: 'http://bot:3003' })).ok).toBe(false);
     expect((await whatsappChannel.sendAlert({ ownerNumber: '1@c.us' }, { alertType: 'digest_sent', title: 'T', message: 'M' }, { fetchFn: vi.fn().mockRejectedValue(new Error('net')), botControlUrl: 'http://bot:3003' })).ok).toBe(false);
