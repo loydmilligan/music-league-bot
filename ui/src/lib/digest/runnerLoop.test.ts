@@ -8,4 +8,11 @@ describe('buildRunnerDeps', () => {
       expect(typeof (d as unknown as Record<string, unknown>)[k]).toBe('function');
     }
   });
+
+  it('buildRunnerDeps wires the review-gate + approval collaborators', () => {
+    const d = buildRunnerDeps();
+    expect(typeof d.structuralReview).toBe('function');
+    expect(typeof d.awaitApproval).toBe('function');
+    expect(typeof d.awaitReview).toBe('function');
+  });
 });
