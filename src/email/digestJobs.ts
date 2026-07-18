@@ -4,13 +4,18 @@ import type Database from 'better-sqlite3';
 // across the src/ and ui/ projects). Keep the two in sync.
 const DIGEST_JOBS_DDL = `
   CREATE TABLE IF NOT EXISTS digest_jobs (
-    round_id   INTEGER PRIMARY KEY,
-    league_id  INTEGER NOT NULL,
-    status     TEXT NOT NULL,
-    gen_params TEXT,
-    error      TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    round_id       INTEGER PRIMARY KEY,
+    league_id      INTEGER NOT NULL,
+    status         TEXT NOT NULL,
+    gen_params     TEXT,
+    error          TEXT,
+    approval_token TEXT,
+    decision       TEXT,
+    decided_at     TEXT,
+    review_url     TEXT,
+    attempts       INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
   );
 `;
 
