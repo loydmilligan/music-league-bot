@@ -80,6 +80,21 @@ describe('approveJob', () => {
     const res = await approveJob(db, 'tok', { finalize: vi.fn(), triggerSend: vi.fn(), now: () => NOW });
     expect(res.ok).toBe(false);
   });
+  it('marks the job failed with the error message when finalize throws, without calling triggerSend, and still consumes the token', async () => {
+    const db = makeDb();
+    setAwaitingApproval(db, 7, 'tok', 'https://d/x', NOW);
+    const finalize = vi.fn().mockRejectedValue(new Error('finalize 500'));
+    const triggerSend = vi.fn().mockResolvedValue(undefined);
+    const res = await approveJob(db, 'tok', { finalize, triggerSend, now: () => NOW });
+    expect(res.ok).toBe(false);
+    expect(res.roundId).toBe(7);
+    expect(triggerSend).not.toHaveBeenCalled();
+    const row = db.prepare('SELECT status, error, approval_token FROM digest_jobs WHERE round_id=7').get() as
+      { status: string; error: string | null; approval_token: string | null };
+    expect(row.status).toBe('failed');
+    expect(row.error).toContain('finalize 500');
+    expect(row.approval_token).toBeNull();
+  });
 });
 
 describe('denyJob', () => {
