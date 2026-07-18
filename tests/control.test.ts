@@ -45,4 +45,13 @@ describe('parseControlRequest', () => {
   it('rejects an unknown path', () => {
     expect(parseControlRequest('POST', '/nope', {}).action).toBe('unknown');
   });
+
+  it('parses POST /notify with a text body', () => {
+    expect(parseControlRequest('POST', '/notify', { text: 'hello' })).toEqual({ action: 'notify', text: 'hello' });
+  });
+
+  it('rejects /notify without a non-empty text', () => {
+    expect(parseControlRequest('POST', '/notify', {}).action).toBe('unknown');
+    expect(parseControlRequest('POST', '/notify', { text: '  ' }).action).toBe('unknown');
+  });
 });

@@ -80,6 +80,9 @@ client.on('ready', () => {
         },
         req,
       ),
+    onNotify: async (text) => {
+      await makeSendDm(client)(ownerPhone, text);
+    },
   });
 
   // One-shot send test. Only when DIGEST_PING_TARGET is set; confirms sendMessage
