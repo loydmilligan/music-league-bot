@@ -8,6 +8,9 @@ export interface RunnerDeps {
   render: (roundId: number) => Promise<{ url: string }>;
   leagueConfig: (leagueId: number) => { mode: 'auto' | 'hil' | 'off'; genParams: unknown };
   finalize: (roundId: number) => Promise<void>;
+  structuralReview: (roundId: number) => string | null;
+  awaitApproval: (roundId: number, leagueId: number, reviewUrl: string) => void | Promise<void>;
+  awaitReview: (roundId: number, leagueId: number, reviewUrl: string, reason: string) => void | Promise<void>;
   log: (msg: string) => void;
   now: () => string;
 }
@@ -26,17 +29,32 @@ export async function runOneJob(deps: RunnerDeps): Promise<'idle' | 'ok' | 'fail
     const cap = await deps.capture(roundId);
     if (!cap.ok) { deps.fail(roundId, `capture ${cap.stage}: ${cap.reason}`, deps.now()); return 'failed'; }
 
-    deps.transition(roundId, 'generating', deps.now());
     const cfg = deps.leagueConfig(leagueId);
+
+    deps.transition(roundId, 'generating', deps.now());
     await deps.generate(roundId, cfg.genParams);
 
     deps.transition(roundId, 'rendered', deps.now());
-    await deps.render(roundId);
+    const { url } = await deps.render(roundId);
 
-    if (cfg.mode !== 'auto') {
-      deps.log(`[digest-runner] round ${roundId}: held (mode=${cfg.mode}) — awaiting approval gate`);
+    if (cfg.mode === 'off') {
+      deps.log(`[digest-runner] round ${roundId}: held (mode=off) — no notification`);
       return 'held';
     }
+
+    const reviewReason = deps.structuralReview(roundId);
+    if (reviewReason) {
+      await deps.awaitReview(roundId, leagueId, url, reviewReason);
+      deps.log(`[digest-runner] round ${roundId}: awaiting_review — ${reviewReason}`);
+      return 'held';
+    }
+
+    if (cfg.mode !== 'auto') {
+      await deps.awaitApproval(roundId, leagueId, url);
+      deps.log(`[digest-runner] round ${roundId}: awaiting_approval (mode=${cfg.mode})`);
+      return 'held';
+    }
+
     deps.transition(roundId, 'finalizing', deps.now());
     await deps.finalize(roundId);
     deps.transition(roundId, 'done', deps.now());

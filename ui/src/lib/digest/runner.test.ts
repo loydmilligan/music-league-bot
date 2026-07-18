@@ -11,6 +11,8 @@ function deps(over: Partial<RunnerDeps> = {}): RunnerDeps {
     render: vi.fn().mockResolvedValue({ url: 'https://d/x' }),
     leagueConfig: vi.fn().mockReturnValue({ mode: 'auto', genParams: {} }),
     finalize: vi.fn().mockResolvedValue(undefined),
+    structuralReview: vi.fn().mockReturnValue(null),
+    awaitApproval: vi.fn(), awaitReview: vi.fn(),
     log: vi.fn(), now: () => '2026-07-17T09:00:00Z',
     ...over,
   };
@@ -27,11 +29,45 @@ describe('runOneJob', () => {
     expect(d.finalize).toHaveBeenCalledWith(7);
     expect(d.transition).toHaveBeenLastCalledWith(7, 'done', expect.any(String));
   });
-  it('hil/off-mode holds at rendered and never finalizes', async () => {
+  it('auto + clean: finalizes and returns ok', async () => {
+    const d = deps();
+    expect(await runOneJob(d)).toBe('ok');
+    expect(d.finalize).toHaveBeenCalledWith(7);
+    expect(d.awaitApproval).not.toHaveBeenCalled();
+    expect(d.awaitReview).not.toHaveBeenCalled();
+  });
+
+  it('hil + clean: awaits approval, never finalizes', async () => {
     const d = deps({ leagueConfig: vi.fn().mockReturnValue({ mode: 'hil', genParams: {} }) });
     expect(await runOneJob(d)).toBe('held');
+    expect(d.awaitApproval).toHaveBeenCalledWith(7, 1, 'https://d/x');
     expect(d.finalize).not.toHaveBeenCalled();
-    expect(d.transition).toHaveBeenLastCalledWith(7, 'rendered', expect.any(String));
+  });
+
+  it('auto + structural review: escalates to review, never finalizes (item-11 fix)', async () => {
+    const d = deps({ structuralReview: vi.fn().mockReturnValue('season-final round') });
+    expect(await runOneJob(d)).toBe('held');
+    expect(d.awaitReview).toHaveBeenCalledWith(7, 1, 'https://d/x', 'season-final round');
+    expect(d.finalize).not.toHaveBeenCalled();
+    expect(d.awaitApproval).not.toHaveBeenCalled();
+  });
+
+  it('hil + structural review: awaits review, not approval', async () => {
+    const d = deps({
+      leagueConfig: vi.fn().mockReturnValue({ mode: 'hil', genParams: {} }),
+      structuralReview: vi.fn().mockReturnValue('round has no votes'),
+    });
+    expect(await runOneJob(d)).toBe('held');
+    expect(d.awaitReview).toHaveBeenCalledWith(7, 1, 'https://d/x', 'round has no votes');
+    expect(d.awaitApproval).not.toHaveBeenCalled();
+  });
+
+  it('off mode: holds silently — no approval, no review, no finalize', async () => {
+    const d = deps({ leagueConfig: vi.fn().mockReturnValue({ mode: 'off', genParams: {} }) });
+    expect(await runOneJob(d)).toBe('held');
+    expect(d.awaitApproval).not.toHaveBeenCalled();
+    expect(d.awaitReview).not.toHaveBeenCalled();
+    expect(d.finalize).not.toHaveBeenCalled();
   });
   it('capture auth-failure fails the job and stops', async () => {
     const d = deps({ capture: vi.fn().mockResolvedValue({ ok: false, stage: 'auth', reason: 'expired' }) });
