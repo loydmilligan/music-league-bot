@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { ParsedEmail } from './emailParser.js';
+import { enqueueDigestJob } from './digestJobs.js';
 
 /**
  * Persistence for parsed Music League emails: a full archive (`email_messages`)
@@ -216,6 +217,13 @@ export function ingestParsedEmail(
       db.prepare(
         `UPDATE rounds SET spotify_playlist_url = COALESCE(NULLIF(spotify_playlist_url, ''), ?) WHERE id = ?`,
       ).run(p.playlistUrl, roundId);
+    }
+
+    if (eventType === 'voting_ended') {
+      const leagueRow = db.prepare(
+        `SELECT s.league_id AS leagueId FROM rounds r JOIN seasons s ON s.id=r.season_id WHERE r.id=?`,
+      ).get(roundId) as { leagueId: number } | undefined;
+      if (leagueRow) enqueueDigestJob(db, roundId, leagueRow.leagueId, p.sentAt);
     }
   }
 
