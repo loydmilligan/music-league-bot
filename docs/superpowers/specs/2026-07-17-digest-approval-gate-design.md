@@ -94,7 +94,11 @@ pending → capturing → generating → rendered
 ```
 
 - `decision` ∈ `approved | denied | null`; `approval_token`, `decided_at`,
-  `review_url` fields already exist on `digest_jobs` per the Phase 1 spec's data model.
+  `review_url` (plus `attempts` for retry) are **added to `digest_jobs` by Phase 2**
+  — the Phase 1 spec *described* them but Phase 1 only shipped the base columns
+  (`round_id, league_id, status, gen_params, error, created_at, updated_at`). They're
+  added via the same additive-migration pattern Phase 1 used for `leagues`
+  (`PRAGMA table_info` + `ALTER TABLE ADD COLUMN` in `ui/src/lib/db/client.ts`).
 - **Edit/Review is a read-only deep-link** — tapping it opens the editor but sends no
   server signal, so the job stays parked at `awaiting_approval`/`awaiting_review`.
   When the human finalizes + sends through the existing UI, `sendLog` is the signal
@@ -127,14 +131,27 @@ gate and the resolver can share the intent, and it's unit-testable in isolation.
 
 ## Approve = finalize + immediate send
 
-1. `POST /api/digest/approve { token }` on bot-ui (public via mlb37 tunnel).
-2. Verify the single-use `approval_token`; reject if unknown/consumed.
+1. `POST /api/digest/approve { token }` on bot-ui (public via mlb37 tunnel). The
+   ntfy http-action callback carries `Authorization: Bearer ${NTFY_TOKEN}`.
+2. **Two-layer auth:** (a) reject unless the request's `Authorization: Bearer`
+   equals the configured `NTFY_TOKEN` (coarse gate against randoms hitting the
+   public route); (b) verify the single-use `approval_token` from the body maps to a
+   job in `awaiting_approval`; reject if unknown/consumed/wrong-status. The
+   per-job token is the primary auth and the job lookup; the Bearer is a shared-secret
+   gate. Both read from env — nothing hardcoded. (Worst-case Bearer leak = topic
+   spam, not a send; a dedicated callback secret is a fast-follow.)
 3. Finalize the draft (reuse `POST /api/digest/:id/finalize`).
 4. Consume the token (clear it), set `decision='approved'`, `decided_at`.
 5. POST the bot control `/trigger` (now reachable at `http://bot:3003/trigger` on
    the compose network). The resolver — round now finalized + structurally clean —
    returns `send`, and the poller's existing `sendGuard`/`sendLog` chain posts.
 6. Runner/endpoint transitions the job to `done` once the send ledger confirms.
+
+**Considered alternative (deferred):** the wildcard `mlb-digest*` ACL lets the
+Approve/Deny buttons instead *publish to an `mlb-digest-response` topic* that bot-ui
+subscribes to (SSE), avoiding any inbound public endpoint. Rejected for MVP — it
+adds a long-lived subscription + reconnection to manage and gives no direct HTTP
+response to the tap. Revisit if we want to close the public route entirely.
 
 **Control-server change:** `src/control/server.ts` currently binds `127.0.0.1`
 (container-local). Change it to bind `0.0.0.0`. Safety is preserved because the bot
@@ -143,19 +160,30 @@ the control surface is reachable only by sibling containers on the internal comp
 network, and `/send` still defaults to dry-run with `sendGuard` fail-closed. Add a
 `BOT_CONTROL_URL` env (`http://bot:3003`) that bot-ui reads.
 
-`Deny` (`POST /api/digest/deny { token }`) verifies + consumes the token, sets
-`decision='denied'`, status `denied`, and leaves the draft **unfinalized** so the
-normal manual flow can still pick it up later. `Edit`/`Review` are GET deep-links
-to the `mlb37.mattmariani.com` editor — no server endpoint, no token; the human
-edits and sends through the existing UI, and `sendLog` reconciles the job to `done`.
+`Deny` (`POST /api/digest/deny { token }`) applies the same two-layer auth (Bearer
+gate + single-use token), consumes the token, sets `decision='denied'`, status
+`denied`, and leaves the draft **unfinalized** so the normal manual flow can still
+pick it up later (it accepts a token in either `awaiting_approval` or
+`awaiting_review`). `Edit`/`Review` are deep-links to the `mlb37.mattmariani.com`
+editor — no server endpoint, no token; the human edits and sends through the
+existing UI, and `sendLog` reconciles the job to `done`.
 
 ## ntfy integration
 
+**Provisioning (confirmed live by sysops, values in `.env`):** `NTFY_URL=https://ntfy.mattmariani.com`,
+`NTFY_TOPIC=mlb-digest`, `NTFY_TOKEN=<Bearer, never-expires, ACL rw on mlb-digest*>`.
+Read from env/config — **never hardcode the token**. Verified: publish → 200,
+out-of-scope topic → 403 (ACL enforced). Node/TS `fetch` is fine (the
+Python-urllib WAF User-Agent gotcha does not apply).
+
 New module `ui/src/lib/digest/ntfy.ts`:
 
-- `publish(notification)` — POST to `${NTFY_URL}/${NTFY_TOPIC}` with title, body,
-  click URL, and action buttons; `Authorization: Bearer ${NTFY_TOKEN}` when set
-  (ntfy supports no-auth / basic / token — token chosen for revocability).
+- `publish(notification)` — POST to `${NTFY_URL}/${NTFY_TOPIC}` with
+  `Authorization: Bearer ${NTFY_TOKEN}`, carrying title, body, click URL, and
+  action buttons. Either the header form (`Title` / `Click` / `Actions` headers)
+  or the JSON-body form works; this module uses the **JSON body** form
+  (`{topic, title, message, click, actions:[…]}`) because it expresses the
+  auth-header-bearing action callbacks cleanly.
 - Notification builders:
   - **approval** — title = `<league> — Round <n>`; body = short summary; tap →
     review link (`digest.mattmariani.com/d/<slug>`); buttons **Approve** (http POST
