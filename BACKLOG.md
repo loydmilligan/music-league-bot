@@ -213,3 +213,42 @@ it unattended at scale. Several fold naturally into Plan 2 (the ntfy approval ga
   hand-started) is reused, not regenerated. Fine if intended, but decide
   explicitly — if the auto-pipeline should always produce a fresh draft, the
   generate step must force regeneration.
+
+### 12. Notifications panel follow-ups
+
+Surfaced by the notifications settings panel work (multi-channel dispatch;
+ntfy + WhatsApp shipped, merged 53e27f4).
+
+- **Separate ntfy topic for non-approval alerts.** Today all ntfy notifications
+  publish to `mlb-digest`. Add an optional `alertTopic` to the ntfy channel config
+  (falls back to `topic` when blank), seeded from an env var; the ntfy adapter
+  publishes interactive approval/review notifications to `topic` and plain alerts
+  (`pipeline_failure`, `ml_auth_expired`, `digest_sent`) to `alertTopic`. One `if`
+  on `payload.approval` presence + a panel field + tests. ~30-45 min.
+  DESIRED NAME: `mlb-alerts` — but that is OUTSIDE the token's `mlb-digest*` wildcard
+  ACL, so it needs a token/ACL update (or use an `mlb-digest-*` name). Likely folds
+  into the v2 / Twilio sprint (timing TBD).
+
+- **Twilio SMS channel (Phase 2).** The channel abstraction is Twilio-ready: add a
+  `twilio.ts` adapter (SMS via the REST API), a config card, and a grid column.
+  Adapter `capabilities: ['alert']`; creds (accountSid/authToken/from/to) in the
+  notifications blob.
+
+- **Dead `opts.notifyOwner` wiring.** `src/digest/poller.ts` `makeDeps` now overrides
+  `notifyOwner` with `raise()` (→ bot-ui `/api/notify`), so the `opts.notifyOwner`
+  field in `PollerOpts` + its wiring in `src/index.ts` is unused. Remove it.
+
+- **App-wide auth for bot-ui (Cloudflare Access + service tokens).** bot-ui
+  (mlb37.mattmariani.com) is publicly reachable with NO auth; `/api/notify`,
+  `/api/notifications`, `/api/digest/*`, and all `/settings/*` endpoints rely on the
+  tunnel only. Put bot-ui behind CF Access: machine callers (bot) use a service
+  token (client id + secret, no reauth); the browser gets a long-lived CF session.
+  HARD CONSTRAINT: `digest.mattmariani.com` (the `digest-static` container, its own
+  tunnel, accessed by many league members) stays TOTALLY outside auth. Nuance:
+  approve/deny + `/api/notify` callbacks can't interactive-login → service-token
+  headers or a bypass path. Separate hardening project; Matt owns CF config.
+
+- **Phase 2 leftovers (from the approval gate).** Wire an ntfy failure alert into
+  the approve endpoint's background-completion `.catch` (today it only marks the job
+  failed + logs); consider a dedicated callback secret instead of reusing
+  `NTFY_TOKEN` as the approve/deny Bearer.
