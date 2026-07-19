@@ -41,6 +41,17 @@ export function makeDeps(opts: PollerOpts): AutoPostDeps {
     targets: parseTargets(process.env.DIGEST_SEND_TARGETS),
   };
 
+  // Best-effort alert to bot-ui's notify() dispatch. Never throws — a failure
+  // here must never affect the actual digest send/poll path, only get logged.
+  async function raise(alertType: string, title: string, message: string): Promise<void> {
+    try {
+      await fetch(`${opts.baseUrl}/api/notify`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ alertType, title, message }),
+      });
+    } catch (e) { console.error('[autopost] /api/notify failed:', e instanceof Error ? e.message : e); }
+  }
+
   return {
     env,
     fetchSchedule: async () => {
@@ -56,12 +67,13 @@ export function makeDeps(opts: PollerOpts): AutoPostDeps {
     send: opts.send,
     confirm: async (roundId, target, url) => {
       await post(opts.baseUrl, `/api/digest/${roundId}/send-confirm`, { target, url });
+      await raise('digest_sent', 'Digest sent', `round ${roundId} → ${target}\n${url}`);
     },
     fail: async (roundId, error) => {
       await post(opts.baseUrl, `/api/digest/${roundId}/send-failed`, { error });
     },
     log: (msg) => console.log(msg),
-    notifyOwner: opts.notifyOwner,
+    notifyOwner: (msg) => raise('pipeline_failure', '⚠ digest send', msg),
   };
 }
 

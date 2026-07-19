@@ -9,6 +9,7 @@
  *   POST /trigger                       run one scheduled poll now
  *   POST /send {roundId, target, mode}  send any round's digest to any group
  *                                       (mode defaults to dry-run)
+ *   POST /notify {text}                 DM the bot owner (fixed recipient)
  */
 import http from 'node:http';
 import { parseControlRequest } from './router.js';
@@ -17,6 +18,7 @@ import type { ManualSendReq, ManualSendResult } from '../digest/manualSend.js';
 export interface ControlHandlers {
   onTrigger: () => Promise<void>;
   onSend: (req: ManualSendReq) => Promise<ManualSendResult>;
+  onNotify: (text: string) => Promise<void>;
 }
 
 // Bind on the compose network so bot-ui (a sibling container) can POST /trigger
@@ -56,6 +58,9 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
         } else if (route.action === 'send') {
           const result = await handlers.onSend(route);
           reply(200, { ok: true, action: 'send', ...result });
+        } else if (route.action === 'notify') {
+          await handlers.onNotify(route.text);
+          reply(200, { ok: true, action: 'notify' });
         } else {
           reply(400, { ok: false, reason: route.reason });
         }

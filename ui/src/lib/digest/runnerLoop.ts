@@ -15,10 +15,13 @@ import { getLeagueDigestConfig } from './leagueDigestConfig.js';
 import { type RunnerDeps, runOneJob } from './runner.js';
 import { structuralReviewReason } from './structuralReview.js';
 import { generateApprovalToken, setAwaitingApproval, setAwaitingReview } from './approvals.js';
-import { ntfyConfigFromEnv, publish, buildApprovalNotification, buildReviewNotification, buildFailureNotification } from './ntfy.js';
+import { notify } from '$lib/notifications/dispatch.js';
+import type { AlertPayload } from '$lib/notifications/channels/types.js';
 
 const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
 const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb37.mattmariani.com';
+const botControlUrl = process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
+const dispatchDeps = { botControlUrl };
 
 function names(roundId: number, leagueId: number): { league: string; round: string } {
   const db = getDb();
@@ -33,10 +36,10 @@ export function buildRunnerDeps(): RunnerDeps {
     transition: (roundId, status, now) => transitionJob(getDb(), roundId, status, now),
     fail: (roundId, error, now) => {
       const outcome = failOrRetry(getDb(), roundId, error, now);
-      if (outcome === 'failed') {
-        const cfg = ntfyConfigFromEnv(process.env);
-        if (cfg) void publish(cfg, buildFailureNotification({ stage: 'runner', reason: error, roundId }));
-      }
+      if (outcome !== 'failed') return;
+      const alertType = error.startsWith('capture auth') ? 'ml_auth_expired' : 'pipeline_failure';
+      const title = alertType === 'ml_auth_expired' ? '⚠ ML auth expired' : '⚠ digest pipeline';
+      void notify(getDb(), { alertType, title, message: `round ${roundId}: ${error}` } as AlertPayload, dispatchDeps);
     },
     capture: (roundId) => captureRoundData(roundId),
     generate: async (roundId, genParams) => {
@@ -65,29 +68,20 @@ export function buildRunnerDeps(): RunnerDeps {
     awaitApproval: async (roundId, leagueId, reviewUrl) => {
       const token = generateApprovalToken();
       setAwaitingApproval(getDb(), roundId, token, reviewUrl, new Date().toISOString());
-      const cfg = ntfyConfigFromEnv(process.env);
-      if (!cfg) return;
       const { league, round } = names(roundId, leagueId);
-      await publish(cfg, buildApprovalNotification({
-        league, round, reviewUrl,
-        approveUrl: `${appBase}/api/digest/approve`,
-        denyUrl: `${appBase}/api/digest/deny`,
-        editUrl: `${appBase}/digest/${roundId}`,
-        token, bearer: cfg.token,
-      }));
+      await notify(getDb(), {
+        alertType: 'digest_ready', title: `${league} — ${round}`, message: 'Digest ready.', link: reviewUrl,
+        approval: { kind: 'approve', token, approveUrl: `${appBase}/api/digest/approve`, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}` },
+      }, dispatchDeps);
     },
     awaitReview: async (roundId, leagueId, reviewUrl, reason) => {
       const token = generateApprovalToken();
       setAwaitingReview(getDb(), roundId, token, reviewUrl, new Date().toISOString());
-      const cfg = ntfyConfigFromEnv(process.env);
-      if (!cfg) return;
       const { league, round } = names(roundId, leagueId);
-      await publish(cfg, buildReviewNotification({
-        league, round, reviewUrl,
-        editUrl: `${appBase}/digest/${roundId}`,
-        denyUrl: `${appBase}/api/digest/deny`,
-        token, reason, bearer: cfg.token,
-      }));
+      await notify(getDb(), {
+        alertType: 'digest_ready', title: `${league} — ${round}`, message: `Needs review: ${reason}`, link: reviewUrl,
+        approval: { kind: 'review', token, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}`, reviewReason: reason },
+      }, dispatchDeps);
     },
     log: (msg) => console.log(msg),
     now: () => new Date().toISOString()

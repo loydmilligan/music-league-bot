@@ -6,6 +6,7 @@
 export type ControlAction =
   | { action: 'trigger' }
   | { action: 'send'; roundId: number; target: string; mode: 'live' | 'dry-run' }
+  | { action: 'notify'; text: string }
   | { action: 'unknown'; reason: string };
 
 export function parseControlRequest(method: string, path: string, body: unknown): ControlAction {
@@ -23,6 +24,14 @@ export function parseControlRequest(method: string, path: string, body: unknown)
     // so a typo or omission can never cause a real send.
     const mode = b.mode === 'live' ? 'live' : 'dry-run';
     return { action: 'send', roundId: b.roundId, target: b.target.trim(), mode };
+  }
+
+  if (path === '/notify') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    if (typeof b.text !== 'string' || !b.text.trim()) {
+      return { action: 'unknown', reason: 'text (non-empty string) required' };
+    }
+    return { action: 'notify', text: b.text.trim() };
   }
 
   return { action: 'unknown', reason: `no route for ${method} ${path}` };
