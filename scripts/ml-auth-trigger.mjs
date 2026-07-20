@@ -20,6 +20,8 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Database from 'better-sqlite3';
+import { resolveActiveSourceCompetition } from './lib/mlSource.mjs';
 
 const PORT = Number(process.env.ML_AUTH_TRIGGER_PORT ?? 7679);
 const BIND = process.env.ML_AUTH_TRIGGER_BIND ?? '0.0.0.0';
@@ -283,6 +285,19 @@ async function handleRoundsSnapshot(req, res) {
 }
 
 async function resolveLeagueId({ leagueName, slug }) {
+	// SP1 fast-path: if the DB maps this slug's active season to an upstream id,
+	// use it directly and skip name-matching entirely. Read-only; failure is
+	// non-fatal — fall through to the existing CLI name-match below.
+	try {
+		const db = new Database(process.env.LEAGUE_DB ?? 'data/league.db', { readonly: true });
+		const hit = slug ? resolveActiveSourceCompetition(db, slug) : null;
+		db.close();
+		if (hit?.sourceCompetitionId) {
+			return { mlLeagueId: hit.sourceCompetitionId };
+		}
+	} catch {
+		// ignore — fall through to name-matching
+	}
 	const listResult = await runCli(['--json', 'leagues', 'list'], LEAGUES_LIST_TIMEOUT_MS);
 	if (listResult.kind === 'spawn-error') {
 		return {

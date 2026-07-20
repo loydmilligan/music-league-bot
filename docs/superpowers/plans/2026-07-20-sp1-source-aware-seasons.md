@@ -569,14 +569,14 @@ import { resolveActiveSourceCompetition } from './lib/mlSource.mjs';
 		const hit = slug ? resolveActiveSourceCompetition(db, slug) : null;
 		db.close();
 		if (hit?.sourceCompetitionId) {
-			return { leagueId: hit.sourceCompetitionId };
+			return { mlLeagueId: hit.sourceCompetitionId };
 		}
 	} catch {
 		// ignore — fall through to name-matching
 	}
 ```
 
-Note: confirm the success shape the two callers (`scripts/ml-auth-trigger.mjs:167,238`) expect from `resolveLeagueId` and match it. If they read `resolved.leagueId`, the return above is correct; if they read a different field, mirror that field name instead. (Do not change the callers.)
+Note: verified — `resolveLeagueId`'s success shape is `{ mlLeagueId }` and both callers (`scripts/ml-auth-trigger.mjs:167,238`) read `resolved.mlLeagueId`, so the return above matches. (Do not change the callers.)
 
 - [ ] **Step 3: Verify the success shape** — inspect the two call sites:
 
