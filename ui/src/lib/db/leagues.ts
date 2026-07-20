@@ -29,7 +29,8 @@ export function getLeagueBySlug(db: Database.Database, slug: string): League | n
 
 export function getSeasonsForLeague(db: Database.Database, leagueId: number): Season[] {
   return (db.prepare('SELECT * FROM seasons WHERE league_id=? ORDER BY season_number').all(leagueId) as any[])
-    .map(r => ({ id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status }));
+    .map(r => ({ id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status,
+      source: r.source, sourceCompetitionId: r.source_competition_id }));
 }
 
 export function getActiveSeasonsWithLeague(db: Database.Database): Array<Season & { league: League }> {
@@ -43,19 +44,30 @@ export function getActiveSeasonsWithLeague(db: Database.Database): Array<Season 
     })
     .map(r => ({
       id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status,
+      source: r.source, sourceCompetitionId: r.source_competition_id,
       league: { id: r.league_id, slug: r.league_slug, name: r.league_name, excludeFromCombined: !!r.exclude_from_combined, notes: null },
     }));
 }
 
-export function upsertSeason(db: Database.Database, leagueId: number, seasonNumber: number, status: 'active'|'complete'): number {
+export function upsertSeason(
+  db: Database.Database,
+  leagueId: number,
+  seasonNumber: number,
+  status: 'active'|'complete',
+  sourceCompetitionId?: string | null,
+): number {
   // Preserve status for manually-overridden seasons — import-path callers must not
   // clobber admin flips. A season with status_source='manual' keeps its current
   // status regardless of what the importer derived.
-  return (db.prepare(`INSERT INTO seasons (league_id,season_number,status,status_source) VALUES (?,?,?,'derived')
+  // COALESCE(excluded, existing) means a nullish sourceCompetitionId never wipes a
+  // previously-authored mapping — it only sets one when the caller supplies it.
+  return (db.prepare(`INSERT INTO seasons (league_id,season_number,status,status_source,source_competition_id)
+    VALUES (?,?,?,'derived',?)
     ON CONFLICT(league_id,season_number) DO UPDATE SET
-      status = CASE WHEN seasons.status_source = 'manual' THEN seasons.status ELSE excluded.status END
+      status = CASE WHEN seasons.status_source = 'manual' THEN seasons.status ELSE excluded.status END,
+      source_competition_id = COALESCE(excluded.source_competition_id, seasons.source_competition_id)
     RETURNING id`)
-    .get(leagueId, seasonNumber, status) as { id: number }).id;
+    .get(leagueId, seasonNumber, status, sourceCompetitionId ?? null) as { id: number }).id;
 }
 
 export function setSeasonStatus(db: Database.Database, seasonId: number, status: 'active'|'complete'): boolean {

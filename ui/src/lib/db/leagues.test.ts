@@ -1,6 +1,6 @@
 import { it, expect } from 'vitest';
 import { openLeagueDb } from './client.js';
-import { seedLeagues, getAllLeagues, getActiveSeasonsWithLeague, upsertSeason, setSeasonStatus } from './leagues.js';
+import { seedLeagues, getAllLeagues, getActiveSeasonsWithLeague, upsertSeason, setSeasonStatus, getSeasonsForLeague } from './leagues.js';
 import { upsertRound, updateDeadlines } from './rounds.js';
 
 const mk = () => openLeagueDb(':memory:');
@@ -76,4 +76,18 @@ it('setSeasonStatus sets status_source=manual; upsertSeason skips manual seasons
   const afterUpsert = db.prepare('SELECT status, status_source FROM seasons WHERE id = ?').get(seasonId) as { status: string; status_source: string };
   expect(afterUpsert.status).toBe('complete');
   expect(afterUpsert.status_source).toBe('manual');
+});
+
+it('upsertSeason stores and preserves source_competition_id', () => {
+  const db = mk(); seedLeagues(db);
+  const lid = getAllLeagues(db).find(l => l.slug === 'second-best')!.id;
+  upsertSeason(db, lid, 2, 'active', 'abc123');
+  let s = getSeasonsForLeague(db, lid).find(x => x.seasonNumber === 2)!;
+  expect(s.source).toBe('music_league');
+  expect(s.sourceCompetitionId).toBe('abc123');
+  // Re-upsert without an id must NOT wipe the existing mapping.
+  upsertSeason(db, lid, 2, 'complete');
+  s = getSeasonsForLeague(db, lid).find(x => x.seasonNumber === 2)!;
+  expect(s.sourceCompetitionId).toBe('abc123');
+  expect(s.status).toBe('complete');
 });
