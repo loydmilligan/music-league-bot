@@ -10,6 +10,7 @@
  */
 import { spawn } from 'node:child_process';
 import Database from 'better-sqlite3';
+import { resolveSourceCompetition } from './lib/mlSource.mjs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -60,8 +61,16 @@ async function main() {
 			console.log(`\n[${dbL.slug}] (no slug→ML mapping; skipping)`);
 			continue;
 		}
-		// Prefer the exact pinned league ID; fall back to the name substring.
-		const mlL = pinnedId
+		// DB is source of truth for the max season; pin/name are fallbacks.
+		const maxSeason = db.prepare(
+			'SELECT MAX(season_number) AS n FROM seasons WHERE league_id = (SELECT id FROM leagues WHERE slug = ?)'
+		).get(dbL.slug)?.n;
+		const dbSid = maxSeason != null
+			? resolveSourceCompetition(db, dbL.slug, maxSeason)?.sourceCompetitionId
+			: null;
+		const mlL = dbSid
+			? mlLeagues.find((l) => l.id === dbSid)
+			: pinnedId
 			? mlLeagues.find((l) => l.id === pinnedId)
 			: mlLeagues.find((l) => l.name.toLowerCase().includes(needle));
 		if (!mlL) {
