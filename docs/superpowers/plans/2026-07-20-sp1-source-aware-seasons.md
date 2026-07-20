@@ -307,10 +307,15 @@ if (APPLY && !hasCols) {
   hasCols = true;
 }
 
-const upd = db.prepare(`UPDATE seasons SET source_competition_id = @mlId
-  WHERE source_competition_id IS NULL
-    AND season_number = @season
-    AND league_id = (SELECT id FROM leagues WHERE slug = @slug)`);
+// Prepared lazily: on a dry-run against a DB that predates the columns, the
+// column doesn't exist yet, so we can't prepare this UPDATE. It's only ever run
+// under --apply, which guarantees the columns above.
+const upd = hasCols
+  ? db.prepare(`UPDATE seasons SET source_competition_id = @mlId
+      WHERE source_competition_id IS NULL
+        AND season_number = @season
+        AND league_id = (SELECT id FROM leagues WHERE slug = @slug)`)
+  : null;
 
 let changed = 0, missing = 0;
 for (const m of MAP) {
