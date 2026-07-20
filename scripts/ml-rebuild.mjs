@@ -23,6 +23,7 @@ import { copyFileSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveSourceCompetition } from './lib/mlSource.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -79,7 +80,9 @@ async function main() {
 		if (!target.mlLeagueId) {
 			throw new Error(`[${target.slug} s${target.season}] target has no mlLeagueId — refusing to name-match (unsafe). Pin the exact live league id.`);
 		}
-		const mlL = mlLeagues.find((l) => l.id === target.mlLeagueId);
+		// DB is source of truth; the TARGETS pin is a fallback for un-backfilled rows.
+		const sid = resolveSourceCompetition(db, target.slug, target.season)?.sourceCompetitionId ?? target.mlLeagueId;
+		const mlL = mlLeagues.find((l) => l.id === sid);
 		if (!mlL) {
 			console.log(`\n[${target.slug} s${target.season}] pinned league ${target.mlLeagueId.slice(0, 8)} not in live list — skipping`);
 			continue;
