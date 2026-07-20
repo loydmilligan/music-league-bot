@@ -20,6 +20,11 @@ export const SCHEMA = `
     -- every import-path writer (upsertSeason) skips seasons with 'manual' in both
     -- directions. Default 'derived' so all existing rows behave as before.
     status_source TEXT NOT NULL CHECK(status_source IN ('derived','manual')) DEFAULT 'derived',
+    -- SP1 source-aware seasons: which upstream service + that service's competition id
+    -- this season maps to. Default 'music_league'; source_competition_id set at
+    -- onboarding/backfill (the importer does not know the upstream id).
+    source TEXT NOT NULL DEFAULT 'music_league',
+    source_competition_id TEXT,
     UNIQUE(league_id, season_number)
   );
   CREATE TABLE IF NOT EXISTS rounds (

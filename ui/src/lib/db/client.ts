@@ -28,6 +28,20 @@ export function openLeagueDb(path?: string): Database.Database {
 	for (const col of ['digest_mode', 'digest_gen_params']) {
 		if (!leaguesCols.some(c => c.name === col)) db.exec(`ALTER TABLE leagues ADD COLUMN ${col} TEXT`);
 	}
+	// SP1 source-aware seasons: which upstream service + competition id a season maps to.
+	const seasonsCols = db.prepare("PRAGMA table_info(seasons)").all() as { name: string }[];
+	if (!seasonsCols.some(c => c.name === 'source')) {
+		db.exec("ALTER TABLE seasons ADD COLUMN source TEXT NOT NULL DEFAULT 'music_league'");
+	}
+	if (!seasonsCols.some(c => c.name === 'source_competition_id')) {
+		db.exec("ALTER TABLE seasons ADD COLUMN source_competition_id TEXT");
+	}
+	// Integrity: at most one season per (source, competition id). Partial so many
+	// NULL (un-backfilled) rows don't collide. MUST come AFTER the ALTERs above —
+	// on the live DB `db.exec(SCHEMA)` ran first as a no-op (table already exists),
+	// so the columns only exist once these ALTERs run. Keep this out of schema.ts.
+	db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_seasons_source_comp
+		ON seasons(source, source_competition_id) WHERE source_competition_id IS NOT NULL`);
 	// Relax ml_submissions.competitor_id NOT NULL → nullable so anonymous
 	// playlist-ingest rows (sprint-5 D2) can use competitor_id IS NULL.
 	// SQLite has no ALTER COLUMN; one-time table rebuild preserving every row.
