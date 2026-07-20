@@ -10,8 +10,10 @@
  *      insensitive name. Matched DB rounds get UPDATED in place (preserves
  *      row id, votes, ml_submissions, research_songs, head_to_head_matches).
  *   4. ML rounds with no DB match → INSERT.
- *   5. DB rounds with no ML match → DELETE (these are the empty-name CSV
- *      corruption rows). Their dependent rows go with them.
+ *   5. DB rounds with no ML match → DELETE, but ONLY if data-free (empty-name
+ *      CSV corruption rows). A round with votes/submissions is never deleted;
+ *      if the plan wants to, the season aborts with no writes (wrong-league
+ *      backstop). Their dependent rows go with them.
  *   6. Flip the season's status → active.
  *
  * Dry-run by default. Pass --apply to write. Always backs up the DB first.
@@ -27,23 +29,22 @@ const REPO_ROOT = resolve(__dirname, '..');
 const DB_PATH = process.env.LEAGUE_DB ?? resolve(REPO_ROOT, 'data/league.db');
 const APPLY = process.argv.includes('--apply');
 
-const ML_LEAGUE_NAME = {
-	'fam-jam': 'fam jam',
-	'second-best': 'second best',
-	'nostalgia-pit': 'nostalgia pit',
-	'hip-jammers': 'hip jammers'
-};
-// Per-season targets. `mlLeagueId` pins the exact live ML league for that season
-// — required for fam-jam now that two seasons ("Fam Jam III" complete, "Fam Jam
-// IV: Uncharted Tracks" = S4 in-progress) both match the "fam jam" name needle;
-// without pinning, the name substring would mis-resolve S3 → the IV league.
-// Targets without `mlLeagueId` resolve by ML_LEAGUE_NAME (single-season leagues).
+// Per-season targets. INVARIANTS (see the reconcile-safety guards below):
+//   1. Every target MUST pin an exact live `mlLeagueId`. Name-substring matching
+//      is unsafe now that most leagues have several live seasons sharing a name
+//      ("Second Second Best" contains "second best"; three "Hip Jammers *"
+//      leagues all match "hip jammers") — a bare needle resolves to the WRONG
+//      season and would delete the rounds of a completed one.
+//   2. Only *in-progress* (status='active') seasons belong here. A completed
+//      season has nothing to sync and everything to lose; leaving one in this
+//      list is how second-best S1 became a data-loss landmine (2026-07-19).
+// To retire a season, DELETE its line here the moment it completes.
 const TARGETS = [
-	{ slug: 'fam-jam', season: 3, mlLeagueId: 'e2a5ee4ad1ef4a5ca951d7b51c9b936e' }, // Fam Jam III (complete → skips when not live)
-	{ slug: 'fam-jam', season: 4, mlLeagueId: 'd3d3b2046a2c4c639976ca2621a8afa3' }, // Fam Jam IV: Uncharted Tracks (S4)
-	{ slug: 'second-best', season: 1 },
-	{ slug: 'nostalgia-pit', season: 1 },
-	{ slug: 'hip-jammers', season: 3 }
+	{ slug: 'fam-jam',      season: 4, mlLeagueId: 'd3d3b2046a2c4c639976ca2621a8afa3' }, // Fam Jam IV: Uncharted Tracks
+	{ slug: 'second-best',  season: 2, mlLeagueId: '78b2e6400520468e8d726e8793127fb0' }, // Second Second Best
+	{ slug: 'boarz-ii-men', season: 1, mlLeagueId: '71598b6952064ca4afe4baf437495604' }  // Boarz II Men
+	// hip-jammers S3 retired 2026-07-19 — its ML league completed (drops off the
+	// default `leagues list`). Add the next season here, pinned, when it starts.
 ];
 
 function normName(s) {
@@ -73,15 +74,14 @@ async function main() {
 	const mlLeagues = await cli(['leagues', 'list']);
 
 	for (const target of TARGETS) {
-		// Prefer the exact pinned league ID; fall back to the name substring.
-		const mlL = target.mlLeagueId
-			? mlLeagues.find((l) => l.id === target.mlLeagueId)
-			: mlLeagues.find((l) => l.name.toLowerCase().includes(ML_LEAGUE_NAME[target.slug]));
+		// Invariant 1: pin required. Never resolve by name substring — a needle can
+		// match several live seasons and mis-resolve to the wrong one.
+		if (!target.mlLeagueId) {
+			throw new Error(`[${target.slug} s${target.season}] target has no mlLeagueId — refusing to name-match (unsafe). Pin the exact live league id.`);
+		}
+		const mlL = mlLeagues.find((l) => l.id === target.mlLeagueId);
 		if (!mlL) {
-			const why = target.mlLeagueId
-				? `pinned league ${target.mlLeagueId.slice(0, 8)} not in live list`
-				: `no live ML league matching "${ML_LEAGUE_NAME[target.slug]}"`;
-			console.log(`\n[${target.slug} s${target.season}] ${why} — skipping`);
+			console.log(`\n[${target.slug} s${target.season}] pinned league ${target.mlLeagueId.slice(0, 8)} not in live list — skipping`);
 			continue;
 		}
 		await reconcileSeason(target.slug, target.season, mlL);
@@ -147,13 +147,36 @@ async function reconcileSeason(slug, seasonNumber, mlL) {
 		}
 	}
 
-	console.log(`  Plan: ${plan.updates.length} update, ${plan.inserts.length} insert, ${plan.deletes.length} delete`);
+	// Delete safety: the DELETE branch exists ONLY to sweep empty-name CSV
+	// corruption rows. A round carrying real data (votes or ML submissions) must
+	// never be deleted by a reconcile — if the plan wants to, the target
+	// mis-resolved and we ABORT rather than destroy data (see applyPlan()).
+	const dataCount = db.prepare(
+		'SELECT (SELECT count(*) FROM votes WHERE round_id = @id) + (SELECT count(*) FROM ml_submissions WHERE round_id = @id) AS n'
+	);
+	const hasData = (id) => dataCount.get({ id }).n > 0;
+	plan.safeDeletes = plan.deletes.filter((d) => !hasData(d.id));
+	plan.unsafeDeletes = plan.deletes.filter((d) => hasData(d.id));
+
+	console.log(`  Plan: ${plan.updates.length} update, ${plan.inserts.length} insert, ${plan.safeDeletes.length} delete` +
+		(plan.unsafeDeletes.length ? `, ${plan.unsafeDeletes.length} UNSAFE-DELETE (would abort)` : ''));
 	for (const u of plan.updates)
 		console.log(`     ↻ "${u.dbName}" id=${u.dbId} → ml=${u.mlR.id.slice(0, 8)}`);
 	for (const i of plan.inserts) console.log(`     + #${i.number} "${i.name}"`);
-	for (const d of plan.deletes) console.log(`     − id=${d.id} "${d.name || '(empty)'}"`);
+	for (const d of plan.safeDeletes) console.log(`     − id=${d.id} "${d.name || '(empty)'}" (no data — safe)`);
+	for (const d of plan.unsafeDeletes) console.log(`     ⛔ id=${d.id} "${d.name}" has votes/submissions — WOULD ABORT`);
 
 	if (!APPLY) return;
+
+	// Invariant 2 backstop: refuse to write anything for this season if the plan
+	// would delete a round with real data (target resolved to the wrong league).
+	if (plan.unsafeDeletes.length) {
+		throw new Error(
+			`[${slug} s${seasonNumber}] refusing to delete ${plan.unsafeDeletes.length} round(s) carrying votes/submissions ` +
+			`(${plan.unsafeDeletes.map((d) => `#${d.id} "${d.name}"`).join(', ')}). ` +
+			`The target likely resolved to the wrong ML league — no changes written.`
+		);
+	}
 
 	const tx = db.transaction(() => {
 		// Flip status (skip seasons with a manual override — sprint-26 season-override-fix).
@@ -193,8 +216,8 @@ async function reconcileSeason(slug, seasonNumber, mlL) {
 			insertStmt.run(season.id, r.id, r.name, r.description ?? null, playlist, sub ?? null, vote ?? null, now);
 		}
 
-		// Deletes (kids first)
-		const ids = plan.deletes.map((d) => d.id);
+		// Deletes (kids first) — only the data-free rows; unsafe ones aborted above.
+		const ids = plan.safeDeletes.map((d) => d.id);
 		if (ids.length) {
 			const placeholders = ids.map(() => '?').join(',');
 			db.prepare(`DELETE FROM head_to_head_matches WHERE round_id IN (${placeholders})`).run(...ids);
