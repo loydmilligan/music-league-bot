@@ -9,8 +9,8 @@ coverage/
 .DS_Store
 *.log
 
-# WhatsApp session/auth data
-.wwebjs_auth/
+# WhatsApp session/auth data (incl. test-harness profiles like .wwebjs_auth_test/)
+.wwebjs_auth*/
 .wwebjs_cache/
 auth_info/
 sessions/
@@ -70,3 +70,10 @@ docs/racecard-mobile/
 # Design-handoff binaries & generated digest exports.
 docs/design/*.zip
 docs/r-*-digest-*.pdf
+
+# Design-handoff prototype artifacts (docs/*-handoff/): the rendered design-tool
+# canvas and screenshots are generated, not source. Hand-authored README /
+# DECISION_LOG and sample data stay tracked (docs/design_handoff_sonic_signature
+# precedent).
+docs/*-handoff/**/*.dc.html
+docs/*-handoff/**/screenshots/
