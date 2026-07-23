@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import type { BudgetSource, VoteBudget } from './types.js';
+import type { BudgetSource, VoteBudget, BallotEntry } from './types.js';
 
 /** Used only when neither a round override nor a season default exists. */
 export const DEFAULT_BUDGET: VoteBudget = { upTotal: 7, downTotal: 1, perSongCap: null };
@@ -63,4 +63,45 @@ export function resolveBudget(
   if (seasonRow) return { budget: toBudget(seasonRow), source: 'season' };
 
   return { budget: DEFAULT_BUDGET, source: 'default' };
+}
+
+type BallotRow = {
+  spotify_uri: string; up_points: number; down_points: number;
+  rating: number | null; notes: string; draft_comment: string; is_mine: number;
+};
+
+export function getBallot(db: Database.Database, roundId: number): BallotEntry[] {
+  const rows = db.prepare(
+    `SELECT spotify_uri, up_points, down_points, rating, notes, draft_comment, is_mine
+     FROM voting_lab_ballot WHERE round_id = ? ORDER BY spotify_uri`,
+  ).all(roundId) as BallotRow[];
+  return rows.map((r) => ({
+    spotifyUri: r.spotify_uri,
+    upPoints: r.up_points,
+    downPoints: r.down_points,
+    rating: r.rating,
+    notes: r.notes,
+    draftComment: r.draft_comment,
+    isMine: r.is_mine === 1,
+  }));
+}
+
+export function saveBallotEntry(db: Database.Database, roundId: number, entry: BallotEntry): void {
+  db.prepare(
+    `INSERT INTO voting_lab_ballot
+       (round_id, spotify_uri, up_points, down_points, rating, notes, draft_comment, is_mine, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(round_id, spotify_uri) DO UPDATE SET
+       up_points = excluded.up_points,
+       down_points = excluded.down_points,
+       rating = excluded.rating,
+       notes = excluded.notes,
+       draft_comment = excluded.draft_comment,
+       is_mine = excluded.is_mine,
+       updated_at = excluded.updated_at`,
+  ).run(
+    roundId, entry.spotifyUri, entry.upPoints, entry.downPoints,
+    entry.rating, entry.notes, entry.draftComment, entry.isMine ? 1 : 0,
+    new Date().toISOString(),
+  );
 }

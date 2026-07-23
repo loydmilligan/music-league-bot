@@ -3,7 +3,9 @@ import Database from 'better-sqlite3';
 import { SCHEMA } from '../db/schema.js';
 import {
   DEFAULT_BUDGET, resolveBudget, setRoundBudget, setSeasonBudget, getSeasonBudget,
+  getBallot, saveBallotEntry,
 } from './ballotDb.js';
+import type { BallotEntry } from './types.js';
 
 function freshDb() {
   const db = new Database(':memory:');
@@ -74,5 +76,35 @@ it('resolves each round to its own season budget, not another season\'s', () => 
   expect(resolveBudget(db, 200).budget).toEqual({ upTotal: 5, downTotal: 1, perSongCap: 3 });
   expect(resolveBudget(db, 100).source).toBe('season');
   expect(resolveBudget(db, 200).source).toBe('season');
+  db.close();
+});
+
+const ENTRY: BallotEntry = {
+  spotifyUri: 'spotify:track:a', upPoints: 2, downPoints: 0, rating: 4,
+  notes: 'punchy chorus', draftComment: 'Loved this one.', isMine: false,
+};
+
+it('saves and reads back a ballot entry', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, ENTRY);
+  expect(getBallot(db, 100)).toEqual([ENTRY]);
+  db.close();
+});
+
+it('updates in place rather than duplicating', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, ENTRY);
+  saveBallotEntry(db, 100, { ...ENTRY, upPoints: 5, notes: 'changed' });
+  const rows = getBallot(db, 100);
+  expect(rows).toHaveLength(1);
+  expect(rows[0].upPoints).toBe(5);
+  expect(rows[0].notes).toBe('changed');
+  db.close();
+});
+
+it('round-trips is_mine as a boolean', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, { ...ENTRY, isMine: true, upPoints: 0 });
+  expect(getBallot(db, 100)[0].isMine).toBe(true);
   db.close();
 });
