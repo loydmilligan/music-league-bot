@@ -39,7 +39,7 @@
   {:else}
     <p class="mt-1 text-sm opacity-70">{data.themeName}</p>
     <ul class="mt-3 space-y-2">
-      {#each data.rows as row (row.song.spotifyUri)}
+      {#each data.rows as row (row.song.submissionId)}
         <li class="flex items-center gap-3 rounded border border-white/10 p-2">
           {#if row.song.albumArtUrl}
             <img src={row.song.albumArtUrl} alt="" class="h-10 w-10 rounded" />

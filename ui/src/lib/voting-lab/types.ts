@@ -27,6 +27,12 @@ export interface BudgetUsage {
 
 /** One song in the lab, with the metadata the UI surfaces. */
 export interface LabSong {
+  /**
+   * The ml_submissions.id row id. Used as the stable unique key for this row
+   * because spotifyUri can repeat within a round (two different competitors
+   * may submit the same track).
+   */
+  submissionId: number;
   spotifyUri: string;
   title: string;
   artist: string;

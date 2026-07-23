@@ -93,6 +93,24 @@ it('surfaces song metadata when present', () => {
   db.close();
 });
 
+it('gives duplicate submissions of the same track distinct submission ids', () => {
+  const db = dbWithRound();
+  // Two different competitors may legitimately submit the SAME track in one round.
+  db.prepare(
+    `INSERT INTO competitors (id, ml_competitor_id, name) VALUES (999, 'ml-999', 'Other Competitor')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, album, album_art_url, visible_to_voters, created_at)
+     VALUES (100, 999, 'spotify:track:a', 'Song A', 'Artist A', 'Album A', 'http://art/a.jpg', 1, '2026-07-01T00:00:00Z')`,
+  ).run();
+  const rows = buildLabData(db, 100).rows;
+  const dupes = rows.filter((r) => r.song.spotifyUri === 'spotify:track:a');
+  expect(dupes.length).toBe(2);
+  const ids = dupes.map((r) => r.song.submissionId);
+  expect(new Set(ids).size).toBe(2); // keys must be unique -> no each_key_duplicate
+  db.close();
+});
+
 it('throws for an unknown round', () => {
   const db = dbWithRound();
   expect(() => buildLabData(db, 999)).toThrow();

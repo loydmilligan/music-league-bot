@@ -5,6 +5,7 @@ import type { BallotEntry, LabData, LabRow, LabSong } from './types.js';
 type RoundRow = { id: number; name: string; description: string | null };
 
 type SongRow = {
+  submission_id: number;
   spotify_uri: string;
   title: string;
   artists: string | null;
@@ -41,7 +42,7 @@ export function buildLabData(db: Database.Database, roundId: number): LabData {
   if (!round) throw new Error(`buildLabData: unknown round ${roundId}`);
 
   const songRows = db.prepare(
-    `SELECT s.spotify_uri, s.title, s.artists, s.album_art_url,
+    `SELECT s.id AS submission_id, s.spotify_uri, s.title, s.artists, s.album_art_url,
             p.listeners, p.spotify_popularity, p.tags,
             a.bpm, a.energy,
             l.has_lyrics
@@ -57,6 +58,7 @@ export function buildLabData(db: Database.Database, roundId: number): LabData {
 
   const rows: LabRow[] = songRows.map((r) => {
     const song: LabSong = {
+      submissionId: r.submission_id,
       spotifyUri: r.spotify_uri,
       title: r.title,
       artist: r.artists ?? '',
