@@ -31,3 +31,19 @@ export interface SynthesisInput {
 export interface Synthesis {
   winnerDna: string; cellarTraps: string; whatToSubmit: string; songLanguages: Record<string, string>;
 }
+
+export interface MatchedRun {
+  roundId: number; leagueName: string; seasonLabel: string; title: string;
+  subs: number; scoring: ScoringType; exactness: 'exact' | 'related'; reason: string;
+  standings: SongStanding[]; podium: SongStanding[]; cellar: SongStanding[];
+}
+export interface ThemeBrief {
+  roundId: number; themeTitle: string; themeText: string; leagueSlug: string;
+  runCount: number; firstTime: boolean;
+  matches: MatchedRun[];
+  familiarity: Bucket[];
+  winnerDna: string; cellarTraps: string; whatToSubmit: string;
+  alreadyPlayed: Exposure[];
+  songLanguages: Record<string, string>;
+  generatedAt: string;
+}

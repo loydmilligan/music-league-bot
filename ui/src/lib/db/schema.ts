@@ -463,6 +463,17 @@ export const SCHEMA = `
     line_count  INTEGER,
     fetched_at  TEXT NOT NULL
   );
+  -- Theme Strategy Brief cache (sprint-queue). One row per round: the
+  -- assembled ThemeBrief JSON, so the UI reads a cached result instead of
+  -- re-running the matcher/LLM synth on every view.
+  CREATE TABLE IF NOT EXISTS theme_briefs (
+    round_id     INTEGER PRIMARY KEY,
+    brief_json   TEXT NOT NULL,
+    model        TEXT,
+    cost_usd     REAL,
+    generated_at TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+  );
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
