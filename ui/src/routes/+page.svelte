@@ -4,6 +4,7 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import DotIndicator from '$lib/components/DotIndicator.svelte';
   import ActiveRounds from '$lib/active/ActiveRounds.svelte';
+  import VotingLab from '$lib/components/VotingLab.svelte';
   import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
@@ -249,6 +250,9 @@
             My place: —
           </div>
         </a>
+        {#if phase === 'voting' && s.currentRound}
+          <VotingLab roundId={s.currentRound.id} />
+        {/if}
       {/each}
     </div>
   {/if}
