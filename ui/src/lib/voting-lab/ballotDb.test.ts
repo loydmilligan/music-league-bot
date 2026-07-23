@@ -53,3 +53,26 @@ it('upserts the season budget instead of duplicating', () => {
   expect(getSeasonBudget(db, 10)).toEqual({ upTotal: 9, downTotal: 1, perSongCap: null });
   db.close();
 });
+
+it('resolves each round to its own season budget, not another season\'s', () => {
+  const db = freshDb();
+  // Add a second season and round under the same league
+  db.prepare(
+    `INSERT INTO seasons (id, league_id, season_number, status) VALUES (20, 1, 2, 'active')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, phase)
+     VALUES (200, 20, 'ml-200', 'Round 2', '2026-07-01T00:00:00Z', 'voting')`,
+  ).run();
+
+  // Set different budgets for each season
+  setSeasonBudget(db, 10, { upTotal: 8, downTotal: 2, perSongCap: null });
+  setSeasonBudget(db, 20, { upTotal: 5, downTotal: 1, perSongCap: 3 });
+
+  // Each round should resolve to its own season's budget
+  expect(resolveBudget(db, 100).budget).toEqual({ upTotal: 8, downTotal: 2, perSongCap: null });
+  expect(resolveBudget(db, 200).budget).toEqual({ upTotal: 5, downTotal: 1, perSongCap: 3 });
+  expect(resolveBudget(db, 100).source).toBe('season');
+  expect(resolveBudget(db, 200).source).toBe('season');
+  db.close();
+});
