@@ -18,6 +18,18 @@ function makeDb(): Database.Database {
   db.prepare('INSERT INTO rounds VALUES (145,55,?,?)').run('No Entiendo', 'vocals in a language other than English');
   db.prepare('INSERT INTO theme_tags VALUES (1,?,?)').run('semantic', 'non-english');
   db.prepare('INSERT INTO round_theme_tags VALUES (39,1),(145,1)').run(); // shared tag
+
+  // Untagged fixture: proves the fallback keys on a real significant word
+  // ("karaoke"), not the hardcoded language/English terms, and correctly
+  // ignores a round that shares only a stopword ("song"/"theme") with the
+  // target's description.
+  db.prepare('INSERT INTO leagues VALUES (7,?)').run('KaraokeLeague');
+  db.prepare('INSERT INTO seasons VALUES (77,7,1)').run();
+  db.prepare('INSERT INTO rounds VALUES (300,77,?,?)').run('Sing Along', 'Karaoke night song theme');
+  db.prepare('INSERT INTO rounds VALUES (301,77,?,?)').run('Karaoke Classics', 'Best karaoke jams of the summer');
+  db.prepare('INSERT INTO rounds VALUES (302,77,?,?)').run('Bring Your Own', 'Bring your own song this round');
+  // 300, 301, 302 are all intentionally untagged (no round_theme_tags rows).
+
   return db;
 }
 
@@ -38,5 +50,23 @@ describe('matchThemes', () => {
     const liar: LlmFn = async () => JSON.stringify({ matches: [{ roundId: 999, exactness: 'exact', reason: 'nope' }] });
     const out = await matchThemes(makeDb(), 145, liar);
     expect(out).toEqual([]);
+  });
+
+  it('falls back to significant-word overlap for an untagged target (not hardcoded to language/English)', async () => {
+    // The LLM "hallucinates" a match for round 302 too, but 302 only shares a
+    // stopword ("song"/"theme") with the target's description, not a real
+    // significant word — it must never reach the shortlist, so it's dropped
+    // the same way an invented roundId would be.
+    const stub: LlmFn = async () => JSON.stringify({
+      matches: [
+        { roundId: 301, exactness: 'related', reason: 'both karaoke rounds' },
+        { roundId: 302, exactness: 'related', reason: 'false positive stopword overlap' },
+      ],
+    });
+    const out = await matchThemes(makeDb(), 300, stub);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      roundId: 301, title: 'Karaoke Classics', exactness: 'related', reason: 'both karaoke rounds',
+    });
   });
 });
