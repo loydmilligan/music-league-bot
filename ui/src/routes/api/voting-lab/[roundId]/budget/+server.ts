@@ -14,9 +14,14 @@ export const PUT: RequestHandler = async ({ params, request }) => {
   const roundId = Number(params.roundId);
   if (!Number.isInteger(roundId)) throw error(400, 'roundId must be an integer');
 
-  const parsed = BudgetSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => ({}));
+  const parsed = BudgetSchema.safeParse(body);
   if (!parsed.success) throw error(400, parsed.error.message);
 
-  setRoundBudget(getDb(), roundId, parsed.data);
+  const db = getDb();
+  const exists = db.prepare(`SELECT 1 FROM rounds WHERE id = ?`).get(roundId);
+  if (!exists) throw error(404, 'round not found');
+
+  setRoundBudget(db, roundId, parsed.data);
   return json({ ok: true });
 };
