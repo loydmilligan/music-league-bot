@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { BallotEntry, LabData } from '$lib/voting-lab/types.js';
-  import { canAllocate, computeUsage } from '$lib/voting-lab/budget.js';
+  import { canAllocate, computeUsage, validateBallot } from '$lib/voting-lab/budget.js';
   import VotingLabSongRow from './VotingLabSongRow.svelte';
 
   let { roundId }: { roundId: number } = $props();
@@ -84,6 +84,40 @@
     void roundId;
     return () => { flushPendingSaves(); };
   });
+
+  const problems = $derived(
+    data ? validateBallot(data.rows.map((r) => r.ballot), data.budget) : [],
+  );
+
+  /**
+   * The text you paste into Music League. Never includes submitter identity —
+   * only song metadata and the voter's own allocation/comment.
+   */
+  function ballotText(): string {
+    if (!data) return '';
+    const lines: string[] = [`${data.themeName}`, ''];
+    for (const r of data.rows) {
+      const { upPoints, downPoints, draftComment } = r.ballot;
+      if (upPoints === 0 && downPoints === 0) continue;
+      const pts = downPoints > 0 ? `-${downPoints}` : `+${upPoints}`;
+      lines.push(`${pts}  ${r.song.artist} — ${r.song.title}`);
+      if (draftComment) lines.push(`     "${draftComment}"`);
+    }
+    return lines.join('\n');
+  }
+
+  let copied = $state(false);
+  let copyError = $state<string | null>(null);
+  async function copyBallot() {
+    try {
+      await navigator.clipboard.writeText(ballotText());
+      copyError = null;
+      copied = true;
+      setTimeout(() => (copied = false), 1500);
+    } catch {
+      copyError = 'Failed to copy — select and copy the text manually.';
+    }
+  }
 </script>
 
 <section class="voting-lab">
@@ -112,5 +146,20 @@
         <VotingLabSongRow {row} {canAlloc} onchange={applyBallot} />
       {/each}
     </ul>
+
+    <footer class="mt-4 border-t border-white/10 pt-3">
+      {#if problems.length}
+        <ul class="mb-2 text-sm text-red-500">
+          {#each problems as p}<li>{p}</li>{/each}
+        </ul>
+      {/if}
+      <pre class="whitespace-pre-wrap rounded bg-black/20 p-2 text-sm">{ballotText() || 'No votes allocated yet.'}</pre>
+      <button class="mt-2 rounded border border-white/20 px-3 py-1 text-sm" onclick={copyBallot}>
+        {copied ? 'Copied!' : 'Copy whole ballot'}
+      </button>
+      {#if copyError}
+        <p class="mt-1 text-sm text-red-500">{copyError}</p>
+      {/if}
+    </footer>
   {/if}
 </section>
