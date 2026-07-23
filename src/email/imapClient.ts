@@ -33,6 +33,14 @@ export async function fetchMusicLeagueEmails(
     secure: true,
     auth: { user: cfg.user, pass: cfg.pass },
     logger: false,
+    // Fail fast instead of hanging. A hung/slow command must never hold a Gmail
+    // connection open indefinitely: Gmail caps an account at ~15 simultaneous
+    // IMAP connections, and a leaked connection per timed-out poll accumulates
+    // into "[ALERT] Too many simultaneous connections. (Failure)", which then
+    // rejects EVERY new login (even clean ones) until the slots free up.
+    greetingTimeout: 15_000,
+    connectionTimeout: 15_000,
+    socketTimeout: 60_000,
   });
 
   // ImapFlow can emit 'error' asynchronously — a socket timeout fires from a
@@ -46,25 +54,48 @@ export async function fetchMusicLeagueEmails(
   });
 
   const out: FetchedEmail[] = [];
-  await client.connect();
-  const lock = await client.getMailboxLock('INBOX');
   try {
-    const mailbox = client.mailbox;
-    if (!mailbox || typeof mailbox === 'boolean') return out;
-    const uidValidity = Number(mailbox.uidValidity);
-    const minUid = minUidFor(uidValidity);
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    try {
+      const mailbox = client.mailbox;
+      if (!mailbox || typeof mailbox === 'boolean') return out;
+      const uidValidity = Number(mailbox.uidValidity);
+      const minUid = minUidFor(uidValidity);
 
-    const uids = await client.search({ from: cfg.fromFilter }, { uid: true });
-    const wanted = (uids || []).filter((u) => u > minUid).sort((a, b) => a - b);
-    if (wanted.length === 0) return out;
+      // Date-bound the search so Gmail is not scanning the entire mailbox
+      // history on every poll — the slow unbounded SEARCH is what tripped the
+      // socket timeout that started the connection leak. The UID floor below
+      // still guarantees no duplicates; a window far larger than the poll
+      // interval cannot miss a freshly-arrived message.
+      const windowDays = Number(process.env.EMAIL_SEARCH_WINDOW_DAYS ?? 30);
+      const since = new Date(Date.now() - windowDays * 86_400_000);
+      const uids = await client.search({ from: cfg.fromFilter, since }, { uid: true });
+      const wanted = (uids || []).filter((u) => u > minUid).sort((a, b) => a - b);
+      if (wanted.length === 0) return out;
 
-    for await (const msg of client.fetch(wanted.join(','), { uid: true, source: true }, { uid: true })) {
-      if (!msg.source) continue;
-      out.push({ uid: Number(msg.uid), uidValidity, raw: msg.source.toString('utf8') });
+      for await (const msg of client.fetch(wanted.join(','), { uid: true, source: true }, { uid: true })) {
+        if (!msg.source) continue;
+        out.push({ uid: Number(msg.uid), uidValidity, raw: msg.source.toString('utf8') });
+      }
+    } finally {
+      lock.release();
     }
   } finally {
-    lock.release();
+    // ALWAYS tear the connection down — even when connect()/search()/fetch()
+    // throws or the socket times out — so a failed poll can never leak a Gmail
+    // IMAP slot. logout() is the clean path; close() force-destroys the socket
+    // when logout can't run (e.g. connect() itself failed).
+    try {
+      await client.logout();
+    } catch {
+      /* not connected / already gone */
+    }
+    try {
+      client.close();
+    } catch {
+      /* already closed */
+    }
   }
-  await client.logout().catch(() => undefined);
   return out;
 }
