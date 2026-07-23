@@ -18,3 +18,8 @@ export interface Exposure {
   submissionId: number; roundId: number; title: string; artist: string;
   seenBy: ExposurePlayer[]; recognizable: boolean;
 }
+
+export interface ThemeMatch {
+  roundId: number; leagueId: number; leagueName: string; seasonLabel: string;
+  title: string; exactness: 'exact' | 'related'; reason: string;
+}
