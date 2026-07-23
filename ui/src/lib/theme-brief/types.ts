@@ -23,3 +23,11 @@ export interface ThemeMatch {
   roundId: number; leagueId: number; leagueName: string; seasonLabel: string;
   title: string; exactness: 'exact' | 'related'; reason: string;
 }
+
+export interface SynthesisInput {
+  themeText: string;
+  runs: Array<{ label: string; standings: SongStanding[]; comments: Array<{ title: string; points: number; comment: string }> }>;
+}
+export interface Synthesis {
+  winnerDna: string; cellarTraps: string; whatToSubmit: string; songLanguages: Record<string, string>;
+}
