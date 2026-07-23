@@ -17,7 +17,7 @@ function candidates(db: Database.Database, targetRoundId: number): Candidate[] {
       AND (
         r.id IN (
           SELECT rtt2.round_id FROM round_theme_tags rtt2
-          WHERE rtt2.theme_tag_id IN (SELECT theme_tag_id FROM round_theme_tags WHERE round_id = ?)
+          WHERE rtt2.tag_id IN (SELECT tag_id FROM round_theme_tags WHERE round_id = ?)
         )
         OR r.description LIKE '%language%' OR r.description LIKE '%English%'
       )

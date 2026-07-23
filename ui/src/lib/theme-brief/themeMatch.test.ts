@@ -10,7 +10,7 @@ function makeDb(): Database.Database {
     CREATE TABLE seasons (id INTEGER PRIMARY KEY, league_id INTEGER, season_number INTEGER);
     CREATE TABLE rounds (id INTEGER PRIMARY KEY, season_id INTEGER, name TEXT, description TEXT);
     CREATE TABLE theme_tags (id INTEGER PRIMARY KEY, category TEXT, value TEXT);
-    CREATE TABLE round_theme_tags (round_id INTEGER, theme_tag_id INTEGER);
+    CREATE TABLE round_theme_tags (round_id INTEGER, tag_id INTEGER);
   `);
   db.prepare('INSERT INTO leagues VALUES (2,?),(5,?)').run('Fam-Jam', 'Boarz');
   db.prepare('INSERT INTO seasons VALUES (22,2,2),(55,5,1)').run();
