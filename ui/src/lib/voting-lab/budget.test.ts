@@ -52,6 +52,17 @@ it('enforces per-song cap when set', () => {
   expect(canAllocate(entries, capped, 'a', 'up', -1)).toBe(true);
 });
 
+it('allows decrements even when a pool is already over budget', () => {
+  // upTotal is 7, but 9 are allocated — the user must still be able to claw points back.
+  const entries = [entry({ spotifyUri: 'a', upPoints: 9 })];
+  expect(canAllocate(entries, BUDGET, 'a', 'up', -1)).toBe(true);
+});
+
+it('still blocks increments when a pool is already over budget', () => {
+  const entries = [entry({ spotifyUri: 'a', upPoints: 9 })];
+  expect(canAllocate(entries, BUDGET, 'a', 'up', 1)).toBe(false);
+});
+
 it('returns no violations for a valid ballot', () => {
   const entries = [entry({ spotifyUri: 'a', upPoints: 7 }), entry({ spotifyUri: 'b', downPoints: 2 })];
   expect(validateBallot(entries, BUDGET)).toEqual([]);
@@ -61,7 +72,7 @@ it('reports over-spend violations', () => {
   const entries = [entry({ spotifyUri: 'a', upPoints: 9 })];
   const problems = validateBallot(entries, BUDGET);
   expect(problems.length).toBeGreaterThan(0);
-  expect(problems[0]).toContain('up');
+  expect(problems[0]).toMatch(/up points/i);
 });
 
 it('reports allocation on your own song as a violation', () => {
