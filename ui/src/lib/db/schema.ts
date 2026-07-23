@@ -1,4 +1,5 @@
 export const SCHEMA = `
+  PRAGMA foreign_keys = OFF;
   CREATE TABLE IF NOT EXISTS leagues (
     id INTEGER PRIMARY KEY, slug TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
     exclude_from_combined INTEGER NOT NULL DEFAULT 0, notes TEXT,
@@ -473,6 +474,37 @@ export const SCHEMA = `
     cost_usd     REAL,
     generated_at TEXT NOT NULL,
     updated_at   TEXT NOT NULL
+  );
+  -- Voting Phase Lab (2026-07-23): the owner's private per-round scratchpad.
+  -- One row per (round, song). Never submitted anywhere — copy-out only.
+  CREATE TABLE IF NOT EXISTS voting_lab_ballot (
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    spotify_uri TEXT NOT NULL,
+    up_points INTEGER NOT NULL DEFAULT 0,
+    down_points INTEGER NOT NULL DEFAULT 0,
+    rating INTEGER,
+    notes TEXT NOT NULL DEFAULT '',
+    draft_comment TEXT NOT NULL DEFAULT '',
+    is_mine INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (round_id, spotify_uri)
+  );
+  -- Per-round budget override. Absent row => inherit the season default.
+  CREATE TABLE IF NOT EXISTS voting_lab_budget (
+    round_id INTEGER PRIMARY KEY REFERENCES rounds(id),
+    up_total INTEGER NOT NULL,
+    down_total INTEGER NOT NULL,
+    per_song_cap INTEGER,
+    updated_at TEXT NOT NULL
+  );
+  -- Season-level default budget, edited in Settings. Rosters grow within a
+  -- season, so season is the right grain; rounds may still override.
+  CREATE TABLE IF NOT EXISTS season_vote_budget (
+    season_id INTEGER PRIMARY KEY REFERENCES seasons(id),
+    up_total INTEGER NOT NULL,
+    down_total INTEGER NOT NULL,
+    per_song_cap INTEGER,
+    updated_at TEXT NOT NULL
   );
 `;
 
