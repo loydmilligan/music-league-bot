@@ -98,3 +98,29 @@ it('throws for an unknown round', () => {
   expect(() => buildLabData(db, 999)).toThrow();
   db.close();
 });
+
+it('preserves the hasLyrics tri-state (true / false / null)', () => {
+  const db = dbWithRound();
+  // track:a has lyrics; track:b is instrumental.
+  db.prepare(
+    `INSERT INTO song_lyrics_metrics (spotify_uri, has_lyrics, fetched_at) VALUES ('spotify:track:a', 1, '2026-07-01T00:00:00Z')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO song_lyrics_metrics (spotify_uri, has_lyrics, fetched_at) VALUES ('spotify:track:b', 0, '2026-07-01T00:00:00Z')`,
+  ).run();
+  const rows = buildLabData(db, 100).rows;
+  expect(rows.find((r) => r.song.spotifyUri === 'spotify:track:a')!.song.hasLyrics).toBe(true);
+  expect(rows.find((r) => r.song.spotifyUri === 'spotify:track:b')!.song.hasLyrics).toBe(false);
+  db.close();
+});
+
+it('reports hasLyrics as null when a song has no lyrics row at all', () => {
+  const db = dbWithRound();
+  // Neither song has a song_lyrics_metrics row -> unknown, NOT false.
+  const rows = buildLabData(db, 100).rows;
+  expect(rows[0].song.hasLyrics).toBeNull();
+  expect(rows[1].song.hasLyrics).toBeNull();
+  // Also verify tags default to empty array when there's no song_popularity row.
+  expect(rows[1].song.tags).toEqual([]);
+  db.close();
+});
