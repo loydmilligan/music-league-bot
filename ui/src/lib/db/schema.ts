@@ -1,5 +1,4 @@
 export const SCHEMA = `
-  PRAGMA foreign_keys = OFF;
   CREATE TABLE IF NOT EXISTS leagues (
     id INTEGER PRIMARY KEY, slug TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
     exclude_from_combined INTEGER NOT NULL DEFAULT 0, notes TEXT,
