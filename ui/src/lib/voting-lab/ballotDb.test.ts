@@ -108,3 +108,11 @@ it('round-trips is_mine as a boolean', () => {
   expect(getBallot(db, 100)[0].isMine).toBe(true);
   db.close();
 });
+
+it('round-trips a null rating without coercing it to 0', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, { ...ENTRY, rating: null });
+  const [row] = getBallot(db, 100);
+  expect(row.rating).toBeNull();
+  db.close();
+});
