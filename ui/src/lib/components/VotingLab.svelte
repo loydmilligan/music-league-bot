@@ -21,11 +21,42 @@
     data ? computeUsage(data.rows.map((r) => r.ballot), data.budget) : null,
   );
 
-  const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let saveError = $state<string | null>(null);
+
+  type PendingSave = { timer: ReturnType<typeof setTimeout>; fire: () => void };
+  const saveTimers = new Map<string, PendingSave>();
 
   function canAlloc(uri: string, kind: 'up' | 'down', delta: number): boolean {
     if (!data) return false;
     return canAllocate(data.rows.map((r) => r.ballot), data.budget, uri, kind, delta);
+  }
+
+  /** Perform the PATCH against the round id captured when the save was scheduled. */
+  function sendBallot(targetRoundId: number, entry: BallotEntry) {
+    fetch(`/api/voting-lab/${targetRoundId}/ballot`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          saveError = `Failed to save "${entry.spotifyUri}" (${res.status})`;
+          return;
+        }
+        saveError = null;
+      })
+      .catch(() => {
+        saveError = `Failed to save "${entry.spotifyUri}" (network error)`;
+      });
+  }
+
+  /** Fire any pending debounced save immediately, e.g. before the round changes. */
+  function flushPendingSaves() {
+    for (const [uri, pending] of saveTimers) {
+      clearTimeout(pending.timer);
+      pending.fire();
+      saveTimers.delete(uri);
+    }
   }
 
   /** Update local state immediately, then debounce the PATCH per song. */
@@ -34,19 +65,25 @@
     data.rows = data.rows.map((r) =>
       r.song.spotifyUri === next.spotifyUri ? { ...r, ballot: next } : r,
     );
+    const targetRoundId = roundId; // capture now — the live prop may change before the timer fires
     const existing = saveTimers.get(next.spotifyUri);
-    if (existing) clearTimeout(existing);
-    saveTimers.set(
-      next.spotifyUri,
-      setTimeout(() => {
-        void fetch(`/api/voting-lab/${roundId}/ballot`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(next),
-        });
+    if (existing) clearTimeout(existing.timer);
+    const fire = () => sendBallot(targetRoundId, next);
+    saveTimers.set(next.spotifyUri, {
+      timer: setTimeout(() => {
+        saveTimers.delete(next.spotifyUri);
+        fire();
       }, 400),
-    );
+      fire,
+    });
   }
+
+  // Flush (not drop) any pending save whenever roundId changes, and on destroy —
+  // otherwise a stale timer would PATCH the previous round's data to the new round's endpoint.
+  $effect(() => {
+    void roundId;
+    return () => { flushPendingSaves(); };
+  });
 </script>
 
 <section class="voting-lab">
@@ -59,6 +96,10 @@
       </div>
     {/if}
   </header>
+
+  {#if saveError}
+    <p class="text-sm text-red-500">{saveError}</p>
+  {/if}
 
   {#if loadError}
     <p class="text-red-500">{loadError}</p>
