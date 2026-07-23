@@ -5,6 +5,7 @@ node_modules
 data
 digests
 .wwebjs_auth
+.wwebjs_auth_test
 .wwebjs_cache
 .env
 *.log
