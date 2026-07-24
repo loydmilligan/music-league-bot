@@ -48,15 +48,21 @@ export const GET: RequestHandler = async () => {
 
 	const leagues = db.prepare('SELECT id, slug, name FROM leagues ORDER BY id').all() as LeagueRow[];
 
-	// Member counts per league (distinct players who have submitted)
+	// Member counts per league (distinct people who have submitted).
+	//
+	// Counts by player_id when the competitor is linked to a players row, and
+	// falls back to the competitor's own id otherwise — a competitor who joined
+	// after the last player-seeding run has player_id NULL, and the old
+	// `WHERE c.player_id IS NOT NULL` filter silently dropped them (Boarz showed
+	// 8 members for 9 people). The fallback is negated so a competitor id can
+	// never collide with a player id and merge two distinct members into one.
 	const memberCounts = db
 		.prepare(
-			`SELECT se.league_id, COUNT(DISTINCT c.player_id) AS member_count
+			`SELECT se.league_id, COUNT(DISTINCT COALESCE(c.player_id, -c.id)) AS member_count
 			 FROM ml_submissions s
 			 JOIN competitors c ON c.id = s.competitor_id
 			 JOIN rounds r ON r.id = s.round_id
 			 JOIN seasons se ON se.id = r.season_id
-			 WHERE c.player_id IS NOT NULL
 			 GROUP BY se.league_id`,
 		)
 		.all() as MemberCountRow[];

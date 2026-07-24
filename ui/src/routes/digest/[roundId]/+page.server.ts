@@ -9,6 +9,32 @@ import {
 } from '$lib/digest/llm.js';
 import type { TastemakerPayload } from '$lib/db/discoverability.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
+import type Database from 'better-sqlite3';
+
+// Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
+const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
+  /\/+$/,
+  '',
+);
+
+/**
+ * Absolute URL of a league's published b-side archive, or null when it has none.
+ *
+ * Absolute on purpose: this page is exported to static HTML and re-served from
+ * the digest host, so a root-relative link to a bot-ui route (/content) 404s
+ * there. Returning null lets the caller drop the Archive tab rather than render
+ * a link that goes nowhere.
+ */
+function getArchiveUrl(db: Database.Database, leagueId: number): string | null {
+  try {
+    const row = db
+      .prepare('SELECT slug FROM dashboard_sites WHERE league_id = ?')
+      .get(leagueId) as { slug: string } | undefined;
+    return row ? `${B_SIDE_BASE}/${row.slug}` : null;
+  } catch {
+    return null;
+  }
+}
 
 // sprint-21 season-recap: framing the digest page applies to the DATA sections
 // when the active draft was generated in recap mode (standings/stat-strip/
@@ -128,6 +154,11 @@ type DigestPageBase = {
   // hydration-at-/d/<slug>/ agree — a URL-derived flag would mismatch and the
   // chrome would re-appear on hydration. The +layout reads `page.data.share`.
   share: boolean;
+  // Absolute URL of this league's published b-side archive, or null when the
+  // league has none yet. MUST be absolute: the digest is exported as static HTML
+  // and re-served from the digest host, where a root-relative /content is a 404
+  // (those routes only exist on bot-ui). Null hides the Archive tab entirely.
+  archiveUrl: string | null;
 };
 
 export type DigestPageData =
@@ -181,6 +212,8 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
     season_status: round.season_status,
     league_id: round.league_id,
   };
+
+  const archiveUrl = getArchiveUrl(db, round.league_id);
 
   const relContext = await fetchRelContext(fetch, round.league_id);
 
@@ -240,7 +273,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       : nextRoundMeta;
 
     return {
-      roundId, roundsIndex, currentRound, relContext, share, stage, draft, sections,
+      roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage, draft, sections,
       standings, stats: statsOut, discoverability, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
     } satisfies DigestPageData;
   }
@@ -248,7 +281,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
-  return { roundId, roundsIndex, currentRound, relContext, share, stage: 'prepare', checks } satisfies DigestPageData;
+  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks } satisfies DigestPageData;
 };
 
 async function fetchRelContext(

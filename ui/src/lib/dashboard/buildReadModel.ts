@@ -56,7 +56,9 @@ const PeerScoreSchema = z.object({
 
 const StatSchema = z.object({
 	submitted: z.number().int().nonnegative(),
-	avgPts: z.number().nonnegative(),
+	// NOT nonnegative: a member whose submissions take more downvotes than
+	// upvotes has a negative average (Boarz r135 — CJ Wookie averaged -4.0).
+	avgPts: z.number(),
 	wins: z.number().int().nonnegative(),
 	bestRound: z.string().optional(),
 });

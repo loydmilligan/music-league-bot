@@ -30,6 +30,11 @@
 
   let { data }: { data: PageData } = $props();
 
+  // Absolute b-side URL from the loader (null when this league has no published
+  // archive). Read from `data`, not `page.data`, so it survives the static
+  // export — the exported page re-hydrates from inlined load data.
+  const archiveUrl = $derived((data as { archiveUrl?: string | null }).archiveUrl ?? null);
+
   // Export format. The PNG/PDF renderers load this page with ?format=mobile|wide;
   // when mobile, the .dg-export frame gets the dg-export--mobile reflow class. The
   // on-screen selector (`exportFormat`) drives which artifact the Finalize / Export
@@ -1130,20 +1135,30 @@
   <title>Digest preview · r-{data.roundId}</title>
 </svelte:head>
 
-<!-- Content tab chrome — Digest tab active; Archive links back to /content -->
+<!--
+  Content tab chrome — Digest tab active; Archive deep-links to the league's
+  published b-side.
+
+  The Archive href MUST be the absolute b-side URL, not /content: this page is
+  exported to static HTML and re-served from the digest host, where /content is
+  a 404 (it only exists on bot-ui). When the league has no published archive
+  yet, archiveUrl is null and the tab is omitted rather than rendered dead.
+-->
 <div class="ct-tabrow" style="margin-bottom: 16px;">
   <div class="ct-tabs">
     <a href="/digest/{data.roundId}" class="ct-tab is-on">
       <span class="ct-tab-glyph">✉</span>
       Digest
     </a>
-    <a href="/content" class="ct-tab">
-      <span class="ct-tab-glyph">≣</span>
-      Archive
-      {#if archivePendingCount > 0}
-        <span class="ct-count">{archivePendingCount}</span>
-      {/if}
-    </a>
+    {#if archiveUrl}
+      <a href={archiveUrl} class="ct-tab">
+        <span class="ct-tab-glyph">≣</span>
+        Archive
+        {#if archivePendingCount > 0}
+          <span class="ct-count">{archivePendingCount}</span>
+        {/if}
+      </a>
+    {/if}
   </div>
 </div>
 
