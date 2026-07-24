@@ -26,10 +26,14 @@
     try {
       const res = await fetch(`/api/voting-lab/${roundId}/sync`, { method: 'POST' });
       const body = await res.json();
-      syncMsg = res.ok
-        ? `Synced: ${body.inserted} new, ${body.skipped} already had.`
-        : `Sync failed: ${body.message ?? res.status}`;
-      if (res.ok) await load();
+      if (res.ok) {
+        syncMsg = body.message
+          ? body.message
+          : `Loaded: ${body.inserted} new, ${body.skipped} already had.`;
+        await load();
+      } else {
+        syncMsg = body.message ?? `Load failed (${res.status})`;
+      }
     } finally {
       syncing = false;
     }
@@ -224,7 +228,7 @@
         onclick={syncLive}
         disabled={syncing}
       >
-        {syncing ? 'Syncing…' : 'Sync live round'}
+        {syncing ? 'Loading…' : 'Load playlist'}
       </button>
     {/if}
   </header>

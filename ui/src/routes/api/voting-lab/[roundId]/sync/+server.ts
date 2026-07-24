@@ -1,119 +1,8 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { getDb } from '$lib/db/client.js';
-import { syncRoundSongs } from '$lib/voting-lab/liveSync.js';
-import type { CliSong } from '$lib/voting-lab/liveSync.js';
+import { ingestPlaylist } from '$lib/import/playlistIngest.js';
 import { enqueueMany } from '$lib/db/metadataQueue.js';
-
-const run = promisify(execFile);
-
-/**
- * Path to the musicleague CLI; override with MUSICLEAGUE_CLI when it moves.
- *
- * VERIFIED locally: `cli-web-musicleague votes list <leagueId> <roundId> --json`
- * is the real subcommand — confirmed by running it against a live
- * voting-phase round (Boarz II Men, "I Heard It Through the Napster").
- * Sample row shape:
- *   { league_id, round_id, track_id, track_url, track_name, artist, album,
- *     submitter_id, total_votes }
- * `submitter_id` came back `null` for every song in that live voting-phase
- * round — Music League itself withholds it until voting closes — but we
- * never read that field into CliSong regardless, per the anonymity rule.
- *
- * NOT VERIFIED / KNOWN GAP: this repo's `rounds` table has no ml_league_id
- * column (see leagues onboarding notes — one league row spans many ML
- * league GUIDs, one per season, resolved only by fuzzy name-match). This
- * endpoint resolves it the same way ml-auth-trigger.mjs's resolveLeagueId
- * does: `leagues list --json`, then match by league name.
- *
- * PRODUCTION CONCERN (important, could not verify end-to-end): the bot-ui
- * service runs inside the `bot-ui` Docker container (see docker-compose.yml),
- * which does not have `cli-web-musicleague` on PATH or the host's saved
- * Music League auth session. Every other CLI-shelling feature in this repo
- * (leagues export, rounds themes) bridges through the host-side
- * `ml-auth-trigger` daemon at `http://host.docker.internal:7679`
- * (scripts/ml-auth-trigger.mjs) rather than exec'ing the CLI directly from
- * the SvelteKit server. This endpoint execs the CLI directly, matching the
- * task brief's spec and staying in this task's declared scope (liveSync +
- * endpoint + button only) — but in the deployed container it will fail with
- * ENOENT/502, not because the command below is wrong, but because the CLI
- * binary and auth session simply aren't present in that container. A human
- * should either (a) add a `/round-songs` (or similar) endpoint to
- * ml-auth-trigger.mjs mirroring `/rounds-snapshot`, and point this file at
- * it, or (b) confirm bot-ui is meant to run with host CLI access in some
- * environments. This was not something I could resolve within this task's
- * scope, so flagging it explicitly rather than guessing.
- */
-const CLI = process.env.MUSICLEAGUE_CLI ?? 'cli-web-musicleague';
-const CLI_TIMEOUT_MS = 30_000;
-
-type CliLeague = { id?: string; league_id?: string; leagueId?: string; name?: string };
-
-type CliRow = {
-  // Verified real field names from `votes list --json`.
-  track_id?: string;
-  track_url?: string;
-  track_name?: string;
-  artist?: string;
-  album?: string;
-  // Tolerate the brief's originally-guessed spellings too, in case a future
-  // CLI version renames fields.
-  spotify_uri?: string;
-  uri?: string;
-  title?: string;
-  artists?: string;
-  album_art_url?: string | null;
-};
-
-function normalizeName(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-async function resolveMlLeagueId(leagueName: string): Promise<string> {
-  const { stdout } = await run(CLI, ['--json', 'leagues', 'list'], { timeout: CLI_TIMEOUT_MS });
-  const parsed = JSON.parse(stdout) as CliLeague[] | { leagues?: CliLeague[]; data?: CliLeague[] };
-  const leagues: CliLeague[] = Array.isArray(parsed)
-    ? parsed
-    : (parsed.leagues ?? parsed.data ?? []);
-
-  const needle = normalizeName(leagueName);
-  const exact = leagues.find((l) => normalizeName(l.name ?? '') === needle);
-  let target = exact;
-  if (!target) {
-    const fuzzy = leagues.filter((l) => {
-      const n = normalizeName(l.name ?? '');
-      return n.includes(needle) || needle.includes(n);
-    });
-    if (fuzzy.length === 1) target = fuzzy[0];
-    else if (fuzzy.length > 1) {
-      throw new Error(
-        `ambiguous league name "${leagueName}" — matches ${fuzzy.length}: ${fuzzy.map((l) => l.name).join(', ')}`,
-      );
-    }
-  }
-  if (!target) {
-    throw new Error(`league "${leagueName}" not found in leagues list (got ${leagues.length})`);
-  }
-  const mlLeagueId = target.id ?? target.league_id ?? target.leagueId;
-  if (!mlLeagueId) throw new Error('matched league has no usable id field');
-  return mlLeagueId;
-}
-
-function toCliSongs(rows: CliRow[]): CliSong[] {
-  return rows
-    .map((r) => {
-      const uri = r.spotify_uri ?? r.uri ?? (r.track_id ? `spotify:track:${r.track_id}` : '');
-      return {
-        spotifyUri: uri,
-        title: r.track_name ?? r.title ?? '',
-        artist: r.artist ?? r.artists ?? '',
-        albumArtUrl: r.album_art_url ?? null,
-      };
-    })
-    .filter((s) => s.spotifyUri && s.title);
-}
 
 export const POST: RequestHandler = async ({ params }) => {
   const roundId = Number(params.roundId);
@@ -122,50 +11,59 @@ export const POST: RequestHandler = async ({ params }) => {
   const db = getDb();
   const round = db
     .prepare(
-      `SELECT r.ml_round_id AS ml_round_id, r.phase AS phase, l.name AS league_name
-       FROM rounds r
-       JOIN seasons s ON s.id = r.season_id
-       JOIN leagues l ON l.id = s.league_id
-       WHERE r.id = ?`,
+      `SELECT phase, spotify_playlist_url FROM rounds WHERE id = ?`,
     )
-    .get(roundId) as { ml_round_id: string; phase: string | null; league_name: string } | undefined;
+    .get(roundId) as { phase: string | null; spotify_playlist_url: string | null } | undefined;
   if (!round) throw error(404, 'round not found');
 
   // Data-safety guard: ml_submissions is a SHARED table feeding digests and
-  // standings. Syncing a completed (or any non-voting) round could write
+  // standings. Loading a completed (or any non-voting) round could write
   // rows that don't belong there, with no undo. Only the live voting phase
-  // may be synced.
+  // may be loaded.
   if (round.phase !== 'voting') {
     throw error(409, `round is not in the voting phase (phase: ${round.phase ?? 'unknown'})`);
   }
 
-  let rows: CliRow[];
-  try {
-    const mlLeagueId = await resolveMlLeagueId(round.league_name);
-    const { stdout } = await run(
-      CLI,
-      ['votes', 'list', mlLeagueId, round.ml_round_id, '--json'],
-      { timeout: CLI_TIMEOUT_MS },
+  const playlistUrl = round.spotify_playlist_url?.trim();
+  if (!playlistUrl) {
+    // Expected, normal state — not every round has picked up its "New
+    // Playlist" email (or had one pasted in manually) yet.
+    throw error(
+      409,
+      'no Spotify playlist URL set on this round yet — paste the playlist URL on the round first',
     );
-    rows = JSON.parse(stdout) as CliRow[];
-  } catch (e) {
-    throw error(502, `musicleague CLI failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const cliSongs = toCliSongs(rows);
-  const result = syncRoundSongs(db, roundId, cliSongs);
+  const result = await ingestPlaylist(roundId, playlistUrl, { db });
 
-  // Enqueue metadata enrichment for newly-inserted songs so a freshly-synced
-  // live round doesn't sit with every metadata chip (and every LLM take
-  // input) empty. The songs are already committed at this point, so a
-  // failure here must not fail the sync response — log and continue.
+  // Enqueue metadata enrichment so a freshly-loaded round doesn't sit with
+  // every metadata chip (and every LLM take input) empty. ingestPlaylist
+  // itself does not enqueue metadata. Songs are already committed at this
+  // point, so an enqueue failure must not fail the response — log and
+  // continue. INSERT OR IGNORE inside enqueueMany makes re-enqueuing the
+  // whole round's current URIs harmless.
   if (result.inserted > 0) {
     try {
-      enqueueMany(db, cliSongs.map((s) => s.spotifyUri), ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio']);
+      const uris = (
+        db.prepare(`SELECT spotify_uri FROM ml_submissions WHERE round_id = ?`).all(roundId) as {
+          spotify_uri: string;
+        }[]
+      ).map((r) => r.spotify_uri);
+      enqueueMany(db, uris, ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio']);
     } catch (e) {
       console.error(`voting-lab sync: failed to enqueue metadata for round ${roundId}:`, e);
     }
   }
 
-  return json(result);
+  let message: string | undefined;
+  if (result.inserted === 0 && result.skipped === 0) {
+    // ingestPlaylist degrades gracefully (missing Spotify creds, unparseable
+    // URL, or a failed fetch) by returning zeros rather than throwing. That's
+    // ambiguous with "the playlist is genuinely empty", so surface it rather
+    // than silently reporting success.
+    message =
+      'No tracks were loaded — check that the playlist URL is a valid Spotify playlist link and that Spotify credentials are configured.';
+  }
+
+  return json({ ...result, message });
 };
