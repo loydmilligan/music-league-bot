@@ -40,6 +40,7 @@ export function syncRoundSongs(
     for (const s of songs) {
       if (existing.has(s.spotifyUri)) { skipped++; continue; }
       insert.run(roundId, s.spotifyUri, s.title, s.artist, s.albumArtUrl, now);
+      existing.add(s.spotifyUri);
       inserted++;
     }
   });

@@ -43,3 +43,18 @@ it('is idempotent — re-syncing does not duplicate', () => {
   expect(count.c).toBe(2);
   db.close();
 });
+
+it('skips a duplicate track within a single response instead of throwing', () => {
+  const db = dbWithRound();
+  const withDupe: CliSong[] = [
+    { spotifyUri: 'spotify:track:a', title: 'Song A', artist: 'Artist A', albumArtUrl: null },
+    { spotifyUri: 'spotify:track:a', title: 'Song A', artist: 'Artist A', albumArtUrl: null },
+  ];
+  // Must not throw, and must not lose the whole batch.
+  const result = syncRoundSongs(db, 100, withDupe);
+  expect(result).toEqual({ inserted: 1, skipped: 1 });
+  const count = db.prepare(`SELECT COUNT(*) AS c FROM ml_submissions WHERE round_id = 100`)
+    .get() as { c: number };
+  expect(count.c).toBe(1);
+  db.close();
+});
