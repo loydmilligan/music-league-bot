@@ -79,3 +79,13 @@ it('reports allocation on your own song as a violation', () => {
   const entries = [entry({ spotifyUri: 'mine', isMine: true, upPoints: 1 })];
   expect(validateBallot(entries, BUDGET).some((p) => p.includes('own'))).toBe(true);
 });
+
+it('flags a song allocated both up and down points', () => {
+  const entries = [entry({ spotifyUri: 'a', upPoints: 2, downPoints: 1 })];
+  expect(validateBallot(entries, BUDGET).some((p) => /both up and down/i.test(p))).toBe(true);
+});
+
+it('does not flag a song with only up points or only down points', () => {
+  expect(validateBallot([entry({ spotifyUri: 'a', upPoints: 2 })], BUDGET)).toEqual([]);
+  expect(validateBallot([entry({ spotifyUri: 'b', downPoints: 1 })], BUDGET)).toEqual([]);
+});

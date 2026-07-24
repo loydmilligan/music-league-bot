@@ -95,15 +95,23 @@
    */
   function ballotText(): string {
     if (!data) return '';
-    const lines: string[] = [`${data.themeName}`, ''];
+    const songLines: string[] = [];
     for (const r of data.rows) {
       const { upPoints, downPoints, draftComment } = r.ballot;
       if (upPoints === 0 && downPoints === 0) continue;
-      const pts = downPoints > 0 ? `-${downPoints}` : `+${upPoints}`;
-      lines.push(`${pts}  ${r.song.artist} — ${r.song.title}`);
-      if (draftComment) lines.push(`     "${draftComment}"`);
+      let pts: string;
+      if (upPoints > 0 && downPoints > 0) {
+        pts = `+${upPoints} / -${downPoints}`;
+      } else if (downPoints > 0) {
+        pts = `-${downPoints}`;
+      } else {
+        pts = `+${upPoints}`;
+      }
+      songLines.push(`${pts}  ${r.song.artist} — ${r.song.title}`);
+      if (draftComment) songLines.push(`     "${draftComment}"`);
     }
-    return lines.join('\n');
+    if (songLines.length === 0) return '';
+    return [`${data.themeName}`, '', ...songLines].join('\n');
   }
 
   let copied = $state(false);

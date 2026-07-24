@@ -66,6 +66,9 @@ export function validateBallot(entries: BallotEntry[], budget: VoteBudget): stri
     if (budget.perSongCap !== null && (e.upPoints > budget.perSongCap || e.downPoints > budget.perSongCap)) {
       problems.push(`${e.spotifyUri} exceeds the per-song cap of ${budget.perSongCap}.`);
     }
+    if (e.upPoints > 0 && e.downPoints > 0) {
+      problems.push(`${e.spotifyUri} has both up and down points — a song can only be upvoted or downvoted.`);
+    }
   }
   return problems;
 }
