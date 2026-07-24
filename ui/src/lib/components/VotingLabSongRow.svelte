@@ -16,6 +16,7 @@
 
   let take = $state<VotingTakeOutput | null>(null);
   let takeLoading = $state(false);
+  let drafting = $state(false);
 
   async function getTake() {
     takeLoading = true;
@@ -29,6 +30,33 @@
     } finally {
       takeLoading = false;
     }
+  }
+
+  /**
+   * Draft/Regenerate the public vote comment. "Draft" (forceRegen:false) is
+   * free on revisit — the backend serves a cached draft for these exact
+   * inputs if one exists. "Regenerate" always passes forceRegen:true so it
+   * never returns the same stale text.
+   */
+  async function draftComment(forceRegen: boolean) {
+    drafting = true;
+    try {
+      const res = await fetch(`/api/voting-lab/${roundId}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spotifyUri: row.song.spotifyUri, forceRegen }),
+      });
+      if (res.ok) {
+        const { output } = (await res.json()) as { output: { draft: string } };
+        onchange({ ...row.ballot, draftComment: output.draft });
+      }
+    } finally {
+      drafting = false;
+    }
+  }
+
+  async function copyComment() {
+    await navigator.clipboard.writeText(row.ballot.draftComment);
   }
 
   function bump(kind: 'up' | 'down', delta: number) {
@@ -128,4 +156,26 @@
     value={row.ballot.notes}
     oninput={(e) => setNotes((e.currentTarget as HTMLTextAreaElement).value)}
   ></textarea>
+
+  <div class="mt-2">
+    <textarea
+      class="w-full rounded bg-black/20 p-2 text-sm"
+      rows="2"
+      placeholder="Drafted vote comment…"
+      value={row.ballot.draftComment}
+      oninput={(e) => onchange({ ...row.ballot, draftComment: (e.currentTarget as HTMLTextAreaElement).value })}
+    ></textarea>
+    <div class="mt-1 flex gap-3 text-xs">
+      <button
+        class="underline opacity-70"
+        onclick={() => draftComment(!!row.ballot.draftComment)}
+        disabled={drafting}
+      >
+        {drafting ? 'Drafting…' : row.ballot.draftComment ? 'Regenerate' : 'Draft comment'}
+      </button>
+      {#if row.ballot.draftComment}
+        <button class="underline opacity-70" onclick={copyComment}>Copy</button>
+      {/if}
+    </div>
+  </div>
 </li>
