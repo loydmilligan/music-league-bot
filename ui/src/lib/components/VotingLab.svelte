@@ -85,6 +85,48 @@
     return () => { flushPendingSaves(); };
   });
 
+  /**
+   * PUT the current budget as a per-round override. Reuses `saveError` (the
+   * same failure surface as ballot saves) rather than a separate mechanism.
+   * On success, budgetSource flips to 'round' so the label reflects the
+   * override immediately.
+   */
+  async function saveBudget() {
+    if (!data) return;
+    try {
+      const res = await fetch(`/api/voting-lab/${roundId}/budget`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data.budget),
+      });
+      if (!res.ok) {
+        saveError = `Failed to save budget (${res.status})`;
+        return;
+      }
+      saveError = null;
+      data.budgetSource = 'round';
+    } catch {
+      saveError = 'Failed to save budget (network error)';
+    }
+  }
+
+  // Sanitize on commit (onchange, not oninput) so a momentarily-blank/NaN
+  // input never reaches the endpoint — mirrors the clamp used for the
+  // season-level budget editor in settings/+page.svelte.
+  function setUpTotal(raw: string) {
+    if (!data) return;
+    const n = Math.max(0, Math.round(Number(raw) || 0));
+    data.budget = { ...data.budget, upTotal: n };
+    saveBudget();
+  }
+
+  function setDownTotal(raw: string) {
+    if (!data) return;
+    const n = Math.max(0, Math.round(Number(raw) || 0));
+    data.budget = { ...data.budget, downTotal: n };
+    saveBudget();
+  }
+
   const problems = $derived(
     data ? validateBallot(data.rows.map((r) => r.ballot), data.budget) : [],
   );
@@ -132,8 +174,23 @@
   <header class="flex items-baseline justify-between gap-4">
     <h2 class="text-lg font-semibold">Voting Lab</h2>
     {#if usage && data}
-      <div class="text-sm tabular-nums" class:text-red-500={usage.upRemaining < 0 || usage.downRemaining < 0}>
-        Up: {usage.upUsed}/{data.budget.upTotal} · Down: {usage.downUsed}/{data.budget.downTotal}
+      <div class="flex items-center gap-2 text-sm tabular-nums">
+        <span class:text-red-500={usage.upRemaining < 0}>Up: {usage.upUsed}/</span>
+        <input
+          type="number"
+          min="0"
+          class="w-14 rounded bg-black/20 px-1"
+          value={data.budget.upTotal}
+          onchange={(e) => setUpTotal(e.currentTarget.value)}
+        />
+        <span class:text-red-500={usage.downRemaining < 0}>Down: {usage.downUsed}/</span>
+        <input
+          type="number"
+          min="0"
+          class="w-14 rounded bg-black/20 px-1"
+          value={data.budget.downTotal}
+          onchange={(e) => setDownTotal(e.currentTarget.value)}
+        />
         <span class="opacity-60">({data.budgetSource})</span>
       </div>
     {/if}
