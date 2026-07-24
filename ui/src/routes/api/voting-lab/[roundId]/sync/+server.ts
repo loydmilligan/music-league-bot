@@ -3,6 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { ingestPlaylist } from '$lib/import/playlistIngest.js';
 import { enqueueMany } from '$lib/db/metadataQueue.js';
+import { getRoundPhase } from '$lib/lifecycle.js';
 
 export const POST: RequestHandler = async ({ params }) => {
   const roundId = Number(params.roundId);
@@ -11,17 +12,23 @@ export const POST: RequestHandler = async ({ params }) => {
   const db = getDb();
   const round = db
     .prepare(
-      `SELECT phase, spotify_playlist_url FROM rounds WHERE id = ?`,
+      `SELECT submission_deadline, voting_deadline, spotify_playlist_url FROM rounds WHERE id = ?`,
     )
-    .get(roundId) as { phase: string | null; spotify_playlist_url: string | null } | undefined;
+    .get(roundId) as {
+      submission_deadline: string | null;
+      voting_deadline: string | null;
+      spotify_playlist_url: string | null;
+    } | undefined;
   if (!round) throw error(404, 'round not found');
 
   // Data-safety guard: ml_submissions is a SHARED table feeding digests and
   // standings. Loading a completed (or any non-voting) round could write
   // rows that don't belong there, with no undo. Only the live voting phase
-  // may be loaded.
-  if (round.phase !== 'voting') {
-    throw error(409, `round is not in the voting phase (phase: ${round.phase ?? 'unknown'})`);
+  // may be loaded. Phase is DERIVED from deadlines at request time — the
+  // stored rounds.phase column is stale/unmaintained and must not be used.
+  const derivedPhase = getRoundPhase(round);
+  if (derivedPhase !== 'voting') {
+    throw error(409, `round is not in the voting phase (phase: ${derivedPhase})`);
   }
 
   const playlistUrl = round.spotify_playlist_url?.trim();

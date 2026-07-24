@@ -1,8 +1,15 @@
 import type Database from 'better-sqlite3';
 import { getBallot, resolveBudget } from './ballotDb.js';
 import type { BallotEntry, LabData, LabRow, LabSong } from './types.js';
+import { getRoundPhase } from '$lib/lifecycle.js';
 
-type RoundRow = { id: number; name: string; description: string | null; phase: string | null };
+type RoundRow = {
+  id: number;
+  name: string;
+  description: string | null;
+  submission_deadline: string | null;
+  voting_deadline: string | null;
+};
 
 type SongRow = {
   submission_id: number;
@@ -37,7 +44,7 @@ function parseTags(raw: string | null): string[] {
  */
 export function buildLabData(db: Database.Database, roundId: number): LabData {
   const round = db.prepare(
-    `SELECT id, name, description, phase FROM rounds WHERE id = ?`,
+    `SELECT id, name, description, submission_deadline, voting_deadline FROM rounds WHERE id = ?`,
   ).get(roundId) as RoundRow | undefined;
   if (!round) throw new Error(`buildLabData: unknown round ${roundId}`);
 
@@ -79,7 +86,7 @@ export function buildLabData(db: Database.Database, roundId: number): LabData {
     roundId: round.id,
     themeName: round.name,
     themeDescription: round.description ?? '',
-    phase: round.phase,
+    phase: getRoundPhase(round),
     budget,
     budgetSource: source,
     rows,

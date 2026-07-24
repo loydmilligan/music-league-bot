@@ -4,15 +4,21 @@ import { SCHEMA } from '../db/schema.js';
 import { buildLabData } from './labData.js';
 import { saveBallotEntry, setRoundBudget } from './ballotDb.js';
 
+// Fixed deadlines relative to Date.now() so the derived phase is deterministic
+// and the test isn't a time bomb: submission closed 1 day ago, voting closes
+// 3 days from now -> currently in the voting window.
+const SUB_DEADLINE = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+const VOTE_DEADLINE = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+
 function dbWithRound() {
   const db = new Database(':memory:');
   db.exec(SCHEMA);
   db.prepare(`INSERT INTO leagues (id, slug, name) VALUES (1, 'test', 'Test')`).run();
   db.prepare(`INSERT INTO seasons (id, league_id, season_number, status) VALUES (10, 1, 1, 'active')`).run();
   db.prepare(
-    `INSERT INTO rounds (id, season_id, ml_round_id, name, description, created_at, phase)
-     VALUES (100, 10, 'ml-100', 'Songs in a language other than English', 'Non-English only', '2026-07-01T00:00:00Z', 'voting')`,
-  ).run();
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, description, created_at, submission_deadline, voting_deadline, phase)
+     VALUES (100, 10, 'ml-100', 'Songs in a language other than English', 'Non-English only', '2026-07-01T00:00:00Z', ?, ?, NULL)`,
+  ).run(SUB_DEADLINE, VOTE_DEADLINE);
   db.prepare(
     `INSERT INTO ml_submissions (round_id, spotify_uri, title, artists, album, album_art_url, visible_to_voters, created_at)
      VALUES (100, 'spotify:track:a', 'Song A', 'Artist A', 'Album A', 'http://art/a.jpg', 1, '2026-07-01T00:00:00Z')`,
@@ -23,6 +29,19 @@ function dbWithRound() {
   ).run();
   return db;
 }
+
+it('derives phase as voting from deadlines even when the stored rounds.phase column is NULL', () => {
+  // Regression test: buildLabData must never trust the stale, unmaintained
+  // rounds.phase column. dbWithRound() inserts the row with phase = NULL and
+  // a currently-open voting window (submission deadline in the past, voting
+  // deadline in the future) — the derived phase must still be 'voting'.
+  const db = dbWithRound();
+  const stored = db.prepare(`SELECT phase FROM rounds WHERE id = 100`).get() as { phase: string | null };
+  expect(stored.phase).toBeNull();
+  const data = buildLabData(db, 100);
+  expect(data.phase).toBe('voting');
+  db.close();
+});
 
 it('returns one row per submitted song with theme info', () => {
   const db = dbWithRound();

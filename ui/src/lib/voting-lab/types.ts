@@ -1,5 +1,7 @@
 /** Shared types for the Voting Phase Lab. */
 
+import type { RoundPhase } from '$lib/lifecycle.js';
+
 export interface VoteBudget {
   upTotal: number;
   downTotal: number;
@@ -56,8 +58,8 @@ export interface LabData {
   roundId: number;
   themeName: string;
   themeDescription: string;
-  /** rounds.phase — gates whether "Sync live round" may be shown/used. */
-  phase: string | null;
+  /** Phase derived at runtime from deadlines (via getRoundPhase) — gates whether "Sync live round" may be shown/used. NOT the stale rounds.phase column. */
+  phase: RoundPhase;
   budget: VoteBudget;
   budgetSource: BudgetSource;
   rows: LabRow[];
