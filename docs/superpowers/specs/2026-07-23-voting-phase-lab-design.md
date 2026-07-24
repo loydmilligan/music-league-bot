@@ -63,11 +63,24 @@ The component is decoupled from either host's server `load()` — it talks to it
 **own JSON endpoints** under `ui/src/routes/api/voting-lab/[roundId]/…`. Both host
 pages just render `<VotingLab roundId={…} leagueId={…} />`.
 
-**Live sync:** a "Sync live round" action calls an endpoint that shells to the
-musicleague CLI (`get_active_rounds` / `list_round_songs`, cf. the MCP tools and
-`musicleague/agent-harness/cli_web`) to populate `ml_submissions` for the current
-voting round (anonymous, `visible_to_voters = 1`). Past rounds are already in the
-DB and skip this.
+**Loading a live round's songs (REVISED 2026-07-23):** a **"Load playlist"** action
+populates `ml_submissions` for the current voting round from the round's **Spotify
+playlist** (anonymous, `competitor_id NULL`, `visible_to_voters = 1`), by calling the
+existing `ingestPlaylist()` (`ui/src/lib/import/playlistIngest.ts`). It then enqueues
+those tracks for metadata enrichment, which `ingestPlaylist` does not do on its own —
+without it the metadata chips are empty and the LLM take sees only title + artist.
+
+The playlist URL reaches `rounds.spotify_playlist_url` by two existing paths: the
+Music League **"New Playlist" email sent when voting opens** (already parsed by
+`src/email/emailIngest.ts`), or the user pasting it manually in the round UI. Guards:
+409 unless `phase = 'voting'` (`ml_submissions` is shared with digests/standings, so
+this must never write into a completed round), and 409 with a clear message when the
+round has no playlist URL yet.
+
+> **Superseded approach:** an earlier draft shelled out to the `cli-web-musicleague`
+> CLI. That was abandoned because `bot-ui` runs in Docker with neither the CLI nor
+> Music League auth, so it could never work in production. The playlist route needs
+> only Spotify credentials, which the container already has.
 
 **Component boundary:** `VotingLab` owns the round's ballot UI + LLM-assist and
 depends only on its API endpoints + the budget config. Data model, allocation UX,
@@ -218,7 +231,7 @@ Follows existing repo patterns (predict tasks + theme-brief are already tested):
   mocked; cache-key logic.
 - **Data endpoints** — load join (songs + metadata + ballot + budget) and autosave
   round-trip.
-- **Live sync** — CLI adapter → `ml_submissions` mapping with a mocked CLI response.
+- **Playlist load** — `ingestPlaylist` → anonymous `ml_submissions`, via its `tracksProvider` injection point (no network in tests).
 - **Component** — light smoke test; real logic lives in testable `$lib` functions.
 
 ## Build order
@@ -227,7 +240,7 @@ Follows existing repo patterns (predict tasks + theme-brief are already tested):
 2. Data endpoints + `VotingLab` shell mounted on active-round (voting phase) &
    round-detail pages.
 3. Allocation UX (steppers, meter, `is_mine`, autosave, ballot summary + copy-out).
-4. Live-round sync via the musicleague CLI.
+4. Load a live round's songs from its Spotify playlist (+ metadata enqueue).
 5. `votingTake` (track lens) task + UI.
 6. `voteComment` (drafter) task + UI.
 

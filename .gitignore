@@ -77,3 +77,6 @@ docs/r-*-digest-*.pdf
 # precedent).
 docs/*-handoff/**/*.dc.html
 docs/*-handoff/**/screenshots/
+
+# Python bytecode and cache
+__pycache__/
