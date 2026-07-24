@@ -4,7 +4,8 @@ import type Database from 'better-sqlite3';
 // `players.is_owner` and a bare-`SCHEMA` fixture; the real schema has neither
 // (see voiceSample.test.ts header comment for the full writeup). Owner
 // identity is instead resolved from the OWNER_PHONE_NUMBER env var matched
-// against players.chat_identifier.
+// against WhatsApp-type identities, checking both the legacy
+// players.chat_identifier column and the newer player_identities table.
 
 type Env = Record<string, string | undefined>;
 
@@ -17,8 +18,14 @@ function normalizePhone(raw: string): string {
 
 /**
  * The app owner's player id — the person whose ballot this lab is for.
- * Resolved via OWNER_PHONE_NUMBER (env) matched against players.chat_identifier,
- * since there is no is_owner flag in the real schema. Never throws.
+ * Resolved via OWNER_PHONE_NUMBER (env) matched against WhatsApp-type
+ * identities, since there is no is_owner flag in the real schema. Two
+ * sources are consulted because identities are stored in two places: the
+ * legacy single `players.chat_type` / `players.chat_identifier` columns, and
+ * the newer one-to-many `player_identities` table (identity_type ='whatsapp',
+ * identifier) — see `addPlayerIdentity` in ui/src/lib/db/players.ts, which
+ * writes only to `player_identities` and never touches `players.chat_identifier`.
+ * Never throws.
  */
 export function getOwnerPlayerId(db: Database.Database, env: Env = process.env): number | null {
   const ownerNumber = env.OWNER_PHONE_NUMBER;
@@ -26,13 +33,21 @@ export function getOwnerPlayerId(db: Database.Database, env: Env = process.env):
   const target = normalizePhone(ownerNumber);
   if (!target) return null;
   try {
-    const rows = db.prepare(
+    const legacyRows = db.prepare(
       `SELECT id, chat_identifier FROM players
        WHERE chat_type = 'whatsapp' AND chat_identifier IS NOT NULL AND TRIM(chat_identifier) != ''`,
     ).all() as { id: number; chat_identifier: string }[];
-    const match = rows.find((r) => normalizePhone(r.chat_identifier) === target);
-    return match?.id ?? null;
-  } catch {
+    const legacyMatch = legacyRows.find((r) => normalizePhone(r.chat_identifier) === target);
+    if (legacyMatch) return legacyMatch.id;
+
+    const identityRows = db.prepare(
+      `SELECT player_id, identifier FROM player_identities
+       WHERE identity_type = 'whatsapp' AND identifier IS NOT NULL AND TRIM(identifier) != ''`,
+    ).all() as { player_id: number; identifier: string }[];
+    const identityMatch = identityRows.find((r) => normalizePhone(r.identifier) === target);
+    return identityMatch?.player_id ?? null;
+  } catch (e) {
+    console.warn('[voting-lab] getOwnerPlayerId failed:', e);
     return null;
   }
 }
@@ -47,7 +62,8 @@ export function getOwnerTasteFingerprint(db: Database.Database, env: Env = proce
       `SELECT taste_fingerprint FROM player_profiles WHERE player_id = ?`,
     ).get(playerId) as { taste_fingerprint: string | null } | undefined;
     return row?.taste_fingerprint ?? '';
-  } catch {
+  } catch (e) {
+    console.warn('[voting-lab] getOwnerTasteFingerprint failed:', e);
     return '';
   }
 }
@@ -69,7 +85,8 @@ export function getVoiceSample(db: Database.Database, limit = 8, env: Env = proc
        LIMIT ?`,
     ).all(playerId, limit) as { comment: string }[];
     return rows.map((r) => r.comment);
-  } catch {
+  } catch (e) {
+    console.warn('[voting-lab] getVoiceSample failed:', e);
     return [];
   }
 }

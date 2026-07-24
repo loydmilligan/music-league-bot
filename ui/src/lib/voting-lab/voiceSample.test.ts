@@ -49,6 +49,30 @@ function dbWithOwner() {
 
 const OWNER_ENV = { OWNER_PHONE_NUMBER: '16617476822' };
 
+// Owner identity found ONLY via player_identities (the newer one-to-many
+// table written by addPlayerIdentity), with players.chat_identifier NULL or
+// stale/different — proves getOwnerPlayerId also consults player_identities,
+// not just the legacy column.
+function dbWithOwnerViaPlayerIdentitiesOnly(chatIdentifier: string | null) {
+  const db = openLeagueDb(':memory:');
+  db.prepare(`INSERT INTO leagues (id, slug, name) VALUES (1, 'l1', 'L1')`).run();
+  db.prepare(`INSERT INTO seasons (id, league_id, season_number, status) VALUES (10, 1, 1, 'active')`).run();
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, phase)
+     VALUES (100, 10, 'ml-100', 'R1', '2026-07-01T00:00:00Z', 'complete')`,
+  ).run();
+  db.prepare(`INSERT INTO competitors (id, ml_competitor_id, name) VALUES (5, 'c5', 'Owner')`).run();
+  db.prepare(
+    `INSERT INTO players (id, name, chat_type, chat_identifier) VALUES (5, 'Owner', 'whatsapp', ?)`,
+  ).run(chatIdentifier);
+  // A decoy player, to confirm we don't just match "the only player".
+  db.prepare(`INSERT INTO players (id, name, chat_type, chat_identifier) VALUES (6, 'Decoy', NULL, NULL)`).run();
+  db.prepare(
+    `INSERT INTO player_identities (player_id, identity_type, identifier) VALUES (5, 'whatsapp', '+16617476822')`,
+  ).run();
+  return db;
+}
+
 it('finds the owner player by matching OWNER_PHONE_NUMBER to chat_identifier', () => {
   const db = dbWithOwner();
   expect(getOwnerPlayerId(db, OWNER_ENV)).toBe(5);
@@ -59,6 +83,31 @@ it('returns null when OWNER_PHONE_NUMBER is unset or matches nobody', () => {
   const db = dbWithOwner();
   expect(getOwnerPlayerId(db, {})).toBeNull();
   expect(getOwnerPlayerId(db, { OWNER_PHONE_NUMBER: '15550001111' })).toBeNull();
+  db.close();
+});
+
+it('finds the owner via player_identities when players.chat_identifier is NULL', () => {
+  const db = dbWithOwnerViaPlayerIdentitiesOnly(null);
+  expect(getOwnerPlayerId(db, OWNER_ENV)).toBe(5);
+  db.close();
+});
+
+it('finds the owner via player_identities when players.chat_identifier is stale/different', () => {
+  const db = dbWithOwnerViaPlayerIdentitiesOnly('+15550009999');
+  expect(getOwnerPlayerId(db, OWNER_ENV)).toBe(5);
+  db.close();
+});
+
+it('still finds the owner via the legacy players.chat_identifier path (no regression)', () => {
+  const db = dbWithOwner();
+  expect(getOwnerPlayerId(db, OWNER_ENV)).toBe(5);
+  db.close();
+});
+
+it('returns null for an empty/unset OWNER_PHONE_NUMBER and never matches a random player', () => {
+  const db = dbWithOwnerViaPlayerIdentitiesOnly('+16617476822');
+  expect(getOwnerPlayerId(db, { OWNER_PHONE_NUMBER: '' })).toBeNull();
+  expect(getOwnerPlayerId(db, {})).toBeNull();
   db.close();
 });
 
