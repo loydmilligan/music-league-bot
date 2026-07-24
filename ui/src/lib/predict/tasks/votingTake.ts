@@ -7,6 +7,7 @@ import { modelForSection } from '../../digest/modelFor.js';
 export interface VotingTakeSong {
   title: string;
   artist: string;
+  spotifyUri: string;
   spotifyPopularity: number | null;
   listeners: number | null;
   bpm: number | null;
@@ -111,17 +112,16 @@ export interface RunVotingTakeResult {
 
 type CachedRun = { output_json: string; model: string; cost_usd: number; latency_ms: number; created_at: string };
 
-function lookupCache(db: Database.Database, roundId: number, title: string, artist: string): CachedRun | undefined {
+function lookupCache(db: Database.Database, roundId: number, spotifyUri: string): CachedRun | undefined {
   return db.prepare(
     `SELECT output_json, model, cost_usd, latency_ms, created_at
      FROM prediction_runs
      WHERE task_id = 'voting-take'
        AND round_id = ?
-       AND json_extract(input_json, '$.song.title') = ?
-       AND json_extract(input_json, '$.song.artist') = ?
+       AND json_extract(input_json, '$.song.spotifyUri') = ?
      ORDER BY created_at DESC
      LIMIT 1`,
-  ).get(roundId, title, artist) as CachedRun | undefined;
+  ).get(roundId, spotifyUri) as CachedRun | undefined;
 }
 
 export async function runVotingTake(
@@ -129,7 +129,7 @@ export async function runVotingTake(
   opts: { roundId: number; song: VotingTakeSong; theme: VotingTakeTheme; tasteFingerprint: string; forceRegen?: boolean },
 ): Promise<RunVotingTakeResult> {
   if (!opts.forceRegen) {
-    const cached = lookupCache(db, opts.roundId, opts.song.title, opts.song.artist);
+    const cached = lookupCache(db, opts.roundId, opts.song.spotifyUri);
     if (cached) {
       return {
         output: VotingTakeOutputSchema.parse(JSON.parse(cached.output_json)),

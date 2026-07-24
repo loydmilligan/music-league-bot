@@ -3,7 +3,7 @@ import { VotingTakeOutputSchema, votingTakeTask, buildVotingTakeMessages } from 
 import type { VotingTakeInput } from './votingTake.js';
 
 const INPUT: VotingTakeInput = {
-  song: { title: 'Song A', artist: 'Artist A', spotifyPopularity: 12, listeners: 900, bpm: 128, energy: 0.7, hasLyrics: true, tags: ['shoegaze'] },
+  song: { title: 'Song A', artist: 'Artist A', spotifyUri: 'spotify:track:123abc', spotifyPopularity: 12, listeners: 900, bpm: 128, energy: 0.7, hasLyrics: true, tags: ['shoegaze'] },
   theme: { name: 'Non-English', description: 'Songs not in English' },
   tasteFingerprint: 'Rewards obscure, texture-forward records; punishes novelty songs.',
 };
@@ -44,4 +44,10 @@ it('never puts submitter identity in the prompt and forbids recommendations', ()
   expect(all).toContain('Non-English');
   // The system prompt must forbid telling the user how to vote.
   expect(all.toLowerCase()).toContain('do not recommend');
+});
+
+it('includes the track identifier in the task input type', () => {
+  // spotifyUri is what makes the cache key unique per track; title+artist can repeat
+  // (original vs remaster), so it must be part of the cached input.
+  expect(INPUT.song.spotifyUri).toBeTruthy();
 });

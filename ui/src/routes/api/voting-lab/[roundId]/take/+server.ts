@@ -27,7 +27,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const result = await runVotingTake(db, {
     roundId,
     song: {
-      title: row.song.title, artist: row.song.artist,
+      title: row.song.title, artist: row.song.artist, spotifyUri: row.song.spotifyUri,
       spotifyPopularity: row.song.spotifyPopularity, listeners: row.song.listeners,
       bpm: row.song.bpm, energy: row.song.energy,
       hasLyrics: row.song.hasLyrics, tags: row.song.tags,
