@@ -105,88 +105,93 @@
   }
 </script>
 
-<li class="rounded border border-white/10 p-3">
-  <div class="flex items-center gap-3">
-    {#if row.song.albumArtUrl}
-      <img src={row.song.albumArtUrl} alt="" class="h-10 w-10 rounded" />
-    {/if}
-    <div class="min-w-0 flex-1">
-      <div class="truncate font-medium">{row.song.title}</div>
-      <div class="truncate text-sm opacity-70">{row.song.artist}</div>
-      <div class="mt-1 flex flex-wrap gap-1 text-xs opacity-60">
-        {#if row.song.spotifyPopularity !== null}<span>pop {row.song.spotifyPopularity}</span>{/if}
-        {#if row.song.bpm !== null}<span>{row.song.bpm} bpm</span>{/if}
-        {#if row.song.energy !== null}<span>energy {row.song.energy.toFixed(2)}</span>{/if}
-        {#if row.song.hasLyrics === false}<span>instrumental</span>{/if}
-        {#each row.song.tags.slice(0, 3) as tag}<span>{tag}</span>{/each}
+<li class="overflow-hidden rounded border border-border-muted p-3">
+  <div class="flex flex-wrap items-start gap-3">
+    <div class="flex min-w-0 flex-1 items-center gap-3">
+      {#if row.song.albumArtUrl}
+        <img src={row.song.albumArtUrl} alt="" class="h-10 w-10 flex-none rounded" />
+      {/if}
+      <div class="min-w-0 flex-1">
+        <div class="truncate font-medium">{row.song.title}</div>
+        <div class="truncate text-sm text-fg-muted">{row.song.artist}</div>
+        <div class="mt-1 flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-wide text-fg-dim">
+          {#if row.song.spotifyPopularity !== null}<span>pop {row.song.spotifyPopularity}</span>{/if}
+          {#if row.song.bpm !== null}<span>{row.song.bpm} bpm</span>{/if}
+          {#if row.song.energy !== null}<span>energy {row.song.energy.toFixed(2)}</span>{/if}
+          {#if row.song.hasLyrics === false}<span>instrumental</span>{/if}
+          {#each row.song.tags.slice(0, 3) as tag}<span>{tag}</span>{/each}
+        </div>
       </div>
     </div>
 
-    {#if row.ballot.isMine}
-      <span class="text-xs opacity-60">your song</span>
-    {:else}
-      <div class="flex items-center gap-1">
-        <button
-          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
-          onclick={() => bump('up', -1)}
-          disabled={!canAlloc(row.song.spotifyUri, 'up', -1)}
-          aria-label="one less up point"
-        >−</button>
-        <span class="w-8 text-center tabular-nums">▲{row.ballot.upPoints}</span>
-        <button
-          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
-          onclick={() => bump('up', 1)}
-          disabled={!canAlloc(row.song.spotifyUri, 'up', 1)}
-          aria-label="one more up point"
-        >+</button>
-      </div>
-      <div class="flex items-center gap-1">
-        <button
-          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
-          onclick={() => bump('down', -1)}
-          disabled={!canAlloc(row.song.spotifyUri, 'down', -1)}
-          aria-label="one less down point"
-        >−</button>
-        <span class="w-8 text-center tabular-nums">▼{row.ballot.downPoints}</span>
-        <button
-          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
-          onclick={() => bump('down', 1)}
-          disabled={!canAlloc(row.song.spotifyUri, 'down', 1)}
-          aria-label="one more down point"
-        >+</button>
-      </div>
-    {/if}
+    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      {#if row.ballot.isMine}
+        <span class="font-mono text-[10px] uppercase tracking-wide text-fg-dim">your song</span>
+      {:else}
+        <div class="flex items-center gap-1">
+          <button
+            class="flex h-8 w-8 items-center justify-center disabled:cursor-not-allowed disabled:opacity-30"
+            onclick={() => bump('up', -1)}
+            disabled={!canAlloc(row.song.spotifyUri, 'up', -1)}
+            aria-label="one less up point"
+          >−</button>
+          <span class="w-8 text-center font-mono tabular-nums">▲{row.ballot.upPoints}</span>
+          <button
+            class="flex h-8 w-8 items-center justify-center disabled:cursor-not-allowed disabled:opacity-30"
+            onclick={() => bump('up', 1)}
+            disabled={!canAlloc(row.song.spotifyUri, 'up', 1)}
+            aria-label="one more up point"
+          >+</button>
+        </div>
+        <div class="flex items-center gap-1">
+          <button
+            class="flex h-8 w-8 items-center justify-center disabled:cursor-not-allowed disabled:opacity-30"
+            onclick={() => bump('down', -1)}
+            disabled={!canAlloc(row.song.spotifyUri, 'down', -1)}
+            aria-label="one less down point"
+          >−</button>
+          <span class="w-8 text-center font-mono tabular-nums">▼{row.ballot.downPoints}</span>
+          <button
+            class="flex h-8 w-8 items-center justify-center disabled:cursor-not-allowed disabled:opacity-30"
+            onclick={() => bump('down', 1)}
+            disabled={!canAlloc(row.song.spotifyUri, 'down', 1)}
+            aria-label="one more down point"
+          >+</button>
+        </div>
+      {/if}
 
-    <button class="text-xs underline opacity-60" onclick={toggleMine}>
-      {row.ballot.isMine ? 'not mine' : 'mine'}
-    </button>
+      <button class="text-xs text-fg-muted underline" onclick={toggleMine}>
+        {row.ballot.isMine ? 'not mine' : 'mine'}
+      </button>
+    </div>
   </div>
 
-  <div class="mt-2 flex items-center gap-1 text-xs">
-    <span class="opacity-60">Your rating</span>
-    {#each [1, 2, 3, 4, 5] as star}
-      <button
-        class="px-1"
-        class:opacity-100={row.ballot.rating !== null && star <= row.ballot.rating}
-        class:opacity-30={row.ballot.rating === null || star > row.ballot.rating}
-        onclick={() => setRating(star)}
-        aria-label={`rate ${star} of 5`}
-      >★</button>
-    {/each}
+  <div class="mt-2 flex flex-wrap items-center gap-2">
+    <span class="font-mono text-[10px] uppercase tracking-wide text-fg-dim">rating</span>
+    <div class="flex gap-1">
+      {#each [1, 2, 3, 4, 5] as n}
+        <button
+          class="rt-dot{row.ballot.rating !== null && n <= row.ballot.rating ? ' on' : ''}"
+          style={row.ballot.rating !== null && n <= row.ballot.rating ? 'background: var(--color-amber)' : undefined}
+          onclick={() => setRating(n)}
+          aria-label={`rate ${n} of 5`}
+        ></button>
+      {/each}
+    </div>
   </div>
 
   {#if take}
-    <div class="mt-2 rounded bg-black/20 p-2 text-sm">
-      <p><span class="opacity-60">Theme:</span> {take.theme_read}</p>
-      <p><span class="opacity-60">Your taste:</span> {take.taste_note}</p>
+    <div class="mt-2 overflow-hidden rounded bg-bg-elevated p-2 text-sm">
+      <p><span class="text-fg-dim">Theme:</span> {take.theme_read}</p>
+      <p><span class="text-fg-dim">Your taste:</span> {take.taste_note}</p>
       <ul class="mt-1 list-disc pl-5">
         {#each take.angles as a}<li>{a}</li>{/each}
       </ul>
-      <div class="mt-1 flex flex-wrap gap-1 text-xs opacity-60">
-        {#each take.signals as s}<span class="rounded bg-white/10 px-1">{s}</span>{/each}
+      <div class="mt-1 flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-wide text-fg-dim">
+        {#each take.signals as s}<span class="rounded bg-surface-strong px-1">{s}</span>{/each}
       </div>
       <button
-        class="mt-2 text-xs underline opacity-70"
+        class="mt-2 text-xs text-fg-muted underline"
         onclick={() => getTake(true)}
         disabled={takeLoading}
       >
@@ -194,16 +199,16 @@
       </button>
     </div>
   {:else}
-    <button class="mt-2 text-xs underline opacity-70" onclick={() => getTake(false)} disabled={takeLoading}>
+    <button class="mt-2 text-xs text-fg-muted underline" onclick={() => getTake(false)} disabled={takeLoading}>
       {takeLoading ? 'Thinking…' : 'Get take'}
     </button>
   {/if}
   {#if takeError}
-    <p class="mt-1 text-xs text-red-500">{takeError}</p>
+    <p class="mt-1 text-xs text-ember">{takeError}</p>
   {/if}
 
   <textarea
-    class="mt-2 w-full rounded bg-black/20 p-2 text-sm"
+    class="mt-2 w-full rounded bg-bg-elevated p-2 text-sm"
     rows="2"
     placeholder="Your notes on this track…"
     value={row.ballot.notes}
@@ -212,7 +217,7 @@
 
   <div class="mt-2">
     <textarea
-      class="w-full rounded bg-black/20 p-2 text-sm"
+      class="w-full rounded bg-bg-elevated p-2 text-sm"
       rows="2"
       placeholder="Drafted vote comment…"
       value={row.ballot.draftComment}
@@ -220,18 +225,18 @@
     ></textarea>
     <div class="mt-1 flex gap-3 text-xs">
       <button
-        class="underline opacity-70"
+        class="text-fg-muted underline"
         onclick={() => draftComment(!!row.ballot.draftComment)}
         disabled={drafting}
       >
         {drafting ? 'Drafting…' : row.ballot.draftComment ? 'Regenerate' : 'Draft comment'}
       </button>
       {#if row.ballot.draftComment}
-        <button class="underline opacity-70" onclick={copyComment}>Copy</button>
+        <button class="text-fg-muted underline" onclick={copyComment}>Copy</button>
       {/if}
     </div>
     {#if draftError}
-      <p class="mt-1 text-xs text-red-500">{draftError}</p>
+      <p class="mt-1 text-xs text-ember">{draftError}</p>
     {/if}
   </div>
 </li>

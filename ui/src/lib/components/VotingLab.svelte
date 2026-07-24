@@ -209,63 +209,64 @@
 </script>
 
 <section class="voting-lab">
-  <header class="flex items-baseline justify-between gap-4">
-    <h2 class="text-lg font-semibold">Voting Lab</h2>
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <h2 class="font-display text-lg font-semibold">Voting Lab</h2>
     {#if usage && data}
-      <div class="flex items-center gap-2 text-sm tabular-nums">
+      <div class="flex flex-wrap items-center gap-2 text-sm">
         <span
-          class:text-red-500={usage.upRemaining < 0}
-          class:text-amber-500={usage.upRemaining === 0}
+          class:text-ember={usage.upRemaining < 0}
+          class:text-amber={usage.upRemaining === 0}
         >
-          Up: {usage.upUsed}/
+          Up: <span class="font-mono tabular-nums">{usage.upUsed}</span>/
         </span>
         <input
           type="number"
           min="0"
-          class="w-14 rounded bg-black/20 px-1"
+          class="w-14 rounded bg-bg-elevated px-1 font-mono tabular-nums"
           value={data.budget.upTotal}
           onchange={(e) => setUpTotal(e.currentTarget.value)}
         />
         <span
-          class:text-red-500={usage.upRemaining < 0}
-          class:text-amber-500={usage.upRemaining === 0}
+          class:text-ember={usage.upRemaining < 0}
+          class:text-amber={usage.upRemaining === 0}
         >
-          &middot; {usage.upRemaining} left
+          &middot; <span class="font-mono tabular-nums">{usage.upRemaining}</span> left
         </span>
         <span
-          class:text-red-500={usage.downRemaining < 0}
-          class:text-amber-500={usage.downRemaining === 0}
+          class:text-ember={usage.downRemaining < 0}
+          class:text-amber={usage.downRemaining === 0}
         >
-          Down: {usage.downUsed}/
+          Down: <span class="font-mono tabular-nums">{usage.downUsed}</span>/
         </span>
         <input
           type="number"
           min="0"
-          class="w-14 rounded bg-black/20 px-1"
+          class="w-14 rounded bg-bg-elevated px-1 font-mono tabular-nums"
           value={data.budget.downTotal}
           onchange={(e) => setDownTotal(e.currentTarget.value)}
         />
         <span
-          class:text-red-500={usage.downRemaining < 0}
-          class:text-amber-500={usage.downRemaining === 0}
+          class:text-ember={usage.downRemaining < 0}
+          class:text-amber={usage.downRemaining === 0}
         >
-          &middot; {usage.downRemaining} left
+          &middot; <span class="font-mono tabular-nums">{usage.downRemaining}</span> left
         </span>
-        <span class="opacity-60">cap/song</span>
+        <span class="font-mono text-[10px] uppercase tracking-wide text-fg-dim">cap/song</span>
+        <!-- Deferred: a future split into separate upCap/downCap would go here (not wanted today — up-cap > down-cap makes it moot). -->
         <input
           type="number"
           min="1"
           placeholder="none"
-          class="w-14 rounded bg-black/20 px-1"
+          class="w-14 rounded bg-bg-elevated px-1 font-mono tabular-nums"
           value={data.budget.perSongCap ?? ''}
           onchange={(e) => setPerSongCap(e.currentTarget.value)}
         />
-        <span class="opacity-60">({data.budgetSource})</span>
+        <span class="text-fg-dim">({data.budgetSource})</span>
       </div>
     {/if}
     {#if data?.phase === 'voting'}
       <button
-        class="rounded border border-white/20 px-2 py-1 text-xs"
+        class="rounded border border-border px-2 py-1 text-xs"
         onclick={syncLive}
         disabled={syncing}
       >
@@ -274,36 +275,36 @@
     {/if}
   </header>
 
-  {#if syncMsg}<p class="text-xs opacity-70">{syncMsg}</p>{/if}
+  {#if syncMsg}<p class="text-xs text-fg-muted">{syncMsg}</p>{/if}
 
   {#if saveError}
-    <p class="text-sm text-red-500">{saveError}</p>
+    <p class="text-sm text-ember">{saveError}</p>
   {/if}
 
   {#if loadError}
-    <p class="text-red-500">{loadError}</p>
+    <p class="text-ember">{loadError}</p>
   {:else if !data}
-    <p class="opacity-60">Loading…</p>
+    <p class="text-fg-dim">Loading…</p>
   {:else}
-    <p class="mt-1 text-sm opacity-70">{data.themeName}</p>
+    <p class="mt-1 font-display text-sm text-fg-muted">{data.themeName}</p>
     <ul class="mt-3 space-y-2">
       {#each data.rows as row (row.song.submissionId)}
         <VotingLabSongRow {row} {roundId} {canAlloc} onchange={applyBallot} flushSaves={flushPendingSaves} />
       {/each}
     </ul>
 
-    <footer class="mt-4 border-t border-white/10 pt-3">
+    <footer class="mt-4 border-t border-border-muted pt-3">
       {#if problems.length}
-        <ul class="mb-2 text-sm text-red-500">
+        <ul class="mb-2 text-sm text-ember">
           {#each problems as p}<li>{p}</li>{/each}
         </ul>
       {/if}
-      <pre class="whitespace-pre-wrap rounded bg-black/20 p-2 text-sm">{ballotText() || 'No votes allocated yet.'}</pre>
-      <button class="mt-2 rounded border border-white/20 px-3 py-1 text-sm" onclick={copyBallot}>
+      <pre class="whitespace-pre-wrap rounded bg-bg-elevated p-2 text-sm">{ballotText() || 'No votes allocated yet.'}</pre>
+      <button class="mt-2 rounded border border-border px-3 py-1 text-sm" onclick={copyBallot}>
         {copied ? 'Copied!' : 'Copy whole ballot'}
       </button>
       {#if copyError}
-        <p class="mt-1 text-sm text-red-500">{copyError}</p>
+        <p class="mt-1 text-sm text-ember">{copyError}</p>
       {/if}
     </footer>
   {/if}
