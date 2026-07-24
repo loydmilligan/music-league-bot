@@ -17,6 +17,24 @@
 
   $effect(() => { void roundId; void load(); });
 
+  let syncing = $state(false);
+  let syncMsg = $state<string | null>(null);
+
+  async function syncLive() {
+    syncing = true;
+    syncMsg = null;
+    try {
+      const res = await fetch(`/api/voting-lab/${roundId}/sync`, { method: 'POST' });
+      const body = await res.json();
+      syncMsg = res.ok
+        ? `Synced: ${body.inserted} new, ${body.skipped} already had.`
+        : `Sync failed: ${body.message ?? res.status}`;
+      if (res.ok) await load();
+    } finally {
+      syncing = false;
+    }
+  }
+
   const usage = $derived(
     data ? computeUsage(data.rows.map((r) => r.ballot), data.budget) : null,
   );
@@ -194,7 +212,16 @@
         <span class="opacity-60">({data.budgetSource})</span>
       </div>
     {/if}
+    <button
+      class="rounded border border-white/20 px-2 py-1 text-xs"
+      onclick={syncLive}
+      disabled={syncing}
+    >
+      {syncing ? 'Syncing…' : 'Sync live round'}
+    </button>
   </header>
+
+  {#if syncMsg}<p class="text-xs opacity-70">{syncMsg}</p>{/if}
 
   {#if saveError}
     <p class="text-sm text-red-500">{saveError}</p>
