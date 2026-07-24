@@ -126,14 +126,34 @@
       <span class="text-xs opacity-60">your song</span>
     {:else}
       <div class="flex items-center gap-1">
-        <button class="px-2" onclick={() => bump('up', -1)} aria-label="one less up point">−</button>
+        <button
+          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          onclick={() => bump('up', -1)}
+          disabled={!canAlloc(row.song.spotifyUri, 'up', -1)}
+          aria-label="one less up point"
+        >−</button>
         <span class="w-8 text-center tabular-nums">▲{row.ballot.upPoints}</span>
-        <button class="px-2" onclick={() => bump('up', 1)} aria-label="one more up point">+</button>
+        <button
+          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          onclick={() => bump('up', 1)}
+          disabled={!canAlloc(row.song.spotifyUri, 'up', 1)}
+          aria-label="one more up point"
+        >+</button>
       </div>
       <div class="flex items-center gap-1">
-        <button class="px-2" onclick={() => bump('down', -1)} aria-label="one less down point">−</button>
+        <button
+          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          onclick={() => bump('down', -1)}
+          disabled={!canAlloc(row.song.spotifyUri, 'down', -1)}
+          aria-label="one less down point"
+        >−</button>
         <span class="w-8 text-center tabular-nums">▼{row.ballot.downPoints}</span>
-        <button class="px-2" onclick={() => bump('down', 1)} aria-label="one more down point">+</button>
+        <button
+          class="px-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          onclick={() => bump('down', 1)}
+          disabled={!canAlloc(row.song.spotifyUri, 'down', 1)}
+          aria-label="one more down point"
+        >+</button>
       </div>
     {/if}
 

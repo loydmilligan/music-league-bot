@@ -5,6 +5,7 @@
   import DotIndicator from '$lib/components/DotIndicator.svelte';
   import ActiveRounds from '$lib/active/ActiveRounds.svelte';
   import VotingLab from '$lib/components/VotingLab.svelte';
+  import CollapsiblePanel from '$lib/components/CollapsiblePanel.svelte';
   import type { RoundPhase } from '$lib/types.js';
 
   let { data }: { data: PageData } = $props();
@@ -151,6 +152,13 @@
     });
   });
 
+  // Active leagues currently in the voting phase — each gets its own Voting
+  // Lab panel above the grid (never inside a grid cell; the lab is far too
+  // tall for that layout). null-safe on currentRound, same as isLivePhase.
+  const votingLeagues = $derived(
+    activeLeagues.filter(s => s.currentRound && s.currentRound.phase === 'voting')
+  );
+
   const activeCount = $derived(activeLeagues.length);
   const totalLeagues = $derived(allLeagues.length);
 
@@ -188,6 +196,25 @@
 <!-- Active-round management (sprint-22 active-round-ui): one slot per active
      league, with the "no active round → choose/create-with-dates" modal. -->
 <ActiveRounds />
+
+<!--
+  Voting Lab panels — one per active league currently in the voting phase,
+  rendered ABOVE the league grid (never inside a grid cell; the lab's
+  steppers/textareas/take-card/ballot-footer are far too tall for a grid
+  cell). Each is wrapped in the shared CollapsiblePanel so multiple labs
+  don't produce a wall of UI. Defaults open when there's exactly one voting
+  league, collapsed when there are several; CollapsiblePanel persists the
+  user's own toggle per-id afterward regardless of this default.
+-->
+{#each votingLeagues as s (s.league.slug + s.seasonNumber)}
+  <CollapsiblePanel
+    id={`voting-lab-${s.league.slug}-${s.seasonNumber}`}
+    title={`Voting Lab — ${s.league.name} · ${s.currentRound!.name}`}
+    defaultOpen={votingLeagues.length === 1}
+  >
+    <VotingLab roundId={s.currentRound!.id} />
+  </CollapsiblePanel>
+{/each}
 
 <!--
   Sections side-by-side at md+ (active wider, archive narrower) per
@@ -250,9 +277,6 @@
             My place: —
           </div>
         </a>
-        {#if phase === 'voting' && s.currentRound}
-          <VotingLab roundId={s.currentRound.id} />
-        {/if}
       {/each}
     </div>
   {/if}

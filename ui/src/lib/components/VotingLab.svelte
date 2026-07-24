@@ -155,6 +155,16 @@
     saveBudget();
   }
 
+  // Blank means "no cap" (null), not 0 — mirrors the per-song-cap clamp used
+  // for the season-level budget editor in settings/+page.svelte.
+  function setPerSongCap(raw: string) {
+    if (!data) return;
+    const trimmed = raw.trim();
+    const n = trimmed === '' ? null : Math.max(1, Math.round(Number(trimmed) || 1));
+    data.budget = { ...data.budget, perSongCap: n };
+    saveBudget();
+  }
+
   const problems = $derived(
     data ? validateBallot(data.rows.map((r) => r.ballot), data.budget) : [],
   );
@@ -203,7 +213,12 @@
     <h2 class="text-lg font-semibold">Voting Lab</h2>
     {#if usage && data}
       <div class="flex items-center gap-2 text-sm tabular-nums">
-        <span class:text-red-500={usage.upRemaining < 0}>Up: {usage.upUsed}/</span>
+        <span
+          class:text-red-500={usage.upRemaining < 0}
+          class:text-amber-500={usage.upRemaining === 0}
+        >
+          Up: {usage.upUsed}/
+        </span>
         <input
           type="number"
           min="0"
@@ -211,13 +226,39 @@
           value={data.budget.upTotal}
           onchange={(e) => setUpTotal(e.currentTarget.value)}
         />
-        <span class:text-red-500={usage.downRemaining < 0}>Down: {usage.downUsed}/</span>
+        <span
+          class:text-red-500={usage.upRemaining < 0}
+          class:text-amber-500={usage.upRemaining === 0}
+        >
+          &middot; {usage.upRemaining} left
+        </span>
+        <span
+          class:text-red-500={usage.downRemaining < 0}
+          class:text-amber-500={usage.downRemaining === 0}
+        >
+          Down: {usage.downUsed}/
+        </span>
         <input
           type="number"
           min="0"
           class="w-14 rounded bg-black/20 px-1"
           value={data.budget.downTotal}
           onchange={(e) => setDownTotal(e.currentTarget.value)}
+        />
+        <span
+          class:text-red-500={usage.downRemaining < 0}
+          class:text-amber-500={usage.downRemaining === 0}
+        >
+          &middot; {usage.downRemaining} left
+        </span>
+        <span class="opacity-60">cap/song</span>
+        <input
+          type="number"
+          min="1"
+          placeholder="none"
+          class="w-14 rounded bg-black/20 px-1"
+          value={data.budget.perSongCap ?? ''}
+          onchange={(e) => setPerSongCap(e.currentTarget.value)}
         />
         <span class="opacity-60">({data.budgetSource})</span>
       </div>
