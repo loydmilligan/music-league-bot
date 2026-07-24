@@ -1,15 +1,35 @@
 <script lang="ts">
   import type { BallotEntry, LabRow } from '$lib/voting-lab/types.js';
+  import type { VotingTakeOutput } from '$lib/predict/tasks/votingTake.js';
 
   let {
     row,
+    roundId,
     canAlloc,
     onchange,
   }: {
     row: LabRow;
+    roundId: number;
     canAlloc: (uri: string, kind: 'up' | 'down', delta: number) => boolean;
     onchange: (ballot: BallotEntry) => void;
   } = $props();
+
+  let take = $state<VotingTakeOutput | null>(null);
+  let takeLoading = $state(false);
+
+  async function getTake() {
+    takeLoading = true;
+    try {
+      const res = await fetch(`/api/voting-lab/${roundId}/take`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spotifyUri: row.song.spotifyUri }),
+      });
+      if (res.ok) take = (await res.json()).output as VotingTakeOutput;
+    } finally {
+      takeLoading = false;
+    }
+  }
 
   function bump(kind: 'up' | 'down', delta: number) {
     if (!canAlloc(row.song.spotifyUri, kind, delta)) return;
@@ -83,6 +103,23 @@
       >★</button>
     {/each}
   </div>
+
+  {#if take}
+    <div class="mt-2 rounded bg-black/20 p-2 text-sm">
+      <p><span class="opacity-60">Theme:</span> {take.theme_read}</p>
+      <p><span class="opacity-60">Your taste:</span> {take.taste_note}</p>
+      <ul class="mt-1 list-disc pl-5">
+        {#each take.angles as a}<li>{a}</li>{/each}
+      </ul>
+      <div class="mt-1 flex flex-wrap gap-1 text-xs opacity-60">
+        {#each take.signals as s}<span class="rounded bg-white/10 px-1">{s}</span>{/each}
+      </div>
+    </div>
+  {:else}
+    <button class="mt-2 text-xs underline opacity-70" onclick={getTake} disabled={takeLoading}>
+      {takeLoading ? 'Thinking…' : 'Get take'}
+    </button>
+  {/if}
 
   <textarea
     class="mt-2 w-full rounded bg-black/20 p-2 text-sm"

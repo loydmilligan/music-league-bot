@@ -235,7 +235,7 @@
     <p class="mt-1 text-sm opacity-70">{data.themeName}</p>
     <ul class="mt-3 space-y-2">
       {#each data.rows as row (row.song.submissionId)}
-        <VotingLabSongRow {row} {canAlloc} onchange={applyBallot} />
+        <VotingLabSongRow {row} {roundId} {canAlloc} onchange={applyBallot} />
       {/each}
     </ul>
 
