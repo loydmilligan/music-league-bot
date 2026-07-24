@@ -119,6 +119,7 @@ function lookupCache(db: Database.Database, roundId: number, spotifyUri: string)
      WHERE task_id = 'voting-take'
        AND round_id = ?
        AND json_extract(input_json, '$.song.spotifyUri') = ?
+       AND output_json IS NOT NULL AND outcome IS NULL
      ORDER BY created_at DESC
      LIMIT 1`,
   ).get(roundId, spotifyUri) as CachedRun | undefined;

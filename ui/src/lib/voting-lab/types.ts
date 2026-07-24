@@ -56,6 +56,8 @@ export interface LabData {
   roundId: number;
   themeName: string;
   themeDescription: string;
+  /** rounds.phase — gates whether "Sync live round" may be shown/used. */
+  phase: string | null;
   budget: VoteBudget;
   budgetSource: BudgetSource;
   rows: LabRow[];

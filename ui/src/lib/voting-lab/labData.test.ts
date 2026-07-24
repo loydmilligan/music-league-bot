@@ -30,6 +30,7 @@ it('returns one row per submitted song with theme info', () => {
   expect(data.roundId).toBe(100);
   expect(data.themeName).toBe('Songs in a language other than English');
   expect(data.themeDescription).toBe('Non-English only');
+  expect(data.phase).toBe('voting');
   expect(data.rows).toHaveLength(2);
   expect(data.rows[0].song.title).toBe('Song A');
   expect(data.rows[0].song.artist).toBe('Artist A');

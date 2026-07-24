@@ -531,18 +531,24 @@
   });
 
   let seasonBudgetSaving = $state<Record<number, boolean>>({});
+  let seasonBudgetError = $state<Record<number, string>>({});
 
   async function saveSeasonBudget(seasonId: number) {
     const b = seasonBudgets[seasonId] ?? SEASON_BUDGET_DEFAULT;
     seasonBudgetSaving = { ...seasonBudgetSaving, [seasonId]: true };
+    seasonBudgetError = { ...seasonBudgetError, [seasonId]: '' };
     try {
-      await fetch('/api/settings/season-budget', {
+      const r = await fetch('/api/settings/season-budget', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seasonId, ...b }),
       });
+      if (!r.ok) {
+        const err = await r.json().catch(() => null) as { message?: string } | null;
+        seasonBudgetError = { ...seasonBudgetError, [seasonId]: err?.message ?? `Failed to save (${r.status})` };
+      }
     } catch {
-      /* silently ignore — inputs keep the user's typed value */
+      seasonBudgetError = { ...seasonBudgetError, [seasonId]: 'Failed to save (network error)' };
     } finally {
       seasonBudgetSaving = { ...seasonBudgetSaving, [seasonId]: false };
     }
@@ -1312,6 +1318,9 @@
 
           {#if seasonBudgetSaving[season.id]}
             <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Saving…</span>
+          {/if}
+          {#if seasonBudgetError[season.id]}
+            <span class="text-xs text-red-500">{seasonBudgetError[season.id]}</span>
           {/if}
         </div>
       {/each}

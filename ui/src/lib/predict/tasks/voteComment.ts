@@ -119,6 +119,7 @@ function lookupCache(
        AND json_extract(input_json, '$.rating') IS ?
        AND json_extract(input_json, '$.upPoints') = ?
        AND json_extract(input_json, '$.downPoints') = ?
+       AND output_json IS NOT NULL AND outcome IS NULL
      ORDER BY created_at DESC
      LIMIT 1`,
   ).get(roundId, spotifyUri, notes, rating, upPoints, downPoints) as CachedRun | undefined;

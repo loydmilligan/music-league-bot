@@ -1,4 +1,5 @@
 import { it, expect, vi, beforeEach, describe } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import { openLeagueDb } from '$lib/db/client.js';
 
 const db = openLeagueDb(':memory:');
@@ -164,5 +165,33 @@ describe('runVoteComment caching', () => {
     expect(mockCallOpenRouter).toHaveBeenCalledTimes(2);
     expect(otherSong.cacheHit).toBe(false);
     expect(otherSong.output.draft).toBe('Song B draft.');
+  });
+
+  it('does not return a poisoned (unusable, output_json NULL) row from cache lookup', async () => {
+    // Simulate a previous run that failed schema validation twice: predict.ts writes
+    // output_json = NULL, outcome = 'unusable' before throwing. It is the newest row
+    // matching this exact cache key — it must be excluded, not just deprioritized.
+    db.prepare(
+      `INSERT INTO prediction_runs (id, task_id, round_id, input_json, output_json, model, cost_usd, latency_ms, created_at, outcome)
+       VALUES (?, 'vote-comment', ?, ?, NULL, 'm', 0, 0, ?, 'unusable')`,
+    ).run(
+      randomUUID(),
+      1,
+      JSON.stringify({
+        song: BASE.song,
+        notes: BASE.notes,
+        rating: BASE.rating,
+        upPoints: BASE.upPoints,
+        downPoints: BASE.downPoints,
+      }),
+      new Date().toISOString(),
+    );
+
+    mockCallOpenRouter.mockResolvedValueOnce(llmResult('Fresh draft.'));
+
+    const result = await run();
+
+    expect(result.cacheHit).toBe(false);
+    expect(mockCallOpenRouter).toHaveBeenCalledTimes(1);
   });
 });

@@ -41,7 +41,7 @@
 
   let saveError = $state<string | null>(null);
 
-  type PendingSave = { timer: ReturnType<typeof setTimeout>; fire: () => void };
+  type PendingSave = { timer: ReturnType<typeof setTimeout>; fire: () => Promise<void> };
   const saveTimers = new Map<string, PendingSave>();
 
   function canAlloc(uri: string, kind: 'up' | 'down', delta: number): boolean {
@@ -50,31 +50,37 @@
   }
 
   /** Perform the PATCH against the round id captured when the save was scheduled. */
-  function sendBallot(targetRoundId: number, entry: BallotEntry) {
-    fetch(`/api/voting-lab/${targetRoundId}/ballot`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          saveError = `Failed to save "${entry.spotifyUri}" (${res.status})`;
-          return;
-        }
-        saveError = null;
-      })
-      .catch(() => {
-        saveError = `Failed to save "${entry.spotifyUri}" (network error)`;
+  async function sendBallot(targetRoundId: number, entry: BallotEntry): Promise<void> {
+    try {
+      const res = await fetch(`/api/voting-lab/${targetRoundId}/ballot`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
       });
+      if (!res.ok) {
+        saveError = `Failed to save "${entry.spotifyUri}" (${res.status})`;
+        return;
+      }
+      saveError = null;
+    } catch {
+      saveError = `Failed to save "${entry.spotifyUri}" (network error)`;
+    }
   }
 
-  /** Fire any pending debounced save immediately, e.g. before the round changes. */
-  function flushPendingSaves() {
+  /**
+   * Fire any pending debounced save immediately and await it — e.g. before
+   * the round changes, or before a "Draft comment" request that reads the
+   * ballot back out of the DB (the draft endpoint would otherwise see
+   * stale notes/rating/allocation still sitting behind the 400ms debounce).
+   */
+  async function flushPendingSaves(): Promise<void> {
+    const pendingFires: Promise<void>[] = [];
     for (const [uri, pending] of saveTimers) {
       clearTimeout(pending.timer);
-      pending.fire();
+      pendingFires.push(pending.fire());
       saveTimers.delete(uri);
     }
+    await Promise.all(pendingFires);
   }
 
   /** Update local state immediately, then debounce the PATCH per song. */
@@ -212,13 +218,15 @@
         <span class="opacity-60">({data.budgetSource})</span>
       </div>
     {/if}
-    <button
-      class="rounded border border-white/20 px-2 py-1 text-xs"
-      onclick={syncLive}
-      disabled={syncing}
-    >
-      {syncing ? 'Syncing…' : 'Sync live round'}
-    </button>
+    {#if data?.phase === 'voting'}
+      <button
+        class="rounded border border-white/20 px-2 py-1 text-xs"
+        onclick={syncLive}
+        disabled={syncing}
+      >
+        {syncing ? 'Syncing…' : 'Sync live round'}
+      </button>
+    {/if}
   </header>
 
   {#if syncMsg}<p class="text-xs opacity-70">{syncMsg}</p>{/if}
@@ -235,7 +243,7 @@
     <p class="mt-1 text-sm opacity-70">{data.themeName}</p>
     <ul class="mt-3 space-y-2">
       {#each data.rows as row (row.song.submissionId)}
-        <VotingLabSongRow {row} {roundId} {canAlloc} onchange={applyBallot} />
+        <VotingLabSongRow {row} {roundId} {canAlloc} onchange={applyBallot} flushSaves={flushPendingSaves} />
       {/each}
     </ul>
 

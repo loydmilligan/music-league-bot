@@ -7,26 +7,38 @@
     roundId,
     canAlloc,
     onchange,
+    flushSaves,
   }: {
     row: LabRow;
     roundId: number;
     canAlloc: (uri: string, kind: 'up' | 'down', delta: number) => boolean;
     onchange: (ballot: BallotEntry) => void;
+    /** Flush (and await) any pending debounced ballot save before drafting a comment. */
+    flushSaves: () => Promise<void>;
   } = $props();
 
   let take = $state<VotingTakeOutput | null>(null);
   let takeLoading = $state(false);
+  let takeError = $state<string | null>(null);
   let drafting = $state(false);
+  let draftError = $state<string | null>(null);
 
-  async function getTake() {
+  async function getTake(forceRegen = false) {
     takeLoading = true;
+    takeError = null;
     try {
       const res = await fetch(`/api/voting-lab/${roundId}/take`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spotifyUri: row.song.spotifyUri }),
+        body: JSON.stringify({ spotifyUri: row.song.spotifyUri, forceRegen }),
       });
-      if (res.ok) take = (await res.json()).output as VotingTakeOutput;
+      if (res.ok) {
+        take = (await res.json()).output as VotingTakeOutput;
+      } else {
+        takeError = `Failed to get take (${res.status})`;
+      }
+    } catch {
+      takeError = 'Failed to get take (network error)';
     } finally {
       takeLoading = false;
     }
@@ -37,10 +49,17 @@
    * free on revisit — the backend serves a cached draft for these exact
    * inputs if one exists. "Regenerate" always passes forceRegen:true so it
    * never returns the same stale text.
+   *
+   * Flushes any pending debounced ballot save (notes/rating/allocation)
+   * first — the comment endpoint reads those from the DB, and the ballot
+   * PATCH is debounced 400ms client-side, so without this a "Draft comment"
+   * click right after typing notes would draft (and cache) from stale notes.
    */
   async function draftComment(forceRegen: boolean) {
     drafting = true;
+    draftError = null;
     try {
+      await flushSaves();
       const res = await fetch(`/api/voting-lab/${roundId}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +68,11 @@
       if (res.ok) {
         const { output } = (await res.json()) as { output: { draft: string } };
         onchange({ ...row.ballot, draftComment: output.draft });
+      } else {
+        draftError = `Failed to draft comment (${res.status})`;
       }
+    } catch {
+      draftError = 'Failed to draft comment (network error)';
     } finally {
       drafting = false;
     }
@@ -142,11 +165,21 @@
       <div class="mt-1 flex flex-wrap gap-1 text-xs opacity-60">
         {#each take.signals as s}<span class="rounded bg-white/10 px-1">{s}</span>{/each}
       </div>
+      <button
+        class="mt-2 text-xs underline opacity-70"
+        onclick={() => getTake(true)}
+        disabled={takeLoading}
+      >
+        {takeLoading ? 'Thinking…' : 'Refresh'}
+      </button>
     </div>
   {:else}
-    <button class="mt-2 text-xs underline opacity-70" onclick={getTake} disabled={takeLoading}>
+    <button class="mt-2 text-xs underline opacity-70" onclick={() => getTake(false)} disabled={takeLoading}>
       {takeLoading ? 'Thinking…' : 'Get take'}
     </button>
+  {/if}
+  {#if takeError}
+    <p class="mt-1 text-xs text-red-500">{takeError}</p>
   {/if}
 
   <textarea
@@ -177,5 +210,8 @@
         <button class="underline opacity-70" onclick={copyComment}>Copy</button>
       {/if}
     </div>
+    {#if draftError}
+      <p class="mt-1 text-xs text-red-500">{draftError}</p>
+    {/if}
   </div>
 </li>

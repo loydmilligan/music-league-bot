@@ -1,5 +1,15 @@
-import { it, expect } from 'vitest';
-import { VotingTakeOutputSchema, votingTakeTask, buildVotingTakeMessages } from './votingTake.js';
+import { it, expect, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { openLeagueDb } from '$lib/db/client.js';
+
+vi.mock('$lib/digest/llm.js', () => ({
+  callOpenRouter: vi.fn(),
+}));
+
+import { callOpenRouter } from '$lib/digest/llm.js';
+const mockCallOpenRouter = vi.mocked(callOpenRouter);
+
+import { VotingTakeOutputSchema, votingTakeTask, buildVotingTakeMessages, runVotingTake } from './votingTake.js';
 import type { VotingTakeInput } from './votingTake.js';
 
 const INPUT: VotingTakeInput = {
@@ -50,4 +60,30 @@ it('includes the track identifier in the task input type', () => {
   // spotifyUri is what makes the cache key unique per track; title+artist can repeat
   // (original vs remaster), so it must be part of the cached input.
   expect(INPUT.song.spotifyUri).toBeTruthy();
+});
+
+it('does not return a poisoned (unusable, output_json NULL) row from cache lookup', async () => {
+  const db = openLeagueDb(':memory:');
+  vi.clearAllMocks();
+
+  // Simulate a previous run that failed schema validation twice: predict.ts writes
+  // output_json = NULL, outcome = 'unusable' before throwing. It is the newest row
+  // for this (round, song) — the poisoned row must be excluded, not just deprioritized.
+  db.prepare(
+    `INSERT INTO prediction_runs (id, task_id, round_id, input_json, output_json, model, cost_usd, latency_ms, created_at, outcome)
+     VALUES (?, 'voting-take', ?, ?, NULL, 'm', 0, 0, ?, 'unusable')`,
+  ).run(randomUUID(), 1, JSON.stringify({ song: { spotifyUri: INPUT.song.spotifyUri } }), new Date().toISOString());
+
+  mockCallOpenRouter.mockResolvedValueOnce({
+    content: JSON.stringify({ theme_read: 'a', taste_note: 'b', angles: ['c'], signals: [] }),
+    costUsd: 0.001, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
+  });
+
+  const result = await runVotingTake(db, {
+    roundId: 1, song: INPUT.song, theme: INPUT.theme, tasteFingerprint: INPUT.tasteFingerprint,
+  });
+
+  expect(result.cacheHit).toBe(false);
+  expect(mockCallOpenRouter).toHaveBeenCalledTimes(1);
+  db.close();
 });

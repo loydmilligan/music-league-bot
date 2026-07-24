@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import { getDb } from '$lib/db/client.js';
 import { syncRoundSongs } from '$lib/voting-lab/liveSync.js';
 import type { CliSong } from '$lib/voting-lab/liveSync.js';
+import { enqueueMany } from '$lib/db/metadataQueue.js';
 
 const run = promisify(execFile);
 
@@ -121,14 +122,22 @@ export const POST: RequestHandler = async ({ params }) => {
   const db = getDb();
   const round = db
     .prepare(
-      `SELECT r.ml_round_id AS ml_round_id, l.name AS league_name
+      `SELECT r.ml_round_id AS ml_round_id, r.phase AS phase, l.name AS league_name
        FROM rounds r
        JOIN seasons s ON s.id = r.season_id
        JOIN leagues l ON l.id = s.league_id
        WHERE r.id = ?`,
     )
-    .get(roundId) as { ml_round_id: string; league_name: string } | undefined;
+    .get(roundId) as { ml_round_id: string; phase: string | null; league_name: string } | undefined;
   if (!round) throw error(404, 'round not found');
+
+  // Data-safety guard: ml_submissions is a SHARED table feeding digests and
+  // standings. Syncing a completed (or any non-voting) round could write
+  // rows that don't belong there, with no undo. Only the live voting phase
+  // may be synced.
+  if (round.phase !== 'voting') {
+    throw error(409, `round is not in the voting phase (phase: ${round.phase ?? 'unknown'})`);
+  }
 
   let rows: CliRow[];
   try {
@@ -143,5 +152,20 @@ export const POST: RequestHandler = async ({ params }) => {
     throw error(502, `musicleague CLI failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  return json(syncRoundSongs(db, roundId, toCliSongs(rows)));
+  const cliSongs = toCliSongs(rows);
+  const result = syncRoundSongs(db, roundId, cliSongs);
+
+  // Enqueue metadata enrichment for newly-inserted songs so a freshly-synced
+  // live round doesn't sit with every metadata chip (and every LLM take
+  // input) empty. The songs are already committed at this point, so a
+  // failure here must not fail the sync response — log and continue.
+  if (result.inserted > 0) {
+    try {
+      enqueueMany(db, cliSongs.map((s) => s.spotifyUri), ['ytm', 'lastfm_pop', 'lastfm_tags', 'lyrics', 'audio']);
+    } catch (e) {
+      console.error(`voting-lab sync: failed to enqueue metadata for round ${roundId}:`, e);
+    }
+  }
+
+  return json(result);
 };
