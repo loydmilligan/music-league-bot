@@ -485,6 +485,69 @@
     loadBucketBoundaries();
   });
 
+  // ---------------------------------------------------------------------------
+  // Season vote-budget editor (Voting Phase Lab, Task 10)
+  // ---------------------------------------------------------------------------
+  // A round's budget resolves as: per-round override -> this season default ->
+  // a hardcoded fallback. This panel edits the season-default tier.
+  //
+  // seasonBudgets is pre-populated for every season known at mount time (from
+  // `data.hierarchy`, defaulting to the hardcoded budget, then overlaid with any
+  // saved values from `data.seasonBudgets`) so the template never needs to write
+  // into $state while reading it — a lazily-initializing accessor called from
+  // markup would fire on every render pass and could loop.
+  const SEASON_BUDGET_DEFAULT = { upTotal: 7, downTotal: 1, perSongCap: null as number | null };
+
+  function seededSeasonBudgets(): Record<number, { upTotal: number; downTotal: number; perSongCap: number | null }> {
+    const seeded: Record<number, { upTotal: number; downTotal: number; perSongCap: number | null }> = {};
+    for (const league of data.hierarchy as HierarchyLeague[]) {
+      for (const season of league.seasons) {
+        seeded[season.id] = { ...(data.seasonBudgets?.[season.id] ?? SEASON_BUDGET_DEFAULT) };
+      }
+    }
+    return seeded;
+  }
+
+  let seasonBudgets = $state<Record<number, { upTotal: number; downTotal: number; perSongCap: number | null }>>(
+    seededSeasonBudgets(),
+  );
+
+  // If the live-refreshed `hierarchy` (client polling) surfaces a season id
+  // that wasn't present at mount, seed a default for it — without touching
+  // any entry that already exists (so in-progress edits are never clobbered).
+  // Only writes when a genuinely new id shows up, so this cannot self-loop.
+  $effect(() => {
+    const h = hierarchy;
+    const missing: number[] = [];
+    for (const league of h) {
+      for (const season of league.seasons) {
+        if (!(season.id in seasonBudgets)) missing.push(season.id);
+      }
+    }
+    if (missing.length === 0) return;
+    const next = { ...seasonBudgets };
+    for (const id of missing) next[id] = { ...SEASON_BUDGET_DEFAULT };
+    seasonBudgets = next;
+  });
+
+  let seasonBudgetSaving = $state<Record<number, boolean>>({});
+
+  async function saveSeasonBudget(seasonId: number) {
+    const b = seasonBudgets[seasonId] ?? SEASON_BUDGET_DEFAULT;
+    seasonBudgetSaving = { ...seasonBudgetSaving, [seasonId]: true };
+    try {
+      await fetch('/api/settings/season-budget', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seasonId, ...b }),
+      });
+    } catch {
+      /* silently ignore — inputs keep the user's typed value */
+    } finally {
+      seasonBudgetSaving = { ...seasonBudgetSaving, [seasonId]: false };
+    }
+  }
+
   // Legacy weights (read-only — frozen once all surfaces migrate)
   const wLegacy = data.settings;
   const wLegacyTotal = wLegacy.weightDiscovery + wLegacy.weightThemeFit + wLegacy.weightPersonal + wLegacy.weightNostalgia;
@@ -1180,6 +1243,83 @@
         {bucketsLoading ? 'Saving…' : 'Save boundaries'}
       </button>
     </div>
+  </div>
+</CollapsiblePanel>
+
+<!-- Season vote-budget editor (Voting Phase Lab) -->
+<CollapsiblePanel id="app-season-vote-budgets" title="Vote budgets (Voting Phase Lab)">
+  <p class="text-xs text-fg-dim mb-5">
+    Season-level default vote budget. Up and down are separate pools spent per ballot; per-song cap
+    limits how many points can land on one song (blank = no cap). A round with no override inherits
+    its season's default; leaving a season blank falls back to the shipped default (7 up / 1 down / no cap).
+  </p>
+
+  <div class="space-y-3">
+    {#each hierarchy as league (league.id)}
+      {#each league.seasons as season (season.id)}
+        {@const budget = seasonBudgets[season.id] ?? SEASON_BUDGET_DEFAULT}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 py-2 border-t border-border-muted first:border-t-0">
+          <span class="text-sm text-fg w-56 shrink-0 truncate" title="{league.name} · {season.name}">
+            {league.name} <span class="text-fg-faint">·</span> {season.name}
+          </span>
+
+          <label class="inline-flex items-center gap-1.5 text-xs text-fg-muted">
+            up
+            <input
+              type="number"
+              min="0"
+              value={budget.upTotal}
+              onchange={(e) => {
+                const n = Math.max(0, Math.round(Number(e.currentTarget.value) || 0));
+                seasonBudgets = { ...seasonBudgets, [season.id]: { ...budget, upTotal: n } };
+                saveSeasonBudget(season.id);
+              }}
+              class="w-16 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg focus:border-accent focus:outline-none transition-colors"
+            />
+          </label>
+
+          <label class="inline-flex items-center gap-1.5 text-xs text-fg-muted">
+            down
+            <input
+              type="number"
+              min="0"
+              value={budget.downTotal}
+              onchange={(e) => {
+                const n = Math.max(0, Math.round(Number(e.currentTarget.value) || 0));
+                seasonBudgets = { ...seasonBudgets, [season.id]: { ...budget, downTotal: n } };
+                saveSeasonBudget(season.id);
+              }}
+              class="w-16 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg focus:border-accent focus:outline-none transition-colors"
+            />
+          </label>
+
+          <label class="inline-flex items-center gap-1.5 text-xs text-fg-muted">
+            per-song cap
+            <input
+              type="number"
+              min="1"
+              placeholder="none"
+              value={budget.perSongCap ?? ''}
+              onchange={(e) => {
+                const raw = e.currentTarget.value.trim();
+                const n = raw === '' ? null : Math.max(1, Math.round(Number(raw) || 1));
+                seasonBudgets = { ...seasonBudgets, [season.id]: { ...budget, perSongCap: n } };
+                saveSeasonBudget(season.id);
+              }}
+              class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg focus:border-accent focus:outline-none transition-colors"
+            />
+          </label>
+
+          {#if seasonBudgetSaving[season.id]}
+            <span class="font-mono text-[10px] tracking-widest uppercase text-fg-faint">Saving…</span>
+          {/if}
+        </div>
+      {/each}
+    {/each}
+
+    {#if hierarchy.length === 0}
+      <p class="text-fg-dim text-sm">No leagues/seasons imported yet.</p>
+    {/if}
   </div>
 </CollapsiblePanel>
 

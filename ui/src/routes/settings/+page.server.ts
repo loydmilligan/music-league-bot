@@ -10,6 +10,7 @@ import { importZipData } from '$lib/import/importer.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
 import { getHierarchy } from '$lib/db/metadataQueue.js';
 import { getEmailPollerData } from '$lib/email/emailPollerQuery.js';
+import { getSeasonBudget } from '$lib/voting-lab/ballotDb.js';
 
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
 
@@ -20,7 +21,19 @@ export const load: PageServerLoad = async () => {
   const allLeagues = getAllLeagues(db);
   const hierarchy = getHierarchy(db);
   const emailPoller = getEmailPollerData(db);
-  return { settings, importLog, allLeagues, hierarchy, emailPoller };
+
+  // Season-level default vote budgets (Voting Phase Lab, Task 10). Only seasons
+  // with an explicit override are included — the client fills in the hardcoded
+  // default (7/1/no cap) for everything else.
+  const seasonBudgets: Record<number, { upTotal: number; downTotal: number; perSongCap: number | null }> = {};
+  for (const league of hierarchy) {
+    for (const season of league.seasons) {
+      const b = getSeasonBudget(db, season.id);
+      if (b) seasonBudgets[season.id] = b;
+    }
+  }
+
+  return { settings, importLog, allLeagues, hierarchy, emailPoller, seasonBudgets };
 };
 
 export const actions: Actions = {
