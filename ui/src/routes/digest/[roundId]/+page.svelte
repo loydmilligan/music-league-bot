@@ -13,6 +13,7 @@
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import ChatMoments from '$lib/digest/ChatMoments.svelte';
   import StatStrip from '$lib/digest/StatStrip.svelte';
+  import DigestInsights from '$lib/digest/DigestInsights.svelte';
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
@@ -630,14 +631,14 @@
   //   podium         → AlbumPodium          (LLM section, visual variant)
   //   chat           → ChatMoments          (restructured { summary, moments[] }; web = expandable, PDF = anchor-linked)
   //   standings      → StandingsChart       (synthetic data-driven section, see below)
-  //   stats          → StatStrip            (sprint-17 synthetic data-driven)
+  //   stats          → DigestInsights      (approved post-vote insight surface)
   //   discoverability→ TastemakerSection    (sprint-18 v2 — replaces v1 leaderboard)
   //   nextRound      → NextRoundPreview     (sprint-17 synthetic data-driven)
   const VISUAL_COMPONENTS: VisualRegistry = {
     podium: AlbumPodium,
     chat: ChatMoments,
     standings: StandingsChart,
-    stats: StatStrip,
+    stats: DigestInsights,
     discoverability: TastemakerSection,
     nextRound: NextRoundPreview,
   };
@@ -668,10 +669,14 @@
   // sprint-21 season-recap: data-section framing when the active draft is a recap.
   const recap = $derived(inDigest ? data.recap : null);
 
-  let statsOverride = $state<typeof data.stats>(null);
-  const statsData = $derived(statsOverride ?? (inDigest ? data.stats : null));
+  let statsOverride = $state<typeof data.insights>(null);
+  const statsData = $derived(recap ? data.stats : statsOverride ?? (inDigest ? data.insights : null));
   let statsExcluded = $state(false);
-  const statsAvailable = $derived(!!statsData && Object.values(statsData).some((v) => typeof v === 'number'));
+  const statsAvailable = $derived(
+    !!statsData && (recap
+      ? Object.values(statsData).some((v) => typeof v === 'number')
+      : !!statsData.audio && (!!statsData.audio.analyzedSongs || !!statsData.wordCloud?.length || !!statsData.artists?.songCount)),
+  );
   // Gates on availability only — see showStandings comment above.
   const showStats = $derived(statsAvailable);
 
@@ -710,7 +715,7 @@
     !!standingsData && (standingsData.standings?.length ?? 0) > 0 ? 'ready' : 'incomplete',
   );
   const nextRoundAvailability = $derived<'ready' | 'incomplete'>(nextRoundAvailable ? 'ready' : 'incomplete');
-  const StatSlot = $derived(VISUAL_COMPONENTS.stats);
+  const StatSlot = $derived(recap ? StatStrip : VISUAL_COMPONENTS.stats);
   const DiscoverabilitySlot = $derived(VISUAL_COMPONENTS.discoverability);
   const NextRoundSlot = $derived(VISUAL_COMPONENTS.nextRound);
 
@@ -893,10 +898,10 @@
     dataSectionRunState[key] = 'regenerating';
     try {
       if (key === 'stats') {
-        const res = await fetch(`/api/digest/${data.roundId}/stats`);
+        const res = await fetch(`/api/digest/${data.roundId}/insights`);
         if (!res.ok) throw new Error(`stats recompute failed (${res.status})`);
-        const body = (await res.json()) as { stats: typeof data.stats };
-        statsOverride = body.stats;
+        const body = (await res.json()) as { insights: typeof data.insights };
+        statsOverride = body.insights;
       } else if (key === 'standings') {
         const res = await fetch(`/api/digest/${data.roundId}/standings`);
         if (!res.ok) throw new Error(`standings recompute failed (${res.status})`);

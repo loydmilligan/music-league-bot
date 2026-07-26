@@ -10,6 +10,7 @@ import {
 import type { TastemakerPayload } from '$lib/db/discoverability.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
 import type Database from 'better-sqlite3';
+import { getRoundInsights, type RoundInsights } from '$lib/db/roundInsights.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -169,6 +170,7 @@ export type DigestPageData =
       sections: SectionWithContent[];
       standings: StandingsPayload | null;
       stats: DigestStats | null;
+      insights: RoundInsights | null;
       discoverability: TastemakerPayload | null;
       nextRound: NextRoundInfo | null;
       nextRoundMeta: NextRoundMeta;
@@ -228,6 +230,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
         | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
+    const insights = getRoundInsights(db, roundId);
     const [standings, stats, discoverability, nextRoundRaw] = await Promise.all([
       fetchStandings(fetch, roundId),
       fetchJson<{ stats: DigestStats }>(fetch, `/api/digest/${roundId}/stats`).then((b) => b?.stats ?? null),
@@ -274,7 +277,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
     return {
       roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage, draft, sections,
-      standings, stats: statsOut, discoverability, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
+      standings, stats: statsOut, insights, discoverability, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
     } satisfies DigestPageData;
   }
 
