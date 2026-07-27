@@ -279,6 +279,65 @@ describe('computeSuperlatives', () => {
 		expect(jimmy.complexWordsAdj).toBeLessThan(jimmy.complexWords - 10);
 	});
 
+	it('scores mastery only for words that are long, uncommon and real', () => {
+		const r = computeSuperlatives(
+			[
+				msg('Matt Mariani', 'sacrilegious'),          // long + rare + real → counts
+				msg('Jimmy', 'the the the the', { ts: T0 + 1 }), // common → no
+			],
+			[],
+			{
+				dictionary: new Set(['sacrilegious', 'everybody']),
+				commonWords: ['the', 'everybody'],
+				masteryCutoff: 2,
+				vocabSample: 1,
+			},
+		);
+		const matt = r.people.find((p) => p.name === 'Matt Mariani')!;
+		const jimmy = r.people.find((p) => p.name === 'Jimmy')!;
+		expect(matt.masteryDistinct).toBe(1);
+		expect(matt.masteryExamples).toEqual(['sacrilegious']);
+		expect(jimmy.masteryDistinct).toBe(0);
+	});
+
+	it('rejects a long rare word that is not in the dictionary', () => {
+		// "Columbus" is rare only because it is a name; the lowercase dictionary
+		// has no entry for it, so it must not score.
+		const r = computeSuperlatives([msg('Matt Mariani', 'columbus')], [], {
+			dictionary: new Set(['sacrilegious']),
+			commonWords: ['the'],
+			masteryCutoff: 1,
+			vocabSample: 1,
+		});
+		expect(r.people[0].masteryDistinct).toBe(0);
+	});
+
+	it('rejects a long word that is common', () => {
+		const r = computeSuperlatives([msg('Matt Mariani', 'everybody')], [], {
+			dictionary: new Set(['everybody']),
+			commonWords: ['everybody'],
+			masteryCutoff: 1,
+			vocabSample: 1,
+		});
+		expect(r.people[0].masteryDistinct).toBe(0);
+	});
+
+	it('gives a longer word more mastery points than a shorter one', () => {
+		const long = computeSuperlatives([msg('Matt Mariani', 'sacrilegious')], [], {
+			dictionary: new Set(['sacrilegious', 'gondola']),
+			commonWords: ['the'],
+			masteryCutoff: 1,
+			vocabSample: 1,
+		}).people[0].mastery;
+		const short = computeSuperlatives([msg('Matt Mariani', 'gondola')], [], {
+			dictionary: new Set(['sacrilegious', 'gondola']),
+			commonWords: ['the'],
+			masteryCutoff: 1,
+			vocabSample: 1,
+		}).people[0].mastery;
+		expect(long).toBeGreaterThan(short);
+	});
+
 	it('keeps never-voted people out of the ratio entirely', () => {
 		const jimmy = result.people.find((p) => p.name === 'Jimmy')!;
 		expect(jimmy.voted).toBe(false);

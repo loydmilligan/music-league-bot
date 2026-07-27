@@ -27,8 +27,15 @@ export interface ComputeOptions {
 	 * set counts as a "rare" word. Without it, rareWords is 0 for everyone.
 	 */
 	commonWords?: string[];
-	/** How many of the commonWords list count as "common". */
+	/** How many of the commonWords list count as "common" for `rareWords`. */
 	commonCutoff?: number;
+	/**
+	 * How much of the commonWords list a word must fall outside of to count
+	 * toward mastery. Higher than `commonCutoff` on purpose: "favorite" (rank
+	 * 3163) and "awesome" (4491) are outside the top 2,000 but nobody would call
+	 * them sophisticated.
+	 */
+	masteryCutoff?: number;
 	/** Minimum tokens required to score vocabulary richness. */
 	vocabFloor?: number;
 	/** Token sample size for the standardized type-token ratio. */
@@ -87,6 +94,27 @@ export interface PersonStats {
 	gradeLevel: number;
 	/** Grade level shrunk toward the group mean by sample size. */
 	gradeLevelAdj: number;
+	/**
+	 * Command of the language: how often someone reaches for a word that is both
+	 * long and genuinely uncommon.
+	 *
+	 * Each word scoring 3+ syllables, absent from the 10,000 most common English
+	 * words, and present in the dictionary as a lowercase entry earns
+	 * `syllables - 2` points, so a five-syllable word outweighs a three. The
+	 * total is expressed per 100 words, which rewards doing it often rather than
+	 * once.
+	 *
+	 * The lowercase-dictionary requirement is what keeps this honest: it drops
+	 * proper nouns (columbus, nashville, marlboro) that are rare only because
+	 * they are names, and drops typos that are rare only because they are wrong.
+	 */
+	mastery: number;
+	/** Mastery shrunk toward the group mean by sample size. */
+	masteryAdj: number;
+	/** How many different qualifying words they used — breadth, not repetition. */
+	masteryDistinct: number;
+	/** A few of their longest qualifying words, for showing the work. */
+	masteryExamples: string[];
 	avgWordsPerMessage: number;
 	longestMessage: { chars: number; text: string; ts: number } | null;
 	/** Median minutes to reply, counting only replies within 10 minutes.
@@ -306,10 +334,18 @@ export function computeSuperlatives(
 	// 400 tokens, not 1500: at 1500 half the group falls below the floor and
 	// gets "insufficient sample", which defeats the point of a full-field chart.
 	// A 400-token standardized TTR is noisier but still comparable across people.
-	const { dictionary, vocabSample = 400, seed = 20260727, commonWords, commonCutoff = 1000 } = opts;
+	const {
+		dictionary,
+		vocabSample = 400,
+		seed = 20260727,
+		commonWords,
+		commonCutoff = 1000,
+		masteryCutoff = 10000,
+	} = opts;
 	const rand = mulberry32(seed);
 	const notes: string[] = [];
 	const commonSet = commonWords ? new Set(commonWords.slice(0, commonCutoff)) : null;
+	const masterySet = commonWords ? new Set(commonWords.slice(0, masteryCutoff)) : null;
 
 	interface Acc {
 		person: Person;
@@ -326,6 +362,8 @@ export function computeSuperlatives(
 		syllables: number;
 		complex: number;
 		rare: number;
+		masteryPts: number;
+		masteryWords: Map<string, number>;
 		longest: { chars: number; text: string; ts: number } | null;
 		hours: number[];
 		heatmap: number[][];
@@ -341,7 +379,7 @@ export function computeSuperlatives(
 				messages: 0, words: 0, characters: 0, edits: 0, links: 0,
 				emoji: 0, mediaShared: 0,
 				swearCounts: new Map(), tokens: [], unique: new Set(),
-				syllables: 0, complex: 0, rare: 0, longest: null, hours: [],
+				syllables: 0, complex: 0, rare: 0, masteryPts: 0, masteryWords: new Map(), longest: null, hours: [],
 				heatmap: Array.from({ length: 7 }, () => new Array(24).fill(0)),
 				replyGaps: [],
 			};
@@ -386,6 +424,18 @@ export function computeSuperlatives(
 			if (syl >= 3) a.complex++;
 			if (commonSet && !commonSet.has(lower)) a.rare++;
 
+			// Long, uncommon, and a real lowercase dictionary word — the last test
+			// is what excludes proper nouns and typos.
+			if (
+				syl >= 3 &&
+				masterySet &&
+				!masterySet.has(lower) &&
+				dictionary?.has(lower)
+			) {
+				a.masteryPts += syl - 2;
+				a.masteryWords.set(lower, (a.masteryWords.get(lower) ?? 0) + 1);
+			}
+
 			const bare = lower.replace(/['’]/g, '');
 			if (SWEAR_SET.has(bare)) {
 				a.swearCounts.set(bare, (a.swearCounts.get(bare) ?? 0) + 1);
@@ -429,6 +479,8 @@ export function computeSuperlatives(
 		([...acc.values()].reduce((s, a) => s + [...a.swearCounts.values()].reduce((t, n) => t + n, 0), 0) /
 			totalWords) *
 		1000;
+	const meanMastery =
+		([...acc.values()].reduce((s, a) => s + a.masteryPts, 0) / totalWords) * 100;
 	const totalMessages = [...acc.values()].reduce((s, a) => s + a.messages, 0) || 1;
 	const meanGrade = gunningFog(totalWords / totalMessages, meanComplex);
 
@@ -441,6 +493,7 @@ export function computeSuperlatives(
 		if (vocabulary === null) belowFloor.push(`${a.person.name} (${a.tokens.length})`);
 
 		const voted = voters.has(a.person.name);
+		const masteryRate = a.words ? (a.masteryPts / a.words) * 100 : 0;
 		const grade = gunningFog(
 			a.messages ? a.words / a.messages : 0,
 			a.words ? (a.complex / a.words) * 100 : 0,
@@ -474,6 +527,14 @@ export function computeSuperlatives(
 			rareWordsAdj: shrink(a.words ? (a.rare / a.words) * 100 : 0, a.words, meanRare),
 			gradeLevel: grade,
 			gradeLevelAdj: shrink(grade, a.words, meanGrade),
+			mastery: masteryRate,
+			// k is double the other metrics': only ~2% of words qualify, so the
+			// evidence behind this rate is far thinner than the word count implies.
+			masteryAdj: shrink(masteryRate, a.words, meanMastery, 2000),
+			masteryDistinct: a.masteryWords.size,
+			masteryExamples: [...a.masteryWords.keys()]
+				.sort((x, y) => y.length - x.length)
+				.slice(0, 3),
 			avgWordsPerMessage: a.messages ? a.words / a.messages : 0,
 			longestMessage: a.longest,
 			medianReplyMinutes: median(a.replyGaps),
@@ -525,6 +586,7 @@ export function computeSuperlatives(
 	const professor = by(people, (p) => p.gradeLevelAdj, desc);
 	const simplest = by(people, (p) => p.gradeLevelAdj, asc);
 	const wordsmith = by(people, (p) => p.rareWordsAdj, desc);
+	const linguist = by(people, (p) => p.masteryAdj, desc);
 	const nightOwl = by(people, (p) => p.lateNightShare, desc);
 	const rambler = by(people, (p) => p.longestMessage?.chars ?? 0, desc);
 	const linker = by(people, (p) => p.links, desc);
@@ -603,6 +665,15 @@ export function computeSuperlatives(
 				`grade ${simplest?.gradeLevelAdj.toFixed(1) ?? '—'}`,
 				'Says it in the fewest words and syllables.',
 			),
+			linguist: linguist
+				? {
+						person: linguist.name,
+						value: `${linguist.masteryAdj.toFixed(2)} per 100 words`,
+						caption: `${linguist.masteryDistinct} different long, uncommon words${
+							linguist.masteryExamples.length ? ' — ' + linguist.masteryExamples.join(', ') : ''
+						}.`,
+					}
+				: null,
 			wordsmith: award(
 				wordsmith,
 				`${wordsmith?.rareWordsAdj.toFixed(1) ?? '—'}% rare words`,

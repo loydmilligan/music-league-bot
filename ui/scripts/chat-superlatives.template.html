@@ -449,6 +449,7 @@ footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:50
         <li><b>Vocabulary richness</b> — unique words in a 400-word random sample, averaged over ten draws. Raw unique-word counts just measure who talks most, which is a different award. Adjacent places are inside the sampling noise, so read the top and the bottom, not the gap between fourth and fifth.</li>
         <li><b>Grade level</b> — Gunning Fog: 0.4 × (words per message + percentage of big words). It counts every message as one sentence, for everybody. The earlier number here was Flesch-Kincaid, which was quietly measuring punctuation: FK is two-thirds driven by words per sentence, and because most chat messages carry no full stop, every unpunctuated message counted as one enormous sentence. Two people writing messages of the same length landed 1.4 grades apart purely because one of them used periods. Fixing the sentence unit removes that. Note that message length still drives this roughly three to one over word difficulty, so read it alongside big words rather than instead of it.</li>
         <li><b>Big words</b> — the share of your words with three or more syllables, independent of how long your messages are.</li>
+        <li><b>Mastery</b> — the one that tries to measure command of the language rather than a single lucky word. A word scores only if it clears three syllables, sits outside the 10,000 most common words in English, and appears in the dictionary in lowercase. That last test matters more than it sounds: without it the leaderboard fills with Columbus, Nashville and Marlboro, which are rare only because they are names. Longer words earn more, and the total is per 100 words, so using them often is what counts. Because only about 2% of words qualify, this one is adjusted harder than the others for how much you wrote.</li>
         <li><b>Rare words</b> — the share of your words outside the 1,000 most common words in English, by Google's frequency list. Not the same as big words: you can use long words that everybody else uses too.</li>
         <li><b>Adjusted rates</b> — big words, rare words and swearing are pulled toward the group average in proportion to how few words back them up. Raw rates are less neutral than they look. Here they ran against volume at −0.45 and −0.51, so the people who talked most were quietly penalised while the top spots went to whoever had the least evidence behind their number. A 430-word sample carries a margin of ±2.4 points, which swallows the whole spread from first to last. Adjusting does not tip it the other way: an ordinary rate over 6,000 words still comes out ordinary.</li>
         <li><b>Explicit rate</b> — swears per 1,000 words against a fixed list, adjusted as above.</li>
@@ -546,6 +547,8 @@ const METRICS = [
    note:'Swears per 1,000 words, adjusted for how much you wrote. <b>This is the ranking the award uses</b> — a hot streak over 600 words counts for less than the same rate over 6,000.'},
   {id:'vocabulary', label:'Vocabulary',  norms:['total'],                    unit:'',      hi:true,
    note:'Unique words in a 400-word sample, averaged over ten draws. <b>Already volume-adjusted</b>, so there is nothing to divide by.'},
+  {id:'masteryAdj', label:'Mastery',         norms:['total'],                unit:'/100w', hi:true,
+   note:'Words that are <b>both long and genuinely uncommon</b> — three or more syllables, outside the 10,000 most common in English, and a real dictionary word so names and typos don\'t count. Longer words score more, and it is a rate, so reaching for them <b>often</b> is what wins it.'},
   {id:'gradeLevelAdj', label:'Grade level',  norms:['total'],                unit:'grade', hi:true,
    note:'Gunning Fog: 0.4 × (words per message + % big words). <b>Each message counts as one sentence for everyone</b>, so skipping full stops no longer inflates the score the way it did under the old reading level. Length drives this about 3:1 over word difficulty — for pure word difficulty use "Big words".'},
   {id:'complexWordsAdj', label:'Big words',  norms:['total'],                unit:'%',     hi:true,
@@ -817,6 +820,7 @@ paintHeat();
 const ROLL = [
   ['motormouth','Motormouth'],
   ['vocabulary','Biggest Vocabulary'],
+  ['linguist','Command of the Language'],
   ['wordsmith','The Wordsmith'],
   ['professor','The Professor'],
   ['simplest','Man of the People'],
