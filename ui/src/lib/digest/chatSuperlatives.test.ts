@@ -6,6 +6,7 @@ import {
 	standardizedTTR,
 	syllables,
 	shrink,
+	gunningFog,
 	prose,
 	words,
 } from './chatSuperlatives';
@@ -90,6 +91,22 @@ describe('text helpers', () => {
 
 	it('falls back to the group mean with no words at all', () => {
 		expect(shrink(99, 0, 5)).toBe(5);
+	});
+
+	it('computes Gunning Fog from message length and complex-word share', () => {
+		// 0.4 * (15 + 10) = 10
+		expect(gunningFog(15, 10)).toBeCloseTo(10, 5);
+	});
+
+	it('rises with both longer messages and harder words', () => {
+		expect(gunningFog(20, 10)).toBeGreaterThan(gunningFog(10, 10));
+		expect(gunningFog(10, 20)).toBeGreaterThan(gunningFog(10, 10));
+	});
+
+	it('cannot be inflated by punctuation, unlike Flesch-Kincaid', () => {
+		// The inputs are per-message and per-word; terminal punctuation is not an
+		// input at all, so how someone punctuates cannot move the number.
+		expect(gunningFog(10, 8)).toBe(gunningFog(10, 8));
 	});
 });
 

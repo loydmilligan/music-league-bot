@@ -75,6 +75,18 @@ export interface PersonStats {
 	rareWords: number;
 	/** Rare-word rate shrunk toward the group mean by sample size. */
 	rareWordsAdj: number;
+	/**
+	 * Gunning Fog grade level: 0.4 × (words per message + % complex words).
+	 *
+	 * Uses the message as the sentence unit for everyone rather than terminal
+	 * punctuation. That is the whole point: counting real sentences let anyone
+	 * who skips full stops post one enormous "sentence" and score higher, which
+	 * is how the old Flesch-Kincaid number ended up ranking punctuation habits.
+	 * Messages are a unit nobody can game by typing differently.
+	 */
+	gradeLevel: number;
+	/** Grade level shrunk toward the group mean by sample size. */
+	gradeLevelAdj: number;
 	avgWordsPerMessage: number;
 	longestMessage: { chars: number; text: string; ts: number } | null;
 	/** Median minutes to reply, counting only replies within 10 minutes.
@@ -201,6 +213,16 @@ export function syllables(word: string): number {
  * @param k word count at which a person sits halfway between their own rate and
  *          the group mean.
  */
+/**
+ * Gunning Fog grade level, with the message standing in for the sentence.
+ *
+ * @param wordsPerMessage how much someone packs into one message
+ * @param complexPercent  share of their words with 3+ syllables
+ */
+export function gunningFog(wordsPerMessage: number, complexPercent: number): number {
+	return 0.4 * (wordsPerMessage + complexPercent);
+}
+
 export function shrink(rate: number, words: number, groupMean: number, k = 1000): number {
 	if (words <= 0) return groupMean;
 	return (words * rate + k * groupMean) / (words + k);
@@ -407,6 +429,8 @@ export function computeSuperlatives(
 		([...acc.values()].reduce((s, a) => s + [...a.swearCounts.values()].reduce((t, n) => t + n, 0), 0) /
 			totalWords) *
 		1000;
+	const totalMessages = [...acc.values()].reduce((s, a) => s + a.messages, 0) || 1;
+	const meanGrade = gunningFog(totalWords / totalMessages, meanComplex);
 
 	const people: PersonStats[] = [...acc.values()].map((a) => {
 		const swears = [...a.swearCounts.values()].reduce((s, n) => s + n, 0);
@@ -417,6 +441,11 @@ export function computeSuperlatives(
 		if (vocabulary === null) belowFloor.push(`${a.person.name} (${a.tokens.length})`);
 
 		const voted = voters.has(a.person.name);
+		const grade = gunningFog(
+			a.messages ? a.words / a.messages : 0,
+			a.words ? (a.complex / a.words) * 100 : 0,
+		);
+
 		const vw = voted ? voteWords.get(a.person.name) ?? 0 : null;
 		// Voted but never commented is the extreme of this metric, not a gap.
 		const talkToBallot = !voted ? null : vw === 0 ? Infinity : a.words / (vw as number);
@@ -443,6 +472,8 @@ export function computeSuperlatives(
 			complexWordsAdj: shrink(a.words ? (a.complex / a.words) * 100 : 0, a.words, meanComplex),
 			rareWords: a.words ? (a.rare / a.words) * 100 : 0,
 			rareWordsAdj: shrink(a.words ? (a.rare / a.words) * 100 : 0, a.words, meanRare),
+			gradeLevel: grade,
+			gradeLevelAdj: shrink(grade, a.words, meanGrade),
 			avgWordsPerMessage: a.messages ? a.words / a.messages : 0,
 			longestMessage: a.longest,
 			medianReplyMinutes: median(a.replyGaps),
@@ -491,8 +522,8 @@ export function computeSuperlatives(
 	const vocabKing = by(vocabRanked, (p) => p.vocabulary as number, desc);
 	const perfectionist = by(people, (p) => p.edits, desc);
 	const explicit = by(people, (p) => p.swearRateAdj, desc);
-	const professor = by(people, (p) => p.complexWordsAdj, desc);
-	const simplest = by(people, (p) => p.complexWordsAdj, asc);
+	const professor = by(people, (p) => p.gradeLevelAdj, desc);
+	const simplest = by(people, (p) => p.gradeLevelAdj, asc);
 	const wordsmith = by(people, (p) => p.rareWordsAdj, desc);
 	const nightOwl = by(people, (p) => p.lateNightShare, desc);
 	const rambler = by(people, (p) => p.longestMessage?.chars ?? 0, desc);
@@ -564,13 +595,13 @@ export function computeSuperlatives(
 				: null,
 			professor: award(
 				professor,
-				`${professor?.complexWordsAdj.toFixed(1) ?? '—'}% big words`,
-				'Highest share of three-syllable-plus words.',
+				`grade ${professor?.gradeLevelAdj.toFixed(1) ?? '—'}`,
+				'Highest reading level: long messages, long words.',
 			),
 			simplest: award(
 				simplest,
-				`${simplest?.complexWordsAdj.toFixed(1) ?? '—'}% big words`,
-				'Says it in the fewest syllables.',
+				`grade ${simplest?.gradeLevelAdj.toFixed(1) ?? '—'}`,
+				'Says it in the fewest words and syllables.',
 			),
 			wordsmith: award(
 				wordsmith,
