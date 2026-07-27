@@ -338,6 +338,37 @@ describe('computeSuperlatives', () => {
 		expect(long).toBeGreaterThan(short);
 	});
 
+	it('does not let sheer volume win the vocabulary award on its own', () => {
+		// Chatty repeats four words forever. Quiet says fewer words, all distinct.
+		const chatty = Array.from({ length: 60 }, (_, i) =>
+			msg('Matt Mariani', 'alpha beta gamma delta', { ts: T0 + i * 1000 }),
+		);
+		// Words must be letters-only: the tokenizer ignores digits, so "w1"/"w2"
+		// would collapse into a single word "w".
+		const label = (n: number) => 'q' + n.toString(36).replace(/[^a-z0-9]/g, '').replace(/\d/g, (d) => 'abcdefghij'[+d]);
+		const quiet = Array.from({ length: 20 }, (_, i) =>
+			msg('Jimmy', `${label(i * 3)} ${label(i * 3 + 1)} ${label(i * 3 + 2)}`, {
+				ts: T0 + 100_000 + i * 1000,
+			}),
+		);
+		const r = computeSuperlatives([...chatty, ...quiet], [], { vocabSample: 20 });
+		const matt = r.people.find((p) => p.name === 'Matt Mariani')!;
+		const jimmy = r.people.find((p) => p.name === 'Jimmy')!;
+
+		// Matt typed far more words; Jimmy used more different ones.
+		expect(matt.words).toBeGreaterThan(jimmy.words);
+		expect(jimmy.uniqueWords).toBeGreaterThan(matt.uniqueWords);
+		expect(jimmy.vocabScore).toBeGreaterThan(matt.vocabScore);
+	});
+
+	it('scores vocabulary on a 0-100 scale across the group', () => {
+		const scores = result.people.map((p) => p.vocabScore);
+		for (const s of scores) {
+			expect(s).toBeGreaterThanOrEqual(0);
+			expect(s).toBeLessThanOrEqual(100);
+		}
+	});
+
 	it('keeps never-voted people out of the ratio entirely', () => {
 		const jimmy = result.people.find((p) => p.name === 'Jimmy')!;
 		expect(jimmy.voted).toBe(false);

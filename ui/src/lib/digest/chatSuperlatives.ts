@@ -62,9 +62,29 @@ export interface PersonStats {
 	/** Swear rate shrunk toward the group mean by sample size. See `shrink`. */
 	swearRateAdj: number;
 	topSwear: string | null;
-	/** Standardized type-token ratio ×100, or null below the floor. */
+	/**
+	 * Variety: standardized type-token ratio ×100, or null below the floor.
+	 * How varied someone is *for their volume* — deliberately blind to how much
+	 * they wrote.
+	 */
 	vocabulary: number | null;
+	/** How many different words they actually used. Absolute size. */
 	uniqueWords: number;
+	/**
+	 * Overall vocabulary standing, 0–100: half how many different words someone
+	 * used, half how varied they are for their volume.
+	 *
+	 * Neither half works alone. Raw distinct-word counts correlate +0.98 with
+	 * total words — that is a talkativeness ranking wearing a vocabulary label.
+	 * Variety alone throws away size entirely, which is not what anyone means by
+	 * "how big is your vocabulary". Blending the two *values* fails too, because
+	 * variety spans only 60–67 while word counts span 258–1819, so the size term
+	 * swamps it (the blend lands at +0.99).
+	 *
+	 * Combining the two *rankings* gives each half equal say and lands at +0.74:
+	 * size counts for a lot, but talking most does not win it by itself.
+	 */
+	vocabScore: number;
 	/**
 	 * Share of words with 3+ syllables, as a percentage. The "complex words"
 	 * component of Gunning Fog.
@@ -521,6 +541,7 @@ export function computeSuperlatives(
 			topSwear,
 			vocabulary,
 			uniqueWords: a.unique.size,
+			vocabScore: 0,
 			complexWords: a.words ? (a.complex / a.words) * 100 : 0,
 			complexWordsAdj: shrink(a.words ? (a.complex / a.words) * 100 : 0, a.words, meanComplex),
 			rareWords: a.words ? (a.rare / a.words) * 100 : 0,
@@ -552,6 +573,22 @@ export function computeSuperlatives(
 		};
 	});
 
+	// Vocabulary standing needs the whole group, so it is a second pass.
+	const rankOf = (key: (p: PersonStats) => number) => {
+		const order = [...people].sort((a, b) => key(b) - key(a)).map((p) => p.name);
+		return (name: string) => order.indexOf(name) + 1;
+	};
+	const sizeRank = rankOf((p) => p.uniqueWords);
+	// People below the variety floor rank last rather than being dropped.
+	const varietyRank = rankOf((p) => p.vocabulary ?? -1);
+	const n = people.length;
+	for (const p of people) {
+		p.vocabScore =
+			n > 1
+				? (100 * (n - sizeRank(p.name) + (n - varietyRank(p.name)))) / (2 * (n - 1))
+				: 100;
+	}
+
 	people.sort((a, b) => b.messages - a.messages);
 
 	// Longest word per person, then overall top 10 — so the table isn't one
@@ -579,8 +616,8 @@ export function computeSuperlatives(
 
 	const motormouth = by(people, (p) => p.messages, desc);
 	const lurker = by(people, (p) => p.messages, asc);
-	const vocabRanked = people.filter((p) => p.vocabulary !== null);
-	const vocabKing = by(vocabRanked, (p) => p.vocabulary as number, desc);
+	const vocabKing = by(people, (p) => p.vocabScore, desc);
+	const varietyKing = by(people.filter((p) => p.vocabulary !== null), (p) => p.vocabulary as number, desc);
 	const perfectionist = by(people, (p) => p.edits, desc);
 	const explicit = by(people, (p) => p.swearRateAdj, desc);
 	const professor = by(people, (p) => p.gradeLevelAdj, desc);
@@ -651,7 +688,20 @@ export function computeSuperlatives(
 		awards: {
 			motormouth: award(motormouth, `${motormouth?.messages ?? 0} messages`, 'Talked the most. By a lot.'),
 			lurker: award(lurker, `${lurker?.messages ?? 0} messages`, 'Present. Barely.'),
-			vocabulary: award(vocabKing, `${vocabKing?.vocabulary?.toFixed(1) ?? '—'} richness`, 'Widest vocabulary, volume-adjusted.'),
+			vocabulary: vocabKing
+				? {
+						person: vocabKing.name,
+						value: `${vocabKing.uniqueWords.toLocaleString()} different words`,
+						caption: `Best combined standing on size and variety${
+							vocabKing.vocabulary ? ` (${vocabKing.vocabulary.toFixed(1)} variety)` : ''
+						}.`,
+					}
+				: null,
+			variety: award(
+				varietyKing,
+				`${varietyKing?.vocabulary?.toFixed(1) ?? '—'} variety`,
+				'Least repetitive, word for word.',
+			),
 			biggestWord: topWords[0]
 				? { person: topWords[0].person, value: topWords[0].word, caption: `${topWords[0].word.length} letters.` }
 				: null,
