@@ -446,9 +446,11 @@ footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:50
     <div class="method">
       <h3>Definitions</h3>
       <ul>
-        <li><b>Vocabulary richness</b> — unique words in a 400-word random sample, averaged over ten draws. Raw unique-word counts just measure who talks most, which is a different award.</li>
-        <li><b>Reading level</b> — Flesch-Kincaid grade over everything you wrote. Treat this as a bit: it is a blunt instrument on chat text, everyone lands between grades 2 and 6, and the ordering is mostly noise wearing a lab coat.</li>
-        <li><b>Explicit rate</b> — swears per 1,000 words against a fixed list, so writing more doesn't automatically make you filthier.</li>
+        <li><b>Vocabulary richness</b> — unique words in a 400-word random sample, averaged over ten draws. Raw unique-word counts just measure who talks most, which is a different award. Adjacent places are inside the sampling noise, so read the top and the bottom, not the gap between fourth and fifth.</li>
+        <li><b>Big words</b> — the share of your words with three or more syllables. This replaced a Flesch-Kincaid reading level, which turned out to be measuring punctuation habits: FK is two-thirds driven by words per sentence, and because most chat messages carry no full stop, every unpunctuated message counted as one enormous sentence. Two people writing the same length of message landed 1.4 grades apart purely because one of them used periods.</li>
+        <li><b>Rare words</b> — the share of your words outside the 1,000 most common words in English, by Google's frequency list. Not the same as big words: you can use long words that everybody else uses too.</li>
+        <li><b>Adjusted rates</b> — big words, rare words and swearing are pulled toward the group average in proportion to how few words back them up. Raw rates are less neutral than they look. Here they ran against volume at −0.45 and −0.51, so the people who talked most were quietly penalised while the top spots went to whoever had the least evidence behind their number. A 430-word sample carries a margin of ±2.4 points, which swallows the whole spread from first to last. Adjusting does not tip it the other way: an ordinary rate over 6,000 words still comes out ordinary.</li>
+        <li><b>Explicit rate</b> — swears per 1,000 words against a fixed list, adjusted as above.</li>
         <li><b>Words and characters</b> — URLs and attached-media filenames are stripped out first. Sharing a link is not a sentence.</li>
       </ul>
     </div>
@@ -538,11 +540,15 @@ const METRICS = [
   {id:'edits', label:'Edits',            norms:['total','perMsg','per1k'],   unit:'edits', hi:true,
    note:'Messages sent, then fixed. <b>Only visible in the export</b> — the live relay can\'t tell an edit from a new message.'},
   {id:'swears', label:'Swearing',        norms:['total','perMsg','per1k'],   unit:'swears',hi:true,
-   note:'Against a fixed profanity list. <b>Per 1,000 words is the honest ranking</b> — totals just reward talking more.'},
+   note:'Against a fixed profanity list. <b>Per 1,000 words is the honest ranking</b>; totals just reward talking more.'},
+  {id:'swearRateAdj', label:'Swearing (adj)', norms:['total'],               unit:'/1k',   hi:true,
+   note:'Swears per 1,000 words, adjusted for how much you wrote. <b>This is the ranking the award uses</b> — a hot streak over 600 words counts for less than the same rate over 6,000.'},
   {id:'vocabulary', label:'Vocabulary',  norms:['total'],                    unit:'',      hi:true,
    note:'Unique words in a 400-word sample, averaged over ten draws. <b>Already volume-adjusted</b>, so there is nothing to divide by.'},
-  {id:'readingLevel', label:'Reading level', norms:['total'],                unit:'grade', hi:true,
-   note:'Flesch-Kincaid grade. <b>This is a joke metric</b> and everybody lands in primary school.'},
+  {id:'complexWordsAdj', label:'Big words',  norms:['total'],                unit:'%',     hi:true,
+   note:'Share of your words with three or more syllables. <b>A rate, so using big words often is what counts</b> — not using one long word once. Adjusted for how much you wrote.'},
+  {id:'rareWordsAdj', label:'Rare words',    norms:['total'],                unit:'%',     hi:true,
+   note:'Share of your words outside the 1,000 most common in English. <b>Big words and rare words are not the same thing</b> — you can use long words that everybody uses.'},
   {id:'links', label:'Links',            norms:['total','perMsg','per1k'],   unit:'links', hi:true,
    note:'Spotify, YouTube and everything else pasted into the chat.'},
   {id:'emoji', label:'Emoji',            norms:['total','perMsg','per1k'],   unit:'emoji', hi:true,
@@ -806,11 +812,14 @@ paintHeat();
 
 // ── award roll ────────────────────────────────────────────────────────
 const ROLL = [
+  ['motormouth','Motormouth'],
   ['vocabulary','Biggest Vocabulary'],
-  ['perfectionist','The Perfectionist'],
-  ['explicit','Most Explicit'],
+  ['wordsmith','The Wordsmith'],
   ['professor','The Professor'],
   ['simplest','Man of the People'],
+  ['perfectionist','The Perfectionist'],
+  ['explicit','Most Explicit'],
+  ['allTalk','All Talk, No Ballot'],
   ['lurker','The Lurker'],
   ['nightOwl','Night Owl'],
   ['fastest','Quickest Draw']

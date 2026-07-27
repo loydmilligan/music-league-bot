@@ -5,7 +5,7 @@ import {
 	computeSuperlatives,
 	standardizedTTR,
 	syllables,
-	fleschKincaid,
+	shrink,
 	prose,
 	words,
 } from './chatSuperlatives';
@@ -68,10 +68,28 @@ describe('text helpers', () => {
 		expect(prose(m)).toBe('');
 	});
 
-	it('computes Flesch-Kincaid in the expected direction', () => {
-		const simple = fleschKincaid(10, 5, 10);
-		const complex = fleschKincaid(10, 1, 30);
-		expect(complex).toBeGreaterThan(simple);
+	it('leaves a well-evidenced rate almost untouched', () => {
+		// 6000 words against k=1000: barely moves.
+		expect(shrink(10, 6000, 5)).toBeCloseTo(9.29, 1);
+	});
+
+	it('pulls a thinly-evidenced rate toward the group mean', () => {
+		// 200 words against k=1000: mostly the mean.
+		expect(shrink(10, 200, 5)).toBeCloseTo(5.83, 1);
+	});
+
+	it('sits exactly halfway at k words', () => {
+		expect(shrink(10, 1000, 5, 1000)).toBeCloseTo(7.5, 5);
+	});
+
+	it('does not reward volume on its own', () => {
+		// An average rate stays average no matter how many words back it.
+		expect(shrink(5, 50, 5)).toBeCloseTo(5, 5);
+		expect(shrink(5, 50000, 5)).toBeCloseTo(5, 5);
+	});
+
+	it('falls back to the group mean with no words at all', () => {
+		expect(shrink(99, 0, 5)).toBe(5);
 	});
 });
 
@@ -194,6 +212,54 @@ describe('computeSuperlatives', () => {
 		expect(silent.awards.allTalk?.person).toBe('Grant Koziol');
 		expect(silent.awards.allTalk?.value).toBe('∞');
 		expect(silent.notes.join(' ')).toMatch(/Grant Koziol voted without leaving/);
+	});
+
+	it('measures complex words as a rate, so one long word does not win it', () => {
+		const r = computeSuperlatives(
+			[
+				// 1 complex word in 10 → 10%.
+				msg('Matt Mariani', 'antidisestablishmentarianism a a a a a a a a a'),
+				// 2 complex words in 4 → 50%, despite writing far less.
+				msg('Jimmy', 'beautiful wonderful a a', { ts: T0 + 1000 }),
+			],
+			[],
+			{ vocabSample: 2 },
+		);
+		const matt = r.people.find((p) => p.name === 'Matt Mariani')!;
+		const jimmy = r.people.find((p) => p.name === 'Jimmy')!;
+		expect(jimmy.complexWords).toBeGreaterThan(matt.complexWords);
+	});
+
+	it('counts rare words against the supplied common-word list', () => {
+		const r = computeSuperlatives(
+			[msg('Matt Mariani', 'the and cat')],
+			[],
+			{ commonWords: ['the', 'and'], commonCutoff: 2, vocabSample: 2 },
+		);
+		const matt = r.people.find((p) => p.name === 'Matt Mariani')!;
+		expect(matt.rareWords).toBeCloseTo(100 / 3, 3); // only "cat" is rare
+	});
+
+	it('reports no rare words when given no common-word list', () => {
+		const r = computeSuperlatives([msg('Matt Mariani', 'the and cat')], [], { vocabSample: 2 });
+		expect(r.people[0].rareWords).toBe(0);
+	});
+
+	it('shrinks a thin sample toward the mean but leaves a thick one alone', () => {
+		const many = Array.from({ length: 400 }, (_, i) =>
+			msg('Matt Mariani', 'beautiful wonderful a a a a a a a a', { ts: T0 + i * 1000 }),
+		);
+		const r = computeSuperlatives(
+			[...many, msg('Jimmy', 'beautiful wonderful a a', { ts: T0 + 900_000 })],
+			[],
+			{ vocabSample: 2 },
+		);
+		const matt = r.people.find((p) => p.name === 'Matt Mariani')!;
+		const jimmy = r.people.find((p) => p.name === 'Jimmy')!;
+		// Matt has thousands of words: his adjusted rate stays near his raw one.
+		expect(Math.abs(matt.complexWordsAdj - matt.complexWords)).toBeLessThan(0.5);
+		// Jimmy has four: his 50% gets dragged a long way down.
+		expect(jimmy.complexWordsAdj).toBeLessThan(jimmy.complexWords - 10);
 	});
 
 	it('keeps never-voted people out of the ratio entirely', () => {

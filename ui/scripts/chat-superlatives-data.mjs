@@ -118,5 +118,18 @@ console.error(
 		`${voteComments.length} vote comments, ${dictionary?.size ?? 0} dictionary words`,
 );
 
-const result = computeSuperlatives(messages, voteComments, { dictionary }, voters);
+// Google's 10k English words, most-frequent first. Anything outside the top
+// 1,000 counts as "rare".
+const commonWords = fs
+	.readFileSync(path.join(UI, 'src/lib/digest/common-words.txt'), 'utf8')
+	.split('\n')
+	.map((w) => w.trim())
+	.filter(Boolean);
+
+const result = computeSuperlatives(
+	messages,
+	voteComments,
+	{ dictionary, commonWords, commonCutoff: 1000 },
+	voters,
+);
 process.stdout.write(JSON.stringify(result, null, 2));

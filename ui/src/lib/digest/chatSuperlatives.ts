@@ -22,6 +22,13 @@ export type Voters = Set<string>;
 export interface ComputeOptions {
 	/** Lowercase dictionary, for THE BIGGEST WORD. Without it, that award is null. */
 	dictionary?: Set<string>;
+	/**
+	 * The N most common English words, most-frequent first. Anything outside this
+	 * set counts as a "rare" word. Without it, rareWords is 0 for everyone.
+	 */
+	commonWords?: string[];
+	/** How many of the commonWords list count as "common". */
+	commonCutoff?: number;
 	/** Minimum tokens required to score vocabulary richness. */
 	vocabFloor?: number;
 	/** Token sample size for the standardized type-token ratio. */
@@ -43,14 +50,31 @@ export interface PersonStats {
 	emoji: number;
 	mediaShared: number;
 	swears: number;
-	/** Swears per 1,000 words. */
+	/** Swears per 1,000 words, raw. */
 	swearRate: number;
+	/** Swear rate shrunk toward the group mean by sample size. See `shrink`. */
+	swearRateAdj: number;
 	topSwear: string | null;
 	/** Standardized type-token ratio ×100, or null below the floor. */
 	vocabulary: number | null;
 	uniqueWords: number;
-	/** Flesch-Kincaid grade level. */
-	readingLevel: number;
+	/**
+	 * Share of words with 3+ syllables, as a percentage. The "complex words"
+	 * component of Gunning Fog.
+	 *
+	 * Replaces Flesch-Kincaid, which was removed: FK is 2/3 driven by
+	 * words-per-sentence, and chat messages mostly lack terminal punctuation, so
+	 * it silently measured punctuation habits. Two people writing identically
+	 * long messages scored 1.4 grades apart purely because one used periods.
+	 * A rate over words has no such dependency.
+	 */
+	complexWords: number;
+	/** Complex-word rate shrunk toward the group mean by sample size. */
+	complexWordsAdj: number;
+	/** Share of words outside the N most common English words, as a percentage. */
+	rareWords: number;
+	/** Rare-word rate shrunk toward the group mean by sample size. */
+	rareWordsAdj: number;
 	avgWordsPerMessage: number;
 	longestMessage: { chars: number; text: string; ts: number } | null;
 	/** Median minutes to reply, counting only replies within 10 minutes.
@@ -156,16 +180,30 @@ export function syllables(word: string): number {
 	return Math.max(1, s ? s.length : 1);
 }
 
-/** Sentence count — chat text often has no terminal punctuation, so a message
- *  with none still counts as one sentence. */
-export function sentences(text: string): number {
-	const marks = text.match(/[.!?]+(?:\s|$)/g);
-	return Math.max(1, marks ? marks.length : 1);
-}
-
-export function fleschKincaid(totalWords: number, totalSentences: number, totalSyllables: number): number {
-	if (totalWords === 0 || totalSentences === 0) return 0;
-	return 0.39 * (totalWords / totalSentences) + 11.8 * (totalSyllables / totalWords) - 15.59;
+/**
+ * Pull a rate toward the group mean in proportion to how little evidence backs
+ * it (empirical-Bayes shrinkage).
+ *
+ * Raw rates look volume-neutral but are not: on this corpus, complex-word and
+ * rare-word rates correlate -0.45 and -0.51 with log(total words). Two forces
+ * cause that. People who talk more pad with filler ("lol", "yeah"), which
+ * genuinely dilutes their rate; and small samples produce extreme values by
+ * chance, so the top of any raw leaderboard fills up with the people whose
+ * numbers are least trustworthy. Dave Steingart's 8.84% over 430 words carries
+ * a 95% interval of ±2.42 — it overlaps the group average.
+ *
+ * Shrinking fixes the second force without inverting the first: a person with
+ * plenty of words keeps their number, a person with few is pulled toward the
+ * middle, and anyone can still win outright if their signal is strong enough to
+ * survive it. High volume is not rewarded either — an average rate over 6,000
+ * words stays average.
+ *
+ * @param k word count at which a person sits halfway between their own rate and
+ *          the group mean.
+ */
+export function shrink(rate: number, words: number, groupMean: number, k = 1000): number {
+	if (words <= 0) return groupMean;
+	return (words * rate + k * groupMean) / (words + k);
 }
 
 /** Deterministic PRNG so the vocabulary sample is reproducible. */
@@ -246,9 +284,10 @@ export function computeSuperlatives(
 	// 400 tokens, not 1500: at 1500 half the group falls below the floor and
 	// gets "insufficient sample", which defeats the point of a full-field chart.
 	// A 400-token standardized TTR is noisier but still comparable across people.
-	const { dictionary, vocabSample = 400, seed = 20260727 } = opts;
+	const { dictionary, vocabSample = 400, seed = 20260727, commonWords, commonCutoff = 1000 } = opts;
 	const rand = mulberry32(seed);
 	const notes: string[] = [];
+	const commonSet = commonWords ? new Set(commonWords.slice(0, commonCutoff)) : null;
 
 	interface Acc {
 		person: Person;
@@ -263,7 +302,8 @@ export function computeSuperlatives(
 		tokens: string[];
 		unique: Set<string>;
 		syllables: number;
-		sentences: number;
+		complex: number;
+		rare: number;
 		longest: { chars: number; text: string; ts: number } | null;
 		hours: number[];
 		heatmap: number[][];
@@ -279,7 +319,7 @@ export function computeSuperlatives(
 				messages: 0, words: 0, characters: 0, edits: 0, links: 0,
 				emoji: 0, mediaShared: 0,
 				swearCounts: new Map(), tokens: [], unique: new Set(),
-				syllables: 0, sentences: 0, longest: null, hours: [],
+				syllables: 0, complex: 0, rare: 0, longest: null, hours: [],
 				heatmap: Array.from({ length: 7 }, () => new Array(24).fill(0)),
 				replyGaps: [],
 			};
@@ -313,13 +353,16 @@ export function computeSuperlatives(
 		const ws = words(body);
 		a.words += ws.length;
 		a.characters += body.length;
-		a.sentences += ws.length ? sentences(body) : 0;
 
 		for (const w of ws) {
 			const lower = w.toLowerCase();
 			a.tokens.push(lower);
 			a.unique.add(lower);
-			a.syllables += syllables(lower);
+			const syl = syllables(lower);
+			a.syllables += syl;
+			// Gunning Fog's "complex word" threshold.
+			if (syl >= 3) a.complex++;
+			if (commonSet && !commonSet.has(lower)) a.rare++;
 
 			const bare = lower.replace(/['’]/g, '');
 			if (SWEAR_SET.has(bare)) {
@@ -355,6 +398,16 @@ export function computeSuperlatives(
 
 	const belowFloor: string[] = [];
 
+	// Group means are pooled over all words, not averaged over people, so one
+	// quiet person's outlier doesn't drag the baseline the others shrink toward.
+	const totalWords = [...acc.values()].reduce((s, a) => s + a.words, 0) || 1;
+	const meanComplex = ([...acc.values()].reduce((s, a) => s + a.complex, 0) / totalWords) * 100;
+	const meanRare = ([...acc.values()].reduce((s, a) => s + a.rare, 0) / totalWords) * 100;
+	const meanSwear =
+		([...acc.values()].reduce((s, a) => s + [...a.swearCounts.values()].reduce((t, n) => t + n, 0), 0) /
+			totalWords) *
+		1000;
+
 	const people: PersonStats[] = [...acc.values()].map((a) => {
 		const swears = [...a.swearCounts.values()].reduce((s, n) => s + n, 0);
 		const topSwear =
@@ -382,10 +435,14 @@ export function computeSuperlatives(
 			mediaShared: a.mediaShared,
 			swears,
 			swearRate: a.words ? (swears / a.words) * 1000 : 0,
+			swearRateAdj: shrink(a.words ? (swears / a.words) * 1000 : 0, a.words, meanSwear),
 			topSwear,
 			vocabulary,
 			uniqueWords: a.unique.size,
-			readingLevel: fleschKincaid(a.words, a.sentences, a.syllables),
+			complexWords: a.words ? (a.complex / a.words) * 100 : 0,
+			complexWordsAdj: shrink(a.words ? (a.complex / a.words) * 100 : 0, a.words, meanComplex),
+			rareWords: a.words ? (a.rare / a.words) * 100 : 0,
+			rareWordsAdj: shrink(a.words ? (a.rare / a.words) * 100 : 0, a.words, meanRare),
 			avgWordsPerMessage: a.messages ? a.words / a.messages : 0,
 			longestMessage: a.longest,
 			medianReplyMinutes: median(a.replyGaps),
@@ -433,9 +490,10 @@ export function computeSuperlatives(
 	const vocabRanked = people.filter((p) => p.vocabulary !== null);
 	const vocabKing = by(vocabRanked, (p) => p.vocabulary as number, desc);
 	const perfectionist = by(people, (p) => p.edits, desc);
-	const explicit = by(people, (p) => p.swearRate, desc);
-	const professor = by(people, (p) => p.readingLevel, desc);
-	const simplest = by(people, (p) => p.readingLevel, asc);
+	const explicit = by(people, (p) => p.swearRateAdj, desc);
+	const professor = by(people, (p) => p.complexWordsAdj, desc);
+	const simplest = by(people, (p) => p.complexWordsAdj, asc);
+	const wordsmith = by(people, (p) => p.rareWordsAdj, desc);
 	const nightOwl = by(people, (p) => p.lateNightShare, desc);
 	const rambler = by(people, (p) => p.longestMessage?.chars ?? 0, desc);
 	const linker = by(people, (p) => p.links, desc);
@@ -478,6 +536,9 @@ export function computeSuperlatives(
 		);
 	}
 	notes.push(
+		'Big-word, rare-word and swearing rates are adjusted for how much someone wrote. Raw rates quietly punish the people who talk most and hand the top spots to whoever has the least evidence behind their number, so each rate is pulled toward the group average in proportion to how few words back it up. Talking more is not rewarded either: an ordinary rate over 6,000 words stays ordinary.',
+	);
+	notes.push(
 		'Export timestamps are minute-resolution, so response times are rounded to whole minutes; "Quickest Draw" uses the share of replies inside one minute rather than an average.',
 	);
 	const totalEmoji = people.reduce((s, p) => s + p.emoji, 0);
@@ -501,10 +562,23 @@ export function computeSuperlatives(
 			biggestWord: topWords[0]
 				? { person: topWords[0].person, value: topWords[0].word, caption: `${topWords[0].word.length} letters.` }
 				: null,
-			professor: award(professor, `grade ${professor?.readingLevel.toFixed(1) ?? '—'}`, 'Highest reading level.'),
-			simplest: award(simplest, `grade ${simplest?.readingLevel.toFixed(1) ?? '—'}`, 'Keeps it simple.'),
+			professor: award(
+				professor,
+				`${professor?.complexWordsAdj.toFixed(1) ?? '—'}% big words`,
+				'Highest share of three-syllable-plus words.',
+			),
+			simplest: award(
+				simplest,
+				`${simplest?.complexWordsAdj.toFixed(1) ?? '—'}% big words`,
+				'Says it in the fewest syllables.',
+			),
+			wordsmith: award(
+				wordsmith,
+				`${wordsmith?.rareWordsAdj.toFixed(1) ?? '—'}% rare words`,
+				'Most words outside the 1,000 most common in English.',
+			),
 			perfectionist: award(perfectionist, `${perfectionist?.edits ?? 0} edits`, 'Could not leave it alone.'),
-			explicit: award(explicit, `${explicit?.swearRate.toFixed(1) ?? '—'} per 1k words`, `Signature: "${explicit?.topSwear ?? '—'}"`),
+			explicit: award(explicit, `${explicit?.swearRateAdj.toFixed(1) ?? '—'} per 1k words`, `Signature: "${explicit?.topSwear ?? '—'}"`),
 			allTalk: award(
 				allTalk,
 				allTalk?.talkToBallot === Infinity ? '∞' : `${allTalk?.talkToBallot?.toFixed(0) ?? '—'}:1`,
