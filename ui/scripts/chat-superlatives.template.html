@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>The Boarz Tape — Chat Superlatives</title>
+<meta name="description" content="Sixteen days of the Boarz II Men group chat, counted, measured and ranked.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2307090c'/%3E%3Crect x='5' y='11' width='22' height='11' rx='2' fill='%23ff5b2e'/%3E%3Ccircle cx='11.5' cy='16.5' r='2.2' fill='%2307090c'/%3E%3Ccircle cx='20.5' cy='16.5' r='2.2' fill='%2307090c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./_app/fonts.css">
+<style>
+:root{
+  --mash-pulp:#ff5b2e; --mash-pulp-deep:#d94c23; --mash-pulp-edge:#8a2d15; --mash-pulp-soft:#ff5b2e22;
+  --ink-0:#07090c; --ink-1:#0d1116; --ink-2:#141921; --ink-3:#1c232c; --ink-4:#283039;
+  --ink-5:#3a4451; --ink-6:#5a6773; --ink-7:#8b97a4; --ink-8:#c2cad3; --ink-9:#f1f4f7;
+  --bone:#faf7f2;
+  --moss:#3ec27a; --amber:#e8a83a; --ember:#e6566c; --sky:#5aa3ff;
+  --bg:var(--ink-0); --surface:var(--ink-1); --surface-2:var(--ink-2);
+  --line:var(--ink-4); --line-strong:var(--ink-5);
+  --fg:var(--ink-9); --fg-2:var(--ink-8); --fg-muted:var(--ink-7); --fg-quiet:var(--ink-6);
+  --font-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"Inter Tight",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --col:860px;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--fg-2);
+  font:400 16px/1.6 var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--col); margin:0 auto; padding:0 24px 96px}
+
+h1,h2,h3{font-family:var(--font-display); color:var(--fg); margin:0; letter-spacing:-.03em; text-wrap:balance}
+a{color:var(--mash-pulp)}
+figure{margin:0}
+
+/* ── rules ─────────────────────────────────────────────────────────── */
+.rule{height:1px;background:var(--line);border:0;margin:0}
+.rule-heavy{height:3px;background:var(--fg);border:0;margin:0}
+
+/* ── masthead ──────────────────────────────────────────────────────── */
+.mast{padding:56px 0 0}
+.mast-tape{
+  display:flex; align-items:center; gap:14px;
+  font:600 11px/1 var(--font-mono); letter-spacing:.22em; text-transform:uppercase;
+  color:var(--mash-pulp); margin-bottom:22px;
+}
+.mast-tape::after{content:"";flex:1;height:1px;background:var(--mash-pulp-edge)}
+.mast h1{
+  font-size:clamp(52px,13vw,116px); font-weight:800; line-height:.86;
+  letter-spacing:-.045em; color:var(--fg); margin:0 0 6px;
+}
+.mast h1 em{font-style:normal;color:var(--mash-pulp)}
+.mast-sub{
+  font:400 17px/1.5 var(--font-body); color:var(--fg-muted);
+  max-width:56ch; margin:20px 0 0;
+}
+.mast-meta{
+  display:flex; flex-wrap:wrap; gap:0 28px; margin:26px 0 0; padding:14px 0 0;
+  border-top:1px solid var(--line);
+  font:500 12px/1.8 var(--font-mono); color:var(--fg-muted); letter-spacing:.04em;
+}
+.mast-meta b{color:var(--fg); font-weight:600}
+
+/* ── section ───────────────────────────────────────────────────────── */
+section{margin:76px 0 0}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap;margin:0 0 6px}
+.sec-head h2{font-size:clamp(26px,4.6vw,38px);font-weight:700;line-height:1.05}
+.sec-head .sec-tag{font:600 11px/1 var(--font-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--mash-pulp);white-space:nowrap}
+.sec-lede{color:var(--fg-muted);font-size:15.5px;max-width:68ch;margin:14px 0 30px}
+.sec-lede strong{color:var(--fg-2);font-weight:600}
+
+/* ── hero: biggest word ────────────────────────────────────────────── */
+.bigword{
+  position:relative; margin:34px 0 0; padding:44px 34px 36px;
+  background:
+    radial-gradient(120% 140% at 12% 0%, #1a0d07 0%, var(--ink-1) 58%);
+  border:1px solid var(--mash-pulp-edge); border-radius:6px; overflow:hidden;
+}
+.bigword-crown{
+  font:700 10px/1 var(--font-mono); letter-spacing:.26em; text-transform:uppercase;
+  color:var(--mash-pulp); margin:0 0 26px;
+}
+.bigword-word{
+  font-family:var(--font-display); font-weight:800; color:var(--fg);
+  font-size:clamp(30px,7.4vw,66px); line-height:.95; letter-spacing:-.05em;
+  word-break:break-word; margin:0;
+}
+.bigword-meta{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  margin:22px 0 0; padding:18px 0 0; border-top:1px solid var(--mash-pulp-edge);
+}
+.bigword-who{font:700 18px/1.2 var(--font-display);color:var(--mash-pulp)}
+.bigword-len{font:500 12px/1 var(--font-mono);color:var(--fg-muted);letter-spacing:.08em}
+.bigword-quote{
+  margin:20px 0 0; padding:0 0 0 18px; border-left:1px solid var(--line-strong);
+  color:var(--fg-muted); font-size:15px; font-style:italic; line-height:1.65;
+  max-width:64ch;
+}
+
+/* longest-words runners up */
+.runners{margin:30px 0 0;border-top:1px solid var(--line)}
+.runner{
+  display:grid; grid-template-columns:34px 1fr auto; gap:16px; align-items:baseline;
+  padding:11px 2px; border-bottom:1px solid var(--line);
+}
+.runner-n{font:500 12px/1 var(--font-mono);color:var(--fg-quiet);text-align:right}
+.runner-w{font:600 17px/1.3 var(--font-body);color:var(--fg);word-break:break-word}
+.runner-w small{display:block;font:400 13px/1.4 var(--font-body);color:var(--fg-muted);margin-top:2px}
+.runner-l{font:500 12px/1 var(--font-mono);color:var(--fg-muted);white-space:nowrap}
+
+/* ── mixing board ──────────────────────────────────────────────────── */
+.board{margin:26px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.board-controls{padding:20px 22px;border-bottom:1px solid var(--line);background:var(--ink-2)}
+.ctl{margin:0 0 18px}
+.ctl:last-child{margin:0}
+.ctl-label{
+  display:block;font:600 10px/1 var(--font-mono);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--fg-muted);margin:0 0 11px;
+}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  font:500 13px/1 var(--font-body); color:var(--fg-muted);
+  background:var(--ink-1); border:1px solid var(--line); border-radius:100px;
+  padding:8px 15px; cursor:pointer; transition:color .18s var(--ease),background .18s var(--ease),border-color .18s var(--ease);
+}
+.chip:hover:not([aria-disabled="true"]){color:var(--fg);border-color:var(--line-strong);background:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--mash-pulp);border-color:var(--mash-pulp);color:var(--bone);font-weight:600}
+.chip[aria-disabled="true"]{opacity:.34;cursor:not-allowed}
+.chip:focus-visible{outline:2px solid var(--mash-pulp);outline-offset:2px}
+
+.board-note{
+  padding:13px 22px; background:var(--ink-1); border-bottom:1px solid var(--line);
+  font:400 13.5px/1.55 var(--font-body); color:var(--fg-muted);
+}
+.board-note b{color:var(--fg-2);font-weight:600}
+
+.board-rows{padding:14px 22px 22px; position:relative}
+.row{
+  display:grid; grid-template-columns:26px 104px 1fr 74px; gap:14px; align-items:center;
+  padding:9px 0;
+}
+.row-rank{font:500 12px/1 var(--font-mono);color:var(--fg-quiet);text-align:right}
+.row-name{font:500 14px/1.2 var(--font-body);color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.is-top .row-name{color:var(--fg);font-weight:700}
+.row.is-top .row-rank{color:var(--mash-pulp)}
+.row-track{height:12px;background:var(--ink-3);border-radius:2px;overflow:hidden}
+.row-bar{
+  height:100%;background:var(--mash-pulp);border-radius:2px;width:0;
+  transition:width .62s var(--ease);
+}
+.row:not(.is-top) .row-bar{background:var(--ink-6)}
+.row-val{font:500 13px/1 var(--font-mono);color:var(--fg);text-align:right;white-space:nowrap}
+.row-val small{color:var(--fg-quiet);font-size:11px}
+.row.is-na .row-val{color:var(--fg-quiet)}
+.row.is-na .row-bar{background:repeating-linear-gradient(90deg,var(--ink-4) 0 4px,transparent 4px 8px);width:100%!important}
+
+/* ── triptych (3-series grouped bars) ──────────────────────────────── */
+.tri{margin:22px 0 0;border-top:1px solid var(--line)}
+.tri-legend{display:flex;gap:20px;flex-wrap:wrap;padding:16px 0 20px;font:500 12px/1 var(--font-mono);color:var(--fg-muted);letter-spacing:.04em}
+.tri-legend span{display:inline-flex;align-items:center;gap:7px}
+.tri-legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.tri-row{display:grid;grid-template-columns:104px 1fr;gap:16px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+.tri-name{font:500 14px/1.2 var(--font-body);color:var(--fg-2)}
+.tri-row:first-of-type .tri-name{color:var(--fg);font-weight:700}
+.tri-bars{display:flex;flex-direction:column;gap:4px}
+.tri-b{display:grid;grid-template-columns:1fr 66px;gap:12px;align-items:center}
+.tri-t{height:9px;background:var(--ink-2);border-radius:2px;overflow:hidden}
+.tri-f{height:100%;border-radius:2px;width:0;transition:width .8s var(--ease)}
+.tri-v{font:500 11.5px/1 var(--font-mono);color:var(--fg-muted);text-align:right}
+
+/* ── dumbbell: all talk no ballot ──────────────────────────────────── */
+.dumb{margin:22px 0 0;border-top:1px solid var(--line)}
+.dumb-row{display:grid;grid-template-columns:104px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.dumb-name{font:500 14px/1.2 var(--font-body);color:var(--fg-2)}
+.dumb-track{position:relative;height:26px}
+.dumb-line{position:absolute;top:50%;height:1px;background:var(--line-strong);transform:translateY(-50%)}
+.dumb-dot{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;transform:translate(-50%,-50%)}
+.dumb-dot.chat{background:var(--mash-pulp)}
+.dumb-dot.ballot{background:var(--sky)}
+.dumb-val{font:600 13px/1 var(--font-mono);color:var(--fg);white-space:nowrap;text-align:right;min-width:56px}
+.dumb-val.inf{color:var(--mash-pulp);font-size:17px}
+.dumb-val.na{color:var(--fg-quiet);font-size:11px;font-weight:500}
+.axis-note{margin:16px 0 0;font:500 11.5px/1.5 var(--font-mono);color:var(--fg-quiet);letter-spacing:.04em}
+
+/* ── heatmap ───────────────────────────────────────────────────────── */
+.heat{margin:22px 0 0}
+.heat-grid{display:grid;grid-template-columns:34px repeat(24,1fr);gap:3px;align-items:center}
+.heat-daylab{font:500 10px/1 var(--font-mono);color:var(--fg-muted);letter-spacing:.06em}
+.heat-cell{aspect-ratio:1;border-radius:2px;background:var(--ink-2);transition:background .45s var(--ease)}
+.heat-hours{display:grid;grid-template-columns:34px repeat(24,1fr);gap:3px;margin-top:7px}
+.heat-hourlab{font:500 9px/1 var(--font-mono);color:var(--fg-quiet);text-align:center}
+.heat-scale{display:flex;align-items:center;gap:9px;margin:20px 0 0;font:500 11px/1 var(--font-mono);color:var(--fg-muted)}
+.heat-scale i{width:22px;height:11px;border-radius:2px;display:inline-block}
+
+/* ── award roll ────────────────────────────────────────────────────── */
+.roll{margin:22px 0 0;border-top:1px solid var(--fg)}
+.award{
+  display:grid; grid-template-columns:1fr auto; gap:10px 26px; align-items:baseline;
+  padding:20px 0; border-bottom:1px solid var(--line);
+}
+.award-t{font:700 21px/1.15 var(--font-display);color:var(--fg);letter-spacing:-.02em}
+.award-c{grid-column:1/2;font-size:14.5px;color:var(--fg-muted);margin:0}
+.award-r{grid-row:1/3;grid-column:2/3;text-align:right;align-self:center}
+.award-who{font:700 17px/1.2 var(--font-display);color:var(--mash-pulp);white-space:nowrap}
+.award-v{display:block;font:500 12px/1 var(--font-mono);color:var(--fg-muted);margin-top:6px;white-space:nowrap}
+
+/* ── tracklist ─────────────────────────────────────────────────────── */
+.pl-cta{
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  margin:24px 0 0; padding:20px 22px;
+  background:var(--surface); border:1px solid var(--mash-pulp-edge); border-radius:6px;
+  text-decoration:none;
+}
+.pl-cta:hover{background:var(--ink-2)}
+.pl-cta:focus-visible{outline:2px solid var(--mash-pulp);outline-offset:3px}
+.pl-cta-txt{flex:1 1 220px;min-width:0;display:block}
+.pl-cta-t{display:block;font:700 17px/1.25 var(--font-display);color:var(--fg);margin:0}
+.pl-cta-s{display:block;font:400 13.5px/1.5 var(--font-body);color:var(--fg-muted);margin:5px 0 0}
+.pl-btn{
+  display:inline-flex;align-items:center;gap:9px;white-space:nowrap;
+  background:var(--mash-pulp);color:var(--bone);text-decoration:none;
+  font:700 14px/1 var(--font-body);padding:13px 20px;border-radius:100px;
+  transition:background .18s var(--ease),transform .18s var(--ease);
+}
+.pl-btn:hover{background:var(--mash-pulp-deep);transform:translateY(-1px)}
+.pl-btn:focus-visible{outline:2px solid var(--bone);outline-offset:3px}
+
+.podium{margin:30px 0 0;display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.pod{display:grid;grid-template-columns:44px 52px 1fr auto;gap:15px;align-items:center;background:var(--ink-1);padding:14px 16px;text-decoration:none}
+.pod:hover{background:var(--ink-2)}
+.pod-pl{font:800 22px/1 var(--font-display);color:var(--mash-pulp);text-align:center}
+.pod-art{width:52px;height:52px;border-radius:3px;background:var(--ink-3);object-fit:cover;display:block}
+/* Grid items default to min-width:auto, so a long title refuses to shrink and
+   blows out the row. These two carry the flexible column. */
+.pod-txt,.track-txt{min-width:0}
+.pod-t{font:600 15px/1.3 var(--font-body);color:var(--fg);margin:0;overflow-wrap:anywhere}
+.pod-a{font:400 13px/1.4 var(--font-body);color:var(--fg-muted);margin:2px 0 0}
+.pod-a b{color:var(--fg-2);font-weight:600}
+.pod-p{font:700 15px/1 var(--font-mono);color:var(--fg);white-space:nowrap}
+.pod-p small{display:block;font:500 10px/1 var(--font-mono);color:var(--fg-quiet);margin-top:5px;letter-spacing:.1em}
+
+.tracks{margin:26px 0 0;border-top:1px solid var(--line)}
+.track{display:grid;grid-template-columns:30px 40px 1fr auto;gap:14px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);text-decoration:none}
+.track:hover{background:var(--ink-1)}
+.track-n{font:500 11px/1 var(--font-mono);color:var(--fg-quiet);text-align:right}
+.track-art{width:40px;height:40px;border-radius:3px;background:var(--ink-3);object-fit:cover;display:block}
+.track-art.ph{display:flex;align-items:center;justify-content:center;font:700 9px/1 var(--font-mono);color:var(--fg-quiet)}
+.track-t{font:500 14.5px/1.3 var(--font-body);color:var(--fg);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track-a{font:400 12.5px/1.4 var(--font-body);color:var(--fg-muted);margin:1px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track-w{font:500 11px/1 var(--font-mono);color:var(--mash-pulp);white-space:nowrap;letter-spacing:.04em}
+
+/* ── trivia ────────────────────────────────────────────────────────── */
+.trivia{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:22px 0 0}
+.triv{background:var(--ink-1);padding:18px 16px}
+.triv-k{font:600 10px/1.3 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-muted);margin:0 0 10px}
+.triv-w{font:700 16px/1.2 var(--font-display);color:var(--fg);margin:0}
+.triv-v{font:500 12px/1 var(--font-mono);color:var(--mash-pulp);margin:7px 0 0}
+
+/* ── methodology ───────────────────────────────────────────────────── */
+.method{margin:22px 0 0;padding:26px 24px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.method h3{font:700 15px/1.2 var(--font-display);color:var(--fg);margin:0 0 14px}
+.method ul{margin:0;padding:0 0 0 20px;color:var(--fg-muted);font-size:14.5px;line-height:1.72}
+.method li{margin:0 0 9px}
+.method li:last-child{margin:0}
+.method li b{color:var(--fg-2);font-weight:600}
+.method + .method{margin-top:14px}
+
+footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:500 11.5px/1.7 var(--font-mono);color:var(--fg-quiet);letter-spacing:.05em}
+
+/* ── responsive ────────────────────────────────────────────────────── */
+@media (max-width:640px){
+  .wrap{padding:0 16px 72px}
+  .row{grid-template-columns:22px 1fr 60px;grid-template-areas:"r n v" "r t t";row-gap:6px}
+  .row-rank{grid-area:r}.row-name{grid-area:n}.row-val{grid-area:v}.row-track{grid-area:t}
+  .tri-row,.dumb-row{grid-template-columns:1fr;gap:9px}
+  .dumb-val{text-align:left}
+  .board-controls,.board-rows,.board-note{padding-left:16px;padding-right:16px}
+  .bigword{padding:32px 20px 28px}
+  .heat-grid,.heat-hours{grid-template-columns:26px repeat(24,1fr);gap:2px}
+  .heat-hourlab{font-size:0}
+  .heat-hourlab[data-major]{font-size:8px}
+  .award{grid-template-columns:1fr}
+  .award-r{grid-row:auto;grid-column:1;text-align:left}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="mast-tape">Side A · Chat Superlatives</div>
+    <h1>The Boarz<br><em>Tape</em></h1>
+    <p class="mast-sub">Sixteen days of the Boarz II Men group chat, counted, measured and ranked. Nobody asked for this.</p>
+    <div class="mast-meta" id="meta"></div>
+  </header>
+
+
+  <section id="awards">
+    <div class="sec-head">
+      <h2>The Full Roll</h2>
+      <span class="sec-tag">Every winner</span>
+    </div>
+    <p class="sec-lede">Ten days of counting, condensed into the only part anyone will quote back at each other.</p>
+    <div class="roll" id="roll"></div>
+  </section>
+
+  <section id="board">
+    <div class="sec-head">
+      <h2>The Mixing Board</h2>
+      <span class="sec-tag">Find yourself</span>
+    </div>
+    <p class="sec-lede">Every stat, every person, one board. Change what you measure, and how you measure it. <strong>Totals reward whoever talks most; per-message and per-1,000-words don't.</strong> The winner changes.</p>
+    <div class="board">
+      <div class="board-controls">
+        <div class="ctl">
+          <span class="ctl-label" id="lab-metric">Measure</span>
+          <div class="chips" id="metrics" role="group" aria-labelledby="lab-metric"></div>
+        </div>
+        <div class="ctl">
+          <span class="ctl-label" id="lab-norm">Per what</span>
+          <div class="chips" id="norms" role="group" aria-labelledby="lab-norm"></div>
+        </div>
+      </div>
+      <p class="board-note" id="board-note"></p>
+      <div class="board-rows" id="rows"></div>
+    </div>
+  </section>
+
+  <section id="heatmap">
+    <div class="sec-head">
+      <h2>When The Boarz Post</h2>
+      <span class="sec-tag">Filter by person</span>
+    </div>
+    <p class="sec-lede">Day of week against hour of day. Switch to one person to see their own shape. The night posters give themselves away immediately.</p>
+    <div class="ctl" style="margin:0 0 22px">
+      <span class="ctl-label" id="lab-who">Whose chat</span>
+      <div class="chips" id="who" role="group" aria-labelledby="lab-who"></div>
+    </div>
+    <div class="heat">
+      <div class="heat-grid" id="heat"></div>
+      <div class="heat-hours" id="heat-hours"></div>
+      <div class="heat-scale">
+        <span>Quiet</span><span id="heat-swatches" style="display:flex;gap:3px"></span><span>Busy</span>
+        <span style="margin-left:auto;color:var(--fg-quiet)" id="heat-peak"></span>
+      </div>
+    </div>
+  </section>
+  <section id="bigword">
+    <div class="sec-head">
+      <h2>The Biggest Word</h2>
+      <span class="sec-tag">Longest word</span>
+    </div>
+    <p class="sec-lede">The longest real word anybody typed. Checked against a 64,000-word dictionary, so <strong>aaaaahhhhh</strong> doesn't count, and neither does a Spotify URL.</p>
+    <div class="bigword">
+      <p class="bigword-crown">Longest word of the season</p>
+      <p class="bigword-word" id="bw-word"></p>
+      <div class="bigword-meta">
+        <span class="bigword-who" id="bw-who"></span>
+        <span class="bigword-len" id="bw-len"></span>
+      </div>
+      <p class="bigword-quote" id="bw-quote"></p>
+    </div>
+    <div class="runners" id="runners"></div>
+  </section>
+
+  <section id="volume">
+    <div class="sec-head">
+      <h2>Motormouth</h2>
+      <span class="sec-tag">Volume</span>
+    </div>
+    <p class="sec-lede">Three ways to be loud: how often you speak, how much you say, and how long you take to say it. Each bar is scaled against its own leader, so the three are comparable.</p>
+    <div class="tri">
+      <div class="tri-legend">
+        <span><i style="background:var(--mash-pulp)"></i>Messages</span>
+        <span><i style="background:var(--sky)"></i>Words</span>
+        <span><i style="background:var(--moss)"></i>Characters</span>
+      </div>
+      <div id="tri"></div>
+    </div>
+  </section>
+
+  <section id="ballot">
+    <div class="sec-head">
+      <h2>All Talk, No Ballot</h2>
+      <span class="sec-tag">Chat vs. ballots</span>
+    </div>
+    <p class="sec-lede">Words typed into the group chat versus words written in actual vote comments. <strong>Four people voted without leaving a single comment.</strong> That is an infinite ratio, and the whole joke of this award.</p>
+    <div class="dumb">
+      <div class="tri-legend">
+        <span><i style="background:var(--mash-pulp)"></i>Chat words</span>
+        <span><i style="background:var(--sky)"></i>Vote-comment words</span>
+      </div>
+      <div id="dumb"></div>
+      <p class="axis-note" id="dumb-axis"></p>
+    </div>
+  </section>
+
+  <section id="songs">
+    <div class="sec-head">
+      <h2>The Track List</h2>
+      <span class="sec-tag">Every song shared</span>
+    </div>
+    <p class="sec-lede">Round one's podium, then every song anybody dropped into the chat, in the order it was posted. All of it is a real playlist.</p>
+
+    <a class="pl-cta" id="pl-cta" href="#" target="_blank" rel="noopener">
+      <span class="pl-cta-txt">
+        <span class="pl-cta-t">The Boarz Tape — Side A</span>
+        <span class="pl-cta-s" id="pl-sub"></span>
+      </span>
+      <span class="pl-btn">Open in Spotify →</span>
+    </a>
+
+    <h3 style="font:700 13px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-muted);margin:38px 0 0" id="pod-head"></h3>
+    <div class="podium" id="podium"></div>
+
+    <h3 style="font:700 13px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-muted);margin:38px 0 0">Shared in the chat</h3>
+    <div class="tracks" id="tracks"></div>
+  </section>
+
+  <section id="trivia">
+    <div class="sec-head">
+      <h2>Loose Ends</h2>
+      <span class="sec-tag">Trivia</span>
+    </div>
+    <div class="trivia" id="triv"></div>
+  </section>
+
+  <section id="method">
+    <div class="sec-head">
+      <h2>How This Was Counted</h2>
+      <span class="sec-tag">Methodology</span>
+    </div>
+    <p class="sec-lede">Because somebody is going to argue with their ranking.</p>
+    <div class="method">
+      <h3>Caveats worth knowing</h3>
+      <ul id="notes"></ul>
+    </div>
+    <div class="method">
+      <h3>Definitions</h3>
+      <ul>
+        <li><b>Vocabulary richness</b> — unique words in a 400-word random sample, averaged over ten draws. Raw unique-word counts just measure who talks most, which is a different award.</li>
+        <li><b>Reading level</b> — Flesch-Kincaid grade over everything you wrote. Treat this as a bit: it is a blunt instrument on chat text, everyone lands between grades 2 and 6, and the ordering is mostly noise wearing a lab coat.</li>
+        <li><b>Explicit rate</b> — swears per 1,000 words against a fixed list, so writing more doesn't automatically make you filthier.</li>
+        <li><b>Words and characters</b> — URLs and attached-media filenames are stripped out first. Sharing a link is not a sentence.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function(){
+"use strict";
+const D = JSON.parse(document.getElementById('data').textContent);
+const P = D.people;
+
+// ── short names: first name, unless two people share one ──────────────
+const firsts = {};
+P.forEach(p => { const f = p.name.split(' ')[0]; firsts[f] = (firsts[f]||0)+1; });
+P.forEach(p => {
+  const parts = p.name.split(' ');
+  p.short = firsts[parts[0]] > 1 && parts[1] ? parts[0] + ' ' + parts[1][0] + '.' : parts[0];
+});
+const byName = Object.fromEntries(P.map(p => [p.name, p]));
+const shortOf = n => byName[n] ? byName[n].short : n;
+
+const fmt = n => {
+  if (n === null || n === undefined || !isFinite(n)) return '—';
+  // Counts are whole numbers; "99.0 messages" reads like a rounding artefact.
+  if (Number.isInteger(n)) return n.toLocaleString('en-US');
+  if (Math.abs(n) >= 100) return n.toFixed(0);
+  if (Math.abs(n) >= 10)  return n.toFixed(1);
+  return n.toFixed(2);
+};
+const el = (tag, cls, html) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ── masthead meta ─────────────────────────────────────────────────────
+const g = D.generatedFrom;
+const dt = ms => new Date(ms).toLocaleDateString('en-US', {month:'short', day:'numeric', timeZone:'UTC'});
+document.getElementById('meta').innerHTML =
+  `<span><b>${g.messages.toLocaleString()}</b> messages</span>` +
+  `<span><b>${P.length}</b> people</span>` +
+  `<span><b>${g.days}</b> days</span>` +
+  `<span>${dt(g.from)} – ${dt(g.to)} 2026</span>`;
+
+// ── biggest word ──────────────────────────────────────────────────────
+const bws = D.biggestWords;
+if (bws.length) {
+  const top = bws[0];
+  document.getElementById('bw-word').textContent = top.word;
+  document.getElementById('bw-who').textContent = top.person;
+  document.getElementById('bw-len').textContent = top.word.length + ' letters';
+  document.getElementById('bw-quote').textContent = '“' + top.quote.replace(/\s+/g,' ').slice(0,260) + (top.quote.length>260?'…':'') + '”';
+
+  const runners = document.getElementById('runners');
+  bws.slice(1).forEach((b,i) => {
+    const r = el('div','runner');
+    r.append(
+      el('div','runner-n', String(i+2)),
+      el('div','runner-w', esc(b.word) + '<small>' + esc(b.person) + '</small>'),
+      el('div','runner-l', b.word.length + ' ltr')
+    );
+    runners.append(r);
+  });
+}
+
+// ── mixing board ──────────────────────────────────────────────────────
+// Each metric declares which normalizations are meaningful. Invalid pairs are
+// disabled rather than rendered as a number nobody can interpret.
+const NORMS = [
+  {id:'total', label:'Total'},
+  {id:'perMsg', label:'Per message'},
+  {id:'per1k', label:'Per 1,000 words'}
+];
+const METRICS = [
+  {id:'messages', label:'Messages',      norms:['total'],                    unit:'msgs',  hi:true,
+   note:'Raw message count. <b>The only measure where sheer persistence is the whole story.</b>'},
+  {id:'words', label:'Words',            norms:['total','perMsg'],           unit:'words', hi:true,
+   note:'Total words typed. Switch to <b>per message</b> to separate the people who write essays from the people who just never stop.'},
+  {id:'characters', label:'Characters',  norms:['total','perMsg'],           unit:'chars', hi:true,
+   note:'Every character, URLs and media filenames excluded.'},
+  {id:'edits', label:'Edits',            norms:['total','perMsg','per1k'],   unit:'edits', hi:true,
+   note:'Messages sent, then fixed. <b>Only visible in the export</b> — the live relay can\'t tell an edit from a new message.'},
+  {id:'swears', label:'Swearing',        norms:['total','perMsg','per1k'],   unit:'swears',hi:true,
+   note:'Against a fixed profanity list. <b>Per 1,000 words is the honest ranking</b> — totals just reward talking more.'},
+  {id:'vocabulary', label:'Vocabulary',  norms:['total'],                    unit:'',      hi:true,
+   note:'Unique words in a 400-word sample, averaged over ten draws. <b>Already volume-adjusted</b>, so there is nothing to divide by.'},
+  {id:'readingLevel', label:'Reading level', norms:['total'],                unit:'grade', hi:true,
+   note:'Flesch-Kincaid grade. <b>This is a joke metric</b> and everybody lands in primary school.'},
+  {id:'links', label:'Links',            norms:['total','perMsg','per1k'],   unit:'links', hi:true,
+   note:'Spotify, YouTube and everything else pasted into the chat.'},
+  {id:'emoji', label:'Emoji',            norms:['total','perMsg','per1k'],   unit:'emoji', hi:true,
+   note:'Typed into messages only. <b>Reactions aren\'t in WhatsApp exports</b>, which is why the totals here are so small.'},
+  {id:'mediaShared', label:'Photos & video', norms:['total','perMsg'],       unit:'files', hi:true,
+   note:'Attachments sent to the group.'},
+  {id:'snapBackRate', label:'Quickest draw', norms:['total'],                unit:'%',     hi:true, pct:true,
+   note:'Share of their replies fired back inside a minute. <b>Timestamps are minute-resolution</b>, so this is a rate, not an average.'}
+];
+
+let metric = METRICS[0], norm = 'total';
+
+function valueFor(p, m, n) {
+  let v = p[m.id];
+  if (v === null || v === undefined) return null;
+  if (m.pct) v = v * 100;
+  if (n === 'perMsg') return p.messages ? v / p.messages : null;
+  if (n === 'per1k')  return p.words ? (v / p.words) * 1000 : null;
+  return v;
+}
+function unitFor(m, n) {
+  if (m.pct) return '%';
+  if (n === 'perMsg') return '/msg';
+  if (n === 'per1k') return '/1k';
+  return '';
+}
+
+const metricsBox = document.getElementById('metrics');
+const normsBox = document.getElementById('norms');
+const rowsBox = document.getElementById('rows');
+const noteBox = document.getElementById('board-note');
+
+METRICS.forEach(m => {
+  const b = el('button','chip', esc(m.label));
+  b.type = 'button';
+  b.setAttribute('aria-pressed', String(m.id === metric.id));
+  b.addEventListener('click', () => {
+    metric = m;
+    if (!m.norms.includes(norm)) norm = m.norms[0];
+    render();
+  });
+  m._btn = b;
+  metricsBox.append(b);
+});
+NORMS.forEach(n => {
+  const b = el('button','chip', esc(n.label));
+  b.type = 'button';
+  b.addEventListener('click', () => {
+    if (!metric.norms.includes(n.id)) return;
+    norm = n.id;
+    render();
+  });
+  n._btn = b;
+  normsBox.append(b);
+});
+
+// FLIP reorder: the one authored motion moment on the page.
+function render() {
+  METRICS.forEach(m => m._btn.setAttribute('aria-pressed', String(m.id === metric.id)));
+  NORMS.forEach(n => {
+    const ok = metric.norms.includes(n.id);
+    n._btn.setAttribute('aria-disabled', String(!ok));
+    n._btn.setAttribute('aria-pressed', String(ok && n.id === norm));
+  });
+  noteBox.innerHTML = metric.note;
+
+  const scored = P.map(p => ({p, v: valueFor(p, metric, norm)}));
+  const ranked = scored.filter(s => s.v !== null).sort((a,b) => b.v - a.v);
+  const missing = scored.filter(s => s.v === null);
+  const max = ranked.length ? Math.max(...ranked.map(s => s.v)) : 1;
+
+  const firstRects = {};
+  [...rowsBox.children].forEach(c => { firstRects[c.dataset.name] = c.getBoundingClientRect().top; });
+
+  rowsBox.innerHTML = '';
+  const unit = unitFor(metric, norm);
+
+  ranked.concat(missing).forEach((s, i) => {
+    const isNA = s.v === null;
+    const row = el('div','row' + (i === 0 && !isNA ? ' is-top' : '') + (isNA ? ' is-na' : ''));
+    row.dataset.name = s.p.name;
+    row.append(
+      el('div','row-rank', isNA ? '–' : String(i+1)),
+      el('div','row-name', esc(s.p.short))
+    );
+    const track = el('div','row-track');
+    const bar = el('div','row-bar');
+    track.append(bar);
+    row.append(track);
+    // "%" sits tight against the number; "/msg" and "/1k" read as separate units.
+    const gap = unit === '%' ? '' : ' ';
+    row.append(el('div','row-val', isNA
+      ? '<small>no data</small>'
+      : esc(fmt(s.v)) + (unit ? gap + '<small>' + esc(unit) + '</small>' : '')));
+    rowsBox.append(row);
+    requestAnimationFrame(() => { bar.style.width = isNA ? '100%' : Math.max(1.5, (s.v / max) * 100) + '%'; });
+  });
+
+  // FLIP: animate rows from their previous position to the new one.
+  [...rowsBox.children].forEach(c => {
+    const prev = firstRects[c.dataset.name];
+    if (prev === undefined) return;
+    const delta = prev - c.getBoundingClientRect().top;
+    if (!delta) return;
+    c.animate(
+      [{transform:`translateY(${delta}px)`}, {transform:'none'}],
+      {duration:520, easing:'cubic-bezier(.16,1,.3,1)'}
+    );
+  });
+}
+render();
+
+// ── triptych ──────────────────────────────────────────────────────────
+const triBox = document.getElementById('tri');
+const maxMsg = Math.max(...P.map(p=>p.messages));
+const maxWrd = Math.max(...P.map(p=>p.words));
+const maxChr = Math.max(...P.map(p=>p.characters));
+const series = [
+  {key:'messages',   max:maxMsg, color:'var(--mash-pulp)'},
+  {key:'words',      max:maxWrd, color:'var(--sky)'},
+  {key:'characters', max:maxChr, color:'var(--moss)'}
+];
+P.slice().sort((a,b)=>b.messages-a.messages).forEach(p => {
+  const row = el('div','tri-row');
+  row.append(el('div','tri-name', esc(p.short) + (p.rookie ? ' <span style="font:600 9px/1 var(--font-mono);letter-spacing:.12em;color:var(--amber)">ROOKIE</span>' : '')));
+  const bars = el('div','tri-bars');
+  series.forEach(s => {
+    const b = el('div','tri-b');
+    const t = el('div','tri-t');
+    const f = el('div','tri-f');
+    f.style.background = s.color;
+    t.append(f);
+    b.append(t, el('div','tri-v', p[s.key].toLocaleString()));
+    bars.append(b);
+    requestAnimationFrame(()=>{ f.style.width = Math.max(1,(p[s.key]/s.max)*100) + '%'; });
+  });
+  row.append(bars);
+  triBox.append(row);
+});
+
+// ── dumbbell ──────────────────────────────────────────────────────────
+const dumbBox = document.getElementById('dumb');
+// ONE scale for both dots. Scaling chat and ballot words against their own
+// maxima would put a 172-word ballot dot further right than a 5,753-word chat
+// dot — visually claiming the opposite of the truth. Sharing the axis makes the
+// ballot dots hug zero, which is exactly the point of this award.
+const maxWords = Math.max(...P.map(p => p.words));
+// Rank: infinite ratios first (by chat volume), then finite, then non-voters.
+const ranked = P.slice().sort((a,b)=>{
+  const rank = p => p.silentVoter ? 2 : (p.voted ? 1 : 0);
+  if (rank(b) !== rank(a)) return rank(b) - rank(a);
+  if (rank(a) === 2) return b.words - a.words;
+  if (rank(a) === 1) return (b.talkToBallot||0) - (a.talkToBallot||0);
+  return b.words - a.words;
+});
+ranked.forEach(p => {
+  const row = el('div','dumb-row');
+  row.append(el('div','dumb-name', esc(p.short)));
+  const track = el('div','dumb-track');
+  const chatPct = 2 + (p.words / maxWords) * 94;
+  const chat = el('div','dumb-dot chat');
+  chat.style.left = chatPct + '%';
+  chat.title = p.words.toLocaleString() + ' chat words';
+
+  if (p.voted) {
+    const balPct = 2 + ((p.voteCommentWords || 0) / maxWords) * 94;
+    const line = el('div','dumb-line');
+    line.style.left = Math.min(chatPct, balPct) + '%';
+    line.style.width = Math.abs(chatPct - balPct) + '%';
+    const bal = el('div','dumb-dot ballot');
+    bal.style.left = balPct + '%';
+    bal.title = (p.voteCommentWords || 0).toLocaleString() + ' vote-comment words';
+    track.append(line, bal);
+  } else {
+    // No ballot exists, so there is no second point to plot.
+    chat.style.opacity = '.5';
+  }
+  track.append(chat);
+  row.append(track);
+  let v, cls='';
+  if (!p.voted) { v = 'did not vote'; cls=' na'; }
+  else if (p.silentVoter) { v = '∞'; cls=' inf'; }
+  else { v = Math.round(p.talkToBallot) + ':1'; }
+  row.append(el('div','dumb-val'+cls, v));
+  dumbBox.append(row);
+});
+document.getElementById('dumb-axis').textContent =
+  `Both dots share one scale: 0 to ${maxWords.toLocaleString()} words. Vote comments never clear ` +
+  `${Math.round((Math.max(...P.map(p => p.voteCommentWords || 0)) / maxWords) * 100)}% of the axis.`;
+
+// ── heatmap ───────────────────────────────────────────────────────────
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const heatBox = document.getElementById('heat');
+const whoBox = document.getElementById('who');
+const cells = [];
+let whoSel = null;
+
+function heatData() {
+  const grid = Array.from({length:7},()=>new Array(24).fill(0));
+  P.filter(p => !whoSel || p.name === whoSel).forEach(p => {
+    for (let d=0; d<7; d++) for (let h=0; h<24; h++) grid[d][h] += p.heatmap[d][h];
+  });
+  return grid;
+}
+function shade(v, max) {
+  if (!v) return 'var(--ink-2)';
+  const t = Math.pow(v / max, 0.62);
+  // Single-hue ramp from panel to pulp; luminance carries the value.
+  return `color-mix(in oklab, var(--mash-pulp) ${Math.round(12 + t*88)}%, var(--ink-2))`;
+}
+for (let d=0; d<7; d++) {
+  heatBox.append(el('div','heat-daylab', DAYS[d]));
+  cells[d] = [];
+  for (let h=0; h<24; h++) {
+    const c = el('div','heat-cell');
+    cells[d][h] = c;
+    heatBox.append(c);
+  }
+}
+const hoursBox = document.getElementById('heat-hours');
+hoursBox.append(el('div'));
+for (let h=0; h<24; h++) {
+  const lab = el('div','heat-hourlab', h % 3 === 0 ? String(h) : '');
+  if (h % 6 === 0) lab.dataset.major = '1';
+  hoursBox.append(lab);
+}
+function paintHeat() {
+  const grid = heatData();
+  const max = Math.max(1, ...grid.flat());
+  let peak = {v:0,d:0,h:0};
+  for (let d=0; d<7; d++) for (let h=0; h<24; h++) {
+    cells[d][h].style.background = shade(grid[d][h], max);
+    cells[d][h].title = `${DAYS[d]} ${String(h).padStart(2,'0')}:00 — ${grid[d][h]} message${grid[d][h]===1?'':'s'}`;
+    if (grid[d][h] > peak.v) peak = {v:grid[d][h], d, h};
+  }
+  document.getElementById('heat-peak').textContent =
+    peak.v ? `Peak: ${DAYS[peak.d]} ${String(peak.h).padStart(2,'0')}:00 · ${peak.v} msgs` : '';
+  const sw = document.getElementById('heat-swatches');
+  sw.innerHTML = '';
+  [0,.25,.5,.75,1].forEach(t => {
+    const i = el('i');
+    i.style.background = shade(t*max, max);
+    sw.append(i);
+  });
+}
+function addWho(label, name) {
+  const b = el('button','chip', esc(label));
+  b.type = 'button';
+  b.setAttribute('aria-pressed', String(whoSel === name));
+  b.addEventListener('click', () => {
+    whoSel = name;
+    [...whoBox.children].forEach(c => c.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    paintHeat();
+  });
+  whoBox.append(b);
+}
+addWho('Everyone', null);
+P.forEach(p => addWho(p.short, p.name));
+paintHeat();
+
+// ── award roll ────────────────────────────────────────────────────────
+const ROLL = [
+  ['vocabulary','Biggest Vocabulary'],
+  ['perfectionist','The Perfectionist'],
+  ['explicit','Most Explicit'],
+  ['professor','The Professor'],
+  ['simplest','Man of the People'],
+  ['lurker','The Lurker'],
+  ['nightOwl','Night Owl'],
+  ['fastest','Quickest Draw']
+];
+const rollBox = document.getElementById('roll');
+ROLL.forEach(([k,title]) => {
+  const a = D.awards[k];
+  if (!a) return;
+  const row = el('div','award');
+  row.append(el('div','award-t', esc(title)));
+  row.append(el('p','award-c', esc(a.caption)));
+  const r = el('div','award-r');
+  r.innerHTML = '<span class="award-who">' + esc(a.person) + '</span><span class="award-v">' + esc(a.value) + '</span>';
+  row.append(r);
+  rollBox.append(row);
+});
+
+// ── trivia ────────────────────────────────────────────────────────────
+const TRIV = [['rambler','Longest single message'],['linker','Most links'],['emoji','Most emoji'],['motormouth','Most messages']];
+const trivBox = document.getElementById('triv');
+TRIV.forEach(([k,label]) => {
+  const a = D.awards[k];
+  if (!a) return;
+  const t = el('div','triv');
+  t.append(el('p','triv-k', esc(label)), el('p','triv-w', esc(a.person)), el('p','triv-v', esc(a.value)));
+  trivBox.append(t);
+});
+
+// ── tracklist ─────────────────────────────────────────────────────────
+const S = D.songs || {};
+const playlistUrl = S.playlistUrl || null;
+const podium = S.podium || [];
+const shared = (S.links || []).filter(l => l.kind === 'spotify' || l.kind === 'youtube');
+
+const cta = document.getElementById('pl-cta');
+if (playlistUrl) {
+  cta.href = playlistUrl;
+  document.getElementById('pl-sub').textContent =
+    `${S.playlistTracks || (podium.length + shared.filter(l=>l.track).length)} tracks — the round-one podium plus everything shared in the chat.`;
+} else {
+  cta.remove();
+}
+
+document.getElementById('pod-head').textContent = S.round ? 'Round 1 — ' + S.round : 'Round 1 podium';
+const podBox = document.getElementById('podium');
+podium.forEach(p => {
+  const a = el('a','pod');
+  if (p.url) { a.href = p.url; a.target = '_blank'; a.rel = 'noopener'; }
+  a.append(el('div','pod-pl', String(p.place)));
+  if (p.art) {
+    const img = document.createElement('img');
+    img.className = 'pod-art'; img.src = p.art; img.alt = ''; img.loading = 'lazy';
+    a.append(img);
+  } else a.append(el('div','pod-art'));
+  const t = el('div','pod-txt');
+  t.append(el('p','pod-t', esc(p.title)), el('p','pod-a', esc(p.artists) + ' · <b>' + esc(shortOf(p.submitter)) + '</b>'));
+  a.append(t);
+  a.append(el('div','pod-p', p.points + '<small>PTS</small>'));
+  podBox.append(a);
+});
+
+const trBox = document.getElementById('tracks');
+shared.forEach((l, i) => {
+  const a = el('a','track');
+  a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+  a.append(el('div','track-n', String(i+1)));
+  if (l.track && l.track.art) {
+    const img = document.createElement('img');
+    img.className = 'track-art'; img.src = l.track.art; img.alt = ''; img.loading = 'lazy';
+    a.append(img);
+  } else {
+    a.append(el('div','track-art ph', l.kind === 'youtube' ? 'YT' : 'SP'));
+  }
+  const t = el('div','track-txt');
+  if (l.track) {
+    t.append(el('p','track-t', esc(l.track.title)), el('p','track-a', esc(l.track.artists)));
+  } else {
+    // Albums and playlists have no single-track metadata. Name what it actually
+    // is, and use the message it arrived in as the subtitle.
+    const kindLabel =
+      /open\.spotify\.com\/album/.test(l.url) ? 'Spotify album' :
+      /open\.spotify\.com\/playlist/.test(l.url) ? 'Spotify playlist' :
+      /music\.youtube\.com\/playlist/.test(l.url) ? 'YouTube Music playlist' :
+      /youtube\.com\/playlist/.test(l.url) ? 'YouTube playlist' :
+      l.kind === 'youtube' ? 'YouTube video' : 'Spotify link';
+    t.append(
+      el('p','track-t', kindLabel),
+      el('p','track-a', esc(l.context ? l.context.slice(0,70) : 'shared without a message'))
+    );
+  }
+  a.append(t);
+  a.append(el('div','track-w', esc(shortOf(l.person))));
+  trBox.append(a);
+});
+
+// ── notes ─────────────────────────────────────────────────────────────
+const notesBox = document.getElementById('notes');
+D.notes.forEach(n => notesBox.append(el('li', null, esc(n))));
+
+document.getElementById('foot').textContent =
+  'Boarz II Men · Season 1 · Generated ' +
+  new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) +
+  ' · Counted from the WhatsApp group export';
+})();
+</script>
+</body>
+</html>
