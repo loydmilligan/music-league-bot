@@ -10,6 +10,8 @@ import { detectMusicUrls } from './urlDetector.js';
 import { resolveSonglinkUrl } from '../resolver/songlinkResolver.js';
 import { songlinkLimiter } from '../resolver/songlinkRateLimiter.js';
 import { insertChatCapture } from '../storage/chatDb.js';
+import { interpretMessage } from '../chat/prompts/engine.js';
+import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -19,6 +21,10 @@ export interface WhatsAppMessage {
   fromMe: boolean;
   capturedAt: string;     // ISO timestamp of the message
   priorMessages: Array<{ sender: string; timeMs: number; text: string }>;
+  /** Set when this message quote-replies something the bot itself sent. */
+  quotedFromBot?: boolean;
+  /** Text/caption of the quoted message, when this is a quote-reply. */
+  quotedText?: string;
   reply(text: string): Promise<void>;
   getContact(): Promise<{ pushname: string }>;
 }
@@ -36,9 +42,28 @@ export interface BotConfig {
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
   const { config, spotify, db, allowedGroupIds, ownerPhone, sendDm } = botConfig;
 
+  // Never react to ourselves. Previously implicit — our own messages carry our
+  // LID in `from`, so the @g.us allowlist below dropped them — but the direct
+  // branch accepts non-group chats by design, which would feed the bot its own
+  // replies. Those replies quote a player's name ("Logged: Dave Steingart…"),
+  // so it would answer its own prompt, then loop on the duplicate reply forever.
+  if (msg.fromMe) return;
+
+  // A private message can only ever be a prompt answer — never song capture —
+  // and is deliberately exempt from the group allowlist, which exists to stop
+  // the bot acting in groups it was not invited to reason about.
+  if (!msg.from.endsWith('@g.us')) {
+    await handlePromptAnswer(msg, botConfig, true);
+    return;
+  }
+
   if (!allowedGroupIds.some((id) => msg.from.includes(id))) return;
 
   console.log('[bot] captured from group:', msg.from, '|', msg.body.slice(0, 80));
+
+  // Path 0: an answer to an open prompt. Runs first so a reply like "Koziol"
+  // is never also scanned for song URLs, and returns early when it lands.
+  if (await handlePromptAnswer(msg, botConfig)) return;
 
   // Path A: explicit !song command
   const parsed = parseMessage(msg.body);
@@ -164,6 +189,66 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
       console.error('[handler] Spotify error during add:', err);
       await msg.reply('❌ Something went wrong — try again');
     }
+  }
+}
+
+/**
+ * Route a message to the generic prompt engine. Returns true when it was an
+ * answer (and therefore fully handled).
+ *
+ * The engine is pure and knows nothing about songs; everything song-shaped lives
+ * in whoever created the prompt. Failures here are swallowed deliberately — a
+ * bug in a chat game must never take down song capture.
+ */
+async function handlePromptAnswer(
+  msg: WhatsAppMessage,
+  botConfig: BotConfig,
+  isDirect = false,
+): Promise<boolean> {
+  const { db } = botConfig;
+  try {
+    const open = isDirect ? getDirectPrompts(db) : getOpenPrompts(db, msg.from);
+    if (open.length === 0) return false;
+
+    let authorName = msg.author;
+    try {
+      authorName = (await msg.getContact()).pushname || msg.author;
+    } catch { /* @lid contacts may not resolve */ }
+
+    const outcome = interpretMessage(
+      {
+        chatId: msg.from,
+        authorId: msg.author,
+        authorName,
+        text: msg.body,
+        quotedFromBot: msg.quotedFromBot,
+        quotedText: msg.quotedText,
+        isDirect,
+      },
+      open,
+      { hasAnswered: (promptId, authorId) => hasAnswered(db, promptId, authorId) },
+    );
+    if (!outcome) return false;
+
+    if (!outcome.duplicate) {
+      recordAnswer(db, {
+        promptId: outcome.promptId,
+        authorId: outcome.authorId,
+        authorName,
+        answerText: outcome.answerText,
+        resolution: outcome.resolution,
+        trigger: outcome.trigger,
+      });
+    }
+    console.log(
+      `[prompt] ${outcome.promptId} ← ${authorName} "${outcome.answerText}" ` +
+      `→ ${outcome.resolution.kind}${outcome.duplicate ? ' (duplicate)' : ''}`,
+    );
+    if (outcome.reply) await msg.reply(outcome.reply);
+    return true;
+  } catch (err) {
+    console.error('[prompt] error handling answer:', err);
+    return false;
   }
 }
 

@@ -29,7 +29,14 @@ export interface ControlHandlers {
     target: string | null,
     file: string,
     caption: string | null,
+    pin: number | null,
   ) => Promise<{ target: string }>;
+  onSay: (
+    target: string | null,
+    text: string,
+    pin: number | null,
+  ) => Promise<{ target: string }>;
+  onPrompt: (prompt: Record<string, unknown>) => Promise<{ id: string }>;
 }
 
 // Bind on the compose network so bot-ui (a sibling container) can POST /trigger
@@ -76,8 +83,14 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
           const result = await handlers.onPoll(route.target, route.name, route.options, route.allowMultiple);
           reply(200, { ok: true, action: 'poll', ...result });
         } else if (route.action === 'media') {
-          const result = await handlers.onMedia(route.target, route.file, route.caption);
+          const result = await handlers.onMedia(route.target, route.file, route.caption, route.pin);
           reply(200, { ok: true, action: 'media', ...result });
+        } else if (route.action === 'prompt') {
+          const result = await handlers.onPrompt(route.prompt);
+          reply(200, { ok: true, action: 'prompt', ...result });
+        } else if (route.action === 'say') {
+          const result = await handlers.onSay(route.target, route.text, route.pin);
+          reply(200, { ok: true, action: 'say', ...result });
         } else {
           reply(400, { ok: false, reason: route.reason });
         }

@@ -8,8 +8,15 @@ export type ControlAction =
   | { action: 'send'; roundId: number; target: string; mode: 'live' | 'dry-run' }
   | { action: 'notify'; text: string }
   | { action: 'poll'; target: string | null; name: string; options: string[]; allowMultiple: boolean }
-  | { action: 'media'; target: string | null; file: string; caption: string | null }
+  | { action: 'media'; target: string | null; file: string; caption: string | null; pin: number | null }
+  | { action: 'say'; target: string | null; text: string; pin: number | null }
+  | { action: 'prompt'; prompt: Record<string, unknown> }
   | { action: 'unknown'; reason: string };
+
+/** Pin duration in seconds. Anything non-positive or absent means "don't pin". */
+function parsePin(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : null;
+}
 
 export function parseControlRequest(method: string, path: string, body: unknown): ControlAction {
   if (method !== 'POST') return { action: 'unknown', reason: `method ${method} not allowed` };
@@ -73,7 +80,30 @@ export function parseControlRequest(method: string, path: string, body: unknown)
     }
     const target = typeof b.target === 'string' && b.target.trim() ? b.target.trim() : null;
     const caption = typeof b.caption === 'string' && b.caption.trim() ? b.caption.trim() : null;
-    return { action: 'media', target, file, caption };
+    return { action: 'media', target, file, caption, pin: parsePin(b.pin) };
+  }
+
+  // Plain text to an arbitrary chat, optionally pinned (how-to-play explainer).
+  if (path === '/say') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    if (typeof b.text !== 'string' || !b.text.trim()) {
+      return { action: 'unknown', reason: 'text (non-empty string) required' };
+    }
+    const target = typeof b.target === 'string' && b.target.trim() ? b.target.trim() : null;
+    return { action: 'say', target, text: b.text.trim(), pin: parsePin(b.pin) };
+  }
+
+  // Open a prompt (generic ask-the-group question). Body is validated by the
+  // store; only the shape needed for routing is checked here.
+  if (path === '/prompt') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    if (typeof b.chatId !== 'string' || !b.chatId.trim()) {
+      return { action: 'unknown', reason: 'chatId (string) required' };
+    }
+    if (!Array.isArray(b.options) || b.options.length === 0) {
+      return { action: 'unknown', reason: 'options (non-empty array) required' };
+    }
+    return { action: 'prompt', prompt: b };
   }
 
   return { action: 'unknown', reason: `no route for ${method} ${path}` };

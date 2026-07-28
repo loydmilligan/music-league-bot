@@ -7,6 +7,17 @@ const _require = createRequire(import.meta.url);
 const { Client, LocalAuth, Poll, MessageMedia } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
 const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { small?: boolean }): void };
 
+/**
+ * Every address form this account is known by.
+ *
+ * `client.info.wid` reports the phone-based id (12134198455@c.us) but the same
+ * account appears in groups as a LID (186428122255581@lid), so comparing a
+ * quoted message's author against wid alone wrongly concludes "not me". Learn
+ * the forms instead: for our OWN messages `msg.from` IS our id (see
+ * listGroups.ts), so one outgoing message teaches us the LID.
+ */
+const selfIds = new Set<string>();
+
 interface BufferedMsg { sender: string; timeMs: number; text: string; }
 const chatBuffer = new Map<string, BufferedMsg[]>();
 const BUFFER_SIZE = 5;
@@ -46,6 +57,13 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     const chatId = raw.from;
     const timeMs = raw.timestamp * 1000;
 
+    // Our own outgoing messages carry our id in `from` — the only reliable way
+    // to learn the LID this account shows up as inside groups.
+    if (raw.fromMe && raw.from) {
+      if (!selfIds.has(raw.from)) console.log(`[self] learned own id ${raw.from}`);
+      selfIds.add(raw.from);
+    }
+
     // LOG_GROUPS=1: dump the message's whole raw payload plus the address
     // envelope. Plain fields only — no Store call (every Store method throws
     // `r: r` in this wwebjs version). Post in a chat to find its @g.us id.
@@ -75,8 +93,32 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       chatName = chat.name || chatId;
     } catch { /* fallback to chatId */ }
 
+    // Is this a quote-reply to something WE said? getQuotedMessage() is a Store
+    // call and Store is broken in this build, so read the plain _data envelope.
+    // `quotedParticipant` is the quoted message's author.
+    let quotedFromBot = false;
+    let quotedText: string | undefined;
+    if (raw.hasQuotedMsg) {
+      const d = (raw as { _data?: Record<string, unknown> })._data ?? {};
+      // The quoted message's own text. "Reply privately" carries the card into
+      // the DM this way, and it is the only handle on WHICH prompt is meant.
+      const qm = d.quotedMsg as { caption?: string; body?: string } | undefined;
+      quotedText = qm?.caption || qm?.body || undefined;
+      const qp = d.quotedParticipant as { _serialized?: string } | string | undefined;
+      const quotedAuthor = typeof qp === 'string' ? qp : qp?._serialized;
+      // Permissive until we have learned at least one id, so the very first
+      // reply after a restart is not silently dropped. The engine still only
+      // acts when exactly one prompt is open in the chat.
+      quotedFromBot = !quotedAuthor || selfIds.size === 0 || selfIds.has(quotedAuthor);
+      console.log(
+        `[reply] quotedAuthor=${quotedAuthor ?? '?'} known=[${[...selfIds].join(',')}] → fromBot=${quotedFromBot}`,
+      );
+    }
+
     const wrapped: WhatsAppMessage = {
       body: raw.body,
+      quotedFromBot,
+      quotedText,
       from: chatId,
       chatName,
       author: raw.author ?? raw.from,
@@ -119,9 +161,42 @@ export function makeSendPoll(
 // so the poll's text options can reference tiles by number.
 export function makeSendMedia(
   client: ClientType,
-): (chatId: string, filePath: string, caption?: string) => Promise<void> {
-  return async (chatId, filePath, caption) => {
+): (chatId: string, filePath: string, caption?: string, pinSeconds?: number) => Promise<void> {
+  return async (chatId, filePath, caption, pinSeconds) => {
     const media = MessageMedia.fromFilePath(filePath);
-    await client.sendMessage(chatId, media, caption ? { caption } : undefined);
+    const sent = await client.sendMessage(chatId, media, caption ? { caption } : undefined);
+    await tryPin(sent, pinSeconds);
+  };
+}
+
+/**
+ * Best-effort pin. sendMessage only returns a Message when a page-side
+ * `Chat.find` succeeds (Client.js:154/173), and every Store method is broken in
+ * this whatsapp-web.js build — the same `r: r` failure listGroups.ts documents.
+ * So `sent` is routinely undefined and pinning is simply unavailable here.
+ * Never let that lose the message that was already delivered.
+ */
+async function tryPin(sent: unknown, pinSeconds?: number): Promise<void> {
+  if (!pinSeconds) return;
+  const msg = sent as { pin?: (d: number) => Promise<boolean> } | undefined;
+  if (typeof msg?.pin !== 'function') {
+    console.warn('[whatsapp] pin unavailable (sendMessage returned no Message) — sent unpinned');
+    return;
+  }
+  try {
+    await msg.pin(pinSeconds);
+  } catch (err) {
+    console.warn('[whatsapp] pin failed, message still sent:', err instanceof Error ? err.message : String(err));
+  }
+}
+
+// Plain text to an arbitrary chat, optionally pinned. makeSendDm exists but is
+// fire-and-forget; this returns through pin(), which needs the sent Message.
+export function makeSay(
+  client: ClientType,
+): (chatId: string, text: string, pinSeconds?: number) => Promise<void> {
+  return async (chatId, text, pinSeconds) => {
+    const sent = await client.sendMessage(chatId, text);
+    await tryPin(sent, pinSeconds);
   };
 }

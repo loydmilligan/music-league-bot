@@ -4,13 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config/loader.js';
 import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
-import { createClient, makeSendDm, makeSendPoll, makeSendMedia } from './whatsapp/client.js';
+import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay } from './whatsapp/client.js';
 import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
 import { guardedSend } from './whatsapp/sendGuard.js';
 import { runManualSend } from './digest/manualSend.js';
 import { startControlServer } from './control/server.js';
+import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
+import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -18,6 +20,7 @@ const configPath = path.join(__dirname, '../config/rules.json');
 const config = loadConfig(configPath);
 const spotify = new SpotifyAdapter();
 const db = openDb(path.join(__dirname, '../data/submissions.db'));
+createPromptTables(db);
 
 const allowedGroupIds = (process.env.WHATSAPP_ALLOWED_GROUP_IDS ?? '')
   .split(',')
@@ -89,10 +92,34 @@ client.on('ready', () => {
       console.log(`[poll] sent "${name}" (${options.length} options) to ${to}`);
       return { target: to };
     },
-    onMedia: async (target, file, caption) => {
+    onMedia: async (target, file, caption, pin) => {
       const to = target ?? ownerPhone;
-      await makeSendMedia(client)(to, file, caption ?? undefined);
-      console.log(`[media] sent ${file} to ${to}`);
+      await makeSendMedia(client)(to, file, caption ?? undefined, pin ?? undefined);
+      console.log(`[media] sent ${file} to ${to}${pin ? ` (pinned ${pin}s)` : ''}`);
+      return { target: to };
+    },
+    onPrompt: async (raw) => {
+      const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `p-${Date.now()}`;
+      insertPrompt(db, {
+        id,
+        chatId: String(raw.chatId),
+        messageId: typeof raw.messageId === 'string' ? raw.messageId : null,
+        hashtag: typeof raw.hashtag === 'string' ? raw.hashtag : null,
+        subject: typeof raw.subject === 'string' ? raw.subject : null,
+        options: raw.options as PromptOption[],
+        templates: raw.templates as PromptTemplates,
+        onePerPerson: raw.onePerPerson !== false,
+        acceptDirect: raw.acceptDirect === true,
+        kind: typeof raw.kind === 'string' ? raw.kind : null,
+        meta: raw.meta,
+      });
+      console.log(`[prompt] opened ${id} in ${String(raw.chatId)}`);
+      return { id };
+    },
+    onSay: async (target, text, pin) => {
+      const to = target ?? ownerPhone;
+      await makeSay(client)(to, text, pin ?? undefined);
+      console.log(`[say] sent ${text.length} chars to ${to}${pin ? ` (pinned ${pin}s)` : ''}`);
       return { target: to };
     },
   });
