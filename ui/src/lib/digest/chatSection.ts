@@ -393,7 +393,13 @@ export function buildChatSection(
 	if (!window) return null;
 
 	const { messages, sendersSeen } = loadChatWindow(db, opts.groupName, window);
-	const roster = buildChatRoster(db, opts.leagueId, sendersSeen, opts.platform ?? 'whatsapp');
+	const roster = buildChatRoster(
+		db,
+		opts.leagueId,
+		sendersSeen,
+		opts.platform ?? 'whatsapp',
+		opts.groupName,
+	);
 
 	const lists = loadWordLists();
 	const stats = computeSuperlatives(messages, [], {

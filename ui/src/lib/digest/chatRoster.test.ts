@@ -109,3 +109,15 @@ describe('buildChatRoster', () => {
 		);
 	});
 });
+
+describe('group pseudo-sender', () => {
+	it('does not count the group itself as a participant', () => {
+		const db = new Database(':memory:');
+		db.exec(`CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+			CREATE TABLE player_identities (id INTEGER PRIMARY KEY, player_id INTEGER,
+				league_id INTEGER, identity_type TEXT, identifier TEXT);`);
+		const r = buildChatRoster(db, 3, ['Second Best chat', 'Real Person'], 'whatsapp', 'Second Best chat');
+		expect(r.resolve('Second Best chat')).toBeNull();
+		expect(r.unmapped).toEqual(['Real Person']);
+	});
+});

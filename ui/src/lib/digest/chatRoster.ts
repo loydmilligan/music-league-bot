@@ -80,7 +80,10 @@ export function buildChatRoster(
 	leagueId: number,
 	sendersSeen: Iterable<string> = [],
 	platform: 'whatsapp' | 'google-chat' = 'whatsapp',
+	/** The group's own name — WhatsApp emits it as a sender on group events. */
+	groupName?: string,
 ): ChatRoster {
+	const groupKey = groupName ? normalizeSender(groupName) : null;
 	const rows = db
 		.prepare(
 			`SELECT pi.identifier, p.id AS player_id, p.name
@@ -104,7 +107,7 @@ export function buildChatRoster(
 	// participant, keyed on their display name so their messages still count.
 	for (const raw of sendersSeen) {
 		const key = normalizeSender(raw);
-		if (!key || NON_PARTICIPANTS.has(key) || byKey.has(key)) continue;
+		if (!key || NON_PARTICIPANTS.has(key) || key === groupKey || byKey.has(key)) continue;
 		unmapped.add(raw);
 		byKey.set(key, { name: displayName(raw), playerId: null, unmapped: true });
 	}
@@ -112,7 +115,7 @@ export function buildChatRoster(
 	return {
 		resolve(rawSender: string): ChatPerson | null {
 			const key = normalizeSender(rawSender);
-			if (!key || NON_PARTICIPANTS.has(key)) return null;
+			if (!key || NON_PARTICIPANTS.has(key) || key === groupKey) return null;
 			return byKey.get(key) ?? null;
 		},
 		unmapped: [...unmapped],
