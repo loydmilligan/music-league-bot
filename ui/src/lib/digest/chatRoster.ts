@@ -44,6 +44,9 @@ export interface ChatRoster {
 export function normalizeSender(raw: string): string {
 	return raw
 		.replace(/[  ⁠⁨⁩]/g, ' ')
+		// U+FFFD turns up when a relay message loses a byte in transit; without
+		// this, one corrupted "~<?>JB" becomes an eleventh participant.
+		.replace(/\uFFFD/g, '')
 		.replace(/^\s*~\s*/, '')
 		.replace(/\s+/g, ' ')
 		.trim()
@@ -102,12 +105,38 @@ export function buildChatRoster(
 		if (!byKey.has(key)) byKey.set(key, { name: r.name, playerId: r.player_id, unmapped: false });
 	}
 
+	/**
+	 * Second pass: match a short display name to a longer stored identifier when
+	 * exactly one person fits.
+	 *
+	 * The relay phone and the contact book disagree — WhatsApp shows a person's
+	 * own profile name ("~ Tj") to a device that has no contact for them, while
+	 * player_identities holds the contact-book name ("Tj Cook"). Requiring one
+	 * unique match is what keeps this safe: "~ Sarah" fits both Sarah Black and
+	 * Sarah Zucker, so it stays unmapped rather than being credited to a guess.
+	 */
+	const prefixMatch = (key: string): ChatPerson | null => {
+		const hits = new Map<number, ChatPerson>();
+		for (const [k, person] of byKey) {
+			if (person.unmapped || person.playerId === null) continue;
+			if (k === key || k.startsWith(key + ' ') || key.startsWith(k + ' ')) {
+				hits.set(person.playerId, person);
+			}
+		}
+		return hits.size === 1 ? [...hits.values()][0] : null;
+	};
+
 	const unmapped = new Set<string>();
 	// Anyone seen in the chat but absent from player_identities becomes their own
 	// participant, keyed on their display name so their messages still count.
 	for (const raw of sendersSeen) {
 		const key = normalizeSender(raw);
 		if (!key || NON_PARTICIPANTS.has(key) || key === groupKey || byKey.has(key)) continue;
+		const guessed = prefixMatch(key);
+		if (guessed) {
+			byKey.set(key, guessed);
+			continue;
+		}
 		unmapped.add(raw);
 		byKey.set(key, { name: displayName(raw), playerId: null, unmapped: true });
 	}

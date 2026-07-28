@@ -121,3 +121,57 @@ describe('group pseudo-sender', () => {
 		expect(r.unmapped).toEqual(['Real Person']);
 	});
 });
+
+describe('unique-prefix matching', () => {
+	let db: Database.Database;
+	beforeEach(() => {
+		db = new Database(':memory:');
+		db.exec(`
+			CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+			CREATE TABLE player_identities (id INTEGER PRIMARY KEY, player_id INTEGER,
+				league_id INTEGER, identity_type TEXT, identifier TEXT);
+			INSERT INTO players (id,name) VALUES (6,'TJ Cook'),(9,'Sara Black'),(10,'Sarah Zucker');
+			INSERT INTO player_identities (player_id,league_id,identity_type,identifier) VALUES
+				(6,3,'whatsapp','Tj Cook'),
+				(9,3,'whatsapp','Sarah Black'),
+				(10,3,'whatsapp','Sarah Zucker');
+		`);
+	});
+
+	it('merges a short profile name onto the one person it can be', () => {
+		// The relay shows "~ Tj"; the contact book stored "Tj Cook".
+		const r = buildChatRoster(db, 3, ['~ Tj']);
+		expect(r.resolve('~ Tj')?.name).toBe('TJ Cook');
+		expect(r.resolve('~ Tj')?.unmapped).toBe(false);
+		expect(r.unmapped).toEqual([]);
+	});
+
+	it('refuses to guess when two people share the prefix', () => {
+		// "~ Sarah" fits Sarah Black AND Sarah Zucker — naming one would be a coin
+		// flip, in a section that prints people's names publicly.
+		const r = buildChatRoster(db, 3, ['~ Sarah']);
+		expect(r.resolve('~ Sarah')?.unmapped).toBe(true);
+		expect(r.unmapped).toEqual(['~ Sarah']);
+	});
+
+	it('does not match on a partial word', () => {
+		// "~ T" must not silently become TJ Cook.
+		const r = buildChatRoster(db, 3, ['~ T']);
+		expect(r.resolve('~ T')?.unmapped).toBe(true);
+	});
+});
+
+describe('corrupted sender strings', () => {
+	it('survives a lost byte rather than minting a new participant', () => {
+		const db = new Database(':memory:');
+		db.exec(`CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+			CREATE TABLE player_identities (id INTEGER PRIMARY KEY, player_id INTEGER,
+				league_id INTEGER, identity_type TEXT, identifier TEXT);
+			INSERT INTO players (id,name) VALUES (4,'Jon Black');
+			INSERT INTO player_identities (player_id,league_id,identity_type,identifier)
+				VALUES (4,3,'whatsapp','~ JB');`);
+		const r = buildChatRoster(db, 3, ['~�JB']);
+		expect(r.resolve('~�JB')?.name).toBe('Jon Black');
+		expect(r.unmapped).toEqual([]);
+	});
+});

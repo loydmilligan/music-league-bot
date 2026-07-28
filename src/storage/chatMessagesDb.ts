@@ -17,6 +17,12 @@ function getDb(): Database.Database {
       group_name   TEXT NOT NULL,
       group_key    TEXT,
       sender       TEXT NOT NULL,
+      -- Stable per-person handle from the relay (phone number / account id).
+      -- The display name in the sender column depends on the RELAY PHONE's
+      -- contact list, so one person reads as 'Tj Cook' on one device and
+      -- '~ Tj' on another, and two people sharing a profile name collapse
+      -- into one label. The handle does not move, so identity stays exact.
+      sender_handle TEXT,
       text         TEXT NOT NULL,
       ts           TEXT NOT NULL,
       msg_hash     TEXT NOT NULL,
@@ -95,9 +101,14 @@ export function ingestRelayPayload(payload: RelayPayload): { inserted: number; s
   const events = (payload.events ?? []).filter(e => e.event_type === 'message');
   if (events.length === 0) return { inserted: 0, skipped: 0 };
 
+  // Additive migration: older databases predate sender_handle.
+  const hasHandle = (db.prepare('PRAGMA table_info(chat_messages)').all() as { name: string }[])
+    .some((c) => c.name === 'sender_handle');
+  if (!hasHandle) db.exec('ALTER TABLE chat_messages ADD COLUMN sender_handle TEXT');
+
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO chat_messages (id, platform, group_name, group_key, sender, text, ts, msg_hash)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO chat_messages (id, platform, group_name, group_key, sender, sender_handle, text, ts, msg_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   let inserted = 0, skipped = 0;
@@ -119,7 +130,11 @@ export function ingestRelayPayload(payload: RelayPayload): { inserted: number; s
       const tsIso = new Date(tsMs).toISOString();
       const hash = msgHash(sourceType, platform, groupName, sender, tsMs, text);
 
-      const result = insert.run(randomUUID(), platform, groupName, groupKey, sender, text, tsIso, hash);
+      // party_handle is the relay's stable id for the person; it arrived on
+      // every event and used to be discarded, which is why identity had to be
+      // reverse-engineered from display names.
+      const senderHandle = (e.party_handle ?? '').trim() || null;
+      const result = insert.run(randomUUID(), platform, groupName, groupKey, sender, senderHandle, text, tsIso, hash);
       if (result.changes > 0) {
         if (debug) console.log(`[chat-relay:ingest] INSERT  ${platform}/${groupName}/${sender}: "${text.slice(0, 60)}"`);
         inserted++;
