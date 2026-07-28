@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config/loader.js';
 import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
-import { createClient, makeSendDm } from './whatsapp/client.js';
+import { createClient, makeSendDm, makeSendPoll, makeSendMedia } from './whatsapp/client.js';
 import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
@@ -82,6 +82,18 @@ client.on('ready', () => {
       ),
     onNotify: async (text) => {
       await makeSendDm(client)(ownerPhone, text);
+    },
+    onPoll: async (target, name, options, allowMultiple) => {
+      const to = target ?? ownerPhone;
+      await makeSendPoll(client)(to, name, options, allowMultiple);
+      console.log(`[poll] sent "${name}" (${options.length} options) to ${to}`);
+      return { target: to };
+    },
+    onMedia: async (target, file, caption) => {
+      const to = target ?? ownerPhone;
+      await makeSendMedia(client)(to, file, caption ?? undefined);
+      console.log(`[media] sent ${file} to ${to}`);
+      return { target: to };
     },
   });
 

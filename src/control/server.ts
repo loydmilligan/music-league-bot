@@ -19,6 +19,17 @@ export interface ControlHandlers {
   onTrigger: () => Promise<void>;
   onSend: (req: ManualSendReq) => Promise<ManualSendResult>;
   onNotify: (text: string) => Promise<void>;
+  onPoll: (
+    target: string | null,
+    name: string,
+    options: string[],
+    allowMultiple: boolean,
+  ) => Promise<{ target: string }>;
+  onMedia: (
+    target: string | null,
+    file: string,
+    caption: string | null,
+  ) => Promise<{ target: string }>;
 }
 
 // Bind on the compose network so bot-ui (a sibling container) can POST /trigger
@@ -61,6 +72,12 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
         } else if (route.action === 'notify') {
           await handlers.onNotify(route.text);
           reply(200, { ok: true, action: 'notify' });
+        } else if (route.action === 'poll') {
+          const result = await handlers.onPoll(route.target, route.name, route.options, route.allowMultiple);
+          reply(200, { ok: true, action: 'poll', ...result });
+        } else if (route.action === 'media') {
+          const result = await handlers.onMedia(route.target, route.file, route.caption);
+          reply(200, { ok: true, action: 'media', ...result });
         } else {
           reply(400, { ok: false, reason: route.reason });
         }

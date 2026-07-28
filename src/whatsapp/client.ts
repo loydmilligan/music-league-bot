@@ -4,7 +4,7 @@ import type { WhatsAppMessage } from '../bot/handler.js';
 import { formatEnvelope } from './listGroups.js';
 
 const _require = createRequire(import.meta.url);
-const { Client, LocalAuth } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
+const { Client, LocalAuth, Poll, MessageMedia } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
 const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { small?: boolean }): void };
 
 interface BufferedMsg { sender: string; timeMs: number; text: string; }
@@ -99,4 +99,29 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
 
 export function makeSendDm(client: ClientType): (phone: string, text: string) => Promise<void> {
   return async (phone, text) => { await client.sendMessage(phone, text); };
+}
+
+// Experiment (2026-07-23): send a native WhatsApp poll from the bot account.
+// whatsapp-web.js 1.34 ships a Poll structure; sendMessage accepts it directly.
+export function makeSendPoll(
+  client: ClientType,
+): (chatId: string, name: string, options: string[], allowMultiple?: boolean) => Promise<void> {
+  return async (chatId, name, options, allowMultiple = false) => {
+    // messageSecret is optional at runtime (Poll.js defaults it) but the shipped
+    // .d.ts marks it required — cast to satisfy the type without inventing a secret.
+    const pollOpts = { allowMultipleAnswers: allowMultiple } as unknown as ConstructorParameters<typeof Poll>[2];
+    await client.sendMessage(chatId, new Poll(name, options, pollOpts));
+  };
+}
+
+// Experiment (2026-07-27): send an image from a file already inside the container.
+// Pairs with makeSendPoll — a numbered album-art grid posted just before a poll,
+// so the poll's text options can reference tiles by number.
+export function makeSendMedia(
+  client: ClientType,
+): (chatId: string, filePath: string, caption?: string) => Promise<void> {
+  return async (chatId, filePath, caption) => {
+    const media = MessageMedia.fromFilePath(filePath);
+    await client.sendMessage(chatId, media, caption ? { caption } : undefined);
+  };
 }
