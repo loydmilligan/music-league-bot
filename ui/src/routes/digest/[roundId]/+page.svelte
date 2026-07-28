@@ -17,6 +17,8 @@
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
+  import ChatLabSection from '$lib/digest/ChatLabSection.svelte';
+  import type { PartRecommendation } from '$lib/digest/chatSection.js';
   import ReconciliationModal from '$lib/digest/ReconciliationModal.svelte';
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
   import DataSectionActions from '$lib/digest/DataSectionActions.svelte';
@@ -671,7 +673,7 @@
 
   let statsOverride = $state<typeof data.insights>(null);
   const statsData = $derived(recap ? data.stats : statsOverride ?? (inDigest ? data.insights : null));
-  let statsExcluded = $state(false);
+  let statsExcluded = $state(data.stage !== "prepare" && data.draft.stats_state === "excluded");
   const statsAvailable = $derived(
     !!statsData && (recap
       ? Object.values(statsData).some((v) => typeof v === 'number')
@@ -694,6 +696,27 @@
 
   const nextRoundData = $derived(inDigest ? data.nextRound : null);
   // excluded flag loaded from server (persisted in draft) — falls back to false when no draft yet.
+  // Chat sub-section part toggles. Session-scoped like the other synthetic
+  // data sections; seeded from the server's recommendation so an obviously bad
+  // part starts switched off rather than needing to be noticed and cut.
+  // The 'prepare' stage of the page union carries neither field, and template
+  // narrowing does not reach property access, so read them through one accessor.
+  const chatData = $derived(
+    data.stage === 'prepare'
+      ? { section: null, recommendations: [] as PartRecommendation[] }
+      : {
+          section: data.chatSection ?? null,
+          recommendations: data.chatRecommendations ?? [],
+        },
+  );
+  let chatPartsExcluded = $state<Record<string, boolean>>(
+    Object.fromEntries(
+      (data.stage === 'prepare' ? [] : (data.chatRecommendations ?? [])).map((r) => [
+        r.part,
+        !r.include,
+      ]),
+    ),
+  );
   let nextRoundExcluded = $state(data.stage !== 'prepare' ? data.nextRoundMeta.excluded : false);
   let nextRoundLocked = $state(false);
   const nextRoundAvailable = $derived(
@@ -776,6 +799,14 @@
     }
   }
 
+  async function saveStatsInlineEdit(content: unknown) {
+    try {
+      const res = await fetch("/api/digest/" + data.roundId + "/sections/stats", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ content }) });
+      if (!res.ok) throw new Error("deterministic caption save failed (" + res.status + ")");
+      await invalidateAll();
+    } catch (err) { showError(err); }
+  }
+
   // modalTarget: 'whole' or a specific section id
   let modalTarget = $state<string | 'whole' | null>(null);
 
@@ -804,21 +835,16 @@
     if (idx === -1) return;
     const swapIdx = action === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= sorted.length) return;
-    const a = sorted[idx];
-    const b = sorted[swapIdx];
     try {
-      await Promise.all([
-        fetch(`/api/digest/${data.roundId}/sections/${a.id}`, {
+      const reordered = [...sorted];
+      [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+      await Promise.all(reordered.map((item, position) =>
+        fetch("/api/digest/" + data.roundId + "/sections/" + item.id, {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ position: b.position }),
+          body: JSON.stringify({ position }),
         }),
-        fetch(`/api/digest/${data.roundId}/sections/${b.id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ position: a.position }),
-        }),
-      ]);
+      ));
       await invalidateAll();
     } catch (err) {
       showError(err);
@@ -867,7 +893,7 @@
 
   type DataSectionKey = 'stats' | 'standings' | 'discoverability';
   let dataSectionRunState = $state<Record<DataSectionKey, 'default' | 'locked' | 'queued' | 'regenerating'>>({
-    stats: 'default',
+    stats: data.stage !== "prepare" && data.draft.stats_state === "locked" ? "locked" : "default",
     standings: 'default',
     discoverability: 'default',
   });
@@ -882,16 +908,27 @@
     if (key === 'standings') return standingsExcluded;
     return discoverabilityExcluded;
   }
+  function persistStatsState(state: "default" | "excluded" | "locked") {
+    void fetch("/api/digest/" + data.roundId + "/sections/stats", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ state }) }).catch((err) => showError(err));
+  }
+
+  function dataSectionState(key: DataSectionKey): SectionState {
+    if (dataSectionExcluded(key)) return "excluded";
+    return dataSectionRunState[key];
+  }
+
   function toggleDataExcluded(key: DataSectionKey) {
     if (key === 'stats') statsExcluded = !statsExcluded;
     else if (key === 'standings') standingsExcluded = !standingsExcluded;
     else discoverabilityExcluded = !discoverabilityExcluded;
     if (dataSectionExcluded(key)) dequeueData(key);
+    if (key === "stats") persistStatsState(dataSectionExcluded(key) ? "excluded" : dataSectionRunState.stats === "locked" ? "locked" : "default");
   }
   function toggleDataLocked(key: DataSectionKey) {
     const next = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
     dataSectionRunState[key] = next;
-    if (next === 'locked') dequeueData(key);
+    if (next === "locked") dequeueData(key);
+    if (key === "stats") persistStatsState(next);
   }
 
   async function recomputeDataSection(key: DataSectionKey) {
@@ -1127,7 +1164,10 @@
 
   // Section order for rendering — preserve DB position order.
   const renderSections = $derived(
-    [...sectionsList].sort((a, b) => a.position - b.position),
+    [
+      ...sectionsList,
+      ...(!recap && showStats ? [{ id: "stats", kind: "stats", position: data.draft.stats_position ?? 0, content: data.insights?.statsContent ?? {}, variant: "visual" }] : []),
+    ].sort((a, b) => a.position - b.position),
   );
 
   // Make sure unknown section kinds don't crash.
@@ -1427,7 +1467,7 @@
 
     <!-- By-the-numbers stat strip (sprint-17) — synthetic data-driven section,
          near the top. Reads data.stats; self-suppresses when empty. -->
-    {#if showStats && StatSlot}
+    {#if recap && showStats && StatSlot}
       <div class="dg-section-wrap" class:is-excluded={dataSectionExcluded('stats')} class:is-locked={dataSectionRunState.stats === 'locked'} class:is-queued={dataSectionRunState.stats === 'queued'} class:is-regenerating={dataSectionRunState.stats === 'regenerating'} data-section-kind="stats">
         {#if dataSectionExcluded('stats')}
           <div class="dg-excluded-banner">⊘ excluded from final · By the numbers</div>
@@ -1453,8 +1493,26 @@
     {/if}
 
     {#each renderSections as section (section.id)}
-      <DigestSection
-        kind={kindOrFallback(section.kind)}
+      {#if section.kind === "stats"}
+        <DigestSection
+          kind="stats"
+          label="By the numbers · deterministic"
+          sectionState={dataSectionState("stats")}
+          content={section.content}
+          visualData={statsData}
+          visualComponent={VISUAL_COMPONENTS.stats}
+          variant="visual"
+          sectionId="stats"
+          roundId={data.roundId}
+          onToggleExcluded={() => toggleDataExcluded("stats")}
+          onToggleLocked={() => toggleDataLocked("stats")}
+          onRegen={() => openDataRegen("stats")}
+          onEditSave={saveStatsInlineEdit}
+          onKebabAction={(action) => kebabAction("stats", action)}
+        />
+      {:else}
+        <DigestSection
+          kind={kindOrFallback(section.kind)}
         label={SECTION_LABELS[kindOrFallback(section.kind)]}
         sectionState={sectionStates[section.id] ?? 'default'}
         content={section.content}
@@ -1469,8 +1527,9 @@
         onEditSave={(content) => saveInlineEdit(section.id, content)}
         onKebabAction={(action) => kebabAction(section.id, action)}
         coverData={coverDataMap.get(section.id) ?? null}
-        onCoverPick={(picked) => handleCoverPick(section.id, picked)}
-      />
+          onCoverPick={(picked) => handleCoverPick(section.id, picked)}
+        />
+      {/if}
     {/each}
 
     <!-- Synthetic, data-driven standings section (sprint-15 standings-wire).
@@ -1551,6 +1610,18 @@
         hasOverride={nextRoundHasOverride}
         onExcludedChange={(v) => { nextRoundExcluded = v; }}
         onLockedChange={(v) => { nextRoundLocked = v; }}
+      />
+    {/if}
+
+    <!-- Chat sub-section: liner notes live in the `chat` section above; this
+         adds the deterministic chart / feature / superlatives beneath it, each
+         independently excludable. -->
+    {#if chatData.section}
+      <ChatLabSection
+        data={chatData.section}
+        recommendations={chatData.recommendations}
+        initialExcluded={chatPartsExcluded}
+        onExcludedChange={(part, v) => { chatPartsExcluded = { ...chatPartsExcluded, [part]: v }; }}
       />
     {/if}
 

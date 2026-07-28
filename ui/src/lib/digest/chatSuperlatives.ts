@@ -38,6 +38,15 @@ export interface ComputeOptions {
 	masteryCutoff?: number;
 	/** Minimum tokens required to score vocabulary richness. */
 	vocabFloor?: number;
+	/**
+	 * Minimum messages someone must post in the window before they can win a
+	 * language award. Without a floor, a person who wrote one sentence is scored
+	 * almost entirely by the shrinkage prior and can top a leaderboard on
+	 * evidence that isn't theirs.
+	 */
+	minMessages?: number;
+	/** Minimum words for the same reason. Both floors must be cleared. */
+	minWords?: number;
 	/** Token sample size for the standardized type-token ratio. */
 	vocabSample?: number;
 	/** Deterministic seed so repeated runs produce identical output. */
@@ -49,6 +58,12 @@ export interface ComputeOptions {
 export interface PersonStats {
 	name: string;
 	rookie: boolean;
+	/**
+	 * Wrote enough in this window to be ranked on word-quality awards. Everyone
+	 * still appears in volume counts — being quiet is itself a stat, and The
+	 * Lurker depends on it.
+	 */
+	eligible: boolean;
 	messages: number;
 	words: number;
 	characters: number;
@@ -358,6 +373,8 @@ export function computeSuperlatives(
 		dictionary,
 		vocabSample = 400,
 		seed = 20260727,
+		minMessages = 0,
+		minWords = 0,
 		commonWords,
 		commonCutoff = 1000,
 		masteryCutoff = 10000,
@@ -528,6 +545,7 @@ export function computeSuperlatives(
 		return {
 			name: a.person.name,
 			rookie: a.person.rookie,
+			eligible: a.messages >= minMessages && a.words >= minWords,
 			messages: a.messages,
 			words: a.words,
 			characters: a.characters,
@@ -616,14 +634,21 @@ export function computeSuperlatives(
 
 	const motormouth = by(people, (p) => p.messages, desc);
 	const lurker = by(people, (p) => p.messages, asc);
-	const vocabKing = by(people, (p) => p.vocabScore, desc);
-	const varietyKing = by(people.filter((p) => p.vocabulary !== null), (p) => p.vocabulary as number, desc);
+	// Word-quality awards rank only people who wrote enough for the number to be
+	// theirs rather than the prior's. Volume awards below stay open to everyone.
+	const ranked = people.filter((p) => p.eligible);
+	const vocabKing = by(ranked, (p) => p.vocabScore, desc);
+	const varietyKing = by(
+		ranked.filter((p) => p.vocabulary !== null),
+		(p) => p.vocabulary as number,
+		desc,
+	);
 	const perfectionist = by(people, (p) => p.edits, desc);
-	const explicit = by(people, (p) => p.swearRateAdj, desc);
-	const professor = by(people, (p) => p.gradeLevelAdj, desc);
-	const simplest = by(people, (p) => p.gradeLevelAdj, asc);
-	const wordsmith = by(people, (p) => p.rareWordsAdj, desc);
-	const linguist = by(people, (p) => p.masteryAdj, desc);
+	const explicit = by(ranked, (p) => p.swearRateAdj, desc);
+	const professor = by(ranked, (p) => p.gradeLevelAdj, desc);
+	const simplest = by(ranked, (p) => p.gradeLevelAdj, asc);
+	const wordsmith = by(ranked, (p) => p.rareWordsAdj, desc);
+	const linguist = by(ranked, (p) => p.masteryAdj, desc);
 	const nightOwl = by(people, (p) => p.lateNightShare, desc);
 	const rambler = by(people, (p) => p.longestMessage?.chars ?? 0, desc);
 	const linker = by(people, (p) => p.links, desc);
@@ -651,6 +676,12 @@ export function computeSuperlatives(
 	if (belowFloor.length) {
 		notes.push(
 			`Vocabulary richness needs ${vocabSample} words to score. Below that: ${belowFloor.join(', ')}.`,
+		);
+	}
+	const held = people.filter((p) => !p.eligible).map((p) => p.name);
+	if (held.length && (minMessages > 0 || minWords > 0)) {
+		notes.push(
+			`${held.join(', ')} wrote too little this round to be ranked on the language awards (the floor is ${minMessages} messages and ${minWords} words). They still count in the volume tallies.`,
 		);
 	}
 	const rookies = people.filter((p) => p.rookie).map((p) => p.name);

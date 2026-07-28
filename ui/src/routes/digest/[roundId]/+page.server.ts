@@ -10,7 +10,10 @@ import {
 import type { TastemakerPayload } from '$lib/db/discoverability.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
 import type Database from 'better-sqlite3';
+import { coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 import { getRoundInsights, type RoundInsights } from '$lib/db/roundInsights.js';
+import { buildChatSection, recommendParts, type ChatSectionData, type PartRecommendation } from '$lib/digest/chatSection.js';
+import { getChatSettings } from '$lib/chat/historyQuery.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -174,6 +177,9 @@ export type DigestPageData =
       discoverability: TastemakerPayload | null;
       nextRound: NextRoundInfo | null;
       nextRoundMeta: NextRoundMeta;
+      /** Deterministic chat sub-section; null when the league has no linked group. */
+      chatSection: ChatSectionData | null;
+      chatRecommendations: PartRecommendation[];
       recap: RecapContext | null;
     });
 
@@ -230,7 +236,65 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
         | 'both',
     }));
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    const insights = getRoundInsights(db, roundId);
+    let statsContent: { title?: string; body?: string } = {};
+    try { statsContent = JSON.parse(draft.stats_content_json ?? '{}'); } catch { /* use empty editable caption */ }
+    let savedVisuals: unknown = [];
+    try { savedVisuals = JSON.parse(draft.top_section_visuals ?? '[]'); } catch { /* use auto mode */ }
+    // ── chat sub-section (deterministic; reads chat_messages, not an export) ──
+    // Failing to build it must never take the whole digest down: chat is a
+    // bonus surface, and the group may not even be linked to this league.
+    let chatSection: ChatSectionData | null = null;
+    let chatRecommendations: PartRecommendation[] = [];
+    try {
+      const league = db
+        .prepare('SELECT slug FROM leagues WHERE id = ?')
+        .get(round.league_id) as { slug?: string } | undefined;
+      const groupName = league?.slug
+        ? (getChatSettings(db).leagueGroupMap[league.slug] ?? '')
+        : '';
+      if (groupName) {
+        const nums = db
+          .prepare(
+            `SELECT r.id, r.round_number, r.voting_deadline
+               FROM rounds r JOIN seasons s ON s.id = r.season_id
+              WHERE s.id = (SELECT season_id FROM rounds WHERE id = ?)
+              ORDER BY COALESCE(r.round_number, r.id) ASC`,
+          )
+          .all(roundId) as { id: number; round_number: number | null; voting_deadline: string | null }[];
+        const idx = nums.findIndex((r) => r.id === roundId);
+        const prevEnd = idx > 0 ? nums[idx - 1].voting_deadline : null;
+        const roundNumber = nums[idx]?.round_number ?? idx + 1;
+
+        chatSection = buildChatSection(db, {
+          groupName,
+          roundNumber,
+          roundEndIso: round.voting_deadline,
+          previousRoundEndIso: prevEnd,
+        });
+
+        if (chatSection) {
+          // Last round's section is what "shown recently" means for the
+          // repeat-winner check.
+          const prior =
+            idx > 0
+              ? buildChatSection(db, {
+                  groupName,
+                  roundNumber: roundNumber - 1,
+                  roundEndIso: nums[idx - 1].voting_deadline,
+                  previousRoundEndIso: idx > 1 ? nums[idx - 2].voting_deadline : null,
+                })
+              : null;
+          const hasLinerNotes = sections.some(
+            (sec) => sec.kind === 'chat' && sec.state !== 'excluded',
+          );
+          chatRecommendations = recommendParts(chatSection, prior, hasLinerNotes);
+        }
+      }
+    } catch (err) {
+      console.error('[digest] chat section failed, continuing without it:', err);
+    }
+
+    const insights = { ...getRoundInsights(db, roundId), roundId, topSectionVariant: draft.top_section_variant, topSectionVisuals: coerceTopSectionVisuals(savedVisuals), statsContent };
     const [standings, stats, discoverability, nextRoundRaw] = await Promise.all([
       fetchStandings(fetch, roundId),
       fetchJson<{ stats: DigestStats }>(fetch, `/api/digest/${roundId}/stats`).then((b) => b?.stats ?? null),
@@ -277,7 +341,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
     return {
       roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage, draft, sections,
-      standings, stats: statsOut, insights, discoverability, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
+      standings, stats: statsOut, insights, discoverability, chatSection, chatRecommendations, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
     } satisfies DigestPageData;
   }
 

@@ -36,59 +36,96 @@ export const PEOPLE: Person[] = [
 	{ name: 'Jimmy', playerId: null, mlCompetitorId: null, rookie: true },
 ];
 
-/** Raw sender string (export or chat_messages) → canonical name. */
+/**
+ * Sender string → canonical name, keyed by `normalizeSender` output, so the
+ * tilde prefix and the narrow-no-break space are already stripped.
+ */
 const ALIASES: Record<string, string> = {
-	// Export senders
 	'+1 (786) 626-6895': 'Grant Koziol',
-	'Matt Mariani': 'Matt Mariani',
-	'Jon Black': 'Jon Black',
-	'Conor Johnston': 'Conor Johnston',
-	'Dave Jensen': 'Dave Jensen',
-	'Clements Johnson': 'Clements Johnson',
-	'Shane Farkas': 'Shane Farkas',
-	'Darren Pallets': 'Darren Pallets',
-	'Dave Steingart': 'Dave Steingart',
-	Jimmy: 'Jimmy',
-
-	// chat_messages relay variants
-	'~ Grant': 'Grant Koziol',
-	'~ JB': 'Jon Black',
-	'~ Conor J': 'Conor Johnston',
-	'Conor J': 'Conor Johnston',
-	'~ Dave': 'Dave Jensen',
-	'David Jensen': 'Dave Jensen',
-	'~ Shane': 'Shane Farkas',
-	'~ Darren': 'Darren Pallets',
-	'~ Jimmy': 'Jimmy',
-	'~ Clements': 'Clements Johnson',
-	'Darren Paletz': 'Darren Pallets',
+	grant: 'Grant Koziol',
+	'matt mariani': 'Matt Mariani',
+	mashew: 'Matt Mariani',
+	'jon black': 'Jon Black',
+	'jonathan black': 'Jon Black',
+	jb: 'Jon Black',
+	'conor johnston': 'Conor Johnston',
+	'conor j': 'Conor Johnston',
+	'dave jensen': 'Dave Jensen',
+	'david jensen': 'Dave Jensen',
+	dave: 'Dave Jensen',
+	djensen37: 'Dave Jensen',
+	'clements johnson': 'Clements Johnson',
+	clements: 'Clements Johnson',
+	'shane farkas': 'Shane Farkas',
+	shane: 'Shane Farkas',
+	'darren pallets': 'Darren Pallets',
+	'darren paletz': 'Darren Pallets',
+	darren: 'Darren Pallets',
+	'dave steingart': 'Dave Steingart',
+	jimmy: 'Jimmy',
 };
+
+/**
+ * Senders that are not people: WhatsApp group-event pseudo-senders, and the
+ * group's own name. Resolving these to a person would invent chat activity.
+ */
+const NON_PARTICIPANTS = new Set([
+	'mentioned all',
+	'boarz ii men - music league',
+	'whatsapp',
+]);
 
 const BY_NAME = new Map(PEOPLE.map((p) => [p.name, p]));
 
 /**
+ * Fold a raw sender string to a comparable key.
+ *
+ * WhatsApp's relay writes the "not in your contacts" marker as a tilde followed
+ * by U+202F NARROW NO-BREAK SPACE — not a regular space. Matching literal
+ * strings therefore fails on every relay-captured row while working fine on the
+ * export, which is exactly the kind of difference that survives testing and
+ * breaks in production. Normalising kills that whole class of bug, and lets one
+ * entry cover "~ Dave", "~ David Jensen" and "Dave Jensen" alike.
+ */
+export function normalizeSender(raw: string): string {
+	return raw
+		.replace(/[   ⁠]/g, ' ')
+		.replace(/^\s*~\s*/, '')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.toLowerCase();
+}
+
+/**
  * Resolve a raw sender to a canonical person.
- * Returns null for non-participants (group-event pseudo-senders like
- * "Mentioned all" or the group's own name). Throws on an unrecognised
- * human-looking sender rather than silently minting an 11th person.
+ *
+ * Returns null for group pseudo-senders AND for anyone unrecognised. Unknown
+ * senders must not throw here: this runs on every weekly digest, and a new
+ * member joining the group is a normal event, not a reason to fail the run.
+ * Use `resolveSenderStrict` for curated one-off analysis where silence is worse.
  */
 export function resolveSender(raw: string): Person | null {
-	const key = raw.trim();
-	const NON_PARTICIPANTS = new Set([
-		'Mentioned all',
-		'Boarz II Men - Music League',
-		'WhatsApp',
-	]);
-	if (NON_PARTICIPANTS.has(key)) return null;
-
+	const key = normalizeSender(raw);
+	if (!key || NON_PARTICIPANTS.has(key)) return null;
 	const canonical = ALIASES[key];
-	if (!canonical) {
+	return canonical ? BY_NAME.get(canonical) ?? null : null;
+}
+
+/** True when the sender is neither a known person nor a known non-participant. */
+export function isUnknownSender(raw: string): boolean {
+	const key = normalizeSender(raw);
+	return !!key && !NON_PARTICIPANTS.has(key) && !ALIASES[key];
+}
+
+/** Throws on an unrecognised sender rather than silently dropping them. */
+export function resolveSenderStrict(raw: string): Person | null {
+	if (isUnknownSender(raw)) {
 		throw new Error(
-			`chatIdentity: unrecognised sender ${JSON.stringify(key)}. ` +
+			`chatIdentity: unrecognised sender ${JSON.stringify(raw)}. ` +
 				`Add it to ALIASES or NON_PARTICIPANTS — do not let it become a new person.`,
 		);
 	}
-	return BY_NAME.get(canonical) ?? null;
+	return resolveSender(raw);
 }
 
 export function personByName(name: string): Person | undefined {

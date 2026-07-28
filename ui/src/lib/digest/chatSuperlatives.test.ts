@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Message } from './chatExport';
-import { resolveSender } from './chatIdentity';
+import { resolveSender, resolveSenderStrict, isUnknownSender } from './chatIdentity';
 import {
 	computeSuperlatives,
 	standardizedTTR,
@@ -37,8 +37,29 @@ describe('chatIdentity', () => {
 		expect(resolveSender('Mentioned all')).toBeNull();
 	});
 
-	it('throws rather than silently minting an eleventh person', () => {
-		expect(() => resolveSender('Some Stranger')).toThrow(/unrecognised sender/);
+	it('matches the relay tilde prefix, which uses a narrow no-break space', () => {
+		// chat_messages stores "~ Grant", not "~ Grant". Matching literal
+		// strings worked on the export and failed on every relay row.
+		expect(resolveSender('~ Grant')?.name).toBe('Grant Koziol');
+		expect(resolveSender('~ David Jensen')?.name).toBe('Dave Jensen');
+		expect(resolveSender('~ Clements Johnson')?.name).toBe('Clements Johnson');
+		expect(resolveSender('~ JB')?.name).toBe('Jon Black');
+	});
+
+	it('resolves the Music League handles too', () => {
+		expect(resolveSender('Mashew')?.name).toBe('Matt Mariani');
+		expect(resolveSender('djensen37')?.name).toBe('Dave Jensen');
+	});
+
+	it('drops an unknown sender rather than failing the whole digest run', () => {
+		expect(resolveSender('Some Stranger')).toBeNull();
+		expect(isUnknownSender('Some Stranger')).toBe(true);
+		expect(isUnknownSender('Mentioned all')).toBe(false);
+	});
+
+	it('still fails loudly when strictness is asked for', () => {
+		expect(() => resolveSenderStrict('Some Stranger')).toThrow(/unrecognised sender/);
+		expect(resolveSenderStrict('~ Grant')?.name).toBe('Grant Koziol');
 	});
 });
 
