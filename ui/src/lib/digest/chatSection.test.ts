@@ -12,6 +12,8 @@ import {
 	recommendParts,
 	tzOffsetMinutes,
 	loadWordLists,
+	chatSectionEnabledFor,
+	setChatSectionEnabled,
 } from './chatSection';
 
 describe('chatWindowFor', () => {
@@ -76,7 +78,17 @@ describe('loadChatWindow', () => {
 		db.exec(`CREATE TABLE chat_messages (
 			id TEXT, platform TEXT, group_name TEXT, group_key TEXT,
 			sender TEXT, text TEXT, ts TEXT, msg_hash TEXT, captured_at TEXT
-		)`);
+		);
+		CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+		CREATE TABLE player_identities (
+			id INTEGER PRIMARY KEY, player_id INTEGER, league_id INTEGER,
+			identity_type TEXT, identifier TEXT
+		);
+		INSERT INTO players (id,name) VALUES (1,'Matt Mariani'),(2,'Grant Koziol'),(3,'Jimmy');
+		INSERT INTO player_identities (player_id,league_id,identity_type,identifier) VALUES
+			(1,5,'whatsapp','Matt Mariani'),
+			(2,5,'whatsapp','~ Grant'),
+			(3,5,'whatsapp','~ Jimmy');`);
 		const ins = db.prepare(
 			`INSERT INTO chat_messages (group_name, sender, text, ts) VALUES (?,?,?,?)`,
 		);
@@ -104,10 +116,10 @@ describe('loadChatWindow', () => {
 		expect(messages.some((m) => /Waiting for this message/.test(m.text))).toBe(false);
 	});
 
-	it('reports unknown senders rather than throwing', () => {
-		const { unknownSenders } = loadChatWindow(db, 'G', win);
-		expect(unknownSenders).toContain('Nobody Known');
-		expect(unknownSenders).not.toContain('Matt Mariani');
+	it('reports every sender it saw, for the roster to resolve', () => {
+		const { sendersSeen } = loadChatWindow(db, 'G', win);
+		expect(sendersSeen).toContain('Nobody Known');
+		expect(sendersSeen).toContain('Matt Mariani');
 	});
 
 	it('flags attachments as media', () => {
@@ -129,7 +141,17 @@ describe('buildChatSection', () => {
 		db.exec(`CREATE TABLE chat_messages (
 			id TEXT, platform TEXT, group_name TEXT, group_key TEXT,
 			sender TEXT, text TEXT, ts TEXT, msg_hash TEXT, captured_at TEXT
-		)`);
+		);
+		CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+		CREATE TABLE player_identities (
+			id INTEGER PRIMARY KEY, player_id INTEGER, league_id INTEGER,
+			identity_type TEXT, identifier TEXT
+		);
+		INSERT INTO players (id,name) VALUES (1,'Matt Mariani'),(2,'Grant Koziol'),(3,'Jimmy');
+		INSERT INTO player_identities (player_id,league_id,identity_type,identifier) VALUES
+			(1,5,'whatsapp','Matt Mariani'),
+			(2,5,'whatsapp','~ Grant'),
+			(3,5,'whatsapp','~ Jimmy');`);
 		const ins = db.prepare(
 			`INSERT INTO chat_messages (group_name, sender, text, ts) VALUES (?,?,?,?)`,
 		);
@@ -145,6 +167,7 @@ describe('buildChatSection', () => {
 
 	const opts = {
 		groupName: 'G',
+		leagueId: 5,
 		roundNumber: 1,
 		roundEndIso: '2026-07-24T00:00:00Z',
 		previousRoundEndIso: '2026-07-17T00:00:00Z',
@@ -176,7 +199,12 @@ describe('buildChatSection', () => {
 		quiet.exec(`CREATE TABLE chat_messages (
 			id TEXT, platform TEXT, group_name TEXT, group_key TEXT,
 			sender TEXT, text TEXT, ts TEXT, msg_hash TEXT, captured_at TEXT
-		)`);
+		);
+		CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+		CREATE TABLE player_identities (
+			id INTEGER PRIMARY KEY, player_id INTEGER, league_id INTEGER,
+			identity_type TEXT, identifier TEXT
+		);`);
 		quiet
 			.prepare(`INSERT INTO chat_messages (group_name, sender, text, ts) VALUES (?,?,?,?)`)
 			.run('G', 'Matt Mariani', 'just the one', '2026-07-20T10:00:00Z');
@@ -203,7 +231,7 @@ describe('recommendParts', () => {
 			stats: {} as never,
 			rotation: { chart: 'heatmap', feature: 'biggestWord', awards: awards.map((a) => a.key) },
 			awards: awards.map((a) => ({ ...a, value: '', caption: '' })),
-			unknownSenders: [],
+			unmappedSenders: [],
 			tooQuiet: messageCount < 40,
 		}) as never;
 
@@ -246,7 +274,17 @@ describe('timezone handling', () => {
 		db.exec(`CREATE TABLE chat_messages (
 			id TEXT, platform TEXT, group_name TEXT, group_key TEXT,
 			sender TEXT, text TEXT, ts TEXT, msg_hash TEXT, captured_at TEXT
-		)`);
+		);
+		CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);
+		CREATE TABLE player_identities (
+			id INTEGER PRIMARY KEY, player_id INTEGER, league_id INTEGER,
+			identity_type TEXT, identifier TEXT
+		);
+		INSERT INTO players (id,name) VALUES (1,'Matt Mariani'),(2,'Grant Koziol'),(3,'Jimmy');
+		INSERT INTO player_identities (player_id,league_id,identity_type,identifier) VALUES
+			(1,5,'whatsapp','Matt Mariani'),
+			(2,5,'whatsapp','~ Grant'),
+			(3,5,'whatsapp','~ Jimmy');`);
 		// 01:00 UTC in July is 18:00 the previous day in Los Angeles. Reading UTC
 		// hours straight would call this "after midnight" and hand out Night Owl.
 		db.prepare(`INSERT INTO chat_messages (group_name, sender, text, ts) VALUES (?,?,?,?)`)
@@ -285,5 +323,35 @@ describe('award rotation period', () => {
 		const seen = new Set<string>();
 		for (let n = 0; n < AWARD_POOL.length; n++) rotationFor(n).awards.forEach((a) => seen.add(a));
 		expect(seen.size).toBe(AWARD_POOL.length);
+	});
+});
+
+describe('per-league opt-in', () => {
+	let db: Database.Database;
+	beforeEach(() => {
+		db = new Database(':memory:');
+		db.exec(`CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+	});
+
+	it('defaults to Boarz on, the rest off', () => {
+		expect(chatSectionEnabledFor(db, 'boarz-ii-men')).toBe(true);
+		expect(chatSectionEnabledFor(db, 'second-best')).toBe(false);
+		expect(chatSectionEnabledFor(db, 'fam-jam')).toBe(false);
+	});
+
+	it('defaults an unknown league to off rather than on', () => {
+		expect(chatSectionEnabledFor(db, 'brand-new-league')).toBe(false);
+	});
+
+	it('remembers an explicit choice in both directions', () => {
+		setChatSectionEnabled(db, 'second-best', true);
+		setChatSectionEnabled(db, 'boarz-ii-men', false);
+		expect(chatSectionEnabledFor(db, 'second-best')).toBe(true);
+		expect(chatSectionEnabledFor(db, 'boarz-ii-men')).toBe(false);
+	});
+
+	it('falls back to defaults when the setting is corrupt', () => {
+		db.prepare(`INSERT INTO settings (key,value) VALUES ('chat_section_leagues','{not json')`).run();
+		expect(chatSectionEnabledFor(db, 'boarz-ii-men')).toBe(true);
 	});
 });

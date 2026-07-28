@@ -12,7 +12,7 @@ import { gatherSeasonData } from '$lib/db/seasonData.js';
 import type Database from 'better-sqlite3';
 import { coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 import { getRoundInsights, type RoundInsights } from '$lib/db/roundInsights.js';
-import { buildChatSection, recommendParts, type ChatSectionData, type PartRecommendation } from '$lib/digest/chatSection.js';
+import { buildChatSection, recommendParts, chatSectionEnabledFor, type ChatSectionData, type PartRecommendation } from '$lib/digest/chatSection.js';
 import { getChatSettings } from '$lib/chat/historyQuery.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
@@ -252,7 +252,15 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       const groupName = league?.slug
         ? (getChatSettings(db).leagueGroupMap[league.slug] ?? '')
         : '';
-      if (groupName) {
+      // Per-league opt-in: a league only gets the section once its roster has
+      // been linked in /settings/setup and someone has eyeballed the result.
+      const enabled = league?.slug ? chatSectionEnabledFor(db, league.slug) : false;
+      if (groupName && enabled) {
+        const platform = (db
+          .prepare('SELECT platform FROM chat_messages WHERE group_name = ? LIMIT 1')
+          .get(groupName) as { platform?: string } | undefined)?.platform === 'googlechat'
+          ? ('google-chat' as const)
+          : ('whatsapp' as const);
         const nums = db
           .prepare(
             `SELECT r.id, r.round_number, r.voting_deadline
@@ -267,6 +275,8 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
         chatSection = buildChatSection(db, {
           groupName,
+          leagueId: round.league_id,
+          platform,
           roundNumber,
           roundEndIso: round.voting_deadline,
           previousRoundEndIso: prevEnd,
@@ -279,6 +289,8 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
             idx > 0
               ? buildChatSection(db, {
                   groupName,
+                  leagueId: round.league_id,
+                  platform,
                   roundNumber: roundNumber - 1,
                   roundEndIso: nums[idx - 1].voting_deadline,
                   previousRoundEndIso: idx > 1 ? nums[idx - 2].voting_deadline : null,

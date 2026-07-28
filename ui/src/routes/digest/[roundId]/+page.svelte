@@ -224,6 +224,14 @@
   function closeGenerate() { if (!drafting) genModalOpen = false; }
 
   async function submitGenerate(params: GenerateParams) {
+    // The chat extras are computed, not generated: applying the choice locally
+    // is what makes it take effect, since there is nothing for the model to do.
+    if (params.chatParts) {
+      chatPartsExcluded = {
+        ...chatPartsExcluded,
+        ...Object.fromEntries(Object.entries(params.chatParts).map(([k, v]) => [k, !v])),
+      };
+    }
     drafting = true;
     try {
       const res = await fetch(`/api/digest/${data.roundId}/draft`, {
@@ -709,6 +717,13 @@
           recommendations: data.chatRecommendations ?? [],
         },
   );
+  /** Deterministic parts printed under the Back cover chat section. */
+  const CHAT_SUB_PARTS = [
+    { id: 'chart', label: 'The chart', hint: 'Activity heatmap or who-talked ranking, alternating each round.' },
+    { id: 'feature', label: 'Feature visual', hint: 'Biggest word, longest words, triptych, or shared tracks.' },
+    { id: 'superlatives', label: 'Superlatives', hint: 'Four rotating awards.' },
+  ];
+
   let chatPartsExcluded = $state<Record<string, boolean>>(
     Object.fromEntries(
       (data.stage === 'prepare' ? [] : (data.chatRecommendations ?? [])).map((r) => [
@@ -851,7 +866,13 @@
     }
   }
 
-  async function submitRegen(payload: { chips: string[]; instructions: string }) {
+  async function submitRegen(payload: { chips: string[]; instructions: string; subParts?: Record<string, boolean> }) {
+    if (payload.subParts && modalIsChat) {
+      chatPartsExcluded = {
+        ...chatPartsExcluded,
+        ...Object.fromEntries(Object.entries(payload.subParts).map(([k, v]) => [k, !v])),
+      };
+    }
     const target = modalTarget;
     modalTarget = null;
     if (!target || (data.stage !== 'refine' && data.stage !== 'finalize')) return;
@@ -1132,6 +1153,12 @@
       : modalTarget
         ? labelForSection(modalTarget)
         : '',
+  );
+  /** True when the open regen modal targets the Back cover chat section. */
+  const modalIsChat = $derived(
+    !!modalTarget &&
+      modalTarget !== 'whole' &&
+      renderSections.some((sec) => sec.id === modalTarget && sec.kind === 'chat'),
   );
   const modalPreview = $derived(
     modalTarget === 'whole'
@@ -1530,6 +1557,18 @@
           onCoverPick={(picked) => handleCoverPick(section.id, picked)}
         />
       {/if}
+
+      <!-- The deterministic chat block rides directly under the Back cover
+           section it belongs to, so the LLM chat notes and the computed
+           chart / feature / superlatives read (and regenerate) as one unit. -->
+      {#if section.kind === 'chat' && chatData.section}
+        <ChatLabSection
+          data={chatData.section}
+          recommendations={chatData.recommendations}
+          initialExcluded={chatPartsExcluded}
+          onExcludedChange={(part, v) => { chatPartsExcluded = { ...chatPartsExcluded, [part]: v }; }}
+        />
+      {/if}
     {/each}
 
     <!-- Synthetic, data-driven standings section (sprint-15 standings-wire).
@@ -1613,18 +1652,6 @@
       />
     {/if}
 
-    <!-- Chat sub-section: liner notes live in the `chat` section above; this
-         adds the deterministic chart / feature / superlatives beneath it, each
-         independently excludable. -->
-    {#if chatData.section}
-      <ChatLabSection
-        data={chatData.section}
-        recommendations={chatData.recommendations}
-        initialExcluded={chatPartsExcluded}
-        onExcludedChange={(part, v) => { chatPartsExcluded = { ...chatPartsExcluded, [part]: v }; }}
-      />
-    {/if}
-
     <footer class="dgC-foot">
       <div>m/l · liner notes · r-{data.roundId}</div>
       <div>generated {data.draft.generated_at}{data.draft.finalized_at ? ` · finalized ${data.draft.finalized_at}` : ''}</div>
@@ -1676,6 +1703,10 @@
     sectionPreview={modalPreview}
     initialChips={modalInitialChips}
     initialInstructions={modalInitialInstructions}
+    subParts={modalIsChat ? CHAT_SUB_PARTS : []}
+    initialSubParts={modalIsChat
+      ? Object.fromEntries(CHAT_SUB_PARTS.map((p) => [p.id, !chatPartsExcluded[p.id]]))
+      : {}}
     onCancel={closeModal}
     onSubmit={submitRegen}
     onQueue={(payload) => {

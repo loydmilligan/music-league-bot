@@ -5,8 +5,20 @@
     initialChips?: string[];
     initialInstructions?: string;
     onCancel: () => void;
-    onSubmit: (payload: { chips: string[]; instructions: string }) => void;
-    onQueue: (payload: { chips: string[]; instructions: string }) => void;
+    onSubmit: (payload: RegenPayload) => void;
+    onQueue: (payload: RegenPayload) => void;
+    /**
+     * Deterministic parts printed under this section. Only the Back cover chat
+     * section has them; passing them here keeps one regen block in charge of
+     * everything that prints with the section, rather than a separate control.
+     */
+    subParts?: { id: string; label: string; hint: string }[];
+    initialSubParts?: Record<string, boolean>;
+  };
+  export type RegenPayload = {
+    chips: string[];
+    instructions: string;
+    subParts?: Record<string, boolean>;
   };
   let {
     sectionLabel,
@@ -16,7 +28,11 @@
     onCancel,
     onSubmit,
     onQueue,
+    subParts = [],
+    initialSubParts = {},
   }: Props = $props();
+
+  let parts = $state<Record<string, boolean>>({ ...initialSubParts });
 
   const REGEN_CHIPS = [
     'be funnier',
@@ -44,10 +60,10 @@
   }
 
   function submit() {
-    onSubmit({ chips: activeChips, instructions });
+    onSubmit({ chips: activeChips, instructions, subParts: $state.snapshot(parts) });
   }
   function queue() {
-    onQueue({ chips: activeChips, instructions });
+    onQueue({ chips: activeChips, instructions, subParts: $state.snapshot(parts) });
   }
 </script>
 
@@ -93,6 +109,27 @@
       <p class="dg-modal-hint">
         The full source data (votes, comments, chat) is passed alongside your instructions. Cached prior versions of this section stay available.
       </p>
+
+      {#if subParts.length}
+        <span class="dg-modal-eyebrow">Also prints with this section · computed</span>
+        <div class="dg-regen-subparts">
+          {#each subParts as part (part.id)}
+            <label class="dg-regen-subcheck">
+              <input
+                type="checkbox"
+                checked={parts[part.id] !== false}
+                onchange={(e) => (parts = { ...parts, [part.id]: e.currentTarget.checked })}
+              />
+              <span>{part.label}</span>
+            </label>
+            <p class="dg-modal-hint dg-regen-subhint">{part.hint}</p>
+          {/each}
+        </div>
+        <p class="dg-modal-hint">
+          These are computed from the chat, not written by the model — regenerating won't change
+          them, but this controls whether they print.
+        </p>
+      {/if}
     </div>
     <footer class="dg-modal-foot">
       <span class="cost">~ 280 tokens · ~ 4¢ · cached after this run</span>

@@ -2,8 +2,8 @@
   ChatLabSection — the digest's chat sub-section.
 
   Batches four independently excludable parts under one header:
-    • Liner Notes   — the LLM chat summaries (rendered by the existing `chat`
-                      section; this component only owns its toggle)
+    • Chat notes    — the LLM chat summaries, rendered by the existing
+                      'Back cover · chat notes' section; this owns only its toggle
     • The chart     — mixing board OR activity heatmap, alternating by round
     • Feature       — one visual from the rotating pool
     • Superlatives  — a few awards from the rotating pool
@@ -35,7 +35,7 @@
   const isExport = $derived(page.url?.searchParams?.get('export') === '1');
 
   const PARTS: { id: PartId; label: string }[] = [
-    { id: 'linerNotes', label: 'Liner Notes' },
+    { id: 'linerNotes', label: 'Chat notes' },
     { id: 'chart', label: 'The chart' },
     { id: 'feature', label: 'Feature' },
     { id: 'superlatives', label: 'Superlatives' },
@@ -99,7 +99,7 @@
   <section class="cl" class:cl-quiet={data.tooQuiet}>
     <header class="cl-head">
       <div>
-        <h2>The Chat</h2>
+        <h2>Back cover · chat</h2>
         <p class="cl-sub">
           {data.messageCount.toLocaleString()} messages · {data.participantCount} people ·
           {fmtWindow(data.window.fromIso)}–{fmtWindow(data.window.toIso)}
@@ -252,10 +252,11 @@
       </div>
     {/if}
 
-    {#if data.unknownSenders.length && !isExport}
+    {#if data.unmappedSenders.length && !isExport}
       <p class="cl-warn">
-        Unmapped sender{data.unknownSenders.length === 1 ? '' : 's'}:
-        {data.unknownSenders.join(', ')} — add to chatIdentity so they are counted.
+        {data.unmappedSenders.length} sender{data.unmappedSenders.length === 1 ? '' : 's'} not linked
+        to a player: {data.unmappedSenders.join(', ')}. They are still counted, under those names —
+        link them in <a href="/settings/setup">Settings → Setup</a> to merge them with their player.
       </p>
     {/if}
   </section>

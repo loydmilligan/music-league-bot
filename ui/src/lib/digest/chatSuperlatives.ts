@@ -6,7 +6,15 @@
  */
 
 import type { Message } from './chatExport';
-import { resolveSender, type Person } from './chatIdentity';
+import { resolveSender as defaultResolve, type Person } from './chatIdentity';
+
+/** Minimal shape the compute needs from whatever resolves senders to people. */
+export interface ResolvedPerson {
+	name: string;
+	/** Joined mid-season / never voted — excluded from vote-linked metrics. */
+	rookie?: boolean;
+}
+export type SenderResolver = (rawSender: string) => ResolvedPerson | null;
 
 // ── inputs ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +44,12 @@ export interface ComputeOptions {
 	 * them sophisticated.
 	 */
 	masteryCutoff?: number;
+	/**
+	 * How raw sender strings become people. Defaults to the hardcoded Boarz
+	 * roster used by the standalone export page; the digest passes a
+	 * league-scoped roster built from player_identities so leagues stay isolated.
+	 */
+	resolve?: SenderResolver;
 	/** Minimum tokens required to score vocabulary richness. */
 	vocabFloor?: number;
 	/**
@@ -375,6 +389,7 @@ export function computeSuperlatives(
 		seed = 20260727,
 		minMessages = 0,
 		minWords = 0,
+		resolve = defaultResolve,
 		commonWords,
 		commonCutoff = 1000,
 		masteryCutoff = 10000,
@@ -385,7 +400,7 @@ export function computeSuperlatives(
 	const masterySet = commonWords ? new Set(commonWords.slice(0, masteryCutoff)) : null;
 
 	interface Acc {
-		person: Person;
+		person: ResolvedPerson;
 		messages: number;
 		words: number;
 		characters: number;
@@ -408,7 +423,7 @@ export function computeSuperlatives(
 	}
 
 	const acc = new Map<string, Acc>();
-	const ensure = (p: Person): Acc => {
+	const ensure = (p: ResolvedPerson): Acc => {
 		let a = acc.get(p.name);
 		if (!a) {
 			a = {
@@ -431,7 +446,7 @@ export function computeSuperlatives(
 	let counted = 0;
 
 	for (const m of sorted) {
-		const person = resolveSender(m.sender);
+		const person = resolve(m.sender);
 		if (!person) continue;
 		const a = ensure(person);
 		counted++;
@@ -544,7 +559,7 @@ export function computeSuperlatives(
 
 		return {
 			name: a.person.name,
-			rookie: a.person.rookie,
+			rookie: !!a.person.rookie,
 			eligible: a.messages >= minMessages && a.words >= minWords,
 			messages: a.messages,
 			words: a.words,

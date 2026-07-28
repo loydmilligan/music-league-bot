@@ -1,10 +1,16 @@
 /**
- * chatIdentity — one canonical person per human, across two messy sources.
+ * chatIdentity — the Boarz roster, for the standalone export-based page ONLY.
  *
- * The WhatsApp export names people from Matt's contact list (10 clean names).
- * chat_messages holds 21 sender strings for those same 10 people, because the
- * Android relay sees WhatsApp's own display strings ("~ Grant" for anyone not
- * in the relay phone's contacts). Canonical spelling follows the export.
+ * SCOPE: this is a hardcoded, single-league roster. It is correct for the
+ * Boarz Tape page, which parses a WhatsApp export whose sender names come from
+ * a contact list and are already clean.
+ *
+ * Do NOT use it for the digest. It has no league scoping, so running it against
+ * another league resolves only the people who happen to also be in Boarz —
+ * Second Best resolved just Matt and Jon and lost 116 of 167 messages. It also
+ * guessed "~ Dave" was Dave Jensen where player_identities has Dave Steingart.
+ * The digest builds a league-scoped roster from the database instead; see
+ * chatRoster.ts.
  */
 
 export interface Person {

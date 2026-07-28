@@ -10,9 +10,10 @@
 
 import type Database from 'better-sqlite3';
 import type { Message } from './chatExport';
-import { isUnknownSender } from './chatIdentity';
+import { buildChatRoster, type ChatRoster } from './chatRoster';
 import { computeSuperlatives, type ChatSuperlatives, type ComputeOptions } from './chatSuperlatives';
 import { extractLinks, type SharedLink } from './chatLinks';
+import { COMMON_WORDS_RAW, LONG_WORDS_RAW } from './wordLists';
 
 // ── window ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +63,8 @@ const MEDIA_RE = /\(file attached\)$/;
 
 export interface LoadedChat {
 	messages: Message[];
-	/** Sender strings that matched nobody — surfaced so they can be mapped. */
-	unknownSenders: string[];
+	/** Every distinct sender in the window — the roster is built from these. */
+	sendersSeen: string[];
 	skippedPlaceholders: number;
 }
 
@@ -111,7 +112,7 @@ export function loadChatWindow(
 		.all(groupName, window.fromIso, window.toIso) as { sender: string; text: string; ts: string }[];
 
 	const messages: Message[] = [];
-	const unknown = new Set<string>();
+	const seen = new Set<string>();
 	let skipped = 0;
 
 	for (const r of rows) {
@@ -120,7 +121,7 @@ export function loadChatWindow(
 			skipped++;
 			continue;
 		}
-		if (isUnknownSender(r.sender)) unknown.add(r.sender);
+		seen.add(r.sender);
 		const utc = Date.parse(r.ts);
 		if (Number.isNaN(utc)) continue;
 		// Shift to local wall clock so getUTCHours()/getUTCDay() downstream read as
@@ -137,7 +138,7 @@ export function loadChatWindow(
 		});
 	}
 
-	return { messages, unknownSenders: [...unknown], skippedPlaceholders: skipped };
+	return { messages, sendersSeen: [...seen], skippedPlaceholders: skipped };
 }
 
 // ── rotation ──────────────────────────────────────────────────────────────────
@@ -211,7 +212,12 @@ export interface ChatSectionData {
 	rotation: Rotation;
 	/** Awards actually resolvable this week, in rotation order. */
 	awards: { key: string; person: string; value: string; caption: string }[];
-	unknownSenders: string[];
+	/**
+	 * Senders with no player_identities row for this league. They still appear in
+	 * the stats under their display name; this list drives the "link these in
+	 * /settings/setup" prompt.
+	 */
+	unmappedSenders: string[];
 	/**
 	 * Music links shared in the window. Titles are not resolved here — that needs
 	 * network calls, which have no business in a page loader.
@@ -227,33 +233,79 @@ export const MIN_MESSAGES_FOR_SECTION = 40;
 // ── word lists ────────────────────────────────────────────────────────────────
 
 /**
- * Frequency list and dictionary, bundled rather than read from the system.
+ * Frequency list and dictionary, imported as modules rather than read from disk.
  *
- * The standalone page used /usr/share/dict/words, which does not exist in the
- * production container — the language awards would have silently scored zero
- * for everyone. Shipping the lists makes the digest reproducible anywhere.
- * The dictionary is trimmed to 7+ letters because every word it gates on
- * (3+ syllables) is longer than that.
+ * Two traps here, both hit for real. /usr/share/dict/words does not exist in
+ * the production container, and reading bundled .txt files with fs does not
+ * work either, because SvelteKit ships JS and leaves .txt behind — the read
+ * threw and the section silently disappeared. Importing them as source is the
+ * only form that survives the build.
  */
 let wordLists: { dictionary: Set<string>; commonWords: string[] } | null = null;
 
 export function loadWordLists(): { dictionary: Set<string>; commonWords: string[] } {
 	if (wordLists) return wordLists;
-	// Lazy require keeps this out of any browser bundle.
-	const fs = require('node:fs') as typeof import('node:fs');
-	const path = require('node:path') as typeof import('node:path');
-	const here = path.dirname(new URL(import.meta.url).pathname);
-	const read = (f: string) =>
-		fs
-			.readFileSync(path.join(here, f), 'utf8')
-			.split('\n')
-			.map((w) => w.trim())
-			.filter(Boolean);
+	const split = (raw: string) => raw.split('\n').map((w) => w.trim()).filter(Boolean);
 	wordLists = {
-		dictionary: new Set(read('long-words.txt')),
-		commonWords: read('common-words.txt'),
+		dictionary: new Set(split(LONG_WORDS_RAW)),
+		commonWords: split(COMMON_WORDS_RAW),
 	};
 	return wordLists;
+}
+
+// ── per-league opt-in ─────────────────────────────────────────────────────────
+
+/**
+ * Which leagues currently publish the chat section.
+ *
+ * Off by default for everyone except Boarz: the section names and ranks real
+ * people, so a league gets it only after its roster is linked in
+ * /settings/setup and someone has looked at the output. Second Best has seven
+ * unlinked senders today, Fam Jam is Google Chat and unverified.
+ */
+export const CHAT_SECTION_DEFAULTS: Record<string, boolean> = {
+	'boarz-ii-men': true,
+	'second-best': false,
+	'fam-jam': false,
+	'hip-jammers': false,
+	'nostalgia-pit': false,
+};
+
+const SETTINGS_KEY = 'chat_section_leagues';
+
+export function chatSectionEnabledFor(db: Database.Database, leagueSlug: string): boolean {
+	try {
+		const row = db
+			.prepare('SELECT value FROM settings WHERE key = ?')
+			.get(SETTINGS_KEY) as { value?: string } | undefined;
+		const saved = row?.value ? (JSON.parse(row.value) as Record<string, boolean>) : {};
+		if (leagueSlug in saved) return !!saved[leagueSlug];
+	} catch {
+		// A malformed or missing setting falls back to the defaults rather than
+		// failing the digest load.
+	}
+	return CHAT_SECTION_DEFAULTS[leagueSlug] ?? false;
+}
+
+export function setChatSectionEnabled(
+	db: Database.Database,
+	leagueSlug: string,
+	enabled: boolean,
+): void {
+	const row = db
+		.prepare('SELECT value FROM settings WHERE key = ?')
+		.get(SETTINGS_KEY) as { value?: string } | undefined;
+	let saved: Record<string, boolean> = {};
+	try {
+		saved = row?.value ? JSON.parse(row.value) : {};
+	} catch {
+		saved = {};
+	}
+	saved[leagueSlug] = enabled;
+	db.prepare(
+		`INSERT INTO settings (key, value) VALUES (?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+	).run(SETTINGS_KEY, JSON.stringify(saved));
 }
 
 // ── recommendations ───────────────────────────────────────────────────────────
@@ -327,6 +379,9 @@ export function buildChatSection(
 	db: Database.Database,
 	opts: {
 		groupName: string;
+		/** Scopes the roster, so one league never resolves another's people. */
+		leagueId: number;
+		platform?: 'whatsapp' | 'google-chat';
 		roundNumber: number;
 		roundEndIso: string | null;
 		previousRoundEndIso: string | null;
@@ -337,7 +392,8 @@ export function buildChatSection(
 	const window = chatWindowFor(opts.roundEndIso, opts.previousRoundEndIso);
 	if (!window) return null;
 
-	const { messages, unknownSenders } = loadChatWindow(db, opts.groupName, window);
+	const { messages, sendersSeen } = loadChatWindow(db, opts.groupName, window);
+	const roster = buildChatRoster(db, opts.leagueId, sendersSeen, opts.platform ?? 'whatsapp');
 
 	const lists = loadWordLists();
 	const stats = computeSuperlatives(messages, [], {
@@ -349,6 +405,7 @@ export function buildChatSection(
 		dictionary: lists.dictionary,
 		commonWords: lists.commonWords,
 		commonCutoff: 1000,
+		resolve: (sender) => roster.resolve(sender),
 		...opts.compute,
 	});
 
@@ -370,7 +427,7 @@ export function buildChatSection(
 		stats,
 		rotation,
 		awards,
-		unknownSenders,
+		unmappedSenders: roster.unmapped,
 		links: extractLinks(messages),
 		tooQuiet: messages.length < MIN_MESSAGES_FOR_SECTION,
 	};

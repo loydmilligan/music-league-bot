@@ -48,6 +48,8 @@
     sonicSignatures: DataGenOpt;
     recap: RecapGenOpt;
     regenAvatars: boolean;
+    /** Which deterministic parts print under the Back cover chat section. */
+    chatParts: Record<string, boolean>;
   };
 
   // Availability state for a DATA section's indicator. 'ready' = the underlying
@@ -92,6 +94,18 @@
       context: '',
     })),
   );
+  /**
+   * Deterministic parts that print under the Back cover chat section. They are
+   * computed from chat_messages rather than generated, so they are choices
+   * about what to PRINT, not what to ask the model for.
+   */
+  const CHAT_PARTS = [
+    { id: 'chart', label: 'The chart', hint: 'Alternates each round between the activity heatmap and a who-talked ranking.' },
+    { id: 'feature', label: 'Feature visual', hint: 'Rotates: biggest word, longest words, message triptych, shared tracks.' },
+    { id: 'superlatives', label: 'Superlatives', hint: 'Four awards, rotating through a pool of twelve.' },
+  ] as const;
+  let chatParts = $state<Record<string, boolean>>({ chart: true, feature: true, superlatives: true });
+
   let pastedChat = $state('');
   let expanded = $state<Record<string, boolean>>({});
 
@@ -153,6 +167,7 @@
       sonicSignatures: { include: sonicSignaturesInclude },
       recap: { enabled: recapEnabled, final: recapFinal },
       regenAvatars,
+      chatParts: $state.snapshot(chatParts),
     });
   }
 
@@ -289,6 +304,25 @@
                     placeholder="Paste the round's WhatsApp chat here. Used as this section's source (overrides the flaky auto-capture)."
                     disabled={!s.enabled}
                   ></textarea>
+
+                  <!-- Deterministic chat parts. Subsidiaries of this section, so
+                       one block governs everything that prints on the back cover. -->
+                  <span class="dg-gen-label">back cover extras · computed, not LLM</span>
+                  <div class="dg-gen-subparts">
+                    {#each CHAT_PARTS as part (part.id)}
+                      <label class="dg-gen-check dg-gen-subcheck">
+                        <input
+                          type="checkbox"
+                          checked={chatParts[part.id]}
+                          disabled={!s.enabled}
+                          onchange={(e) => (chatParts = { ...chatParts, [part.id]: e.currentTarget.checked })}
+                        />
+                        <span class="dg-gen-name">{part.label}</span>
+                        <span class="dg-gen-databadge">data</span>
+                      </label>
+                      <p class="dg-gen-note dg-gen-subnote">{part.hint}</p>
+                    {/each}
+                  </div>
                 {/if}
               </div>
             {/if}
@@ -648,4 +682,11 @@
   .dg-vpk-icon {
     font: 700 13px/1 var(--font-mono);
   }
+  .dg-gen-subparts {
+    margin: 6px 0 0;
+    padding: 8px 0 2px 12px;
+    border-left: 1px solid var(--line, #283039);
+  }
+  .dg-gen-subcheck { margin: 0; }
+  .dg-gen-subnote { margin: 2px 0 8px 22px; opacity: 0.8; }
 </style>
