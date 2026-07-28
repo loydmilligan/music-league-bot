@@ -13,7 +13,14 @@ export interface WordCloudWord {
 export interface WordCloudOptions {
   limit?: number;
   minLength?: number;
+  /** Replaces the built-in stopword list entirely. */
   stopwords?: ReadonlySet<string> | readonly string[];
+  /**
+   * Added on top of the effective stopword list rather than replacing it.
+   * Use this for per-round noise (song titles, artist names, handles) so the
+   * built-in articles/connectives stay filtered.
+   */
+  extraStopwords?: ReadonlySet<string> | readonly string[];
 }
 
 const DEFAULT_STOPWORDS = new Set([
@@ -107,6 +114,182 @@ const DEFAULT_STOPWORDS = new Set([
   'would',
   'you',
   'your',
+  // Pronouns / possessives the original list missed.
+  'hers',
+  'herself',
+  'himself',
+  'mine',
+  'ours',
+  'own',
+  'she',
+  'themselves',
+  'us',
+  'yours',
+  'yourself',
+  // Auxiliaries and modals.
+  'aint',
+  "ain't",
+  'cannot',
+  'cant',
+  "can't",
+  'couldnt',
+  "couldn't",
+  'didnt',
+  "didn't",
+  'doesnt',
+  "doesn't",
+  'doing',
+  'done',
+  'dont',
+  "don't",
+  'hadnt',
+  "hadn't",
+  'hasnt',
+  "hasn't",
+  'havent',
+  "haven't",
+  'hed',
+  "he'd",
+  'hes',
+  "he's",
+  'isnt',
+  "isn't",
+  'itll',
+  "it's",
+  'ive',
+  "i'm",
+  "i've",
+  "i'll",
+  "i'd",
+  'may',
+  'might',
+  'must',
+  'shall',
+  'shes',
+  "she's",
+  'should',
+  'shouldnt',
+  "shouldn't",
+  'thats',
+  "that's",
+  'theres',
+  "there's",
+  'theyre',
+  "they're",
+  'wasnt',
+  "wasn't",
+  'werent',
+  "weren't",
+  'weve',
+  "we've",
+  "we're",
+  'wont',
+  "won't",
+  'wouldnt',
+  "wouldn't",
+  'youd',
+  "you'd",
+  'youll',
+  "you'll",
+  'youre',
+  "you're",
+  'youve',
+  "you've",
+  // Conjunctions, prepositions, determiners.
+  'above',
+  'across',
+  'against',
+  'along',
+  'among',
+  'another',
+  'around',
+  'back',
+  'below',
+  'besides',
+  'between',
+  'both',
+  'down',
+  'during',
+  'each',
+  'either',
+  'else',
+  'enough',
+  'every',
+  'few',
+  'however',
+  'instead',
+  'less',
+  'many',
+  'much',
+  'near',
+  'neither',
+  'off',
+  'once',
+  'only',
+  'onto',
+  'other',
+  'others',
+  'over',
+  'per',
+  'since',
+  'though',
+  'through',
+  'together',
+  'toward',
+  'towards',
+  'under',
+  'until',
+  'upon',
+  'while',
+  'whom',
+  'whose',
+  'with',
+  'within',
+  'without',
+  'yet',
+  // Low-signal filler that dominates chat and vote comments.
+  'actually',
+  'almost',
+  'already',
+  'always',
+  'anything',
+  'basically',
+  'definitely',
+  'even',
+  'ever',
+  'everything',
+  'going',
+  'gonna',
+  'gotta',
+  'guess',
+  'kinda',
+  'kind',
+  'lot',
+  'maybe',
+  'much',
+  'never',
+  'nothing',
+  'now',
+  'pretty',
+  'probably',
+  'quite',
+  'same',
+  'seem',
+  'seems',
+  'something',
+  'sort',
+  'still',
+  'sure',
+  'thing',
+  'things',
+  'think',
+  'those',
+  'thought',
+  'want',
+  'way',
+  'well',
+  'yeah',
+  'yes',
 ]);
 
 const URL_OR_EMAIL = /(?:https?:\/\/|www\.|\S+@\S+\.)\S+/giu;
@@ -124,9 +307,19 @@ function normalizeWord(word: string): string {
 
 function asStopwordSet(stopwords: WordCloudOptions['stopwords']): ReadonlySet<string> {
   if (!stopwords) return DEFAULT_STOPWORDS;
-  return stopwords instanceof Set
-    ? stopwords
-    : new Set(stopwords.map((word) => normalizeWord(word)));
+  return Array.isArray(stopwords)
+    ? new Set(stopwords.map((word) => normalizeWord(word)))
+    : (stopwords as ReadonlySet<string>);
+}
+
+function withExtras(
+  base: ReadonlySet<string>,
+  extras: WordCloudOptions['extraStopwords'],
+): ReadonlySet<string> {
+  if (!extras) return base;
+  const merged = new Set(base);
+  for (const word of extras) merged.add(normalizeWord(word));
+  return merged;
 }
 
 function sourceText(entry: string | WordCloudText): string {
@@ -147,7 +340,7 @@ export function getWordFrequencies(
   const minLength = options.minLength ?? 3;
   if (limit <= 0 || minLength <= 0) return [];
 
-  const stopwords = asStopwordSet(options.stopwords);
+  const stopwords = withExtras(asStopwordSet(options.stopwords), options.extraStopwords);
   const counts = new Map<string, number>();
 
   for (const entry of entries) {

@@ -273,3 +273,17 @@ describe('word lists', () => {
 		expect(dictionary.has('sacrilegious')).toBe(true);
 	});
 });
+
+describe('award rotation period', () => {
+	it('does not repeat the whole strip after only a few rounds', () => {
+		const first = rotationFor(0).awards.join('|');
+		const repeats = [1, 2, 3, 4, 5].filter((n) => rotationFor(n).awards.join('|') === first);
+		expect(repeats).toEqual([]);
+	});
+
+	it('eventually cycles, and covers the pool along the way', () => {
+		const seen = new Set<string>();
+		for (let n = 0; n < AWARD_POOL.length; n++) rotationFor(n).awards.forEach((a) => seen.add(a));
+		expect(seen.size).toBe(AWARD_POOL.length);
+	});
+});

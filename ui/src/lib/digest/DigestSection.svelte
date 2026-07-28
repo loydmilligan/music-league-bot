@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { SectionKind } from './llm.js';
   import VariantPlaceholder from './VariantPlaceholder.svelte';
   import SectionInlineEditor from './SectionInlineEditor.svelte';
   import {
@@ -40,7 +39,7 @@
   };
 
   type Props = {
-    kind: SectionKind;
+    kind: import('./variants.js').DigestKind;
     label: string;
     sectionState: SectionState;
     content: unknown;

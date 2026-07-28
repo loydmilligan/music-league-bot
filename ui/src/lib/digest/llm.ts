@@ -5,6 +5,7 @@ import { buildArchiveContext } from './archiveContext.js';
 import { modelFor, modelForSection } from './modelFor.js';
 import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
 import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
+import type { TopSectionVariant, TopSectionVisual } from './topSectionVariants.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -24,6 +25,11 @@ export interface DigestDraftRow {
   /** sprint-21: generated in season-recap mode (1) and FINAL (1) vs mid (0). */
   recap_enabled: number;
   recap_final: number;
+  top_section_variant: TopSectionVariant;
+  top_section_visuals: string;
+  stats_position: number;
+  stats_state: 'default' | 'excluded' | 'locked';
+  stats_content_json: string;
   /** sprint-39: groups all LLM calls for one generation (draft + its regens). */
   run_id: string | null;
 }
@@ -90,6 +96,8 @@ export interface GenParams {
   sections?: GenSectionParam[];
   pastedChat?: string;
   recap?: RecapParams;
+  topSectionVariant?: TopSectionVariant;
+  topSectionVisuals?: TopSectionVisual[];
 }
 
 export function gatherRoundData(
@@ -1078,9 +1086,9 @@ export function writeDraft(
   const tx = db.transaction(() => {
     const archiveContext = JSON.stringify(buildArchiveContext(genParams, output));
     db.prepare(
-      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final, archive_context, run_id)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal, archiveContext, output.runId ?? null);
+      `INSERT INTO digest_drafts (id, round_id, generated_at, rel_context, prep_checks, whole_regen_count, llm_cost_usd, recap_enabled, recap_final, top_section_variant, top_section_visuals, stats_position, stats_state, stats_content_json, archive_context, run_id)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 0, 'default', '{}', ?, ?)`,
+    ).run(draftId, roundId, now, data.relContext, JSON.stringify(prepChecks ?? {}), output.costUsd ?? 0, recapEnabled, recapFinal, genParams?.topSectionVariant ?? 'auto', JSON.stringify(genParams?.topSectionVisuals ?? []), archiveContext, output.runId ?? null);
 
     // Only persist enabled + content-available sections; position is dense.
     // Recap mode: chat depends on pasted text only (no season chat-mentions).

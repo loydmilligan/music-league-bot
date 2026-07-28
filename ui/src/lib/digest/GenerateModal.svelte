@@ -8,6 +8,7 @@
   // honors `enabled`, injects style/context, respects variant, and uses
   // pastedChat as the chat section's source).
   import { SECTION_KINDS, type SectionKind } from './llm.js';
+  import { TOP_SECTION_VARIANTS, TOP_SECTION_VISUALS, TOP_SECTION_VARIANT_META, type TopSectionVariant, type TopSectionVisual } from './topSectionVariants.js';
   import {
     VISUAL_CAPABLE,
     VARIANT_ICON,
@@ -40,6 +41,8 @@
     pastedChat: string;
     standings: StandingsGenOpt;
     stats: DataGenOpt;
+    topSectionVariant: TopSectionVariant;
+    topSectionVisuals: TopSectionVisual[];
     nextRound: DataGenOpt;
     tastemaker: DataGenOpt;
     sonicSignatures: DataGenOpt;
@@ -102,6 +105,13 @@
   // The other synthetic DATA sections — include toggles, default ON. Pure data, so
   // no recompute opt: regen always recomputes them from source on load.
   let statsInclude = $state(true);
+  let topSectionVariant = $state<TopSectionVariant>("auto");
+  let topSectionVisuals = $state<TopSectionVisual[]>([]);
+  function toggleTopSectionVisual(visual: TopSectionVisual) {
+    topSectionVisuals = topSectionVisuals.includes(visual)
+      ? topSectionVisuals.filter((v) => v !== visual)
+      : [...topSectionVisuals, visual];
+  }
   let nextRoundInclude = $state(true);
   let tastemakerInclude = $state(true);
   // Sonic Signatures — embed each player's taste waveform in their digest card. Opt-in.
@@ -136,6 +146,8 @@
       pastedChat,
       standings: { include: standingsInclude, recompute: standingsRecompute },
       stats: { include: statsInclude },
+      topSectionVariant,
+      topSectionVisuals,
       nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
       sonicSignatures: { include: sonicSignaturesInclude },
@@ -299,6 +311,21 @@
           <p class="dg-gen-note">
             Vote/submission tallies for the round. Pure data — regenerate recomputes it; no LLM prompt.
           </p>
+          <div class="dg-top-variant">
+            <span class="dg-gen-label">deterministic visuals · no model</span>
+            <select bind:value={topSectionVariant} disabled={!statsInclude} aria-label="Deterministic digest visual mode">
+              {#each TOP_SECTION_VARIANTS as variant (variant)}
+                <option value={variant}>{TOP_SECTION_VARIANT_META[variant].label}</option>
+              {/each}
+            </select>
+            <span class="dg-top-variant-hint">{TOP_SECTION_VARIANT_META[topSectionVariant].description}</span>
+            <div class="dg-top-visuals" aria-label="Include specific deterministic visuals">
+              {#each TOP_SECTION_VISUALS as visual (visual)}
+                <label><input type="checkbox" checked={topSectionVisuals.includes(visual)} onchange={() => toggleTopSectionVisual(visual)} disabled={!statsInclude || topSectionVariant !== "auto"} /> {TOP_SECTION_VARIANT_META[visual].label}</label>
+              {/each}
+            </div>
+            <small class="dg-top-variant-hint">Auto selects one visual unless specific visuals are checked. This section is deterministic and never uses the configured AI model.</small>
+          </div>
         </div>
 
         <!-- Standings: a DATA section (computed from votes, not LLM prose). -->

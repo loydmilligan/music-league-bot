@@ -12,6 +12,7 @@ import type Database from 'better-sqlite3';
 import type { Message } from './chatExport';
 import { isUnknownSender } from './chatIdentity';
 import { computeSuperlatives, type ChatSuperlatives, type ComputeOptions } from './chatSuperlatives';
+import { extractLinks, type SharedLink } from './chatLinks';
 
 // ── window ────────────────────────────────────────────────────────────────────
 
@@ -184,9 +185,13 @@ export interface Rotation {
  */
 export function rotationFor(roundNumber: number, awardCount = 4): Rotation {
 	const n = Math.max(0, Math.floor(roundNumber));
+	// Stride coprime with the pool size, so the strip takes AWARD_POOL.length
+	// rounds to repeat exactly rather than AWARD_POOL.length / awardCount. With
+	// a stride of 4 into a 12-award pool, round 3 was already a rerun of round 0.
+	const stride = 5;
 	const awards: string[] = [];
 	for (let i = 0; i < awardCount; i++) {
-		awards.push(AWARD_POOL[(n * awardCount + i) % AWARD_POOL.length]);
+		awards.push(AWARD_POOL[(n * stride + i) % AWARD_POOL.length]);
 	}
 	return {
 		chart: CHARTS[n % CHARTS.length],
@@ -207,6 +212,11 @@ export interface ChatSectionData {
 	/** Awards actually resolvable this week, in rotation order. */
 	awards: { key: string; person: string; value: string; caption: string }[];
 	unknownSenders: string[];
+	/**
+	 * Music links shared in the window. Titles are not resolved here — that needs
+	 * network calls, which have no business in a page loader.
+	 */
+	links: SharedLink[];
 	/** Too little chat in the window to be worth showing at all. */
 	tooQuiet: boolean;
 }
@@ -361,6 +371,7 @@ export function buildChatSection(
 		rotation,
 		awards,
 		unknownSenders,
+		links: extractLinks(messages),
 		tooQuiet: messages.length < MIN_MESSAGES_FOR_SECTION,
 	};
 }

@@ -83,6 +83,14 @@
     return dupe && parts[1] ? `${parts[0]} ${parts[1][0]}.` : parts[0];
   };
 
+  const bigWords = $derived(data?.stats?.biggestWords ?? []);
+  const maxWords = $derived(Math.max(1, ...people.map((p: any) => p.words)));
+  const maxChars = $derived(Math.max(1, ...people.map((p: any) => p.characters)));
+  const trim = (t: string, n: number) => {
+    const clean = (t ?? '').replace(/\s+/g, ' ').trim();
+    return clean.length > n ? clean.slice(0, n) + '…' : clean;
+  };
+
   const fmtWindow = (iso: string) =>
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 </script>
@@ -159,6 +167,68 @@
                   <span class="cl-bar-fill" style="width: {(p.messages / maxMessages) * 100}%"></span>
                 </span>
                 <span class="cl-bar-val">{p.messages.toLocaleString()}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- ── feature visual (rotates through FEATURES) ─────────────────── -->
+    {#if !excluded.feature}
+      {@const f = data.rotation.feature}
+      <div class="cl-part">
+        {#if f === 'biggestWord' && bigWords.length}
+          <h3>Biggest word of the round</h3>
+          <p class="cl-bigword">{bigWords[0].word}</p>
+          <p class="cl-bigword-who">
+            {bigWords[0].person} · {bigWords[0].word.length} letters
+          </p>
+          <p class="cl-quote">“{trim(bigWords[0].quote, 200)}”</p>
+        {:else if f === 'longestWords' && bigWords.length}
+          <h3>Longest words used</h3>
+          <div class="cl-words">
+            {#each bigWords.slice(0, 6) as b (b.person)}
+              <div class="cl-word-row">
+                <span class="cl-word">{b.word}</span>
+                <span class="cl-word-who">{shortName(b.person)}</span>
+                <span class="cl-word-len">{b.word.length}</span>
+              </div>
+            {/each}
+          </div>
+        {:else if f === 'trackList' && data.links.length}
+          <h3>Shared in the chat</h3>
+          <div class="cl-words">
+            {#each data.links.slice(0, 8) as l (l.url)}
+              <div class="cl-word-row">
+                <a class="cl-word cl-link" href={l.url} target="_blank" rel="noopener">
+                  {l.kind === 'youtube' ? 'YouTube' : 'Spotify'}{l.context ? ` — ${trim(l.context, 46)}` : ''}
+                </a>
+                <span class="cl-word-who">{shortName(l.person)}</span>
+                <span class="cl-word-len"></span>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <!-- triptych, and the fallback when a feature has no data this round -->
+          <h3>Messages · words · characters</h3>
+          <div class="cl-bars">
+            {#each people.slice(0, 8) as p (p.name)}
+              <div class="cl-tri-row">
+                <span class="cl-bar-name">{shortName(p.name)}</span>
+                <span class="cl-tri-stack">
+                  {#each [['messages', maxMessages, 'var(--mash-pulp, #ff5b2e)'], ['words', maxWords, 'var(--sky, #5aa3ff)'], ['characters', maxChars, 'var(--moss, #3ec27a)']] as [key, max, color] (key)}
+                    <span class="cl-tri-line">
+                      <span class="cl-bar-track">
+                        <span
+                          class="cl-bar-fill"
+                          style="width: {(p[key] / max) * 100}%; background: {color}"
+                        ></span>
+                      </span>
+                      <span class="cl-tri-val">{p[key].toLocaleString()}</span>
+                    </span>
+                  {/each}
+                </span>
               </div>
             {/each}
           </div>
@@ -284,8 +354,55 @@
     color: var(--fg-muted, #8b97a4);
   }
 
+  .cl-bigword {
+    margin: 0; font: 800 clamp(26px, 6vw, 44px)/1 var(--font-display, sans-serif);
+    color: var(--fg, #f1f4f7); letter-spacing: -0.04em; word-break: break-word;
+  }
+  .cl-bigword-who {
+    margin: 10px 0 0; font: 500 12px/1 var(--font-mono, monospace);
+    color: var(--mash-pulp, #ff5b2e); letter-spacing: 0.04em;
+  }
+  .cl-quote {
+    margin: 12px 0 0; padding-left: 14px;
+    border-left: 1px solid var(--line-strong, #3a4451);
+    font: italic 400 13px/1.6 var(--font-body, sans-serif);
+    color: var(--fg-muted, #8b97a4); max-width: 62ch;
+  }
+
+  .cl-word-row {
+    display: grid; grid-template-columns: 1fr auto 26px; gap: 12px;
+    align-items: baseline; padding: 7px 0;
+    border-bottom: 1px solid var(--line, #283039);
+  }
+  .cl-word {
+    font: 600 14px/1.3 var(--font-body, sans-serif); color: var(--fg, #f1f4f7);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cl-link { color: var(--mash-pulp, #ff5b2e); text-decoration: none; }
+  .cl-link:hover { text-decoration: underline; }
+  .cl-word-who {
+    font: 500 11px/1 var(--font-mono, monospace); color: var(--fg-muted, #8b97a4);
+    white-space: nowrap;
+  }
+  .cl-word-len {
+    font: 500 11px/1 var(--font-mono, monospace); color: var(--fg-quiet, #5a6773);
+    text-align: right;
+  }
+
+  .cl-tri-row {
+    display: grid; grid-template-columns: 92px 1fr; gap: 12px;
+    align-items: center; padding: 7px 0;
+  }
+  .cl-tri-stack { display: flex; flex-direction: column; gap: 3px; }
+  .cl-tri-line { display: grid; grid-template-columns: 1fr 54px; gap: 10px; align-items: center; }
+  .cl-tri-val {
+    font: 500 10.5px/1 var(--font-mono, monospace); color: var(--fg-muted, #8b97a4);
+    text-align: right;
+  }
+
   @media (max-width: 640px) {
     .cl-bar-row { grid-template-columns: 74px 1fr 40px; gap: 9px; }
     .cl-heat { grid-template-columns: 24px repeat(24, 1fr); gap: 1px; }
+    .cl-tri-row { grid-template-columns: 70px 1fr; gap: 9px; }
   }
 </style>

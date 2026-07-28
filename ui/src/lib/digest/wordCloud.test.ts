@@ -37,6 +37,27 @@ describe('getWordFrequencies', () => {
     ]);
   });
 
+  it('adds extraStopwords on top of the built-in list instead of replacing it', () => {
+    // 'this' and 'would' are built-ins; 'karaoke' is per-round noise.
+    expect(
+      getWordFrequencies(['This would be a karaoke chorus, this chorus'], {
+        extraStopwords: ['karaoke'],
+      }),
+    ).toEqual([{ word: 'chorus', count: 2, weight: 1 }]);
+  });
+
+  it('keeps built-in stopwords out when the caller supplies round noise', () => {
+    const words = getWordFrequencies(
+      ['and the song would be good, but this song is only about her'],
+      { extraStopwords: ['song'] },
+    ).map((entry) => entry.word);
+    expect(words).not.toContain('and');
+    expect(words).not.toContain('this');
+    expect(words).not.toContain('would');
+    expect(words).not.toContain('song');
+    expect(words).toContain('good');
+  });
+
   it('returns an empty list for empty or invalid limits', () => {
     expect(getWordFrequencies([])).toEqual([]);
     expect(getWordFrequencies(['music everywhere'], { limit: 0 })).toEqual([]);
