@@ -24,4 +24,32 @@ describe('parseDiscordLog', () => {
     // the 4th line is a consecutive duplicate of msg[2] → collapsed, so only 3 total
     expect(msgs).toHaveLength(3);
   });
+
+  it('strips standalone Spoiler trailer (without edit mark)', () => {
+    const raw = '[03/01/2026, 07:57 AM UTC] User: secret stuff.Spoiler';
+    const msgs = parseDiscordLog(raw);
+    expect(msgs[0].text).toBe('secret stuff.');
+  });
+
+  it('collapses plain duplicate (identical sender+text, no continuations)', () => {
+    const raw = [
+      '[03/01/2026, 07:57 AM UTC] KarBen: hello',
+      '[03/01/2026, 08:00 AM UTC] KarBen: hello',
+    ].join('\n');
+    const msgs = parseDiscordLog(raw);
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].sender).toBe('KarBen');
+    expect(msgs[0].text).toBe('hello');
+  });
+
+  it('parses 12 AM/PM boundary correctly', () => {
+    const raw = [
+      '[03/01/2026, 12:00 AM UTC] User: midnight',
+      '[03/01/2026, 12:00 PM UTC] User: noon',
+    ].join('\n');
+    const msgs = parseDiscordLog(raw);
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0].tsMs).toBe(Date.parse('2026-03-01T00:00:00Z'));
+    expect(msgs[1].tsMs).toBe(Date.parse('2026-03-01T12:00:00Z'));
+  });
 });

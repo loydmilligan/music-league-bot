@@ -2,9 +2,9 @@ export interface DiscordMessage { sender: string; text: string; tsMs: number }
 
 const LINE_RE = /^\[(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}) (AM|PM) UTC\]\s+(.+?):\s([\s\S]*)$/;
 
-/** Strip Discord's edit trailer: optional "Spoiler" then "(edited)<weekday date…>". */
+/** Strip Discord's edit trailer: optional "Spoiler" then "(edited)<weekday date…>", or standalone trailing "Spoiler". */
 function stripTrailer(text: string): string {
-  return text.replace(/\s*(?:Spoiler\s*)?\(edited\).*$/s, '').trimEnd();
+  return text.replace(/\s*(?:Spoiler\s*)?\(edited\).*$/s, '').replace(/\s*Spoiler\s*$/, '').trimEnd();
 }
 
 function toMs(mm: string, dd: string, yyyy: string, hh12: string, min: string, ap: string): number {
