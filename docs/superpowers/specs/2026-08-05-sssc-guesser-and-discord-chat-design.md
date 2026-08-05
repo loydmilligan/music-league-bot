@@ -111,12 +111,33 @@ guesser_guesses(
 - **Drunk-by-the-end** — accuracy and/or drink-word density as a function of his
   lateness cue, surfacing the "gets worse as the night goes on" arc.
 
-### 4. Chat storylines (softest; LLM-written from ingested chat, optional)
+### 4. Recurring cast & storylines (curated seeds + deterministic evidence)
 
-Recurring narrative threads mined from the ingested Discord chat window — e.g.
-"Baganation & MissMara relitigating the songs they *didn't* pick." An
-LLM-written sub-block fed by the round's chat window; **clearly optional** so it
-never blocks the deterministic parts. Ships last.
+A "cast of regulars" block: recurring character bits the league knows, written up
+each round with **real quotes pulled from that round's data**. Not free LLM
+discovery — a **curated seed list** the owner maintains, so the characters are
+intentional and the output is reproducible.
+
+- **Seed config** (`storyline_seeds`, per league): each entry = `{player,
+  motif label, keyword/phrase patterns, sources}`. Sources can be `chat`,
+  `vote_comments`, or both.
+- **Deterministic evidence pass:** for each seed, search the round's chat window
+  and/or the player's vote comments for the motif patterns → collect matching
+  quotes with timestamps. A seed with no hits this round is silently dropped.
+- **LLM write-up (thin):** given the evidence quotes, the LLM writes a short,
+  factual blurb per active storyline. It only phrases what the evidence shows —
+  no invented threads. Cached like other section content for regen.
+
+**Initial SSSC seeds (from the owner):**
+| Player | Motif | Sources |
+| --- | --- | --- |
+| PoetryInNoise | cats; "big butts" | vote_comments + chat |
+| Timmywhatup (timmyg) | "rapity rap rap" rap obsession; **Friday** new-release deep-dives; weed | chat |
+| bagimation + missmara | relitigating the songs they *didn't* pick | chat |
+
+Ships after the deterministic Guesser work; the seed mechanism is small and the
+value is high, so it is **in scope**, not optional. New seeds are a config edit,
+not code.
 
 ## Persistence & regen
 
