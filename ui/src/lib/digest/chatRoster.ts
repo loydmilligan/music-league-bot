@@ -82,7 +82,7 @@ export function buildChatRoster(
 	db: Database.Database,
 	leagueId: number,
 	sendersSeen: Iterable<string> = [],
-	platform: 'whatsapp' | 'google-chat' = 'whatsapp',
+	platform: 'whatsapp' | 'google-chat' | 'discord' = 'whatsapp',
 	/** The group's own name — WhatsApp emits it as a sender on group events. */
 	groupName?: string,
 ): ChatRoster {

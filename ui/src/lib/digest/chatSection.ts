@@ -381,7 +381,7 @@ export function buildChatSection(
 		groupName: string;
 		/** Scopes the roster, so one league never resolves another's people. */
 		leagueId: number;
-		platform?: 'whatsapp' | 'google-chat';
+		platform?: 'whatsapp' | 'google-chat' | 'discord';
 		roundNumber: number;
 		roundEndIso: string | null;
 		previousRoundEndIso: string | null;

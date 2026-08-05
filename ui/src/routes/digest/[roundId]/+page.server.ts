@@ -256,10 +256,12 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       // been linked in /settings/setup and someone has eyeballed the result.
       const enabled = league?.slug ? chatSectionEnabledFor(db, league.slug) : false;
       if (groupName && enabled) {
-        const platform = (db
+        const rawPlatform = (db
           .prepare('SELECT platform FROM chat_messages WHERE group_name = ? LIMIT 1')
-          .get(groupName) as { platform?: string } | undefined)?.platform === 'googlechat'
-          ? ('google-chat' as const)
+          .get(groupName) as { platform?: string } | undefined)?.platform;
+        const platform =
+          rawPlatform === 'googlechat' ? ('google-chat' as const)
+          : rawPlatform === 'discord' ? ('discord' as const)
           : ('whatsapp' as const);
         const nums = db
           .prepare(
