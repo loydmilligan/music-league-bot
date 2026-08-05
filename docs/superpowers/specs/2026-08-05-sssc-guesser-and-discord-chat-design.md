@@ -157,6 +157,30 @@ Ships after the deterministic Guesser work; the seed mechanism is small and the
 value is high, so it is **in scope**, not optional. New seeds are a config edit,
 not code.
 
+### 5. Music League in-app chat (separate source)
+
+The ML app has its own **Chat** panel, captured as 10 phone screenshots
+(`~/Downloads/8132.png`–`8141.png`, seasons 5–6). A **distinct content source**
+from the Discord thread, with its own corpus and history.
+
+- **Format (per screenshot):** bold **sender = ML competitor name** (e.g. "Boonie
+  Dogsweat", "bagimation"), a timestamp ("16 Jun 2026 12:58pm"), message text
+  (may wrap), and a reaction count. **No roster mapping needed** — senders are the
+  competitor names already in the DB.
+- **Transcription, not OCR:** the model reads each PNG via the Read tool and emits
+  structured records `{sender, ts, text, reactions}`. Consecutive screenshots
+  overlap at the scroll boundary → dedup on `(sender, ts, text)`.
+- **Storage:** its own corpus in `chat_messages` with `platform='ml-app'` and a
+  **separate `group_name='sssc-mlchat'`** (kept apart from the Discord `sssc`
+  group so each has its own history). Timestamps parsed to ISO (assume the league
+  TZ, `DEFAULT_CHAT_TZ`).
+- **Digest inclusion:** because it is small, the round's ML-app messages (windowed
+  by the round deadlines, like the chat section) are surfaced in the digest as a
+  small dedicated block **in addition to** the Discord chat section — "sent with"
+  the digest each week.
+- **Own plan:** ships as its own plan (transcribe → ingest → per-round inclusion);
+  independent of the Discord ingest.
+
 ## Persistence & regen
 
 - Extracted guesses cached in `guesser_guesses` (stable key) → regen reuses.
