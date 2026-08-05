@@ -15,6 +15,7 @@
     "set-group": "tsx scripts/set-group.ts",
     "add-group": "tsx scripts/add-group.ts",
     "export-bracket": "tsx scripts/export-bracket-csv.ts",
+    "cover-gen": "python3 scripts/cover-gen/cli.py",
     "playlist-to-csv": "tsx scripts/playlist-to-csv.ts",
     "api": "tsx src/api/server.ts",
     "test:integration": "vitest run tests/spotify.integration.test.ts"

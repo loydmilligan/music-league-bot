@@ -22,6 +22,30 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   if (!roundId || !sectionId) throw error(400, 'invalid params');
 
   const db = getDb();
+
+  if (sectionId === "stats") {
+    const draft = db.prepare("SELECT id, stats_position, stats_state, stats_content_json FROM digest_drafts WHERE round_id = ? ORDER BY generated_at DESC LIMIT 1").get(roundId) as { id: string; stats_position: number; stats_state: string; stats_content_json: string } | undefined;
+    if (!draft) throw error(404, "draft not found");
+    const body = (await request.json().catch(() => ({}))) as { content?: unknown; state?: unknown; position?: unknown };
+    const sets: string[] = [];
+    const args: unknown[] = [];
+    if ("content" in body && body.content !== undefined) { sets.push("stats_content_json = ?"); args.push(JSON.stringify(body.content)); }
+    if ("state" in body) {
+      if (!["default", "excluded", "locked"].includes(String(body.state))) throw error(400, "invalid state");
+      sets.push("stats_state = ?"); args.push(String(body.state));
+    }
+    if ("position" in body) {
+      const pos = Number(body.position);
+      if (!Number.isInteger(pos) || pos < 0) throw error(400, "invalid position");
+      sets.push("stats_position = ?"); args.push(pos);
+    }
+    if (!sets.length) throw error(400, "no editable fields in patch");
+    args.push(draft.id);
+    db.prepare("UPDATE digest_drafts SET " + sets.join(", ") + " WHERE id = ?").run(...args);
+    const updated = db.prepare("SELECT id, stats_position, stats_state, stats_content_json FROM digest_drafts WHERE id = ?").get(draft.id);
+    return json({ ok: true, sectionId, section: updated, deterministic: true });
+  }
+
   const section = loadSection(db, roundId, sectionId);
   if (!section) throw error(404, `section not found: ${sectionId}`);
 

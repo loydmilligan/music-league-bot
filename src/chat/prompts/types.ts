@@ -51,6 +51,16 @@ export interface ChatPrompt {
    * hashtag or quote-reply is needed — nobody messages a bot by accident.
    */
   acceptDirect?: boolean;
+  /**
+   * Accept a bare name typed straight into the chat — no hashtag, no reply.
+   *
+   * Only safe under the "bare answer" rule below. Measured over 2,954 real
+   * Boarz messages: treating ANY message as an answer fires on 14.4% of
+   * ordinary conversation, because people genuinely say each other's names
+   * ("Darren said he'll vote tonight"). Requiring the message to be a name and
+   * nothing else drops that to 0.58%.
+   */
+  acceptInline?: boolean;
   status: 'open' | 'closed';
 }
 
@@ -100,7 +110,7 @@ export interface AnswerOutcome {
   answerText: string;
   resolution: Resolution;
   /** How the message was recognised as an answer to this prompt. */
-  trigger: 'reply' | 'hashtag' | 'direct';
+  trigger: 'reply' | 'hashtag' | 'direct' | 'inline';
   /** Null when a template list was empty — caller then stays silent. */
   reply: string | null;
   /** True when onePerPerson rejected it; no answer should be recorded. */

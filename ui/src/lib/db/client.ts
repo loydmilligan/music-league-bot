@@ -115,6 +115,21 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (draftCols.length && !draftCols.some(c => c.name === 'archive_context')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN archive_context TEXT");
 	}
+	if (draftCols.length && !draftCols.some(c => c.name === 'top_section_variant')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN top_section_variant TEXT NOT NULL DEFAULT 'auto'");
+	}
+	if (draftCols.length && !draftCols.some(c => c.name === 'top_section_visuals')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN top_section_visuals TEXT NOT NULL DEFAULT '[]'");
+	}
+	if (draftCols.length && !draftCols.some(c => c.name === 'stats_position')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN stats_position INTEGER NOT NULL DEFAULT 0");
+	}
+	if (draftCols.length && !draftCols.some(c => c.name === 'stats_state')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN stats_state TEXT NOT NULL DEFAULT 'default'");
+	}
+	if (draftCols.length && !draftCols.some(c => c.name === 'stats_content_json')) {
+		db.exec("ALTER TABLE digest_drafts ADD COLUMN stats_content_json TEXT NOT NULL DEFAULT '{}'");
+	}
 	// sprint-25 next-round-edit: persist exclude flag + theme/deadline overrides on the draft.
 	if (digestDraftCols.length && !digestDraftCols.some(c => c.name === 'next_round_excluded')) {
 		db.exec("ALTER TABLE digest_drafts ADD COLUMN next_round_excluded INTEGER NOT NULL DEFAULT 0");

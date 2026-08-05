@@ -19,6 +19,7 @@ import { getStandings } from '$lib/db/standings.js';
 import { shouldRegenerate } from '$lib/digest/draftForce.js';
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { recomputePopularityProxies } from '$lib/lastfm.js';
+import { coerceTopSectionVariant, coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -141,12 +142,14 @@ function parseRecap(v: unknown): RecapParams | undefined {
 
 function parseGenParams(body: unknown): GenParams | null {
   if (!body || typeof body !== 'object') return null;
-  const b = body as { sections?: unknown; pastedChat?: unknown; recap?: unknown };
+  const b = body as { sections?: unknown; pastedChat?: unknown; recap?: unknown; topSectionVariant?: unknown; topSectionVisuals?: unknown };
   const recap = parseRecap(b.recap);
+  const topSectionVariant = coerceTopSectionVariant(b.topSectionVariant);
+  const topSectionVisuals = coerceTopSectionVisuals(b.topSectionVisuals);
   const hasSections = Array.isArray(b.sections) && b.sections.length > 0;
   const hasPasted = typeof b.pastedChat === 'string' && b.pastedChat.trim().length > 0;
   // recap.enabled is itself a meaningful param → force a fresh (recap) generation.
-  if (!hasSections && !hasPasted && !recap?.enabled) return null;
+  if (!hasSections && !hasPasted && !recap?.enabled && b.topSectionVariant === undefined && b.topSectionVisuals === undefined) return null;
 
   const validKinds = new Set<string>(SECTION_KINDS);
   const sections: GenSectionParam[] = (Array.isArray(b.sections) ? b.sections : [])
@@ -166,6 +169,8 @@ function parseGenParams(body: unknown): GenParams | null {
     sections,
     pastedChat: hasPasted ? String(b.pastedChat) : undefined,
     recap,
+    topSectionVariant,
+    topSectionVisuals,
   };
 }
 

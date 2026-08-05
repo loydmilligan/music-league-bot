@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { getWordFrequencies, type WordCloudWord } from '../digest/wordCloud.js';
+import type { TopSectionVariant } from '../digest/topSectionVariants.js';
 
 const MAX_ARTISTS = 8;
 const MAX_KEYS = 6;
@@ -32,15 +33,35 @@ export interface RoundSubmissionTiming {
   latestHoursBeforeDeadline: number | null;
 }
 
+/**
+ * An artist in this round who already appeared in an earlier season of the same
+ * league. `sameSubmitter` marks the player going back to their own well.
+ */
+export interface ArtistCallback {
+  artist: string;
+  title: string;
+  submitter: string | null;
+  priorTitle: string;
+  priorSubmitter: string | null;
+  priorSeasonNumber: number | null;
+  sameSubmitter: boolean;
+}
+
 export interface RoundArtistLandscape {
   songCount: number;
   uniqueArtistCount: number;
-  repeatedArtistCount: number;
-  repeatRatePercent: number;
+  /** Earlier seasons of this league that were searched for callbacks. */
+  priorSeasonsCompared: number;
+  callbackCount: number;
+  callbacks: ArtistCallback[];
   topArtists: InsightCount[];
 }
 
 export interface RoundInsights {
+  roundId?: number;
+  topSectionVariant?: TopSectionVariant;
+  topSectionVisuals?: import('../digest/topSectionVariants.js').TopSectionVisual[];
+  statsContent?: { title?: string; body?: string };
   audio: RoundAudioProfile;
   submissionTiming: RoundSubmissionTiming;
   artists: RoundArtistLandscape;
@@ -51,6 +72,14 @@ interface SubmissionRow {
   title: string;
   artists: string;
   created_at: string;
+  submitter: string | null;
+}
+
+interface PriorSubmissionRow {
+  title: string;
+  artists: string;
+  submitter: string | null;
+  season_number: number | null;
 }
 
 interface AudioRow {
@@ -98,11 +127,14 @@ export function getRoundInsights(
 ): RoundInsights {
   const submissions = db
     .prepare(
-      `SELECT artists, created_at
-              , title
-       FROM ml_submissions
-       WHERE round_id = ? AND competitor_id IS NOT NULL
-       ORDER BY id`,
+      `SELECT s.artists, s.created_at
+              , s.title
+              , COALESCE(p.name, c.name) AS submitter
+       FROM ml_submissions s
+       LEFT JOIN players p ON p.id = s.player_id
+       LEFT JOIN competitors c ON c.id = s.competitor_id
+       WHERE s.round_id = ? AND s.competitor_id IS NOT NULL
+       ORDER BY s.id`,
     )
     .all(roundId) as SubmissionRow[];
 
@@ -189,9 +221,81 @@ export function getRoundInsights(
   const artistMap = new Map(
     [...artistCounts].map(([key, value]) => [key, value.count]),
   );
-  const repeatedArtistCount = [...artistCounts.values()].filter(
-    (artist) => artist.count > 1,
-  ).length;
+
+  // Season callbacks: a single round never repeats an artist within itself, so
+  // the interesting repeat is across seasons — an artist this league already
+  // used in an earlier season of the same league.
+  const seasonRow = db
+    .prepare(
+      `SELECT se.league_id, se.season_number
+       FROM rounds r JOIN seasons se ON se.id = r.season_id
+       WHERE r.id = ?`,
+    )
+    .get(roundId) as { league_id: number; season_number: number | null } | undefined;
+
+  let priorSeasonsCompared = 0;
+  let callbacks: ArtistCallback[] = [];
+  if (seasonRow && seasonRow.season_number != null) {
+    priorSeasonsCompared = (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM seasons
+           WHERE league_id = ? AND season_number < ?`,
+        )
+        .get(seasonRow.league_id, seasonRow.season_number) as { n: number }
+    ).n;
+
+    const priorRows = db
+      .prepare(
+        `SELECT ps.title, ps.artists
+                , COALESCE(pp.name, pc.name) AS submitter
+                , pse.season_number
+         FROM ml_submissions ps
+         JOIN rounds pr ON pr.id = ps.round_id
+         JOIN seasons pse ON pse.id = pr.season_id
+         LEFT JOIN players pp ON pp.id = ps.player_id
+         LEFT JOIN competitors pc ON pc.id = ps.competitor_id
+         WHERE ps.competitor_id IS NOT NULL
+           AND pse.league_id = ? AND pse.season_number < ?
+         ORDER BY pse.season_number DESC, ps.id`,
+      )
+      .all(seasonRow.league_id, seasonRow.season_number) as PriorSubmissionRow[];
+
+    const priorByArtist = new Map<string, PriorSubmissionRow[]>();
+    for (const row of priorRows) {
+      const key = firstArtist(row.artists).toLocaleLowerCase();
+      if (!key) continue;
+      const bucket = priorByArtist.get(key);
+      if (bucket) bucket.push(row);
+      else priorByArtist.set(key, [row]);
+    }
+
+    for (const row of submissions) {
+      const label = firstArtist(row.artists);
+      if (!label) continue;
+      for (const prior of priorByArtist.get(label.toLocaleLowerCase()) ?? []) {
+        callbacks.push({
+          artist: label,
+          title: row.title,
+          submitter: row.submitter,
+          priorTitle: prior.title,
+          priorSubmitter: prior.submitter,
+          priorSeasonNumber: prior.season_number,
+          sameSubmitter:
+            !!row.submitter && !!prior.submitter && row.submitter === prior.submitter,
+        });
+      }
+    }
+
+    // Self-callbacks read as the sharper stat, then most recent season first.
+    callbacks.sort(
+      (a, b) =>
+        Number(b.sameSubmitter) - Number(a.sameSubmitter) ||
+        (b.priorSeasonNumber ?? 0) - (a.priorSeasonNumber ?? 0) ||
+        a.artist.localeCompare(b.artist),
+    );
+    callbacks = callbacks.slice(0, MAX_ARTISTS);
+  }
 
   const round = db
     .prepare("SELECT submission_deadline FROM rounds WHERE id = ?")
@@ -245,10 +349,9 @@ export function getRoundInsights(
     artists: {
       songCount: submissions.length,
       uniqueArtistCount: artistCounts.size,
-      repeatedArtistCount,
-      repeatRatePercent: artistCounts.size
-        ? Math.round((repeatedArtistCount / artistCounts.size) * 100)
-        : 0,
+      priorSeasonsCompared,
+      callbackCount: callbacks.length,
+      callbacks,
       topArtists: topCounts(artistMap, MAX_ARTISTS).map((entry) => ({
         ...entry,
         value:
@@ -261,7 +364,7 @@ export function getRoundInsights(
         text: entry.text,
         source: chatEntries.includes(entry) ? 'chat' : 'comment',
       })),
-      { limit: 24, stopwords: lexicalNoise },
+      { limit: 24, extraStopwords: lexicalNoise },
     ),
   };
 }

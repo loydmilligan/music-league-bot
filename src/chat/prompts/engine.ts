@@ -60,13 +60,16 @@ export function interpretMessage(
   }
 
   const resolution = resolveAnswer(clean.text, prompt.options, opts.resolve);
+  // An inline guess was never explicitly addressed to the bot, so anything that
+  // does not resolve is just chat — say nothing rather than heckle the group.
+  if (trigger === 'inline' && resolution.kind !== 'matched') return null;
   return outcome(prompt, msg, clean.text, resolution, trigger, false, opts);
 }
 
 function selectPrompt(
   msg: InboundMessage,
   open: ChatPrompt[],
-): { prompt: ChatPrompt; trigger: 'reply' | 'hashtag' | 'direct' } | null {
+): { prompt: ChatPrompt; trigger: 'reply' | 'hashtag' | 'direct' | 'inline' } | null {
   // In a DM the whole conversation is the answer channel, so a bare name counts
   // — no hashtag, no quote-reply. Only when exactly one prompt takes private
   // answers, otherwise "Grant" could belong to either.
@@ -97,7 +100,29 @@ function selectPrompt(
   // Several open prompts sharing one hashtag cannot be told apart; the caller
   // orders prompts oldest-first, so the newest is the live question.
   if (tagged.length > 0) return { prompt: tagged[tagged.length - 1], trigger: 'hashtag' };
+
+  // Inline: a bare name typed straight into the chat. Requires the message to
+  // be a name and NOTHING else — see isBareAnswer — and only one prompt may be
+  // listening, since a bare name names no question.
+  const inline = open.filter((p) => p.acceptInline);
+  if (inline.length === 1 && isBareAnswer(msg.text)) {
+    return { prompt: inline[0], trigger: 'inline' };
+  }
   return null;
+}
+
+/**
+ * Is this message a name and nothing else?
+ *
+ * The whole basis of inline answering. "Grant" is an answer; "Darren said he'll
+ * vote tonight" is conversation that merely contains a name. Sentence
+ * punctuation, links and length are what tell them apart.
+ */
+export function isBareAnswer(text: string): boolean {
+  const t = (text ?? '').trim();
+  if (!t || t.length > 30) return false;
+  if (/[.!?,;:]|https?:\/\//.test(t)) return false;
+  return t.split(/\s+/).length <= 2;
 }
 
 function hasHashtag(text: string, hashtag: string): boolean {
@@ -110,7 +135,7 @@ function outcome(
   msg: InboundMessage,
   answerText: string,
   resolution: Resolution,
-  trigger: 'reply' | 'hashtag' | 'direct',
+  trigger: 'reply' | 'hashtag' | 'direct' | 'inline',
   duplicate: boolean,
   opts: InterpretOptions,
 ): AnswerOutcome {

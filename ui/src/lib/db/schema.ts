@@ -182,6 +182,11 @@ export const SCHEMA = `
     -- ("so far, through R{N}"). Read by regen + the data-section framing.
     recap_enabled     INTEGER NOT NULL DEFAULT 0,
     recap_final       INTEGER NOT NULL DEFAULT 1,
+    top_section_variant TEXT NOT NULL DEFAULT 'auto',
+    top_section_visuals TEXT NOT NULL DEFAULT '[]',
+    stats_position INTEGER NOT NULL DEFAULT 0,
+    stats_state TEXT NOT NULL DEFAULT 'default',
+    stats_content_json TEXT NOT NULL DEFAULT '{}',
     archive_context TEXT                        -- S1: lean digest->read-model channel (JSON), non-published
   );
   CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);

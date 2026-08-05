@@ -110,6 +110,7 @@ client.on('ready', () => {
         templates: raw.templates as PromptTemplates,
         onePerPerson: raw.onePerPerson !== false,
         acceptDirect: raw.acceptDirect === true,
+        acceptInline: raw.acceptInline === true,
         kind: typeof raw.kind === 'string' ? raw.kind : null,
         meta: raw.meta,
       });

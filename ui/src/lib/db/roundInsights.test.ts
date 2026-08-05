@@ -95,8 +95,9 @@ describe("getRoundInsights", () => {
       artists: {
         songCount: 4,
         uniqueArtistCount: 3,
-        repeatedArtistCount: 1,
-        repeatRatePercent: 33,
+        priorSeasonsCompared: 0,
+        callbackCount: 0,
+        callbacks: [],
         topArtists: [
           { value: "The Aces", count: 2 },
           { value: "Beta", count: 1 },
@@ -129,9 +130,77 @@ describe("getRoundInsights", () => {
     });
     expect(insights.artists).toMatchObject({
       uniqueArtistCount: 1,
-      repeatedArtistCount: 0,
-      repeatRatePercent: 0,
+      priorSeasonsCompared: 0,
+      callbackCount: 0,
+      callbacks: [],
     });
+    db.close();
+  });
+
+  it("reports artists carried over from an earlier season of the same league", () => {
+    const db = openLeagueDb(":memory:");
+    seedRound(db); // league 1, season 1 (season_number 1), round 1
+    db.prepare(
+      "INSERT INTO seasons (id, league_id, season_number, status) VALUES (2, 1, 2, 'active')",
+    ).run();
+    db.prepare(
+      `INSERT INTO rounds (id, season_id, ml_round_id, name, submission_deadline, created_at)
+       VALUES (2, 2, 'insights-2', 'Season Two Round', '2026-08-10T00:00:00Z', '2026-08-01T00:00:00Z')`,
+    ).run();
+    // Season 1 history: competitor A played The Aces, competitor B played Beta.
+    addSubmission(db, 1, "spotify:track:s1a", "The Aces", "2026-07-09T00:00:00Z");
+    addSubmission(db, 2, "spotify:track:s1b", "Beta", "2026-07-09T00:00:00Z");
+    // Season 2 round: A returns to The Aces; C brings Beta for the first time.
+    db.prepare(
+      `INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (?, 2, ?, ?, ?, ?, ?)`,
+    ).run(3, 1, "spotify:track:s2a", "Encore", "The Aces", "2026-08-09T00:00:00Z");
+    db.prepare(
+      `INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (?, 2, ?, ?, ?, ?, ?)`,
+    ).run(4, 3, "spotify:track:s2b", "Borrowed", "Beta", "2026-08-09T00:00:00Z");
+
+    const { artists } = getRoundInsights(db, 2);
+    expect(artists.priorSeasonsCompared).toBe(1);
+    expect(artists.callbackCount).toBe(2);
+    // Self-callbacks sort first.
+    expect(artists.callbacks[0]).toEqual({
+      artist: "The Aces",
+      title: "Encore",
+      submitter: "A",
+      priorTitle: "Song 1",
+      priorSubmitter: "A",
+      priorSeasonNumber: 1,
+      sameSubmitter: true,
+    });
+    expect(artists.callbacks[1]).toMatchObject({
+      artist: "Beta",
+      submitter: "C",
+      priorSubmitter: "B",
+      sameSubmitter: false,
+    });
+    db.close();
+  });
+
+  it("finds no callbacks when the earlier season shares no artists", () => {
+    const db = openLeagueDb(":memory:");
+    seedRound(db);
+    db.prepare(
+      "INSERT INTO seasons (id, league_id, season_number, status) VALUES (2, 1, 2, 'active')",
+    ).run();
+    db.prepare(
+      `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at)
+       VALUES (2, 2, 'insights-2', 'Season Two Round', '2026-08-01T00:00:00Z')`,
+    ).run();
+    addSubmission(db, 1, "spotify:track:s1a", "The Aces", "2026-07-09T00:00:00Z");
+    db.prepare(
+      `INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (?, 2, ?, ?, ?, ?, ?)`,
+    ).run(3, 1, "spotify:track:s2a", "Fresh", "Someone Else", "2026-08-09T00:00:00Z");
+
+    const { artists } = getRoundInsights(db, 2);
+    expect(artists.priorSeasonsCompared).toBe(1);
+    expect(artists.callbacks).toEqual([]);
     db.close();
   });
 

@@ -1111,6 +1111,11 @@
 
         {#if digestOpen}
           <div class="mlm-section-rows">
+            <div class="mlm-section-row mlm-section-row--deterministic">
+              <span class="mlm-section-label">Round intelligence - deterministic</span>
+              <span class="mlm-section-resolved">no model - computed from round data</span>
+              <span class="mlm-section-label" style="font-size:11px;color:var(--fg-muted);">Visual set selected in Generate / regeneration options</span>
+            </div>
             {#each digestSections as s (s.section)}
               {@const eligible = qualifying(s.requires)}
               {@const pinSet = s.selected != null}

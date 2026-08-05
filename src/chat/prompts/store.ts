@@ -20,6 +20,7 @@ export function createPromptTables(db: Database.Database): void {
       templates   TEXT NOT NULL,
       one_per_person INTEGER NOT NULL DEFAULT 1,
       accept_direct  INTEGER NOT NULL DEFAULT 0,
+      accept_inline  INTEGER NOT NULL DEFAULT 0,
       status      TEXT NOT NULL DEFAULT 'open',
       kind        TEXT,
       meta        TEXT,
@@ -49,6 +50,7 @@ export function createPromptTables(db: Database.Database): void {
   // CREATE TABLE IF NOT EXISTS silently leaves an older table untouched.
   for (const ddl of [
     `ALTER TABLE chat_prompts ADD COLUMN accept_direct INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE chat_prompts ADD COLUMN accept_inline INTEGER NOT NULL DEFAULT 0`,
   ]) {
     try { db.exec(ddl); } catch { /* column already present */ }
   }
@@ -80,6 +82,8 @@ export interface NewPrompt {
   onePerPerson?: boolean;
   /** Also accept answers sent privately to the bot. */
   acceptDirect?: boolean;
+  /** Also accept a bare name typed straight into the chat. */
+  acceptInline?: boolean;
   /** Caller's own label, e.g. "guess-the-submitter". Opaque here. */
   kind?: string | null;
   /** Anything the caller needs on resolution (round id, spotify uri, …). */
@@ -90,9 +94,9 @@ export function insertPrompt(db: Database.Database, p: NewPrompt): void {
   db.prepare(`
     INSERT INTO chat_prompts
       (id, chat_id, message_id, hashtag, subject, options, templates,
-       one_per_person, accept_direct, status, kind, meta, created_at)
+       one_per_person, accept_direct, accept_inline, status, kind, meta, created_at)
     VALUES (@id, @chatId, @messageId, @hashtag, @subject, @options, @templates,
-            @onePerPerson, @acceptDirect, 'open', @kind, @meta, @createdAt)
+            @onePerPerson, @acceptDirect, @acceptInline, 'open', @kind, @meta, @createdAt)
   `).run({
     id: p.id,
     chatId: p.chatId,
@@ -103,6 +107,7 @@ export function insertPrompt(db: Database.Database, p: NewPrompt): void {
     templates: JSON.stringify(p.templates),
     onePerPerson: p.onePerPerson === false ? 0 : 1,
     acceptDirect: p.acceptDirect ? 1 : 0,
+    acceptInline: p.acceptInline ? 1 : 0,
     kind: p.kind ?? null,
     meta: p.meta === undefined ? null : JSON.stringify(p.meta),
     createdAt: Date.now(),
@@ -112,7 +117,7 @@ export function insertPrompt(db: Database.Database, p: NewPrompt): void {
 interface PromptRow {
   id: string; chat_id: string; message_id: string | null; hashtag: string | null;
   subject: string | null; options: string; templates: string;
-  one_per_person: number; accept_direct: number; status: string;
+  one_per_person: number; accept_direct: number; accept_inline: number; status: string;
 }
 
 /** Oldest first — the engine treats the last as the live one for a shared hashtag. */
@@ -134,6 +139,7 @@ function rowToPrompt(r: PromptRow): ChatPrompt {
     templates: JSON.parse(r.templates) as PromptTemplates,
     onePerPerson: r.one_per_person === 1,
     acceptDirect: r.accept_direct === 1,
+    acceptInline: r.accept_inline === 1,
     status: 'open',
   };
 }

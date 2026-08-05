@@ -266,6 +266,49 @@ describe('interpretMessage', () => {
     expect(out?.trigger).toBe('direct');
   });
 
+  describe('inline answers', () => {
+    const inline = { ...prompt, acceptInline: true };
+
+    it('accepts a bare name typed straight into the chat', () => {
+      const out = interpretMessage(msg({ text: 'Koziol' }), [inline], noAnswers);
+      expect(out?.trigger).toBe('inline');
+      expect(out?.reply).toContain('Grant Koziol');
+    });
+
+    it('ignores a name used inside a sentence', () => {
+      // Real chat: these fire on 14.4% of messages without the bare-name rule.
+      for (const t of [
+        "Darren said he'll vote tonight",
+        'Conor is loving this as a new platform',
+        'Paletz - color me badd broke up in 98',
+      ]) {
+        expect(interpretMessage(msg({ text: t }), [inline], noAnswers)).toBeNull();
+      }
+    });
+
+    it('stays silent on a bare word that resolves to nothing', () => {
+      // Never heckle the group for messages not addressed to the bot.
+      expect(interpretMessage(msg({ text: 'lol' }), [inline], noAnswers)).toBeNull();
+      expect(interpretMessage(msg({ text: 'ok cool' }), [inline], noAnswers)).toBeNull();
+    });
+
+    it('stays silent when ambiguous, rather than asking unprompted', () => {
+      expect(interpretMessage(msg({ text: 'dave' }), [inline], noAnswers)).toBeNull();
+    });
+
+    it('does not fire inline when two prompts are listening', () => {
+      const two = [
+        { ...inline, id: 'a', hashtag: undefined },
+        { ...inline, id: 'b', hashtag: undefined },
+      ];
+      expect(interpretMessage(msg({ text: 'Koziol' }), two, noAnswers)).toBeNull();
+    });
+
+    it('is off unless the prompt opts in', () => {
+      expect(interpretMessage(msg({ text: 'Koziol' }), [prompt], noAnswers)).toBeNull();
+    });
+  });
+
   it('treats a bare hashtag as unmatched, not a crash', () => {
     const out = interpretMessage(msg({ text: '#guess' }), [prompt], noAnswers);
     expect(out?.resolution.kind).toBe('unmatched');
