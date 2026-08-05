@@ -182,6 +182,51 @@ not code.
 - Records: seeded `guesser_guesses` → asserted weekly record, eludes-him,
   always-nails, littermates.
 
+## Appendix A — SSSC identity roster (authoritative, resolved 2026-08-05)
+
+Correct chat source is the **"MusicLeague" thread (musics-chat)**, 6 monthly files
+`~/Downloads/MusicLeague-thread-log_2026-{03..08}.txt`. (An earlier `#general`
+export was the wrong channel and was discarded.) Implementation materializes this
+into `player_identities` (`music-league` + `discord` types) scoped to `sssc`.
+
+| ML competitor | Discord sender | Source |
+| --- | --- | --- |
+| Boonie Dogsweat | Dogsweat 🚂 | auto |
+| Cherry | Libby/Cherry | auto |
+| KarBen | KarBen (MDR) | auto |
+| Lexa Prole | lexa prole | auto |
+| Mouse Atreides | Mouse Atreides | auto |
+| PoetryinNoise | PoetryInNoise | auto |
+| TekniKali.Mo | Kali | auto |
+| Tragically Skip | TragicallySkip | auto |
+| a1mrson | a1mrson | auto |
+| antigravpjs | antigravpjs | auto |
+| bagimation | bagimation | auto |
+| bump versino | bump versino | auto |
+| frankenberge | frankenberge | auto |
+| missmara | missmara | auto |
+| mrklorox | MrKlorox | auto |
+| nateoeb | NateOEB | auto |
+| socalledbutton | socalledbutton | auto |
+| Timmywhatup | timmyg (the g is for whatup) | confirmed |
+| GoodGollyMiss | 🌙✨good.golly.ms✨🌙 | confirmed |
+| jirafa | lithogiraffe | confirmed |
+| Dylan/Brannigans_L4w | Brannigan's Law | confirmed |
+| dubs613 | dubc_613 | confirmed |
+| Heath DG | FanonAndOn (AndOnAndOn) | owner |
+| Aidan | falseaidentity | owner |
+| nowlistenallison | zewskers | owner |
+| Aniss | — (not in Discord) | ML-only |
+| Kelly Jean | — (not in Discord) | ML-only |
+| sparklepants13 | — (not in Discord) | ML-only |
+
+**Guess-alias notes (names Dogsweat uses → competitor):** "Zewskers" →
+nowlistenallison; "Generous Giragge" → jirafa; "Sparkle Pants" → sparklepants13;
+"Karben" → KarBen; "Poetry in Noise" → PoetryinNoise; "Antigrav PJs" → antigravpjs;
+"TEKNIKALI MO" → TekniKali.Mo; "Bump Versino" → bump versino; "Cherrycola" →
+Cherry. **Unresolved:** "Mollie" (no known competitor — extractor flags as
+low-confidence; confirm later if it recurs).
+
 ## Out of scope (YAGNI)
 
 - Generalizing "The Guesser" beyond SSSC's opt-in (the kind is reusable, but no
