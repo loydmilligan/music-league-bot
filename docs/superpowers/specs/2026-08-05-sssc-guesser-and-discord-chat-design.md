@@ -45,6 +45,18 @@ increasingly-drunk ritual. We want:
 - **Chat section is per-league opt-in** (`chat_section_leagues` setting; off by
   default). "The Guesser" follows the same opt-in, **off by default**.
 
+## First deliverable (acceptance target)
+
+The first end-to-end digest is **R163 "Ink worthy"** (S6, round_id 163). It must
+render, on the same digest:
+- the **standard chat-notes section** for SSSC (requires component 1 Discord
+  ingest + component 2 roster + enabling the chat section for `sssc`), and
+- **"The Guesser"** section (component 3).
+
+So components 1–3 must be complete and enabled for `sssc` before this digest.
+This is the concrete "done" check for the deterministic work; the cast/storylines
+(component 4) can follow.
+
 ## Components (built in order; each independently useful)
 
 ### 1. Discord chat ingestion (deterministic)
