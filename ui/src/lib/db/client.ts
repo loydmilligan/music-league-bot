@@ -590,6 +590,27 @@ export function openLeagueDb(path?: string): Database.Database {
 	// (in years) applied when prompting image generation, allowing the operator
 	// to skew all avatars younger or older than the stored player age.
 	upsert.run('avatar_age_shift', '0');
+	// Widen player_identities.identity_type to allow 'discord'. SQLite cannot ALTER
+	// a CHECK, so rebuild once when the current CHECK is the pre-discord one.
+	const piSql = (db.prepare(
+		"SELECT sql FROM sqlite_master WHERE type='table' AND name='player_identities'",
+	).get() as { sql?: string } | undefined)?.sql ?? '';
+	if (piSql && !piSql.includes("'discord'")) {
+		db.exec(`
+			CREATE TABLE player_identities_new (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+				league_id INTEGER REFERENCES leagues(id) ON DELETE SET NULL,
+				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league','discord')),
+				identifier TEXT NOT NULL,
+				created_at TEXT DEFAULT (datetime('now'))
+			);
+			INSERT INTO player_identities_new (id, player_id, league_id, identity_type, identifier, created_at)
+				SELECT id, player_id, league_id, identity_type, identifier, created_at FROM player_identities;
+			DROP TABLE player_identities;
+			ALTER TABLE player_identities_new RENAME TO player_identities;
+		`);
+	}
 	// digest approval gate: approval_token/decision/decided_at/review_url +
 	// attempts retry counter on digest_jobs.
 	const digestJobsCols = db.prepare("PRAGMA table_info(digest_jobs)").all() as { name: string }[];
