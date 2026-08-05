@@ -269,6 +269,7 @@ export const CHAT_SECTION_DEFAULTS: Record<string, boolean> = {
 	'fam-jam': false,
 	'hip-jammers': false,
 	'nostalgia-pit': false,
+	'sssc': false,
 };
 
 const SETTINGS_KEY = 'chat_section_leagues';
