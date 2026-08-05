@@ -29,10 +29,13 @@ increasingly-drunk ritual. We want:
   Noise", `antigravpjs`↔"Antigrav PJs", `sparklepants13`↔"Sparkle Pants",
   `KarBen`↔"Karben", `TekniKali.Mo`↔"TEKNIKALI MO". A minority need an alias map
   (e.g. "Generous Giragge"→`jirafa`/`lithogiraffe`, "Zewskers", "Mollie").
-- **No stored playlist position.** `ml_submissions` has only submission
-  timestamps (not play order). The "drunker by the end" pattern must be inferred
-  from his own textual lateness cues ("Final song", "close to the end", "half
-  this list to get through") + drink-word density, not a true ML playlist index.
+- **Play order is exactly reconstructable.** Music League Spotify playlists are
+  ordered **alphabetically by Spotify track id**, and voting shows the same order.
+  So play/vote position = submissions sorted `ORDER BY spotify_uri` (1..N).
+  Verified against Dogsweat's own cues in R154: `spotify_uri`-sorted position 1 =
+  "First one is always the hardest", position 13 = "I have lost all semblance of
+  coherence", last position = "Final song … my final pick". This makes the
+  "drunker by the end" arc an **exact** position metric, not an inference.
 - **Chat DB shape:** `chat_messages(platform, group_name, group_key, sender,
   text, ts, msg_hash, sender_handle)`, dedup on `msg_hash` UNIQUE and natural key
   `(group_name, sender, ts, text)`. Chat scopes to a league via the
@@ -90,7 +93,8 @@ guesser_guesses(
   correct,                        -- guessed == actual
   confidence,                     -- match confidence 0..1
   drink_refs,                     -- count of drink-word hits in the comment
-  lateness_cue,                   -- parsed ordinal signal 0..1 (NULL if none)
+  play_position,                  -- 1..N, submissions sorted by spotify_uri
+  play_count,                     -- N songs in the round (for position/N)
   extracted_at
 )
 ```
@@ -108,8 +112,10 @@ guesser_guesses(
 - **"Always nails" award** — submitter(s) he's never/rarely missed (min sample).
 - **"Littermates"** — the ordered pair (A,B) he most often swaps: he guesses B on
   A's songs and vice-versa. Symmetric confusion count.
-- **Drunk-by-the-end** — accuracy and/or drink-word density as a function of his
-  lateness cue, surfacing the "gets worse as the night goes on" arc.
+- **Drunk-by-the-end** — accuracy and drink-word density as a function of exact
+  `play_position` (spotify_uri order), surfacing the "gets worse as the night
+  goes on" arc. E.g. hit rate in the first third of the playlist vs the last
+  third, and the position where his coherence visibly breaks.
 
 ### 4. Recurring cast & storylines (curated seeds + deterministic evidence)
 
@@ -148,8 +154,6 @@ not code.
 
 ## Constraints / risks
 
-- **No true playlist position** → the "drunker by the end" angle is inferred from
-  textual cues + drink-word density, not an exact play index. Accept as coarse.
 - **Roster gaps** can misattribute guesses; low-confidence matches are excluded
   from awards rather than scored wrong.
 - **`identity_type` CHECK change** and **`digest_sections.kind` CHECK change** are
@@ -172,4 +176,3 @@ not code.
   other league is wired now).
 - Live/auto Discord ingestion — this is a manual file drop + parse, matching how
   Mara hand-exports ML data.
-- True playlist-order reconstruction.
