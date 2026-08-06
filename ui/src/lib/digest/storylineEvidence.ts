@@ -8,6 +8,14 @@
  * chat section) and/or that player's vote comments for the round, matching
  * on the seed's patterns. No LLM involved — the write-up consumes this
  * bundle, it doesn't produce it.
+ *
+ * Attribution is by `player_id`, not by name string: `players.name` and
+ * `competitors.name` frequently disagree (e.g. SSSC's `missmara` is player
+ * row "Mara Mariani"), so each seed's `player` label is resolved to a
+ * `player_id` once, up front, the same way `guesserInsights.ts` builds its
+ * candidate roster — from the league's competitor names (via votes /
+ * ml_submissions) and `player_identities` (discord + music-league) — and
+ * evidence is then matched by id, never by re-comparing names downstream.
  */
 
 import type Database from 'better-sqlite3';
@@ -45,6 +53,80 @@ function sortQuotes(quotes: RawQuote[]): RawQuote[] {
 	});
 }
 
+/**
+ * Detect the chat platform actually stored for a group, instead of assuming
+ * WhatsApp.
+ *
+ * Mirrors `+page.server.ts`'s chat-section platform detection exactly — SSSC's
+ * `chat_messages` rows are all `platform='discord'`, so hardcoding 'whatsapp'
+ * here made `buildChatRoster` look up the wrong `identity_type` and resolve
+ * nobody, silently zeroing out every chat-sourced seed.
+ */
+function detectPlatform(
+	db: Database.Database,
+	groupName: string,
+): 'whatsapp' | 'google-chat' | 'discord' {
+	const raw = (
+		db.prepare('SELECT platform FROM chat_messages WHERE group_name = ? LIMIT 1').get(groupName) as
+			| { platform?: string }
+			| undefined
+	)?.platform;
+	if (raw === 'googlechat') return 'google-chat';
+	if (raw === 'discord') return 'discord';
+	return 'whatsapp';
+}
+
+/**
+ * Resolve each seed's `player` label to a `player_id`, once, for the whole
+ * gather — before any evidence matching happens.
+ *
+ * Candidates are the league's competitor names (scoped via votes /
+ * ml_submissions, same join `guesserInsights.ts` uses) and
+ * `player_identities` identifiers for `discord`/`music-league` (the only
+ * identity types that hold a human-readable handle rather than an opaque
+ * phone/chat id) — league-scoped or global. A seed whose player can't be
+ * resolved to an id is left out of the map and its evidence search is
+ * skipped entirely: it cannot produce attributed evidence.
+ */
+function resolveSeedPlayerIds(db: Database.Database, leagueId: number): Map<string, number> {
+	const byNormalizedLabel = new Map<string, number>();
+
+	const competitorRows = db
+		.prepare(
+			`SELECT DISTINCT c.name AS name, c.player_id AS playerId
+			   FROM competitors c
+			   JOIN votes v ON v.voter_id = c.id
+			   JOIN rounds r ON r.id = v.round_id
+			   JOIN seasons se ON se.id = r.season_id
+			  WHERE se.league_id = ? AND c.player_id IS NOT NULL
+			 UNION
+			 SELECT DISTINCT c.name AS name, c.player_id AS playerId
+			   FROM competitors c
+			   JOIN ml_submissions s ON s.competitor_id = c.id
+			   JOIN rounds r ON r.id = s.round_id
+			   JOIN seasons se ON se.id = r.season_id
+			  WHERE se.league_id = ? AND c.player_id IS NOT NULL`,
+		)
+		.all(leagueId, leagueId) as { name: string; playerId: number }[];
+	for (const row of competitorRows) {
+		byNormalizedLabel.set(normalizePlayer(row.name), row.playerId);
+	}
+
+	const identityRows = db
+		.prepare(
+			`SELECT identifier, player_id AS playerId
+			   FROM player_identities
+			  WHERE identity_type IN ('discord', 'music-league')
+			    AND (league_id = ? OR league_id IS NULL)`,
+		)
+		.all(leagueId) as { identifier: string; playerId: number }[];
+	for (const row of identityRows) {
+		byNormalizedLabel.set(normalizePlayer(row.identifier), row.playerId);
+	}
+
+	return byNormalizedLabel;
+}
+
 export function gatherStorylineEvidence(db: Database.Database, roundId: number): StorylineEvidence[] {
 	const round = db
 		.prepare(
@@ -63,6 +145,8 @@ export function gatherStorylineEvidence(db: Database.Database, roundId: number):
 	const seeds: StorylineSeed[] = STORYLINE_SEEDS[round.slug] ?? [];
 	if (seeds.length === 0) return [];
 
+	const seedPlayerIds = resolveSeedPlayerIds(db, round.leagueId);
+
 	// Previous round = the season round with the next-lower voting_deadline.
 	const prevRound = round.votingDeadline
 		? (db
@@ -80,58 +164,63 @@ export function gatherStorylineEvidence(db: Database.Database, roundId: number):
 	// Chat evidence is only available when there's a window AND the league has a
 	// mapped chat group — either missing just means chat-sourced seeds find
 	// nothing, not that the whole gatherer fails.
-	let chatQuotesByPlayer = new Map<string, RawQuote[]>();
+	const chatQuotesByPlayerId = new Map<number, RawQuote[]>();
 	if (window) {
 		const groupName = getChatSettings(db).leagueGroupMap[round.slug];
 		if (groupName) {
+			const platform = detectPlatform(db, groupName);
 			const { messages, sendersSeen } = loadChatWindow(db, groupName, window);
-			const roster = buildChatRoster(db, round.leagueId, sendersSeen, 'whatsapp', groupName);
-			chatQuotesByPlayer = new Map();
+			const roster = buildChatRoster(db, round.leagueId, sendersSeen, platform, groupName);
 			for (const msg of messages) {
 				const person = roster.resolve(msg.sender);
-				if (!person) continue;
-				const key = normalizePlayer(person.name);
-				const list = chatQuotesByPlayer.get(key) ?? [];
+				if (!person || person.playerId === null) continue;
+				const list = chatQuotesByPlayerId.get(person.playerId) ?? [];
 				list.push({
 					text: msg.text,
 					ts: new Date(msg.ts).toISOString(),
 					source: 'chat',
 				});
-				chatQuotesByPlayer.set(key, list);
+				chatQuotesByPlayerId.set(person.playerId, list);
 			}
 		}
 	}
 
 	// Vote-comment evidence: every commented vote this round, keyed by the
-	// voting competitor's name.
+	// voting competitor's player_id. `votes.player_id` is the backfilled FK
+	// (sprint-25); `competitors.player_id` covers rows written before that
+	// backfill ran.
 	const voteRows = db
 		.prepare(
-			`SELECT v.comment AS comment, v.created_at AS ts, c.name AS competitorName
+			`SELECT v.comment AS comment, v.created_at AS ts,
+			        COALESCE(v.player_id, c.player_id) AS playerId
 			   FROM votes v
 			   JOIN competitors c ON c.id = v.voter_id
 			  WHERE v.round_id = ? AND v.comment IS NOT NULL AND TRIM(v.comment) != ''`,
 		)
-		.all(round.id) as { comment: string; ts: string; competitorName: string }[];
-	const voteQuotesByPlayer = new Map<string, RawQuote[]>();
+		.all(round.id) as { comment: string; ts: string; playerId: number | null }[];
+	const voteQuotesByPlayerId = new Map<number, RawQuote[]>();
 	for (const row of voteRows) {
-		const key = normalizePlayer(row.competitorName);
-		const list = voteQuotesByPlayer.get(key) ?? [];
+		if (row.playerId === null) continue;
+		const list = voteQuotesByPlayerId.get(row.playerId) ?? [];
 		list.push({ text: row.comment, ts: row.ts, source: 'vote_comments' });
-		voteQuotesByPlayer.set(key, list);
+		voteQuotesByPlayerId.set(row.playerId, list);
 	}
 
 	const evidence: StorylineEvidence[] = [];
 	for (const seed of seeds) {
-		const key = normalizePlayer(seed.player);
+		const playerId = seedPlayerIds.get(normalizePlayer(seed.player));
+		// Can't attribute evidence to a player we couldn't resolve.
+		if (playerId === undefined) continue;
+
 		const candidates: RawQuote[] = [];
 
 		if (seed.sources.includes('chat')) {
-			for (const q of chatQuotesByPlayer.get(key) ?? []) {
+			for (const q of chatQuotesByPlayerId.get(playerId) ?? []) {
 				if (seed.patterns.some((p) => p.test(q.text))) candidates.push(q);
 			}
 		}
 		if (seed.sources.includes('vote_comments')) {
-			for (const q of voteQuotesByPlayer.get(key) ?? []) {
+			for (const q of voteQuotesByPlayerId.get(playerId) ?? []) {
 				if (seed.patterns.some((p) => p.test(q.text))) candidates.push(q);
 			}
 		}
