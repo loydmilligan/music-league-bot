@@ -1,11 +1,24 @@
 import Database from 'better-sqlite3';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import { openLeagueDb } from './client.js';
 import { randomUUID } from 'node:crypto';
+import { unlinkSync } from 'node:fs';
+
+let dbPath: string | undefined;
+
+afterAll(() => {
+  if (!dbPath) return;
+  try {
+    unlinkSync(dbPath);
+  } catch {
+    // best-effort cleanup
+  }
+});
 
 describe('digest_sections.kind storylines widening', () => {
   it('widens digest_sections.kind to storylines, preserving rows + regen children', () => {
     const path = `/tmp/ds-storylines-${randomUUID()}.db`;
+    dbPath = path;
 
     // Manually construct a pre-storylines DB: minimal digest_drafts +
     // digest_sections (OLD CHECK, no 'storylines') + digest_regenerations
