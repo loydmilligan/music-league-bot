@@ -196,7 +196,7 @@ export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS digest_sections (
     id           TEXT PRIMARY KEY,
     draft_id     TEXT NOT NULL REFERENCES digest_drafts(id) ON DELETE CASCADE,
-    kind         TEXT NOT NULL CHECK(kind IN ('podium','villain','flow','consensus','quotes','chat')),
+    kind         TEXT NOT NULL CHECK(kind IN ('podium','villain','flow','consensus','quotes','chat','storylines')),
     position     INTEGER NOT NULL,
     state        TEXT NOT NULL DEFAULT 'default' CHECK(state IN ('default','excluded','locked')),
     content_json TEXT NOT NULL,

@@ -620,6 +620,36 @@ export function openLeagueDb(path?: string): Database.Database {
 			ALTER TABLE player_identities_new RENAME TO player_identities;
 		`);
 	}
+	// Widen digest_sections.kind to allow 'storylines'. SQLite cannot ALTER a
+	// CHECK, so rebuild once when the current CHECK is the pre-storylines one.
+	// digest_regenerations.section_id REFERENCES digest_sections(id) ON DELETE
+	// CASCADE, so dropping digest_sections with FKs ON would cascade-delete
+	// every digest_regenerations row. Disable FKs for the swap and restore after.
+	const dsSql = (db.prepare(
+		"SELECT sql FROM sqlite_master WHERE type='table' AND name='digest_sections'",
+	).get() as { sql?: string } | undefined)?.sql ?? '';
+	if (dsSql && !dsSql.includes("'storylines'")) {
+		db.pragma('foreign_keys = OFF');
+		db.exec(`
+			CREATE TABLE digest_sections_new (
+				id           TEXT PRIMARY KEY,
+				draft_id     TEXT NOT NULL REFERENCES digest_drafts(id) ON DELETE CASCADE,
+				kind         TEXT NOT NULL CHECK(kind IN ('podium','villain','flow','consensus','quotes','chat','storylines')),
+				position     INTEGER NOT NULL,
+				state        TEXT NOT NULL DEFAULT 'default' CHECK(state IN ('default','excluded','locked')),
+				content_json TEXT NOT NULL,
+				edited_at    TEXT,
+				regen_count  INTEGER NOT NULL DEFAULT 0,
+				variant      TEXT NOT NULL DEFAULT 'textual' CHECK(variant IN ('textual','visual','both'))
+			);
+			INSERT INTO digest_sections_new (id, draft_id, kind, position, state, content_json, edited_at, regen_count, variant)
+				SELECT id, draft_id, kind, position, state, content_json, edited_at, regen_count, variant FROM digest_sections;
+			DROP TABLE digest_sections;
+			ALTER TABLE digest_sections_new RENAME TO digest_sections;
+			CREATE INDEX IF NOT EXISTS idx_digest_sections_draft ON digest_sections(draft_id, position);
+		`);
+		db.pragma('foreign_keys = ON');
+	}
 	// digest approval gate: approval_token/decision/decided_at/review_url +
 	// attempts retry counter on digest_jobs.
 	const digestJobsCols = db.prepare("PRAGMA table_info(digest_jobs)").all() as { name: string }[];
