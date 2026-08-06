@@ -1,0 +1,263 @@
+{
+  "meta": {
+    "league": "SouthSide Secret Club (SSSC)",
+    "section": "Storylines / The Regulars",
+    "note": "Curated recurring-character seeds -> deterministic evidence quotes (round chat window + the players vote comments, attributed by player_id) -> thin LLM writeup constrained to use ONLY the evidence. A seed with no evidence this round is dropped."
+  },
+  "seeds": [
+    {
+      "player": "PoetryinNoise",
+      "motif": "cats & big butts",
+      "patterns": [
+        "/\\bcats?\\b/i",
+        "/\\bbig butts?\\b/i",
+        "/\\bbutts?\\b/i"
+      ],
+      "sources": [
+        "vote_comments",
+        "chat"
+      ]
+    },
+    {
+      "player": "Timmywhatup",
+      "motif": "rap deep-dives & weed",
+      "patterns": [
+        "/\\brap(ity)?\\b/i",
+        "/\\bnew (music|releases?)\\b/i",
+        "/\\bfriday\\b/i",
+        "/\\bweed\\b/i"
+      ],
+      "sources": [
+        "chat"
+      ]
+    },
+    {
+      "player": "bagimation",
+      "motif": "songs they didn't pick",
+      "patterns": [
+        "/\\bdidn.?t (pick|choose|submit)\\b/i",
+        "/\\bshould have (picked|submitted)\\b/i",
+        "/\\balmost (picked|went with)\\b/i"
+      ],
+      "sources": [
+        "chat"
+      ]
+    },
+    {
+      "player": "missmara",
+      "motif": "songs they didn't pick",
+      "patterns": [
+        "/\\bdidn.?t (pick|choose|submit)\\b/i",
+        "/\\bshould have (picked|submitted)\\b/i",
+        "/\\balmost (picked|went with)\\b/i"
+      ],
+      "sources": [
+        "chat"
+      ]
+    }
+  ],
+  "exampleGeneratedCast_R163": {
+    "title": "Cast and Motifs",
+    "cast": [
+      {
+        "name": "PoetryinNoise",
+        "headline": "Sir Mix-a-Lot's Biggest Fan (And Reluctant Motley Crüe Scholar)",
+        "evidence": [
+          "\"Look, I'm not saying I prefer my paramours to have a big ol' butt...but few songs have spoken to me on a deeper level than Baby's Got Back.\"",
+          "Confessed to owning Motley Crüe's *New Tattoo* twice and experiencing active moral distress about it."
+        ]
+      },
+      {
+        "name": "timmyg",
+        "headline": "The Underground Hip-Hop Completist (Who Lives and Dies by OME)",
+        "evidence": [
+          "\"some alternative ink 'must every seed i plant bear fruit' ELUCID on Baby Steps (from Maps) 'i wake up and smoke weed' Billy Woods on... Hiding places somewhere. 'every member is also president' RAP Ferreira on... cycles\"",
+          "Consistently pulled lyrical deep cuts as alternatives, proving a music taste that hasn't changed in 25 years and won't apologize for it."
+        ]
+      }
+    ]
+  },
+  "evidenceByRound": [
+    {
+      "round": "Who said what now?",
+      "roundId": 154,
+      "seedsFired": []
+    },
+    {
+      "round": "Cool Down Lap",
+      "roundId": 155,
+      "seedsFired": [
+        {
+          "player": "Timmywhatup",
+          "motif": "rap deep-dives & weed",
+          "quotes": [
+            {
+              "text": "@Mouse Atreides (and anyone else who's not switched on to busdriver)   i recommend putting on album  'fear of a black tangent' and letting it roll. the album showcases his humor and flows, the beats are accessible, and he mostly concentrates on themes of being black, an outsider, and rap. its weird but not too weird.",
+              "ts": "2026-04-07T14:34:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "@Mouse Atreides (and anyone else who's not switched on to busdriver)   i recommend putting on album  'fear of a black tangent' and letting it roll. the album showcases his humor and flows, the beats are accessible, and he mostly concentrates on themes of being black, an outsider, and rap. its weird but not too weird.",
+              "ts": "2026-04-07T14:27:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "@Mouse Atreides (and anyone else who's not switched on to busdriver)  i recommend putting on album  'fear of a black tangent' and letting it roll. the album showcases his humor and flows, the beats are accessible, and he mostly concentrates on themes of being black, an outsider, and rap. its weird but not too weird.",
+              "ts": "2026-04-07T11:53:00.000Z",
+              "source": "chat"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": "Spirits and Shadows",
+      "roundId": 156,
+      "seedsFired": [
+        {
+          "player": "Timmywhatup",
+          "motif": "rap deep-dives & weed",
+          "quotes": [
+            {
+              "text": "some alt drinking raps. one beer didn't make it in the playlist  or all outta ale! kdot - swimming  devin - reefer and beer  PUTS - pass the 40 kid koala - drunk trumpet the coup - long island ice tea, neat jlive - fire water injury reserve - keep on sippin thundercat - drunk (whole album :))  my drinking songs to weed songs ratio gotta be at least 1:10. ima get blazed as heck and listen to this playlist pretending I drink once my sister goes home.",
+              "ts": "2026-04-23T20:49:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "some alt drinking raps. one beer didn't make it in the playlist  or all outta ale! kdot - swimming  devin - reefer and beer  PUTS - pass the 40 kid koala - drunk trumpet the coup - long island ice tea, neat jlive - fire water injury reserve - keep on sippin thundercat - drunk (whole album :))  my drinking songs to weed songs ratio gotta be at least 1:10. ima get blazed as heck and listen to this playlist pretending I drink once my sister goes home.",
+              "ts": "2026-04-23T11:41:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "some alt drinking raps. one beer didn't make it in the playlist  or all outta ale! kdot - swimming  devin - reefer and beer  PUTS - pass the 40 kid koala - drunk trumpet the coup - long island ice tea, neat jlive - fire water injury reserve - keep on sippin thundercat - drunk (whole album :)) my drinking songs to weed songs ratio gotta be at least 1:10. ima get blazed as heck and listen to this playlist pretending I drink once my sister goes home.",
+              "ts": "2026-04-23T11:28:00.000Z",
+              "source": "chat"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": "Reinterpreted Cover Songs",
+      "roundId": 157,
+      "seedsFired": []
+    },
+    {
+      "round": "I found them first (or 24,999th)",
+      "roundId": 158,
+      "seedsFired": [
+        {
+          "player": "Timmywhatup",
+          "motif": "rap deep-dives & weed",
+          "quotes": [
+            {
+              "text": "its part of being a 1D 1genre man. only listening to rap has lead me to this point.",
+              "ts": "2026-05-14T18:43:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "again mos def covering but me not liking it. This kind of cover (jacking style) is what is okay for rap. (don't look up crayzwalz we don't like him anymore) https://www.youtube.com/watch?v=yrb5t_JEWDc",
+              "ts": "2026-05-14T13:24:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "i asked OME about covering rap songs once with the mailbag, and whatever he said convinced me that its not gonna happen",
+              "ts": "2026-05-14T13:20:00.000Z",
+              "source": "chat"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": "Songs to Ride My Bike In Traffic to",
+      "roundId": 159,
+      "seedsFired": []
+    },
+    {
+      "round": "Local Love Soundscape",
+      "roundId": 160,
+      "seedsFired": []
+    },
+    {
+      "round": "Too Much Noise in My Head",
+      "roundId": 161,
+      "seedsFired": []
+    },
+    {
+      "round": "DEEP-CUTS ONLY",
+      "roundId": 162,
+      "seedsFired": []
+    },
+    {
+      "round": "Ink worthy",
+      "roundId": 163,
+      "seedsFired": [
+        {
+          "player": "PoetryinNoise",
+          "motif": "cats & big butts",
+          "quotes": [
+            {
+              "text": "Look, I'm not saying I prefer my paramours to have a big ol' butt...but few songs have spoken to me on a deeper level than Baby's Got Back.",
+              "ts": "2026-07-23T18:09:00.000Z",
+              "source": "chat"
+            }
+          ]
+        },
+        {
+          "player": "Timmywhatup",
+          "motif": "rap deep-dives & weed",
+          "quotes": [
+            {
+              "text": "\"i love rap, it's a bit awkward\" - OME",
+              "ts": "2026-07-22T22:07:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "some alternative ink 'must every seed i plant bear fruit' ELUCID on Baby Steps (from Maps) 'i wake up and smoke weed' Billy Woods on... Hiding places somewhere. 'every member is also president' RAP Ferreira on... cycles",
+              "ts": "2026-07-22T19:21:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "some alternative ink 'must every seed i plant bear fruit' ELUCID on Baby Steps (from Maps) 'i wake up and smoke weed' Billy Woods on... Hiding places somewhere. 'every member is also president' RAP Ferreira on... cycles",
+              "ts": "2026-07-22T00:05:00.000Z",
+              "source": "chat"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "round": "Time is a Shark",
+      "roundId": 164,
+      "seedsFired": [
+        {
+          "player": "Timmywhatup",
+          "motif": "rap deep-dives & weed",
+          "quotes": [
+            {
+              "text": "i havent changed my music taste in 25 years im so screwed gang.  ill end up like marty mcfly playing music nobody ready for.  send kendricks catalogue back and just release the songs as me and become kdot before he can. ima be a famous rap star. hey boy from ottawa y u rappin bout compton? i got my reasons",
+              "ts": "2026-07-30T16:05:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "i havent changed my music taste in 25 years im so screwed gang.  ill end up like marty mcfly playing music nobody ready for.  send kendricks catalogue back and just release the songs as me and become kdot before he can. ima be a famous rap star. hey boy from ottawa y u rappin bout compton? i got my reasons",
+              "ts": "2026-07-30T12:21:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "i havent changed my music taste in 25 years im so screwed gang. ill end up like marty mcfly playing music nobody ready for.  send kendricks catalogue back and just release the songs as me and become kdot before he can. ima be a famous rap star. hey boy from ottawa y u rappin bout compton? i got my reasons",
+              "ts": "2026-07-30T12:19:00.000Z",
+              "source": "chat"
+            },
+            {
+              "text": "'lotta years' is the tat i would actually steal from this round. shout out how y'all all know i love the rappiest rap so it's easy to guess me. but missed. i want my next round submission ito be the entirety of PMP. but since i can't submit an album to music league ...",
+              "ts": "2026-07-28T09:52:00.000Z",
+              "source": "chat"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

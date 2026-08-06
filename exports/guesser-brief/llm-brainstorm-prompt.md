@@ -21,7 +21,11 @@ A **deterministic** ledger of Dogsweat's guessing. From the data we compute:
 ### Section 2 — "Storylines" ("The Regulars")
 A cast of **recurring bits** for the league's characters, written from real evidence quotes (e.g. one player's obsession with cats & Sir Mix-a-Lot; another's Friday new-music deep-dives + weed). Cast size varies per round.
 
-## The data (attached: `dogsweat-guesser-data.json`)
+## The data (attached)
+
+**`storylines-data.json`** — the Storylines seeds, and for each of the 11 rounds the real evidence quotes that fired (note: seeds fire *sparsely* — only 6 times across the season, so most rounds have 0–2 cast members), plus R163's generated cast. Use it for the Storylines ideas.
+
+**`dogsweat-guesser-data.json`** (below) — for The Guesser:
 - `meta` — who the guesser is, the tradition.
 - `seasonLeaderboards` — eludesHim / alwaysNails / littermates.
 - `perRound[]` — for all 11 rounds: his weekly attempts/correct/rate, `drunkByThird` (accuracy in first/middle/last third of the playlist), and **`guesses[]`** — every song with its play `pos`, the **actual** submitter, his **guessed** submitter, whether he was `correct`, the points he gave, and **his full `comment`** (this is the gold — it's where the drunkenness, reasoning, and personality live).

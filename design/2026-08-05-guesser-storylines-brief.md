@@ -125,10 +125,21 @@ CD will: (1) read this brief and load/observe the design system as it's actually
 - **Constraints:** anything asserted must be backed by real data (the litter-mates/eludes-him rows already are). Audio-feature angles (BPM/genre) are **aspirational** — only 6/217 SSSC songs are analyzed today.
 - **Taste fingerprints:** the repo has a per-player taste system (`ui/src/lib/taste-waveform/`, `song_audio_features` with bpm/key/energy). A rich future angle: when Dogsweat's comment **nails** a player's taste vs. **totally misses** it, surface it. (Assumption: worth prototyping the *presentation* even if the data pipeline is later.)
 
-### Idea E — Storylines / "The Regulars" (more open)
-- **The idea:** Improve the cast section. The team is **less sure** here. Today it's `{name, headline, evidence[]}` as a list. It could be more of a "trading-card / who's-who" treatment.
-- **Constraints:** content is LLM-written from bounded evidence; cast size varies per round (0–4 fired for R163's window); must degrade gracefully to empty. Same export/web dual-mode requirement.
-- **Open questions:** cards vs. list vs. margin notes? How to show the *evidence quotes* without it reading like footnotes? How does it relate visually to The Guesser (sibling "culture" sections)?
+### Idea E — Storylines / "The Regulars" *(the other new section — full treatment)*
+
+**What it is (current implementation).** A curated **cast of recurring characters** in the league. Mechanism (`ui/src/lib/digest/storylineSeeds.ts` + `storylineEvidence.ts`): a per-league **seed** list (`{player, motif, patterns, sources}`) drives a *deterministic* evidence gatherer that searches the round's chat window + that player's vote comments for the motif; matching **quotes** are collected; a thin LLM pass then writes a `{name, headline, evidence[]}` card for each seed **using only those quotes** (no invented threads). A seed with no evidence that round is **dropped**. Current SSSC seeds: PoetryinNoise (cats / "big butts"), Timmywhatup (rap deep-dives / weed), bagimation + missmara ("songs they didn't pick").
+
+**Real current output (R163 "Ink worthy") — use this as the sample content, not lorem:**
+- **PoetryinNoise** — *headline:* "Sir Mix-a-Lot's Biggest Fan (And Reluctant Motley Crüe Scholar)"; *evidence:* "…few songs have spoken to me on a deeper level than Baby's Got Back." / "Confessed to owning Motley Crüe's *New Tattoo* twice and experiencing active moral distress about it."
+- **timmyg** — *headline:* "The Underground Hip-Hop Completist (Who Lives and Dies by OME)"; *evidence:* a real ELUCID/Billy Woods/RAP Ferreira weed-lyric deep-dive quote.
+
+**The hard truth CD must design around: it fires sparsely.** Across the 11-round season the 4 seeds produced evidence only **6 times total** — most rounds show **0–2** cast members, and the "didn't-pick" seeds almost never fire. So the section is **frequently empty or a single card.** The design must make a 1-member (or 2-member) state feel *intentional and good*, not broken — and must have a graceful "no regulars surfaced this week" empty state. A dense multi-card grid designed for 5 people will look wrong at n=1.
+
+**Why the team is less sure here.** Unlike The Guesser (a beloved tradition with a clear shape), Storylines is newer and its content is thinner/less predictable. It may want to be quieter — margin notes, a single "character of the week" spotlight, or a running who's-who that persists across rounds — rather than a big section.
+
+- **Constraints:** LLM-written from bounded evidence; **cast size 0–2 typical**, must degrade gracefully; same export/web dual-mode; the `evidence[]` items are the real value and should read as *character*, not footnotes.
+- **Open questions:** cards vs. list vs. margin notes vs. a single weekly spotlight? Given sparse firing, should it be a small always-present "regulars" strip that just shows *who appeared* this week, expanding only when there's real material? How should it relate visually to The Guesser — a matched sibling, or deliberately quieter?
+- **Data:** the full seeds + every round's fired evidence quotes + R163's generated cast are exported to `exports/guesser-brief/storylines-data.json` (hand to CD).
 
 ---
 
@@ -179,13 +190,13 @@ CD will: (1) read this brief and load/observe the design system as it's actually
 - **Canvas:** 3 layout options varying the hero element.
 - **How we'll decide:** which reads as most *fun*, not most *accurate*.
 
-### D4. Storylines format · **[Proposed by CC]**
-- **The decision:** List vs. trading-card/who's-who vs. margin notes for the cast.
-- **Why it matters:** it's the other new section and should feel sibling to The Guesser.
-- **Options:** (a) refined list (status quo+), (b) cast "cards" with name/headline/quote, (c) an annotated "cast page" with evidence quotes as pull-quotes.
-- **Constraints:** variable cast size (0–4), LLM-written, export dual-mode, graceful empty.
-- **Canvas:** 2–3 options in context; show a 1-member and a 3-member state.
-- **How we'll decide:** recognizable, warm, and coherent with The Guesser.
+### D4. Storylines format & how it survives being sparse · **[Proposed by CC]**
+- **The decision:** What form the cast takes AND how it holds up when only 0–2 seeds fire (the common case: 6 fires across 11 rounds).
+- **Why it matters:** it's the other new section; the wrong form looks broken at n=1. It should feel sibling to The Guesser without competing with it.
+- **Options:** (a) refined list (status quo+); (b) cast "cards" (name/headline/pull-quote) sized to look right at n=1–2; (c) a single "regular of the week" spotlight; (d) a small persistent "the regulars" strip that names who showed up and expands only when there's real material; (e) quiet margin notes alongside other sections.
+- **Constraints:** variable cast size **0–2 typical**, LLM-written from real quotes, export dual-mode, graceful "none this week" empty state.
+- **Canvas:** 2–3 options in context, each shown at **n=0, n=1, and n=2** (the states it will actually be in), web + export.
+- **How we'll decide:** looks intentional at n=1, warm, recognizable, coherent-but-subordinate to The Guesser.
 
 ### D5. *(open stub for CD)*
 ### D6. *(open stub for CD)*
@@ -233,5 +244,6 @@ CD will: (1) read this brief and load/observe the design system as it's actually
 - **Design tokens:** `ui/src/app.css` (paper theme vars; `--bg #f4f1ea`, `--fg #1a1d22`, `--accent → --mash-pulp`, `--font-display` Bricolage, `--font-mono` JetBrains).
 - **Component library:** `ui/src/lib/digest/` — `DigestSection.svelte` (shell), `ChatMoments.svelte` (dual-mode template), `DigestInsights.svelte` (deterministic-visual precedent), `GuesserLeaderboard.svelte` (current Guesser), `StorylinesCast.svelte` (current Storylines).
 - **Screens the feature touches:** `ui/src/routes/digest/[roundId]/+page.svelte`; live example `/digest/163`.
-- **Data:** `GuesserData` shape in `ui/src/lib/db/guesserInsights.ts`; a full real dataset (11 rounds of Dogsweat's guesses + comments + leaderboards) is exported to `exports/guesser-brief/dogsweat-guesser-data.json` (hand this to CD too — real content beats lorem).
+- **Data (Guesser):** `GuesserData` shape in `ui/src/lib/db/guesserInsights.ts`; a full real dataset (11 rounds of Dogsweat's guesses + comments + leaderboards) → `exports/guesser-brief/dogsweat-guesser-data.json`.
+- **Data (Storylines):** seeds (`ui/src/lib/digest/storylineSeeds.ts`) + shape `{title, cast:[{name, headline, evidence[]}]}`; real seeds + every round's fired evidence + R163's generated cast → `exports/guesser-brief/storylines-data.json`. (Hand both data files to CD — real content beats lorem.)
 - **Related:** taste system `ui/src/lib/taste-waveform/`; audio features `song_audio_features` table (sparse: 6/217 SSSC songs).
