@@ -14,6 +14,8 @@ import { coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 import { getRoundInsights, type RoundInsights } from '$lib/db/roundInsights.js';
 import { buildChatSection, recommendParts, chatSectionEnabledFor, type ChatSectionData, type PartRecommendation } from '$lib/digest/chatSection.js';
 import { getChatSettings } from '$lib/chat/historyQuery.js';
+import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
+import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -181,6 +183,9 @@ export type DigestPageData =
       chatSection: ChatSectionData | null;
       chatRecommendations: PartRecommendation[];
       recap: RecapContext | null;
+      /** "The Guesser" deterministic sub-section; null when the league hasn't opted in. */
+      guesserData: GuesserData | null;
+      guesserPosition: number;
     });
 
 export const load: PageServerLoad = async ({ params, fetch, url }) => {
@@ -308,6 +313,20 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       console.error('[digest] chat section failed, continuing without it:', err);
     }
 
+    // ── "The Guesser" sub-section (deterministic; scores vote-comment guesses) ──
+    // Opt-in per league, same convention as chat: off unless explicitly enabled
+    // in settings. Never let a failure here take down the digest.
+    let guesserData: GuesserData | null = null;
+    try {
+      const slug = (db
+        .prepare('SELECT slug FROM leagues WHERE id = ?')
+        .get(round.league_id) as { slug?: string } | undefined)?.slug;
+      if (slug && guesserSectionEnabledFor(db, slug)) guesserData = getGuesserData(db, roundId);
+    } catch (err) {
+      console.error('[digest] guesser section failed, continuing without it:', err);
+    }
+    const guesserPosition = (draft as DigestDraftRow & { guesser_position?: number }).guesser_position ?? 0;
+
     const insights = { ...getRoundInsights(db, roundId), roundId, topSectionVariant: draft.top_section_variant, topSectionVisuals: coerceTopSectionVisuals(savedVisuals), statsContent };
     const [standings, stats, discoverability, nextRoundRaw] = await Promise.all([
       fetchStandings(fetch, roundId),
@@ -356,6 +375,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
     return {
       roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage, draft, sections,
       standings, stats: statsOut, insights, discoverability, chatSection, chatRecommendations, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
+      guesserData, guesserPosition,
     } satisfies DigestPageData;
   }
 
