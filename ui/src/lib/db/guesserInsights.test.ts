@@ -126,6 +126,23 @@ describe('getGuesserData', () => {
     expect(g.weekly.rate).toBeCloseTo(1 / 3);
   });
 
+  it('buckets accuracy by play-position third (playCount=4: firstEnd=2, middleEnd=3)', () => {
+    const g = getGuesserData(db, round2Id);
+    // 4 submissions in round 4 -> firstEnd=ceil(4/3)=2, middleEnd=ceil(8/3)=3.
+    // Guesses land at positions 1 (Ann, correct), 2 (Bob, wrong), 3 (Cid,
+    // wrong); position 4 (Gus's own song) is skipped entirely, so `last`
+    // never gets an attempt and defaults to 0.
+    expect(g.drunkByThird).toEqual({ first: 0.5, middle: 0, last: 0 });
+  });
+
+  it('buckets accuracy by play-position third at a small-N boundary (playCount=2)', () => {
+    // Round 1 as its own target: 2 submissions (Ann, Bob) -> firstEnd=ceil(2/3)=1,
+    // middleEnd=ceil(4/3)=2. Position 1 (Ann, correct) -> first; position 2
+    // (Bob, wrong) -> middle; nothing lands in last.
+    const g1 = getGuesserData(db, 1);
+    expect(g1.drunkByThird).toEqual({ first: 1, middle: 0, last: 0 });
+  });
+
   it('builds season leaderboards with the MIN-attempts floor', () => {
     const g = getGuesserData(db, round2Id);
     // Ann: 4/4 correct across r1..r4 -> tops alwaysNails.

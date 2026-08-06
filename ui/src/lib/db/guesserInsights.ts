@@ -184,6 +184,9 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     if (!nameToPlayerId.has(row.name)) nameToPlayerId.set(row.name, row.player_id);
   }
 
+  // Only discord/music-league identifiers are human-readable handles that can
+  // appear in a free-text guess comment; whatsapp/google-chat identifiers are
+  // opaque phone numbers/chat ids and would never match.
   const identityRows = db
     .prepare(
       `SELECT identifier, player_id
@@ -205,11 +208,16 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   // 4. Deterministic comment -> guessed-player resolver.
   const matcher = buildGuessMatcher(candidates);
 
-  // Player id -> display name, for weekly + leaderboard rows.
-  const playerNames = new Map<number, string>();
-  for (const row of competitorRows) {
-    if (row.player_id !== null) playerNames.set(row.player_id, row.name);
-  }
+  // Player id -> canonical display name, for weekly + leaderboard rows.
+  // Sourced from `players` directly (not from competitorRows' competitors.name)
+  // so guessedName/littermates always agree with actualName's COALESCE(p.name, c.name)
+  // preference for the canonical name — otherwise the same person could render
+  // under two different names (canonical when he's the actual submitter, stale
+  // competitors.name when he's the guessed player), and a guess resolved only
+  // via a global identity row could fall back to a raw numeric id string.
+  const playerNames = new Map<number, string>(
+    (db.prepare('SELECT id, name FROM players').all() as { id: number; name: string }[]).map((r) => [r.id, r.name]),
+  );
   const nameOf = (playerId: number | null): string | null =>
     playerId === null ? null : (playerNames.get(playerId) ?? null);
 
