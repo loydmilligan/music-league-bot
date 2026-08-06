@@ -632,6 +632,7 @@ export function openLeagueDb(path?: string): Database.Database {
 		db.pragma('foreign_keys = OFF');
 		try {
 			db.exec(`
+				BEGIN;
 				CREATE TABLE digest_sections_new (
 					id           TEXT PRIMARY KEY,
 					draft_id     TEXT NOT NULL REFERENCES digest_drafts(id) ON DELETE CASCADE,
@@ -648,6 +649,7 @@ export function openLeagueDb(path?: string): Database.Database {
 				DROP TABLE digest_sections;
 				ALTER TABLE digest_sections_new RENAME TO digest_sections;
 				CREATE INDEX IF NOT EXISTS idx_digest_sections_draft ON digest_sections(draft_id, position);
+				COMMIT;
 			`);
 		} finally {
 			db.pragma('foreign_keys = ON');

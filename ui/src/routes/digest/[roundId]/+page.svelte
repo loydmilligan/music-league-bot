@@ -811,9 +811,11 @@
   // The restructured chat section ({ summary, moments[] }) has no meaningful
   // textual form — it only renders via ChatMoments (the visual slot). So default
   // chat to 'visual' unless the user explicitly picked a visual mode already.
+  // storylines ({ title, cast[] }) has the same problem — no textual renderer
+  // in DigestSection.svelte — and is rescued the same way via StorylinesCast.
   function effectiveSectionVariant(kind: string, id: string, persisted: string | undefined): SectionVariant {
     const v = sectionVariant(id, persisted);
-    if (kind === 'chat' && v === 'textual') return 'visual';
+    if ((kind === 'chat' || kind === 'storylines') && v === 'textual') return 'visual';
     return v;
   }
   function changeVariant(id: string, v: SectionVariant) {

@@ -19,7 +19,7 @@
  */
 
 import type Database from 'better-sqlite3';
-import { chatWindowFor, loadChatWindow } from './chatSection';
+import { chatWindowFor, loadChatWindow, tzOffsetMinutes, DEFAULT_CHAT_TZ } from './chatSection';
 import { buildChatRoster } from './chatRoster';
 import { getChatSettings } from '../chat/historyQuery';
 import { STORYLINE_SEEDS, type StorylineSeed } from './storylineSeeds';
@@ -175,9 +175,16 @@ export function gatherStorylineEvidence(db: Database.Database, roundId: number):
 				const person = roster.resolve(msg.sender);
 				if (!person || person.playerId === null) continue;
 				const list = chatQuotesByPlayerId.get(person.playerId) ?? [];
+				// msg.ts is already shifted to local wall-clock (loadChatWindow's
+				// deliberate hack so downstream getUTCHours()/getUTCDay() reads
+				// local time — see chatSection.ts). Re-serializing that shifted
+				// value with `new Date(msg.ts).toISOString()` would stamp it "Z"
+				// and mislabel it as UTC, wrong by the zone's offset. Shift back
+				// to real UTC before labeling.
+				const realUtcMs = msg.ts - tzOffsetMinutes(new Date(msg.ts), DEFAULT_CHAT_TZ) * 60_000;
 				list.push({
 					text: msg.text,
-					ts: new Date(msg.ts).toISOString(),
+					ts: new Date(realUtcMs).toISOString(),
 					source: 'chat',
 				});
 				chatQuotesByPlayerId.set(person.playerId, list);

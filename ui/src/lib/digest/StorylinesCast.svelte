@@ -10,7 +10,7 @@
   // VISUAL_CAPABLE.storylines = true + VISUAL_COMPONENTS.storylines). Mounted as:
   //   <StorylinesCast {kind} {content} variant={'visual'|'both'} />
   // Reads the storylines section's content_json shape (backend, llm.ts
-  // SECTION_JSON_SHAPES.storylines):
+  // SECTION_SCHEMA.storylines):
   //   { title: string, cast: [{ name: string, headline: string, evidence: string[] }] }
   //
   // Defensive: the LLM's generic missing-kind fallback shape is
