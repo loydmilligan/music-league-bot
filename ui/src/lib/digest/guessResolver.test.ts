@@ -22,4 +22,9 @@ describe('buildGuessMatcher', () => {
   it('returns null when no roster name appears', () => {
     expect(m("This song really wasn't about anything.")).toBeNull();
   });
+  it('ambiguity: longest-label match wins over shorter when both players named', () => {
+    // Comment names both Poetry in Noise (15 chars normalized) and bagimation (10 chars).
+    // Both playerId 1 and 2 match, but longest label wins.
+    expect(m('Could be Poetry in Noise or bagimation, not sure.')).toBe(1);
+  });
 });

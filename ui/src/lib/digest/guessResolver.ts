@@ -24,9 +24,10 @@ export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: strin
     }
     if (hits.size === 0) return null;
     if (hits.size === 1) return [...hits][0];
-    // Ambiguous: multiple distinct players named. Prefer the longest-label match
-    // (norms is longest-first, so firstLabelPlayer is the longest); if that longest
-    // is unique to one player, take it, else null.
+    // Ambiguous: multiple distinct players named. Apply deterministic heuristic:
+    // the longest matching label's player wins. This prefers the most specific name,
+    // which is usually the intended guess. (norms is precomputed longest-first, so
+    // firstLabelPlayer is the longest match; ties resolve by candidate array order.)
     return firstLabelPlayer;
   };
 }
