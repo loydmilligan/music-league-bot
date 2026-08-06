@@ -20,6 +20,7 @@ import { shouldRegenerate } from '$lib/digest/draftForce.js';
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { recomputePopularityProxies } from '$lib/lastfm.js';
 import { coerceTopSectionVariant, coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
+import { storylinesSectionEnabledFor } from '$lib/digest/storylinesSection.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -72,12 +73,18 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   await recomputePopularityProxies(db); // fresh proxy so the tastemaker gate passes when data exists
 
+  // storylines is opt-in per league (Task 4): a league that hasn't enabled it
+  // must never generate (and pay for) the section, even on a default/cached-miss
+  // draft that supplied no explicit section params. Gate here, before
+  // generateDraft is invoked, so activeKindsForDraft drops 'storylines'.
+  const effectiveGenParams = disableStorylinesIfOptedOut(db, roundId, genParams);
+
   const data = gatherRoundData(db, roundId);
   // sprint-21: recap mode feeds per-section season slices (rounds ≤ roundId).
-  const season = genParams?.recap?.enabled ? gatherSeasonData(db, roundId) : undefined;
+  const season = effectiveGenParams?.recap?.enabled ? gatherSeasonData(db, roundId) : undefined;
   let output;
   try {
-    output = await generateDraft(data, genParams ?? undefined, season);
+    output = await generateDraft(data, effectiveGenParams ?? undefined, season);
   } catch (e) {
     throw error(502, `LLM draft failed: ${(e as Error).message}`);
   }
@@ -89,7 +96,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   }
 
   const { draft, sections } = writeDraft(
-    db, roundId, data, output, { generated_via: 'POST /draft', genParams: genParams ?? null }, genParams ?? undefined,
+    db, roundId, data, output, { generated_via: 'POST /draft', genParams: effectiveGenParams ?? null }, effectiveGenParams ?? undefined,
   );
 
   return json({
@@ -176,4 +183,36 @@ function parseGenParams(body: unknown): GenParams | null {
 
 function normalizeVariant(v: unknown): 'textual' | 'visual' | 'both' | undefined {
   return v === 'textual' || v === 'visual' || v === 'both' ? v : undefined;
+}
+
+// Resolve the round's league slug and, when the storylines section is not
+// opted in for that league, ensure genParams disables it — so
+// activeKindsForDraft() (llm.ts) drops 'storylines' before the LLM call is
+// ever made. Returns genParams unchanged when the league has opted in.
+function disableStorylinesIfOptedOut(
+  db: ReturnType<typeof getDb>,
+  roundId: number,
+  genParams: GenParams | null,
+): GenParams | null {
+  const row = db
+    .prepare(
+      `SELECT l.slug AS slug
+       FROM rounds r
+       JOIN seasons s ON s.id = r.season_id
+       JOIN leagues l ON l.id = s.league_id
+       WHERE r.id = ?`,
+    )
+    .get(roundId) as { slug?: string } | undefined;
+  const slug = row?.slug;
+  if (!slug || storylinesSectionEnabledFor(db, slug)) return genParams;
+
+  const sections = (genParams?.sections ?? []).filter((s) => s.id !== 'storylines');
+  sections.push({ id: 'storylines', enabled: false });
+  return {
+    sections,
+    pastedChat: genParams?.pastedChat,
+    recap: genParams?.recap,
+    topSectionVariant: genParams?.topSectionVariant,
+    topSectionVisuals: genParams?.topSectionVisuals,
+  };
 }
