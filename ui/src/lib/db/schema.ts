@@ -187,6 +187,9 @@ export const SCHEMA = `
     stats_position INTEGER NOT NULL DEFAULT 0,
     stats_state TEXT NOT NULL DEFAULT 'default',
     stats_content_json TEXT NOT NULL DEFAULT '{}',
+    guesser_position INTEGER NOT NULL DEFAULT 0,
+    guesser_state TEXT NOT NULL DEFAULT 'default',
+    guesser_content_json TEXT NOT NULL DEFAULT '{}',
     archive_context TEXT                        -- S1: lean digest->read-model channel (JSON), non-published
   );
   CREATE INDEX IF NOT EXISTS idx_digest_drafts_round ON digest_drafts(round_id);
