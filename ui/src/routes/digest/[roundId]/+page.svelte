@@ -12,6 +12,7 @@
   import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
   import StandingsChart from '$lib/digest/StandingsChart.svelte';
   import ChatMoments from '$lib/digest/ChatMoments.svelte';
+  import StorylinesCast from '$lib/digest/StorylinesCast.svelte';
   import StatStrip from '$lib/digest/StatStrip.svelte';
   import DigestInsights from '$lib/digest/DigestInsights.svelte';
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
@@ -120,9 +121,8 @@
     consensus: 'Consensus & controversy',
     quotes: 'Liner quotes',
     chat: 'Back cover · chat notes',
-    // sprint-storylines Task 3: minimal stub to satisfy Record<SectionKind, ...>
-    // now that 'storylines' joined SECTION_KINDS. Real label/rendering is Task 5.
-    storylines: 'Storylines',
+    // sprint-storylines Task 5: recurring-character bits for this round's cast.
+    storylines: 'The Regulars',
   };
 
   // When stage === 'finalize' (finalized_at is set), activeIdx advances past
@@ -649,6 +649,7 @@
   //   discoverability→ TastemakerSection    (sprint-18 v2 — replaces v1 leaderboard)
   //   nextRound      → NextRoundPreview     (sprint-17 synthetic data-driven)
   //   guesser        → GuesserLeaderboard   (the-guesser: synthetic data-driven, opt-in per league)
+  //   storylines     → StorylinesCast       (sprint-storylines Task 5: recurring-character cast cards)
   const VISUAL_COMPONENTS: VisualRegistry = {
     podium: AlbumPodium,
     chat: ChatMoments,
@@ -657,6 +658,7 @@
     discoverability: TastemakerSection,
     nextRound: NextRoundPreview,
     guesser: GuesserLeaderboard,
+    storylines: StorylinesCast,
   };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
