@@ -16,6 +16,7 @@ import { buildChatSection, recommendParts, chatSectionEnabledFor, type ChatSecti
 import { getChatSettings } from '$lib/chat/historyQuery.js';
 import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
 import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
+import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -240,6 +241,55 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
         | 'visual'
         | 'both',
     }));
+    // ── Carry the seed motif onto each storylines cast member ──────────────
+    // The Regulars strip shows "name · motif" pills, but the LLM only writes
+    // { name, headline, evidence } — motif lives on the seed. Re-derive it
+    // deterministically from the same evidence gatherer the LLM wrote from and
+    // join by normalized name. A missing match just omits the motif (graceful);
+    // a failure here must never take the digest down.
+    try {
+      const storySec = sections.find((s) => s.kind === 'storylines' && s.state !== 'excluded');
+      const storyContent = storySec?.content as
+        | { title?: string; cast?: Array<{ name?: string; motif?: string }> }
+        | undefined;
+      const cast = storyContent?.cast;
+      // The section is "The Regulars" now (CD redesign D4/§4.2) — its shell
+      // eyebrow reads content.title, so retitle regardless of the LLM's label.
+      if (storyContent && Array.isArray(cast)) storyContent.title = 'The Regulars';
+      if (Array.isArray(cast) && cast.length) {
+        // `evidence` is the seed list that fired this round, in the same order
+        // it was fed to the LLM. Match name-first (handles seeds the LLM echoed
+        // verbatim), then fall back to positional for any the LLM renamed — the
+        // count is 0–2, so the ordering the prompt imposes is reliable.
+        const evidence = gatherStorylineEvidence(db, roundId);
+        const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const used = new Set<number>();
+        for (const m of cast) {
+          if (!m || typeof m.name !== 'string' || m.motif) continue;
+          const nm = normName(m.name);
+          const idx = evidence.findIndex(
+            (e, i) =>
+              !used.has(i) &&
+              (normName(e.player) === nm ||
+                normName(e.player).startsWith(nm) ||
+                nm.startsWith(normName(e.player))),
+          );
+          if (idx >= 0) {
+            m.motif = evidence[idx].motif;
+            used.add(idx);
+          }
+        }
+        cast.forEach((m, i) => {
+          if (m && typeof m.name === 'string' && !m.motif && evidence[i] && !used.has(i)) {
+            m.motif = evidence[i].motif;
+            used.add(i);
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[digest] storylines motif enrich failed, continuing:', err);
+    }
+
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
     let statsContent: { title?: string; body?: string } = {};
     try { statsContent = JSON.parse(draft.stats_content_json ?? '{}'); } catch { /* use empty editable caption */ }

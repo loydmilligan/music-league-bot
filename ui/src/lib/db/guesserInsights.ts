@@ -20,6 +20,19 @@ export interface GuesserGuess {
   guessedPlayerId: number | null;
   guessedName: string | null;
   correct: boolean;
+  /** The guesser's raw vote comment on this song (null = no comment). Consumed
+   *  by the "descent" viz to mine landmark annotations. */
+  comment: string | null;
+}
+
+/** One round's guess hit-rate, for the season-arc sparkbars. */
+export interface GuesserSeasonPoint {
+  roundId: number;
+  /** Round number label for the x-axis (falls back to the round id). */
+  label: string;
+  correct: number;
+  attempts: number;
+  rate: number;
 }
 
 export interface GuesserLeaderRow {
@@ -40,6 +53,10 @@ export interface GuesserData {
   guesserName: string | null;
   weekly: { attempts: number; correct: number; rate: number; guesses: GuesserGuess[] };
   drunkByThird: { first: number; middle: number; last: number };
+  /** Per-round hit-rate over the season (chronological), for the season arc. */
+  seasonHitRates: GuesserSeasonPoint[];
+  /** Season-wide hit rate (total correct / total attempts, 0 when none). */
+  seasonRate: number;
   eludesHim: GuesserLeaderRow[];
   alwaysNails: GuesserLeaderRow[];
   littermates: GuesserLittermates | null;
@@ -81,6 +98,8 @@ function emptyGuesserData(): GuesserData {
     guesserName: null,
     weekly: { attempts: 0, correct: 0, rate: 0, guesses: [] },
     drunkByThird: { first: 0, middle: 0, last: 0 },
+    seasonHitRates: [],
+    seasonRate: 0,
     eludesHim: [],
     alwaysNails: [],
     littermates: null,
@@ -101,6 +120,7 @@ interface VoteCommentRow {
 
 interface SeasonGuessRow {
   round_id: number;
+  round_number: number | null;
   spotify_uri: string;
   actual_player_id: number | null;
   actual_name: string;
@@ -282,6 +302,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
       guessedPlayerId,
       guessedName,
       correct,
+      comment,
     });
 
     // A comment with no roster-name match is not an attempt — never counted,
@@ -307,7 +328,8 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   // submitter of the same (round, spotify_uri).
   const seasonRows = db
     .prepare(
-      `SELECT s.round_id, s.spotify_uri,
+      `SELECT s.round_id, r.round_number,
+              s.spotify_uri,
               COALESCE(s.player_id, c.player_id) AS actual_player_id,
               COALESCE(p.name, c.name) AS actual_name,
               v.comment AS guess_comment
@@ -329,6 +351,11 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const seenKeys = new Set<string>();
   const perSubmitter = new Map<number, { name: string; attempts: number; correct: number }>();
   const pairSwaps = new Map<string, { aId: number; bId: number; aName: string; bName: string; swaps: number }>();
+  // Per-round hit-rate for the season arc. Keyed by round_id; insertion order
+  // follows the chronological row ordering (created_at ASC), so the arc reads
+  // left→right oldest→newest. Only rounds where he made at least one real
+  // attempt appear.
+  const perRound = new Map<number, { label: string; attempts: number; correct: number }>();
 
   for (const row of seasonRows) {
     const key = `${row.round_id}:${row.spotify_uri}`;
@@ -342,6 +369,14 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     const guessedPlayerId = row.guess_comment !== null ? matcher(row.guess_comment) : null;
     // A comment with no roster-name match is not an attempt.
     if (guessedPlayerId === null) continue;
+
+    // Season arc: bucket this attempt into its round.
+    const roundBucket =
+      perRound.get(row.round_id) ??
+      { label: row.round_number != null ? String(row.round_number) : String(row.round_id), attempts: 0, correct: 0 };
+    roundBucket.attempts += 1;
+    if (guessedPlayerId === row.actual_player_id) roundBucket.correct += 1;
+    perRound.set(row.round_id, roundBucket);
 
     const bucket = perSubmitter.get(row.actual_player_id) ?? { name: row.actual_name, attempts: 0, correct: 0 };
     bucket.attempts += 1;
@@ -369,6 +404,19 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const eludesHim = [...leaderRows].sort((a, b) => a.rate - b.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
   const alwaysNails = [...leaderRows].sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
+  const seasonHitRates: GuesserSeasonPoint[] = [...perRound.entries()].map(([roundId, v]) => ({
+    roundId,
+    label: v.label,
+    correct: v.correct,
+    attempts: v.attempts,
+    rate: rate(v.correct, v.attempts),
+  }));
+  const seasonTotals = seasonHitRates.reduce(
+    (acc, p) => ({ correct: acc.correct + p.correct, attempts: acc.attempts + p.attempts }),
+    { correct: 0, attempts: 0 },
+  );
+  const seasonRate = rate(seasonTotals.correct, seasonTotals.attempts);
+
   let littermates: GuesserLittermates | null = null;
   const pairList = [...pairSwaps.values()].sort(
     (a, b) => b.swaps - a.swaps || a.aName.localeCompare(b.aName) || a.bName.localeCompare(b.bName),
@@ -382,6 +430,8 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     guesserName,
     weekly: { attempts: weeklyAttempts, correct: weeklyCorrect, rate: rate(weeklyCorrect, weeklyAttempts), guesses: weeklyGuesses },
     drunkByThird,
+    seasonHitRates,
+    seasonRate,
     eludesHim,
     alwaysNails,
     littermates,

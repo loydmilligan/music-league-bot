@@ -171,6 +171,36 @@ describe('getGuesserData', () => {
     expect(g.littermates!.swaps).toBe(5);
   });
 
+  it('carries the raw vote comment on each weekly guess (for the descent viz)', () => {
+    const g = getGuesserData(db, round2Id);
+    const byName = Object.fromEntries(g.weekly.guesses.map((x) => [x.actualName, x]));
+    expect(byName.Ann.comment).toBe('this is Ann');
+    expect(byName.Bob.comment).toBe('must be Cid');
+    expect(byName.Cid.comment).toBe('sounds like Bob');
+    // Gus's own song is skipped entirely — never appears as a guess row.
+    expect(g.weekly.guesses.some((x) => x.actualName === 'Gus')).toBe(false);
+  });
+
+  it('builds the season hit-rate arc chronologically with a season average', () => {
+    const g = getGuesserData(db, round2Id);
+    // One point per round he attempted, oldest→newest (round ids 1..4).
+    expect(g.seasonHitRates.map((p) => p.roundId)).toEqual([1, 2, 3, 4]);
+    // round_number is unset in the fixture → label falls back to the round id.
+    expect(g.seasonHitRates.map((p) => p.label)).toEqual(['1', '2', '3', '4']);
+    // r1..r3: Ann right + Bob wrong (Cid's no-match doesn't count) = 1/2 each.
+    // r4: Ann right, Bob wrong, Cid wrong = 1/3.
+    expect(g.seasonHitRates.map((p) => [p.correct, p.attempts])).toEqual([
+      [1, 2],
+      [1, 2],
+      [1, 2],
+      [1, 3],
+    ]);
+    expect(g.seasonHitRates[0].rate).toBeCloseTo(0.5);
+    expect(g.seasonHitRates[3].rate).toBeCloseTo(1 / 3);
+    // Season average = total correct (4) / total attempts (9).
+    expect(g.seasonRate).toBeCloseTo(4 / 9);
+  });
+
   it('returns an empty section when no guesser can be detected', () => {
     const empty = openLeagueDb(':memory:');
     empty.prepare("INSERT INTO leagues (id, slug, name) VALUES (1, 'y', 'Y League')").run();
@@ -181,6 +211,8 @@ describe('getGuesserData', () => {
     const g = getGuesserData(empty, 1);
     expect(g.guesserName).toBeNull();
     expect(g.weekly).toEqual({ attempts: 0, correct: 0, rate: 0, guesses: [] });
+    expect(g.seasonHitRates).toEqual([]);
+    expect(g.seasonRate).toBe(0);
     expect(g.eludesHim).toEqual([]);
     expect(g.alwaysNails).toEqual([]);
     expect(g.littermates).toBeNull();
