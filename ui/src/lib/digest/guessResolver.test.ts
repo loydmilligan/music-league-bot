@@ -28,3 +28,58 @@ describe('buildGuessMatcher', () => {
     expect(m('Could be Poetry in Noise or bagimation, not sure.')).toBe(1);
   });
 });
+
+describe('buildGuessMatcher: real production cases (round 163)', () => {
+  describe('spacing — guesser adds spaces, roster label is concatenated', () => {
+    const m = buildGuessMatcher([
+      { playerId: 1, label: 'PoetryinNoise' },
+      { playerId: 2, label: 'Timmywhatup' },
+      { playerId: 3, label: 'antigravpjs' },
+      { playerId: 4, label: 'GoodGollyMiss' },
+    ]);
+    it('matches "Poetry in Noise" against PoetryinNoise', () => {
+      expect(m('Poetry in Noise! Coffee Tattoos...')).toBe(1);
+    });
+    it('matches "Timmy what up" against Timmywhatup', () => {
+      expect(m('Timmy what up! This one hit')).toBe(2);
+    });
+    it('matches "Anti Grav PJs" against antigravpjs', () => {
+      expect(m('Anti Grav PJs. The musicality')).toBe(3);
+    });
+    it('matches "Good Golly Miss" against GoodGollyMiss', () => {
+      expect(m('Good Golly Miss coming for the crown')).toBe(4);
+    });
+  });
+
+  describe('typos — one edit off from the roster label', () => {
+    const m = buildGuessMatcher([
+      { playerId: 5, label: 'a1mrson' },
+      { playerId: 6, label: 'dubs613' },
+      { playerId: 7, label: 'jirafa' },
+    ]);
+    it('matches "a1merson" (extra char) against a1mrson', () => {
+      expect(m('a1merson! Welcome to the league')).toBe(5);
+    });
+    it('matches "Dubsc613" (extra char) against dubs613', () => {
+      expect(m('Dubsc613, big DUB')).toBe(6);
+    });
+    it('matches "Jiraffa" (extra char) against jirafa', () => {
+      expect(m('Jiraffa! Appreciate you')).toBe(7);
+    });
+  });
+
+  describe('false-positive guards', () => {
+    it('does not fuzzy-match an unrelated word to a >=5-char label', () => {
+      const m = buildGuessMatcher([{ playerId: 8, label: 'Aniss' }]);
+      expect(m('this song is oddly nostalgic')).toBeNull();
+    });
+    it('does not match a short (<5 char) label mid-word (no fuzzy, whole-word only)', () => {
+      const m = buildGuessMatcher([{ playerId: 9, label: 'Cid' }]);
+      expect(m('acidic guitars')).toBeNull();
+    });
+    it('DOES match a whole-word mention even if it is also a substring elsewhere (not a false positive)', () => {
+      const m = buildGuessMatcher([{ playerId: 8, label: 'Cherry' }]);
+      expect(m('cherry on top of the sundae')).toBe(8);
+    });
+  });
+});
