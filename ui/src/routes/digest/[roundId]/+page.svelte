@@ -120,6 +120,9 @@
     consensus: 'Consensus & controversy',
     quotes: 'Liner quotes',
     chat: 'Back cover · chat notes',
+    // sprint-storylines Task 3: minimal stub to satisfy Record<SectionKind, ...>
+    // now that 'storylines' joined SECTION_KINDS. Real label/rendering is Task 5.
+    storylines: 'Storylines',
   };
 
   // When stage === 'finalize' (finalized_at is set), activeIdx advances past

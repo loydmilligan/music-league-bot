@@ -24,8 +24,8 @@ export function modelFor(bucket: 'predict' | 'digest', db: Database.Database): s
 }
 
 /**
- * Maps each of the 16 pinnable section/task keys to its bucket.
- * - digest (6): the SECTION_KINDS from llm.ts
+ * Maps each of the 17 pinnable section/task keys to its bucket.
+ * - digest (7): the SECTION_KINDS from llm.ts
  * - predict (10): narrative, profile, season-update, and the 3 static-env tasks
  *
  * season-update falls back to 'digest' per open question A: the task was originally
@@ -39,6 +39,7 @@ export const SECTION_BUCKET_MAP: Record<string, 'predict' | 'digest'> = {
   consensus:                      'digest',
   quotes:                         'digest',
   chat:                           'digest',
+  storylines:                     'digest',
   // predict bucket (10)
   'narrative-player-superlatives': 'predict',
   'narrative-fan-hater-blurbs':    'predict',

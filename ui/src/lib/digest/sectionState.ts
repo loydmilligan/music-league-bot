@@ -15,13 +15,14 @@ export interface SectionState {
 
 // Human-readable display labels for each section.
 export const SECTION_LABELS: Record<string, string> = {
-  // digest (6)
+  // digest (7)
   podium:                          'Podium',
   villain:                         'Villain',
   flow:                            'Flow',
   consensus:                       'Consensus',
   quotes:                          'Quotes',
   chat:                            'Chat',
+  storylines:                      'Storylines',
   // predict (10)
   'narrative-player-superlatives': 'Player Superlatives',
   'narrative-fan-hater-blurbs':    'Fan/Hater Blurbs',

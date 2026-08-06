@@ -6,8 +6,9 @@ import { modelFor, modelForSection } from './modelFor.js';
 import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
 import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
 import type { TopSectionVariant, TopSectionVisual } from './topSectionVariants.js';
+import { gatherStorylineEvidence, type StorylineEvidence } from './storylineEvidence.js';
 
-export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat'] as const;
+export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat', 'storylines'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -75,6 +76,8 @@ export interface RoundData {
   relContext: string;
   /** Auto-fetched league chat over the round window (sprint-task-9). Undefined when no group is mapped. */
   chatHistory?: string;
+  /** Deterministic per-player storyline evidence (Task 2 gatherer). Empty/undefined = no seeds matched. */
+  storylineEvidence?: StorylineEvidence[];
 }
 
 // Per-section Generation params (sprint-14 generation-wiring). `id` is the
@@ -274,6 +277,7 @@ export function gatherRoundData(
     chatMentions: chatRows,
     relContext: resolvedRelContext,
     chatHistory,
+    storylineEvidence: gatherStorylineEvidence(db, roundId),
   };
 }
 
@@ -480,6 +484,7 @@ const SECTION_DESCRIPTIONS: Record<SectionKind, string> = {
   consensus: 'Songs/artists where multiple voters agreed (high vote spread / repeat voters). Bulleted list with the agreement noted.',
   quotes: '3-6 punchy direct quotes from vote comments — voter name + quote. Pick the ones with the most personality.',
   chat: 'Highlights from the WhatsApp chat tied to this round. Find the genuinely funny / notable exchanges and keep the dry, slightly-funny editorial voice. Output { "summary": <1-2 sentence overall read of the chat>, "moments": [{ "label": <short punchy title for one discrete chat moment>, "detail": <a fuller 1-2 sentence description of that moment, preserving the funny content> }] } with 3-6 moments.',
+  storylines: 'Recurring-character bits for this round\'s cast, written ONLY from the "Storylines evidence" block below — do not invent threads, quotes, or characters not present there. For each player+motif seed given, write a short headline capturing their bit and cite 1-3 of their actual quotes as evidence.',
 };
 
 // sprint-21 season-recap: per-section recap-variant intents. Same OUTPUT shape
@@ -492,6 +497,10 @@ const SECTION_DESCRIPTIONS_RECAP: Record<SectionKind, string> = {
   consensus: 'The season\'s CONSENSUS darlings — tracks that earned broad, even agreement (many voters, low spread) AND high totals across the season. Bulleted; note the agreement.',
   quotes: 'The best lines from the SEASON\'s vote comments — punchy, full of personality, drawn from across all rounds. voter + quote. Pick the most memorable.',
   chat: 'Season highlights from the pasted chat transcript (the whole season, not one round). Output { "summary", "moments":[{"label","detail"}] } with 3-6 moments.',
+  // sprint-storylines: recap mode has no per-round evidence gatherer — this
+  // kind is always excluded from season recap (see activeKindsForRecap).
+  // Stub description kept only to satisfy the Record<SectionKind, string> type.
+  storylines: 'Not used in season-recap mode (no season-scoped evidence gatherer yet).',
 };
 
 // Format the compact season slice for one section into prompt text.
@@ -601,6 +610,9 @@ export function activeKindsForRecap(genParams?: GenParams): SectionKind[] {
   return SECTION_KINDS.filter((k) => {
     if (disabled.has(k)) return false;
     if (k === 'chat') return hasChat;
+    // sprint-storylines: no season-scoped evidence gatherer exists yet — never
+    // active in recap mode (see SECTION_DESCRIPTIONS_RECAP.storylines stub).
+    if (k === 'storylines') return false;
     return true;
   });
 }
@@ -614,6 +626,7 @@ const SECTION_SCHEMA: Record<SectionKind, string> = {
   consensus: `"consensus": { "title": string, "items": [...] }`,
   quotes:    `"quotes":    { "title": string, "items": [{"voter": string, "quote": string}] }`,
   chat:      `"chat":      { "title": string, "summary": string, "moments": [{"label": string, "detail": string}] }`,
+  storylines: `"storylines": { "title": string, "cast": [{"name": string, "headline": string, "evidence": [string] }] }`,
 };
 
 /**
@@ -664,6 +677,7 @@ export function activeKindsForDraft(data: RoundData, genParams?: GenParams): Sec
   return SECTION_KINDS.filter((k) => {
     if (disabled.has(k)) return false;
     if (k === 'chat') return hasChat;
+    if (k === 'storylines') return (data.storylineEvidence?.length ?? 0) > 0;
     return true;
   });
 }
@@ -771,6 +785,22 @@ export function buildUserPrompt(
     parts.push(
       `\n# League chat for this round — use THIS as the source for the "chat" section (ignore auto-captured mentions for that section):\n${data.chatHistory.trim()}`,
     );
+  }
+
+  // Storyline evidence (sprint-storylines) — bounded, curated per-player quotes.
+  // Only inject when the "storylines" kind is actually being requested (steer
+  // targets it, or it's among the active/subset kinds for a full draft).
+  const wantsStorylines = steer?.kind === 'storylines' || (sections ?? activeKindsForDraft(data, genParams)).includes('storylines');
+  if (wantsStorylines && data.storylineEvidence?.length) {
+    parts.push(
+      `\n# Storylines evidence — write the "storylines" section ONLY from these quotes; do NOT invent threads or characters:`,
+    );
+    for (const seed of data.storylineEvidence) {
+      parts.push(`\n## ${seed.player} — ${seed.motif}`);
+      for (const q of seed.quotes) {
+        parts.push(`- [${q.ts}, ${q.source}] "${q.text.replace(/\s+/g, ' ').trim()}"`);
+      }
+    }
   }
 
   if (steer?.kind) {

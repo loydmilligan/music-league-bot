@@ -559,7 +559,7 @@ describe('integration: DEFAULT_PIPELINE flow cover persists both takes', () => {
         flow: { title: 'flow', body: 'flow original' },
         consensus: { title: 'consensus', body: 'consensus body', items: [] },
         quotes: { title: 'quotes', body: 'quotes body', items: [] },
-      } as Record<'podium' | 'villain' | 'flow' | 'consensus' | 'quotes' | 'chat', unknown>,
+      } as Record<'podium' | 'villain' | 'flow' | 'consensus' | 'quotes' | 'chat' | 'storylines', unknown>,
       _covers: {
         flow: { title: 'flow', body: 'flow cover' },
       },

@@ -61,9 +61,9 @@ describe('modelForSection — resolution order', () => {
     else process.env.OPENROUTER_DIGEST_MODEL = origDigest;
   });
 
-  it('SECTION_BUCKET_MAP contains all 16 known sections', () => {
+  it('SECTION_BUCKET_MAP contains all 17 known sections', () => {
     const expectedSections = [
-      'podium', 'villain', 'flow', 'consensus', 'quotes', 'chat',
+      'podium', 'villain', 'flow', 'consensus', 'quotes', 'chat', 'storylines',
       'narrative-player-superlatives', 'narrative-fan-hater-blurbs',
       'narrative-league-reel', 'narrative-moment-lines',
       'profile-spectrum', 'profile-playlist', 'season-update',
@@ -72,7 +72,7 @@ describe('modelForSection — resolution order', () => {
     for (const s of expectedSections) {
       expect(SECTION_BUCKET_MAP).toHaveProperty(s);
     }
-    expect(Object.keys(SECTION_BUCKET_MAP)).toHaveLength(16);
+    expect(Object.keys(SECTION_BUCKET_MAP)).toHaveLength(17);
   });
 
   it('season-update maps to digest bucket', () => {

@@ -100,6 +100,7 @@ export const VISUAL_CAPABLE: Record<DigestKind, boolean> = {
   discoverability: true, // synthetic data-driven (sprint-17): tastemaker leaderboard
   nextRound: true, // synthetic data-driven (sprint-17): next-round preview
   guesser: true, // synthetic data-driven (sprint: the-guesser): deterministic guess-comment ledger
+  storylines: false, // sprint-storylines Task 3: textual-only for now; visual component TBD (Task 5)
 };
 
 /** Glyphs for the three variants — used by the per-section variant switcher and

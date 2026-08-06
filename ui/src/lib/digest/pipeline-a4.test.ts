@@ -44,6 +44,7 @@ function mkOutput(overrides: Partial<DraftLLMOutput> = {}): DraftLLMOutput {
       consensus: { title: 'Consensus', items: [] },
       quotes: { title: 'Quotes', items: [] },
       chat: { title: 'Chat', summary: '', moments: [] },
+      storylines: { title: 'Storylines', cast: [] },
     },
     costUsd: 0.01,
     draftId: `draft-42-testcvr`,

@@ -76,7 +76,9 @@ export type EP = {
  */
 export const DEFAULT_PIPELINE: Pipeline = {
   releaseKind: 'digest',
-  order: ['quotes', 'consensus', 'podium', 'chat', 'villain', 'flow'],
+  // sprint-storylines: 'storylines' is factual/extractive (fed by curated
+  // evidence, not free narrative), so it joins EP0 alongside quotes/consensus/podium.
+  order: ['quotes', 'consensus', 'podium', 'storylines', 'chat', 'villain', 'flow'],
   models: {},
   skipAfter: { chat: true },
   covers: [{ of: 'flow', model: 'anthropic/claude-sonnet-4-5' }],
