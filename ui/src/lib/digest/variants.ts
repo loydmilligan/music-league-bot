@@ -10,7 +10,8 @@ export type DigestKind =
   | 'standings'
   | 'stats'
   | 'discoverability'
-  | 'nextRound';
+  | 'nextRound'
+  | 'guesser';
 
 // =============================================================================
 // VARIANT SLOT INTERFACE  (sprint-14 · frontend owns this; viz implements to it)
@@ -98,6 +99,7 @@ export const VISUAL_CAPABLE: Record<DigestKind, boolean> = {
   stats: true, // synthetic data-driven (sprint-17): by-the-numbers stat strip
   discoverability: true, // synthetic data-driven (sprint-17): tastemaker leaderboard
   nextRound: true, // synthetic data-driven (sprint-17): next-round preview
+  guesser: true, // synthetic data-driven (sprint: the-guesser): deterministic guess-comment ledger
 };
 
 /** Glyphs for the three variants — used by the per-section variant switcher and

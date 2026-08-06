@@ -16,6 +16,7 @@
   import DigestInsights from '$lib/digest/DigestInsights.svelte';
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
+  import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
   import ChatLabSection from '$lib/digest/ChatLabSection.svelte';
   import type { PartRecommendation } from '$lib/digest/chatSection.js';
@@ -644,6 +645,7 @@
   //   stats          → DigestInsights      (approved post-vote insight surface)
   //   discoverability→ TastemakerSection    (sprint-18 v2 — replaces v1 leaderboard)
   //   nextRound      → NextRoundPreview     (sprint-17 synthetic data-driven)
+  //   guesser        → GuesserLeaderboard   (the-guesser: synthetic data-driven, opt-in per league)
   const VISUAL_COMPONENTS: VisualRegistry = {
     podium: AlbumPodium,
     chat: ChatMoments,
@@ -651,6 +653,7 @@
     stats: DigestInsights,
     discoverability: TastemakerSection,
     nextRound: NextRoundPreview,
+    guesser: GuesserLeaderboard,
   };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
@@ -689,6 +692,26 @@
   );
   // Gates on availability only — see showStandings comment above.
   const showStats = $derived(statsAvailable);
+
+  // "The Guesser" (the-guesser sprint) — frontend-only synthetic section, same
+  // shape as `stats`: deterministic, opt-in per league, never an LLM section
+  // row. Gates on data AVAILABILITY (populated + a detected guesser + at least
+  // one guess this week), mirroring showStandings/showStats above.
+  const showGuesser = $derived(
+    !!data.guesserData && !!data.guesserData.guesserName && data.guesserData.weekly.attempts > 0,
+  );
+  const guesserContent = $derived(
+    (() => {
+      const raw = (data.draft as unknown as { guesser_content_json?: string } | undefined)
+        ?.guesser_content_json;
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw) as { title?: string; body?: string };
+      } catch {
+        return {};
+      }
+    })(),
+  );
 
   let discoverabilityOverride = $state<typeof data.discoverability>(null);
   const discoverabilityData = $derived(discoverabilityOverride ?? (inDigest ? data.discoverability : null));
@@ -1194,6 +1217,7 @@
     [
       ...sectionsList,
       ...(!recap && showStats ? [{ id: "stats", kind: "stats", position: data.draft.stats_position ?? 0, content: data.insights?.statsContent ?? {}, variant: "visual" }] : []),
+      ...(!recap && showGuesser ? [{ id: "guesser", kind: "guesser", position: data.guesserPosition ?? 0, content: guesserContent, variant: "visual" }] : []),
     ].sort((a, b) => a.position - b.position),
   );
 
@@ -1536,6 +1560,22 @@
           onRegen={() => openDataRegen("stats")}
           onEditSave={saveStatsInlineEdit}
           onKebabAction={(action) => kebabAction("stats", action)}
+        />
+      {:else if section.kind === "guesser"}
+        <DigestSection
+          kind="guesser"
+          label="The Guesser · deterministic"
+          sectionState="default"
+          content={section.content}
+          visualData={data.guesserData}
+          visualComponent={VISUAL_COMPONENTS.guesser}
+          variant="visual"
+          sectionId="guesser"
+          roundId={data.roundId}
+          onToggleExcluded={() => {}}
+          onToggleLocked={() => {}}
+          onRegen={() => {}}
+          onKebabAction={() => {}}
         />
       {:else}
         <DigestSection
