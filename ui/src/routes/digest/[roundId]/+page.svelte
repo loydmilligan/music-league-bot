@@ -700,6 +700,13 @@
   const showGuesser = $derived(
     !!data.guesserData && !!data.guesserData.guesserName && data.guesserData.weekly.attempts > 0,
   );
+  // Session-scoped include toggle, same convention as statsExcluded — seeded
+  // from the persisted `guesser_state` column (cast: not yet on DigestDraftRow,
+  // see guesserContent below).
+  let guesserExcluded = $state(
+    data.stage !== "prepare"
+      && (data.draft as unknown as { guesser_state?: string } | undefined)?.guesser_state === "excluded",
+  );
   const guesserContent = $derived(
     (() => {
       const raw = (data.draft as unknown as { guesser_content_json?: string } | undefined)
@@ -845,6 +852,14 @@
     } catch (err) { showError(err); }
   }
 
+  async function saveGuesserInlineEdit(content: unknown) {
+    try {
+      const res = await fetch("/api/digest/" + data.roundId + "/sections/guesser", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ content }) });
+      if (!res.ok) throw new Error("deterministic caption save failed (" + res.status + ")");
+      await invalidateAll();
+    } catch (err) { showError(err); }
+  }
+
   // modalTarget: 'whole' or a specific section id
   let modalTarget = $state<string | 'whole' | null>(null);
 
@@ -935,25 +950,35 @@
     }
   }
 
-  type DataSectionKey = 'stats' | 'standings' | 'discoverability';
+  type DataSectionKey = 'stats' | 'standings' | 'discoverability' | 'guesser';
   let dataSectionRunState = $state<Record<DataSectionKey, 'default' | 'locked' | 'queued' | 'regenerating'>>({
     stats: data.stage !== "prepare" && data.draft.stats_state === "locked" ? "locked" : "default",
     standings: 'default',
     discoverability: 'default',
+    guesser: data.stage !== "prepare"
+      && (data.draft as unknown as { guesser_state?: string } | undefined)?.guesser_state === "locked"
+      ? "locked" : "default",
   });
   const DATA_SECTION_LABEL: Record<DataSectionKey, string> = {
     stats: 'By the numbers',
     standings: 'Season standings',
     discoverability: 'Tastemaker',
+    guesser: 'The Guesser',
   };
 
   function dataSectionExcluded(key: DataSectionKey): boolean {
     if (key === 'stats') return statsExcluded;
     if (key === 'standings') return standingsExcluded;
+    if (key === 'guesser') return guesserExcluded;
     return discoverabilityExcluded;
   }
-  function persistStatsState(state: "default" | "excluded" | "locked") {
-    void fetch("/api/digest/" + data.roundId + "/sections/stats", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ state }) }).catch((err) => showError(err));
+  // 'stats' and 'guesser' persist their state server-side via a per-section
+  // PATCH (mirrors the same-shaped digest_drafts columns: stats_state /
+  // guesser_state — see guesserExcluded above for the guesser_state cast).
+  // 'standings'/'discoverability' don't have a corresponding column and stay
+  // session-scoped only, as before.
+  function persistDataSectionState(key: 'stats' | 'guesser', state: "default" | "excluded" | "locked") {
+    void fetch("/api/digest/" + data.roundId + "/sections/" + key, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ state }) }).catch((err) => showError(err));
   }
 
   function dataSectionState(key: DataSectionKey): SectionState {
@@ -964,15 +989,16 @@
   function toggleDataExcluded(key: DataSectionKey) {
     if (key === 'stats') statsExcluded = !statsExcluded;
     else if (key === 'standings') standingsExcluded = !standingsExcluded;
+    else if (key === 'guesser') guesserExcluded = !guesserExcluded;
     else discoverabilityExcluded = !discoverabilityExcluded;
     if (dataSectionExcluded(key)) dequeueData(key);
-    if (key === "stats") persistStatsState(dataSectionExcluded(key) ? "excluded" : dataSectionRunState.stats === "locked" ? "locked" : "default");
+    if (key === "stats" || key === "guesser") persistDataSectionState(key, dataSectionExcluded(key) ? "excluded" : dataSectionRunState[key] === "locked" ? "locked" : "default");
   }
   function toggleDataLocked(key: DataSectionKey) {
     const next = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
     dataSectionRunState[key] = next;
     if (next === "locked") dequeueData(key);
-    if (key === "stats") persistStatsState(next);
+    if (key === "stats" || key === "guesser") persistDataSectionState(key, next);
   }
 
   async function recomputeDataSection(key: DataSectionKey) {
@@ -988,6 +1014,11 @@
         if (!res.ok) throw new Error(`standings recompute failed (${res.status})`);
         const body = (await res.json()) as StandingsResult;
         standingsOverride = body;
+      } else if (key === 'guesser') {
+        // The Guesser has no dedicated recompute endpoint (deterministic,
+        // computed once at page `load()` from the same source tables as
+        // everything else here) — re-running load() is the recompute.
+        await invalidateAll();
       } else {
         const res = await fetch(`/api/digest/${data.roundId}/discoverability`);
         if (!res.ok) throw new Error(`tastemaker recompute failed (${res.status})`);
@@ -1156,14 +1187,16 @@
     + (statsExcluded ? 1 : 0)
     + (standingsExcluded ? 1 : 0)
     + (discoverabilityExcluded ? 1 : 0)
-    + (nextRoundExcluded ? 1 : 0),
+    + (nextRoundExcluded ? 1 : 0)
+    + (guesserExcluded ? 1 : 0),
   );
   const lockedCount = $derived(
     sectionsList.filter((s) => sectionStates[s.id] === 'locked').length
     + (dataSectionRunState.stats === 'locked' ? 1 : 0)
     + (dataSectionRunState.standings === 'locked' ? 1 : 0)
     + (dataSectionRunState.discoverability === 'locked' ? 1 : 0)
-    + (nextRoundLocked ? 1 : 0),
+    + (nextRoundLocked ? 1 : 0)
+    + (dataSectionRunState.guesser === 'locked' ? 1 : 0),
   );
 
   const allChecksOk = $derived(
@@ -1565,17 +1598,18 @@
         <DigestSection
           kind="guesser"
           label="The Guesser · deterministic"
-          sectionState="default"
+          sectionState={dataSectionState("guesser")}
           content={section.content}
           visualData={data.guesserData}
           visualComponent={VISUAL_COMPONENTS.guesser}
           variant="visual"
           sectionId="guesser"
           roundId={data.roundId}
-          onToggleExcluded={() => {}}
-          onToggleLocked={() => {}}
-          onRegen={() => {}}
-          onKebabAction={() => {}}
+          onToggleExcluded={() => toggleDataExcluded("guesser")}
+          onToggleLocked={() => toggleDataLocked("guesser")}
+          onRegen={() => openDataRegen("guesser")}
+          onEditSave={saveGuesserInlineEdit}
+          onKebabAction={(action) => kebabAction("guesser", action)}
         />
       {:else}
         <DigestSection
