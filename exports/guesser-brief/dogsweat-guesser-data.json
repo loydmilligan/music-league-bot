@@ -1,0 +1,2244 @@
+{
+  "meta": {
+    "guesser": "Boonie Dogsweat",
+    "league": "SouthSide Secret Club (SSSC)",
+    "rounds": 11,
+    "note": "Boonie Dogsweat guesses the submitter of EVERY song EVERY round, getting progressively drunker down the (spotify_uri-ordered) playlist. Play order = spotify_uri asc."
+  },
+  "seasonLeaderboards": {
+    "eludesHim": [
+      {
+        "playerId": 48,
+        "name": "antigravpjs",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 60,
+        "name": "dubs613",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 57,
+        "name": "GoodGollyMiss",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 55,
+        "name": "socalledbutton",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 46,
+        "name": "Tragically Skip",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 41,
+        "name": "KarBen",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 54,
+        "name": "nateoeb",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 56,
+        "name": "Timmywhatup",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 2,
+        "name": "Mara Mariani",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 64,
+        "name": "Aniss",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 50,
+        "name": "bump versino",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 43,
+        "name": "Mouse Atreides",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 49,
+        "name": "bagimation",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      },
+      {
+        "playerId": 44,
+        "name": "PoetryinNoise",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      }
+    ],
+    "alwaysNails": [
+      {
+        "playerId": 49,
+        "name": "bagimation",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      },
+      {
+        "playerId": 44,
+        "name": "PoetryinNoise",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      },
+      {
+        "playerId": 64,
+        "name": "Aniss",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 50,
+        "name": "bump versino",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 43,
+        "name": "Mouse Atreides",
+        "attempts": 3,
+        "correct": 1,
+        "rate": 0.3333333333333333
+      },
+      {
+        "playerId": 2,
+        "name": "Mara Mariani",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 48,
+        "name": "antigravpjs",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 60,
+        "name": "dubs613",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 57,
+        "name": "GoodGollyMiss",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 55,
+        "name": "socalledbutton",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 46,
+        "name": "Tragically Skip",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 41,
+        "name": "KarBen",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 54,
+        "name": "nateoeb",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 56,
+        "name": "Timmywhatup",
+        "attempts": 3,
+        "correct": 0,
+        "rate": 0
+      }
+    ],
+    "littermates": {
+      "aName": "Timmywhatup",
+      "bName": "dubs613",
+      "swaps": 3
+    }
+  },
+  "perRound": [
+    {
+      "round": "Who said what now?",
+      "roundId": 154,
+      "votingDeadline": "2026-04-07T00:44:01Z",
+      "attempts": 20,
+      "correct": 3,
+      "rate": 0.15,
+      "drunkByThird": {
+        "first": 0.3333333333333333,
+        "middle": 0,
+        "last": 0.14285714285714285
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Hollywood Freaks",
+          "actual": "Heath DG",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "First one is always the hardest and I'm just gonna have to go blind and say Southern California Buttons! I haven't listened to much Beck truthfully, but this was fun and locked me into the playlist the first time."
+        },
+        {
+          "pos": 2,
+          "song": "Heaven or Las Vegas",
+          "actual": "Aidan",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "I... I don't understand French. Is this French? Who speaks French in the gang? Wait... this is is English, and like Femme Mohaim? It might beDubs613. He's probably smarter than me and probably more refined. The most refined thing about me is that I'm sipping absinthe and enjoying it."
+        },
+        {
+          "pos": 3,
+          "song": "Super Ink Burst",
+          "actual": "mrklorox",
+          "guessed": "Dylan/Brannigans_L4w",
+          "correct": false,
+          "points": 1,
+          "comment": "This feels like a Brannigan's Law pull and it hits. I'm not sure what is talking to me, but I don't mind it saying things. keep talking to me strange ghost."
+        },
+        {
+          "pos": 4,
+          "song": "Roadhouse Blues",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "I haven't heard The Doors in a minute. Man this takes me back. Is this our good ol friend Fanonanon (and on and on, and on and on)?"
+        },
+        {
+          "pos": 5,
+          "song": "Best Friend's Arm",
+          "actual": "Mouse Atreides",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 2,
+          "comment": "This sounds like a Bagimation pull. And I'm truthfully not at all mad at it. This is a bop. I have no idea what anyone is saying. Am I that drunk or is homie just singing weird? Whatever, this feels good on the brain. KEEP IT ROLLING."
+        },
+        {
+          "pos": 6,
+          "song": "Eena Meena Deeka (From \"Aasha) - Male Vocals",
+          "actual": "Cherry",
+          "guessed": "Cherry",
+          "correct": true,
+          "points": 2,
+          "comment": "Cherrycola is the safe bet and that's what I'm going with. This song plays in my head now during meetings when I start losing focus. I don't care if it means nothing, neither does this meeting. Take me away to a better place. And play that clarinet you crazy clarinetist. Saaaaaaveeee meeeee."
+        },
+        {
+          "pos": 7,
+          "song": "Dopamine Lit (Intro)",
+          "actual": "dubs613",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "This song is about Dopamine chasing and doing all the things to get that dopamine hit. I know that Dragos Light is not well loved, but I do like songs on it. I'm gonna guess this is a Miss Mara pic."
+        },
+        {
+          "pos": 8,
+          "song": "Fa Fa",
+          "actual": "frankenberge",
+          "guessed": "frankenberge",
+          "correct": true,
+          "points": 2,
+          "comment": "Maybe Frankenberg. I haven't heard much of Guster at all, but I do feel compelled to check them out now. There's alotta Fa's and disappointment. I strangely feel it. I've had so much absinthe, I suspect my urine is gonna smell like licorice."
+        },
+        {
+          "pos": 9,
+          "song": "Red Dust",
+          "actual": "Timmywhatup",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "I have a sneaking suspicion what this song is about Generous Giragge, but I kinda think it's best that the mystery is not confirmed. I will say that Billy Woods often hits too close to home for me and the way I feel about a lot of things, for good and for ill. In this case, for ill."
+        },
+        {
+          "pos": 10,
+          "song": "Alice In My Fantasies",
+          "actual": "socalledbutton",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 1,
+          "comment": "NATEOEB is my first thought. This thing blaps. Theres a lot of absurd shit happening and I'm not entirely sure what to make of it, but this chaos is what I am needing at this moment."
+        },
+        {
+          "pos": 11,
+          "song": "Little Egypt",
+          "actual": "Tragically Skip",
+          "guessed": "TekniKali.Mo",
+          "correct": false,
+          "points": 2,
+          "comment": "TEKNIKALI MO! I am.. very curious about this story actually. Perhaps I should ask you about it after this round is over. Finding 45s as a child is lowkey wild."
+        },
+        {
+          "pos": 12,
+          "song": "Imaginary Places",
+          "actual": "bagimation",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Timmy with the Busdriver pick! This man is in fact going too fast. He does not respect the speed limit. His advice however to buy real estate in an imaginary place is very solid. I approve."
+        },
+        {
+          "pos": 13,
+          "song": "NATAL",
+          "actual": "PoetryinNoise",
+          "guessed": "mrklorox",
+          "correct": false,
+          "points": 1,
+          "comment": "It is this point of the list, I have lost all semblance of coherence. This song is making me fall deeper into that hole. This makes me think this is Mr Klorox. It is shaking me awake, which I desperately needed because I still got half this list to get through. Pray for me."
+        },
+        {
+          "pos": 14,
+          "song": "Metropole",
+          "actual": "antigravpjs",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "I'm gonna guess this one is Poetry in Noise. I have no idea what is going on, but I am scaroused by the technology ghost. What do I do now with these feelings? Should I be in love? Afraid? Have another glass of absence? Maybe I should just go use the bathroom."
+        },
+        {
+          "pos": 15,
+          "song": "The National Anthem",
+          "actual": "Kelly Jean",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 2,
+          "comment": "Antigrav PJs! I have a thing for really complex compositions and Radiohead always seems to deliver on that front. That bass line is also killer and it lulls me into a trance. Or maybe I'm drunk. Either way, it is sedating me and after jumping around drunkenly from the past two entries, I can finally tale a break."
+        },
+        {
+          "pos": 16,
+          "song": "Tantor",
+          "actual": "Lexa Prole",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Every time I hear Danny Brown, I promise myself to listen to more Danny Brown. It is my duty to embrace this man. This man just bragging about his insane life. I'm guessing this one is Mollie. What up Mollie! This one is in fact a heater."
+        },
+        {
+          "pos": 17,
+          "song": "FYE FYE",
+          "actual": "Mara Mariani",
+          "guessed": "bump versino",
+          "correct": false,
+          "points": 3,
+          "comment": "Ok I'm back and I'm pretty sure this is the DJ Okapi (aka Bump Versino!) selection. This shit is FYE! Bringing all the energy out when all I wanna do is take a nap."
+        },
+        {
+          "pos": 18,
+          "song": "Janitor",
+          "actual": "jirafa",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 1,
+          "comment": "Tragically Skip our venerable Card Creator! Not sure if this is you but I am so unbelievably cooked right now and this one sounds real fun so I'm just gonna attribute this one to you."
+        },
+        {
+          "pos": 20,
+          "song": "Prisencolinensinainciusol",
+          "actual": "sparklepants13",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 2,
+          "comment": "Lexaprole! This is the smart shit I know you for. You would choose the exemplary song of this topic and I like it. Stone cold classics babyyyy. My brain wants to understand what folks are saying, even if I know it is gibberish. Maybe I should go drink some water."
+        },
+        {
+          "pos": 21,
+          "song": "A Room to Sing",
+          "actual": "TekniKali.Mo",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 2,
+          "comment": "Mouse Atreides! This is my first time playing this game with you, so I have no clue if I'm even on the mark with this one, but I am intrigued by the mumbling. What are these people saying? Does it matter? It is pretty tho, and the random plucking of the (I think that's a guzheng?) strings is dope."
+        },
+        {
+          "pos": 22,
+          "song": "Good Morning Starshine",
+          "actual": "nowlistenallison",
+          "guessed": "nowlistenallison",
+          "correct": true,
+          "points": 2,
+          "comment": "Zewskers with the whimsical pick! It feels like a tribute to the morning gang and I love that. This is really fun and makes me giggle."
+        },
+        {
+          "pos": 23,
+          "song": "going no place",
+          "actual": "nateoeb",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "Aniss, for sure. I think you chose an Armandhammer joint last time so I wouldn't put it past you to do it again. The moodiness of the track is a great cool down from the previous track. I'm close to the end and ready to go take a nap."
+        },
+        {
+          "pos": 24,
+          "song": "Earth People",
+          "actual": "GoodGollyMiss",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 1,
+          "comment": "Karben Macro Data Relay! I remember some Octagon fans and I remembered you being one of them. Maybe I'm hallucinating. Whatever the case is, homie"
+        },
+        {
+          "pos": 25,
+          "song": "Dream House",
+          "actual": "Aniss",
+          "guessed": "Aidan",
+          "correct": false,
+          "points": 2,
+          "comment": "Does Aidan go to secret shows? Aidan definitely goes to secret shows. This shit BANG."
+        },
+        {
+          "pos": 26,
+          "song": "Unknown Language ft Donae'O",
+          "actual": "bump versino",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Sparkle Pants, I believe you. I won't understand anything you're saying, but I believe you."
+        },
+        {
+          "pos": 27,
+          "song": "Walk Like a Motherfucker",
+          "actual": "KarBen",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 2,
+          "comment": "Final song and it is now Kelly Jean as my final pick. Not a bad way to end this journey. I'm still quite drunk. Came back from a bathroom break and it smelled like licorice. Great success I think."
+        }
+      ]
+    },
+    {
+      "round": "Cool Down Lap",
+      "roundId": 155,
+      "votingDeadline": "2026-04-20T02:39:55Z",
+      "attempts": 21,
+      "correct": 3,
+      "rate": 0.14285714285714285,
+      "drunkByThird": {
+        "first": 0,
+        "middle": 0.1111111111111111,
+        "last": 0.2857142857142857
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Manic Monday",
+          "actual": "sparklepants13",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "You sound like you know what you're doing and that makes me suspect that this is Aniss, the guest MC of this round. Good choice. Bangles are a nostalgic favorite of mine."
+        },
+        {
+          "pos": 2,
+          "song": "I'm So Tired",
+          "actual": "Cherry",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 2,
+          "comment": "Another person who seems to know what they're doing, so going down the list of players, I'm gonna guess this is Dubs613. It's so focused a choice for a cooldown song. It also oddly captures the weariness I'm feeling at the moment and I'm slowly sinking in to my chair."
+        },
+        {
+          "pos": 3,
+          "song": "tiger driver '91",
+          "actual": "bump versino",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Bump Version aka DJ OKAPI! This has gotta be you. It's so vibey and the multiple times I listened to the playlist, I was too amped up, but here, on the precipice of decompression, everything just feels right. . Damn. I get it now."
+        },
+        {
+          "pos": 4,
+          "song": "LSDXOXO_TRUTH OR DARE_123 BPM",
+          "actual": "socalledbutton",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Sparklepants? This shit slap. I'm all for this. I want to get up and dance. I cannot. I'm too drunk for that."
+        },
+        {
+          "pos": 5,
+          "song": "The Originators",
+          "actual": "Aniss",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Yes to Jazzy hip hop. Can I have some more please? Jirafa please pop the trunk, I really would like some more."
+        },
+        {
+          "pos": 6,
+          "song": "Casual Horns, Dog",
+          "actual": "Tragically Skip",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 3,
+          "comment": "Ok you cannot just put Dog in the title and not expect me to like it. This might be a Nate OEB joint. I feel so classy sipping on this over proofed old fashioned listening to this. This is the vibe I wanted and never knew I did."
+        },
+        {
+          "pos": 7,
+          "song": "Drive",
+          "actual": "TekniKali.Mo",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Teknikail Mo! Were you the one who sent me this album like a month ago? I'm gonna go peep it again. Keeping the vibes going, I'm still grooving and letting go. I'm starting to feel the alcohol now and getting a little too relaxed. Doesn't matter, this is hitting all the right spaces in my brain."
+        },
+        {
+          "pos": 8,
+          "song": "Golden Wings",
+          "actual": "dubs613",
+          "guessed": "frankenberge",
+          "correct": false,
+          "points": 2,
+          "comment": "OH THE WHIMSY. Most days, I will take the whimsy where I can get it, and Golden Wings is everything I need tonight. Figuring who would choose this is a real conundrum. Maybe Frankenberge? You're a fiend for that whimsy."
+        },
+        {
+          "pos": 9,
+          "song": "Professional Vengeance",
+          "actual": "Aidan",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "I'm trying to remember who the Jane Remover fan was in the gang and I think it was Southern California Buttons that was into it. And to that, yes. This shit slaps. Also GIMME DAT CHIPTUNNE"
+        },
+        {
+          "pos": 10,
+          "song": "Macho Thing",
+          "actual": "Lexa Prole",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 0,
+          "comment": "I hate to say this is my 0 for this round, but this is mostly because I can't forgive the rap crimes. Is this you Bagimation? I'm sorry brother. This is my first of the two zeroes in this round."
+        },
+        {
+          "pos": 11,
+          "song": "Realla",
+          "actual": "nateoeb",
+          "guessed": "Cherry",
+          "correct": false,
+          "points": 2,
+          "comment": "Anderson .Paak and TokiMonsta is like a combination made specifically for my proclivities. Yes I will take this. Thank you Cherry Cola."
+        },
+        {
+          "pos": 12,
+          "song": "Confetti",
+          "actual": "antigravpjs",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 1,
+          "comment": "Miss Mara, I'm guessing the HG shenanigans is you. I personally will welcome most HG games. Most of them. Hell yeah."
+        },
+        {
+          "pos": 13,
+          "song": "Tell You (Today)",
+          "actual": "frankenberge",
+          "guessed": "Heath DG",
+          "correct": false,
+          "points": 2,
+          "comment": "Drunk dug for some reason really likes groovy bass and horns. This is insane. I am learning things about myself in this round. Maybe in my soul I'm just really horn-y. HEATH DG my boy FANONONONONONOOONONONON"
+        },
+        {
+          "pos": 14,
+          "song": "davina mccall",
+          "actual": "bagimation",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 3,
+          "comment": "LEXA PROLE 🫠🫠🫠🫠🫠 THIS IS CHEATING. YOU KNOW I MELT FOR THIS BUSINES. Train Conductor all over the chair, melted down and useless."
+        },
+        {
+          "pos": 15,
+          "song": "Dark Cycle",
+          "actual": "Mouse Atreides",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 2,
+          "comment": "Barely reconstituted, and yet here I am tryna pick myself up off the floor. Antigravpjs, if this is your choice, I agree. I feel like I am exhaling and all I feel is relief."
+        },
+        {
+          "pos": 16,
+          "song": "Andromeda",
+          "actual": "Heath DG",
+          "guessed": "nowlistenallison",
+          "correct": false,
+          "points": 1,
+          "comment": "Spacey ballads, is this the illustrious Zewskers? The song is telling me to stay melted, and melted I shall stay."
+        },
+        {
+          "pos": 17,
+          "song": "Roygbiv",
+          "actual": "PoetryinNoise",
+          "guessed": "PoetryinNoise",
+          "correct": true,
+          "points": 1,
+          "comment": "Poetry in Noise! Chillout rooms are an interesting concept. I don't know much about raves, I've only been to one, but if I knew about the Chillout room, then I definitely would be in there. I actually get real exhausted being around so many people."
+        },
+        {
+          "pos": 18,
+          "song": "Bandy Bandy",
+          "actual": "jirafa",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 2,
+          "comment": "Badu box got me in a chokehold, again. Dammit. Word to Tragically Skip. Card create another one for me."
+        },
+        {
+          "pos": 19,
+          "song": "Renai Circulation - Remix",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": "Dylan/Brannigans_L4w",
+          "correct": true,
+          "points": 1,
+          "comment": "Brannigan's Law! I actually like this version of Renai Circulation. Lilly Pichu did a great job on this cover. Ionno, more credit to her. She's actually very musically talented and I would like to hear more from her."
+        },
+        {
+          "pos": 20,
+          "song": "Anytime",
+          "actual": "Timmywhatup",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 1,
+          "comment": "Kelly Jean! Sometimes you pick some esoteric hiphop and I get surprises and I think you might have pulled a fast one on me again. I'm not mad, but I do approve."
+        },
+        {
+          "pos": 21,
+          "song": "Vititus",
+          "actual": "mrklorox",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Is this Timmy with the points hack? I do like this one but it isn't my favorite. You did get my guaranteed points doe."
+        },
+        {
+          "pos": 22,
+          "song": "Microfiche",
+          "actual": "nowlistenallison",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 4,
+          "comment": "This song reminds me of my birthday cake and it's the best birthday I had in a whole decade. Another birthday gift for me? You shouldn't have Karben Macro Data Relay!"
+        },
+        {
+          "pos": 23,
+          "song": "Passing By",
+          "actual": "Kelly Jean",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 1,
+          "comment": "Mouse Atreides! This feels like a cool down song for real and I quite like it. It feels good on the brain and after much sustained semi-hype, a cool down from the cooldown is well appreciated."
+        },
+        {
+          "pos": 24,
+          "song": "Fantasy",
+          "actual": "GoodGollyMiss",
+          "guessed": "GoodGollyMiss",
+          "correct": true,
+          "points": 1,
+          "comment": "Good Golly Miss! I do like Mariah and in the club this would hit. Mariah was my second celebrity crush. The first was the Yellow Ranger from Power Rangers. That's a story for a different time."
+        },
+        {
+          "pos": 25,
+          "song": "Body Slam",
+          "actual": "KarBen",
+          "guessed": "mrklorox",
+          "correct": false,
+          "points": 1,
+          "comment": "Mr Klorox! Groovy Bass? Yes. Goofy theme? Good for me. I like it."
+        },
+        {
+          "pos": 27,
+          "song": "Where's The Catch? (feat. André 3000)",
+          "actual": "Mara Mariani",
+          "guessed": "Aidan",
+          "correct": false,
+          "points": 0,
+          "comment": "Aidan you're the only one I didn't guess and I must apologize: it's not you, it's me. I don't like Coldplay, and anything that sounds like it immediately turns me off. This is a me problem. I just find it so hard to get into. I've listened to all their albums, and nothing in it connects with me. Sorry, final 0, and I don't like that I'm this way."
+        }
+      ]
+    },
+    {
+      "round": "Spirits and Shadows",
+      "roundId": 156,
+      "votingDeadline": "2026-04-30T03:26:15Z",
+      "attempts": 20,
+      "correct": 2,
+      "rate": 0.1,
+      "drunkByThird": {
+        "first": 0,
+        "middle": 0.4,
+        "last": 0
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Caribou Lou (Album Version (Explicit))",
+          "actual": "Mara Mariani",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 1,
+          "comment": "As a person that really likes rum, Malibu rum makes me gag. But you can make some good cocktails with the rest of the stuff mentioned. Regardless, it's a fun song . No idea who this could be so I guess I choose Karben Macro Data Relay for no other reason other than I need to make an actual guess."
+        },
+        {
+          "pos": 2,
+          "song": "Take Your Whiskey Home - 2015 Remaster",
+          "actual": "Tragically Skip",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 1,
+          "comment": "Gonna guess this is Dubs613. Not entirely sure why but this shit rips and I feel like I need to have another whiskey. I'm gonna need to hold off on this though. I'm plenty drunk already and I can't afford to fall asleep yet."
+        },
+        {
+          "pos": 3,
+          "song": "Pour Me Another",
+          "actual": "GoodGollyMiss",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 3,
+          "comment": "Awake again and damn if I'm not a sucker for Atmosphere. This harrowing tale of self medication gussied up in a bright tune sounds like what escape feels like. Gonna guess this one is from San Mouse Atreides, from No-Saints- Paul, Minnesota!"
+        },
+        {
+          "pos": 4,
+          "song": "Alcohol",
+          "actual": "nateoeb",
+          "guessed": "Timmywhatup",
+          "correct": false,
+          "points": 2,
+          "comment": "WHAT IS THIS BEAT?! It felt so strange and fun. Timmy Whatup, please tell me what's up. I always take the opportunity to listen to some Serengetti."
+        },
+        {
+          "pos": 5,
+          "song": "Whiskey River - Live in Las Vegas - 1978",
+          "actual": "Kelly Jean",
+          "guessed": "socalledbutton",
+          "correct": false,
+          "points": 2,
+          "comment": "Whiskey Rivers for Socalled Buttons? Can I put in the same request the Mr. Nelson made? I could use a brain scrub and a psychological refresh."
+        },
+        {
+          "pos": 6,
+          "song": "Dos Factotum",
+          "actual": "Aniss",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 2,
+          "comment": "Oh my goodness. This sample, this tragedy, and the self medication. Gonna guess this is a Kelly Jean pull and I can't really get enough of this one either."
+        },
+        {
+          "pos": 7,
+          "song": "Getting' Drunk",
+          "actual": "bagimation",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 1,
+          "comment": "It was at this point I actually fell asleep while I was listening to the playlist. I guess my exhaustion took over. I reset the playlist back to this and these old school blues are treat to wake up to. Tragically Skip, card creating to some real Folk Blues."
+        },
+        {
+          "pos": 8,
+          "song": "Beau Goes to the Hospital",
+          "actual": "jirafa",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "I'm rocking with this Miss Mara. No notes. Everything so far's been a fun ride, as, sad as it can be. Excellent work gang."
+        },
+        {
+          "pos": 9,
+          "song": "One Bourbon, One Scotch, One Beer",
+          "actual": "socalledbutton",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 2,
+          "comment": "John Lee Hooker is a gotdang legend. A song about nothing but grain alcohol really hits right now. Debating so hard on who this could be, and I'm guessing this one is Lexaprole."
+        },
+        {
+          "pos": 10,
+          "song": "i recovered from this",
+          "actual": "Aidan",
+          "guessed": "Aidan",
+          "correct": true,
+          "points": 1,
+          "comment": "I'm starting to associate sad drunk stories with a lot of guitar. And this includes all the hiphop. Is the guitar built for sadness? Aidan is my guess, but it's so interesting as I go down this list, I can empathize why so many folks drink. I've felt these feelings too; but this is also the reason I'm hyper vigilant about indulging. Anyway good pick."
+        },
+        {
+          "pos": 11,
+          "song": "Drunk Right Now",
+          "actual": "dubs613",
+          "guessed": "frankenberge",
+          "correct": false,
+          "points": 1,
+          "comment": "FrankenBerg? man I liked this one too and I'm running out of votes already. Whatever, I'm rolling with it. Relatable."
+        },
+        {
+          "pos": 12,
+          "song": "Blanco",
+          "actual": "TekniKali.Mo",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "This definitely fits Fanonanon. The \"blanco\" Wale is referencing here is blanco tequila (the clear stuff). It totally works."
+        },
+        {
+          "pos": 13,
+          "song": "The Queen and I",
+          "actual": "sparklepants13",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "SparklePants! God, I'm having such a hard time writing anything meaningful in these comments outside of the guesses."
+        },
+        {
+          "pos": 14,
+          "song": "Alcohol",
+          "actual": "Mouse Atreides",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "I remember that you said you liked two types of drinks: takes on Old Fashioneds and those sweet Tiki Drinks, so for you I will give you two classics I keep in my back pocket. The Classic Mai Tai: Build in a shaker: 1 oz. or 30 ml. Lime Juice .5 oz. or 15 ml. Dry Curaçao .5 oz. or 15 ml. Orgeat (Use a good one! Either homemade, small hand foods, or something else) 1.5 oz. Jamaican Rum .5 oz. Rhum Agricole Add ice and shake Open pour into glass Garnish with Mint Sprig and the inverted hull of a lime half Drink through a straw Golden Gate Old Fashioned (a riff on the Cable Car + Old Fashioned) Build in a glass with one big ice cube 2 oz Gold Spanish style rum .25 oz Cinnamon syrup .25 oz Dry Curacao 3 dashes Angostura Bitters, 1 dash of orange bitters Stir and garnish with a lemon peel"
+        },
+        {
+          "pos": 15,
+          "song": "Tipsy",
+          "actual": "PoetryinNoise",
+          "guessed": "PoetryinNoise",
+          "correct": true,
+          "points": 3,
+          "comment": "Poetry in Noise you know how to pluck on my heart strings, and this is the exact way to do it. I love clipping. The whole theater got hyphy when they played this at Berkeley. Yes."
+        },
+        {
+          "pos": 16,
+          "song": "Alcohol",
+          "actual": "Heath DG",
+          "guessed": "Cherry",
+          "correct": false,
+          "points": 2,
+          "comment": "Cherrycola? I resonate with this particular sentiment. Scruff McGruff is also funny as hell."
+        },
+        {
+          "pos": 17,
+          "song": "Spring Break 1899",
+          "actual": "antigravpjs",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 1,
+          "comment": "This is an unhinged pick of a song and I gotta guess this one is Bagimation. The dice chose well."
+        },
+        {
+          "pos": 18,
+          "song": "Whisky",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": "TekniKali.Mo",
+          "correct": false,
+          "points": 2,
+          "comment": "Teknikalimo! Ya being real hipster with this pick, but I don't mind. They remind me a lot of Odessa in their early days Good times."
+        },
+        {
+          "pos": 19,
+          "song": "Death Shot",
+          "actual": "Cherry",
+          "guessed": "Dylan/Brannigans_L4w",
+          "correct": false,
+          "points": 1,
+          "comment": "Brannigan's Law? You strike me as a Dark Pop type of guy and I'm starting to gain an appreciation for the genre. This is some sick synth-driven trance inducing music."
+        },
+        {
+          "pos": 20,
+          "song": "Skull & Crossbones",
+          "actual": "mrklorox",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 3,
+          "comment": "Alright more Bay Area bias in my bones. It's a little unfair to put this much Yay Area on the list. Is this Antigravpjs?Anyways, 5 Hurricanes is an insane amount of alcohol. 20 oz of straight liquor (almost a whole bottle!) That's enough to get the average person admitted to a hospital."
+        },
+        {
+          "pos": 22,
+          "song": "Love is Like a Bottle of Gin",
+          "actual": "frankenberge",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Jirafa! Every time I see 69 Love songs in this Music League playlist, I'm starting to think this album is a staple for the gang. It is a good album tho."
+        },
+        {
+          "pos": 23,
+          "song": "40oz for Breakfast",
+          "actual": "Timmywhatup",
+          "guessed": "GoodGollyMiss",
+          "correct": false,
+          "points": 2,
+          "comment": "Apologies to you GoodGollyMiss. We keep changing our songs. It wasn't me that held the song, but I did change my song so many times. I feel terrible. Terrible enough to go search for a 40 oz."
+        },
+        {
+          "pos": 24,
+          "song": "Don't Get Gassed",
+          "actual": "bump versino",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Bump! This has to DJ Okapi himself. We need more moderate your drinking songs tbh and I'm all for this."
+        },
+        {
+          "pos": 25,
+          "song": "I Only Drink When I'm Drunk",
+          "actual": "Lexa Prole",
+          "guessed": "mrklorox",
+          "correct": false,
+          "points": 2,
+          "comment": "Mr Klorox! Last guess on my list but this song is actually kinda funny."
+        }
+      ]
+    },
+    {
+      "round": "Reinterpreted Cover Songs",
+      "roundId": 157,
+      "votingDeadline": "2026-05-10T00:38:46Z",
+      "attempts": 16,
+      "correct": 3,
+      "rate": 0.1875,
+      "drunkByThird": {
+        "first": 0.25,
+        "middle": 0.16666666666666666,
+        "last": 0.16666666666666666
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Sweetest Taboo",
+          "actual": "TekniKali.Mo",
+          "guessed": "Dylan/Brannigans_L4w",
+          "correct": false,
+          "points": 2,
+          "comment": "I didn't realize that guessing sober would be so difficult. I guess the inhibition helps stop the over thinking machine. I guess this Brannigan's Law? Oh boy I'm cooked already."
+        },
+        {
+          "pos": 2,
+          "song": "Bring The Pain",
+          "actual": "mrklorox",
+          "guessed": "mrklorox",
+          "correct": true,
+          "points": 2,
+          "comment": "Mr Klorox probably. I actually like this cover a lot. I don't know anything about this guy and I'm going to choose to not dig deeper."
+        },
+        {
+          "pos": 3,
+          "song": "Killing Me Softly With His Song",
+          "actual": "GoodGollyMiss",
+          "guessed": null,
+          "correct": false,
+          "points": 3,
+          "comment": "Kalimo coded probably and also probably one of my favorite covers I've ever heard. I didn't realize this song was originally Roberta Flack because I heard this version first! Anyways its beautiful, no notes."
+        },
+        {
+          "pos": 4,
+          "song": "Higher Love",
+          "actual": "nateoeb",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "I love the song, but not this cover... Anyways, shot in the dark, Sparkle Pants, maybe? I'm very sober and confused. Send help."
+        },
+        {
+          "pos": 5,
+          "song": "Mr. Grieves",
+          "actual": "Mara Mariani",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 2,
+          "comment": "Landing on an intersection of my tastes is a strange thing. Gonna say this is NateOEB, even though I suspect this maybe another gang member too, I have to lock in. Also shout out acapella."
+        },
+        {
+          "pos": 7,
+          "song": "Can't Get You out of My Head - Live at KEXP",
+          "actual": "Kelly Jean",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 2,
+          "comment": "Is this the secret AntigravPJs pick? I do like this cover. It's very spooky and grandiose."
+        },
+        {
+          "pos": 8,
+          "song": "Summer Breeze",
+          "actual": "Tragically Skip",
+          "guessed": "Tragically Skip",
+          "correct": true,
+          "points": 3,
+          "comment": "Tragically Skip the Card Creator! This is such a good cover and it was part of the soundtrack to my childhood! Pops loved the Isley Brothers and I heard this so much. It makes the tension in my shoulders just melt away."
+        },
+        {
+          "pos": 9,
+          "song": "Let’s Dance",
+          "actual": "frankenberge",
+          "guessed": "Aidan",
+          "correct": false,
+          "points": 1,
+          "comment": "This melancholy cover hits like a distorted dancehall caught in the fog of silent hill. Haunting but effective. Aidan maybe? I see now why I do this drunk. I'm unsure of my guesses drunk, but I'm way more hesitant sober."
+        },
+        {
+          "pos": 10,
+          "song": "That Funny Feeling",
+          "actual": "Aniss",
+          "guessed": "nowlistenallison",
+          "correct": false,
+          "points": 2,
+          "comment": "Zewskers!!!!!! Is my guess, but also I'm prolly wrong. This is hard. I never heard the original but I get the feeling I might like this more than the original. Will peep the OG after the bit bote."
+        },
+        {
+          "pos": 11,
+          "song": "Hatin",
+          "actual": "Aidan",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 1,
+          "comment": "Ok so I wasn't sure what to expect from this, but I guess Kelly Jean is way more aggressive than I thought. This flip of Dust Your Shoulders is WILD."
+        },
+        {
+          "pos": 12,
+          "song": "De La Souls",
+          "actual": "bagimation",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 2,
+          "comment": "This intersection of punk and hip hop is something I find myself being pulled towards just instinctively. I'm going to guess that this is the one Mouse Atreides."
+        },
+        {
+          "pos": 13,
+          "song": "Remember (Walking In The Sand)",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": "frankenberge",
+          "correct": false,
+          "points": 2,
+          "comment": "Frankenberg! This seems like a pick of yours. I forgot this thing even existed. This is dope."
+        },
+        {
+          "pos": 14,
+          "song": "Knock It",
+          "actual": "Timmywhatup",
+          "guessed": null,
+          "correct": false,
+          "points": 5,
+          "comment": "THIS IS CHEATING TIMMY. But goddam if it didn't work on me."
+        },
+        {
+          "pos": 15,
+          "song": "(I Can't Get No) Satisfaction",
+          "actual": "PoetryinNoise",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 3,
+          "comment": "Is this Playlist Pres Lexaprole? The Devo makes me think it is, but I am unsure. Whatever this shit bang."
+        },
+        {
+          "pos": 16,
+          "song": "Stairway to Heaven",
+          "actual": "sparklepants13",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Molly I was not expecting a Dolly song. I didn't even know she did a cover of this song. I'm confused and yet pleased."
+        },
+        {
+          "pos": 17,
+          "song": "Pony",
+          "actual": "Mouse Atreides",
+          "guessed": "Cherry",
+          "correct": false,
+          "points": 1,
+          "comment": "Cherrycola? This seems like an HG captain submission"
+        },
+        {
+          "pos": 18,
+          "song": "Long White Line",
+          "actual": "jirafa",
+          "guessed": "jirafa",
+          "correct": true,
+          "points": 2,
+          "comment": "JIRAFA! This is actually pretty dang fun. I like it."
+        },
+        {
+          "pos": 19,
+          "song": "The Apologist - Acoustic",
+          "actual": "dubs613",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "Poetry In Noise? I'm not familiar at all with Fink, but I'm convinced I gotta check him out."
+        },
+        {
+          "pos": 20,
+          "song": "Some Things Last A Long Time",
+          "actual": "Lexa Prole",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "It's a Built to Spill track, so I'm gonna guess this is you Miss Mara. At first I thought this was Modest Mouse, but even after realizing it wasn't, it still feels good on da brain."
+        },
+        {
+          "pos": 21,
+          "song": "I Fought the Law",
+          "actual": "socalledbutton",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 3,
+          "comment": "Bagimation! I would assume that an old school punk rock cover of an even older song would be a pick from you. As I get to the bottom of this list, I am very unsure of people's choices. I am befuddled."
+        }
+      ]
+    },
+    {
+      "round": "I found them first (or 24,999th)",
+      "roundId": 158,
+      "votingDeadline": "2026-05-20T03:30:56Z",
+      "attempts": 17,
+      "correct": 4,
+      "rate": 0.23529411764705882,
+      "drunkByThird": {
+        "first": 0.14285714285714285,
+        "middle": 0,
+        "last": 1
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "erasinMEfast",
+          "actual": "dubs613",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 2,
+          "comment": "I don't know who this could be, but I definitely enjoy it. I'm gonna guess Tragically Skip and leave it at that. I have no basis to make this guess. I just like it."
+        },
+        {
+          "pos": 2,
+          "song": "foxhole",
+          "actual": "Aidan",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "OK THIS SHIT IS WEIRD AND I LIKE IT. It's very noisy, so it must be the noise poet, Poetry in Noise! It's very eerie and haunting. Both of those things I quite like. I'm going to check out more."
+        },
+        {
+          "pos": 3,
+          "song": "The Earn",
+          "actual": "KarBen",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "Just because this is a Maryland pull, I'm gonna guess Anis. No real reason outside of the fact that yU is from Maryland and DC is RIGHTE THERE."
+        },
+        {
+          "pos": 4,
+          "song": "Every Time I Get Close to You",
+          "actual": "Heath DG",
+          "guessed": "socalledbutton",
+          "correct": false,
+          "points": 2,
+          "comment": "Socalled Button! This is in-fact a very cute and odd song. I dig the vibe. Didn't know homie had an album. Very interesting."
+        },
+        {
+          "pos": 5,
+          "song": "(Don't) Talk to Strangers",
+          "actual": "Mara Mariani",
+          "guessed": "frankenberge",
+          "correct": false,
+          "points": 2,
+          "comment": "It feels low key like what happens when you take the Division of Laura Lee and smashed it together with Pink Floyd. I dig it. Frankenberge pull me thinks."
+        },
+        {
+          "pos": 6,
+          "song": "The Groove",
+          "actual": "Timmywhatup",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 2,
+          "comment": "Karben MDR! Solid pick and very fun. This thing is super groovy. I am very inarticulate sober. Why am I like this?."
+        },
+        {
+          "pos": 7,
+          "song": "Angry Bong Rips",
+          "actual": "bagimation",
+          "guessed": "bagimation",
+          "correct": true,
+          "points": 2,
+          "comment": "Bagimation! This sounds like a very Bagimated pick. I approve."
+        },
+        {
+          "pos": 8,
+          "song": "Show You Right",
+          "actual": "TekniKali.Mo",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Kalimo coded for sure! I like it. I vibe with it. I'm gonna go out and drive to this later. Once I figure out a place to go to."
+        },
+        {
+          "pos": 9,
+          "song": "Spill",
+          "actual": "jirafa",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "Miss Mara! I'm guessing this is you. I don't know why. I'm just doing it. I think being tired and sore doing the votes is harder than drunk. The feeling is peculiar, and I feel less hinged than usual."
+        },
+        {
+          "pos": 10,
+          "song": "Love Me When I Go To Sleep",
+          "actual": "PoetryinNoise",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 2,
+          "comment": "Comrade Lexaprole picks pretty things once again. This is my guess and I am sticking to it. I'm ready for a Steady Holiday with Steady Holiday."
+        },
+        {
+          "pos": 11,
+          "song": "Chop You Up",
+          "actual": "frankenberge",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Fun, whimsical, and unhinged with poop jokes! What a treasure. Thank you Jirafa you generous giraffe."
+        },
+        {
+          "pos": 12,
+          "song": "LO",
+          "actual": "Tragically Skip",
+          "guessed": "Aidan",
+          "correct": false,
+          "points": 2,
+          "comment": "Aidan maybe, probably. I don't know. I am a very confused man that is deep into the list no. I'm enjoying the sonic journey. I've given up on my accuracy and just trying to chill."
+        },
+        {
+          "pos": 13,
+          "song": "As an Adult",
+          "actual": "nateoeb",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 3,
+          "comment": "Goddammit this song is cheating. Dubs613, you are allowed this sneaky pick, because to my knowledge you've never done it. I also will never get tired of self deprecating poop bars."
+        },
+        {
+          "pos": 14,
+          "song": "Notice",
+          "actual": "socalledbutton",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 2,
+          "comment": "Mouse Atreides I think this is you. I like it. I need more dancey music in my life."
+        },
+        {
+          "pos": 15,
+          "song": "Cops Don't Care About the Drip",
+          "actual": "Mouse Atreides",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 2,
+          "comment": "Damn I love Prince and all of the people he influenced. Gonna guess this one is Antigrave PJs. Love the name of your buddy's act."
+        },
+        {
+          "pos": 16,
+          "song": "Reinventing the Wheel",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "More groovy business. And these cats go hard. Damn. It is a real shame they aren't more popular. Maybe Fanonanon submitted this one. Some folks didn't submit so I gotta guess someone secret."
+        },
+        {
+          "pos": 17,
+          "song": "Ate the Tuning Fork While I Taxied in the Crepuscular",
+          "actual": "GoodGollyMiss",
+          "guessed": null,
+          "correct": false,
+          "points": 3,
+          "comment": "Mollie got me wanting to twerk in the TSA line. This is like contraband for me. God I love this song."
+        },
+        {
+          "pos": 18,
+          "song": "You Are Not A Cowboy",
+          "actual": "Aniss",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Sparklepants? I like this country twang thang. Dang this playlist is fun,"
+        },
+        {
+          "pos": 19,
+          "song": "Buried My Husband",
+          "actual": "Kelly Jean",
+          "guessed": "Kelly Jean",
+          "correct": true,
+          "points": 2,
+          "comment": "YO. This is a wild ass song. Gonna guess this is Kelly Jean? This feels like a Morning Gang Saint song."
+        },
+        {
+          "pos": 20,
+          "song": "Hibiscus",
+          "actual": "bump versino",
+          "guessed": "bump versino",
+          "correct": true,
+          "points": 2,
+          "comment": "Feels like a Bump Versino song. I rock with it."
+        },
+        {
+          "pos": 21,
+          "song": "The Bible Is Bullshit",
+          "actual": "mrklorox",
+          "guessed": "mrklorox",
+          "correct": true,
+          "points": 2,
+          "comment": "This sounds like the Mr Klorox pick. It is infact still a banger."
+        }
+      ]
+    },
+    {
+      "round": "Songs to Ride My Bike In Traffic to",
+      "roundId": 159,
+      "votingDeadline": "2026-05-30T02:33:32Z",
+      "attempts": 19,
+      "correct": 2,
+      "rate": 0.10526315789473684,
+      "drunkByThird": {
+        "first": 0.2857142857142857,
+        "middle": 0,
+        "last": 0
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Full Speed",
+          "actual": "bagimation",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 2,
+          "comment": "All this drinking has made me kinda hungry. I could go for some beef right now. This song rips. Gotta blind guess so dubc_613 I'm a florping torpedo and it's all your fault."
+        },
+        {
+          "pos": 2,
+          "song": "Speedline Miracle Masterpiece",
+          "actual": "Mara Mariani",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 2,
+          "comment": "Karben Macro Data Relay!! The song started and then I had to peddle faster. Oh boy that was a bad idea. I'm starting to feel queasy. Thank goodness I got my water bottle. Maybe this exercise bike thing was a bad idea."
+        },
+        {
+          "pos": 3,
+          "song": "Terminator X To The Edge Of Panic",
+          "actual": "PoetryinNoise",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Fanonanon (and on and on, and on and on!). I forgot that this song existed. The rapid chantings of \"Go! Go! Go!\" was very encouraging."
+        },
+        {
+          "pos": 4,
+          "song": "Raiden & Tyrone",
+          "actual": "bump versino",
+          "guessed": "bump versino",
+          "correct": true,
+          "points": 2,
+          "comment": "Bump Versino! I love that you always highlight some UK talent in your entries. It's really opening up my music palette to things I normally don't listen to. Anyways, DK Okapi picked another heater, what else is new?"
+        },
+        {
+          "pos": 5,
+          "song": "Running",
+          "actual": "antigravpjs",
+          "guessed": "Aidan",
+          "correct": false,
+          "points": 2,
+          "comment": "AIDAN! THE SYNTH DOG BARKS. I AM FILLED WITH DETERMINATION. On the real, this is a fun little track, that right now sounds extremely incoherent to me. Very drunk, and trying to keep pedaling and typing on my phone is rough. Why am I doing this? Why do I make things harder for myself? Stop asking questions you drunk mutt and keep pedaling!"
+        },
+        {
+          "pos": 6,
+          "song": "Underwater Boi",
+          "actual": "GoodGollyMiss",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 1,
+          "comment": "Ya boi is suddenly swimming. I dig it. I haven't listened to much Turnstile, but I think I'm convinced to peep. My guess is Mouse Atreides. Why? I dunno. I'm underwater. How am I supposed to justify any of this?."
+        },
+        {
+          "pos": 7,
+          "song": "Change the Channel",
+          "actual": "mrklorox",
+          "guessed": "mrklorox",
+          "correct": true,
+          "points": 2,
+          "comment": "Clipping is very much an easy upvote from me. Only person I can think of that likes clipping as much as I do is Mr, Klorox, to which I say, I will change the channel Whatever shit they got on this gym tv is boring and bumming me out. Who watches trashy reality shows while working out? I'm disgusted."
+        },
+        {
+          "pos": 8,
+          "song": "Sick Ride",
+          "actual": "Tragically Skip",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "POETRY IN NOISE. This is the level of aggression I hope to carry in my life. I sadly can't. I'm actually usually very mellow as a person in real life, and get tired being angry. But fuck yeah Karen Dio rips."
+        },
+        {
+          "pos": 9,
+          "song": "South Carolina",
+          "actual": "Heath DG",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 2,
+          "comment": "Comrade Lexaprole! I'm only guessing this because a secret TMBG pick would be right up your alley. That said, fuck yeah John Linnell can write a song fr."
+        },
+        {
+          "pos": 10,
+          "song": "GLASS WINDOW",
+          "actual": "Lexa Prole",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 2,
+          "comment": "Bagimation? You strike me as an Osees fan. I do have to throw it up for the SF legends who refuse to cooperate with the market."
+        },
+        {
+          "pos": 11,
+          "song": "Tragic Monsters",
+          "actual": "frankenberge",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 2,
+          "comment": "Mouse Atreides! I am a tragic monster. I am very tired. I want to stop pedaling. I will probably take a break on the pedaling after this song. I am sweating. I am tired. I am thirsty. I need some water."
+        },
+        {
+          "pos": 12,
+          "song": "Livin' Proof",
+          "actual": "socalledbutton",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 2,
+          "comment": "Tragically Skip! This makes me feel like I'm riding down the blocks of Brooklyn. Is this your intent? Cause if so, you have succeeded. Man taking this break was a good idea."
+        },
+        {
+          "pos": 13,
+          "song": "Tangible Dream",
+          "actual": "KarBen",
+          "guessed": "Timmywhatup",
+          "correct": false,
+          "points": 2,
+          "comment": "Timmywhatup! I never drive in the bike lane. That's hella rude. But all my dreams are tangible. I feel this, and I can cruise to it."
+        },
+        {
+          "pos": 14,
+          "song": "Like A Dance",
+          "actual": "Aidan",
+          "guessed": "Dylan/Brannigans_L4w",
+          "correct": false,
+          "points": 2,
+          "comment": "Brannigans Law! Hella dancy. Really bouncy. I am involuntarily going faster. I also need to pee. I'm gonna run to the bathroom real quick."
+        },
+        {
+          "pos": 15,
+          "song": "Speed Law",
+          "actual": "jirafa",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "Aniss! Playing the classics while I roll is good. It is a musical relief as much as running to the toilet was for me just a minute ago. Smooth is fast is right, and this is buttery!"
+        },
+        {
+          "pos": 16,
+          "song": "This Is It",
+          "actual": "Aniss",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Jirafa pick? This got me back and pedaling. This future funk-disco track makes me want to start, go, and never ever stop."
+        },
+        {
+          "pos": 17,
+          "song": "High Noon",
+          "actual": "Timmywhatup",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 2,
+          "comment": "Antigrav PJs! I love the snake skin guitars every time I hear them, and this is not an exception. I am biking faster, but that's mostly cause the tempo switched up on me. I guess I am a slave to the rhythm."
+        },
+        {
+          "pos": 18,
+          "song": "F it Up - Live Sesh",
+          "actual": "Dylan/Brannigans_L4w",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Good Golly Mollie! This is a very heavily layered song, but it does get me pumped up. It's pretty great."
+        },
+        {
+          "pos": 19,
+          "song": "Cinnamon Temple",
+          "actual": "dubs613",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "Miss Mara! This is very much up my alley. This experimental soulful complexity is all in my wheel house, and I love it."
+        },
+        {
+          "pos": 21,
+          "song": "What a Time To Be Alive",
+          "actual": "TekniKali.Mo",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Sparkle Pants! This one I am very surprised by. I haven't heard FOB by choice in a long time, but I'm kinda happy that they still got some musical fuel in the tank."
+        },
+        {
+          "pos": 22,
+          "song": "Drivin' My Life Away",
+          "actual": "Kelly Jean",
+          "guessed": "frankenberge",
+          "correct": false,
+          "points": 1,
+          "comment": "Frankenberge! You should definitely ride through traffic on your bike. At least, you should if there are bike lanes in your city. If not, I don't recommend it."
+        },
+        {
+          "pos": 23,
+          "song": "Nina",
+          "actual": "Mouse Atreides",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 2,
+          "comment": "NateOEB! This song does rule and I definitely would ride my bike into traffic with this."
+        },
+        {
+          "pos": 24,
+          "song": "Come On Feet",
+          "actual": "nateoeb",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Kalimo closes off the list and this is a great cool down lap song. Somehow the randomizer worked out in the best way possible. This is a solid closer. I'm gonna go take a shower."
+        }
+      ]
+    },
+    {
+      "round": "Local Love Soundscape",
+      "roundId": 160,
+      "votingDeadline": "2026-06-27T17:00:47Z",
+      "attempts": 13,
+      "correct": 3,
+      "rate": 0.23076923076923078,
+      "drunkByThird": {
+        "first": 0.3333333333333333,
+        "middle": 0.3333333333333333,
+        "last": 0
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Kick in the Door - 2014 Remaster",
+          "actual": "Aniss",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Timmy G (G stands for Good taste). I don't know why, but there is a sneaking suspicion that the yellow discman that we both owned (in very different parts of the world admittedly) brought the same amount of comfort that it brought me. Anyways iconic pick."
+        },
+        {
+          "pos": 2,
+          "song": "Goodbye Sky Harbor",
+          "actual": "Mouse Atreides",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "15 minute run time is intimidating Kalimo, but I'm not really bugging. I've had this playing a lot while I was out running errands this week. It's worked wonders for my jetlagged and frayed nerves. It's been a nice companion on my solo trips trying not to fall asleep."
+        },
+        {
+          "pos": 3,
+          "song": "Sure Shot",
+          "actual": "GoodGollyMiss",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 3,
+          "comment": "AntigravPjs is my guess because you seem like a man of refined taste. This one I did both appreciate and recognize. I'm probably gonna listen to some Karl Denson once I'm done with the voting."
+        },
+        {
+          "pos": 4,
+          "song": "Go Go Gadget Flow",
+          "actual": "bagimation",
+          "guessed": "bagimation",
+          "correct": true,
+          "points": 2,
+          "comment": "Bagimation. Just straight up. Also, I loved this album. It was one of the reasons why I got back into hiphop in the latter half of high school (along with E-40 and the Blue Scholars). I need to visit the best city in the whole wide world. I don't know if it will ever knock SF from the top spot for me, but seeing as how all the artists I love, and all the people who I think are the coolest in the world come from Chicago, I need to visit my personal Mecca."
+        },
+        {
+          "pos": 5,
+          "song": "Speed",
+          "actual": "Heath DG",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Fanonanon (and on and on, and on and on) this has to be you. I remember your love for Little Brother and how important they were to you. These dudes were legends. I feel priviliged to watch their rise alongside you."
+        },
+        {
+          "pos": 6,
+          "song": "A Song About Fishing",
+          "actual": "nateoeb",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 1,
+          "comment": "Jirafa because you got the esoteric picks always. Also, it's very poetic which is something you always go with. I appreciate it generous Giraffe."
+        },
+        {
+          "pos": 7,
+          "song": "Rendez-vous",
+          "actual": "bump versino",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 2,
+          "comment": "Karben Macro Data Relay! Guessing you cause you're always putting the gang on to some international acts. I actually resonate deeply with the feelings of this one. A lot of the places that I held dear are slowly fading away. I long for them, but I've started to realize that if I miss it, I should do something to rebuild them."
+        },
+        {
+          "pos": 8,
+          "song": "History Lesson Part 2",
+          "actual": "Lexa Prole",
+          "guessed": "Lexa Prole",
+          "correct": true,
+          "points": 2,
+          "comment": "Lexaprole!!!!!!!!!!! Blicking up your home town. Shout out to the So Cal Punk rock scene that taught me roughly 40% of my body politic."
+        },
+        {
+          "pos": 9,
+          "song": "We Live In Brooklyn, Baby",
+          "actual": "socalledbutton",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 2,
+          "comment": "Tragically Skip, the CARD CREATOR! Always shouting out Brooklyn. Rest in Peace Roy Ayers. Word to the broke peoples of the world."
+        },
+        {
+          "pos": 10,
+          "song": "These Dreams of You - 2013 Remaster",
+          "actual": "dubs613",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 1,
+          "comment": "Wild swing but Poetry in Noise. This one is a bit of left field pick, but I figure that the East Coast focused story is you. Also, it's a cute story. I adore it."
+        },
+        {
+          "pos": 11,
+          "song": "Southern Cross",
+          "actual": "Tragically Skip",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 1,
+          "comment": "NATEOEB. It seems like a cute Romance and that's what I'm going with because cute romance is kinda your vibe? Ionno why tbh. It just kinda fits cause you're a wholesome dude in my mind?"
+        },
+        {
+          "pos": 12,
+          "song": "Warsaw - Audiotree Live Version",
+          "actual": "Mara Mariani",
+          "guessed": "Mara Mariani",
+          "correct": true,
+          "points": 3,
+          "comment": "Ok Mara, you said this would be obvious and I only remembered it was you because you and I both went to the GNX concert, but I went to the one in SF, and you went to the one in Warsaw. I kinda drew the connections from there. Thank goodness my memory is still good, otherwise, I would have missed this entirely. Dessa is dope tho like fr."
+        },
+        {
+          "pos": 13,
+          "song": "Pocket Lint",
+          "actual": "Timmywhatup",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 3,
+          "comment": "Dubs613 seems like a well traveled human. My guess is you, and damn, didn't know you spent some time in NZ."
+        },
+        {
+          "pos": 15,
+          "song": "Baby's Arms",
+          "actual": "Kelly Jean",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "Aniss. For sure. It is a good place to be 100%"
+        },
+        {
+          "pos": 16,
+          "song": "Without You",
+          "actual": "antigravpjs",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 2,
+          "comment": "Kelly Jean. I feel you on this. I didn't party much, but a lot of my old memories of the good times feel lifetimes away. I can't even recognize the man that I used to be. He's got my face, but what's with that attitude? Chill bro, you finna be alright."
+        },
+        {
+          "pos": 17,
+          "song": "Corn Maze",
+          "actual": "PoetryinNoise",
+          "guessed": "GoodGollyMiss",
+          "correct": false,
+          "points": 2,
+          "comment": "And Finally Good Golly Miss Mollie! Closing it out strong. I hate to admit it tho, that my stereotype of Idaho is just a corn maze. I should be held accountable for my whack ass prejudices."
+        }
+      ]
+    },
+    {
+      "round": "Too Much Noise in My Head",
+      "roundId": 161,
+      "votingDeadline": "2026-07-07T15:38:22Z",
+      "attempts": 16,
+      "correct": 1,
+      "rate": 0.0625,
+      "drunkByThird": {
+        "first": 0.14285714285714285,
+        "middle": 0,
+        "last": 0
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "The Boy In the Bubble",
+          "actual": "Lexa Prole",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 1,
+          "comment": "Tragically Skip is going to get my first guess because the first guess is always the hardest and I have nothing to base it on. I am drunk. I am confused. The US is losing this world cup game, and all I think is \"good\"."
+        },
+        {
+          "pos": 2,
+          "song": "Flying Overseas (feat. Devonte Hynes and Solange Knowles)",
+          "actual": "Mara Mariani",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "JIRAFFA, the generous giraffe! I don't know if this is you but I just assume it is you. I kept running this one back while I was driving around the Inland Empire this weekend and that says a lot."
+        },
+        {
+          "pos": 3,
+          "song": "Say It Is",
+          "actual": "dubs613",
+          "guessed": "bump versino",
+          "correct": false,
+          "points": 2,
+          "comment": "DJ Okapi aka Bump Versino, our resident international representative. This too was in heavy rotation while I was stuck driving around in the parts of SoCal no one talks about."
+        },
+        {
+          "pos": 4,
+          "song": "Interiors",
+          "actual": "Mouse Atreides",
+          "guessed": "Mouse Atreides",
+          "correct": true,
+          "points": 2,
+          "comment": "I never heard Sea and Cake prior to this Mouse Atreides, but the vibes are immaculate. It is soothing to a degree that I can deeply appreciate. I'm melting into my computer chair right now and just letting the mood ride."
+        },
+        {
+          "pos": 5,
+          "song": "Something About Us",
+          "actual": "Timmywhatup",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 2,
+          "comment": "Not sure what it was about this that brought me back to rolling around in high school getting into shenanigans, but this was the vibe back in the day. I'm at a loss so I take shots in the dark and say Dubs613. I've fully sunk into my chair now and am coasting."
+        },
+        {
+          "pos": 6,
+          "song": "She Came and She Touched Me - Live",
+          "actual": "PoetryinNoise",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 2,
+          "comment": "NATEOEB! This song came on when I was driving through the reservoir in San Luis Obispo, and the scenery along with the lyrics just clicked with me in an unexpected way. Extra point for awakening an ancient emotion in me."
+        },
+        {
+          "pos": 7,
+          "song": "Noctuary",
+          "actual": "antigravpjs",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "Poetry in Noise this put me in a pocket that I did not at all expect. I put on more Bonobo when I finally got home from my trip and it was a real nice cool-off album."
+        },
+        {
+          "pos": 8,
+          "song": "Hollywood Forever Cemetery Sings",
+          "actual": "Kelly Jean",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Fanonanon maybe? Also it does make sense that the noise corrals the many voices into a concentrated whole that can be dealt with. Very cathartic. I am in danger now of being too relaxed. Or is that the alcohol? I dunno. I'm gonna drink more water."
+        },
+        {
+          "pos": 9,
+          "song": "Aht Uh Mi Hed",
+          "actual": "jirafa",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Southern California Buttons! Never gonna turn down a soul submission. This felt good in the brain, and the funky bass is always appreciated."
+        },
+        {
+          "pos": 10,
+          "song": "CYCLES",
+          "actual": "GoodGollyMiss",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 2,
+          "comment": "KARBEN MACRO DATA RELAY! Gracious host, this is very soothing to the soul."
+        },
+        {
+          "pos": 11,
+          "song": "Hindsight",
+          "actual": "KarBen",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 1,
+          "comment": "Bagimation, Canada can get it."
+        },
+        {
+          "pos": 12,
+          "song": "Cruisin' For Burgers",
+          "actual": "Heath DG",
+          "guessed": "Lexa Prole",
+          "correct": false,
+          "points": 2,
+          "comment": "LEXAPROLE! I made sure that when this song came on, I went to Tommy's Burgers. This maybe a little bit controversial but I think Tommy's burgers got the best burgers in the country. I guess I am a little biased in this respect, but it is the one thing I will always concede to LA. I dunno why I will die on this hill, but this is the hill I have chosen."
+        },
+        {
+          "pos": 13,
+          "song": "This World",
+          "actual": "nateoeb",
+          "guessed": "Timmywhatup",
+          "correct": false,
+          "points": 2,
+          "comment": "Timmy what up, what up Timmy! Geti is a cheat code for me, and this album is one of my favorites. It's just so soothing."
+        },
+        {
+          "pos": 14,
+          "song": "I Can't Give Everything Away",
+          "actual": "Tragically Skip",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 2,
+          "comment": "As a fellow blasphemous lover of the Bowie cover over the original, this one I feel deep in my heart for many many reasons. It this the homie Aniss?"
+        },
+        {
+          "pos": 15,
+          "song": "True Dreams of Wichita",
+          "actual": "Aniss",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 1,
+          "comment": "This might actually be Antigrav Pjs. The Wichita gives it away? Maybe I'm making things up. It is dope tho."
+        },
+        {
+          "pos": 16,
+          "song": "Nicotine Lips",
+          "actual": "bagimation",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 1,
+          "comment": "Aniss blowing tree poetically. I've loved your descriptions of all your choices so far."
+        },
+        {
+          "pos": 17,
+          "song": "Rock In The Video Age",
+          "actual": "bump versino",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 1,
+          "comment": "Kelly Jean getting high in public spaces, anxious as all get out. And yet, here you are alive, and CHILLING."
+        },
+        {
+          "pos": 19,
+          "song": "Didn't Cha Know",
+          "actual": "socalledbutton",
+          "guessed": "GoodGollyMiss",
+          "correct": false,
+          "points": 2,
+          "comment": "Good Golly Miss Mollie this one is forever in my rotation. It feels like the perfect end to a playlist all about vibing."
+        }
+      ]
+    },
+    {
+      "round": "DEEP-CUTS ONLY",
+      "roundId": 162,
+      "votingDeadline": "2026-07-17T19:54:30Z",
+      "attempts": 13,
+      "correct": 3,
+      "rate": 0.23076923076923078,
+      "drunkByThird": {
+        "first": 0.2,
+        "middle": 0.3333333333333333,
+        "last": 0.2
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Painkiller",
+          "actual": "Mouse Atreides",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 2,
+          "comment": "First guess is always the hardest and I'm going NATEOEB because this is a Texan deep cut and I gotta grasp at something. I should have made a pain killer for this song. Damn. I missed the mark on that one."
+        },
+        {
+          "pos": 2,
+          "song": "WASTED YEARS",
+          "actual": "antigravpjs",
+          "guessed": "PoetryinNoise",
+          "correct": false,
+          "points": 2,
+          "comment": "Antigrav PJs. I only pick you cause you're buff as fuck and I think that the sad workout submission is inline with your behavior. I like it. I am sad. I can see why Poetry in Noise cries to this. Fuck."
+        },
+        {
+          "pos": 3,
+          "song": "Spitting Off the Edge of the World",
+          "actual": "Mara Mariani",
+          "guessed": "socalledbutton",
+          "correct": false,
+          "points": 2,
+          "comment": "Ok Socalledbuttons, I'm gonna guess this is you cause you said \"join the resistance\" and to that I say: Viva La Resistance! Viva la Gente!"
+        },
+        {
+          "pos": 5,
+          "song": "Hold Your Head",
+          "actual": "KarBen",
+          "guessed": "Timmywhatup",
+          "correct": false,
+          "points": 1,
+          "comment": "Timmy What up! I am slipping. But damn if this isn't a different kind of sad boi energy."
+        },
+        {
+          "pos": 6,
+          "song": "John Wayne Gacy, Jr.",
+          "actual": "Aniss",
+          "guessed": "Aniss",
+          "correct": true,
+          "points": 1,
+          "comment": "Gonna guess Aniss cause I don't know anyone else. Our sads are accumulating and your boi is sitting here just quietly vibing. I'm lost in the slow moving maelstrom but I think I kinda need to be here for a little bit."
+        },
+        {
+          "pos": 7,
+          "song": "Black Dog",
+          "actual": "nateoeb",
+          "guessed": null,
+          "correct": false,
+          "points": 4,
+          "comment": "Damn hearing this song again was so goddam devastating. Sharp empathy, melodic vocals. Understated pains. I'm just gonna guess Mollie, deep empath as you are, I assume its just you."
+        },
+        {
+          "pos": 8,
+          "song": "Starless",
+          "actual": "socalledbutton",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 2,
+          "comment": "Tragically Skip the card creator! I actually never skip this song despite the length. I really like King Crimson (I guess that's something I share with the dudes from Bad Religion) and this long rhapsody of melancholic mania is the sort of thing I would choose to listen to on a quiet afternoon. RIP to beloved grandmothers. May your lives shine bright like the stars above us. May no sky ever be starless."
+        },
+        {
+          "pos": 9,
+          "song": "Just For You",
+          "actual": "PoetryinNoise",
+          "guessed": "PoetryinNoise",
+          "correct": true,
+          "points": 1,
+          "comment": "There are so very many empaths in this group and I have a real hard time pinpointing who chose what. Stab in the dark, I'm gonna say it's Poetry in Noise, but I know it could be anyone one of you. Your love for Lux is beautiful. That is all."
+        },
+        {
+          "pos": 10,
+          "song": "Not A Day Goes By",
+          "actual": "bump versino",
+          "guessed": null,
+          "correct": false,
+          "points": 2,
+          "comment": "Pains me to guess this but Kalimo. Only guessing cause you put Mortimer in front of me and I ate up his discography when it was served up to me. I deeply resonated with all of this and had to keep myself from tearing up while I was stuck in traffic today."
+        },
+        {
+          "pos": 11,
+          "song": "Down Easy",
+          "actual": "Timmywhatup",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Shot in the dark, DubsC cause I can't think of anyone else. I think the alcohol is clouding my judgement. I'm just taking it real easy and all my thoughts are going blank. I better get up and do some pushups."
+        },
+        {
+          "pos": 12,
+          "song": "Grief",
+          "actual": "dubs613",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 1,
+          "comment": "Kelly Jean! I got no idea if this is you, but this one is also beautiful. It's been a little rough keeping it together through the voting round since I'm just sitting here in my feelings, but I do appreciate this trip through the beautiful tapestry of loss. It reminds me that the things that disappear are worth it because we mourn their absence. As sad as it maybe, it is only speaks to both their beauty of presence, and the emptiness of their absence."
+        },
+        {
+          "pos": 13,
+          "song": "Steer Your Way",
+          "actual": "jirafa",
+          "guessed": "bump versino",
+          "correct": false,
+          "points": 2,
+          "comment": "BUMP VERSINO. I doubt I will actually catch you DJ Okapi, but I will try and in every round I will guess until I find you. This shit is moody and dark tho and I fuck with it."
+        },
+        {
+          "pos": 14,
+          "song": "Sleeping Sickness",
+          "actual": "Tragically Skip",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 2,
+          "comment": "Mouse Atreides I suspect that this is you. I do feel like I'm constantly on the verge of breaking down (although I never really talk about it). But in all in honesty, what is there left to say but to fight for the future I want to see? I have no answers, only my foolish drive to move forward."
+        },
+        {
+          "pos": 15,
+          "song": "Losers 2",
+          "actual": "bagimation",
+          "guessed": "bagimation",
+          "correct": true,
+          "points": 2,
+          "comment": "Bagimation! No reason. Just feels like a pick that resonates with you, and me. I feel like I'm destined to die poor despite my very fortunate circumstances. Regardless, poor rural boy doesn't ever run from where he came from. Just very sad that he's one of the lucky few that managed to do better."
+        },
+        {
+          "pos": 16,
+          "song": "Them Changes",
+          "actual": "GoodGollyMiss",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Jiraffa! Damn this groove hits me in the face every time. I needed this sad pick me up. I was running out of steam."
+        },
+        {
+          "pos": 17,
+          "song": "Kozmic Blues",
+          "actual": "Kelly Jean",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 3,
+          "comment": "Mara, I suspect that this one is you. You seem like the deeply poetic type, and also incredibly well read. The poem is beautiful. The blues are cosmic but so is our light. May the darkness never enfold us."
+        }
+      ]
+    },
+    {
+      "round": "Ink worthy",
+      "roundId": 163,
+      "votingDeadline": "2026-07-28T05:37:08Z",
+      "attempts": 16,
+      "correct": 2,
+      "rate": 0.125,
+      "drunkByThird": {
+        "first": 0,
+        "middle": 0,
+        "last": 0.4
+      },
+      "guesses": [
+        {
+          "pos": 1,
+          "song": "Big Green",
+          "actual": "Mara Mariani",
+          "guessed": "Kelly Jean",
+          "correct": false,
+          "points": 3,
+          "comment": "This song hit in ways that were super unexpected for me and I found myself bumping this song alone while I was out running errands. Gonna guess Kelly Jean? Guessing the first song is always so hard. Whoever submitted this song, thanks homie."
+        },
+        {
+          "pos": 2,
+          "song": "Why I'm Lonely",
+          "actual": "Mouse Atreides",
+          "guessed": "bagimation",
+          "correct": false,
+          "points": 2,
+          "comment": "Bagimation! This song is well written on a lot of levels. It's kind of mind blowing. Forcing myself to sit through it now and not do things makes me appreciate a whole lot more."
+        },
+        {
+          "pos": 3,
+          "song": "AN IDEA IS A WORK OF ART",
+          "actual": "Tragically Skip",
+          "guessed": "a1mrson",
+          "correct": false,
+          "points": 2,
+          "comment": "a1merson! Welcome to the league! Mike Ladd really killed it with those lines. His whole verse on this beat is just magical and nostalgic for a thing I've only felt in my imagination. Just magnificent."
+        },
+        {
+          "pos": 4,
+          "song": "Don't Call Me Whitney, Bobby",
+          "actual": "KarBen",
+          "guessed": "dubs613",
+          "correct": false,
+          "points": 2,
+          "comment": "Dubsc613, big DUB I'm gonna guess this is you. The jaunty upbeat sound mixed with the grim lyrics struck the dark whimsey part of the brain that just felt good."
+        },
+        {
+          "pos": 5,
+          "song": "Bold as Love",
+          "actual": "GoodGollyMiss",
+          "guessed": "Tragically Skip",
+          "correct": false,
+          "points": 3,
+          "comment": "Tragically SKIP the CARD CREATOR! I'll take any excuse to listen to Jimi and this song is like a comfort blanket. Sometimes the boldness is the comfort that love brings. Also, Jimmy really is a deity of the strings. Damn."
+        },
+        {
+          "pos": 6,
+          "song": "The Ballad Of El Goodo",
+          "actual": "a1mrson",
+          "guessed": "Aniss",
+          "correct": false,
+          "points": 1,
+          "comment": "Gonna guess this one is Aniss. This song is oddly nostalgic for me too. I guess nostalgia is doing a lot for me this round. This is also like comfort food, which in some ways is kinda the opposite of this entire song's sentiment. Whatever, it's a good one. I need to drink some more water."
+        },
+        {
+          "pos": 7,
+          "song": "bending of the fork",
+          "actual": "Timmywhatup",
+          "guessed": "KarBen",
+          "correct": false,
+          "points": 1,
+          "comment": "Karben Macro Data Relay! This sentiment resonates with me. Upon a lot of reflection, some of the greatest moments of my life were tainted by my mood, and some of the worst were softened by blind bliss to my detriment. Mood does make up too much of this life. Solid pick."
+        },
+        {
+          "pos": 8,
+          "song": "The Kid",
+          "actual": "bagimation",
+          "guessed": "Mouse Atreides",
+          "correct": false,
+          "points": 1,
+          "comment": "Mouse Atreides! This song was haunting in ways that maybe I don't quite get, but the imagery in the song is so very easy to imagine. Finding out that this is based on Blood Meridian doesn't surprise me since I read the book, and this felt like it fit right in the middle of the book. Good lord."
+        },
+        {
+          "pos": 9,
+          "song": "I Am I Be",
+          "actual": "socalledbutton",
+          "guessed": "GoodGollyMiss",
+          "correct": false,
+          "points": 2,
+          "comment": "A certified hood classic. Good Golly Miss coming for the crown with this one, and I'd be surprised if this doesn't get top spot. What else is there to say other than this slaps."
+        },
+        {
+          "pos": 10,
+          "song": "Here For You",
+          "actual": "nateoeb",
+          "guessed": "jirafa",
+          "correct": false,
+          "points": 2,
+          "comment": "Jiraffa! Appreciate you maintaining the spirit of the game. \"The Universe is not something sperate from yourself\" is a hard line. I really like guitar beats. Huge sucker for them. Also a contender: \"I'm here for you, all you gotta do is ask.\""
+        },
+        {
+          "pos": 11,
+          "song": "Lock-picks, Knives, Bricks and Bats",
+          "actual": "antigravpjs",
+          "guessed": "nateoeb",
+          "correct": false,
+          "points": 2,
+          "comment": "NATEOEB, this song made me want to get up and do things like *redacted*. It does inspire something in me from my own personal experiences to dissent and fight back. Maybe my militancy is showing but I feel like that sentiment's only been growing with every passing year."
+        },
+        {
+          "pos": 12,
+          "song": "The Wheel",
+          "actual": "Kelly Jean",
+          "guessed": null,
+          "correct": false,
+          "points": 1,
+          "comment": "Southern California Buttons! The sentiment of not trying to avoid the scary inevitable will lead to the much more devastating electricity coming for you is a sentiment I hold deep within my own heart."
+        },
+        {
+          "pos": 13,
+          "song": "The Day",
+          "actual": "dubs613",
+          "guessed": "Timmywhatup",
+          "correct": false,
+          "points": 2,
+          "comment": "Timmy what up! This one hit for me, and you know I love me a good line about dogs. Even if it is one with a missing leg. Solidarity with the maimed."
+        },
+        {
+          "pos": 14,
+          "song": "3 Peat - ChopNotSlop",
+          "actual": "bump versino",
+          "guessed": "bump versino",
+          "correct": true,
+          "points": 1,
+          "comment": "BUMP VERSINO is the guess. Shout out to DJ Okapi. You've eluded me all season but this is my (probably wrong bet)."
+        },
+        {
+          "pos": 15,
+          "song": "Home",
+          "actual": "jirafa",
+          "guessed": "antigravpjs",
+          "correct": false,
+          "points": 1,
+          "comment": "Anti Grav PJs. The musicality in this one shouldn't be that surprising, but it is appreciated nonetheless. This one hit for me."
+        },
+        {
+          "pos": 16,
+          "song": "Coffee - Main",
+          "actual": "PoetryinNoise",
+          "guessed": "PoetryinNoise",
+          "correct": true,
+          "points": 2,
+          "comment": "Poetry in Noise! Coffee Tattoos are a solid idea. Fits with the whole gang mentality. Didn't know you disliked beef, but that's all fine by me. I'm cutting that out of my diet as best as I can. Unless we're getting Tommy's."
+        },
+        {
+          "pos": 18,
+          "song": "Dry the Rain",
+          "actual": "Aniss",
+          "guessed": "Mara Mariani",
+          "correct": false,
+          "points": 2,
+          "comment": "Mara! This one gotta be you. Beta band forever. Yeah. I feel you. It'll be ok."
+        }
+      ]
+    },
+    {
+      "round": "Time is a Shark",
+      "roundId": 164,
+      "votingDeadline": "2026-08-07T06:41:00.000Z",
+      "attempts": 0,
+      "correct": 0,
+      "rate": 0,
+      "drunkByThird": {
+        "first": 0,
+        "middle": 0,
+        "last": 0
+      },
+      "guesses": []
+    }
+  ]
+}
