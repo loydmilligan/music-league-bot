@@ -1116,6 +1116,11 @@
               <span class="mlm-section-resolved">no model - computed from round data</span>
               <span class="mlm-section-label" style="font-size:11px;color:var(--fg-muted);">Visual set selected in Generate / regeneration options</span>
             </div>
+            <div class="mlm-section-row mlm-section-row--deterministic">
+              <span class="mlm-section-label">The Guesser - deterministic</span>
+              <span class="mlm-section-resolved">no model - computed from vote comments</span>
+              <span class="mlm-section-label" style="font-size:11px;color:var(--fg-muted);">Off by default; enable per-league</span>
+            </div>
             {#each digestSections as s (s.section)}
               {@const eligible = qualifying(s.requires)}
               {@const pinSet = s.selected != null}
