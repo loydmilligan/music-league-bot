@@ -53,5 +53,20 @@ export const STORYLINE_SEEDS: Record<string, StorylineSeed[]> = {
 			],
 			sources: ['chat'],
 		},
+		{
+			// The accommodating commissioner: perpetual extensions, no-pressure
+			// vote reminders, and "peace and love."
+			player: 'KarBen',
+			motif: 'extensions & peace and love',
+			patterns: [
+				/\bno worries\b/i,
+				/\b(hours?|days?|time) left to vote\b/i,
+				/\bextend(ed|ing)?\b/i,
+				/\bextension\b/i,
+				/\bno (rush|pressure)\b/i,
+				/\bpeace and love\b/i,
+			],
+			sources: ['chat', 'vote_comments'],
+		},
 	],
 };

@@ -2,14 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { STORYLINE_SEEDS } from './storylineSeeds';
 
 describe('STORYLINE_SEEDS.sssc', () => {
-	it('has the four SSSC entries', () => {
-		expect(STORYLINE_SEEDS.sssc).toHaveLength(4);
+	it('has the five SSSC entries', () => {
+		expect(STORYLINE_SEEDS.sssc).toHaveLength(5);
 		expect(STORYLINE_SEEDS.sssc.map((s) => s.player)).toEqual([
 			'PoetryinNoise',
 			'Timmywhatup',
 			'bagimation',
 			'missmara',
+			'KarBen',
 		]);
+	});
+
+	it("KarBen's patterns match his commissioner/extension lines, not unrelated text", () => {
+		const seed = STORYLINE_SEEDS.sssc.find((s) => s.player === 'KarBen')!;
+		expect(seed.patterns.some((p) => p.test('3 hours left to vote. No worries at all'))).toBe(true);
+		expect(seed.patterns.some((p) => p.test("I'll extend the deadline for you"))).toBe(true);
+		expect(seed.patterns.some((p) => p.test('peace and love everyone'))).toBe(true);
+		expect(seed.patterns.some((p) => p.test('great submission this week'))).toBe(false);
 	});
 
 	it('gives every seed a motif, at least one pattern, and at least one source', () => {

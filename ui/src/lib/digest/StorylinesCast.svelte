@@ -141,8 +141,9 @@
     {/if}
 
     <p class="stl-whatis">
-      a "regular" surfaces only when this round's chat + that player's vote comments contain real quotes
-      matching their motif. no evidence that round → they're dropped. every line above is a verbatim quote.
+      the regulars started as missmara's answers when her husband asked her for something funny about each
+      player. one only turns up here when this round's chat or their own vote comments back the bit with a
+      real quote — no quote that round, they sit it out. every line above is verbatim.
     </p>
   {:else}
     <div class="stl-emptystate">
