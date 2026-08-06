@@ -58,6 +58,7 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string }>> =
   sssc: [
     { match: 'Generous Giragge', asName: 'jirafa' },
     { match: 'Cherrycola', asName: 'Cherry' },
+    { match: 'Mara', asName: 'missmara' },
   ],
 };
 
