@@ -2,15 +2,40 @@ import { describe, it, expect } from 'vitest';
 import { STORYLINE_SEEDS } from './storylineSeeds';
 
 describe('STORYLINE_SEEDS.sssc', () => {
-	it('has the five SSSC entries', () => {
-		expect(STORYLINE_SEEDS.sssc).toHaveLength(5);
+	it('has all thirteen SSSC entries', () => {
+		expect(STORYLINE_SEEDS.sssc).toHaveLength(13);
 		expect(STORYLINE_SEEDS.sssc.map((s) => s.player)).toEqual([
 			'PoetryinNoise',
 			'Timmywhatup',
 			'bagimation',
 			'missmara',
 			'KarBen',
+			'mrklorox',
+			'Cherry',
+			'nateoeb',
+			'GoodGollyMiss',
+			'Lexa Prole',
+			'Mouse Atreides',
+			'Tragically Skip',
+			'socalledbutton',
 		]);
+	});
+
+	it('matches each new Regular on an on-motif line but not unrelated text', () => {
+		const find = (p: string) => STORYLINE_SEEDS.sssc.find((s) => s.player === p)!;
+		const hits = (p: string, text: string) => find(p).patterns.some((r) => r.test(text));
+		expect(hits('mrklorox', 'land o lakes? more like all aches')).toBe(true);
+		expect(hits('Cherry', "here's 24 hours of underground African stuff")).toBe(true);
+		expect(hits('nateoeb', 'I may be doing too much research this time')).toBe(true);
+		expect(hits('GoodGollyMiss', 'add to the rap sleeve tattoo in progress')).toBe(true);
+		expect(hits('Lexa Prole', 'gang I am in full on whimsy mode')).toBe(true);
+		expect(hits('Mouse Atreides', "if it doesn't make you cry what are you even doing")).toBe(true);
+		expect(hits('Tragically Skip', "I'm never confident in my submissions")).toBe(true);
+		expect(hits('socalledbutton', 'first time I had absinthe was in Rome')).toBe(true);
+		// A plain compliment shouldn't trip any of them.
+		for (const p of ['mrklorox', 'Cherry', 'nateoeb', 'GoodGollyMiss', 'Lexa Prole', 'Mouse Atreides', 'Tragically Skip', 'socalledbutton']) {
+			expect(hits(p, 'great submission this week')).toBe(false);
+		}
 	});
 
 	it("KarBen's patterns match his commissioner/extension lines, not unrelated text", () => {

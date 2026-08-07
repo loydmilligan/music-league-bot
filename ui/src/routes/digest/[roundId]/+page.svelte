@@ -279,6 +279,10 @@
       statsExcluded = !params.stats.include;
       nextRoundExcluded = !params.nextRound.include;
       discoverabilityExcluded = !params.tastemaker.include;
+      // The Guesser include toggle: mirror stats — apply locally AND persist the
+      // guesser_state column so the choice survives reload (deterministic, no LLM).
+      guesserExcluded = !params.guesser.include;
+      persistDataSectionState('guesser', guesserExcluded ? 'excluded' : dataSectionRunState.guesser === 'locked' ? 'locked' : 'default');
       // Persist the next-round exclude flag to the draft (fire-and-forget).
       fetch(`/api/digest/${data.roundId}/next-round`, {
         method: 'PATCH',
@@ -788,6 +792,7 @@
     !!standingsData && (standingsData.standings?.length ?? 0) > 0 ? 'ready' : 'incomplete',
   );
   const nextRoundAvailability = $derived<'ready' | 'incomplete'>(nextRoundAvailable ? 'ready' : 'incomplete');
+  const guesserAvailability = $derived<'ready' | 'incomplete'>(showGuesser ? 'ready' : 'incomplete');
   const StatSlot = $derived(recap ? StatStrip : VISUAL_COMPONENTS.stats);
   const DiscoverabilitySlot = $derived(VISUAL_COMPONENTS.discoverability);
   const NextRoundSlot = $derived(VISUAL_COMPONENTS.nextRound);
@@ -1755,6 +1760,7 @@
     {standingsAvailability}
     {nextRoundAvailability}
     {tastemakerCoverage}
+    {guesserAvailability}
     onCancel={closeGenerate}
     onSubmit={submitGenerate}
   />

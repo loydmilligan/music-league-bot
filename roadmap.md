@@ -1084,3 +1084,21 @@ summary: >-
   from the GroupRelay-ingested chat_messages table on the same trigger, removing
   the manual paste step. Surfaced while wiring the same import route into the MCP
   server's import_round_data tool.
+---
+id: league-default-digest
+title: Per-League Default Digest (order + content types)
+stage: idea
+effort: medium
+source: owner (2026-08-06)
+summary: >-
+  In Settings, let each league define its default digest: which content types (sections)
+  are included and in what order. Today the section roster + order is a global default per
+  round, tuned by hand in the generate modal each time. A saved per-league template would
+  seed the generate modal (include/exclude toggles + ordering) so a league's digest starts
+  in its preferred shape — e.g. SSSC leads with The Regulars + The Guesser, Boarz omits
+  them. Distinct from per-league PIPELINE profiles (which model runs each section); this is
+  about section selection/order, not model routing. Depends on: section kinds already being
+  individually toggleable in the generate modal (done, incl. Regulars/storylines and The
+  Guesser) and the existing per-section position PATCH. Open decisions: where the template
+  lives (settings table key vs a new table), whether it applies at draft-time or only
+  pre-seeds the modal, and how it interacts with data-section availability self-suppression.

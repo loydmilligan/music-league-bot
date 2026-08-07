@@ -45,6 +45,7 @@
     topSectionVisuals: TopSectionVisual[];
     nextRound: DataGenOpt;
     tastemaker: DataGenOpt;
+    guesser: DataGenOpt;
     sonicSignatures: DataGenOpt;
     recap: RecapGenOpt;
     regenAvatars: boolean;
@@ -67,6 +68,7 @@
     standingsAvailability?: DataAvailability;
     nextRoundAvailability?: DataAvailability;
     tastemakerCoverage?: DataAvailability;
+    guesserAvailability?: DataAvailability;
     onCancel: () => void;
     onSubmit: (params: GenerateParams) => void;
   };
@@ -77,6 +79,7 @@
     standingsAvailability = 'ready',
     nextRoundAvailability = 'incomplete',
     tastemakerCoverage = 'incomplete',
+    guesserAvailability = 'incomplete',
     onCancel,
     onSubmit,
   }: Props = $props();
@@ -128,6 +131,10 @@
   }
   let nextRoundInclude = $state(true);
   let tastemakerInclude = $state(true);
+  // The Guesser — deterministic, opt-in per league; include toggle mirrors the
+  // other DATA sections. Availability reflects whether the round has a detected
+  // guesser with attempts (else the section self-suppresses).
+  let guesserInclude = $state(true);
   // Sonic Signatures — embed each player's taste waveform in their digest card. Opt-in.
   let sonicSignaturesInclude = $state(false);
 
@@ -164,6 +171,7 @@
       topSectionVisuals,
       nextRound: { include: nextRoundInclude },
       tastemaker: { include: tastemakerInclude },
+      guesser: { include: guesserInclude },
       sonicSignatures: { include: sonicSignaturesInclude },
       recap: { enabled: recapEnabled, final: recapFinal },
       regenAvatars,
@@ -445,6 +453,27 @@
             {#if tastemakerCoverage !== 'ready'}
               Hidden until ≥80% of the season has popularity data.
             {/if}
+          </p>
+        </div>
+
+        <!-- The Guesser: a DATA section (deterministic; scores vote-comment
+             guesses of who submitted what). Opt-in per league; include toggle +
+             availability indicator. Move/lock/edit/regenerate live on the card. -->
+        <div class="dg-gen-row dg-gen-row--data" class:is-off={!guesserInclude}>
+          <div class="dg-gen-rowhead">
+            <label class="dg-gen-check">
+              <input type="checkbox" bind:checked={guesserInclude} />
+              <span class="dg-gen-name">The Guesser</span>
+              <span class="dg-gen-databadge">data</span>
+            </label>
+            <span
+              class="dg-gen-cov {guesserAvailability === 'ready' ? 'dg-gen-cov--ok' : 'dg-gen-cov--warn'}"
+              title={guesserAvailability === 'ready' ? 'A guesser with attempts was detected — the section will render' : 'No detected guesser / attempts this round — the section self-suppresses'}
+            >{guesserAvailability === 'ready' ? '● coverage ready' : '⚠ no guesser detected'}</span>
+          </div>
+          <p class="dg-gen-note">
+            Scores the round's who-submitted-what guesses from vote comments. Pure data —
+            regenerate recomputes it from source; no LLM prompt. Opt-in per league.
           </p>
         </div>
       </div>
