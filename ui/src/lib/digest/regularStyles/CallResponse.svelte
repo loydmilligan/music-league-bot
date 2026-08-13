@@ -33,7 +33,7 @@
     margin: 2px 0 6px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-cr {
     display: flex;
@@ -41,7 +41,10 @@
   }
   .crx {
     display: grid;
-    grid-template-columns: 1fr auto;
+    /* the prompt keeps a floor of the row so a freakishly long reply squeezes
+       itself (breaking, since it's one token) instead of crushing the prompt
+       column down to a couple of characters */
+    grid-template-columns: minmax(30%, 1fr) auto;
     gap: 16px;
     align-items: center;
     padding: 10px 0;
@@ -50,10 +53,12 @@
     border-top: 1px solid var(--line);
   }
   /* grid items must be allowed to shrink below their content, or one long
-     unbroken reply widens .dg-export past the 800px frame and clips the PNG */
+     unbroken reply widens .dg-export past the 800px frame and clips the PNG.
+     break-word, never `anywhere` — `anywhere` also collapses min-content
+     sizing, which breaks an ordinary multi-word reply mid-word. */
   .crx > * {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .prompt {
     color: var(--fg-quiet);

@@ -25,7 +25,7 @@
     margin: 2px 0 10px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-spot {
     display: flex;
@@ -37,10 +37,12 @@
     border: 1px solid var(--line-strong);
     border-radius: 9px;
   }
-  /* a long unbroken utterance must break, not widen the 800px export frame */
+  /* a long unbroken utterance must break, not widen the 800px export frame.
+     break-word keeps min-content at the longest word, so ordinary utterances
+     still break at their spaces. */
   .rs-spot > * {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-spot .big {
     color: var(--amber);

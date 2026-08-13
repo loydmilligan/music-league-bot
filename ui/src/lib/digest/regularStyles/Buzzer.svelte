@@ -74,13 +74,13 @@
     margin: 2px 0 10px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .buz-lbl {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     margin-bottom: 6px;
     color: var(--fg-quiet);
     font: 700 8.5px/1.3 var(--font-mono);
@@ -116,7 +116,7 @@
     transform: translate(-50%, -50%);
   }
   .marks {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     margin: 14px 0 0;
     color: var(--fg-muted);
     font: 600 10px/1.5 var(--font-mono);

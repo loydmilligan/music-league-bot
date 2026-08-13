@@ -26,7 +26,7 @@
     margin: 2px 0 10px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-map {
     display: grid;
@@ -36,12 +36,14 @@
     margin-top: 4px;
   }
   /* A minted nickname is exactly the kind of value that arrives as one
-     unbroken 50-character token. Without min-width:0 a grid item refuses to
-     shrink below its content, which widens .dg-export past the 800px frame and
-     silently clips the exported PNG — so every cell may break mid-token. */
+     unbroken 50-character token. min-width:0 lets the grid item shrink below
+     its content — without it the cell widens .dg-export past the 800px frame
+     and silently clips the exported PNG — and break-word then breaks that token
+     only when it genuinely cannot fit. NOT `overflow-wrap: anywhere`: that also
+     drops min-content sizing to ~1ch, so ordinary text breaks mid-word too. */
   .rs-map > * {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-map .real {
     text-align: right;

@@ -34,7 +34,7 @@
     margin: 2px 0 6px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-refrain {
     padding: 6px 0 2px;
@@ -47,10 +47,10 @@
     color: var(--amber);
     font: 800 clamp(38px, 10vw, 54px) / 0.9 var(--font-display);
     letter-spacing: -0.02em;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-refrain .cap {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     margin: 8px 0 0;
     color: var(--fg-muted);
     font: 400 12px/1.5 var(--font-mono);
@@ -64,7 +64,7 @@
   }
   .oc {
     max-width: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     padding: 5px 10px;
     background: var(--surface-2);
     border: 1px solid var(--line-strong);

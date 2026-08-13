@@ -20,7 +20,7 @@
     font: 400 12.5px/1.5 var(--font-body);
     /* a quote can carry an unbroken 50-char token; break it rather than let it
        widen .dg-export past the export frame and clip the PNG */
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   /* the tell itself, marked inside its own quote */
   .rs-hl {

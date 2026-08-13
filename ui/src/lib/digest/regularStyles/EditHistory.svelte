@@ -38,7 +38,7 @@
     margin: 2px 0 8px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-stats {
     display: flex;
@@ -57,8 +57,12 @@
     font-variant-numeric: tabular-nums;
   }
   .rs-stats .l {
-    max-width: 11ch;
-    overflow-wrap: anywhere;
+    /* The mock's 11ch is narrower than the word "apostrophes" once the
+       uppercase tracking is applied, which forced a mid-word break on the real
+       R147 label regardless of wrap mode. Sized to the longest word a curated
+       stat label realistically carries. */
+    max-width: 15ch;
+    overflow-wrap: break-word;
     color: var(--fg-quiet);
     font: 700 9px/1.3 var(--font-mono);
     letter-spacing: 0.08em;
@@ -83,7 +87,7 @@
     margin: 0;
     color: var(--fg);
     font: 400 15px/1.7 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   /* the wrong token, kept visible and struck */
   .rl {

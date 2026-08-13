@@ -23,7 +23,7 @@
     margin: 2px 0 4px;
     color: var(--fg-2);
     font: 500 13px/1.4 var(--font-body);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .rs-none {
     margin: 2px 0 0;
