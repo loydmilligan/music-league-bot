@@ -1,62 +1,58 @@
 # R147 "I Hope You Shit Your Pants at Target" (Boarz II Men) — hand-authored
-# content for The Regulars + The Coinage. Paste into the digest review screen's
-# YAML editor.
+# content for The Usual Suspects + The Coinage.
 #
 # EVERY number and quote below was verified against data/league.db over the
-# round window 2026-08-06T04:03:44Z → 2026-08-13T06:30:01Z (chat group
-# "Boarz II Men - Music League"). Nothing here is an LLM estimate.
+# round window 2026-08-06T04:03:44Z → 2026-08-13T06:30:01Z ("this week") and
+# season 10, 2026-07-24 → 2026-08-13 ("this season"), chat group
+# "Boarz II Men - Music League". Nothing here is an LLM estimate.
 #
-# Corrections made to the stand-ins CD shipped:
-#   • Coinage speakers: 4 → 3. Only Steiny, Shane and Mashew ever say the term
-#     (7 uses total). The live draft's "4" counts Conor, but his contribution
-#     ("Not me. I'm a chud.", 2026-08-10) never uses the phrase — he answered it.
-#     Origin verified: Jensen posted "👾 Summarizing my trip to outside lands"
-#     at 2026-08-09T17:13Z; Steiny coined it at 18:28Z, 75 minutes later.
-#   • Mashew "9 self-edits · all spelling" → 7 messages sent in two versions.
-#     The second version is NOT always a repair: 'fit'→'for' and 'sees'→'swees'
-#     make the text worse, so "self-edit" overclaims. Reworded.
-#   • The mock's example caption "one message, two edits · aug 5" was false:
-#     "I dont rememebr being this wrong about someone" is 2026-08-13 and was
-#     NEVER corrected. That is the better joke anyway — it now sits in evidence
-#     as the un-repaired line, and the redline example uses a real repair.
+# v2 — owner rewrite. The first pass was too busy to follow: each entry stacked
+# a paragraph, two stats, a boxed example and three quotes. Now each entry is
+# ONE idea, named for its archetype rather than its player, with the evidence
+# doing the rest. `name` = the archetype, `player` = who it actually is.
 
-# ── The Regulars → storylines content_json ───────────────────────────────────
-title: Time for a Reinvention
+title: The Usual Suspects
 cast:
-  - name: Mashew
-    type: sloppy-fast typist
+  # ── The Editor ────────────────────────────────────────────────────────────
+  # 13 posts sent more than once in the round window; the largest cluster is 3
+  # versions. WhatsApp edits land in the archive as new messages, so every
+  # attempt survives — that's how this is countable at all.
+  - name: The Editor
+    player: Mashew
+    type: self-corrector
     style: edit-history
-    motif: apostrophe-optional
+    motif: double-edits
+    note: >
+      The Editor shows his face by sending the same message twice — and when
+      the wording really matters, three times.
     stats:
-      - { value: 12, label: dropped apostrophes }
-      - { value: 7, label: messages sent twice }
+      - { value: 13, label: posts sent more than once }
+      - { value: 3, label: versions of one post }
     example:
+      # Verified: three versions of this message, all stamped 2026-08-13T05:51:07.
+      # Struck text is what he first wrote; the replacement follows it.
       repairs:
-        - { was: teh, now: the }
-      text: "I have never been in ⟨teh⟩ exact same situation"
-      caption: sent twice, one letter apart · aug 13
-    evidence:
-      - "I dont rememebr being this wrong about someone"
-      - "clements is usually our pellet whisperer - but hes gone dark since his scam went bad"
-      - "alright guys - you want me jsut to end it - i guess i can"
-    highlight: [dont, rememebr, hes, jsut]
-    note: The apostrophes go first, then whole letters start arriving out of order. He fixed one of these.
+        - { was: her was to tell your, now: "her, this" }
+      text: "your response to ⟨her was to tell your⟩ wife who puts up with soooo much, just to send you a message on whats app"
+      caption: three versions of one sentence · aug 13
 
-  - name: Conor
+  # ── The Consul ────────────────────────────────────────────────────────────
+  # 18 one-word declarative replies to another player in season 10 (questions,
+  # emoji and list numerals excluded). "Correct" accounts for three of them.
+  # Consul = the chapter president in the owner's old fraternity; "tree fort
+  # gang" was what they called brothers a little too invested in the ritual.
+  - name: The Consul
+    player: Conor
     type: one-word oracle
     style: call-response
-    motif: minimum viable profundity
+    motif: one-word rulings
+    note: >
+      Eighteen times this season the Consul declined to spend a second word.
+      Three of them were "Correct." The ruling comes down, the chapter moves on.
     exchanges:
-      - { prompt: "Mashew: Well that was conors position", reply: Is }
       - { prompt: "Jensen: So 36 hours starting with every round of votes?", reply: Correct }
+      - { prompt: "Mashew: Well that was conors position", reply: Is }
       - { prompt: "Jensen: Make it 36 hours and you've got yourself a deal", reply: Deal }
-      - { prompt: "Jimmy: This would've been my other submission", reply: Damnit }
-      # The immediately preceding message is Mashew's "Indeed", but that carries
-      # no sense on its own — the real setup is JB's line six minutes earlier,
-      # and the delay is the joke. (The previous draft framed this as "the theory
-      # that men who insist on their full names are gay"; nobody ever said that.)
-      - { prompt: "JB: the age at which he sired Mike would suggest that moniker was well-earned", reply: Gay }
-    note: He can write two hundred words on why the voting is corrupt, and did. Five times this round he did not bother.
 
 note: ""
 
@@ -69,18 +65,16 @@ phrase:
   definition: >
     An older man visibly straining to keep up with what's current —
     unc (out-of-touch uncle) + chopped (ugly, busted).
-  # Three YAML traps in CD's original one-liner, all fixed here:
-  #   1. `on:` is a RESERVED BOOLEAN in YAML 1.1 — it parsed as the key `True`.
-  #      Renamed to `date:`.
-  #   2. a bare 2026-08-09 parses as a date OBJECT, not a string → quoted.
-  #   3. `at: Jensen, over an Outside Lands gif` — the comma splits the flow
-  #      mapping, so the trailing phrase became its own null key. Block mapping
-  #      + explicit `context:` instead.
+  # `on:` is a reserved boolean in YAML 1.1 and a bare date parses as a date
+  # object, so this is `date:` and quoted. A comma inside a flow mapping splits
+  # it, so this is a block mapping with an explicit `context:`.
   coined:
     by: Steiny
     date: "2026-08-09"
     at: Jensen
     context: over an Outside Lands gif
+  # speakers is 3, not 4: only Steiny, Shane and Mashew ever say the term.
+  # Conor answered the bit ("Not me. I'm a chud.") without using it.
   stats: { uses: 7, speakers: 3, prior_rounds: 0 }
   usages:
     - label: original
@@ -89,13 +83,11 @@ phrase:
     - label: best
       speaker: Shane
       text: "I guess we're all chopped uncs"
-  # Absolute URLs on purpose — media must NOT live under digests/d/<slug>/.
-  # These are the files already shipping in the live R147 draft; verified present
-  # at digests/_media/. The mock's "chopped-unc.gif" does not exist.
   media:
     src: https://digest.mattmariani.com/_media/chopped_unc.mp4
     poster: https://digest.mattmariani.com/_media/chopped_unc.jpg
     caption: the gif that started it
     alt: Jensen's Outside Lands gif
-  # source: OWNER TO PROVIDE — the urbandictionary URL. Key omitted on purpose;
-  # the card renders no source line when it is absent.
+  # source: omitted deliberately — the card renders no origin link without it,
+  # and Mashew's own "apparently it means ugly or uncool old person" already
+  # does the looking-up inside the digest.

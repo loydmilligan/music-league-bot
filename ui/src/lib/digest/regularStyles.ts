@@ -70,7 +70,13 @@ export type Buzzer = { opens: string; deadline: string; marks: string[]; caption
  * rather than rendering an empty card.
  */
 export type RegularEntry = {
+  /**
+   * The ARCHETYPE, not the person — "The Editor", "The Consul". This is the
+   * card's headline, because the bit is the character, not the roster entry.
+   */
   name: string;
+  /** who it actually is. Falls back to `name` when the entry names a person. */
+  player: string;
   motif: string;
   /** taxonomy type, used to pick a style when `style:` is absent */
   type: string;
@@ -201,6 +207,7 @@ export function normalizeCast(content: unknown): RegularEntry[] {
 
       return {
         name: str(m.name),
+        player: str(m.player) || str(m.name),
         motif: str(m.motif),
         type: str(m.type),
         style: str(m.style) as RegularStyle,

@@ -14,8 +14,12 @@
   // Renders:
   //   1. subhead counting the tells that fired (the section title is printed by
   //      the DigestSection shell from `content.title` — not repeated here)
-  //   2. a persistent strip — one pill per regular (initial avatar · name · motif)
-  //   3. per-entry: name · motif · style, then that style's layout, DUAL-MODE
+  //   2. a persistent strip — one pill per regular. The avatar initial comes
+  //      from `player` (the PERSON), not `name` (the ARCHETYPE), or "The
+  //      Editor" and "The Consul" would both show a "T".
+  //   3. per-entry: archetype · player · motif, then that style's layout.
+  //      The `style:` value itself is never printed — it's a layout
+  //      implementation detail, not vocabulary the reader should learn. DUAL-MODE
   //      exactly like ChatMoments.svelte:
   //        • web (?export absent): click-to-expand accordion
   //        • export (?export=1): flat cards, everything printed (PNG-safe)
@@ -94,7 +98,7 @@
     <div class="stl-strip">
       {#each cast as m, i (i)}
         <span class="stl-reg">
-          <span class="av">{initialOf(m.name || '?')}</span>{m.name}{#if m.motif}<span class="mo">{m.motif}</span>{/if}
+          <span class="av">{initialOf(m.player || m.name || '?')}</span>{m.name}{#if m.motif}<span class="mo">{m.motif}</span>{/if}
         </span>
       {/each}
     </div>
@@ -108,7 +112,8 @@
           <div class="stl-card">
             <p class="stl-cardhd">
               <span class="stl-name">{m.name}</span>
-              <span class="stl-mo">{#if m.motif}{m.motif} · {/if}{style}</span>
+              {#if m.player && m.player !== m.name}<span class="stl-who">{m.player}</span>{/if}
+              {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
             </p>
             <C entry={m} {isExport} />
           </div>
@@ -130,7 +135,8 @@
             >
               <span class="stl-chev" class:is-open={open[i]} aria-hidden="true">▸</span>
               <span class="stl-name">{m.name}</span>
-              <span class="stl-mo">{#if m.motif}{m.motif} · {/if}{style}</span>
+              {#if m.player && m.player !== m.name}<span class="stl-who">{m.player}</span>{/if}
+              {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
             </button>
             {#if open[i]}
               <div class="stl-panel" id={`stl-panel-${i}`} role="region">
@@ -160,6 +166,7 @@
 
   .stl-subhead {
     margin: 0 0 16px;
+    overflow-wrap: break-word;
     color: var(--fg-quiet);
     font: 400 11px/1.45 var(--font-mono);
   }
@@ -175,6 +182,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    /* a pill is a flex item in a wrapping row: without these a pathological
+       name refuses to shrink and widens .dg-export past the export frame */
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
     padding: 7px 14px 7px 9px;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -193,7 +205,7 @@
     color: var(--mash-pulp);
     font: 700 9px/1 var(--font-mono);
   }
-  .stl-reg .mo { color: var(--fg-quiet); font: 500 10.5px/1 var(--font-mono); }
+  .stl-reg .mo { min-width: 0; overflow-wrap: break-word; color: var(--fg-quiet); font: 500 10.5px/1 var(--font-mono); }
 
   /* export: flat cards */
   .stl-cast {
@@ -211,20 +223,33 @@
   }
   .stl-cardhd {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 12px;
+    gap: 4px 10px;
     margin: 0 0 10px;
   }
+  .stl-cardhd .stl-mo { margin-left: auto; }
 
   /* shared entry header type (card + accordion trigger) */
+  /* `name` is the ARCHETYPE ("The Editor") and headlines the entry; `player`
+     is the person behind it and sits beside it, quieter. */
   .stl-name {
+    min-width: 0;
+    overflow-wrap: break-word;
     color: var(--mash-pulp);
     font: 700 10px/1.3 var(--font-mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
+  .stl-who {
+    min-width: 0;
+    overflow-wrap: break-word;
+    color: var(--fg-muted);
+    font: 500 10px/1.3 var(--font-mono);
+  }
   .stl-mo {
+    min-width: 0;
+    overflow-wrap: break-word;
     color: var(--fg-quiet);
     font: 500 10px/1.3 var(--font-mono);
     text-align: right;
@@ -265,6 +290,7 @@
   /* n=0 empty state */
   .stl-emptystate {
     margin-top: 12px;
+    overflow-wrap: break-word;
     padding: 16px 18px;
     background: var(--surface-2);
     border: 1px dashed var(--line-strong);
@@ -277,6 +303,7 @@
 
   .stl-whatis {
     margin: 14px 0 0;
+    overflow-wrap: break-word;
     padding-top: 12px;
     border-top: 1px solid var(--line);
     color: var(--fg-quiet);

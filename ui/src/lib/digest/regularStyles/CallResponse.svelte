@@ -39,15 +39,24 @@
     display: flex;
     flex-direction: column;
   }
+  /* Row rhythm: the reply is what gets read, so give each row real vertical
+     room and let the hairline rule do the separating — the first build's tight
+     10px rows read as a wall once there were five of them. */
   .crx {
     display: grid;
     /* the prompt keeps a floor of the row so a freakishly long reply squeezes
        itself (breaking, since it's one token) instead of crushing the prompt
        column down to a couple of characters */
     grid-template-columns: minmax(30%, 1fr) auto;
-    gap: 16px;
+    gap: 18px;
     align-items: center;
-    padding: 10px 0;
+    padding: 14px 0;
+  }
+  .crx:first-child {
+    padding-top: 4px;
+  }
+  .crx:last-child {
+    padding-bottom: 4px;
   }
   .crx + .crx {
     border-top: 1px solid var(--line);
@@ -60,9 +69,11 @@
     min-width: 0;
     overflow-wrap: break-word;
   }
+  /* obviously secondary: smaller, quieter, and set in mono against the reply's
+     display type so the eye never mistakes it for the point of the row */
   .prompt {
     color: var(--fg-quiet);
-    font: 400 12px/1.5 var(--font-mono);
+    font: 400 11px/1.55 var(--font-mono);
   }
   .prompt .who {
     color: var(--fg-muted);
