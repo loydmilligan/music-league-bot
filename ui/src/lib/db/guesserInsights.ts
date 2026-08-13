@@ -53,10 +53,25 @@ export interface GuesserData {
   guesserName: string | null;
   weekly: { attempts: number; correct: number; rate: number; guesses: GuesserGuess[] };
   drunkByThird: { first: number; middle: number; last: number };
-  /** Per-round hit-rate over the season (chronological), for the season arc. */
+  /**
+   * Per-round hit-rate for the season arc, chronological (oldest → newest),
+   * capped to the most recent `SEASON_ARC_ROUNDS` rounds so the strip stays
+   * readable at the 800px export width. `[]` for a league with one round and
+   * no resolved guesses.
+   */
   seasonHitRates: GuesserSeasonPoint[];
-  /** Season-wide hit rate (total correct / total attempts, 0 when none). */
+  /**
+   * Season-wide hit rate (total correct / total attempts, 0 when none).
+   * Computed over the WHOLE season, not just the rounds shown in the arc.
+   */
   seasonRate: number;
+  /**
+   * How many rounds `seasonRate` actually averages over — i.e. every round this
+   * season he made a resolvable guess in, which is >= `seasonHitRates.length`
+   * once the arc is capped. Exists so the UI can never caption a whole-season
+   * average with the (smaller) on-screen bar count.
+   */
+  seasonRoundCount: number;
   eludesHim: GuesserLeaderRow[];
   alwaysNails: GuesserLeaderRow[];
   littermates: GuesserLittermates | null;
@@ -64,6 +79,9 @@ export interface GuesserData {
 
 /** Minimum season attempts against a given submitter to qualify for a leaderboard. */
 const MIN_ATTEMPTS = 3;
+
+/** How many of the most recent rounds the season-arc sparkbars show (CD §5.1). */
+const SEASON_ARC_ROUNDS = 10;
 
 /**
  * SSSC-specific guess aliases from the design doc Appendix A (guessed text ->
@@ -100,6 +118,7 @@ function emptyGuesserData(): GuesserData {
     drunkByThird: { first: 0, middle: 0, last: 0 },
     seasonHitRates: [],
     seasonRate: 0,
+    seasonRoundCount: 0,
     eludesHim: [],
     alwaysNails: [],
     littermates: null,
@@ -404,18 +423,22 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const eludesHim = [...leaderRows].sort((a, b) => a.rate - b.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
   const alwaysNails = [...leaderRows].sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
-  const seasonHitRates: GuesserSeasonPoint[] = [...perRound.entries()].map(([roundId, v]) => ({
+  const allRoundPoints: GuesserSeasonPoint[] = [...perRound.entries()].map(([roundId, v]) => ({
     roundId,
     label: v.label,
     correct: v.correct,
     attempts: v.attempts,
     rate: rate(v.correct, v.attempts),
   }));
-  const seasonTotals = seasonHitRates.reduce(
+  // The average is a SEASON average — take totals before capping the arc, so
+  // trimming the strip never silently changes the headline number.
+  const seasonTotals = allRoundPoints.reduce(
     (acc, p) => ({ correct: acc.correct + p.correct, attempts: acc.attempts + p.attempts }),
     { correct: 0, attempts: 0 },
   );
   const seasonRate = rate(seasonTotals.correct, seasonTotals.attempts);
+  const seasonRoundCount = allRoundPoints.length;
+  const seasonHitRates = allRoundPoints.slice(-SEASON_ARC_ROUNDS);
 
   let littermates: GuesserLittermates | null = null;
   const pairList = [...pairSwaps.values()].sort(
@@ -432,6 +455,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     drunkByThird,
     seasonHitRates,
     seasonRate,
+    seasonRoundCount,
     eludesHim,
     alwaysNails,
     littermates,

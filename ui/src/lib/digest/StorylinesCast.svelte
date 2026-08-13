@@ -1,90 +1,92 @@
 <script lang="ts" module>
-  // ── storylines-render · Guesser/Storylines redesign (CD handoff §4.2) ───────
-  // Visual form of the digest's `storylines` section, reframed as "The
-  // Regulars": the recurring chat characters who turned up THIS round. Designed
-  // sparse-first — its real modal state is n = 0–2 (a seed only surfaces when
-  // that round's chat + that player's vote comments contain real matching
-  // quotes), so it must look intentional at n=1 and graceful at n=0.
+  // ── storylines-render · "Time for a Reinvention" (CD handoff §5.3) ──────────
+  // Visual form of the digest's `storylines` section: the regulars who gave
+  // themselves away THIS round. Sparse-first — its real modal state is n = 0–2 —
+  // so it must look intentional at n=1 and graceful at n=0.
+  //
+  // This file is only the CARRIER. Everything below the per-entry header is a
+  // style component off the shelf (`regularStyles/`), picked by `resolveStyle`:
+  //   quote-led (fallback) · spotlight · call-response · edit-history ·
+  //   roster-map · refrain · buzzer
+  // The old mandatory 3-line `headline` is gone; the tell itself is the hero and
+  // `note` is an optional one-liner.
   //
   // Renders:
-  //   1. eyebrow "The Regulars" + a subhead counting who surfaced
-  //   2. a persistent strip — one pill per regular (avatar · name · motif)
-  //   3. per-regular evidence, DUAL-MODE exactly like ChatMoments.svelte:
-  //        • web (?export absent): a click-to-expand accordion
-  //        • export (?export=1): flat cards, every quote printed (PNG-safe)
+  //   1. subhead counting the tells that fired (the section title is printed by
+  //      the DigestSection shell from `content.title` — not repeated here)
+  //   2. a persistent strip — one pill per regular (initial avatar · name · motif)
+  //   3. per-entry: name · motif · style, then that style's layout, DUAL-MODE
+  //      exactly like ChatMoments.svelte:
+  //        • web (?export absent): click-to-expand accordion
+  //        • export (?export=1): flat cards, everything printed (PNG-safe)
   //   4. an n=0 empty state
-  //   5. a micro-note explaining what makes a "regular" (doubles as newcomer
-  //      explainer): every line is a verbatim quote; no evidence → dropped.
+  //   5. a mono micro-note (form not topic · verbatim · fired this round)
   //
-  // Reads the storylines content_json (llm.ts SECTION_SCHEMA.storylines):
-  //   { title, cast: [{ name, headline, evidence: string[], motif? }] }
-  // `motif` is joined onto each cast member at load time from the seed (see the
-  // digest +page.server.ts enrichment) — the LLM itself never writes it.
-  //
-  // Defensive: the LLM's generic missing-kind fallback is `{ title, body, items }`
-  // (NOT `{ title, cast }`), so `content.cast` may be missing/malformed — always
-  // coerce to an array and render the empty state rather than crash.
-  //
-  // CD designed this on a paper LIGHT surface; per the owner's call we build it
-  // DARK-NATIVE with the shipping semantic tokens so it matches the current dark
-  // digest surrounding it.
+  // Content is hand-authored YAML (see yamlContent.ts) coerced by
+  // `normalizeCast` — a human typo must degrade, never crash: a hydration crash
+  // takes the whole PNG export down (see the each_key_duplicate history), so
+  // every {#each} here is index-keyed.
   import type { VisualComponentProps } from './variants.js';
+  import { markRuns, type RegularEntry } from './regularStyles.js';
 
-  export type StorylineCastMember = {
-    name?: string;
-    headline?: string;
-    evidence?: string[];
-    motif?: string;
+  // Re-exported: tests (and older call sites) import markRuns from this module.
+  // Its home is regularStyles.ts now — every style needs it, not just the quotes.
+  export { markRuns };
+
+  /** The authored shape of one cast member; `normalizeCast` coerces it. */
+  export type StorylineCastMember = Partial<RegularEntry>;
+  export type StorylinesContent = {
+    title?: string;
+    cast?: StorylineCastMember[];
+    /**
+     * Footer explainer. Omit the key to keep the default (SSSC, where the
+     * regulars came from missmara's answers); pass "" to hide it in leagues
+     * where that origin story means nothing.
+     */
+    note?: string;
   };
-  export type StorylinesContent = { title?: string; cast?: StorylineCastMember[] };
+
+  export const DEFAULT_REGULARS_NOTE =
+    "the regulars started as missmara's answers when her husband asked her for something funny about each " +
+    "player. one only turns up here when this round's chat or their own vote comments back the bit with a " +
+    "real quote — no quote that round, they sit it out. every line above is verbatim.";
 
   function initialOf(name: string): string {
     const m = name.trim().match(/[a-z0-9]/i);
     return (m ? m[0] : '?').toUpperCase();
   }
-
-  // The evidence strings often already arrive wrapped in quote marks; strip a
-  // single balanced wrapping pair so the component's own quotes don't double up.
-  function unquote(s: string): string {
-    const t = s.trim();
-    return t.replace(/^["“”'](.*)["“”']$/s, '$1').trim();
-  }
 </script>
 
 <script lang="ts">
   import { page } from '$app/state';
+  import { normalizeCast, resolveStyle } from './regularStyles.js';
+  import { REGULAR_STYLE_COMPONENTS as REGISTRY } from './regularStyles/index.js';
 
   let { content }: VisualComponentProps = $props();
 
   const c = $derived((content ?? {}) as StorylinesContent);
-  const cast = $derived(
-    Array.isArray(c.cast)
-      ? c.cast
-          .filter((m): m is StorylineCastMember => !!m && (!!m.name || !!m.headline))
-          .map((m) => ({
-            name: m.name ?? '',
-            headline: m.headline ?? '',
-            motif: m.motif?.trim() ?? '',
-            evidence: Array.isArray(m.evidence)
-              ? m.evidence.filter((e): e is string => !!e?.trim()).map(unquote)
-              : [],
-          }))
-      : [],
-  );
+  const cast = $derived(normalizeCast(content));
   const n = $derived(cast.length);
 
-  // web accordion open-state; first regular open by default (optional per §4.2).
-  let open = $state<Record<number, boolean>>({ 0: true });
+  // web accordion open-state. Every panel starts OPEN: each style's hero (the
+  // spotlight word, the roster map, the refrain token, the buzzer track, the
+  // redline) must be visible in web AND export, and that invariant can't be
+  // left to depend on how many regulars happened to fire. Collapsing is a user
+  // action from here, not a default.
+  let toggled = $state<Record<number, boolean>>({});
+  // Derived, not an effect, so SSR emits the same open panels the client does.
+  const open = $derived(Object.fromEntries(cast.map((_, i) => [i, toggled[i] ?? true])));
   function toggle(i: number) {
-    open = { ...open, [i]: !open[i] };
+    toggled = { ...toggled, [i]: !open[i] };
   }
 
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
+  const note = $derived(typeof c.note === 'string' ? c.note.trim() : DEFAULT_REGULARS_NOTE);
 </script>
 
 <div class="stl" data-component="storylines-render" data-export={isExport}>
   <div class="stl-subhead">
-    who turned up this week{#if n}<span> · <b>{n}</b> {n === 1 ? 'regular' : 'regulars'} surfaced</span>{/if}
+    who gave themselves away this week{#if n}<span> · <b>{n}</b> {n === 1 ? 'tell' : 'tells'} fired</span>{/if}
   </div>
 
   {#if n}
@@ -98,15 +100,17 @@
     </div>
 
     {#if isExport}
-      <!-- export: flat cards, every quote printed -->
+      <!-- export: flat cards, every style printed in full -->
       <div class="stl-cast">
         {#each cast as m, i (i)}
+          {@const style = resolveStyle(m)}
+          {@const C = REGISTRY[style]}
           <div class="stl-card">
-            <p class="stl-cardname">{m.name}{#if m.motif} · {m.motif}{/if}</p>
-            {#if m.headline}<p class="stl-head">{m.headline}</p>{/if}
-            {#each m.evidence as quote, j (j)}
-              <p class="stl-ev">"{quote}"</p>
-            {/each}
+            <p class="stl-cardhd">
+              <span class="stl-name">{m.name}</span>
+              <span class="stl-mo">{#if m.motif}{m.motif} · {/if}{style}</span>
+            </p>
+            <C entry={m} {isExport} />
           </div>
         {/each}
       </div>
@@ -114,6 +118,8 @@
       <!-- web: click-to-expand accordion -->
       <div class="stl-acc">
         {#each cast as m, i (i)}
+          {@const style = resolveStyle(m)}
+          {@const C = REGISTRY[style]}
           <div class="stl-item">
             <button
               type="button"
@@ -124,15 +130,11 @@
             >
               <span class="stl-chev" class:is-open={open[i]} aria-hidden="true">▸</span>
               <span class="stl-name">{m.name}</span>
-              {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
+              <span class="stl-mo">{#if m.motif}{m.motif} · {/if}{style}</span>
             </button>
             {#if open[i]}
               <div class="stl-panel" id={`stl-panel-${i}`} role="region">
-                {#if m.headline}<p class="stl-head">{m.headline}</p>{/if}
-                {#each m.evidence as quote, j (j)}
-                  <p class="stl-ev">"{quote}"</p>
-                {/each}
-                {#if !m.headline && !m.evidence.length}<p class="stl-ev stl-quiet">(no evidence)</p>{/if}
+                <C entry={m} {isExport} />
               </div>
             {/if}
           </div>
@@ -140,11 +142,7 @@
       </div>
     {/if}
 
-    <p class="stl-whatis">
-      the regulars started as missmara's answers when her husband asked her for something funny about each
-      player. one only turns up here when this round's chat or their own vote comments back the bit with a
-      real quote — no quote that round, they sit it out. every line above is verbatim.
-    </p>
+    {#if note}<p class="stl-whatis">{note}</p>{/if}
   {:else}
     <div class="stl-emptystate">
       Quiet week — the usual suspects kept to themselves. The regulars return next round.
@@ -205,35 +203,32 @@
     margin-top: 14px;
   }
   .stl-card {
-    padding: 15px 17px;
+    padding: 13px 16px 16px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 10px;
     break-inside: avoid;
   }
-  .stl-cardname {
-    margin: 0 0 5px;
+  .stl-cardhd {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 10px;
+  }
+
+  /* shared entry header type (card + accordion trigger) */
+  .stl-name {
     color: var(--mash-pulp);
-    font: 700 10px/1 var(--font-mono);
-    letter-spacing: 0.08em;
+    font: 700 10px/1.3 var(--font-mono);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .stl-head {
-    margin: 0 0 10px;
-    color: var(--fg);
-    font: 700 16px/1.25 var(--font-display);
-    font-style: italic;
-    letter-spacing: -0.01em;
+  .stl-mo {
+    color: var(--fg-quiet);
+    font: 500 10px/1.3 var(--font-mono);
+    text-align: right;
   }
-  .stl-ev {
-    margin: 0;
-    padding-left: 14px;
-    border-left: 2px solid var(--mash-pulp);
-    color: var(--fg-2);
-    font: 400 12px/1.5 var(--font-body);
-  }
-  .stl-ev + .stl-ev { margin-top: 9px; }
-  .stl-quiet { color: var(--fg-quiet); font-style: italic; border-left-color: var(--line-strong); }
 
   /* web accordion */
   .stl-acc {
@@ -246,7 +241,7 @@
   .stl-trig {
     width: 100%;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 10px;
     padding: 13px 15px;
     background: var(--surface);
@@ -261,22 +256,11 @@
     transition: transform 0.12s var(--ease-out, ease);
   }
   .stl-chev.is-open { transform: rotate(90deg); }
-  .stl-trig .stl-name {
-    color: var(--mash-pulp);
-    font: 700 10px/1 var(--font-mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .stl-trig .stl-mo {
-    margin-left: auto;
-    color: var(--fg-quiet);
-    font: 500 11px/1 var(--font-mono);
-  }
+  .stl-trig .stl-mo { margin-left: auto; }
   .stl-panel {
-    padding: 2px 15px 14px 36px;
+    padding: 2px 15px 15px 36px;
     background: var(--surface);
   }
-  .stl-panel .stl-head { font-size: 15px; margin-bottom: 8px; }
 
   /* n=0 empty state */
   .stl-emptystate {
@@ -297,5 +281,17 @@
     border-top: 1px solid var(--line);
     color: var(--fg-quiet);
     font: 400 10.5px/1.5 var(--font-mono);
+  }
+
+  /* 430px reflow. The mobile PNG renders at a 520px viewport with the
+     .dg-export--mobile frame class, so it needs its own selectors — the media
+     query only covers genuinely narrow viewports (phone web). */
+  :global(.dg-export--mobile) .stl-panel { padding-left: 24px; }
+  :global(.dg-export--mobile) .stl-cardhd { flex-direction: column; gap: 3px; }
+  :global(.dg-export--mobile) .stl-cardhd .stl-mo { text-align: left; }
+  @media (max-width: 460px) {
+    .stl-panel { padding-left: 24px; }
+    .stl-cardhd { flex-direction: column; gap: 3px; }
+    .stl-cardhd .stl-mo { text-align: left; }
   }
 </style>

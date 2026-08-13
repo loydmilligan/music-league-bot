@@ -6,10 +6,16 @@
   // moments, …) becomes an editable list. Other types are preserved untouched.
   // This is what lets the chat section ({title, summary, moments[]}) be edited,
   // not just title/body/items.
-  import type { SectionKind } from './llm.js';
+  //
+  // Shapes the generic form can't reach (cast[].exchanges[], phrase.media.poster,
+  // …) are edited in YAML mode instead — same onSave, same JSON in the DB.
+  import type { DigestKind } from './variants.js';
+  import { toYaml, fromYaml, YAML_FIRST_KINDS } from './yamlContent.js';
 
   type Props = {
-    kind: SectionKind;
+    // Every kind the renderer can host, not just the LLM-authored ones —
+    // `stats` (which carries the Coinage phrase block) is edited here too.
+    kind: DigestKind;
     content: unknown;
     onSave: (content: unknown) => void;
     onCancel: () => void;
@@ -17,7 +23,9 @@
   let { kind, content, onSave, onCancel }: Props = $props();
 
   type Content = Record<string, unknown>;
-  const src = (content ?? {}) as Content;
+  // Base object every rebuild starts from, so keys the form can't show survive
+  // a save. Replaced when YAML mode hands back a fresh object.
+  let src = $state<Content>((content ?? {}) as Content);
 
   // Items: keep originals so we can preserve non-edited fields/types on save.
   type ItemEntry =
@@ -44,15 +52,60 @@
     | { kind: 'string'; key: string; value: string; multiline: boolean }
     | { kind: 'array'; key: string; entries: ItemEntry[] };
 
-  let fields = $state<Field[]>(
-    Object.entries(src).flatMap(([key, v]): Field[] => {
+  function buildFields(o: Content): Field[] {
+    return Object.entries(o).flatMap(([key, v]): Field[] => {
       if (typeof v === 'string') return [{ kind: 'string', key, value: v, multiline: key !== 'title' }];
       if (Array.isArray(v)) return [{ kind: 'array', key, entries: v.map(toEntry) }];
       return [];
-    }),
-  );
+    });
+  }
+
+  let fields = $state<Field[]>(buildFields(src));
 
   const hasEditable = $derived(fields.length > 0);
+
+  // --- Fields ⇄ YAML -------------------------------------------------------
+  // YAML mode edits the whole content object as text: the only way to reach
+  // nested shapes. Sections in YAML_FIRST_KINDS open there.
+  let mode = $state<'fields' | 'yaml'>(YAML_FIRST_KINDS.has(kind) ? 'yaml' : 'fields');
+  let yamlText = $state(mode === 'yaml' ? toYaml(src) : '');
+  const parsed = $derived(mode === 'yaml' ? fromYaml(yamlText) : null);
+  const yamlError = $derived(parsed && !parsed.ok ? parsed.error : null);
+  const canSave = $derived(mode !== 'yaml' || !yamlError);
+
+  // Half-written YAML held across a toggle. Never re-serialise over it: a
+  // syntax error mid-edit must not cost the owner the block he was typing.
+  let pendingYaml = $state<string | null>(null);
+
+  function toYamlMode() {
+    // Unparsed edits win; otherwise serialise what's on screen now, not the
+    // content we were handed.
+    yamlText = pendingYaml ?? toYaml(buildFromFields());
+    mode = 'yaml';
+  }
+
+  function toFieldsMode() {
+    // Carry valid YAML edits across; invalid text is parked verbatim and the
+    // form keeps showing the last parse that worked.
+    if (parsed?.ok) {
+      src = parsed.value as Content;
+      fields = buildFields(src);
+      pendingYaml = null;
+    } else {
+      pendingYaml = yamlText;
+    }
+    mode = 'fields';
+  }
+
+  function handleYamlKey(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    const el = e.currentTarget as HTMLTextAreaElement;
+    const { selectionStart: start, selectionEnd: end } = el;
+    yamlText = yamlText.slice(0, start) + '  ' + yamlText.slice(end);
+    // Restore the caret after Svelte writes the new value back.
+    requestAnimationFrame(() => el.setSelectionRange(start + 2, start + 2));
+  }
 
   function rebuildItem(entry: ItemEntry): unknown {
     if (entry.type === 'string') return entry.value;
@@ -65,14 +118,23 @@
     return out;
   }
 
-  function save() {
+  function buildFromFields(): Content {
     // Start from the original so non-editable fields/types survive untouched.
     const out: Content = { ...src };
     for (const f of fields) {
       if (f.kind === 'string') out[f.key] = f.value;
       else out[f.key] = f.entries.map(rebuildItem);
     }
-    onSave(out);
+    return out;
+  }
+
+  function save() {
+    if (mode === 'yaml') {
+      if (!parsed?.ok) return;
+      onSave(parsed.value);
+      return;
+    }
+    onSave(buildFromFields());
   }
 
   function handleKey(e: KeyboardEvent) {
@@ -82,7 +144,44 @@
 </script>
 
 <div class="dg-inline-editor" role="form" aria-label="Edit section inline" onkeydown={handleKey}>
-  <div class="dg-ie-tag">✎ editing inline · no llm · {kind}</div>
+  <div class="dg-ie-head">
+    <div class="dg-ie-tag">✎ editing inline · no llm · {kind}</div>
+    <div class="dg-ie-modes" role="group" aria-label="Edit mode">
+      <button
+        type="button"
+        class="dg-ie-mode"
+        class:dg-ie-mode--on={mode === 'fields'}
+        aria-pressed={mode === 'fields'}
+        onclick={toFieldsMode}>Fields</button
+      >
+      <button
+        type="button"
+        class="dg-ie-mode"
+        class:dg-ie-mode--on={mode === 'yaml'}
+        aria-pressed={mode === 'yaml'}
+        onclick={toYamlMode}>YAML</button
+      >
+    </div>
+  </div>
+
+  {#if mode === 'yaml'}
+    <label class="dg-ie-field">
+      <span class="dg-ie-label">content · yaml</span>
+      <textarea
+        class="dg-ie-yaml"
+        spellcheck="false"
+        autocapitalize="off"
+        aria-invalid={yamlError ? 'true' : 'false'}
+        bind:value={yamlText}
+        onkeydown={handleYamlKey}
+      ></textarea>
+    </label>
+    {#if yamlError}
+      <p class="dg-ie-yamlerr" role="alert">✗ {yamlError}</p>
+    {:else}
+      <p class="dg-ie-yamlok">✓ valid yaml</p>
+    {/if}
+  {:else}
 
   {#each fields as field (field.key)}
     {#if field.kind === 'string'}
@@ -123,15 +222,18 @@
     {/if}
   {/each}
 
-  {#if !hasEditable}
-    <p class="dg-ie-readonly">This section has no editable text fields.</p>
+    {#if !hasEditable}
+      <p class="dg-ie-readonly">This section has no editable text fields. Switch to YAML to edit it.</p>
+    {/if}
   {/if}
 
   <div class="dg-ie-actions">
     <span class="dg-ie-hint">⌘↵ save · esc cancel</span>
     <div style="display: flex; gap: 8px;">
       <button type="button" class="mash-btn mash-btn--ghost mash-btn--sm" onclick={onCancel}>Cancel</button>
-      <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" onclick={save}>✓ Save edit</button>
+      <button type="button" class="mash-btn mash-btn--primary mash-btn--sm" disabled={!canSave} onclick={save}
+        >✓ Save edit</button
+      >
     </div>
   </div>
 </div>
@@ -152,6 +254,73 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--mash-pulp);
+  }
+  .dg-ie-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .dg-ie-modes {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    background: var(--surface);
+  }
+  .dg-ie-mode {
+    border: 0;
+    border-radius: calc(var(--r-2) - 2px);
+    background: transparent;
+    color: var(--fg-muted);
+    font: 700 10px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .dg-ie-mode:hover {
+    color: var(--fg);
+  }
+  .dg-ie-mode--on {
+    background: var(--mash-pulp-soft);
+    color: var(--mash-pulp);
+  }
+  .dg-ie-yaml {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    color: var(--fg);
+    padding: 10px 12px;
+    font: 400 13px/1.6 var(--font-mono);
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 340px;
+    resize: vertical;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    tab-size: 2;
+  }
+  .dg-ie-yaml:focus {
+    border-color: var(--mash-pulp);
+    box-shadow: 0 0 0 3px var(--mash-pulp-soft);
+  }
+  .dg-ie-yaml[aria-invalid='true'] {
+    border-color: var(--ember);
+  }
+  .dg-ie-yamlerr,
+  .dg-ie-yamlok {
+    margin: -4px 0 0;
+    font: 500 11px/1.4 var(--font-mono);
+  }
+  .dg-ie-yamlerr {
+    color: var(--ember);
+  }
+  .dg-ie-yamlok {
+    color: var(--fg-quiet);
   }
   .dg-ie-field {
     display: flex;

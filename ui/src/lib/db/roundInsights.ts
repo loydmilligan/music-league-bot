@@ -57,11 +57,61 @@ export interface RoundArtistLandscape {
   topArtists: InsightCount[];
 }
 
+/**
+ * The Coinage — a term the group coined (or adopted) inside this round's chat
+ * window, rendered as an Urban-Dictionary entry. Hand-authored today via the
+ * editable stats content (YAML, CD handoff §7); BACKLOG item 0(b) is the
+ * deterministic detector (absent from all prior rounds · 3+ uses · 3+ speakers).
+ *
+ * Every field but `term` is optional and the older shape (`gloss`/`meta`/
+ * `quotes`/`metrics`) still renders: the live R147 payload predates this schema
+ * and must not break.
+ */
+export interface PhraseOfRound {
+  /**
+   * Forward-compatible layout knob. Today the only layout is `dictionary`, and
+   * anything else (or nothing) renders it anyway — a second style would earn a
+   * registry, one does not.
+   */
+  style?: string;
+  term: string;
+  /** e.g. "/ˌtʃɒpt ˈʌŋk/" */
+  pronunciation?: string;
+  /** e.g. "noun · slang" */
+  part_of_speech?: string;
+  /** the numbered entry; `gloss` is the older name for the same field */
+  definition?: string;
+  gloss?: string;
+  /**
+   * Who coined it, on whom, when, and why — rendered as the origin line.
+   * `date` is a display string, never parsed: CD's `on:` was unusable because
+   * YAML 1.1 reads a bare `on` key as the boolean `true`.
+   */
+  coined?: { by?: string; date?: string; at?: string; context?: string };
+  /** the flag line's numbers; falls back to the free-text `meta` */
+  stats?: { uses?: number | string; speakers?: number | string; prior_rounds?: number | string };
+  /** labelled pull-quotes ("original" / "best"); falls back to `quotes` */
+  usages?: { label?: string; speaker?: string; text?: string }[];
+  /** origin explainer URL; nothing renders when absent */
+  source?: string;
+  /** right-hand meta on the card head, e.g. "coined 8/9 · 4 speakers" */
+  meta?: string;
+  metrics?: { value: string; label: string }[];
+  quotes?: { speaker?: string; text: string }[];
+  /**
+   * Optional clip illustrating the phrase. Served from digest-static's /_media/
+   * (outside /d/<slug>/, so a re-render can't wipe it). `poster` is required for
+   * the PNG/PDF export path, which screenshots a still frame — video never
+   * captures. Absolute URLs only: the export renders on a different origin.
+   */
+  media?: { src?: string; poster?: string; alt?: string; caption?: string };
+}
+
 export interface RoundInsights {
   roundId?: number;
   topSectionVariant?: TopSectionVariant;
   topSectionVisuals?: import('../digest/topSectionVariants.js').TopSectionVisual[];
-  statsContent?: { title?: string; body?: string };
+  statsContent?: { title?: string; body?: string; phrase?: PhraseOfRound };
   audio: RoundAudioProfile;
   submissionTiming: RoundSubmissionTiming;
   artists: RoundArtistLandscape;

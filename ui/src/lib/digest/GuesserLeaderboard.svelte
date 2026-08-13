@@ -43,11 +43,40 @@
     { icon: '🍸', re: /another (?:glass|drink)|refill|absinthe/i },
   ];
 
+  /**
+   * Caption above the season arc.
+   *
+   * The strip is capped at the last 10 rounds but `seasonRate` averages the
+   * WHOLE season, so a caption of the form "hit-rate over {bars} rounds" sitting
+   * next to "season avg N%" claims the average covers only the bars on screen.
+   * Once capped we name both sets explicitly instead. Takes the two counts as
+   * separate arguments precisely so a caller can't collapse them into one.
+   *
+   * Exported so it can be unit-tested directly — the numbers here are the whole
+   * point, and this section ships with "deterministic · no llm gloss" on it.
+   */
+  export function seasonArcCaption(shownRounds: number, totalRounds: number): string {
+    if (totalRounds > shownRounds) {
+      return `the season so far · last ${shownRounds} of ${totalRounds} rounds · average over all ${totalRounds}`;
+    }
+    return `the season so far · hit-rate over ${totalRounds} rounds`;
+  }
+
   // The 🐾 no-driving line is a declared joke, not a measurement: the data has
   // play-ORDER, not clock-TIME. It sits at a fixed fraction down the list.
   const NO_DRIVE_FRAC = 0.56;
 
   type Annotation = { leftPct: number; icon: string; quote: string; pos: number; hit: boolean; place: 'up' | 'dn' };
+
+  // A 170px label centred on a node near either end of the track hangs off the
+  // gradient panel and out of the exported frame. Near the edges we anchor the
+  // box by its own edge instead and slide the connector line to match, so the
+  // line still points at the real node.
+  function edgeClass(leftPct: number): '' | 'at-start' | 'at-end' {
+    if (leftPct <= 18) return 'at-start';
+    if (leftPct >= 82) return 'at-end';
+    return '';
+  }
 
   function truncate(s: string, n = 60): string {
     const t = s.trim().replace(/\s+/g, ' ');
@@ -89,6 +118,10 @@
   const guesses = $derived(weekly.guesses ?? []);
   const seasonHitRates = $derived(g?.seasonHitRates ?? []);
   const seasonRate = $derived(g?.seasonRate ?? 0);
+  // How many rounds the average actually covers. Falls back to the bar count so
+  // a payload predating `seasonRoundCount` captions "over N rounds" rather than
+  // "last N of 0".
+  const seasonRoundCount = $derived(Math.max(g?.seasonRoundCount ?? 0, seasonHitRates.length));
   // "Eludes him" (D3): players he's guessed the most and NEVER once gotten right.
   const eludes = $derived((g?.eludesHim ?? []).filter((r) => r.rate === 0));
   const littermates = $derived(g?.littermates ?? null);
@@ -147,7 +180,9 @@
     }
     const hits = guesses.filter((gs: GuesserGuess) => gs.correct);
     const lastHit = hits[hits.length - 1];
-    if (lastHit) {
+    // If the landmark comment IS the last hit, one annotation says both things
+    // — a second at the same position would just overprint it.
+    if (lastHit && lastHit.playPosition !== firstLandmark?.playPosition) {
       out.push({
         leftPct: nodeLeft(lastHit.playPosition),
         icon: '',
@@ -182,15 +217,18 @@
 
     <!-- ── season arc (D3 · arc-first) ── -->
     {#if seasonBars.length}
-      <div class="gsl-blocklbl">the season so far · hit-rate over {seasonBars.length} rounds</div>
+      <div class="gsl-blocklbl">{seasonArcCaption(seasonBars.length, seasonRoundCount)}</div>
       <div class="gsl-spark">
         <div class="gsl-avg" style="bottom:{avgBottom}px"><span>season avg {pct(seasonRate)}</span></div>
-        {#each seasonBars as b (b.label)}
+        <!-- index keys throughout: round labels are NOT unique (a null
+             round_number falls back to the round id), and a duplicate {#each}
+             key is a fatal hydration crash that kills the PNG export. -->
+        {#each seasonBars as b, i (i)}
           <div class="gsl-bar" class:now={b.now} style="height:{b.h}px" title={b.title}></div>
         {/each}
       </div>
       <div class="gsl-spark-x">
-        {#each seasonBars as b (b.label)}<span>{b.label}</span>{/each}
+        {#each seasonBars as b, i (i)}<span>{b.label}</span>{/each}
       </div>
     {/if}
 
@@ -200,8 +238,8 @@
       <div class="gsl-dz">
         <div class="gsl-dz-lbl"><span>sober · song 1</span><span class="r">blitzed · song {playCount}</span></div>
         <div class="gsl-tl">
-          {#each annotations as a (a.pos)}
-            <div class="gsl-ann {a.place}" style="left:{a.leftPct}%">
+          {#each annotations as a, i (i)}
+            <div class="gsl-ann {a.place} {edgeClass(a.leftPct)}" style="left:{a.leftPct}%">
               <div class="q">{a.icon ? `${a.icon} ` : ''}{a.hit ? `"${a.quote}"` : a.quote}</div>
               <div class="p">song {String(a.pos).padStart(2, '0')}{a.hit ? ' · hit' : ''}</div>
             </div>
@@ -234,7 +272,7 @@
         <h5>eludes him</h5>
         <p class="gsl-miniexp">players he's guessed the most times and <b>never once</b> gotten right — all season.</p>
         {#if eludes.length}
-          {#each eludes.slice(0, 3) as row (row.playerId)}
+          {#each eludes.slice(0, 3) as row, i (i)}
             <div class="gsl-r"><span>{row.name}</span><span class="n">{row.correct}/{row.attempts}</span></div>
           {/each}
           {#if eludes.length > 3}
@@ -285,12 +323,17 @@
     padding: 5px 11px;
     border: 1.5px solid var(--mash-pulp-edge);
     border-radius: 999px;
-    color: var(--mash-pulp-edge);
+    /* CD drew the stamp's text in --mash-pulp-edge on light paper; at 8.5px on
+       the dark surface that reads ~2:1. Edge stays on the border (as digest.css
+       uses it), the text steps up to full pulp. */
+    color: var(--mash-pulp);
     font: 700 8.5px/1 var(--font-mono);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     transform: rotate(-1.5deg);
   }
+  /* the ◆ is the shared-identity mark echoed by The Regulars — keep it pulp,
+     not a Guesser-only accent, so the two stamps stay the same object. */
   .gsl-stamp .s { color: var(--mash-pulp); }
 
   /* legend + subhead */
@@ -343,14 +386,17 @@
     position: absolute;
     left: 0;
     right: 0;
-    border-top: 1px dashed var(--mash-pulp-edge);
+    /* CD's dashed line is a *dimmer* pulp than the current-round bar so the two
+       read apart. On light paper that was --mash-pulp-edge; on dark, dimming
+       means mixing toward the surface, not toward black. */
+    border-top: 1px dashed color-mix(in srgb, var(--mash-pulp) 60%, var(--surface));
     z-index: 1;
   }
   .gsl-avg span {
     position: absolute;
     right: 0;
     top: -13px;
-    color: var(--mash-pulp-edge);
+    color: color-mix(in srgb, var(--mash-pulp) 75%, var(--fg-muted));
     font: 700 8px/1 var(--font-mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -370,11 +416,15 @@
     padding: 30px 22px 16px;
     border: 1px solid var(--line);
     border-radius: 8px;
+    /* sober → red-zone: moss-tint → pulp-tint → ember-tint, mixed from the
+       shipping tokens rather than the mock's raw hexes. */
     background:
-      linear-gradient(90deg,
-        rgba(62, 194, 122, 0.10) 0%,
-        rgba(255, 91, 46, 0.06) 45%,
-        rgba(230, 86, 108, 0.22) 100%),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--moss) 10%, transparent) 0%,
+        color-mix(in srgb, var(--mash-pulp) 6%, transparent) 45%,
+        color-mix(in srgb, var(--ember) 22%, transparent) 100%
+      ),
       var(--surface);
   }
   .gsl-dz-lbl {
@@ -437,6 +487,12 @@
   }
   .gsl-ann.up::after { top: 100%; height: 14px; }
   .gsl-ann.dn::after { bottom: 100%; height: 14px; }
+  /* edge-anchored labels — the box hugs the panel, the connector keeps pointing
+     at the actual node (see edgeClass). */
+  .gsl-ann.at-start { transform: translateX(-14px); text-align: left; }
+  .gsl-ann.at-start::after { left: 14px; }
+  .gsl-ann.at-end { transform: translateX(calc(-100% + 14px)); text-align: right; }
+  .gsl-ann.at-end::after { left: calc(100% - 14px); }
   .gsl-nodrive {
     position: absolute;
     top: -26px;
@@ -528,8 +584,22 @@
     font: 700 11px/1 var(--font-mono);
   }
 
+  /* ── 430px reflow ─────────────────────────────────────────────────────────
+     Two 170px annotations collide inside a 430px frame, so drop to one: the
+     first one printed stays (the landmark when there is one, otherwise the
+     hit); the dropped one is still legible as a node on the track. Applied by
+     viewport AND by the .dg-export--mobile frame class, since the mobile PNG is
+     rendered in a wide viewport. */
   @media (max-width: 460px) {
     .gsl-minirow { grid-template-columns: 1fr; }
     .gsl-ann { width: 130px; }
+    .gsl-ann + .gsl-ann { display: none; }
+    .gsl-spark { gap: 3px; }
+    .gsl-spark-x { font-size: 7px; }
   }
+  :global(.dg-export--mobile) .gsl-minirow { grid-template-columns: 1fr; }
+  :global(.dg-export--mobile) .gsl-ann { width: 130px; }
+  :global(.dg-export--mobile) .gsl-ann + .gsl-ann { display: none; }
+  :global(.dg-export--mobile) .gsl-spark { gap: 3px; }
+  :global(.dg-export--mobile) .gsl-spark-x { font-size: 7px; }
 </style>

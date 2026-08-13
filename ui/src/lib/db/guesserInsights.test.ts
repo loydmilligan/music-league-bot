@@ -199,6 +199,79 @@ describe('getGuesserData', () => {
     expect(g.seasonHitRates[3].rate).toBeCloseTo(1 / 3);
     // Season average = total correct (4) / total attempts (9).
     expect(g.seasonRate).toBeCloseTo(4 / 9);
+    // Under the cap, the arc shows every round and the counts agree.
+    expect(g.seasonRoundCount).toBe(4);
+    expect(g.seasonRoundCount).toBe(g.seasonHitRates.length);
+  });
+
+  it('caps the season arc at the last 10 rounds but averages over the whole season', () => {
+    // 14-round season in its own DB. The 4 dropped rounds are deliberately
+    // scored DIFFERENTLY from the 10 kept ones, so the season average can only
+    // come out right if totals are taken before the arc is capped:
+    //   r1..r4   (dropped from the arc): 2/2 each  ->  8/8
+    //   r5..r14  (kept in the arc):      1/2 each  -> 10/20
+    //   whole season 18/28 ≈ 0.643   vs   arc-only 10/20 = 0.5
+    const long = openLeagueDb(':memory:');
+    long.prepare("INSERT INTO leagues (id, slug, name) VALUES (1, 'z', 'Z League')").run();
+    long.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')").run();
+
+    const insertPlayer = long.prepare('INSERT INTO players (id, name) VALUES (?, ?)');
+    insertPlayer.run(1, 'Gus');
+    insertPlayer.run(2, 'Ann');
+    insertPlayer.run(3, 'Bob');
+    const insertCompetitor = long.prepare(
+      'INSERT INTO competitors (id, ml_competitor_id, name, player_id) VALUES (?, ?, ?, ?)',
+    );
+    insertCompetitor.run(1, 'ml-gus-z', 'Gus', 1);
+    insertCompetitor.run(2, 'ml-ann-z', 'Ann', 2);
+    insertCompetitor.run(3, 'ml-bob-z', 'Bob', 3);
+
+    const insertRound = long.prepare(
+      'INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (?, 1, ?, ?, ?)',
+    );
+    const insertSub = long.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (?, ?, ?, ?, 'Artist', ?)`,
+    );
+    const insertVote = long.prepare(
+      `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+       VALUES (?, 1, ?, 1, ?, ?)`,
+    );
+
+    const ROUNDS = 14;
+    for (let i = 1; i <= ROUNDS; i++) {
+      // Zero-padded day keeps created_at chronological as a string sort.
+      const at = `2026-02-${String(i).padStart(2, '0')}T00:00:00Z`;
+      insertRound.run(i, `z-${i}`, `Round ${i}`, at);
+      insertSub.run(i, 2, `ann-r${i}`, `Ann Song ${i}`, at);
+      insertSub.run(i, 3, `bob-r${i}`, `Bob Song ${i}`, at);
+      // Ann is always guessed right. Bob is right only in the first 4 rounds —
+      // after that Gus misreads him as Ann.
+      insertVote.run(i, `ann-r${i}`, 'this is Ann', at);
+      insertVote.run(i, `bob-r${i}`, i <= 4 ? 'this is Bob' : 'this is Ann', at);
+    }
+
+    const g = getGuesserData(long, ROUNDS);
+    expect(g.guesserName).toBe('Gus');
+
+    // Arc is capped to the 10 most recent rounds, still oldest→newest.
+    expect(g.seasonHitRates).toHaveLength(10);
+    expect(g.seasonHitRates.map((p) => p.roundId)).toEqual([5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    // round_number is unset → labels fall back to round ids. These are NOT
+    // guaranteed unique against real round numbers, which is why the component
+    // keys its {#each} by index rather than by label.
+    expect(g.seasonHitRates.map((p) => p.label)).toEqual(['5', '6', '7', '8', '9', '10', '11', '12', '13', '14']);
+    expect(g.seasonHitRates.every((p) => p.correct === 1 && p.attempts === 2)).toBe(true);
+
+    // The average spans all 14 rounds, not just the 10 on screen.
+    expect(g.seasonRate).toBeCloseTo(18 / 28);
+    expect(g.seasonRate).not.toBeCloseTo(10 / 20);
+
+    // ...and the count the UI captions that average with is the TRUE season
+    // total, not the capped bar count (review finding F6). Without this the
+    // strip reads "hit-rate over 10 rounds" above a 14-round average.
+    expect(g.seasonRoundCount).toBe(14);
+    expect(g.seasonRoundCount).toBeGreaterThan(g.seasonHitRates.length);
   });
 
   it('returns an empty section when no guesser can be detected', () => {
@@ -213,6 +286,7 @@ describe('getGuesserData', () => {
     expect(g.weekly).toEqual({ attempts: 0, correct: 0, rate: 0, guesses: [] });
     expect(g.seasonHitRates).toEqual([]);
     expect(g.seasonRate).toBe(0);
+    expect(g.seasonRoundCount).toBe(0);
     expect(g.eludesHim).toEqual([]);
     expect(g.alwaysNails).toEqual([]);
     expect(g.littermates).toBeNull();
