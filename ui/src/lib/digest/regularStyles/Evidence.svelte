@@ -4,11 +4,15 @@
   // one place — emphasis always via markRuns() run arrays, never injected HTML.
   import { markRuns } from '../regularStyles.js';
 
-  let { quotes, highlight = [] }: { quotes: string[]; highlight?: string[] } = $props();
+  let {
+    quotes,
+    highlight = [],
+    hero = false,
+  }: { quotes: string[]; highlight?: string[]; hero?: boolean } = $props();
 </script>
 
 {#each quotes as quote, i (i)}
-  <p class="rs-ev">"{#each markRuns(quote, highlight) as run, k (k)}{#if run.hit}<b class="rs-hl">{run.t}</b>{:else}{run.t}{/if}{/each}"</p>
+  <p class="rs-ev" class:is-hero={hero}>"{#each markRuns(quote, highlight) as run, k (k)}{#if run.hit}<b class="rs-hl">{run.t}</b>{:else}{run.t}{/if}{/each}"</p>
 {/each}
 
 <style>
@@ -21,6 +25,12 @@
     /* a quote can carry an unbroken 50-char token; break it rather than let it
        widen .dg-export past the export frame and clip the PNG */
     overflow-wrap: break-word;
+  }
+  /* hero mode: quote-led cards with only a quote or two ARE the card, so the
+     quotes get body-plus size instead of footnote size */
+  .rs-ev.is-hero {
+    font: 400 16px/1.55 var(--font-body);
+    color: var(--fg);
   }
   /* the tell itself, marked inside its own quote */
   .rs-hl {

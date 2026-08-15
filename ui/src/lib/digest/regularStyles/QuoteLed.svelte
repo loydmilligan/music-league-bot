@@ -10,7 +10,7 @@
 
 <div class="rs" data-style="quote-led" data-export={isExport}>
   {#if entry.note}<p class="rs-line">{entry.note}</p>{/if}
-  <Evidence quotes={entry.evidence} highlight={entry.highlight} />
+  <Evidence quotes={entry.evidence} highlight={entry.highlight} hero={entry.evidence.length <= 2} />
   {#if !entry.note && !entry.evidence.length}
     <p class="rs-none">(no evidence)</p>
   {:else if entry.highlight.length}

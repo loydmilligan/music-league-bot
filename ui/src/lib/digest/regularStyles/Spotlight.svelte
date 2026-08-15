@@ -7,13 +7,16 @@
   let { entry, isExport }: { entry: RegularEntry; isExport: boolean } = $props();
 
   const spot = $derived(entry.spotlight);
+  // Display size is for one-liners. A full-sentence ballot at 40px dwarfs every
+  // other card, so long utterances step down to pull-quote size instead.
+  const long = $derived(unquote(spot?.text ?? '').length > 60);
 </script>
 
 <div class="rs" data-style="spotlight" data-export={isExport}>
   {#if entry.note}<p class="rs-line">{entry.note}</p>{/if}
   {#if spot}
     <div class="rs-spot">
-      <span class="big">"{unquote(spot.text)}"</span>
+      <span class="big" class:is-long={long}>"{unquote(spot.text)}"</span>
       {#if spot.caption}<span class="cap">{spot.caption}</span>{/if}
     </div>
   {/if}
@@ -48,6 +51,10 @@
     color: var(--amber);
     font: 800 clamp(30px, 7vw, 40px) / 0.9 var(--font-display);
     letter-spacing: -0.01em;
+  }
+  .rs-spot .big.is-long {
+    font: 700 clamp(17px, 4vw, 21px) / 1.3 var(--font-display);
+    letter-spacing: 0;
   }
   .rs-spot .cap {
     color: var(--fg-muted);
