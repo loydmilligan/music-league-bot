@@ -215,12 +215,17 @@ Flow per round:
 5. Ratings + notes flow into the punch-up pass (WS6.1 steps 4–5), which runs
    with that structured input instead of live chat prose.
 
-- [ ] Bridge generator + storage (per draft; feeds next round).
-- [ ] Lede-generation script (headless `claude -p`, JSON out).
-- [ ] `/d/<digest>/hil` route: rate ledes (simple 1–5 or keep/kill/love),
-      free-text box, auth-lite (slug secrecy like existing digest links, or a
-      token).
-- [ ] ntfy wiring (existing ntfy channel used for digest approval).
+- [x] Bridge generator + storage — `scripts/digest-qa/generate_bridge.py`,
+      `digest_bridges` table; R127/R139/R147 backfilled (2026-08-16).
+- [x] Lede-generation script — `scripts/digest-qa/generate_ledes.py`,
+      `digest_ledes` table; verbatim-evidence gate; ≥2 chat-sourced ledes;
+      R139 trial run stored (2026-08-16).
+- [x] HiL page — `/digest/<roundId>/hil` on bot-ui (love/keep/kill per lede +
+      free-text box → `digest_ledes.ratings_json`); end-to-end smoke-tested
+      (2026-08-16). Note: lives on the review app, not the static digest host.
+- [ ] ntfy wiring: `generate_ledes.py --notify` implemented (default off);
+      remaining: trigger the script from round-end automation and confirm the
+      notification link. Trial: run manually when the next round closes.
 - [ ] v1 scope note: one notification per round with all ledes on one page
       (chosen over one-topic-at-a-time to keep the loop to a single visit).
 
