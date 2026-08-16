@@ -229,11 +229,17 @@ def ask_claude(prompt: str) -> dict:
 
 # ------------------------------------------------------------------- ntfy
 
+def ascii_header(v: str) -> str:
+    """HTTP headers must be latin-1; ntfy titles with em dashes/emoji crash
+    urllib. Body text is unaffected (sent as UTF-8 payload)."""
+    return v.encode("ascii", "replace").decode()
+
+
 def notify(m: dict, send: bool) -> None:
     env = {**load_env(REPO / ".env")}
     url, topic, token = env.get("NTFY_URL"), env.get("NTFY_TOPIC"), env.get("NTFY_TOKEN")
     body = f"Digest HiL ready — round {m['round_name']}"
-    click = f"https://mlbot2.mattmariani.com/digest/{m['round_id']}/hil"
+    click = f"https://mlb37.mattmariani.com/digest/{m['round_id']}/hil"
     if not (url and topic):
         print("ntfy: NTFY_URL/NTFY_TOPIC not configured; skipping", file=sys.stderr)
         return
@@ -243,7 +249,10 @@ def notify(m: dict, send: bool) -> None:
               file=sys.stderr)
         return
     req = urllib.request.Request(f"{url}/{topic}", data=body.encode(), method="POST",
-                                 headers={"Title": f"{m['league_name']} — HiL review",
+                                 headers={"Title": ascii_header(f"{m['league_name']} - HiL review"),
+                                          # ntfy sits behind Cloudflare, which 403s (code 1010)
+                                          # the default Python-urllib user agent.
+                                          "User-Agent": "mlbot-digest-qa/1.0",
                                           "Click": click,
                                           **({"Authorization": f"Bearer {token}"} if token else {})})
     with urllib.request.urlopen(req, timeout=15) as resp:
