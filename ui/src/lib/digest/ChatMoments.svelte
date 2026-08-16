@@ -166,12 +166,33 @@
   }
   .chatm-chevron {
     flex-shrink: 0;
-    font: 600 10px/1 var(--font-mono);
+    font: 700 14px/1 var(--font-mono);
     color: var(--mash-pulp);
     transition: transform var(--dur-fast) var(--ease-out);
+    /* readers kept missing that the moments expand — closed chevrons shimmer
+       until opened, as a "there's more here" affordance */
+    animation: chatm-shimmer 2.2s ease-in-out infinite;
   }
   .chatm-item.is-open .chatm-chevron {
     transform: rotate(90deg);
+    animation: none;
+  }
+  @keyframes chatm-shimmer {
+    0%,
+    100% {
+      color: var(--mash-pulp);
+      text-shadow: none;
+    }
+    50% {
+      color: var(--amber);
+      text-shadow: 0 0 6px var(--amber-soft);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chatm-chevron {
+      animation: none;
+      color: var(--amber);
+    }
   }
   .chatm-label {
     font: 600 12.5px/1.3 var(--font-body);

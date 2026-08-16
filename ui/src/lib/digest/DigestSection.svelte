@@ -165,6 +165,15 @@
   let delightPickIdx = $state(0);
   let delightError = $state('');
 
+  // Hand-authored body text may mark runs with **markdown bold**. Split into
+  // runs so emphasis renders as <strong> without trusting HTML into the DOM.
+  function boldRuns(text: string): { t: string; b: boolean }[] {
+    return text
+      .split(/\*\*(.+?)\*\*/g)
+      .map((t, i) => ({ t, b: i % 2 === 1 }))
+      .filter((r) => r.t !== '');
+  }
+
   // Extract sentence-level spans from the section's body text for the span-picker.
   // Falls back to the whole body as a single span when there are no sentence breaks.
   // Uses displayContent (the currently selected cover/original take) when a cover exists.
@@ -637,7 +646,7 @@
     {/if}
 
     {#if c.body}
-      <p class="dg-section-body">{c.body}</p>
+      <p class="dg-section-body">{#each boldRuns(c.body) as r, ri (ri)}{#if r.b}<strong>{r.t}</strong>{:else}{r.t}{/if}{/each}</p>
     {/if}
 
     {#if !items.length && !c.body}
