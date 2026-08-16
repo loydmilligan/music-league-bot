@@ -163,12 +163,82 @@ executes. Draft shape:
 
 ### WS7 — Archive improvement *(parked until WS6 lands)*
 
+### WS9 — Metrics & behavioral goals *(active — crude v1 shipped 2026-08-16)*
+
+The digest isn't just entertainment: it nudges league behavior. First tracked
+metric: **chat participation per round window**, plus the adjacent surfaces
+(vote comments, submission comments).
+
+- [x] `scripts/digest-qa/chat_participation.py` — per-round: messages, active
+      chatters / roster, participation rate, vote-comment and sub-comment
+      counts; per-player season table. Round window = previous voting_deadline
+      → this voting_deadline; relay truncation dupes removed; senders resolved
+      via player_identities.
+- [x] Baselines captured: `docs/metrics/chat-participation-baseline-boarz.md`,
+      `…-second-best.md` (2026-08-16). Boarz S10 runs 90–100% active; Second
+      Best S11 climbed 67% → 67% → 83% → 85% across four rounds, with message
+      volume 200 → 1,169 (Michael Black's arrival week).
+- [ ] **Mention ledger**: extract per-player digest mentions per round (the
+      inventory pass from R139, automated) and store them, so mentions become
+      a time series alongside participation.
+- [ ] **Nudge evaluation**: per player, join mention counts (round N digest)
+      against chat msgs / vote comments / sub comments (round N+1 window) —
+      the "we mentioned Philip more each week; did any of his three
+      participation surfaces move?" question. Small-n, so treat as directional
+      evidence, not stats.
+- [ ] Fold the balance rule into generation guidance: minimum-mention floor
+      for active players, rotating features for quiet ones (this week: BP,
+      Philip, TJ features are the first deliberate nudge — watch their next
+      two windows).
+- [ ] Later candidates: submission-comment rate (2B's is already strong),
+      voting timeliness (Jac/Ari class), new-member retention.
+
+### WS10 — HiL loop via ntfy *(design agreed, trial next round)*
+
+Formalize the human-in-the-loop step as a notification-driven review instead
+of an open-ended chat session.
+
+Flow per round:
+1. Round-end email trigger fires (existing) → draft digest generated (existing).
+2. **Story-ledes script** (new): non-interactive Claude (`claude -p`) reads the
+   round's chat window, vote + submission comments, results (with rulecard
+   applied), and **last round's bridge** → emits 5–8 candidate ledes/angles
+   with one-line evidence each.
+3. **Round bridge** (new artifact, generated at each digest's finalization):
+   the final draft's main story elements + a concise per-section summary.
+   Feeds the next round's lede generation and the season's continuity
+   (callbacks, running bits, regulars triggers).
+4. ntfy → Matt: "HiL review ready" → link to
+   `digest.mattmariani.com/d/<digest>/hil` — a page that lists the ledes with
+   a rating control each, plus one free-text box for unrelated
+   direction ("Johanna keeps calling me Timmy").
+5. Ratings + notes flow into the punch-up pass (WS6.1 steps 4–5), which runs
+   with that structured input instead of live chat prose.
+
+- [ ] Bridge generator + storage (per draft; feeds next round).
+- [ ] Lede-generation script (headless `claude -p`, JSON out).
+- [ ] `/d/<digest>/hil` route: rate ledes (simple 1–5 or keep/kill/love),
+      free-text box, auth-lite (slug secrecy like existing digest links, or a
+      token).
+- [ ] ntfy wiring (existing ntfy channel used for digest approval).
+- [ ] v1 scope note: one notification per round with all ledes on one page
+      (chosen over one-topic-at-a-time to keep the loop to a single visit).
+
 ### WS8 — Pipeline/workflow improvements
 - [ ] `scripts/digest-qa/` package: `verify_facts.py`, `dedupe_scan.py`,
       `mention_inventory.py`, `render_smoke.mjs`, `identity_lint.py` — each
       runnable standalone and from the punch-up skill.
 - [ ] Wire facts-pass + render-smoke into generation itself (post-generate
       gate: a draft that fails verification is flagged in the review UI).
+- [ ] **Model-vars pipeline integration**: the existing per-section pipeline
+      (OpenRouter model + context selection per section kind, auto section
+      refresh — `api/model-vars/sections`) predates the new features (style
+      shelf, storylines, phrase card, chat superlatives, bold runs). Update it
+      to cover the new section kinds, then make the punch-up protocol's
+      deterministic stages (rulecard, computed standings, gold surfacing,
+      verify) part of the context each section's model receives — so the
+      pipeline is the repeatable home for what the sessions currently do by
+      hand. End state: sessions handle taste, the pipeline handles truth.
 - [ ] Structured "Matt's weekly notes" input (review UI field or a simple file)
       consumed by the punch-up pass.
 - [ ] Punch-up session output → feedback loop: diff final vs. generated,
@@ -179,7 +249,9 @@ executes. Draft shape:
 ## Sequencing
 
 1. **Now:** WS6.1 protocol doc + rulecards (small, immediately useful next
-   round) · WS8 promote existing QA scripts · WS2 inventory (feeds everything).
+   round) · WS8 promote existing QA scripts · WS9 mention ledger + nudge watch
+   (baselines done) · WS10 HiL trial pieces (bridge, ledes, /hil page) ·
+   WS2 inventory (feeds everything).
 2. **Next:** WS3 as-is pipeline doc · WS6.2 generator grounding · WS6.3 tooling
    debt · WS1 sanitization in parallel slices.
 3. **Later:** WS4/5/7 archive track, starting with the phase-backfill fix that
@@ -191,6 +263,13 @@ executes. Draft shape:
 - 2026-08-16 · Digest is the app's top priority; quality work leads (Matt).
 - 2026-08-16 · Weekly improvised session to be formalized into a refinable
   protocol rather than remaining ad hoc (Matt + Claude, this doc).
+- 2026-08-16 · Deterministic stages eventually live in the model-vars
+  pipeline; scripts + HiL protocol are the interim (Matt).
+- 2026-08-16 · Primary behavioral metric: chat participation per round window;
+  digest content deliberately nudges it (mention floors, quiet-player
+  features). Baselines captured for Boarz S10 + Second Best S11 (Matt).
+- 2026-08-16 · HiL trial: ntfy → /d/<digest>/hil lede-rating page + free-text
+  box; round bridge artifact generated at finalization (Matt).
 
 ## Session-learnings inbox
 
