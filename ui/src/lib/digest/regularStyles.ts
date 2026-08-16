@@ -242,8 +242,18 @@ export function normalizeCast(content: unknown): RegularEntry[] {
 export function markRuns(text: string, tokens: string[]): { t: string; hit: boolean }[] {
   const words = tokens.map((w) => w.trim()).filter(Boolean);
   if (!words.length) return [{ t: text, hit: false }];
-  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const re = new RegExp(`\\b(${escaped})\\b`, 'gi');
+  // Word boundaries only where the token actually has a word-char edge —
+  // punctuation tokens like "…" or "Mara:" have no \b at their non-word edge
+  // and would never match with a blanket \b(...)\b.
+  const escaped = words
+    .map((w) => {
+      const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const lead = /^\w/.test(w) ? '\\b' : '';
+      const tail = /\w$/.test(w) ? '\\b' : '';
+      return lead + esc + tail;
+    })
+    .join('|');
+  const re = new RegExp(`(${escaped})`, 'gi');
   const out: { t: string; hit: boolean }[] = [];
   let last = 0;
   for (const m of text.matchAll(re)) {
