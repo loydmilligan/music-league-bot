@@ -52,10 +52,13 @@
   // Static (PNG/PDF) export can't expand → render the anchor-linked variant.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
-  // Accordion open-state (web only).
-  let open = $state<Record<number, boolean>>({});
+  // Accordion open-state (web only). Single-open: expanding a moment collapses
+  // the previous one, and the first moment starts open so readers see there IS
+  // an expanded state. -1 = everything collapsed.
+  let openIdx = $state(0);
+  const open = $derived<Record<number, boolean>>({ [openIdx]: openIdx >= 0 });
   function toggle(i: number) {
-    open = { ...open, [i]: !open[i] };
+    openIdx = openIdx === i ? -1 : i;
   }
 </script>
 
@@ -171,7 +174,7 @@
     transition: transform var(--dur-fast) var(--ease-out);
     /* readers kept missing that the moments expand — closed chevrons shimmer
        until opened, as a "there's more here" affordance */
-    animation: chatm-shimmer 2.2s ease-in-out infinite;
+    animation: chatm-shimmer 1s ease-in-out infinite;
   }
   .chatm-item.is-open .chatm-chevron {
     transform: rotate(90deg);
