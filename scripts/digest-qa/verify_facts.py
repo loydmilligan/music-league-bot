@@ -44,7 +44,20 @@ RULES = {
                     "Mashew": "Matt Mariani", "Em": "Emily Freidman",
                     "Bri": "Brianna Bekier", "M g": "Marc Grey"},
     },
-    # boarz-ii-men, sssc: rulecards are stubs -- ties flagged, not resolved.
+    "boarz-ii-men": {
+        "mandatory_downvote": False,  # up to 2; mandatoriness UNRESOLVED
+        "no_vote_penalty": "void_upvotes_keep_downvotes",  # R147 Grant Koziol precedent
+        "tiebreak": None,  # UNKNOWN -- ties flagged, not resolved
+        "aliases": {"Mashew": "Matt Mariani", "Jonathan Black": "Jon Black",
+                    "djensen37": "Jensen", "Grant Koziol": "Kozh"},
+    },
+    "sssc": {
+        "mandatory_downvote": False,
+        "no_downvotes": True,  # zero negative points across all observed rounds
+        "no_vote_penalty": None,  # UNKNOWN -- no precedent yet
+        "tiebreak": None,  # UNKNOWN -- ties flagged, not resolved
+        "aliases": {"missmara": "Mara Mariani", "Boonie Dogsweat": "Dogsweat"},
+    },
 }
 
 
@@ -340,6 +353,20 @@ def check_numeric_claims(sections, songs, standings_totals, budget, votes, rpt):
             rpt.warn("numeric claim", f"'{m.group(0)}' matches no computed song total, standing, budget, or count")
 
 
+def check_downvote_language(sections, rules, rpt):
+    """A league with no downvote mechanic must never be described as having
+    one (F2). R166 sssc: 'a solitary downvote cutting through' -- fabricated."""
+    if not rules.get("no_downvotes"):
+        return
+    pat = re.compile(r"downvot\w*|down-vot\w*|voted against", re.I)
+    for kind, content in sections:
+        for m in pat.finditer(norm_text(json.dumps(content))):
+            ctx_start = max(0, m.start() - 40)
+            ctx = norm_text(json.dumps(content))[ctx_start:m.end() + 20]
+            rpt.fail("downvote language", f"{kind} section: league has NO downvote mechanic but draft says "
+                     f"\"...{ctx}...\"")
+
+
 def check_standings(db, rnd, rpt):
     stored = db.execute(
         "SELECT competitor_id, name, current_total, rank FROM season_standings WHERE round_id = ?",
@@ -407,6 +434,7 @@ def main():
                 check_villain(content, songs, ranking, rpt)
         check_quotes(sections, corpus, rpt)
         check_numeric_claims(sections, songs, standings_totals, budget, votes, rpt)
+        check_downvote_language(sections, rules, rpt)
 
     if args.json:
         print(json.dumps({"round": rnd["id"], "league": rnd["slug"], "findings": rpt.findings}, indent=2))
