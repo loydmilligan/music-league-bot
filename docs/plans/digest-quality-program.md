@@ -185,9 +185,11 @@ metric: **chat participation per round window**, plus the adjacent surfaces
       `…-second-best.md` (2026-08-16). Boarz S10 runs 90–100% active; Second
       Best S11 climbed 67% → 67% → 83% → 85% across four rounds, with message
       volume 200 → 1,169 (Michael Black's arrival week).
-- [ ] **Mention ledger**: extract per-player digest mentions per round (the
+- [x] **Mention ledger**: extract per-player digest mentions per round (the
       inventory pass from R139, automated) and store them, so mentions become
-      a time series alongside participation.
+      a time series alongside participation. *(2026-08-17:
+      `scripts/digest-qa/mention_inventory.py --store` → `digest_mentions`
+      table; `--floor N` flags under-mentioned active players.)*
 - [ ] **Nudge evaluation**: per player, join mention counts (round N digest)
       against chat msgs / vote comments / sub comments (round N+1 window) —
       the "we mentioned Philip more each week; did any of his three
@@ -237,8 +239,9 @@ Flow per round:
       (chosen over one-topic-at-a-time to keep the loop to a single visit).
 
 ### WS8 — Pipeline/workflow improvements
-- [ ] `scripts/digest-qa/` package: `verify_facts.py`, `dedupe_scan.py`,
-      `mention_inventory.py`, `render_smoke.mjs`, `identity_lint.py` — each
+- [ ] `scripts/digest-qa/` package: `verify_facts.py` ✓, `dedupe_scan.py` ✓,
+      `mention_inventory.py` ✓ (all 2026-08-17; validated on R127/139/147/166,
+      0 false FAILs), `render_smoke.mjs`, `identity_lint.py` — each
       runnable standalone and from the punch-up skill.
 - [ ] Wire facts-pass + render-smoke into generation itself (post-generate
       gate: a draft that fails verification is flagged in the review UI).
