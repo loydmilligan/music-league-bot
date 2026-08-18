@@ -232,9 +232,15 @@ Flow per round:
 - [x] HiL page — `/digest/<roundId>/hil` on bot-ui (love/keep/kill per lede +
       free-text box → `digest_ledes.ratings_json`); end-to-end smoke-tested
       (2026-08-16). Note: lives on the review app, not the static digest host.
-- [ ] ntfy wiring: `generate_ledes.py --notify` implemented (default off);
-      remaining: trigger the script from round-end automation and confirm the
-      notification link. Trial: run manually when the next round closes.
+- [x] ntfy wiring: `generate_ledes.py --notify` implemented (default off);
+      round-end trigger live 2026-08-17: `scripts/digest-qa/hil_autorun.py`
+      polls for fresh un-finalized drafts in `digest_mode='hil'` leagues
+      lacking a `digest_ledes` row and runs generate_ledes --notify. Runs
+      host-side (generate_ledes needs `claude -p`, absent in the bot-ui
+      container) via systemd user timer `mlb-hil-ledes.timer` (15 min,
+      units in `~/.config/systemd/user/`). Notification click URL
+      `/digest/<round>/hil` confirmed 200 on localhost:3002 and mlb37.
+      First live firing: next boarz round close.
 - [ ] v1 scope note: one notification per round with all ledes on one page
       (chosen over one-topic-at-a-time to keep the loop to a single visit).
 
