@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 147 — how the numbers are made</title>
+<style>
+  :root{
+    --bg:#0e0f12; --surface:#16181d; --surface-2:#1d2027; --line:#2b2f38;
+    --fg:#eceef2; --fg-2:#b8bec9; --quiet:#79818f;
+    --up:#5fd08a; --down:#e2685f; --amber:#e0a458; --pulp:#d96a6a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 72px;background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--body)}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{margin:0 0 6px;font-size:26px;line-height:1.15;letter-spacing:-.01em}
+  .sub{margin:0 0 28px;color:var(--quiet);font:600 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.08em}
+  h2{margin:40px 0 12px;font-size:19px;letter-spacing:-.01em}
+  h2 small{display:block;margin-top:3px;color:var(--quiet);font:600 10px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  h3{margin:22px 0 8px;font-size:13px;color:var(--fg-2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+  p{margin:0 0 12px;color:var(--fg-2)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 18px 20px;margin:0 0 18px}
+  .rules ul{margin:6px 0 0;padding-left:18px;color:var(--fg-2)}
+  .rules li{margin:5px 0}
+  table{width:100%;border-collapse:collapse;margin:6px 0 4px;font-size:14px}
+  th{padding:7px 8px;text-align:left;color:var(--quiet);font:700 10px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--fg-2)}
+  td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.who{color:var(--fg);white-space:nowrap}
+  td.cmt{color:var(--quiet);font-size:13px}
+  tr.tot td{border-top:2px solid var(--line);border-bottom:none;color:var(--fg);font-weight:700}
+  .pos{color:var(--up)} .neg{color:var(--down)} .zero{color:var(--quiet)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-top:14px}
+  .kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:13px}
+  .kpi .lab{color:var(--quiet);font:700 9px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.07em}
+  .kpi .val{margin:7px 0 4px;color:var(--fg);font:700 26px/1 var(--mono);font-variant-numeric:tabular-nums}
+  .kpi .math{color:var(--fg-2);font:500 11px/1.45 var(--mono)}
+  .kpi .note{margin-top:6px;color:var(--quiet);font-size:11.5px;line-height:1.4}
+  .formula{display:block;margin:8px 0;padding:12px 14px;background:#101216;border:1px solid var(--line);border-radius:6px;color:var(--fg);font:500 12.5px/1.6 var(--mono);white-space:pre-wrap;overflow-x:auto}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:700px){.split{grid-template-columns:1fr}}
+  .flag{background:#1a1712;border:1px solid #3a3122;padding:12px 14px;border-radius:6px;color:var(--fg-2);font-size:13.5px;margin:12px 0}
+  .flag b{color:var(--amber)}
+  .src{font-family:var(--mono);font-size:12px;color:var(--amber)}
+  .lede{color:var(--fg);font-size:16px}
+  .tag{display:inline-block;padding:3px 7px;border:1px solid var(--line);border-radius:99px;color:var(--quiet);font:700 9px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--quiet);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Where the numbers come from</h1>
+<p class="sub">Round 147 · “I Hope You Shit Your Pants at Target” · worked examples: <b>Radio</b> (13 pts, 1st) and <b>The Story of Adidon</b> (0 pts, 9th)</p>
+
+<div class="card rules">
+  <h3 style="margin-top:0">The scoring rules in play</h3>
+  <ul>
+    <li><b>Every voter gets 8 upvote points and 2 downvote points</b>, spent in whatever chunks they like across the round's songs.</li>
+    <li><b>9 people voted</b> this round (Koziol didn't), so the total pool on the table was <b>72 upvote points</b> and <b>18 downvote points</b>. All 90 were spent.</li>
+    <li><b>You can't vote on your own song</b> — so each song faced 8 eligible voters, not 9. You <i>can</i> leave a comment on it.</li>
+    <li>A row worth <b>0 points is a comment, not a vote</b>. It moves nothing. Silence is a separate thing: no row at all.</li>
+    <li><b>Failing-to-vote penalty:</b> if you don't vote, your song's upvotes are voided and its downvotes stand. Neither song below is affected — both submitters voted. (This is what took Koziol's Alanis from a raw 0 to a final −5.)</li>
+  </ul>
+</div>
+
+<h2>1. Alkaline Trio — “Radio” <small>submitted by Jonathan Black · winner, 13 points</small></h2>
+
+<div class="card">
+<h3>The ballot, row by row</h3>
+<table>
+  <thead><tr><th>Voter</th><th class="n">Points</th><th>What they said</th></tr></thead>
+  <tbody>
+    <tr><td class="who">Clements</td><td class="n pos">+4</td><td class="cmt">“Forgot about this song. Best reminder of the season so far.”</td></tr>
+    <tr><td class="who">CJ Wookie</td><td class="n pos">+3</td><td class="cmt">“Punk can be really good when it's not consumed by screaming and a drummer who dove into meth like Scrooge McDuck. Great lyrics.”</td></tr>
+    <tr><td class="who">Jimmy Troy</td><td class="n pos">+3</td><td class="cmt">“Good job”</td></tr>
+    <tr><td class="who">Mashew</td><td class="n pos">+1</td><td class="cmt">“This hits so soft it hits hard”</td></tr>
+    <tr><td class="who">Shane Farkas</td><td class="n pos">+1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">Steiny</td><td class="n pos">+1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">djensen37</td><td class="n zero">0</td><td class="cmt">“I like alkaline trio, not their best work” <span class="tag">comment only</span></td></tr>
+    <tr><td class="who">Darren Paletz</td><td class="n zero">—</td><td class="cmt">no row: didn't vote on it, didn't comment</td></tr>
+    <tr><td class="who">Jonathan Black</td><td class="n zero">—</td><td class="cmt">ineligible — his own submission</td></tr>
+    <tr class="tot"><td>Total</td><td class="n pos">+13</td><td>6 scoring voters · 0 downvotes</td></tr>
+  </tbody>
+</table>
+<span class="formula">points = Σ(all ballot rows)
+      = (+4) + (+3) + (+3) + (+1) + (+1) + (+1) + 0
+      = <b>13</b>
+
+upvotes  = 13     downvotes = 0
+margin   = 13 − 8 (2nd place) = <b>5</b></span>
+<p>Nothing exotic here: it's a straight sum. What makes 13 the round's high score is not one big vote but <b>breadth</b> — six of the eight eligible voters put something on it, and nobody spent a downvote point against it. It's the only song in the round with a clean sheet at the top.</p>
+</div>
+
+<h2>2. Pusha T — “The Story of Adidon” <small>submitted by Mashew · 9th of 10, 0 points</small></h2>
+
+<div class="card">
+<h3>The ballot, row by row</h3>
+<table>
+  <thead><tr><th>Voter</th><th class="n">Points</th><th>What they said</th></tr></thead>
+  <tbody>
+    <tr><td class="who">Darren Paletz</td><td class="n pos">+1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">Shane Farkas</td><td class="n pos">+1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">djensen37</td><td class="n pos">+1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">Jonathan Black</td><td class="n zero">0</td><td class="cmt">“The only group better at ‘beef’ than hip-hop artists are 7th grade girls. A well known fact.” <span class="tag">comment only</span></td></tr>
+    <tr><td class="who">Clements</td><td class="n neg">−1</td><td class="cmt">“Like a an Afro that won't nap enough, this song sucks.”</td></tr>
+    <tr><td class="who">Jimmy Troy</td><td class="n neg">−1</td><td class="cmt">“Rap beef song clap back”</td></tr>
+    <tr><td class="who">Steiny</td><td class="n neg">−1</td><td class="cmt">—</td></tr>
+    <tr><td class="who">CJ Wookie</td><td class="n zero">—</td><td class="cmt">no row: didn't vote on it, didn't comment</td></tr>
+    <tr><td class="who">Mashew</td><td class="n zero">—</td><td class="cmt">ineligible — his own submission</td></tr>
+    <tr class="tot"><td>Total</td><td class="n">0</td><td>3 up · 3 down · cancels exactly</td></tr>
+  </tbody>
+</table>
+<span class="formula">points = (+1) + (+1) + (+1) + 0 + (−1) + (−1) + (−1)
+      = +3 − 3
+      = <b>0</b>
+
+upvotes = 3      downvotes = 3</span>
+<p>A zero here is not indifference — it's a <b>tie between two camps of three</b>. Six of the eight eligible voters had an opinion strong enough to spend points on, and they split down the middle. That's a materially different zero than “nobody cared,” and it's why the contested metric below separates the two.</p>
+<div class="flag"><b>Why this is 9th and not 10th.</b> Koziol's “You Oughta Know” also summed to a raw 0 (+5 up, −5 down) — but he never voted, so the failing-to-vote penalty voided his +5 and left the −5 standing: <b>−5 final</b>. That's the one place in this round where the displayed score isn't a plain sum, and it's why Adidon finishes 9th of 10 rather than tied for last.</div>
+</div>
+
+<h2>3. The KPIs, derived <small>same two songs, every step shown</small></h2>
+
+<div class="card">
+<h3>Bile efficiency — points per 100 words of lyric</h3>
+<span class="formula">bile_efficiency = points ÷ lyric_word_count × 100</span>
+<div class="split">
+  <div class="kpi">
+    <div class="lab">Radio</div>
+    <div class="val">4.76</div>
+    <div class="math">13 pts ÷ 273 words × 100</div>
+    <div class="note">273 words across 38 lines. Roughly 21 words of lyric per point earned.</div>
+  </div>
+  <div class="kpi">
+    <div class="lab">The Story of Adidon</div>
+    <div class="val">0.00</div>
+    <div class="math">0 pts ÷ 427 words × 100</div>
+    <div class="note">427 words across 58 lines — the wordiest song in the round, and the longest walk to nowhere. Words-per-point is undefined; you can't divide by zero points.</div>
+  </div>
+</div>
+<p style="margin-top:14px">Word counts come from the lyrics-metrics job, which stores <span class="src">word_count</span> and <span class="src">line_count</span> only — the lyric <i>text</i> is discarded after counting. That's the hard ceiling on lyric analysis right now: density is available, sentiment and profanity are not.</p>
+</div>
+
+<div class="card">
+<h3>Contested index — how split the room was</h3>
+<span class="formula">contested = min(total_upvotes, total_downvotes)
+
+A song only scores here if BOTH camps spent real points on it.
+It ignores the net result, which is the point.</span>
+<div class="split">
+  <div class="kpi">
+    <div class="lab">Radio</div>
+    <div class="val">0</div>
+    <div class="math">min(13, 0) = 0</div>
+    <div class="note">Consensus, not conflict. Won 13–0 with nobody dissenting in points.</div>
+  </div>
+  <div class="kpi">
+    <div class="lab">The Story of Adidon</div>
+    <div class="val">3</div>
+    <div class="math">min(3, 3) = 3</div>
+    <div class="note">Second-most contested in the round, behind You Oughta Know (min(5,5) = 5). A perfectly balanced argument.</div>
+  </div>
+</div>
+</div>
+
+<div class="card">
+<h3>Support breadth — share of eligible voters who paid up</h3>
+<span class="formula">breadth = scoring_voters ÷ 8 eligible voters
+(8, not 9 — a submitter can't vote on their own song)</span>
+<div class="split">
+  <div class="kpi">
+    <div class="lab">Radio</div>
+    <div class="val">75%</div>
+    <div class="math">6 of 8 spent points · 1 commented · 1 silent</div>
+  </div>
+  <div class="kpi">
+    <div class="lab">The Story of Adidon</div>
+    <div class="val">75%</div>
+    <div class="math">6 of 8 spent points · 1 commented · 1 silent</div>
+    <div class="note">Identical engagement, opposite result. The difference between 1st and 9th this round was direction, not attention.</div>
+  </div>
+</div>
+</div>
+
+<div class="card">
+<h3>Round-level numbers, for reference</h3>
+<div class="kpis">
+  <div class="kpi"><div class="lab">Point pool spent</div><div class="val">90/90</div><div class="math">72 up + 18 down, 9 voters</div></div>
+  <div class="kpi"><div class="lab">Lyrics in the playlist</div><div class="val">2,342</div><div class="math">words across 377 lines, 9 of 10 songs</div><div class="note">Wu-Tang's “Dog Shit” returned no lyrics — counted as unknown, not zero.</div></div>
+  <div class="kpi"><div class="lab">Hate : love</div><div class="val">13 : 1</div><div class="math">in 509 words of vote commentary</div></div>
+  <div class="kpi"><div class="lab">Comment concision</div><div class="val">11.1</div><div class="math">words per comment, across 47 comments</div><div class="note">Most comments of any round this season; fewest words each (last round: 16.1).</div></div>
+</div>
+</div>
+
+<h2>4. Where every figure is read from</h2>
+<div class="card">
+<table>
+  <thead><tr><th>Figure</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr><td>Every ballot row, points and comment</td><td class="src">votes.points, votes.comment (round_id = 147)</td></tr>
+    <tr><td>Who submitted what</td><td class="src">ml_submissions.competitor_id → competitors.name</td></tr>
+    <tr><td>Lyric word / line counts</td><td class="src">song_lyrics_metrics.word_count, .line_count</td></tr>
+    <tr><td>Monthly listeners</td><td class="src">song_popularity.listeners (Last.fm)</td></tr>
+    <tr><td>Official round score, incl. no-vote penalty</td><td class="src">Music League round results (cross-checked against the raw sums above)</td></tr>
+  </tbody>
+</table>
+<div class="flag"><b>Two caveats worth keeping.</b> (1) Lyric text isn't retained, only counts — any sentiment/profanity KPI would need a re-fetch. (2) Last.fm listener figures are only as good as the artist/title match: the Wu-Tang track returns 247 listeners, which is a bad match rather than a real number, so it's excluded from any obscurity stat.</div>
+</div>
+
+<footer>Generated for round 147 review · every figure recomputed from data/league.db and cross-checked against the live Music League round results.</footer>
+
+</div>
+</body>
+</html>

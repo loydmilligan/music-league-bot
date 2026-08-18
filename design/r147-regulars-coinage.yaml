@@ -80,6 +80,9 @@ phrase:
     - label: original
       speaker: Steiny
       text: "Jensen besides feeling like a chopped unc what were the musical highlights of your adventure"
+    - label: the lookup
+      speaker: Mashew
+      text: "Man, I thought chopped unc sounded cool, but apparently it means ugly or uncool old person"
     - label: best
       speaker: Shane
       text: "I guess we're all chopped uncs"
@@ -88,6 +91,8 @@ phrase:
     poster: https://digest.mattmariani.com/_media/chopped_unc.jpg
     caption: the gif that started it
     alt: Jensen's Outside Lands gif
-  # source: omitted deliberately — the card renders no origin link without it,
-  # and Mashew's own "apparently it means ugly or uncool old person" already
-  # does the looking-up inside the digest.
+  # Turns the origin line into a link (new tab). OWNER TO PROVIDE: the TikTok
+  # where the original chopped unc owns his chopped-unc-iness.
+  # Must include the scheme — safeUrl() allows http/https only and renders no
+  # link at all for a bare host, rather than guessing.
+  # source: https://www.tiktok.com/@…
