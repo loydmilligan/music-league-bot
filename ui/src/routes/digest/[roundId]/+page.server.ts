@@ -291,7 +291,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
     }
 
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
-    let statsContent: { title?: string; body?: string } = {};
+    let statsContent: { title?: string; body?: string; phrase?: import('$lib/db/roundInsights.js').PhraseOfRound } = {};
     try { statsContent = JSON.parse(draft.stats_content_json ?? '{}'); } catch { /* use empty editable caption */ }
     let savedVisuals: unknown = [];
     try { savedVisuals = JSON.parse(draft.top_section_visuals ?? '[]'); } catch { /* use auto mode */ }

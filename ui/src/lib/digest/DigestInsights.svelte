@@ -87,9 +87,55 @@
   // `javascript:` URL would otherwise become a live link. Only http(s) survives;
   // anything else renders no link at all.
   const phraseSourceHref = $derived(safeUrl(phrase?.source));
-  const phraseSourceLabel = $derived(phraseSourceHref ? sourceLabel(phraseSourceHref) : '');
   const lateShare = $derived(timing?.submissionCount ? Math.round(((timing.finalSixHoursCount ?? 0) / timing.submissionCount) * 100) : 0);
   const heroLine = $derived(lateShare >= 45 ? "A late-running round with a packed final stretch." : artists && artists.uniqueArtistCount >= Math.max(1, artists.songCount * 0.8) ? "A wide-open artist field with very little recycling." : audio?.medianBpm != null && audio.medianBpm < 90 ? "A slower, moodier set with room to breathe." : "A round with a distinct sonic and social fingerprint.");
+
+  // ── Clip lightbox (web only) ───────────────────────────────────────────
+  // Interactivity can never survive the PNG, so every part of this is behind
+  // `!isExport`: no trigger, no dialog, no listener.
+  let clipOpen = $state(false);
+  let clipTrigger = $state<HTMLButtonElement | null>(null);
+  let clipDialog = $state<HTMLDivElement | null>(null);
+  let clipClose = $state<HTMLButtonElement | null>(null);
+
+  function openClip() {
+    if (isExport) return;
+    clipOpen = true;
+  }
+
+  function closeClip() {
+    if (!clipOpen) return;
+    clipOpen = false;
+    clipTrigger?.focus();
+  }
+
+  function onWindowKey(e: KeyboardEvent) {
+    if (e.key === 'Escape' && clipOpen) closeClip();
+  }
+
+  /** Keep Tab inside the dialog while it's open. */
+  function trapTab(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !clipDialog) return;
+    const focusable = clipDialog.querySelectorAll<HTMLElement>(
+      'button, [href], video[controls], [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !clipDialog.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  // Move focus into the dialog when it opens; `closeClip` hands it back.
+  $effect(() => {
+    if (clipOpen) clipClose?.focus();
+  });
 
   /** `0 prior rounds` is a real, load-bearing stat — presence, not truthiness. */
   function present(value: number | string | undefined): boolean {
@@ -115,15 +161,14 @@
     }
   }
 
-  /** Link text is the URL without its protocol — the mock's `urbandictionary.com/…`. */
-  function sourceLabel(url: string | undefined): string {
-    const raw = (url ?? '').trim();
-    return raw.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-  }
-
+  /**
+   * "original" → "original usage · Steiny", but a label that is already a
+   * phrase ("the lookup") stands on its own — "the lookup usage" reads like a
+   * form field, and three of those in a row read like a list.
+   */
   function usageLabel(label: string | undefined, speaker: string | undefined): string {
     const l = (label ?? '').trim();
-    const base = l && !/usage/i.test(l) ? `${l} usage` : l;
+    const base = l && !l.includes(' ') && !/usage/i.test(l) ? `${l} usage` : l;
     return [base, (speaker ?? '').trim()].filter(Boolean).join(' · ');
   }
 
@@ -141,6 +186,10 @@
     return `${0.75 + weight * 0.75}rem`;
   }
 </script>
+
+<!-- Top-level by necessity; the handler no-ops unless a lightbox is open, and
+     the lightbox can only open when not exporting. -->
+<svelte:window onkeydown={onWindowKey} />
 
 {#if hasAny}
   <div class="di" data-component="digest-insights">
@@ -178,49 +227,99 @@
         {#if phrase.pronunciation || phrase.part_of_speech}
           <p class="di-pron">{phrase.pronunciation ?? ''}{#if phrase.part_of_speech}<span class="di-pos">{phrase.part_of_speech}</span>{/if}</p>
         {/if}
+        <!-- The clip floats: definition, metrics and usages all flow up beside
+             it, so a short definition can't leave a hole above the usages. -->
         <div class="di-phrase-body">
-          <div class="di-phrase-copy">
-            {#if phraseDefinition}<p class="di-def"><span class="di-def-num">1.</span>{phraseDefinition}</p>{/if}
-          </div>
           {#if phraseMedia}
             <figure class="di-clip">
-              {#if isExport || !phraseMedia.src}
+              {#if isExport}
                 <img src={phraseMedia.poster} alt={phraseMedia.alt ?? phrase.term} />
               {:else}
-                <video
-                  src={phraseMedia.src}
-                  poster={phraseMedia.poster}
-                  autoplay
-                  loop
-                  muted
-                  playsinline
-                  aria-label={phraseMedia.alt ?? phrase.term}
-                ></video>
+                <button
+                  type="button"
+                  class="di-clip-btn"
+                  bind:this={clipTrigger}
+                  onclick={openClip}
+                  aria-label={`Open ${phrase.term} clip larger`}
+                >
+                  {#if phraseMedia.src}
+                    <video
+                      src={phraseMedia.src}
+                      poster={phraseMedia.poster}
+                      autoplay
+                      loop
+                      muted
+                      playsinline
+                      aria-label={phraseMedia.alt ?? phrase.term}
+                    ></video>
+                  {:else}
+                    <img src={phraseMedia.poster} alt={phraseMedia.alt ?? phrase.term} />
+                  {/if}
+                </button>
               {/if}
               {#if phraseMedia.caption}<figcaption>{phraseMedia.caption}</figcaption>{/if}
             </figure>
           {/if}
+          {#if phraseDefinition}<p class="di-def"><span class="di-def-num">1.</span>{phraseDefinition}</p>{/if}
+          {#if phraseMetrics.length}
+            <div class="di-feature-metrics">{#each phraseMetrics as m, i (i)}<strong>{m.value} <small>{m.label}</small></strong>{/each}</div>
+          {/if}
+          {#if phraseUsages.length}
+            <div class="di-usages">
+              {#each phraseUsages as usage, i (i)}
+                <div class="di-usage">
+                  {#if usageLabel(usage.label, usage.speaker)}<span class="di-usage-label">{usageLabel(usage.label, usage.speaker)}</span>{/if}
+                  <span class="di-usage-text">{#each markRuns(usage.text ?? '', phraseTokens) as run, r (r)}{#if run.hit}<b>{run.t}</b>{:else}{run.t}{/if}{/each}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
-        {#if phraseMetrics.length}
-          <div class="di-feature-metrics">{#each phraseMetrics as m, i (i)}<strong>{m.value} <small>{m.label}</small></strong>{/each}</div>
+        {#if phraseOrigin}
+          <p class="di-origin">
+            <b>origin</b> —
+            {#if phraseSourceHref && !isExport}
+              <a href={phraseSourceHref} target="_blank" rel="noopener noreferrer">{phraseOrigin}</a>
+            {:else}{phraseOrigin}{/if}
+          </p>
         {/if}
-        {#if phraseUsages.length}
-          <div class="di-usages">
-            {#each phraseUsages as usage, i (i)}
-              <div class="di-usage">
-                {#if usageLabel(usage.label, usage.speaker)}<span class="di-usage-label">{usageLabel(usage.label, usage.speaker)}</span>{/if}
-                <span class="di-usage-text">{#each markRuns(usage.text ?? '', phraseTokens) as run, r (r)}{#if run.hit}<b>{run.t}</b>{:else}{run.t}{/if}{/each}</span>
-              </div>
-            {/each}
-          </div>
-        {/if}
-        {#if phraseOrigin}<p class="di-origin"><b>origin</b> — {phraseOrigin}</p>{/if}
-        {#if phraseSourceHref}<p class="di-source">origin explainer · <a href={phraseSourceHref} target="_blank" rel="noreferrer">{phraseSourceLabel}</a></p>{/if}
+        <!-- No separate explainer line: the origin sentence above IS the link,
+             and two links to one URL is exactly the busyness being cut. -->
       </section>
     {/if}
 
     {#if hasArtists && callbacks.length}<div class="di-callbacks"><span>Season callbacks</span>{#each callbacks.slice(0, 3) as item, i (i)}<span><b>{item.artist}</b> · {item.sameSubmitter ? "self callback" : "artist revival"}</span>{/each}</div>{/if}
   </div>
+
+  <!-- Web-only clip enlargement. `?export=1` never renders the trigger or this
+       markup at all — the PNG prints the poster inline exactly as before. -->
+  {#if clipOpen && phraseMedia && !isExport}
+    <div
+      class="di-scrim"
+      role="presentation"
+      onclick={(e) => { if (e.target === e.currentTarget) closeClip(); }}
+    >
+      <div
+        class="di-lightbox"
+        role="dialog"
+        aria-modal="true"
+        aria-label={phraseMedia.alt ?? phrase?.term ?? 'clip'}
+        tabindex="-1"
+        bind:this={clipDialog}
+        onkeydown={trapTab}
+      >
+        {#if phraseMedia.src}
+          <video src={phraseMedia.src} poster={phraseMedia.poster} autoplay loop muted playsinline aria-label={phraseMedia.alt ?? phrase?.term}></video>
+        {:else}
+          <img src={phraseMedia.poster} alt={phraseMedia.alt ?? phrase?.term ?? ''} />
+        {/if}
+        <div class="di-lightbox-foot">
+          {#if phraseMedia.caption}<span>{phraseMedia.caption}</span>{/if}
+          <button type="button" class="di-lightbox-x" bind:this={clipClose} onclick={closeClip}>Close</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -241,15 +340,25 @@
   .di-word { display:inline-flex; align-items:baseline; gap:4px; color:var(--mash-pulp); font:700 1rem/1.05 var(--font-display); }
   .di-word:nth-child(3n) { color:var(--amber); } .di-word:nth-child(4n) { color:var(--moss); }
   .di-word small { color:var(--fg-quiet); font:600 9px/1 var(--font-mono); }
-  .di-phrase-body { display:flex; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-top:16px; }
-  .di-phrase-copy { flex:1 1 260px; min-width:0; }
-  .di-clip { flex:0 0 150px; margin:0; }
+  /* flow-root contains the floated clip so the origin rule sits below both columns */
+  .di-phrase-body { display:flow-root; margin-top:16px; }
+  .di-clip { float:right; width:150px; margin:0 0 12px 18px; }
   .di-clip video, .di-clip img { display:block; width:150px; height:150px; object-fit:cover; border:1px solid var(--line); border-radius:var(--r-2); background:var(--ink-0); }
+  .di-clip-btn { display:block; padding:0; border:0; background:none; cursor:zoom-in; }
+  .di-clip-btn:focus-visible { outline:2px solid var(--mash-pulp); outline-offset:3px; }
   .di-clip figcaption { margin-top:6px; color:var(--fg-quiet); font:600 9px/1.3 var(--font-mono); text-transform:uppercase; letter-spacing:.04em; text-align:center; }
-  @media(max-width:520px){ .di-clip { flex:1 1 100%; } .di-clip video, .di-clip img { width:100%; height:auto; aspect-ratio:1; } }
-  .di-term { margin:2px 0 0; color:var(--fg); font:800 clamp(28px,6.5vw,34px)/.95 var(--font-display); letter-spacing:-.02em; }
-  .di-pron { margin:7px 0 0; color:var(--fg-muted); font:400 14px/1.4 var(--font-mono); }
-  .di-pos { margin-left:8px; color:var(--mash-pulp); }
+  @media(max-width:520px){ .di-clip { float:none; width:100%; margin:0 0 12px; } .di-clip video, .di-clip img { width:100%; height:auto; aspect-ratio:1; } }
+  .di-scrim { position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(7,9,12,.62); }
+  .di-lightbox { width:100%; max-width:520px; padding:12px; background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--r-3); }
+  .di-lightbox video, .di-lightbox img { display:block; width:100%; max-height:70vh; object-fit:contain; border-radius:var(--r-2); background:var(--ink-0); }
+  .di-lightbox-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; color:var(--fg-quiet); font:600 9px/1.3 var(--font-mono); text-transform:uppercase; letter-spacing:.04em; }
+  .di-lightbox-x { padding:7px 12px; color:var(--fg); background:var(--ink-0); border:1px solid var(--line-strong); border-radius:999px; font:700 10px/1 var(--font-mono); text-transform:uppercase; letter-spacing:.06em; cursor:pointer; }
+  .di-lightbox-x:hover { border-color:var(--mash-pulp); }
+  /* The word is the whole card, so the word carries the accent; the
+     pronunciation line stays legible but steps back to muted/secondary. */
+  .di-term { margin:2px 0 0; color:var(--mash-pulp); font:800 clamp(28px,6.5vw,34px)/.95 var(--font-display); letter-spacing:-.02em; }
+  .di-pron { margin:7px 0 0; color:var(--fg-quiet); font:400 14px/1.4 var(--font-mono); }
+  .di-pos { margin-left:8px; color:var(--fg-muted); font-weight:600; }
   .di-def { margin:0; max-width:60ch; color:var(--fg-2); font:400 14px/1.6 var(--font-body); }
   .di-def-num { margin-right:8px; color:var(--mash-pulp); font:700 12px/1 var(--font-mono); }
   .di-usages { margin-top:14px; display:grid; gap:10px; }
@@ -259,8 +368,9 @@
   .di-usage-text b { padding:0 3px; color:var(--amber); background:var(--amber-soft); border-radius:3px; font-style:normal; font-weight:700; }
   .di-origin { margin:16px 0 0; padding-top:14px; border-top:1px solid var(--line); color:var(--fg-quiet); font:400 11.5px/1.5 var(--font-mono); }
   .di-origin b { color:var(--fg-muted); font-weight:700; }
-  .di-source { margin:10px 0 0; color:var(--fg-quiet); font:400 10.5px/1.5 var(--font-mono); overflow-wrap:anywhere; }
-  .di-source a { color:var(--mash-pulp); }
+  /* the origin sentence is the link — it stays prose, it doesn't turn blue */
+  .di-origin a { color:inherit; text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:3px; }
+  .di-origin a:hover { color:var(--fg-muted); text-decoration-color:var(--mash-pulp); }
   .di-range, .di-race { display:flex; align-items:center; gap:8px; color:var(--fg-muted); font:600 10px/1 var(--font-mono); }
   .di-range > div, .di-race-track { position:relative; flex:1; height:8px; background:linear-gradient(90deg,var(--mash-pulp-soft),var(--mash-pulp)); border-radius:99px; }
   .di-range i, .di-race-track b { position:absolute; top:50%; width:12px; height:12px; background:var(--fg); border:2px solid var(--mash-pulp); border-radius:50%; transform:translate(-50%,-50%); }

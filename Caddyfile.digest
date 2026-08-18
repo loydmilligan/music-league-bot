@@ -38,6 +38,14 @@
 		file_server
 	}
 
+	# ── Shared digest media (clips, posters) ───────────────────────────────
+	# Small assets referenced by absolute URL from a rendered digest, kept
+	# OUTSIDE /d/<slug>/ so a re-render of that round can't wipe them.
+	handle /_media/* {
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+
 	# ── Shared b-side SPA bundle ────────────────────────────────────────────
 	# Built once at deploy; all league slugs boot from this shared bundle.
 	# The frontend `shell` task copies its Vite build output here.
