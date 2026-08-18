@@ -53,10 +53,12 @@ The repo has accumulated design docs, one-off exports, scratch DBs, and
 sub-project debris. Target end state: current code + a minimum doc set
 (README, CHANGELOG, versioning, PSI_INDEX, active plans).
 
-- [ ] Inventory the root: classify every top-level file/dir (code / active doc
+- [x] Inventory the root: classify every top-level file/dir (code / active doc
       / stale design / data / export / scratch). Note: `design/`, `exports/`,
       loose `*.db` files at root (app.db, bot.db, db.sqlite, league.db…),
-      `.wwebjs_cache.bak-*`, `.env.bak-*`, zips.
+      `.wwebjs_cache.bak-*`, `.env.bak-*`, zips. *(2026-08-17: classified and
+      resolved — 0-byte root DBs + cache backup deleted, the rest committed or
+      gitignored; both stale stashes verified superseded and dropped.)*
 - [ ] Decide archive strategy: `git rm` + tag, or move to `attic/` (out of the
       default working set), or a separate archive repo. Nothing deleted without
       Matt's sign-off — some "stale" design docs are decision records.
@@ -64,10 +66,15 @@ sub-project debris. Target end state: current code + a minimum doc set
       (promote those into `docs/`).
 - [ ] Consolidate DB files: one canonical prod DB (`data/league.db`), backups
       under a single `data/backups/` convention with a retention note.
-- [ ] `.gitignore` pass so scratch artifacts stop landing in status.
-- [ ] Uncommitted-changes triage: 10+ modified tracked files are sitting in the
+      *(2026-08-17: root strays deleted + ignored; `data/league.db.bak-*`
+      backup convention still ad hoc, retention note pending.)*
+- [x] `.gitignore` pass so scratch artifacts stop landing in status.
+      *(2026-08-17: root `*.db`/`*.sqlite`, `.env.bak*`, cache backups,
+      `examples/`, cover-gen output, ML export dumps, design zips.)*
+- [x] Uncommitted-changes triage: 10+ modified tracked files are sitting in the
       working tree from prior sessions (BACKLOG, CHANGELOG, CLAUDE.md, docs…).
-      Commit, revert, or archive each deliberately.
+      Commit, revert, or archive each deliberately. *(2026-08-17: all committed
+      in 7 grouped commits, pushed at `a538ea5`; tree clean.)*
 
 ### WS2 — Digest inventory review
 Know exactly what the digest IS before improving it.
