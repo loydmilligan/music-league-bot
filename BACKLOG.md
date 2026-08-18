@@ -27,6 +27,35 @@ not add `!command` items without deciding that question first.
 
 ## Ranked
 
+### 0. Regulars: mine verbal tics, not topics  (added 2026-08-13)
+
+The Regulars/storylines generator and the chat section both select on *topic*,
+so they surface "asks about league rules" instead of the things the group would
+actually recognize. Two pieces of work, proven by hand on round 147:
+
+**(a) Verbal-tic mining in the regulars generator.** Port the approach in
+`~/Projects/sssc-chat-regulars/scripts/mine_verbal_tics.py` — log-odds with an
+informative Dirichlet prior against the rest of the group, over 1–4-grams,
+openers, laugh spellings, elongations, ALL-CAPS and punctuation habits, tagged
+by flavor (nickname / misspelling / coinage / laugh) so a nickname habit outranks
+a frequent phrase. Bar: 3+ uses across 2+ dates, mostly unused by others. It
+found, in one pass: JB renaming everyone (Palletz 13x/8 dates, Kozh, Kozoil,
+cjwookie, Mashew), Matt's apostrophe-free typing, Jensen's "rember", Grant's
+"ahah", Clements spelling Conor "Connor", Conor's one-word verdicts. Feed
+candidates to the storylines seeds instead of hand-curating
+`STORYLINE_SEEDS` per league.
+
+**(b) "Phrase of the round" detection in the chat section.** A term that (i)
+does not appear in any earlier round's chat, (ii) appears 3+ times in this
+round's window, and (iii) is used by 3+ distinct speakers. Round 147's was
+"chopped unc" — coined by Steiny about Jensen, 7 uses across 4 speakers inside
+36 hours. Deterministic and cheap; the LLM only writes the explanation.
+
+Both were added to the round-147 digest by hand (a `storylines` section row
+inserted directly, since only the seven CHECK-constrained kinds exist). Until
+this is built, adding one costs a manual INSERT + render.
+
+
 ### 1. Live submission / vote counts
 
 Who has and hasn't submitted or voted in the current round. This is the want

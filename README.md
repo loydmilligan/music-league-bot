@@ -1,94 +1,171 @@
 # Music League Bot
 
-A self-hosted toolkit for [Music League](https://musicleague.app/) obsessives. It ingests rounds, generates AI-written digests, publishes per-league public "b-side" sites, and keeps a WhatsApp group bot in the loop — all from a single operator app.
+A private, self-hosted companion for a group of friends playing
+[Music League](https://musicleague.app/). It ingests each league's rounds, keeps a WhatsApp
+bot in the group chat, and — the centre of gravity — generates a **digest**: a designed,
+per-round recap page that is reviewed by a human, exported to PNG/PDF, and shared back into
+the chat.
 
-## Features
+Six leagues run through it today: `boarz-ii-men`, `sssc`, `second-best`, `fam-jam`,
+`hip-jammers`, `nostalgia-pit`. Each has seasons; each season has rounds.
 
-### Operator app (`ui/`)
-SvelteKit dashboard (v1.1.1) for league management. Runs as the `bot-ui` Docker service on port 3002.
+Not affiliated with Music League. Not multi-tenant, not a product — one operator, one server.
 
-- **Rounds & history** — browse every round, see scores, and drill into submissions.
-- **Shortlist** — a queue of Spotify/YouTube tracks to submit to the next round.
-- **Digest pipeline** — generate → refine → finalize an AI-written round recap. Uses OpenRouter (Claude Sonnet by default).
-- **Content screen** — publish and update each league's b-side site without touching the command line. Shows per-league state (update-ready / up-to-date / not-published) and surfaces an archive-update modal with section-level refresh / hold / lock controls and steerable rewrites.
-- **Player Research** — per-player stats and taste fingerprints used to seed LLM prompts.
-- **Settings** — API tokens, Spotify auth, WhatsApp group config.
-
-### Public b-side site (`bside/`)
-A per-league, no-login, static micro-site — think Spotify Wrapped meets a music-nerd yearbook. Each league gets a private URL at `digest.mattmariani.com/{slug}` (slugs are 22-char random base64url strings; no enumeration). Three routes:
-
-- **League Home** — hero KPIs, superlative reel, member grid, season moments.
-- **Player Profile** — signature superlative, Taste Fingerprint (artist/genre/era chips + spectrum sliders), Biggest Fan / Friendly Hater, "Your People" (Vote Together + Taste Twins), discovery playlist.
-- **Digest Archive** — past rounds by season, deep-linking to full digest artifacts.
-
-### Digest pipeline
-The `digest-static` Caddy service (`port 8088`) serves both per-round HTML digest artifacts (`/d/<slug>/`) and the b-side SPA bundle (`/_bside/`). The pipeline: export a round → LLM draft → operator refine → finalize → share link.
-
-### WhatsApp bridge (`src/bot/`)
-Connects via `whatsapp-web.js`. Watches allowed group IDs, parses `!song` commands, resolves Spotify/YouTube links, and manages a per-group shortlist. Can DM the league owner with status updates.
-
-### Browser extension (`extension/`)
-Chrome Manifest V3 extension. One-click ingest of Spotify tracks/albums/playlists and YouTube Music tracks/playlists/albums into the shortlist. Reads the active tab, detects the resource type, and POSTs to `/api/ingest/songs`. No build step required.
-
-## Architecture
+## Architecture at a glance
 
 ```
-music-league-bot/
-├── src/            # Bot + API server (Node.js / TypeScript)
-│   ├── bot/        # WhatsApp message handler
-│   ├── api/        # REST API server (port 3001)
-│   ├── music/      # Music League round ingestion
-│   ├── rules/      # Rules engine
-│   ├── spotify/    # Spotify adapter + OAuth
-│   ├── storage/    # SQLite (better-sqlite3)
-│   ├── whatsapp/   # whatsapp-web.js client
-│   └── utils/
-├── ui/             # SvelteKit operator app (port 3002 in prod)
-├── bside/          # Svelte SPA — public per-league site (no SSR)
-├── extension/      # Chrome extension (no build step)
-├── data/           # SQLite databases + season exports (gitignored)
-└── digests/        # Rendered digest artifacts + b-side bundles (gitignored)
+Music League export (zip/CSV)  ─┐
+WhatsApp group chat ────────────┤
+  via GroupRelay (phone) ───────┤
+Spotify · Last.fm · lrclib ─────┤
+                                ▼
+                         data/league.db  (SQLite, one file, all leagues)
+                                │
+                                ▼
+                    bot-ui  (SvelteKit operator app, :3002)
+                     ├── round history, shortlist, player research
+                     ├── digest pipeline: capture → LLM draft → human
+                     │   review → finalize → render
+                     └── Puppeteer export → digests/  ──► digest-static (:8088)
+                                │                          public share URLs
+                                ▼  (HTTP, polled)
+                       bot  (whatsapp-web.js, holds the session)
+                                ▼
+                          the group chat
 ```
 
 **Docker services** (`docker-compose.yml`):
 
-| Service | Image | Port | Role |
+| Service | Build | Port | Role |
 |---|---|---|---|
-| `bot` | `music-league-bot-base:chromium` | — | WhatsApp bot process |
-| `api` | `music-league-bot-base:chromium` | 3001 | REST API |
-| `bot-ui` | `Dockerfile.ui` | 3002 | Operator SvelteKit app |
-| `digest-static` | `caddy:2-alpine` | 8088 | Static file server for digests + b-side |
+| `bot` | `Dockerfile` | — | WhatsApp client (`whatsapp-web.js`), digest poller, control server (:3003 in-container) |
+| `api` | `Dockerfile` | 3001 | REST API, email/IMAP poller, `POST /webhooks/relay` chat ingestion |
+| `bot-ui` | `Dockerfile.ui` | 3002 | SvelteKit operator app — the thing you actually use |
+| `digest-static` | `caddy:2-alpine` | 8088 | Read-only static server for `digests/` (`/d/<slug>/`, `/_media/`, b-side slugs) |
 
-All app images share a base image (`music-league-bot-base:chromium`) that bundles Chromium and fonts for Puppeteer-driven digest PNG export. Rebuild the base only when `Dockerfile.base` changes.
+`bot` and `api` share one image built from `Dockerfile`, which is `FROM
+music-league-bot-base:chromium` — a stable base carrying Chromium and fonts so app rebuilds
+don't re-download it. Rebuild the base only when `Dockerfile.base` changes:
+`docker build -f Dockerfile.base -t music-league-bot-base:chromium .`
 
-## Quick start
+`digest-static` sits behind a separate public Cloudflare tunnel → `digest.mattmariani.com`;
+everything else is private.
 
-See [QUICKSTART.md](QUICKSTART.md).
+## Repo layout
+
+```
+src/               # bot + api (Node/TypeScript, run with tsx)
+  bot/             #   message handler, intent classifier, URL detection
+  whatsapp/        #   whatsapp-web.js client + send guard
+  digest/          #   poller → autoPost/manualSend: posts finished digests
+  control/         #   local control server (:3003) — /send etc.
+  email/           #   IMAP poller (Music League notification mail)
+  api/             #   REST server, Last.fm, ML auth heartbeat
+  spotify/ resolver/ rules/ parser/ storage/ config/
+ui/                # SvelteKit operator app — most of the product lives here
+  src/lib/digest/  #   the digest pipeline (see below)
+  src/lib/db/      #   read models over league.db
+  src/routes/api/  #   ~34 endpoint groups the UI and MCP server call
+bside/             # Svelte SPA for the public per-league site
+mcp-server/        # stdio MCP server over the bot-ui API (round + digest tools)
+extension/         # Chrome MV3 extension — one-click song ingest, no build step
+scripts/           # one-off + operational scripts (ML rebuild, imports, auth)
+docs/              # see docs/README.md
+data/              # SQLite + per-league exports (gitignored)
+digests/           # rendered digest artifacts, served by digest-static (gitignored)
+```
+
+## Running it
+
+**Prerequisites:** Node 22, npm, Docker + Docker Compose. Setup and env vars are in
+[QUICKSTART.md](QUICKSTART.md).
+
+```bash
+npm install                     # root (bot + api)
+cd ui && npm install            # operator app
+```
+
+Development:
+
+| What | Command | Notes |
+|---|---|---|
+| Operator app | `cd ui && npm run dev` | Vite dev server on :5173 — **but see the digest gotcha below** |
+| Bot | `npm run dev` | `tsx src/index.ts`; needs a WhatsApp session and `OWNER_PHONE_NUMBER` |
+| API | `npm run api` | :3001 |
+| b-side site | `cd bside && npm run dev` | :5190 |
+
+Tests and checks:
+
+```bash
+npm test                        # root vitest
+cd ui && npm test               # operator-app vitest (the bulk of the suite)
+cd ui && npm run check          # svelte-check
+```
+
+Deploy (see [docs/dev-loop-playbook.md](docs/dev-loop-playbook.md) for the full rules):
+
+```bash
+docker compose build bot-ui && docker compose up -d --force-recreate bot-ui
+```
+
+## The digest pipeline
+
+The operator flow lives in `ui/src/lib/digest/`:
+
+- `capture.ts` — freeze the round's data (votes, submissions, chat) for the draft
+- `pipeline.ts` — declarative run order for LLM sections; parallel "EPs" split by skips,
+  adjacent same-model sections merged into one call
+- `llm.ts` — the OpenRouter call, section schemas, and `SECTION_KINDS`
+- `runner.ts` / `runnerLoop.ts` / `jobs.ts` — the job state machine (capture → generate →
+  render → approval → finalize)
+- `DigestSection.svelte` + the per-kind visual components — the rendered page
+- `export.ts` — Puppeteer screenshots the `.dg-export` element at 800px (desktop) and
+  430px (mobile), writes to `digests/`
+- `approvals.ts` / `ntfy.ts` — the human approval gate; approve via ntfy, not a button
+
+There are exactly **seven LLM section kinds** — `podium`, `villain`, `flow`, `consensus`,
+`quotes`, `chat`, `storylines` — and the set is CHECK-constrained in the schema. New section
+ideas ride on an existing kind rather than adding one.
+[docs/digest-sections.md](docs/digest-sections.md) is the section-by-section tour.
+
+## Gotchas that will bite immediately
+
+- **The digest page crashes on hydration under `npm run dev`.**
+  `ui/src/routes/digest/[roundId]/+page.svelte` imports `SECTION_KINDS` from
+  `$lib/digest/llm.js`, and `llm.ts` imports `node:crypto` at module scope. Vite's dev
+  bundling pulls that into the client. Verify digest UI against a **production build**
+  (`npm run build` + a copy of `data/league.db`), never the dev server.
+- **`rounds.phase` is dead data.** The column exists and is CHECK-constrained, but of 115
+  rows it holds only `complete`, `not-started`, and NULL — there has never been a `voting`
+  row. Derive phase from the deadlines via `ui/src/lib/lifecycle.ts` instead.
+- **`.dockerignore` must keep excluding `ui/node_modules`.** It does now (`**/node_modules`).
+  When it didn't, the image silently baked stale compiled server code and deploys appeared
+  to succeed while changing nothing. After any deploy, assert the thing you shipped is
+  actually live.
+- **One WhatsApp session, in the `bot` container.** Only one process can hold the LocalAuth
+  session, which is why `bot` polls bot-ui over HTTP instead of importing `$lib`. If the
+  session logs out, the control server never binds and digest sends fail with
+  `fetch failed` — re-authenticate rather than requeueing the job.
+- **The bot's own SQLite is separate.** `src/index.ts` opens `data/submissions.db`; the
+  league/digest data everything else reads is `data/league.db`.
 
 ## Docs
 
-| Doc | What it covers |
+| Doc | Read it when |
 |---|---|
-| [QUICKSTART.md](QUICKSTART.md) | Prerequisites, clone, env, dev server, prod deploy |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, tests, branch conventions, where docs live |
-| [ui/README.md](ui/README.md) | Operator app dev details |
-| [bside/README.md](bside/README.md) | Public b-side site — build + serve |
-| [extension/README.md](extension/README.md) | Chrome extension install + use |
-| [docs/](docs/) | Design docs, design briefs, sprint coordination |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [QUICKSTART.md](QUICKSTART.md) | Setting the project up from scratch |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Tests, branch conventions, where docs go |
+| [docs/README.md](docs/README.md) | Looking for any other document |
+| [docs/HIGH_LEVEL_DESIGN.md](docs/HIGH_LEVEL_DESIGN.md) | You need the architecture in depth |
+| [ui/README.md](ui/README.md) · [bside/README.md](bside/README.md) · [extension/README.md](extension/README.md) · [mcp-server/README.md](mcp-server/README.md) | Working inside that subproject |
+| [CHANGELOG.md](CHANGELOG.md) | "When did this change?" |
 
 ## Tech stack
 
-- **Runtime:** Node.js 22, TypeScript
-- **Operator app:** SvelteKit 2, Svelte 5, Tailwind CSS 4, adapter-node
-- **Public site:** Svelte 5 SPA (Vite, no SSR)
-- **Storage:** SQLite via better-sqlite3
-- **WhatsApp:** whatsapp-web.js
-- **Digest screenshots:** Puppeteer (Chromium)
-- **Static serving:** Caddy 2
-- **LLM:** OpenRouter (Claude Sonnet default)
-- **Extension:** Chrome Manifest V3, vanilla JS
+Node 22 · TypeScript · SvelteKit 2 / Svelte 5 / Tailwind 4 (adapter-node) ·
+SQLite via better-sqlite3 · whatsapp-web.js · Puppeteer (puppeteer-core + system Chromium) ·
+Caddy 2 · OpenRouter (`anthropic/claude-sonnet-4-5` by default) · Chrome MV3 extension.
 
 ## License
 
-MIT. Private friend-group project — not affiliated with Music League.
+MIT. Private friend-group project.

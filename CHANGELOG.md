@@ -4,6 +4,332 @@ All notable changes to the Music League Bot webapp are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/);
 versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y.Z`).
 
+> **Unreleased.** Everything from here down to v1.13.0 shipped after that release
+> but has no version of its own — `ui/package.json` is still `1.13.0`, so these
+> sections are grouped by date and work-stream rather than by release. Sprint
+> numbering also stopped after sprint-46, so entries cite the work-stream, task
+> or phase name the commits themselves use.
+
+## 2026-08-13 — The style shelf
+
+**One YAML field picks the layout.** The Regulars and The Coinage are now
+hand-authored as YAML, and a single `style:` line per entry chooses how it
+renders — so a round can feel bespoke without new code.
+
+### Visible (UI)
+
+- **Seven layouts for The Regulars**, behind one `style:` field: `quote-led`
+  (the fallback), `spotlight`, `call-response`, `edit-history`, `roster-map`,
+  `refrain` and `buzzer`. Each puts the tell itself first instead of burying it
+  under a paragraph. A declared style whose payload is missing degrades to
+  `quote-led`, so half-written YAML still renders. (style shelf)
+- **The Coinage** — the phrase of the round as an Urban-Dictionary entry (term,
+  pronunciation, part of speech, numbered definition, original + best usage with
+  the term highlighted, origin and source link), read off
+  `stats_content_json.phrase`. It deliberately gets **no** style registry: it has
+  exactly one style, and one adapter is a hypothetical seam, so the existing
+  phrase card was extended in place with `style:` kept forward-compatible.
+- **The Usual Suspects** — the cast section, retitled and rebuilt around one
+  idea per card after the shipped version read as too busy. A new optional
+  `player` field lets `name` carry the *archetype* (The Editor, The Consul) with
+  the person underneath; it defaults to `name`, so pre-existing rows render
+  unchanged. The redline is now the hero of `edit-history`, `call-response` lets
+  the reply read as the content and the prompt as context, and the layout name
+  is no longer printed to the reader — it was implementation detail on a section
+  criticised for noise.
+- **YAML editing mode** in the section inline editor — a Fields ⇄ YAML toggle on
+  the review screen. The DB column stays JSON: no migration, and no new
+  `digest_sections.kind`.
+
+### Under the hood
+
+- **The Guesser's season arc** — `seasonHitRates[]`, `seasonRate` and
+  `seasonRoundCount` on `GuesserData`. The arc is capped to the last 10 rounds so
+  the strip stays readable at the 800px export width, while the average stays
+  whole-season; the caption names both sets once they diverge, so it can never
+  imply the average covers only the bars on screen.
+- **Emphasis is never injected as HTML** — all marking goes through run arrays.
+
+### Fixes
+
+- **`each_key_duplicate` killed the PNG export.** A duplicated hand-authored
+  label on the legacy Coinage metrics path took hydration down for the whole
+  document, and the export with it. Every `{#each}` in the insights block and the
+  shelf is now index-keyed. Several of these were pre-existing.
+- **`phrase.source` went into `href` unguarded** — `javascript:` URLs rendered as
+  live links on a publicly published page. Now http/https only, failing closed.
+- **Pre-redesign storylines rows lost their paragraph** — `normalizeCast` read
+  only `note`; it now falls back to `headline`.
+- **Long unbroken tokens escaped the export frame** (839px inside a 798px frame),
+  silently clipping the PNG. Shelf text now wraps at word boundaries.
+
+## 2026-08-05 → 2026-08-06 — SSSC, The Guesser, The Regulars
+
+**A third league and two deterministic people-sections.** SouthSide Secret Club
+comes aboard with Discord as a first-class chat source, and the digest gains two
+sections about the players rather than the songs.
+
+### Visible (UI)
+
+- **The Guesser** — a deterministic ledger of one player's habit of naming who
+  submitted each song, drawn as a play-order "descent" down the playlist with a
+  season hit-rate arc, an "eludes him" list and a "littermates" mix-up pair. No
+  LLM: every number comes from vote comments resolved against the roster. Opt-in
+  per league via `guesser_*` draft columns.
+- **The Regulars / Storylines** — a cast section fed by deterministic evidence
+  gathering over hand-authored seeds, with per-league opt-in and gen-time gating.
+- **SouthSide Secret Club onboarded** (`sssc`, excluded from combined stats) via
+  the hardcoded league SEED.
+
+### Under the hood
+
+- **Deterministic vote-comment guess resolver** — precomputes despaced candidate
+  keys and matches them against whole-word 1–4 token concatenated runs of the
+  comment, exactly or fuzzily (candidate key ≥5 chars, edit distance ≤1, length
+  difference ≤1). Longest match wins on ambiguity. This catches both spaced
+  guesses against concatenated roster labels ("Poetry in Noise" vs
+  `PoetryinNoise`) and single-character typos (`a1merson` vs `a1mrson`), which
+  the previous space-collapsed substring match missed.
+- **Discord as a first-class chat platform** — a `discord` identity type (added
+  by a guarded table rebuild, with a test proving existing `player_identities`
+  rows survive), a Discord thread-log parser, and scripts to ingest the SSSC
+  thread and materialize its roster identities.
+- **`storylines` digest section kind** — added by a rebuild that preserves regen
+  children.
+- **Round intelligence** — artist callbacks across prior seasons, five additive
+  `digest_drafts` columns, and top-section variants.
+
+## 2026-07-23 → 2026-07-29 — Voting Phase Lab, Theme Strategy Brief, chat superlatives
+
+**Three surfaces that help before and after the vote.** A scratchpad for
+allocating your own votes, a strategy brief for picking a submission, and a
+chat-analytics page for the group.
+
+### Visible (UI)
+
+- **Voting Phase Lab** — a collapsible lab on the active-round and round-detail
+  pages: allocation steppers with an exhaustion-aware meter and per-song cap,
+  notes with debounced autosave, a validated ballot summary you can copy out, a
+  season vote-budget editor in settings and a per-round override in the header.
+  Songs load from the round's Spotify playlist. (voting-phase-lab)
+- **Track lens and comment drafting** — a personalized per-song lens (explicitly
+  *not* a vote recommendation) plus draft vote comments in the owner's voice,
+  built on an owner taste fingerprint and a cross-league voice sample, cached by
+  inputs. (voting-phase-lab)
+- **Theme Strategy Brief** — winner DNA, cellar traps, what-to-submit and
+  language inference for a theme, on top of a deterministic data layer
+  (standings, podium/cellar, familiarity, scoring) and an audience-aware exposure
+  model of who in the target league already saw the owner's past picks. Cached in
+  a `theme_briefs` table and exposed as the `get_theme_brief` MCP tool.
+  (theme-strategy-brief)
+- **Boarz Tape chat superlatives** — a shareable static page: an award roll, an
+  interactive Mixing Board (9 metrics × 3 normalizations), a day/hour activity
+  heatmap with a person filter, the biggest-word hero, and a track list of every
+  music link shared in the chat. Also builds a public Spotify playlist from the
+  round-1 podium plus every resolved track.
+- **"The Off Switch"** — a thread-ender section leading the superlatives page:
+  who ends conversations, and about what. Drop-off is the last message before a
+  long silence, thresholded at 30 minutes (the chat's own 97th percentile — median
+  gap is 24 seconds) and counted in **waking** minutes only, with the clock
+  stopped 01:00–07:00 so being last before bed doesn't score.
+- **Post-vote insight surface** — a deterministic round-intelligence block
+  (`roundInsights.ts`, `DigestInsights.svelte`) with a word cloud, taking over
+  from the old stat strip.
+
+### Under the hood
+
+- **Generic chat prompt engine** (`src/chat/prompts/`) — a question/answer engine
+  that knows nothing about songs or Music League. A prompt is "a question posed
+  to a chat whose answers resolve to a known option set"; guess-the-submitter is
+  just the first caller. Sanitize → resolve (aliases, exact, concatenation,
+  prefix, fuzzy) → template → engine, with the store as the only impure part.
+  Answers arrive as a quote-reply, a `#hashtag`, or a private message.
+- **Readability metrics reworked** — Flesch-Kincaid replaced with
+  volume-adjusted word-difficulty rates, grade level restored as an adjusted
+  Gunning Fog, plus a Mastery metric (long *and* rare words, used often);
+  vocabulary now counts size as well as variety.
+- **`/media` route on the bot control server** for sending images.
+
+### Fixes
+
+- **Round phase is derived from deadlines**, not the stale `rounds.phase` column.
+- **Duplicate-key hydration crash** in the lab's song list — rows are keyed by
+  submission id.
+- **Chat identity resolved across phones** — relay `sender_handle` is captured,
+  identities are league-scoped from `player_identities`, and the chat group
+  itself is never counted as a participant.
+- **Gmail IMAP connections are never leaked**; searches are date-bounded and
+  time-bounded.
+
+## 2026-07-16 → 2026-07-21 — Automated digest pipeline + notifications
+
+**The digest can now produce and send itself, with a human gate.** A job queue,
+a runner state machine, an approval step over ntfy, and a multi-channel
+notification dispatch.
+
+### Visible (UI)
+
+- **Notifications settings panel** — config cards, a routing grid and a
+  per-channel test send. (Phase 2)
+- **Per-league digest mode and default generation params.**
+
+### Under the hood
+
+- **`digest_jobs` table and job queue** — enqueue/claim/transition/fail, with a
+  job enqueued when email ingest records `voting_ended`. Retry with backoff and
+  requeue for failures; alerts fire only on terminal failure. A one-job-in-flight
+  guard serializes ML exports, excluding human waits.
+- **Runner state machine** — capture → generate → render → auto-finalize, with
+  fakes for testing and a claim guard so a throw can never reject the tick.
+- **Approval gate** — single-use tokens, public approve/deny endpoints behind
+  two-layer auth, and a `structuralReviewReason` resolver-parity review gate that
+  holds a draft for a human when it looks off. (Phase 2)
+- **ntfy module and multi-channel dispatch** — publish plus approval/review/
+  failure builders, then generalized into a `Channel` interface with ntfy and
+  WhatsApp adapters and a `notify()` fan-out over the routing grid. The bot's
+  `/notify` route lets the bot DM the owner on behalf of a bot-ui dispatch.
+- **Scheduled-send resolver** with a season-final hold, per-league send targets,
+  claim-before-send idempotency, and a fail-closed send guard on proactive posts.
+- **Bot control server** — trigger a poll or send any round to any group, bound
+  to the compose network for cross-container `/trigger`.
+- **Seasons carry their source** — `source` and `source_competition_id` columns,
+  backfilled for all 11 seasons, with a shared DB-backed season→source resolver.
+  The rebuild, reconcile and auth-trigger scripts now resolve the league id from
+  the DB and keep the hardcoded pin only as a fallback. (SP1)
+
+### Fixes
+
+- **`ml-rebuild` guards deletes against data loss** and pins all targets.
+- **Chat windows a new season's first round from `created_at`**, not a future
+  deadline; live rounds stay visible and season counts are true.
+
+## 2026-07-01 → 2026-07-08 — Sonic Signature, MCP server, research cascade
+
+### Visible (UI)
+
+- **Sonic Signature** — a league-relative taste fingerprint on the b-side and
+  research surfaces, computed client-side from raw interactions and live
+  settings. Archetypes are league-relative: a player is named by how they differ
+  from their league rather than from an abstract center, so a mainstream family
+  still reads as distinct. Ships with a 48-name tiered archetype table, downvote
+  repulsion, lyrical damping and spread. (taste-waveform)
+- **System-wide Taste Waveform config** in settings — palette, axis order, line
+  and node style, amplitude and band knobs, with a live sample, a league→player
+  picker with full-profile preview, a league separation score, and apply-to-live.
+- **Card image share/download** for a signature, client-side.
+- **Collapsible settings panels** — App Settings and Music League Setup collapse
+  by default, with persisted collapse state.
+- **History → League Research tab** (heatmap / drift / genre) and song metadata
+  on Theme Research pick rows.
+- **Digest section controls reach parity** — Stats, Standings and Tastemaker gain
+  exclude/lock/regen; a per-section batch regen queue for prose sections; a
+  queued section state; and a cosmetic lock on the next-round preview.
+- **Missing-popularity panel** on the digest prepare screen, with a manual
+  popularity override endpoint.
+
+### Under the hood
+
+- **MCP server** — package scaffolding and an HTTP client, then tools for
+  `resolve_round`, song lists, H2H random matchups, digest generation,
+  `list_leagues`, `list_rounds`, `get_active_rounds`, `search_spotify` and
+  `import_round_data`, backed by new `GET /api/leagues`, `/api/rounds/list` and
+  `/api/rounds/resolve` endpoints.
+- **Research cascade and H2H random pairing** — soft-removal fields on
+  `research_songs` with an `includeRemoved` filter, a cascade-add endpoint, an
+  `h2h_pending_matchup` table and random-pairing mode across four new routes.
+- **Popularity, honestly** — `fetchSpotifyPopularity` batched in the shared
+  client, a `song_popularity.popularity_source` column, and
+  `recomputePopularityProxies` (uniform percentile with calibrated Spotify
+  ranking), recomputed at digest prepare and generate.
+- **League chat auto-fetched** over the round window into generation.
+- **Configurable Tastemaker archetype bucket boundaries.**
+
+### Fixes
+
+- **Robust JSON extraction from LLM output** (lenient fence + brace-slice),
+  fixing intermittent ` ```json ` parse 500s.
+- **Honest prep checks** — tastemaker coverage matches the `getDiscoverability`
+  gate, a chat-availability row was added, and a Spotify token failure no longer
+  500s the recompute.
+- **`TasteSettingsSchema` moved to `schema.ts`** — SvelteKit rejects non-handler
+  exports from `+server.ts`, which was 500ing both GET and POST.
+- **Operator app subdomain migrated** `mlbot2` → `mlb37.mattmariani.com`.
+
+## 2026-06-23 → 2026-06-30 — Metadata queue, universal song card, avatars
+
+### Visible (UI)
+
+- **Song metadata queue panel** in settings — a digest-readiness block, a
+  coverage matrix, a failures list and an auto-enrich footer. Then redesigned
+  around a status ladder: scope-aware aggregation and hierarchy, metric tiles
+  with monotonic colors and filter state, per-job-type segmented rollups, a
+  hierarchy navigator, a heatmap view, per-song cards with per-element run, and
+  triage with grouped failures and bulk retry/dismiss. (metadata-queue)
+- **Universal song card** — one `SongCard`/`SongList` with canonical types and
+  adapters, migrated across shortlist, research, search, chat and history,
+  including a mobile `SongSheet` and a `SongCompare` H2H surface.
+  (unicard Phase 0–4)
+- **Player avatars** — generated via OpenRouter image models or uploaded, with a
+  settings editor (traits including race, hair style and color, gender-scoped
+  styles, age shift), avatars in the read model and standings chart with
+  rank+arrow badges, a regenerate-themed-avatars checkbox in the digest and
+  b-side modals, and per-player generation cost in the roster. Image-gen cost is
+  captured into `llm_cost_log`. (avatars Task 1–8)
+- **Music League email ingestion** → a real round phase timeline, with an
+  email-poller status panel in settings.
+- **b-side UI polish** — scroll fade, semantic icons, a member-wins badge, OG
+  meta and card-style history rows.
+
+### Under the hood
+
+- **Unified metadata queue** — a `song_metadata_queue` table and helpers,
+  Last.fm and LRCLIB provider handlers, and a single worker replacing the YTM
+  worker. Jobs are enqueued on zip import and shortlist add; audio analysis moved
+  from synchronous to async enqueue; single-song enrich, status, fill-gaps and
+  retry endpoints were added, and `ytmQueue.ts` retired. (queue Task 12)
+- **Audio analysis wired in** (`sintel`), with uv and a sintel mount added to the
+  bot-ui container.
+- **Lyrics word/line counts** captured for the wordiness axis.
+- **Prep checks extended** with five metadata coverage rows.
+
+### Fixes
+
+- **Avatar re-uploads show immediately** — R2 keys are versioned, and the base
+  preview cache-busts on the R2 key rather than a resettable counter.
+- **Audio jobs no longer wedge the metadata queue** in `processing`.
+- **Last.fm API key read at call time**, not module load, with an 8s rate gate.
+- **`effect_update_depth_exceeded` infinite loop** in the digest cover-data
+  `$effect`.
+- **Async job pattern for the b-side update** to beat a Cloudflare 524.
+- **Adapter-node `BODY_SIZE_LIMIT` raised** so avatar uploads parse.
+- **Chat is reachable on phones** — a mobile master-detail layout — and
+  submission-phase chat is no longer orphaned, via contiguous round windows.
+
+## 2026-06-19 → 2026-06-22 — Chat capture and history
+
+### Visible (UI)
+
+- **Chat Content History tab**, a per-round Chat History tab and a Settings Chat
+  section, scoped to leagues with a season filter, a paginated thread viewer
+  (last 100 messages with Load older) and an unmapped-league empty state.
+  (chat-history)
+
+### Under the hood
+
+- **GroupRelay capture wired end to end** — `chatMessagesDb` and the relay
+  handler speak the GroupRelay `CaptureBatch` format, with `RELAY_DEBUG` logging
+  of the raw payload and per-message disposition, and a natural-key unique index
+  on `chat_messages` for dedup.
+- **`mlb-run` and `mlb-download` CLI scripts**, with WhatsApp zip auto-ingest
+  from `~/Downloads/mlb-chat/`.
+
+### Fixes
+
+- **`each_key_duplicate` crash in `BubbleThread`.**
+- **The `./data` volume is mounted** so the api service can read and write the
+  sqlite db.
+- **Digest kebab move-up/down** now swaps section positions.
+
 ## [1.13.0] — 2026-06-19
 
 **sprint-46 — Archive pipeline.** The generation pipeline now drives **b-side
