@@ -80,3 +80,26 @@ docs/*-handoff/**/screenshots/
 
 # Python bytecode and cache
 __pycache__/
+
+# Stray root-level DB files (real data lives in data/) and env backups
+/*.db
+/*.sqlite
+/.env.bak*
+
+# WhatsApp cache backups (docker-owned; regenerable)
+.wwebjs_cache.bak*/
+
+# design-sync archived bundles (copies of source, like .design-sync/bundle)
+.design-sync-archive/
+
+# Design handoff zips (unzipped/curated content is what's tracked)
+design/*.zip
+
+# Local media inputs for cover-gen / digest clips (large binaries, not source)
+/examples/
+
+# cover-gen generated output
+scripts/cover-gen/out/
+
+# Raw Music League export dumps (regenerable via leagues export; zip re-importable)
+exports/music-league-export-*
