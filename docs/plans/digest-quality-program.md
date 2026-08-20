@@ -296,6 +296,16 @@ Flow per round:
 
 Drop raw observations here after each punch-up session; fold into workstreams.
 
+- 2026-08-20 (R148, first full HiL loop): autorun→ntfy→/hil→punch-up ran end to
+  end with zero manual steps before the editorial pass. Findings: (a) the R148
+  draft emitted podium items keyed `song` where the renderer reads `title`, so
+  every podium song title rendered blank — schema drift, worth a shape check in
+  verify_facts; (b) generation skipped `storylines` because boarz-ii-men is not in
+  `storylines_section_leagues` even though R147 shipped a Regulars section —
+  per-league opt-in and per-league practice have diverged; (c) `mention_inventory`
+  counts "CJ Wookie" but not "Conor", so a heavily-featured player read as
+  under-mentioned — the boarz alias map needs CJ Wookie→Conor; (d) ratings_json is
+  still terminal — the punch-up reads it by hand.
 - 2026-08-16 (R139): true-tie cascade needed manual derivation; `~ Sarah`
   narrow-space identity trap; phrase-card media path works well for one-off
   photos; single-open accordion + shimmer improved section discoverability;

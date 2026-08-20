@@ -1,0 +1,79 @@
+# R148 (boarz-ii-men) — hand-authored Regulars + Coinage, punch-up pass 2026-08-20.
+# Written straight into digest_sections.content_json (draft-148-985cb17b-storylines)
+# and digest_drafts.stats_content_json. Generation SKIPS storylines for this league
+# (settings.storylines_section_leagues = {"sssc":true}), so a full regen drops it —
+# re-apply from this file. Same shape as design/r147-regulars-coinage.yaml.
+
+round: 148
+league: boarz-ii-men
+storylines:
+  title: The Usual Suspects
+  cast:
+  - name: The Editor
+    player: Mashew
+    type: self-corrector
+    style: edit-history
+    motif: double-edits
+    note: 'The Editor shows his face by sending the same message twice. Thirty-three times
+      this round — and the second pass is not always an improvement.
+
+      '
+    stats:
+    - value: 33
+      label: posts sent more than once
+    - value: 3
+      label: versions of one post
+    example:
+      text: And this is Jon's rule too... Try not to submitted a song by an artist that has
+        already been submitted, it should warn you
+      repairs:
+      - was: submit a song
+        now: submitted a song
+      caption: the rule, restated worse · aug 17
+  - name: The Consul
+    player: Conor
+    type: one-word oracle
+    style: call-response
+    motif: one-word rulings
+    note: 'The Consul does not spend a second word where one will hold. The ruling comes down;
+      the chapter moves on. This week the docket included his own conduct.
+
+      '
+    exchanges:
+    - prompt: 'Grant: Conor did you just reply to your own text'
+      reply: Correct.
+    - prompt: 'JB: Top four and I''m not going lower'
+      reply: Deal
+    - prompt: 'Mashew: Approval too strong'
+      reply: Tolerance?
+  note: ''
+stats:
+  phrase:
+    style: dictionary
+    term: carrot box
+    pronunciation: /ˈkarət bɒks/
+    part_of_speech: verb · league-internal
+    definition: 'To bait an opponent into a mistake by dangling something he wants — a decoy,
+      a tell, a plausible wrong answer. Never defined in the chat; this entry is reconstructed
+      from twelve uses. Jimmy asked outright on aug 6 — "What does carrot boxing mean? I looked
+      it up and the internet doesn''t even know" — and the league moved on without answering
+      him.
+
+      '
+    coined:
+      by: Mashew
+      date: '2026-07-30'
+      at: the league
+      context: 'first recorded use: "Worried he''s carrot boxing me though"'
+    stats:
+      uses: 12
+      speakers: 4
+      prior_rounds: 3
+    usages:
+    - label: original
+      speaker: Mashew
+      text: Worried he's carrot boxing me though
+    - label: in the wild
+      speaker: Mashew
+      text: I wouldn't normally telegraph my intentions, but I'm just too damn excited to
+        play carrot box with something this good, 'Booty Man' for record of the season!
