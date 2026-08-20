@@ -53,27 +53,27 @@ stats:
     term: carrot box
     pronunciation: /ˈkarət bɒks/
     part_of_speech: verb · league-internal
-    definition: 'To bait an opponent into a mistake by dangling something he wants — a decoy,
-      a tell, a plausible wrong answer. Never defined in the chat; this entry is reconstructed
-      from twelve uses. Jimmy asked outright on aug 6 — "What does carrot boxing mean? I looked
-      it up and the internet doesn''t even know" — and the league moved on without answering
-      him.
+    definition: 'To bluff a man into the wrong read — to hold his eye while holding the box
+      you know is empty. From the "Carrot in a Box" game on the British panel show 8 Out of
+      10 Cats, in which two players share one carrot and only one of them knows where it is.
+      The league has never written the rule down: Jimmy asked outright on aug 6 — "What does
+      carrot boxing mean? I looked it up and the internet doesn''t even know" — and never
+      got an answer.
 
       '
     coined:
-      by: Mashew
-      date: '2026-07-30'
-      at: the league
-      context: 'first recorded use: "Worried he''s carrot boxing me though"'
+      by: Sean Lock
+      context: in the "Carrot in a Box" bluff on 8 Out of 10 Cats; Mashew brought it into
+        the league jul 30
     stats:
       uses: 12
       speakers: 4
       prior_rounds: 3
     usages:
-    - label: original
+    - label: the league's first use
       speaker: Mashew
       text: Worried he's carrot boxing me though
-    - label: in the wild
-      speaker: Mashew
-      text: I wouldn't normally telegraph my intentions, but I'm just too damn excited to
-        play carrot box with something this good, 'Booty Man' for record of the season!
+    - label: this round
+      speaker: Conor
+      text: Surprised Connor didn't beat me to this (Soundgarden cover fyi)
+    source: https://www.youtube.com/watch?v=emidnnQi-bg

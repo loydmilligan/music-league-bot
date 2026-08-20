@@ -17,9 +17,18 @@ digest content for this league. Numbers must be recomputed from `votes`.
 If a submitter never votes, the upvotes on their song are not counted
 (R127: Ari — 4 points voided, official 0).
 
-## Tiebreakers
-Number of voters (more voters wins). R127: Lasagna (7 voters) took sole 3rd
-over Letting Go and YOLO (5 each) at equal points.
+## Tiebreakers (round), in order
+Confirmed by Matt 2026-08-20: **this cascade is the same in every league** — it
+was only ever written down for Second Best because that's where a tie first
+forced the question.
+1. Total points (upvotes + downvotes).
+2. More upvoters wins.
+3. Fewer downvoters wins.
+4. Vote weight sequence, compared highest→lowest until a difference.
+If still tied: shared rank, listed alphabetically.
+
+The old "more voters wins" note was step 2 seen in isolation. R127's ranking
+is unchanged under the full cascade (Lasagna still takes sole 3rd).
 
 ## Culture / voice
 - "No. Rules." — Jordan's anarchy bit; the league nominally has no rules.

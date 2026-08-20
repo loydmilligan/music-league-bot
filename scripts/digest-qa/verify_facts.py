@@ -32,6 +32,7 @@ RULES = {
         "mandatory_downvote": True,
         "no_vote_penalty": "void_upvotes_keep_downvotes",
         "tiebreak": "sb_cascade",  # pts -> more upvoters -> fewer downvoters -> weight sequence
+        # (named for where it was first derived; it is the rule in EVERY league)
         # ML display name -> digest name (rulecard "Voice / conventions").
         "aliases": {"monicac1217": "Michael Black", "Mashew": "Matt Mariani",
                     "Jonathan Black": "Jon Black", "missmara": "Mara Mariani"},
@@ -39,7 +40,9 @@ RULES = {
     "fam-jam": {
         "mandatory_downvote": False,
         "no_vote_penalty": "void_upvotes",
-        "tiebreak": "voter_count",  # more voters wins (R127 Lasagna precedent)
+        "tiebreak": "sb_cascade",  # league-universal cascade (Matt, 2026-08-20);
+        # supersedes the "voter_count" inference from the R127 Lasagna precedent,
+        # which is just step 2 of the same cascade. R127 ranking unchanged.
         "aliases": {"Jorbo": "Jordan Bekier", "missmara": "Mara Mariani",
                     "Mashew": "Matt Mariani", "Em": "Emily Freidman",
                     "Bri": "Brianna Bekier", "M g": "Marc Grey"},
@@ -47,15 +50,17 @@ RULES = {
     "boarz-ii-men": {
         "mandatory_downvote": False,  # up to 2; mandatoriness UNRESOLVED
         "no_vote_penalty": "void_upvotes_keep_downvotes",  # R147 Grant Koziol precedent
-        "tiebreak": None,  # UNKNOWN -- ties flagged, not resolved
+        "tiebreak": "sb_cascade",  # league-universal cascade (Matt, 2026-08-20);
+        # first applied R148 (Rusty Cage over Dixieland Delight, 6 upvoters to 5)
         "aliases": {"Mashew": "Matt Mariani", "Jonathan Black": "Jon Black",
-                    "djensen37": "Jensen", "Grant Koziol": "Kozh"},
+                    "djensen37": "Jensen", "Grant Koziol": "Kozh",
+                    "CJ Wookie": "Conor"},
     },
     "sssc": {
         "mandatory_downvote": False,
         "no_downvotes": True,  # zero negative points across all observed rounds
         "no_vote_penalty": None,  # UNKNOWN -- no precedent yet
-        "tiebreak": None,  # UNKNOWN -- ties flagged, not resolved
+        "tiebreak": "sb_cascade",  # league-universal cascade (Matt, 2026-08-20)
         "aliases": {"missmara": "Mara Mariani", "Boonie Dogsweat": "Dogsweat"},
     },
 }

@@ -22,12 +22,20 @@ If a submitter never files a ballot: **upvotes voided, downvotes stand** —
 same rule as Second Best. Precedent R147: Grant Koziol filed no ballot;
 "You Oughta Know" earned 5 up / −5 down, official −5.
 
-## Tiebreakers
-UNKNOWN — not yet encoded. R147 shipped with Cage and Wind in Your Sail
-tied at 8 (Wind in Your Sail listed 2nd) and You Oughta Know / The Story
-of Adidon tied at 0 (Adidon treated as the villain). Neither ordering has
-a confirmed rule behind it. UNRESOLVED: ask Matt for the cascade; until
-then verify_facts flags ties instead of resolving them.
+## Tiebreakers (round), in order
+Confirmed by Matt 2026-08-20: **this cascade is the same in every league** — it
+was only ever written down for Second Best because that's where a tie first
+forced the question.
+1. Total points (upvotes + downvotes).
+2. More upvoters wins.
+3. Fewer downvoters wins.
+4. Vote weight sequence, compared highest→lowest until a difference.
+If still tied: shared rank, listed alphabetically.
+
+First applied R148: Rusty Cage and Dixieland Delight both on 7; Rusty Cage
+takes third at step 2, six upvoters to five. NOTE: R147 shipped before the
+cascade was encoded — Cage/Wind in Your Sail (8) and You Oughta Know/Adidon
+(0) were ordered by hand and may not match it.
 
 ## Voice / conventions
 - Names: Mashew=Matt Mariani, Jonathan Black/JB=Jon Black, djensen37=Jensen,

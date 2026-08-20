@@ -26,9 +26,18 @@ need Matt's confirmation.
 UNKNOWN — no non-voting submitter observed yet in imported rounds.
 UNRESOLVED: ask Matt / watch for the first occurrence.
 
-## Tiebreakers
-UNKNOWN — not yet encoded. R166 carried point ties at 35/30/29/28 with no
-visible resolution rule. verify_facts flags ties instead of resolving them.
+## Tiebreakers (round), in order
+Confirmed by Matt 2026-08-20: **this cascade is the same in every league** — it
+was only ever written down for Second Best because that's where a tie first
+forced the question.
+1. Total points (upvotes + downvotes).
+2. More upvoters wins.
+3. Fewer downvoters wins.
+4. Vote weight sequence, compared highest→lowest until a difference.
+If still tied: shared rank, listed alphabetically.
+
+NOTE: with no downvotes in this league, steps 3 and 4 do most of the work.
+R166's ties at 35/30/29/28 predate this being encoded.
 
 ## Data / pipeline notes
 - Rounds arrive by **zip import** (`data/sssc/season-N/export.zip`);
