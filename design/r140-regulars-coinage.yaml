@@ -108,3 +108,10 @@ stats:
     - label: the dad joke
       speaker: Jac Chapin
       text: Meowing assassins.
+    media:
+      src: https://digest.mattmariani.com/_media/feline_assassin_gang.mp4
+      poster: https://digest.mattmariani.com/_media/feline_assassin_gang.jpg
+      caption: 'exhibits A–D: the first non-rodent kill · the cat that reads as a rat · Sarah
+        at the cat show · Jon in the bubble with a man from another league'
+      alt: 'Four images: a bird killed by the cats, a hairless cat, Sarah Black holding a
+        cat at a cat show, and Jonathan Black inside a clear plastic cat enclosure.'

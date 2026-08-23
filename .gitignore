@@ -104,3 +104,8 @@ scripts/cover-gen/out/
 # Raw Music League export dumps (regenerable via leagues export; zip re-importable)
 exports/music-league-export-*
 out/
+# League media originals dropped in by hand (large; the derived clip/poster that
+# actually ship live in digests/_media/).
+data/second-best/*.jpeg
+data/second-best/*.mp4
+data/second-best/*.png
