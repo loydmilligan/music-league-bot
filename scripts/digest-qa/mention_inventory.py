@@ -82,7 +82,10 @@ def main():
             variants.add(first)
         n = 0
         for v in variants:
-            n += len(re.findall(r"(?<![\w])" + re.escape(v.lower()) + r"(?![\w])", text))
+            # norm_text folds curly quotes/dashes so "Voltron’s YoungLion" (the
+            # stored competitor name) matches "Voltron's YoungLion" in prose.
+            n += len(re.findall(r"(?<![\w])" + re.escape(norm_text(v).lower()) + r"(?![\w])",
+                                norm_text(text).lower()))
         counts[cid] = n
 
     rows = sorted(counts.items(), key=lambda kv: -kv[1])
