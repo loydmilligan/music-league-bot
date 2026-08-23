@@ -246,7 +246,9 @@ Flow per round:
 
 ### WS8 — Pipeline/workflow improvements
 - [ ] `scripts/digest-qa/` package: `verify_facts.py` ✓, `dedupe_scan.py` ✓,
-      `mention_inventory.py` ✓ (all 2026-08-17; validated on R127/139/147/166,
+      `mention_inventory.py` ✓, `mention_matrix.py` ✓ (2026-08-23: per-section
+      mention breakdown; totals reconcile with mention_inventory by construction
+      — same roster query, alias expansion and folding) (all 2026-08-17; validated on R127/139/147/166,
       0 false FAILs), `render_smoke.mjs`, `identity_lint.py` — each
       runnable standalone and from the punch-up skill.
 - [ ] Wire facts-pass + render-smoke into generation itself (post-generate
