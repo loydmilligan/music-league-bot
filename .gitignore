@@ -103,3 +103,4 @@ scripts/cover-gen/out/
 
 # Raw Music League export dumps (regenerable via leagues export; zip re-importable)
 exports/music-league-export-*
+out/
