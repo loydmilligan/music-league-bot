@@ -34,8 +34,13 @@ RULES = {
         "tiebreak": "sb_cascade",  # pts -> more upvoters -> fewer downvoters -> weight sequence
         # (named for where it was first derived; it is the rule in EVERY league)
         # ML display name -> digest name (rulecard "Voice / conventions").
+        # NB two Sarahs, and they are not the obvious way round: ML "Sarah" is
+        # Sarah Zucker, ML "Sarah S" is Sarah Black.
         "aliases": {"monicac1217": "Michael Black", "Mashew": "Matt Mariani",
-                    "Jonathan Black": "Jon Black", "missmara": "Mara Mariani"},
+                    "Jonathan Black": "Jon Black", "missmara": "Mara Mariani",
+                    "Sarah S": "Sarah Black", "Sarah": "Sarah Zucker",
+                    "Voltron’s YoungLion": "Brian Pascoe", "Tj": "Tj Cook",
+                    "Tommy": "Tommy Chapin", "jac": "Jac Chapin"},
     },
     "fam-jam": {
         "mandatory_downvote": False,

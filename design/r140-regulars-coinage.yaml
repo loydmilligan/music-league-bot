@@ -1,0 +1,94 @@
+# R140 (second-best) — hand-authored Regulars + Coinage, punch-up 2026-08-22.
+# Written to digest_sections.content_json (draft-140-1cfdd14a-storylines) and
+# digest_drafts.stats_content_json. Generation SKIPS storylines for this league
+# (settings.storylines_section_leagues = {"sssc":true}) even though R139 shipped
+# one — a full regen drops it; re-apply from here.
+# The Litigator came off design/sb-regulars-bench.md; bench it again if R141 is thin.
+
+round: 140
+league: second-best
+storylines:
+  title: The Usual Suspects
+  cast:
+  - name: The Cat Lobby
+    player: Sarah Black
+    type: single-issue advocate
+    style: spotlight
+    motif: one platform, zero concessions
+    note: 'The lobby''s biggest week since its founding. A theme about unusual instruments
+      produced, unprompted, a scoring scale with a cat at one end — and the constituency was
+      welcomed, expanded, and purged inside a single hour.
+
+      '
+    spotlight:
+      text: I was going to formally welcome you to the cat lobby but now you’re 86ed like
+        JAC
+      caption: membership revoked eleven minutes after it was offered · aug 20
+    evidence:
+    - Welcome to the constituency. The cat lobby thanks you.
+    - Loving this energy. And especially the inclusion of space kitty
+    - Before Jac began his cat violence ranting and raving
+    highlight:
+    - cat lobby
+    - constituency
+    - space kitty
+  - name: The Litigator
+    player: Jonathan Black
+    type: courtroom formalist
+    style: quote-led
+    motif: everything is a deposition
+    note: 'Off the bench, because this was the week the bit finally got its exhibit. He attached
+      an appeals process to a downvote, conceded a point while denying its premise, and litigated
+      a trailing comma to a draw.
+
+      '
+    evidence:
+    - If the submitter can provide me evidence this song uses a “heavily distorted acoustic
+      auto-harp,” I will give you an additional +2 in next week’s category as an apology.
+    - I say this only to be annoying.  I was always going to give it +1.
+    - I'll try “not confuse,” bonehead.
+    - I'm already talking to you on another chat.  That's how much I don't care about this
+      one.
+    highlight:
+    - evidence
+    - apology
+    - annoying
+    - not confuse
+  note: the regulars are recurring second best bits caught in the wild. one only appears when
+    this round's chat or ballots back the bit with a real quote — every line above is verbatim.
+stats:
+  phrase:
+    style: dictionary
+    term: farkas
+    pronunciation: /ˈfɑːrkəs/
+    part_of_speech: noun · unit of measure
+    definition: 'The maximum value on Michael Black''s proposed scale of unusualness. One
+      farkas is a bilingual cat that has been to Mars, speaks Swahili and sign language, returns
+      to Earth with news of life there, and then elects to only meow at us. A cat that has
+      not been to Mars scores 1. Within two minutes of its introduction the word was also
+      functioning as a mild expletive.
+
+      '
+    coined:
+      by: Michael Black
+      date: '2026-08-20'
+      at: the whole league
+      context: while attempting to legislate a Prominence-and-Unusualness rubric onto a round
+        about cowbells
+    stats:
+      uses: 5
+      speakers: 2
+      prior_rounds: 0
+    usages:
+    - label: original
+      speaker: Michael Black
+      text: 1 is a cat. 10 is a bilingual cat that has been to mars. He comes back and tells
+        us humans there's life on mars. You'll be surprised to know that neither language
+        is English. His name is Farkas by the way.
+    - label: weaponised, two minutes later
+      speaker: Tj Cook
+      text: What the farkas are you talking about?
+    - label: the etymology, self-supplied
+      speaker: Michael Black
+      text: Farkas was Kramer's bizarro character from this show I used to watch. That's how
+        AstroCat got his name.
