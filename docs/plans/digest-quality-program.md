@@ -253,6 +253,28 @@ Flow per round:
       runnable standalone and from the punch-up skill.
 - [ ] Wire facts-pass + render-smoke into generation itself (post-generate
       gate: a draft that fails verification is flagged in the review UI).
+- [ ] **Fold the whole QA pass into the generation flow** (Matt, 2026-08-23 —
+      after R140 this stopped being optional). Post-generate, before the draft
+      is shown: `verify_facts` gate, `dedupe_scan`, and a semantic-duplicate
+      review surfaced the way `dupe_review_page.py` renders it. Plus
+      `mention_matrix` per section with an improvement plan attached, not just a
+      floor check — the matrix is what shows a player's whole count sitting
+      inside one moment.
+- [ ] **Engagement targeting as a generation input** (WS9 -> WS6.2). The metric
+      exists (`chat_participation.py`); nothing consumes it. The digest should
+      be told who is least engaged and deliberately feature them: find a thing
+      that player has referenced more than once and start a running bit, so the
+      nudge is "you are seen" rather than "you are quiet". Second Best splits
+      into talkers (Jac: 204 msgs, 0 ballot comments ever) and ballot-only
+      players (Joe Quinto: 0 msgs in 5 rounds, 26 vote comments; Sarah Zucker:
+      5 msgs, 35 vote comments) — the two populations barely overlap, and the
+      quiet half is invisible to a chat section by construction.
+- [ ] **Length + formatting**: paragraphs are too long for the audience. Favour
+      bold runs, short blocks and media over prose. The `**bold**` body runs
+      (2026-08-16) are the lever; use them everywhere, not occasionally.
+- [ ] **Mention ceiling, not just a floor**: Matt and JB are the loudest in
+      chat and therefore the default subjects. Cap them deliberately so the
+      coverage goes to players who need it.
 - [ ] **Model-vars pipeline integration**: the existing per-section pipeline
       (OpenRouter model + context selection per section kind, auto section
       refresh — `api/model-vars/sections`) predates the new features (style
