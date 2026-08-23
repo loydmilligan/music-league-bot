@@ -15,9 +15,9 @@ storylines:
     type: single-issue advocate
     style: spotlight
     motif: one platform, zero concessions
-    note: 'The lobby''s biggest week since its founding. A theme about unusual instruments
-      produced, unprompted, a scoring scale with a cat at one end — and the constituency was
-      welcomed, expanded, and purged inside a single hour.
+    note: 'Her biggest week since the lobby was founded. A round about unusual instruments
+      produced a scale with a cat at one end, and the constituency was welcomed, expanded
+      and purged inside a single hour.
 
       '
     spotlight:
@@ -27,7 +27,8 @@ storylines:
     evidence:
     - Welcome to the constituency. The cat lobby thanks you.
     - Loving this energy. And especially the inclusion of space kitty
-    - Before Jac began his cat violence ranting and raving
+    - JB still hasn’t unpacked his suitcase from a trip that ended 2 weeks ago, because the
+      cats like to sit in it.
     highlight:
     - cat lobby
     - constituency
@@ -37,8 +38,8 @@ storylines:
     type: courtroom formalist
     style: quote-led
     motif: everything is a deposition
-    note: 'Off the bench, because this was the week the bit finally got its exhibit. He attached
-      an appeals process to a downvote, conceded a point while denying its premise, and litigated
+    note: 'Off the bench, because this is the week the bit got its exhibit. He attached an
+      appeals process to a downvote, conceded a point while denying its premise, and litigated
       a trailing comma to a draw.
 
       '
@@ -54,41 +55,56 @@ storylines:
     - apology
     - annoying
     - not confuse
-  note: the regulars are recurring second best bits caught in the wild. one only appears when
-    this round's chat or ballots back the bit with a real quote — every line above is verbatim.
+  note: '**Both of this week''s regulars live at the same address.** One has spent the season
+    lobbying for more cat coverage; the other attaches an appeals process to a downvote. Dinner
+    at the Black house is presumably a hearing, with a cat on the table.
+
+
+    **On the bubble** — two bits are one more sighting away from a card of their own. **Sarah
+    Zucker**, who has now apologised on three separate ballots and once, pre-emptively, in
+    the chat. And **Jac**, whose broadcast pattern he has himself described: silent for a
+    week, then everything at once. **Michael Layous** keeps his card warm on the bench, and
+    **Tommy Chapin** wrote 1,925 characters of vote commentary this round — the most in the
+    league — which is a bit whether he means it as one or not.
+
+
+    Regulars are recurring Second Best bits caught in the wild. One only appears when this
+    round''s chat or ballots back the bit with a real quote — every line above is verbatim.'
 stats:
   phrase:
     style: dictionary
-    term: farkas
-    pronunciation: /ˈfɑːrkəs/
-    part_of_speech: noun · unit of measure
-    definition: 'The maximum value on Michael Black''s proposed scale of unusualness. One
-      farkas is a bilingual cat that has been to Mars, speaks Swahili and sign language, returns
-      to Earth with news of life there, and then elects to only meow at us. A cat that has
-      not been to Mars scores 1. Within two minutes of its introduction the word was also
-      functioning as a mild expletive.
+    term: the feline assassin gang
+    pronunciation: /ˈfiːlaɪn əˈsæsɪn ɡæŋ/
+    part_of_speech: noun · proper · self-applied
+    definition: 'Jonathan Black''s name for his own cats, deployed the moment they graduated
+      from rodents. The household position is that they kill for sport and leave the evidence
+      where it will be seen. Within hours the term had been to trial: Tommy Chapin reported
+      the household to the authorities, Jac Chapin delivered an unsolicited doctrine on outdoor
+      cats, and the thread arrived at whether a human can murder an animal — settled, on the
+      record, by a judge''s son.
 
       '
     coined:
-      by: Michael Black
-      date: '2026-08-20'
-      at: the whole league
-      context: while attempting to legislate a Prominence-and-Unusualness rubric onto a round
-        about cowbells
+      by: Jonathan Black
+      date: '2026-08-16'
+      at: the league
+      context: posted with photographic evidence of the gang's first non-rodent kill
     stats:
-      uses: 5
+      uses: 2
       speakers: 2
       prior_rounds: 0
     usages:
     - label: original
-      speaker: Michael Black
-      text: 1 is a cat. 10 is a bilingual cat that has been to mars. He comes back and tells
-        us humans there's life on mars. You'll be surprised to know that neither language
-        is English. His name is Farkas by the way.
-    - label: weaponised, two minutes later
-      speaker: Tj Cook
-      text: What the farkas are you talking about?
-    - label: the etymology, self-supplied
-      speaker: Michael Black
-      text: Farkas was Kramer's bizarro character from this show I used to watch. That's how
-        AstroCat got his name.
+      speaker: Jonathan Black
+      text: First confirmed non-rodent kill from our feline assassin gang. Would prefer they
+        stick to mice and rats (or scrub jays because fuck those assholes)
+    - label: the prosecution
+      speaker: Tommy Chapin
+      text: Tearing it open is probably a sign your cat is starving.  I'm calling CPS.  The
+        other CPS.
+    - label: the ruling
+      speaker: Jac Chapin
+      text: A human can't "murder" an animal. We can just waste the meat.
+    - label: the dad joke
+      speaker: Jac Chapin
+      text: Meowing assassins.
