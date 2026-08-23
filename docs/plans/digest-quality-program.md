@@ -269,6 +269,14 @@ Flow per round:
       players (Joe Quinto: 0 msgs in 5 rounds, 26 vote comments; Sarah Zucker:
       5 msgs, 35 vote comments) — the two populations barely overlap, and the
       quiet half is invisible to a chat section by construction.
+- [ ] **Markdown support is inconsistent and silently prints literals** (found
+      2026-08-23 on R140). `boldRuns()` is applied to `c.body` only, so
+      `**bold**` renders in a section body and NOWHERE else: consensus item
+      notes, chat moment details and the storylines note all print the asterisks
+      as text. Single-asterisk italics render literally *everywhere*, bodies
+      included — nothing parses them. Either run the same parser over every
+      hand-authored text field or lint for markdown in fields that can't render
+      it; today the failure is invisible until someone reads the live page.
 - [ ] **Length + formatting**: paragraphs are too long for the audience. Favour
       bold runs, short blocks and media over prose. The `**bold**` body runs
       (2026-08-16) are the lever; use them everywhere, not occasionally.
