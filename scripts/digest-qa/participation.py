@@ -123,3 +123,81 @@ def compute_round(db, slug: str, round_id: int) -> dict[int, dict]:
             (league_id, round_id)).fetchone()[0]
         out[cid] = vec
     return out
+
+
+def backfill(db, slug: str) -> int:
+    """Compute and store every completed round for one league. Idempotent."""
+    import league_context as lc
+    league_id = lc.league_id_for(db, slug)
+    season_ids = [r[0] for r in db.execute(
+        "SELECT id FROM seasons WHERE league_id=? ORDER BY id", (league_id,))]
+    written = 0
+    for sid in season_ids:
+        for w in lc.round_windows(db, sid):
+            for cid, vec in compute_round(db, slug, w.round_id).items():
+                store_vector(db, league_id, w.round_id, cid, vec)
+                written += 1
+    db.commit()
+    return written
+
+
+def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("league_slug")
+    ap.add_argument("--db", default="data/league.db")
+    ap.add_argument("--round", type=int)
+    ap.add_argument("--report", action="store_true")
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    db = sqlite3.connect(args.db)
+    db.row_factory = sqlite3.Row
+    ensure_schema(db)
+
+    import league_context as lc
+    import participation_score as score
+    league_id = lc.league_id_for(db, args.league_slug)
+
+    if args.round:
+        vecs = compute_round(db, args.league_slug, args.round)
+        for cid, vec in vecs.items():
+            store_vector(db, league_id, args.round, cid, vec)
+        db.commit()
+    else:
+        n = backfill(db, args.league_slug)
+        print(f"stored {n} player-round vectors")
+        return
+
+    if args.json:
+        import json as _json
+        print(_json.dumps(vecs, indent=2))
+        return
+
+    if args.report:
+        import participation_report as rep
+        names = {r["id"]: r["name"] for r in db.execute("SELECT id, name FROM competitors")}
+        maxima = {f: max((v.get(f) or 0) for v in vecs.values()) or 0 for f in VECTOR_FIELDS}
+        scores = {c: score.composite(v, maxima) for c, v in vecs.items()}
+        pct = score.percentile_among_active(scores)
+        prev = db.execute(
+            "SELECT MAX(round_id) FROM player_participation WHERE league_id=? AND round_id<?",
+            (league_id, args.round)).fetchone()[0]
+        prev_scores = {}
+        if prev:
+            pv = load_vectors(db, league_id, prev)
+            pmax = {f: max((v.get(f) or 0) for v in pv.values()) or 0 for f in VECTOR_FIELDS}
+            prev_scores = {c: score.composite(v, pmax) for c, v in pv.items()}
+        rows = [{"name": names.get(c, "?"), "score": s, "pct": pct[c],
+                 "delta": s - prev_scores.get(c, s), "vec": vecs[c]}
+                for c, s in sorted(scores.items(), key=lambda kv: -kv[1])]
+        rname = db.execute("SELECT name FROM rounds WHERE id=?", (args.round,)).fetchone()["name"]
+        os.makedirs("out", exist_ok=True)
+        path = f"out/participation-{args.league_slug}-{args.round}.html"
+        with open(path, "w") as fh:
+            fh.write(rep.render_report(args.league_slug, rname, rows, []))
+        print(f"wrote {path}")
+
+
+if __name__ == "__main__":
+    main()
