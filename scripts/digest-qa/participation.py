@@ -70,3 +70,56 @@ def load_vectors(db, league_id: int, round_id: int) -> dict[int, dict]:
         d = dict(r)
         out[d["competitor_id"]] = {f: d[f] for f in VECTOR_FIELDS}
     return out
+
+
+def compute_round(db, slug: str, round_id: int) -> dict[int, dict]:
+    """Assemble the full vector for one round of one league.
+
+    Chat dimensions key on player NAME; ballot dimensions key on competitor_id.
+    The join happens here, and only here.
+    """
+    import league_context as lc
+    import participation_dims as dims
+    import participation_convo as convo
+
+    league_id = lc.league_id_for(db, slug)
+    group = lc.chat_group_for(db, slug)
+    resolve = lc.identity_resolver(db, league_id)
+    raw = lc.deduped_messages(db, group)
+    msgs = [(ts, resolve(sender), text) for ts, sender, text in raw]
+
+    season = db.execute("SELECT season_id FROM rounds WHERE id=?", (round_id,)).fetchone()[0]
+    window = next(w for w in lc.round_windows(db, season) if w.round_id == round_id)
+
+    peaks = convo.peak_hours_for(msgs)
+    names = {n for _t, n, _x in msgs}
+    chat = dims.chat_dims(msgs, window.start, window.end)
+    conv = convo.convo_dims(msgs, window.start, window.end, peaks, roster=sorted(names))
+    ballot = dims.ballot_dims(db, round_id)
+
+    # Chat keys are resolved PLAYER names; competitors.name is the ML display
+    # name (e.g. "missmara"), so the bridge is competitors.player_id -> players.
+    comp_name = {r["id"]: r["name"] for r in db.execute(
+        "SELECT c.id, p.name FROM competitors c JOIN players p ON p.id = c.player_id")}
+    name_comp = {v: k for k, v in comp_name.items()}
+    # One player can own two competitor rows; make this round's ballot row win.
+    for cid in ballot:
+        if cid in comp_name:
+            name_comp[comp_name[cid]] = cid
+
+    out: dict[int, dict] = {}
+    cids = set(ballot) | {name_comp[n] for n in chat if n in name_comp}
+    for cid in cids:
+        vec = {f: 0 for f in VECTOR_FIELDS}
+        vec.update(ballot.get(cid, {}))
+        nm = comp_name.get(cid)
+        if nm:
+            vec.update(chat.get(nm, {}))
+            vec.update(conv.get(nm, {}))
+        vec["rounds_in_league"] = db.execute(
+            "SELECT COUNT(*) FROM rounds r JOIN seasons s ON s.id=r.season_id"
+            " WHERE s.league_id=? AND r.voting_deadline IS NOT NULL"
+            " AND r.voting_deadline <= (SELECT voting_deadline FROM rounds WHERE id=?)",
+            (league_id, round_id)).fetchone()[0]
+        out[cid] = vec
+    return out
