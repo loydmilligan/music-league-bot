@@ -19,16 +19,14 @@ Relay truncation artifacts (same sender+timestamp, shorter text) are deduped.
 
 Usage: python3 scripts/digest-qa/chat_participation.py <league-slug> [--db data/league.db]
 """
-import argparse, json, re, sqlite3, sys
+import argparse, sqlite3
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-def iso(ts: str) -> str:
-    return ts.replace("+00:00", "Z")
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def norm_sender(s: str) -> str:
-    # "~ Name" / "~ Name" push-name prefixes → bare name.
-    return re.sub(r"^~[\s ]*", "", s).strip()
+import league_context as lc
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -38,40 +36,11 @@ def main() -> None:
     args = ap.parse_args()
 
     db = sqlite3.connect(args.db)
-    row = db.execute("SELECT id FROM leagues WHERE slug=?", (args.league_slug,)).fetchone()
-    if not row:
-        sys.exit(f"unknown league slug {args.league_slug!r}")
-    league_id = row[0]
-    season = args.season or db.execute(
-        "SELECT MAX(id) FROM seasons WHERE league_id=?", (league_id,)).fetchone()[0]
-
-    group_map = json.loads(db.execute(
-        "SELECT value FROM settings WHERE key='chat_league_group_map'").fetchone()[0])
-    group = group_map.get(args.league_slug)
-    if not group:
-        sys.exit(f"no chat group mapped for {args.league_slug!r}")
-
-    # sender → player name, via player_identities (whatsapp), else normalized push name
-    ident = {}
-    for identifier, pname in db.execute(
-        """SELECT pi.identifier, p.name FROM player_identities pi
-           JOIN players p ON pi.player_id=p.id
-           WHERE pi.identity_type='whatsapp' AND (pi.league_id=? OR pi.league_id IS NULL)""",
-        (league_id,)):
-        ident[identifier] = pname
-        ident[norm_sender(identifier)] = pname
-
-    def resolve(sender: str) -> str:
-        return ident.get(sender) or ident.get(norm_sender(sender)) or norm_sender(sender)
-
-    # messages, deduped: keep longest text per (sender, ts)
-    best = {}
-    for ts, sender, text in db.execute(
-        "SELECT ts, sender, text FROM chat_messages WHERE group_name=?", (group,)):
-        k = (sender, iso(ts))
-        if k not in best or len(text) > len(best[k]):
-            best[k] = text
-    msgs = sorted((ts, resolve(sender)) for (sender, ts), _ in best.items())
+    league_id = lc.league_id_for(db, args.league_slug)
+    season = args.season or lc.current_season(db, league_id)
+    group = lc.chat_group_for(db, args.league_slug)
+    resolve = lc.identity_resolver(db, league_id)
+    msgs = sorted((ts, resolve(sender)) for ts, sender, _ in lc.deduped_messages(db, group))
 
     rounds = db.execute(
         """SELECT id, name, submission_deadline, voting_deadline FROM rounds
@@ -87,11 +56,11 @@ def main() -> None:
     season_player = defaultdict(lambda: [0, 0, 0, 0])  # msgs, rounds-active, vote comments, sub comments
     prev_deadline = None
     for rid, name, sub_dl, vote_dl in rounds:
-        vote_dl = iso(vote_dl)
+        vote_dl = lc.iso(vote_dl)
         if vote_dl > now:
             break
         start = prev_deadline or (
-            (datetime.fromisoformat(iso(sub_dl).rstrip("Z")) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            (datetime.fromisoformat(lc.iso(sub_dl).rstrip("Z")) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
             if sub_dl else vote_dl[:10] + "T00:00:00Z")
         window = [(ts, p) for ts, p in msgs if start < ts <= vote_dl]
         prev_deadline = vote_dl
@@ -125,7 +94,7 @@ def main() -> None:
                WHERE s.round_id=? AND s.comment IS NOT NULL AND s.comment!=''""", (rid,)):
             season_player[pname][3] += 1
 
-    n_rounds = sum(1 for *_, v in rounds if iso(v) <= now)
+    n_rounds = sum(1 for *_, v in rounds if lc.iso(v) <= now)
     print(f"\n## Per-player, season to date ({n_rounds} completed rounds)\n")
     print("| player | chat msgs | rounds active in chat | vote comments | sub comments |")
     print("|---|---|---|---|---|")
