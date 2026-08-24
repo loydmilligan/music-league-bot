@@ -109,3 +109,6 @@ out/
 data/second-best/*.jpeg
 data/second-best/*.mp4
 data/second-best/*.png
+
+# Dev-only venv for the Python digest-qa tools (pytest). Runtime is stdlib-only.
+.venv-digestqa/

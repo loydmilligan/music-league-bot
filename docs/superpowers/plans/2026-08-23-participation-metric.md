@@ -27,7 +27,7 @@
 | file | responsibility |
 |---|---|
 | `pytest.ini` | test discovery rooted at `scripts/digest-qa/tests/` |
-| `scripts/digest-qa/tests/conftest.py` | fixture DB builder — an in-memory schema + row factory used by every test |
+| `scripts/digest-qa/tests/conftest.py` | fixture DB builder — an in-memory schema + row factory used by every test. **No `__init__.py` in this dir** — pytest only puts the test dir on `sys.path` when it is not a package, and `from conftest import ...` breaks if you add one. |
 | `scripts/digest-qa/league_context.py` | **shared module.** League/season lookup, chat group mapping, identity resolution, message dedupe, round-window computation |
 | `scripts/digest-qa/chat_participation.py` | *modified* — same output, now importing `league_context` |
 | `scripts/digest-qa/participation_dims.py` | pure dimension functions: ballot, chat volume, chat kind |
@@ -62,7 +62,6 @@ Suggested tmux session: `tmux new -s partmetric`, one window per phase, one pane
 
 **Files:**
 - Create: `pytest.ini`
-- Create: `scripts/digest-qa/tests/__init__.py` (empty)
 - Create: `scripts/digest-qa/tests/conftest.py`
 - Create: `scripts/digest-qa/tests/test_harness.py`
 - Modify: `.gitignore`
