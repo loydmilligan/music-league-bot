@@ -48,3 +48,31 @@ def test_first_round_window_falls_back_to_seven_days(fixture_db):
     add_round(fixture_db, 1, "2026-01-08T07:00:00Z")
     w = lc.round_windows(fixture_db, 10)
     assert w[0].start == "2026-01-01T07:00:00Z"
+
+
+def test_deduped_messages_drops_mention_notification_rows(fixture_db):
+    add_msg(fixture_db, "Mentioned all", "@everyone", "2026-01-02T19:00:00Z")
+    add_msg(fixture_db, "Alice", "hi", "2026-01-02T19:01:00Z")
+    msgs = lc.deduped_messages(fixture_db, "Test Group")
+    assert [m[1] for m in msgs] == ["Alice"]
+
+
+def test_deduped_messages_drops_corrupted_sender_twin(fixture_db):
+    add_msg(fixture_db, "~ JB", "you get your vote in yet?", "2026-01-02T19:00:00Z")
+    add_msg(fixture_db, "~���JB", "you get your vote in yet?", "2026-01-02T19:00:00Z")
+    msgs = lc.deduped_messages(fixture_db, "Test Group")
+    assert len(msgs) == 1
+    assert msgs[0][1] == "~ JB"
+
+
+def test_deduped_messages_keeps_corrupted_sender_without_twin(fixture_db):
+    add_msg(fixture_db, "~���JB", "no clean copy exists", "2026-01-02T19:00:00Z")
+    assert len(lc.deduped_messages(fixture_db, "Test Group")) == 1
+
+
+def test_deduped_messages_drops_undelivered_placeholder_rows(fixture_db):
+    add_msg(fixture_db, "Alice", "Waiting for this message. This may take a while.",
+            "2026-01-02T19:00:00Z")
+    add_msg(fixture_db, "Alice", "real content", "2026-01-02T19:01:00Z")
+    msgs = lc.deduped_messages(fixture_db, "Test Group")
+    assert [m[2] for m in msgs] == ["real content"]

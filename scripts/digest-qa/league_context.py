@@ -66,20 +66,33 @@ def identity_resolver(db: sqlite3.Connection, league_id: int) -> Callable[[str],
     return resolve
 
 
-def deduped_messages(db: sqlite3.Connection, group: str) -> list[tuple[str, str, str]]:
-    """(ts, raw_sender, text) for one group, relay truncation removed.
+_REPLACEMENT = "�"
 
-    The relay sometimes delivers a truncated copy of a message it already sent.
-    Keyed on (sender, ts), the longest text wins.
+
+def deduped_messages(db: sqlite3.Connection, group: str) -> list[tuple[str, str, str]]:
+    """(ts, raw_sender, text) for one group, relay artifacts removed.
+
+    The relay sometimes delivers a truncated copy of a message it already sent:
+    keyed on (sender, ts), the longest text wins. It also emits "Mentioned all"
+    notification rows that are not messages, and occasionally a duplicate of a
+    message with the sender's U+202F mangled to U+FFFD -- those are dropped when
+    a clean-sender row with the same (ts, text) exists.
     """
     best: dict[tuple[str, str], str] = {}
     for ts, sender, text in db.execute(
         "SELECT ts, sender, text FROM chat_messages WHERE group_name=?", (group,)
     ):
+        if sender == "Mentioned all":
+            continue
+        if text.startswith("Waiting for this message"):
+            # WhatsApp's undelivered-message placeholder; the content never arrived.
+            continue
         k = (sender, iso(ts))
         if k not in best or len(text) > len(best[k]):
             best[k] = text
-    return sorted((ts, sender, text) for (sender, ts), text in best.items())
+    rows = sorted((ts, sender, text) for (sender, ts), text in best.items())
+    clean = {(ts, text) for ts, sender, text in rows if _REPLACEMENT not in sender}
+    return [r for r in rows if _REPLACEMENT not in r[1] or (r[0], r[2]) not in clean]
 
 
 class RoundWindow(NamedTuple):

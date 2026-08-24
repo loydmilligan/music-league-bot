@@ -13,15 +13,17 @@ and a season per-player table (chat msgs, rounds active, vote comments,
 submission comments) — the baseline against which "did mentioning Philip more
 move Philip?" gets answered later.
 
-Round window = (previous round's voting_deadline, this round's voting_deadline].
-The first round's window opens at its submission_deadline minus 7 days.
+Round window = [previous round's voting_deadline, this round's voting_deadline),
+via league_context.round_windows so every participation tool answers "who was
+active in round N" identically. The first round's window opens at its own
+voting_deadline minus 7 days.
 Relay truncation artifacts (same sender+timestamp, shorter text) are deduped.
 
 Usage: python3 scripts/digest-qa/chat_participation.py <league-slug> [--db data/league.db]
 """
 import argparse, sqlite3
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -42,10 +44,7 @@ def main() -> None:
     resolve = lc.identity_resolver(db, league_id)
     msgs = sorted((ts, resolve(sender)) for ts, sender, _ in lc.deduped_messages(db, group))
 
-    rounds = db.execute(
-        """SELECT id, name, submission_deadline, voting_deadline FROM rounds
-           WHERE season_id=? AND voting_deadline IS NOT NULL ORDER BY voting_deadline""",
-        (season,)).fetchall()
+    windows = [w for w in lc.round_windows(db, season)]
     now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     print(f"# Chat participation — {args.league_slug} (season {season})")
@@ -54,16 +53,11 @@ def main() -> None:
     print("|---|---|---|---|---|---|---|")
 
     season_player = defaultdict(lambda: [0, 0, 0, 0])  # msgs, rounds-active, vote comments, sub comments
-    prev_deadline = None
-    for rid, name, sub_dl, vote_dl in rounds:
-        vote_dl = lc.iso(vote_dl)
-        if vote_dl > now:
+    for w in windows:
+        if w.end > now:
             break
-        start = prev_deadline or (
-            (datetime.fromisoformat(lc.iso(sub_dl).rstrip("Z")) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            if sub_dl else vote_dl[:10] + "T00:00:00Z")
-        window = [(ts, p) for ts, p in msgs if start < ts <= vote_dl]
-        prev_deadline = vote_dl
+        rid, name, start, vote_dl = w.round_id, w.name, w.start, w.end
+        window = [(ts, p) for ts, p in msgs if start <= ts < vote_dl]
 
         roster = {r[0] for r in db.execute(
             """SELECT DISTINCT p.name FROM votes v JOIN players p ON v.player_id=p.id WHERE v.round_id=?
@@ -94,7 +88,7 @@ def main() -> None:
                WHERE s.round_id=? AND s.comment IS NOT NULL AND s.comment!=''""", (rid,)):
             season_player[pname][3] += 1
 
-    n_rounds = sum(1 for *_, v in rounds if lc.iso(v) <= now)
+    n_rounds = sum(1 for w in windows if w.end <= now)
     print(f"\n## Per-player, season to date ({n_rounds} completed rounds)\n")
     print("| player | chat msgs | rounds active in chat | vote comments | sub comments |")
     print("|---|---|---|---|---|")
