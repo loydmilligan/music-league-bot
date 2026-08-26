@@ -313,9 +313,23 @@ resolver.
 
 ### Trigger
 
-Nothing new. The existing scheduler already creates the round's job at close.
-If the league has an enabled rollout config, it creates a `rollout_runs` row
-instead of walking the hardcoded path.
+**Corrected 2026-08-26 during planning.** The trigger is not a scheduler. A
+`digest_jobs` row is created by the **email poller in the `api` container** —
+`enqueueDigestJob` in `src/email/emailIngest.ts`, fired when Music League's
+round-complete email is parsed. `buildSchedule` / `/api/digest/schedule` is a
+read-only advisory for the bot's auto-poster and enqueues nothing.
+
+This matters because `src/` (bot, api) and `ui/` are separate TypeScript
+projects with **no shared imports** — `digest_jobs` DDL is mirrored verbatim in
+both with a keep-in-sync comment.
+
+So the Rollout does **not** touch the trigger. The api container keeps
+enqueueing `digest_jobs` exactly as it does today. The **app executor in
+bot-ui** promotes a `pending` digest job into a rollout run when that league
+has an enabled rollout config, and otherwise leaves it for `runOneJob`. All
+rollout code stays in `ui/`, no DDL is mirrored into `src/`, and the trigger
+path — which lives in a process that has crash-looped before — is not modified
+at all.
 
 ### Claiming
 
