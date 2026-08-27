@@ -25,6 +25,7 @@
   import EditableStandingsTable from '$lib/digest/EditableStandingsTable.svelte';
   import DataSectionActions from '$lib/digest/DataSectionActions.svelte';
   import DataRegenConfirm from '$lib/digest/DataRegenConfirm.svelte';
+  import PrepPanel from '$lib/digest/PrepPanel.svelte';
   import type { Reconcile, StandingsResult } from '$lib/db/standings.js';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -1386,6 +1387,8 @@
         </div>
       {/each}
     </div>
+
+    <PrepPanel material={data.material} roundId={data.roundId} />
 
     <!-- Missing-popularity panel: season-cumulative songs lacking a proxy. -->
     <div class="dg-missing-pop">

@@ -17,6 +17,7 @@ import { getChatSettings } from '$lib/chat/historyQuery.js';
 import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
 import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
 import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
+import { gatherPrepMaterial, type MaterialRow } from '$lib/digest/prepMaterial.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -169,7 +170,7 @@ type DigestPageBase = {
 };
 
 export type DigestPageData =
-  | (DigestPageBase & { stage: 'prepare'; checks: PrepareCheck[] })
+  | (DigestPageBase & { stage: 'prepare'; checks: PrepareCheck[]; material: MaterialRow[] })
   | (DigestPageBase & {
       stage: 'refine' | 'finalize';
       draft: DigestDraftRow;
@@ -432,7 +433,8 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
   const res = await fetch(`/api/digest/${roundId}/prepare`, { method: 'POST' });
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
-  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks } satisfies DigestPageData;
+  const material = gatherPrepMaterial(getDb(), roundId);
+  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks, material } satisfies DigestPageData;
 };
 
 async function fetchRelContext(
