@@ -513,6 +513,78 @@ export const SCHEMA = `
     per_song_cap INTEGER,
     updated_at TEXT NOT NULL
   );
+
+  -- ── Tables created outside schema.ts, mirrored here so in-memory test DBs
+  -- have them. DDL copied verbatim from data/league.db on 2026-08-26; these are
+  -- CREATE TABLE IF NOT EXISTS, so the live tables are never altered.
+  -- digest_bridges + digest_ledes are created by scripts/digest-qa/*.py;
+  -- player_participation by scripts/digest-qa/participation.py.
+  CREATE TABLE IF NOT EXISTS digest_bridges (
+    round_id     INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id    INTEGER NOT NULL,
+    draft_id     TEXT NOT NULL,
+    generated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    content_json TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS digest_ledes (
+    round_id     INTEGER PRIMARY KEY REFERENCES rounds(id),
+    generated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    content_json TEXT NOT NULL,
+    ratings_json TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS player_participation (
+    league_id     INTEGER NOT NULL,
+    round_id      INTEGER NOT NULL,
+    competitor_id INTEGER NOT NULL,
+    voted REAL NOT NULL DEFAULT 0,
+    submitted REAL NOT NULL DEFAULT 0,
+    vote_comments REAL NOT NULL DEFAULT 0,
+    vote_comment_chars REAL NOT NULL DEFAULT 0,
+    sub_comment_chars REAL NOT NULL DEFAULT 0,
+    msgs REAL NOT NULL DEFAULT 0,
+    chars REAL NOT NULL DEFAULT 0,
+    days_active REAL NOT NULL DEFAULT 0,
+    music_links REAL NOT NULL DEFAULT 0,
+    media REAL NOT NULL DEFAULT 0,
+    other_links REAL NOT NULL DEFAULT 0,
+    bursts_joined REAL NOT NULL DEFAULT 0,
+    group_discussions_joined REAL NOT NULL DEFAULT 0,
+    elicited REAL NOT NULL DEFAULT 0,
+    mentions_made REAL NOT NULL DEFAULT 0,
+    mentions_received REAL NOT NULL DEFAULT 0,
+    temporal_overlap REAL NOT NULL DEFAULT 0,
+    rounds_in_league REAL NOT NULL DEFAULT 0,
+    median_hour REAL NOT NULL DEFAULT 0,
+    share_off_peak REAL NOT NULL DEFAULT 0,
+    computed_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    PRIMARY KEY (league_id, round_id, competitor_id)
+  );
+
+  -- ── Round prep panel (spec 2026-08-26-round-prep-panel-design).
+  -- target is validated in code (roundNotes.ts), not by a CHECK constraint, so
+  -- adding a section kind later does not need a table rebuild.
+  CREATE TABLE IF NOT EXISTS round_notes (
+    id         TEXT PRIMARY KEY,
+    round_id   INTEGER NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+    target     TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS round_notes_round ON round_notes(round_id);
+
+  -- Separate from digest_ledes on purpose: no collision with generate_ledes.py's
+  -- "already has a row, use --force" guard, and the real run can never clobber
+  -- mid-round ratings.
+  CREATE TABLE IF NOT EXISTS digest_early_ledes (
+    round_id     INTEGER PRIMARY KEY REFERENCES rounds(id) ON DELETE CASCADE,
+    content_json TEXT NOT NULL,
+    ratings_json TEXT,
+    generated_at TEXT NOT NULL
+  );
+
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
