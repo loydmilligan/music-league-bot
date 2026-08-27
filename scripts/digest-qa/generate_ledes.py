@@ -139,11 +139,33 @@ def gather(db: sqlite3.Connection, round_id: int) -> dict:
             except sqlite3.OperationalError:
                 bridge = None
 
+    # 6. early lede sheet (mid-round, provisional — see build_prompt's caveat)
+    early = None
+    try:
+        row = db.execute(
+            "SELECT content_json, ratings_json FROM digest_early_ledes WHERE round_id=?",
+            (round_id,)).fetchone()
+        if row:
+            early = json.dumps({"ledes": json.loads(row[0]).get("ledes", []),
+                                "ratings": json.loads(row[1]) if row[1] else None})
+    except (sqlite3.OperationalError, ValueError):
+        early = None
+
+    # 7. editor notes targeted at the ledes, plus the general ones
+    notes = []
+    try:
+        notes = [dict(body=r[0]) for r in db.execute(
+            "SELECT body FROM round_notes WHERE round_id=? AND target IN ('ledes','general')"
+            " ORDER BY created_at, id", (round_id,)).fetchall()]
+    except sqlite3.OperationalError:
+        notes = []
+
     return dict(round_id=round_id, round_name=rname, round_desc=rdesc or "",
                 league_name=lname, slug=slug, window=(start, vote_dl),
                 rulecard=rulecard, songs=songs, non_voters=non_voters,
                 vote_comments=vote_comments, sub_comments=sub_comments,
-                chat=chat, bridge=bridge, song_by_uri=song_by_uri)
+                chat=chat, bridge=bridge, early=early, notes=notes,
+                song_by_uri=song_by_uri)
 
 # ------------------------------------------------------------------ prompt
 
@@ -190,6 +212,25 @@ Window (UTC): {m['window'][0]} -> {m['window'][1]}""")
 
     p.append("\n=== PREVIOUS ROUND BRIDGE (continuity: last digest's stories) ===")
     p.append(m["bridge"] if m["bridge"] else "no bridge available")
+
+    if m["early"]:
+        p.append(
+            "\n=== EARLY LEDE SHEET (provisional) ===\n"
+            "These angles were drafted mid-round, WITHOUT votes, results, or the closing\n"
+            "chat. They show what looked live early and which ones the editor liked.\n"
+            "Treat them as steering, NOT as candidates to reproduce. The real evidence\n"
+            "below supersedes them wherever they disagree.\n"
+            + m["early"])
+    else:
+        p.append("\nno early lede sheet for this round")
+
+    if m["notes"]:
+        p.append(
+            "\n=== EDITOR NOTES ===\n"
+            "Editorial direction from the human editor. Treat it as true, but it is\n"
+            "NOT a quotable source: do not attribute it to anyone, and do not present it as\n"
+            "something said in the chat or in a comment.\n"
+            + "\n".join(f"- {n['body'].strip()}" for n in m["notes"]))
 
     p.append(f"\n=== GROUP CHAT TRANSCRIPT ({len(m['chat'])} messages) ===")
     for ts, who, text in m["chat"]:
@@ -286,7 +327,9 @@ def main() -> None:
     print(f"round {args.round_id} '{m['round_name']}' ({m['slug']}): "
           f"{len(m['songs'])} songs, {len(m['vote_comments'])} vote comments, "
           f"{len(m['sub_comments'])} sub comments, {len(m['chat'])} chat msgs, "
-          f"bridge={'yes' if m['bridge'] else 'no'}; prompt {len(prompt)} chars",
+          f"bridge={'yes' if m['bridge'] else 'no'}; "
+          f"early={'yes' if m['early'] else 'no'}; notes={len(m['notes'])}; "
+          f"prompt {len(prompt)} chars",
           file=sys.stderr)
 
     data = ask_claude(prompt)
