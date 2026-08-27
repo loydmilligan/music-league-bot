@@ -90,3 +90,14 @@ def test_tick_does_not_advance_the_ep(db, run, monkeypatch):
     monkeypatch.setattr(hx, "run_script_cut", lambda *a, **k: {"exit_code": 0, "output_json": None, "error": None})
     hx.tick(db, repo=".", now_fn=lambda: "t1")
     assert db.execute("SELECT current_ep FROM rollout_runs WHERE id=?", (run,)).fetchone()["current_ep"] == 0
+
+
+def test_tick_marks_finished_cuts_awaiting_classification(db, run, monkeypatch):
+    """C2: the host has no notion of checks/retries/remasters — a finished cut
+    must be flagged so the app executor's engine reclassifies it."""
+    monkeypatch.setattr(hx, "run_script_cut",
+                        lambda cut, subs, cwd: {"exit_code": 0, "output_json": '{"ok":1}', "error": None})
+    hx.tick(db, repo=".", now_fn=lambda: "t1")
+    row = db.execute("SELECT awaiting_classification FROM rollout_cut_runs"
+                     " WHERE run_id=? AND cut_id='a'", (run,)).fetchone()
+    assert row["awaiting_classification"] == 1

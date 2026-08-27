@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { SCHEMA } from '$lib/db/schema.js';
 import { createRun, loadRun, saveRun } from './store.js';
-import { parkAtHold, liftHold } from './holds.js';
+import { parkAtHold, liftHold, type HoldDeps } from './holds.js';
 import type { Rollout } from './types.js';
+import type { AlertPayload } from '$lib/notifications/channels/types.js';
 
 const T0 = '2026-08-26T00:00:00Z';
 const rollout: Rollout = {
@@ -17,7 +18,7 @@ const rollout: Rollout = {
 };
 
 let db: Database.Database;
-let deps: { notify: ReturnType<typeof vi.fn>; now: () => string; appBase: string };
+let deps: HoldDeps & { notify: ReturnType<typeof vi.fn<(payload: AlertPayload) => Promise<unknown>>> };
 
 beforeEach(() => {
   db = new Database(':memory:');
@@ -28,7 +29,11 @@ beforeEach(() => {
     `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at)
      VALUES (9, 1, 'r9', 'More Cowbell!', ?)`,
   ).run(T0);
-  deps = { notify: vi.fn().mockResolvedValue([]), now: () => T0, appBase: 'https://mlb37.example' };
+  deps = {
+    notify: vi.fn<(payload: AlertPayload) => Promise<unknown>>().mockResolvedValue([]),
+    now: () => T0,
+    appBase: 'https://mlb37.example',
+  };
 });
 
 function parked() {
@@ -77,6 +82,18 @@ describe('parkAtHold', () => {
     const run = await parkAtHold(db, parked(), rollout, deps);
     await parkAtHold(db, loadRun(db, run.runId)!, rollout, deps);
     expect(deps.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes an approval envelope so a notification tap can resume (C3)', async () => {
+    const run = await parkAtHold(db, parked(), rollout, deps);
+    const token = (db.prepare('SELECT resume_token FROM rollout_runs WHERE id=?')
+      .get(run.runId) as { resume_token: string }).resume_token;
+    expect(deps.notify).toHaveBeenCalledWith(expect.objectContaining({
+      approval: expect.objectContaining({
+        token,
+        approveUrl: 'https://mlb37.example/api/rollout/resume',
+      }),
+    }));
   });
 });
 

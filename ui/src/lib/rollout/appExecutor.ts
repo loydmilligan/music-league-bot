@@ -8,7 +8,10 @@
  * exactly as before.
  */
 import type Database from 'better-sqlite3';
-import { getRolloutConfig, createRun, loadRun, saveRun, claimCut, reapStaleCuts, hasActiveRun } from './store.js';
+import {
+  getRolloutConfig, createRun, loadRun, loadRunByRound, saveRun,
+  claimCut, reapStaleCuts, hasActiveRun, hostRawResults,
+} from './store.js';
 import { advance, applyCutResult, claimable } from './engine.js';
 import { parkAtHold, type HoldDeps } from './holds.js';
 import type { Rollout, RunState } from './types.js';
@@ -43,6 +46,10 @@ export function promotePendingJobs(db: Database.Database, nowIso: string): numbe
     const cfg = getRolloutConfig(db, row.league_id);
     if (!cfg.enabled) continue;              // not ours — leave it for runOneJob
     if (hasActiveRun(db, row.league_id)) continue; // one active run per league
+    // rollout_runs_round is UNIQUE — a round that already has ANY run (done,
+    // failed, or otherwise) must never be promoted again, or createRun throws
+    // on every future tick for a re-queued round (final review I6).
+    if (loadRunByRound(db, row.round_id)) continue;
     createRun(db, row.league_id, row.round_id, cfg.rollout, nowIso);
     db.prepare('UPDATE digest_jobs SET status=?, updated_at=? WHERE round_id=?')
       .run(PROMOTED, nowIso, row.round_id);
@@ -89,6 +96,23 @@ export async function tickApp(deps: AppExecutorDeps): Promise<'idle' | 'worked'>
 
     if (run.state === 'parked') {
       await parkAtHold(db, run, rollout, deps.hold); // idempotent: notifies once
+      continue;
+    }
+
+    // Host cuts finished RAW — done/failed written directly by host_executor.py,
+    // which knows nothing of checks, retries, or remasters. Fold each through
+    // the same engine path an app cut takes before claiming anything else this
+    // tick, so a check failure retries/remasters/forces a hold exactly as an
+    // app cut's would (final review C2).
+    for (const raw of hostRawResults(db, id, run.currentEp)) {
+      run = applyCutResult(loadRun(db, id)!, rollout, raw.cutId, {
+        exitCode: raw.exitCode, outputJson: raw.outputJson, error: raw.error,
+      });
+      saveRun(db, run, nowIso);
+      worked = true;
+    }
+    if (run.state === 'parked') {
+      await parkAtHold(db, run, rollout, deps.hold);
       continue;
     }
 

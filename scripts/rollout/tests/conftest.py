@@ -22,6 +22,7 @@ CREATE TABLE rollout_runs (
 CREATE TABLE rollout_cut_runs (
   run_id TEXT, cut_id TEXT, ep INTEGER, runtime TEXT, state TEXT,
   attempts INTEGER DEFAULT 0, remasters INTEGER DEFAULT 0, check_passed INTEGER,
+  awaiting_classification INTEGER NOT NULL DEFAULT 0,
   claimed_at TEXT, heartbeat_at TEXT, output_json TEXT, error TEXT,
   started_at TEXT, finished_at TEXT, PRIMARY KEY (run_id, cut_id));
 """

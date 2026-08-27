@@ -674,6 +674,11 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (cutRunCols.length > 0 && !cutRunCols.some(c => c.name === 'check_passed')) {
 		db.exec('ALTER TABLE rollout_cut_runs ADD COLUMN check_passed INTEGER');
 	}
+	// Rollout: awaiting_classification added when host cut results were found
+	// to bypass the engine's check/retry/remaster logic (final review C2).
+	if (cutRunCols.length > 0 && !cutRunCols.some(c => c.name === 'awaiting_classification')) {
+		db.exec('ALTER TABLE rollout_cut_runs ADD COLUMN awaiting_classification INTEGER NOT NULL DEFAULT 0');
+	}
 	return db;
 }
 

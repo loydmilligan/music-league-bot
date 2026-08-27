@@ -129,3 +129,75 @@ describe('tickApp', () => {
     expect(cut.attempts).toBe(1);
   });
 });
+
+describe('host cut reclassification (C2)', () => {
+  const hostRollout: Rollout = {
+    order: ['verify'],
+    cuts: {
+      verify: { kind: 'script', runtime: 'host', label: 'Verify', command: ['v'], check: { rule: 'no-fail-checks' } },
+    },
+    skipAfter: {},
+    covers: [{ of: 'verify', remaster: true, budget: 1 }],
+  };
+
+  function deps(over = {}) {
+    return {
+      db,
+      capture: vi.fn().mockResolvedValue(undefined),
+      generate: vi.fn().mockResolvedValue(undefined),
+      send: vi.fn().mockResolvedValue(undefined),
+      archive: vi.fn().mockResolvedValue(undefined),
+      hold: { notify: vi.fn().mockResolvedValue([]), now: () => T0, appBase: 'https://x' },
+      now: () => T0,
+      ...over,
+    };
+  }
+
+  /** Mimic host_executor.py's _finish: a raw result, unclassified by the engine. */
+  function hostWritesRaw(runId: string, cutId: string, state: 'done' | 'failed', outputJson: string | null) {
+    db.prepare(
+      `UPDATE rollout_cut_runs SET state=?, output_json=?, error=NULL, finished_at=?, awaiting_classification=1
+        WHERE run_id=? AND cut_id=?`,
+    ).run(state, outputJson, T0, runId, cutId);
+  }
+
+  it('folds a host-raw failure through the engine: remaster once, then parks and notifies on exhaustion', async () => {
+    putRolloutConfig(db, 1, hostRollout, true, T0);
+    promotePendingJobs(db, T0);
+    const runId = loadRunByRound(db, 9)!.runId;
+    const bad = JSON.stringify({ checks: [{ severity: 'fail', id: 'quote fabricated?' }] });
+
+    // First failure: host writes raw; the app tick reclassifies via applyCutResult
+    // and fires the remaster (budget 1) — the cut goes back to pending.
+    hostWritesRaw(runId, 'verify', 'failed', bad);
+    const d1 = deps();
+    expect(await tickApp(d1)).toBe('worked');
+    let run = loadRunByRound(db, 9)!;
+    const afterFirst = run.cuts.find((c) => c.cutId === 'verify')!;
+    expect(afterFirst.state).toBe('pending');
+    expect(afterFirst.remasters).toBe(1);
+    expect(run.state).toBe('running');
+    expect(d1.hold.notify).not.toHaveBeenCalled();
+
+    // Second failure: host writes raw again; budget is exhausted — forced hold,
+    // and the run parks AND notifies within the same tick.
+    hostWritesRaw(runId, 'verify', 'failed', bad);
+    const d2 = deps();
+    await tickApp(d2);
+    run = loadRunByRound(db, 9)!;
+    expect(run.state).toBe('parked');
+    expect(run.cuts.find((c) => c.cutId === 'verify')!.state).toBe('failed');
+    expect(d2.hold.notify).toHaveBeenCalled();
+  });
+
+  it('clears awaiting_classification once reclassified', async () => {
+    putRolloutConfig(db, 1, hostRollout, true, T0);
+    promotePendingJobs(db, T0);
+    const runId = loadRunByRound(db, 9)!.runId;
+    hostWritesRaw(runId, 'verify', 'done', JSON.stringify({ checks: [] }));
+    await tickApp(deps());
+    const row = db.prepare('SELECT awaiting_classification FROM rollout_cut_runs WHERE run_id=? AND cut_id=?')
+      .get(runId, 'verify') as { awaiting_classification: number };
+    expect(row.awaiting_classification).toBe(0);
+  });
+});

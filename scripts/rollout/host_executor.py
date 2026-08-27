@@ -180,11 +180,14 @@ def run_agent_cut(cut, context, subs):
 
 def _finish(db, run_id, cut_id, res, now):
     """Write a finished cut. State transitions (retry / remaster / park) are the
-    app executor's engine — the host records `done` or `failed` plus output and
-    lets the engine decide on its next pass."""
+    app executor's engine — the host records `done` or `failed` plus output,
+    marks the row `awaiting_classification`, and lets the engine reclassify it
+    on its next pass (checks, retries, and remasters are otherwise dead for
+    every host cut — final review C2)."""
     state = "done" if res["exit_code"] == 0 and not res.get("error") else "failed"
     db.execute(
-        "UPDATE rollout_cut_runs SET state=?, output_json=?, error=?, finished_at=?"
+        "UPDATE rollout_cut_runs"
+        "   SET state=?, output_json=?, error=?, finished_at=?, awaiting_classification=1"
         " WHERE run_id=? AND cut_id=?",
         (state, res.get("output_json"), res.get("error"), now, run_id, cut_id))
     db.commit()

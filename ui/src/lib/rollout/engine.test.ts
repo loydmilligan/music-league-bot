@@ -100,4 +100,29 @@ describe('advance', () => {
     const done = run({ state: 'done' });
     expect(advance(done, rollout)).toEqual(done);
   });
+
+  it('does not un-park a forced hold even when its EP is terminal (C1)', () => {
+    // The failed cut makes epComplete(0) true, but the run is PARKED (a
+    // forced hold from applyCutResult), not RUNNING — advance must not move it.
+    let cuts = set(initialCutRuns(rollout), 'a', { state: 'failed' });
+    cuts = set(cuts, 'b', { state: 'done' });
+    const parked = run({ state: 'parked' }, cuts);
+    expect(advance(parked, rollout)).toEqual(parked);
+  });
+
+  it('skips a trailing cover-only EP that has no cut rows (I7)', () => {
+    // A remaster cover of the LAST cut in the order creates an EP entry
+    // (covers non-empty) with zero materialized cut rows — initialCutRuns
+    // never generates a row for a cover, only for ep.cuts. Without a guard
+    // the run parks forever waiting for an EP that can never complete.
+    const trailingCover: Rollout = {
+      order: ['a'],
+      cuts: { a: { kind: 'script', runtime: 'host', label: 'A', command: ['a'] } },
+      skipAfter: {},
+      covers: [{ of: 'a', remaster: true, budget: 1 }],
+    };
+    const cuts = set(initialCutRuns(trailingCover), 'a', { state: 'done' });
+    const next = advance(run({}, cuts), trailingCover);
+    expect(next.state).toBe('done'); // EP1 has no rows to wait for — finish, not stall
+  });
 });

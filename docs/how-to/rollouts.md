@@ -62,14 +62,20 @@ as before.
 
 ## Resuming a parked run
 
-A run **parks** at a `human` cut and fires a notification (ntfy and/or
-WhatsApp, per the existing settings-grid routing) carrying a review link and
-a one-time resume token — this is the digest approval gate generalized from
-one hold to N holds (see Task 9).
+A run **parks** at a `human` cut — or a forced hold, if a check couldn't be
+repaired — and fires a notification (ntfy and/or WhatsApp, per the existing
+settings-grid routing) carrying a review link and a one-time resume token —
+this is the digest approval gate generalized from one hold to N holds (see
+Task 9).
 
 To resume:
-- Tap the link in the ntfy notification, **or**
-- Paste the token into the Runs view's resume field.
+- Tap **Approve** (or **Deny** — for a rollout hold there is no separate deny
+  path, so both buttons resume the run; **Edit** opens the review page) on
+  the ntfy notification, **or**
+- Open the run in the Runs view and click **Resume this run** — no token to
+  find or paste; the server looks up the run's stored token itself
+  (`POST /api/rollout/resume` accepts either `{ token }`, from a notification
+  tap, or `{ runId }`, from the Runs view).
 
 Either path calls `liftHold`, which marks the human cut `done`, resumes the
 run to `running`, and **spends** the token — a stale or reused token comes
@@ -81,6 +87,11 @@ Uncheck **"Rollout enabled"** and Save. This does **not** touch an in-flight
 run — it finishes on its own. It only stops new rounds from being promoted;
 the next `pending` job for that league falls back to `digest_jobs` /
 `runOneJob` exactly as before enabling.
+
+The host executor's timer is independent of any single league's rollback:
+it keeps polling for host-runtime cuts across every league with an active
+run, so disabling one league's rollout does not need — and does not cause —
+any change to `mlb-rollout-host.timer` itself.
 
 ## Three numbers that mean three different things
 

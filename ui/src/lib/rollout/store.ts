@@ -119,7 +119,7 @@ export function saveRun(db: Database.Database, run: RunState, nowIso: string): v
     ).run(run.currentEp, run.state, run.error ?? null, nowIso, run.state, nowIso, run.runId);
     const upd = db.prepare(
       `UPDATE rollout_cut_runs
-          SET state=?, attempts=?, remasters=?, check_passed=?, output_json=?
+          SET state=?, attempts=?, remasters=?, check_passed=?, output_json=?, awaiting_classification=0
         WHERE run_id=? AND cut_id=?`,
     );
     for (const c of run.cuts) {
@@ -176,4 +176,25 @@ export function hasActiveRun(db: Database.Database, leagueId: number): boolean {
     `SELECT COUNT(*) AS n FROM rollout_runs WHERE league_id=? AND state IN ('running','parked')`,
   ).get(leagueId) as { n: number };
   return row.n > 0;
+}
+
+export type HostRawResult = { cutId: string; exitCode: number; outputJson?: string; error?: string };
+
+/**
+ * Host-runtime cuts in the run's current EP that the host executor finished
+ * RAW — written `done`/`failed` directly, with `awaiting_classification=1` —
+ * but which have not yet passed through the engine's check/retry/remaster
+ * logic (final review C2: the host has no notion of checks or budgets).
+ */
+export function hostRawResults(db: Database.Database, runId: string, ep: number): HostRawResult[] {
+  const rows = db.prepare(
+    `SELECT cut_id, state, output_json, error FROM rollout_cut_runs
+      WHERE run_id=? AND ep=? AND runtime='host' AND awaiting_classification=1`,
+  ).all(runId, ep) as { cut_id: string; state: string; output_json: string | null; error: string | null }[];
+  return rows.map((r) => ({
+    cutId: r.cut_id,
+    exitCode: r.state === 'done' ? 0 : 1,
+    outputJson: r.output_json ?? undefined,
+    error: r.error ?? undefined,
+  }));
 }

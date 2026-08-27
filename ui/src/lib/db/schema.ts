@@ -617,6 +617,10 @@ export const SCHEMA = `
     attempts     INTEGER NOT NULL DEFAULT 0,
     remasters    INTEGER NOT NULL DEFAULT 0,
     check_passed INTEGER,
+    -- Set by the host executor when it writes a raw done/failed result: this
+    -- row has NOT yet passed through the engine's check/retry/remaster logic.
+    -- The app executor clears it the moment it reclassifies via applyCutResult.
+    awaiting_classification INTEGER NOT NULL DEFAULT 0,
     claimed_at   TEXT,
     heartbeat_at TEXT,
     output_json  TEXT,

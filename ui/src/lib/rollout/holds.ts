@@ -59,9 +59,17 @@ export async function parkAtHold(
 
   const { league, round } = names(db, run);
   const message = run.error ? `${label} — unresolved: ${run.error}` : label;
-  await deps.notify({
+  const resumeUrl = `${deps.appBase}/api/rollout/resume`;
+  // A hold has exactly one exit — lift it. Approve and Deny both resume (there
+  // is no "deny" concept here); Edit opens the review page. Reuses the same
+  // AlertPayload.approval shape runnerLoop.ts's awaitApproval builds, so this
+  // routes through the existing ntfy tap-to-act action buttons (C3 — the
+  // previous payload omitted `approval` entirely, so a tap could not resume).
+  const payload: AlertPayload = {
     alertType, title: `${league} — ${round}`, message, link: reviewUrl,
-  } as AlertPayload);
+    approval: { kind: 'approve', token, approveUrl: resumeUrl, denyUrl: resumeUrl, editUrl: reviewUrl },
+  };
+  await deps.notify(payload);
 
   return { ...run, state: 'parked' };
 }

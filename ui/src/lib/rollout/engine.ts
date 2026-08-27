@@ -59,11 +59,22 @@ function epHasHuman(run: RunState, ep: number): boolean {
  * contains an unlifted human cut. Marks done when it moves past the last EP.
  */
 export function advance(run: RunState, rollout: Rollout): RunState {
-  if (run.state === 'done' || run.state === 'failed') return run;
+  // Only a RUNNING run may advance. done/failed are terminal; parked covers
+  // both a lift-pending human hold and a FORCED hold from applyCutResult —
+  // in the forced case the EP can look complete (the failed cut is
+  // terminal) while the run must stay put until a human intervenes.
+  if (run.state !== 'running') return run;
   if (!epComplete(run, run.currentEp)) return run;
 
   const eps: RolloutEP[] = resolveRollout(rollout);
-  const nextEp = run.currentEp + 1;
+  let nextEp = run.currentEp + 1;
+  // A remaster cover of the last cut in an EP creates an EP entry with covers
+  // but no cut rows — initialCutRuns only materializes rows for ep.cuts, never
+  // for covers. epComplete can never go true for zero rows, so skip straight
+  // past any EP index with nothing to wait for (I7).
+  while (nextEp < eps.length && !run.cuts.some((c) => c.ep === nextEp)) {
+    nextEp++;
+  }
   if (nextEp >= eps.length) {
     return { ...run, state: 'done' };
   }

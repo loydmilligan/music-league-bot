@@ -6,7 +6,6 @@
 
   let runs = $state<{ runId: string; roundId: number; roundName: string; state: string }[]>([]);
   let selected = $state<RunSummaryView | null>(null);
-  let resumeToken = $state('');
 
   async function loadRuns() {
     const r = await fetch(`/api/rollout/runs?leagueId=${leagueId}`);
@@ -22,12 +21,15 @@
     selected = summarizeRun(run, cfg.rollout);
   }
 
-  async function resume() {
+  // The server resolves the run's current resume token itself — no token
+  // paste required (final review C3; the old UI asked for one but no
+  // endpoint ever surfaced it to copy).
+  async function resume(runId: string) {
     const r = await fetch('/api/rollout/resume', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token: resumeToken }),
+      body: JSON.stringify({ runId }),
     });
-    if (r.ok) { resumeToken = ''; await loadRuns(); }
+    if (r.ok) { selected = null; await loadRuns(); }
   }
 </script>
 
@@ -58,11 +60,7 @@
       </ol>
       {#if selected.resumable}
         <div class="rlt-resume-row">
-          <label class="rlt-field">
-            <span>Resume token</span>
-            <input class="ml-input" bind:value={resumeToken} />
-          </label>
-          <button class="mash-btn mash-btn--primary" onclick={resume} disabled={!resumeToken}>Resume</button>
+          <button class="mash-btn mash-btn--primary" onclick={() => resume(selected!.runId)}>Resume this run</button>
         </div>
       {/if}
     </div>
@@ -107,5 +105,4 @@
   .rlt-run-status--running { background: var(--amber-soft); color: var(--amber); }
 
   .rlt-resume-row { display: flex; align-items: flex-end; gap: 8px; }
-  .rlt-field { display: flex; flex-direction: column; gap: 4px; font: 500 11px/1.2 var(--font-mono); color: var(--fg-muted); }
 </style>
