@@ -1252,10 +1252,11 @@ beforeEach(() => {
   db = new Database(':memory:');
   db.exec(SCHEMA);
   db.prepare('INSERT INTO leagues (id, slug, name) VALUES (1, ?, ?)').run('bz', 'Boarz');
-  db.prepare('INSERT INTO seasons (id, league_id, season_number) VALUES (1, 1, 1)').run();
-  const r = db.prepare('INSERT INTO rounds (id, season_id, name, voting_deadline) VALUES (?, 1, ?, ?)');
-  r.run(148, 'Prev', '2026-08-20T06:30:00Z');
-  r.run(149, 'Surrender Monkeys', '2026-08-27T06:30:00Z');
+  // seasons.status and rounds.ml_round_id/created_at are NOT NULL in SCHEMA.
+  db.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')").run();
+  const r = db.prepare('INSERT INTO rounds (id, season_id, ml_round_id, name, voting_deadline, created_at) VALUES (?, 1, ?, ?, ?, ?)');
+  r.run(148, 'ml-148', 'Prev', '2026-08-20T06:30:00Z', T0);
+  r.run(149, 'ml-149', 'Surrender Monkeys', '2026-08-27T06:30:00Z', T0);
 });
 
 const deps = (ledes: unknown = [{ id: 'a', title: 'T', angle: 'A', evidence: ['e'] }]) => ({
@@ -1337,7 +1338,7 @@ describe('generateEarlyLedes', () => {
 Run: `cd ui && npx vitest run src/lib/digest/earlyLedes.test.ts`
 Expected: FAIL — `Failed to resolve import "./earlyLedes.js"`
 
-- [ ] **Step 3: Add the table to `SCHEMA`**
+- [ ] **Step 3: Add the table to `SCHEMA`** *(already done by the schema task, commit 8f9b2c3 — `digest_early_ledes` and `digest_ledes` are both in schema.ts; skip)*
 
 ```sql
   CREATE TABLE IF NOT EXISTS digest_early_ledes (
@@ -1365,7 +1366,7 @@ Key requirements, each covered by a test above:
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `cd ui && npx vitest run src/lib/digest/earlyLedes.test.ts`
-Expected: PASS (11 tests)
+Expected: PASS (10 tests — the count above, not 11)
 
 - [ ] **Step 6: Commit**
 
