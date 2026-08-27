@@ -8,6 +8,7 @@
  * each track is its own group (never merged with adjacent same-model tracks).
  */
 import type { Pipeline } from '../digest/pipeline.js';
+import { bucketBySkip, placeCovers } from '../digest/epCore.js';
 
 export type ClientEP = {
   groups: { model: string; sections: string[] }[];
@@ -46,38 +47,14 @@ export function solveClientEPs(
   activeSections: string[],
   bucketDefault: string,
 ): ClientEP[] {
-  const activeSet = new Set(activeSections);
   const models = pipeline.models as Record<string, string>;
   const skipAfter = pipeline.skipAfter as Record<string, boolean>;
   const isArchive = pipeline.releaseKind === 'archive';
 
   const resolveModel = (sec: string): string => models[sec] ?? bucketDefault;
 
-  // Split pipeline.order into EP buckets at skipAfter boundaries.
-  // An inactive anchor still fires the boundary (mirrors OQ-2 in resolvePipeline).
-  const epBuckets: string[][] = [];
-  let cur: string[] = [];
-  for (const sec of pipeline.order) {
-    if (activeSet.has(sec)) cur.push(sec);
-    if (skipAfter[sec] === true) {
-      if (cur.length > 0) { epBuckets.push(cur); cur = []; }
-    }
-  }
-  if (cur.length > 0) epBuckets.push(cur);
-
-  // Place covers into the EP slot after the one containing their original section.
-  const coversByEp = new Map<number, { of: string; model: string }[]>();
-  for (const cover of pipeline.covers) {
-    const coverOf = cover.of as string;
-    let origIdx = -1;
-    for (let i = 0; i < epBuckets.length; i++) {
-      if (epBuckets[i].includes(coverOf)) { origIdx = i; break; }
-    }
-    if (origIdx === -1) continue;
-    const coverIdx = origIdx + 1;
-    if (!coversByEp.has(coverIdx)) coversByEp.set(coverIdx, []);
-    coversByEp.get(coverIdx)!.push({ of: coverOf, model: cover.model });
-  }
+  const epBuckets = bucketBySkip(pipeline.order, skipAfter, activeSections);
+  const coversByEp = placeCovers(epBuckets, pipeline.covers as { of: string; model: string }[]);
 
   const totalEps = coversByEp.size > 0
     ? Math.max(epBuckets.length, ...Array.from(coversByEp.keys()).map((k) => k + 1))

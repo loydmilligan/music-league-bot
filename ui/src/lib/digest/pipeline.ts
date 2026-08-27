@@ -17,6 +17,7 @@
 import type Database from 'better-sqlite3';
 import { modelForSection } from './modelFor.js';
 import type { SectionKind } from './llm.js';
+import { bucketBySkip, placeCovers } from './epCore.js';
 
 // Re-export SectionKind for callers that only import from pipeline.ts
 export type { SectionKind };
@@ -145,57 +146,12 @@ export function resolvePipeline(
   activeSections: string[],
   db: Database.Database,
 ): EP[] {
-  const activeSet = new Set(activeSections);
-
   // Resolve model for each section: pipeline.models override → modelForSection fallback.
   const resolveModel = (section: string): string =>
     pipeline.models[section] ?? modelForSection(section, db);
 
-  // Split pipeline.order into EP buckets at skipAfter boundaries.
-  // When a skipAfter anchor is not in activeSections, the boundary fires at the
-  // last active section whose position in pipeline.order precedes the anchor.
-  const epBuckets: string[][] = [];
-  let currentBucket: string[] = [];
-
-  for (const section of pipeline.order) {
-    // Only collect active sections.
-    if (activeSet.has(section)) {
-      currentBucket.push(section);
-    }
-    // A skip sits AFTER this section in the unfiltered order.
-    // We fire the bucket split here whether or not this section is active —
-    // so an inactive anchor still terminates the current EP (OQ-2 resolution).
-    if (pipeline.skipAfter[section] === true) {
-      if (currentBucket.length > 0) {
-        epBuckets.push(currentBucket);
-        currentBucket = [];
-      }
-    }
-  }
-  // Trailing bucket (sections after the last skip, or all sections if no skips).
-  if (currentBucket.length > 0) {
-    epBuckets.push(currentBucket);
-  }
-
-  // Place covers into EP slots.
-  // A cover fires in the EP after the one that contains its original section.
-  // If the original is in the last EP, a trailing EP is appended.
-  const coversByEp: Map<number, Cover[]> = new Map();
-  for (const cover of pipeline.covers) {
-    // Find which EP index the original section landed in.
-    let originalEpIdx = -1;
-    for (let i = 0; i < epBuckets.length; i++) {
-      if (epBuckets[i].includes(cover.of)) {
-        originalEpIdx = i;
-        break;
-      }
-    }
-    if (originalEpIdx === -1) continue; // original not active; skip cover
-
-    const coverEpIdx = originalEpIdx + 1;
-    if (!coversByEp.has(coverEpIdx)) coversByEp.set(coverEpIdx, []);
-    coversByEp.get(coverEpIdx)!.push(cover);
-  }
+  const epBuckets = bucketBySkip(pipeline.order, pipeline.skipAfter as Record<string, boolean>, activeSections);
+  const coversByEp = placeCovers(epBuckets, pipeline.covers);
 
   // Determine total EP count, adding a trailing EP if needed for covers.
   const totalEps = coversByEp.size > 0
