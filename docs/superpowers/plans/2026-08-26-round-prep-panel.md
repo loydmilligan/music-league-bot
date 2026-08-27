@@ -79,10 +79,13 @@ beforeEach(() => {
   db = new Database(':memory:');
   db.exec(SCHEMA);
   db.prepare('INSERT INTO leagues (id, slug, name) VALUES (1, ?, ?)').run('bz', 'Boarz II Men');
-  db.prepare('INSERT INTO seasons (id, league_id, season_number) VALUES (1, 1, 1)').run();
-  const r = db.prepare('INSERT INTO rounds (id, season_id, name, voting_deadline) VALUES (?, 1, ?, ?)');
-  r.run(148, 'Smells Like Teen Cousin Fuckers', '2026-08-20T06:30:00Z');
-  r.run(149, 'Surrender Monkeys', '2026-08-27T06:30:00Z');
+  // Real schema: seasons.status, rounds.ml_round_id and rounds.created_at are NOT NULL.
+  db.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')").run();
+  const r = db.prepare(
+    "INSERT INTO rounds (id, season_id, ml_round_id, name, voting_deadline, created_at) VALUES (?, 1, ?, ?, ?, '2026-08-01T00:00:00Z')",
+  );
+  r.run(148, 'ml-148', 'Smells Like Teen Cousin Fuckers', '2026-08-20T06:30:00Z');
+  r.run(149, 'ml-149', 'Surrender Monkeys', '2026-08-27T06:30:00Z');
 });
 
 describe('previousRoundId', () => {
@@ -114,8 +117,9 @@ describe('gatherPrepMaterial — bridge row', () => {
   });
 
   it('reports present with a preview when the previous round has a bridge', () => {
-    db.prepare('INSERT INTO digest_bridges (round_id, content_json, generated_at) VALUES (?, ?, ?)')
-      .run(148, JSON.stringify({
+    // Real digest_bridges also has NOT NULL league_id + draft_id.
+    db.prepare('INSERT INTO digest_bridges (round_id, league_id, draft_id, content_json, generated_at) VALUES (?, 1, ?, ?, ?)')
+      .run(148, 'draft-148', JSON.stringify({
         round: { id: 148 },
         headline_stories: [{ title: 'The Combo Option' }],
         running_bits: ['carrotbox'],
@@ -135,8 +139,8 @@ describe('gatherPrepMaterial — bridge row', () => {
   });
 
   it('survives a malformed bridge payload rather than throwing', () => {
-    db.prepare('INSERT INTO digest_bridges (round_id, content_json, generated_at) VALUES (?, ?, ?)')
-      .run(148, '{ not json', '2026-08-26T21:55:24Z');
+    db.prepare('INSERT INTO digest_bridges (round_id, league_id, draft_id, content_json, generated_at) VALUES (?, 1, ?, ?, ?)')
+      .run(148, 'draft-148', '{ not json', '2026-08-26T21:55:24Z');
     expect(() => bridgeRow(149)).not.toThrow();
     expect(bridgeRow(149).status).toBe('absent');
   });
@@ -156,17 +160,8 @@ The table was created by `generate_bridge.py`, not by `schema.ts`, so the in-mem
 grep -n "digest_bridges" ui/src/lib/db/schema.ts
 ```
 
-If absent, append to the `SCHEMA` template literal (matching the shape `generate_bridge.py` writes):
-
-```sql
-  CREATE TABLE IF NOT EXISTS digest_bridges (
-    round_id     INTEGER PRIMARY KEY REFERENCES rounds(id),
-    content_json TEXT NOT NULL,
-    generated_at TEXT NOT NULL
-  );
-```
-
-Confirm the real column names first — `sqlite3 data/league.db ".schema digest_bridges"` — and mirror them exactly. Do **not** change the live table.
+Already done (commit 8f9b2c3): `schema.ts` mirrors the live table, which also carries
+NOT NULL `league_id` and `draft_id` columns. Do **not** edit `schema.ts` or the live table.
 
 - [ ] **Step 4: Write the implementation**
 
@@ -258,7 +253,7 @@ Expected: PASS (7 tests)
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ui/src/lib/digest/prepMaterial.ts ui/src/lib/digest/prepMaterial.test.ts ui/src/lib/db/schema.ts
+git add ui/src/lib/digest/prepMaterial.ts ui/src/lib/digest/prepMaterial.test.ts
 git commit -m "feat(prep): material gatherer with the previous-round bridge row
 
 Three-state status: not-enabled is distinct from absent, because collapsing
@@ -600,8 +595,13 @@ beforeEach(() => {
   db = new Database(':memory:');
   db.exec(SCHEMA);
   db.prepare('INSERT INTO leagues (id, slug, name) VALUES (1, ?, ?)').run('bz', 'Boarz');
-  db.prepare('INSERT INTO seasons (id, league_id, season_number) VALUES (1, 1, 1)').run();
-  db.prepare('INSERT INTO rounds (id, season_id, name) VALUES (149, 1, ?)').run('Surrender Monkeys');
+  // Real schema: seasons.status and rounds.ml_round_id/created_at are NOT NULL.
+  db.prepare(
+    `INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (149, 1, 'r149', ?, '2026-08-26T00:00:00Z')`,
+  ).run('Surrender Monkeys');
 });
 
 describe('CRUD', () => {
@@ -620,7 +620,9 @@ describe('CRUD', () => {
   });
 
   it('scopes notes to their round', () => {
-    db.prepare('INSERT INTO rounds (id, season_id, name) VALUES (150, 1, ?)').run('Next');
+    db.prepare(
+      `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (150, 1, 'r150', ?, '2026-08-26T00:00:00Z')`,
+    ).run('Next');
     addNote(db, 149, 'general', 'for 149', T0);
     expect(listNotes(db, 150)).toEqual([]);
   });
@@ -745,8 +747,8 @@ export function wrapNotes(notes: RoundNote[]): string {
   return [
     '',
     '# Editor notes',
-    'Editorial direction from the human editor. Treat it as true, but it is NOT a',
-    'quotable source: do not attribute it to anyone, and do not present it as',
+    'Editorial direction from the human editor. Treat it as true, but it is',
+    'NOT a quotable source: do not attribute it to anyone, and do not present it as',
     'something said in the chat or in a comment.',
     lines,
   ].join('\n');
@@ -1522,14 +1524,23 @@ def test_gather_tolerates_missing_tables(tmp_path):
     import sqlite3
     path = tmp_path / "x.db"
     conn = sqlite3.connect(path)
+    # gather() also reads ml_submissions/players/votes/settings unconditionally,
+    # so the "old DB" must have them; only the two new prep-panel tables are absent.
     conn.executescript(
         "CREATE TABLE leagues (id INTEGER PRIMARY KEY, slug TEXT, name TEXT);"
         "CREATE TABLE seasons (id INTEGER PRIMARY KEY, league_id INTEGER);"
         "CREATE TABLE rounds (id INTEGER PRIMARY KEY, season_id INTEGER, name TEXT,"
         "  description TEXT, voting_deadline TEXT);"
+        "CREATE TABLE players (id INTEGER PRIMARY KEY, name TEXT);"
+        "CREATE TABLE ml_submissions (id INTEGER PRIMARY KEY, round_id INTEGER,"
+        "  player_id INTEGER, spotify_uri TEXT, title TEXT, artists TEXT, comment TEXT);"
+        "CREATE TABLE votes (id INTEGER PRIMARY KEY, round_id INTEGER,"
+        "  player_id INTEGER, spotify_uri TEXT, points INTEGER, comment TEXT);"
+        "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);"
         "INSERT INTO leagues VALUES (1,'bz','Boarz');"
         "INSERT INTO seasons VALUES (1,1);"
-        "INSERT INTO rounds VALUES (149,1,'R','', '2026-08-27T06:30:00Z');")
+        "INSERT INTO rounds VALUES (149,1,'R','', '2026-08-27T06:30:00Z');"
+        "INSERT INTO settings VALUES ('chat_league_group_map','{}');")
     conn.commit()
     m = gl.gather(conn, 149)
     assert m["early"] is None
