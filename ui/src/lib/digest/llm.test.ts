@@ -17,7 +17,8 @@ function mkBundleEntry(round_number: number, name: string, opts: Partial<RoundBu
   return { round_number, name, top3: [], bottom1: null, winner: null, isCurrent: false, isPrev: false, ...opts };
 }
 
-function mkData(over: Partial<RoundData> = {}): RoundData {
+// Exported so llm.notes.test.ts can reuse the fixture without duplicating it.
+export function makeRoundData(over: Partial<RoundData> = {}): RoundData {
   return {
     round: { id: 3, name: 'Department of Education', description: 'songs about school' },
     league: { id: 1, name: 'Hip Jammers' },
@@ -60,7 +61,7 @@ describe('system prompt — ML rules', () => {
 
 describe('user prompt — chronology', () => {
   it('states the current round sequence and anchors "last round"', () => {
-    const p = buildUserPrompt(mkData());
+    const p = buildUserPrompt(makeRoundData());
     expect(p).toMatch(/round 3 of 5/);
     expect(p).toMatch(/Round 1: Your Permanent Record/);
     expect(p).toMatch(/Round 2: Must be love on the brain/);
@@ -68,7 +69,7 @@ describe('user prompt — chronology', () => {
     expect(p).toMatch(/Do not reference any round after round 3/);
   });
   it('notes a first round has no prior round', () => {
-    const p = buildUserPrompt(mkData({
+    const p = buildUserPrompt(makeRoundData({
       roundSequence: { number: 1, total: 5 },
       priorRounds: [],
       bundle: [mkBundleEntry(1, 'Department of Education', { isCurrent: true })],
@@ -76,12 +77,12 @@ describe('user prompt — chronology', () => {
     expect(p).toMatch(/FIRST round of the season/);
   });
   it('presents the cross-round record as the only fact source', () => {
-    const p = buildUserPrompt(mkData());
+    const p = buildUserPrompt(makeRoundData());
     expect(p).toMatch(/Cross-round record/);
     expect(p).toMatch(/ONLY SOURCE of cross-round facts/);
   });
   it('flags relContext as personality context, not cross-round facts', () => {
-    const p = buildUserPrompt(mkData({ relContext: 'Alice loves 80s bangers' }));
+    const p = buildUserPrompt(makeRoundData({ relContext: 'Alice loves 80s bangers' }));
     expect(p).toMatch(/personality and tone context only/i);
     expect(p).toMatch(/NOT a source of cross-round facts/i);
     expect(p).toMatch(/Alice loves 80s bangers/);
@@ -91,33 +92,33 @@ describe('user prompt — chronology', () => {
 describe('generation params', () => {
   it('omits a disabled section from the active set', () => {
     const params: GenParams = { sections: [{ id: 'villain', enabled: false }] };
-    const kinds = activeKindsForDraft(mkData(), params);
+    const kinds = activeKindsForDraft(makeRoundData(), params);
     expect(kinds).not.toContain('villain');
     expect(kinds).toContain('podium');
   });
 
   it('includes chat when pastedChat is supplied even with no auto-captured mentions', () => {
     const params: GenParams = { pastedChat: 'Alice: this round slapped' };
-    const kinds = activeKindsForDraft(mkData({ chatMentions: [] }), params);
+    const kinds = activeKindsForDraft(makeRoundData({ chatMentions: [] }), params);
     expect(kinds).toContain('chat');
   });
 
   it('excludes chat with neither mentions nor pasted text', () => {
-    expect(activeKindsForDraft(mkData({ chatMentions: [] }))).not.toContain('chat');
+    expect(activeKindsForDraft(makeRoundData({ chatMentions: [] }))).not.toContain('chat');
   });
 
   it('injects per-section style words and context into the section instructions', () => {
     const params: GenParams = {
       sections: [{ id: 'podium', enabled: true, style: ['mean', 'concise'], context: 'note the upset' }],
     };
-    const p = buildUserPrompt(mkData(), undefined, params);
+    const p = buildUserPrompt(makeRoundData(), undefined, params);
     expect(p).toMatch(/style\/focus — lean into: mean, concise/);
     expect(p).toMatch(/extra context: note the upset/);
   });
 
   it('feeds pasted chat into the prompt as the chat-section source', () => {
     const params: GenParams = { pastedChat: 'Bob: banger alert' };
-    const p = buildUserPrompt(mkData(), undefined, params);
+    const p = buildUserPrompt(makeRoundData(), undefined, params);
     expect(p).toMatch(/Pasted WhatsApp chat/);
     expect(p).toMatch(/Bob: banger alert/);
   });

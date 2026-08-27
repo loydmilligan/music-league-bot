@@ -7,6 +7,10 @@ import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js'
 import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
 import type { TopSectionVariant, TopSectionVisual } from './topSectionVariants.js';
 import { gatherStorylineEvidence, type StorylineEvidence } from './storylineEvidence.js';
+import { wrapNotes } from './noteEnvelope.js';
+// Type-only: roundNotes imports SECTION_KINDS from this module at eval time,
+// so a static value import here is a TDZ crash. Load notesForPrompt lazily.
+import type { PromptNotes } from './roundNotes.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat', 'storylines'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -699,6 +703,7 @@ export function buildUserPrompt(
   genParams?: GenParams,
   season?: SeasonData,
   sections?: SectionKind[],
+  notes?: PromptNotes,
 ): string {
   // sprint-21: recap mode swaps the entire prompt body to season slices.
   if (genParams?.recap?.enabled && season) {
@@ -741,6 +746,10 @@ export function buildUserPrompt(
   } else {
     parts.push('This is the FIRST round of the season — there is no "last round" to reference.');
   }
+
+  // Editor notes (general): cross-cutting framing, so it sits with the other
+  // whole-digest context rather than on any one section.
+  if (notes?.general?.length) parts.push(wrapNotes(notes.general));
 
   if (data.relContext.trim()) {
     parts.push(
@@ -806,6 +815,10 @@ export function buildUserPrompt(
   if (steer?.kind) {
     parts.push(`\n# Regenerate the ONE section "${steer.kind}"`);
     parts.push(SECTION_DESCRIPTIONS[steer.kind]);
+    const steerNotes = notes?.bySection?.[steer.kind];
+    if (steerNotes?.length) {
+      parts.push(`\nEditor notes — true but NOT quotable, do not attribute: ${steerNotes.map((n) => n.body.trim()).join(' | ')}`);
+    }
     if (steer.currentContent !== undefined) {
       parts.push(`\nPrevious version (replace it):\n${JSON.stringify(steer.currentContent)}`);
     }
@@ -827,6 +840,12 @@ export function buildUserPrompt(
       const p = paramByKind.get(k);
       if (p?.style?.length) line += ` [style/focus — lean into: ${p.style.join(', ')}]`;
       if (p?.context?.trim()) line += ` [extra context: ${p.context.trim()}]`;
+      // Inline form of the editorial envelope: appended to a one-line section
+      // description rather than emitted as a block.
+      const sectionNotes = notes?.bySection?.[k];
+      if (sectionNotes?.length) {
+        line += ` [editor notes — true but NOT quotable, do not attribute: ${sectionNotes.map((n) => n.body.trim()).join(' | ')}]`;
+      }
       parts.push(line);
     }
   }
@@ -874,6 +893,11 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
     }
   }
 
+  // Notes are read server-side rather than passed in from the UI: under an
+  // unattended rollout nobody opens GenerateModal, so a UI-only path would
+  // silently stop working the day automation lands.
+  const notes = db ? (await import('./roundNotes.js')).notesForPrompt(db, data.round.id) : undefined;
+
   // Determine the active section list (same logic as before; chat excluded when no data).
   const activeKinds = activeKindsForDraft(data, genParams);
 
@@ -920,7 +944,7 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
 
       const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
         { role: 'system', content: buildSystemPrompt(groupSections) },
-        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, groupSections) },
+        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, groupSections, notes) },
       ];
       if (priorContextMsg) messages.push(priorContextMsg);
 
@@ -965,7 +989,7 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
       const coverSectionKind = cover.of as SectionKind;
       const coverMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
         { role: 'system', content: buildSystemPrompt([coverSectionKind]) },
-        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [coverSectionKind]) },
+        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [coverSectionKind], notes) },
         coverContextMsg,
       ];
 
@@ -1014,6 +1038,7 @@ export async function regenerateOneSection(
   sectionMeta?: { sectionId: string; runId: string },
 ): Promise<{ section: unknown; costUsd: number }> {
   const model = db ? modelForSection(kind, db) : undefined;
+  const notes = db ? (await import('./roundNotes.js')).notesForPrompt(db, data.round.id) : undefined;
 
   // Derive leagueId from round when available
   const leagueId = db
@@ -1035,7 +1060,7 @@ export async function regenerateOneSection(
   const { content: raw, costUsd } = await callOpenRouter(
     [
       { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }, genParams, season) },
+      { role: 'user', content: buildUserPrompt(data, { chips, instructions, kind, currentContent }, genParams, season, undefined, notes) },
     ],
     { jsonMode: true, model, meta },
   );
