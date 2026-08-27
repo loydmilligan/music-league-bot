@@ -58,6 +58,51 @@ export function promotePendingJobs(db: Database.Database, nowIso: string): numbe
   return promoted;
 }
 
+type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) =>
+  Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
+
+/**
+ * The archive cut (final review I4): the old wiring POSTed
+ * /api/digest/{roundId}/archive-refresh, a route that does not exist, so the
+ * cut 404ed on every run. The real refresh is the league-scoped async content
+ * update: POST /api/content/{leagueId}/update → 202 {jobId} → poll
+ * /update-status/{jobId} until done.
+ *
+ * announce is 'silent' on purpose: the digest send already went out via the
+ * send cut, and an automated cut must not post an extra chat card without a
+ * hold in front of it. Announce by hand from the b-side UI if wanted.
+ */
+export async function archiveRefresh(
+  db: Database.Database, base: string, roundId: number,
+  fetchFn: FetchLike = fetch as unknown as FetchLike,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<void> {
+  const row = db.prepare(
+    'SELECT s.league_id FROM rounds r JOIN seasons s ON s.id=r.season_id WHERE r.id=?',
+  ).get(roundId) as { league_id: number } | undefined;
+  if (!row) throw new Error(`round ${roundId}: no league found for archive refresh`);
+
+  const res = await fetchFn(`${base}/api/content/${row.league_id}/update`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ announce: 'silent' }),
+  });
+  if (res.status === 409) return; // nothing pending — an idempotent re-run
+  if (!res.ok) throw new Error(`content update ${res.status}`);
+  const { jobId } = await res.json() as { jobId: string };
+
+  const deadline = Date.now() + 10 * 60_000;
+  for (;;) {
+    await sleep(5_000);
+    const poll = await fetchFn(`${base}/api/content/${row.league_id}/update-status/${jobId}`);
+    if (!poll.ok) throw new Error(`update-status ${poll.status}`);
+    const body = await poll.json() as { status: string; error?: string };
+    if (body.status === 'done') return;
+    if (body.status === 'error') throw new Error(`archive refresh failed: ${body.error ?? 'unknown'}`);
+    if (Date.now() > deadline) throw new Error('archive refresh timed out after 10m');
+  }
+}
+
 async function runAppCut(
   deps: AppExecutorDeps, rollout: Rollout, run: RunState, cutId: string,
 ): Promise<{ exitCode: number; error?: string }> {
@@ -170,7 +215,7 @@ export function startRolloutAppExecutor(): void {
         capture: async (roundId) => { await captureRoundData(roundId); },
         generate: (roundId) => post(roundId, 'draft'),
         send: (roundId) => post(roundId, 'finalize'),
-        archive: (roundId) => post(roundId, 'archive-refresh'),
+        archive: (roundId) => archiveRefresh(getDb(), base, roundId),
         hold: {
           notify: (payload) => notify(getDb(), payload, { botControlUrl: process.env.BOT_CONTROL_URL ?? 'http://bot:3003' }),
           now: () => new Date().toISOString(),

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { SCHEMA } from '$lib/db/schema.js';
-import { promotePendingJobs, tickApp } from './appExecutor.js';
+import { promotePendingJobs, tickApp, archiveRefresh } from './appExecutor.js';
 import { putRolloutConfig, loadRunByRound } from './store.js';
 import type { Rollout } from './types.js';
 
@@ -268,4 +268,42 @@ describe('app cut heartbeats (I5)', () => {
       ...over,
     };
   }
+});
+
+describe('archiveRefresh (I4)', () => {
+  // The archive cut used to POST /api/digest/{roundId}/archive-refresh — a
+  // route that does not exist, so every archive cut 404ed. The real endpoint
+  // is the league-scoped async content update.
+  it('resolves the league, POSTs the content update, and polls the job to done', async () => {
+    const calls: string[] = [];
+    const fetchFn = vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.endsWith('/api/content/1/update')) {
+        return { ok: true, status: 202, json: async () => ({ jobId: 'j1' }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ status: calls.length > 2 ? 'done' : 'running' }) };
+    });
+    await archiveRefresh(db, 'http://b', 9, fetchFn as never, async () => {});
+    expect(calls[0]).toBe('http://b/api/content/1/update');
+    expect(calls.some((u) => u.includes('/api/content/1/update-status/j1'))).toBe(true);
+  });
+
+  it('treats 409 (no pending update) as success — re-runs are idempotent', async () => {
+    const fetchFn = vi.fn(async () => ({ ok: false, status: 409, json: async () => ({}) }));
+    await expect(archiveRefresh(db, 'http://b', 9, fetchFn as never, async () => {})).resolves.toBeUndefined();
+  });
+
+  it('throws when the update job reports an error', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/update')) return { ok: true, status: 202, json: async () => ({ jobId: 'j1' }) };
+      return { ok: true, status: 200, json: async () => ({ status: 'error', error: 'llm exploded' }) };
+    });
+    await expect(archiveRefresh(db, 'http://b', 9, fetchFn as never, async () => {}))
+      .rejects.toThrow(/llm exploded/);
+  });
+
+  it('throws for a round with no league', async () => {
+    await expect(archiveRefresh(db, 'http://b', 999, vi.fn() as never, async () => {}))
+      .rejects.toThrow(/league/);
+  });
 });
