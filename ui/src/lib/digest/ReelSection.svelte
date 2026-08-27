@@ -11,7 +11,7 @@
   import type { VisualComponentProps } from './variants.js';
 
   interface ReelContent {
-    /** kicker over the media, e.g. "The Week That Was" — optional, keep short */
+    /** section heading — rendered by DigestSection, NOT here (it printed twice) */
     title?: string;
     /** one sentence under the media; the section's entire prose budget */
     note?: string;
@@ -45,8 +45,13 @@
 </script>
 
 {#if hasMedia}
-  <div class="reel">
-    {#if reel.title}<p class="reel-kicker">{reel.title}</p>{/if}
+  <!-- Framed like the deterministic-block cards (DigestInsights .di-feature /
+       .di-card-head): surface card, mono uppercase head row, media inside. -->
+  <section class="reel">
+    <div class="reel-head">
+      <span>Weekly reel</span>
+      {#if reel.media?.caption}<span>{reel.media.caption}</span>{/if}
+    </div>
     <figure class="reel-stage">
       {#if showVideo}
         <video
@@ -62,24 +67,33 @@
       {:else if showPoster}
         <img src={poster} alt={reel.media?.alt ?? reel.title ?? 'weekly reel'} />
       {/if}
-      {#if reel.media?.caption}<figcaption>{reel.media.caption}</figcaption>{/if}
     </figure>
     {#if reel.note}<p class="reel-note">{reel.note}</p>{/if}
-  </div>
+  </section>
 {/if}
 
 <style>
   .reel {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
   }
-  .reel-kicker {
-    margin: 0;
-    font: 700 10px/1 var(--font-mono);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+  .reel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
     color: var(--fg-muted);
+    font: 700 10px/1.2 var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .reel-head span:last-child {
+    color: var(--fg-quiet);
+    font: 600 9px/1.2 var(--font-mono);
+    letter-spacing: 0.04em;
   }
   .reel-stage {
     margin: 0;
@@ -89,18 +103,13 @@
     display: block;
     width: 100%;
     max-width: 100%;
-    border-radius: 8px;
-    border: 1px solid var(--border, rgba(128, 128, 128, 0.25));
-    background: #000;
-  }
-  .reel-stage figcaption {
-    margin-top: 6px;
-    font: 400 11px/1.4 var(--font-mono);
-    color: var(--fg-muted);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    background: var(--ink-0);
   }
   .reel-note {
-    margin: 0;
+    margin: 10px 0 0;
+    color: var(--fg-muted);
     font: 400 13px/1.5 var(--font-body, inherit);
-    color: var(--fg);
   }
 </style>
