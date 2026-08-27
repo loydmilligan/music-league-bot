@@ -12,8 +12,13 @@ export interface Message {
 	ts: number;
 	text: string;
 	edited: boolean;
-	/** Media messages carry a filename and contribute no words. */
+	/**
+	 * Media messages contribute no words. "Export with media" carries the
+	 * filename; "export without media" carries the literal `<Media omitted>`.
+	 */
 	media: string | null;
+	/** Deleted messages count as messages but contribute no words. */
+	deleted: boolean;
 	/** @Names extracted from the mention markers, in order of appearance. */
 	mentions: string[];
 }
@@ -32,6 +37,10 @@ const LINE_RE = new RegExp(
 
 const EDIT_SUFFIX = '<This message was edited>';
 const MEDIA_RE = /^(\S+\.\w{2,4}) \(file attached\)$/;
+const MEDIA_OMITTED = '<Media omitted>';
+// Both sides of a deletion: theirs ("This message was deleted") and the
+// exporter's own ("You deleted this message").
+const DELETED_RE = /^(This message was deleted|You deleted this message)$/;
 
 // U+2068 FIRST STRONG ISOLATE / U+2069 POP DIRECTIONAL ISOLATE wrap @mentions.
 // WhatsApp writes the "@" *outside* the isolates: `@⁨Darren Pallets⁩`. Consume it
@@ -69,11 +78,21 @@ function finalize(raw: { sender: string; ts: number; lines: string[] }): Message
 	}
 
 	const mediaMatch = text.match(MEDIA_RE);
-	const media = mediaMatch ? mediaMatch[1] : null;
+	let media = mediaMatch ? mediaMatch[1] : null;
+	if (text === MEDIA_OMITTED) {
+		media = MEDIA_OMITTED;
+		text = '';
+	}
+
+	let deleted = false;
+	if (DELETED_RE.test(text)) {
+		deleted = true;
+		text = '';
+	}
 
 	const { text: cleaned, mentions } = extractMentions(text);
 
-	return { sender: raw.sender, ts: raw.ts, text: cleaned, edited, media, mentions };
+	return { sender: raw.sender, ts: raw.ts, text: cleaned, edited, media, deleted, mentions };
 }
 
 export function parseExport(content: string): Message[] {

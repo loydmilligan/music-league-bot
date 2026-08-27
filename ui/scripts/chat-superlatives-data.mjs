@@ -24,12 +24,21 @@ const { parseExport } = await jiti.import(path.join(UI, 'src/lib/digest/chatExpo
 const { computeSuperlatives } = await jiti.import(
 	path.join(UI, 'src/lib/digest/chatSuperlatives.ts'),
 );
-const { PEOPLE } = await jiti.import(path.join(UI, 'src/lib/digest/chatIdentity.ts'));
+const { PEOPLE, isUnknownSender } = await jiti.import(path.join(UI, 'src/lib/digest/chatIdentity.ts'));
 
-const ZIP = path.join(
-	ROOT,
-	'data/boarz-ii-men/season-1/WhatsApp Chat with Boarz II Men - Music League.zip',
-);
+// Latest full-history export wins; BOARZ_EXPORT_ZIP overrides. The dated
+// `whatsapp-boarz-chat-export-*.zip` drops supersede the original July export.
+function latestExportZip() {
+	if (process.env.BOARZ_EXPORT_ZIP) return path.resolve(process.env.BOARZ_EXPORT_ZIP);
+	const dir = path.join(ROOT, 'data/boarz-ii-men/season-1');
+	const dated = fs
+		.readdirSync(dir)
+		.filter((f) => /^whatsapp-boarz-chat-export-.*\.zip$/.test(f))
+		.sort((a, b) => fs.statSync(path.join(dir, a)).mtimeMs - fs.statSync(path.join(dir, b)).mtimeMs);
+	if (dated.length) return path.join(dir, dated[dated.length - 1]);
+	return path.join(dir, 'WhatsApp Chat with Boarz II Men - Music League.zip');
+}
+const ZIP = latestExportZip();
 const DB = path.join(ROOT, 'data/league.db');
 const BOARZ_LEAGUE_ID = 5;
 
@@ -109,7 +118,14 @@ function readDictionary() {
 
 // ── main ──────────────────────────────────────────────────────────────────────
 
+console.error(`[info] export: ${path.relative(ROOT, ZIP)}`);
 const messages = parseExport(readExportText(ZIP));
+// A new member or renamed contact silently vanishes from every metric —
+// surface it loudly instead.
+const unknown = [...new Set(messages.map((m) => m.sender).filter(isUnknownSender))];
+if (unknown.length) {
+	console.error(`[warn] unknown sender(s) dropped from all metrics: ${unknown.join(', ')}`);
+}
 const { comments: voteComments, voters } = readVoteComments(DB);
 const dictionary = readDictionary();
 

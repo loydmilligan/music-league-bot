@@ -3,33 +3,33 @@
   "podium": [
     {
       "place": 1,
-      "title": "Do You Know Him?",
-      "artists": "Rise",
-      "uri": "spotify:track:2alPEViaacsjbVbqKi8jaD",
-      "art": "https://i.scdn.co/image/ab67616d0000b273abdaa5156a09803e82a38da6",
-      "points": 11,
-      "submitter": "Darren Pallets",
-      "url": "https://open.spotify.com/track/2alPEViaacsjbVbqKi8jaD"
+      "title": "Waiting Around To Die",
+      "artists": "The Be Good Tanyas",
+      "uri": "spotify:track:0AduS1e4FWNLdnUNmMwQQd",
+      "art": "https://i.scdn.co/image/ab67616d0000b2733f4d69f6be7e58fad5f8331f",
+      "points": 15,
+      "submitter": "Jon Black",
+      "url": "https://open.spotify.com/track/0AduS1e4FWNLdnUNmMwQQd"
     },
     {
       "place": 2,
-      "title": "The Prayer Position",
-      "artists": "AFI",
-      "uri": "spotify:track:68elQ26Y88J2rtr4Mh81Gy",
-      "art": "https://i.scdn.co/image/ab67616d0000b27311512f2a3e39128c81637578",
-      "points": 9,
+      "title": "Pays imaginaire",
+      "artists": "Polo & Pan",
+      "uri": "spotify:track:7i5I4h7r2vkI2r9tgKjy0x",
+      "art": "https://i.scdn.co/image/ab67616d0000b2734ee9468123f381eb8d5e05bb",
+      "points": 14,
       "submitter": "Matt Mariani",
-      "url": "https://open.spotify.com/track/68elQ26Y88J2rtr4Mh81Gy"
+      "url": "https://open.spotify.com/track/7i5I4h7r2vkI2r9tgKjy0x"
     },
     {
       "place": 3,
-      "title": "Because I Got High",
-      "artists": "Afroman",
-      "uri": "spotify:track:0rRboI6IRuGx56Dq3UdYY4",
-      "art": "https://i.scdn.co/image/ab67616d0000b273734b1164a9e0faa980ce1b92",
-      "points": 8,
-      "submitter": "Clements Johnson",
-      "url": "https://open.spotify.com/track/0rRboI6IRuGx56Dq3UdYY4"
+      "title": "Radio",
+      "artists": "Alkaline Trio",
+      "uri": "spotify:track:0YJvSDPuh3MmmpHkvMFJc5",
+      "art": "https://i.scdn.co/image/ab67616d0000b273e0b6191a8484dcf1326d634f",
+      "points": 13,
+      "submitter": "Jon Black",
+      "url": "https://open.spotify.com/track/0YJvSDPuh3MmmpHkvMFJc5"
     }
   ],
   "links": [
@@ -789,6 +789,1844 @@
         "title": "Jurassic Park - Shoot Her!! Raptor Attacks Park Worker",
         "artists": "Adrian Anis",
         "art": "https://i.ytimg.com/vi/ffW4YD5WErI/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5YHerCdiAcONYQl36jqOqc?si=U8yooQ7LSiyjuDNOH-0RQA&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "5YHerCdiAcONYQl36jqOqc",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785185160000,
+      "context": "",
+      "track": {
+        "title": "Soviet National Anthem",
+        "artists": "The Red Army Choir",
+        "album": "Soviet National Anthem",
+        "year": 2020,
+        "art": "https://i.scdn.co/image/ab67616d00004851f27440af8db751f9d41d7a3e",
+        "uri": "spotify:track:5YHerCdiAcONYQl36jqOqc",
+        "url": "https://open.spotify.com/track/5YHerCdiAcONYQl36jqOqc"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=D3klYIA89-Q",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "D3klYIA89-Q",
+      "person": "Dave Jensen",
+      "ts": 1785185400000,
+      "context": "",
+      "track": {
+        "title": "Klingon Drinking Song [Extended/Remastered]",
+        "artists": "Bunnylord Music",
+        "art": "https://i.ytimg.com/vi/D3klYIA89-Q/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtube.com/shorts/w1zmqqMWvIc?is=i6x4KQ30gKqIlFMe",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "w1zmqqMWvIc",
+      "person": "Matt Mariani",
+      "ts": 1785191040000,
+      "context": "",
+      "track": {
+        "title": "Sean Lock and Jon Richardson's legendary carrot in a box showdown | 8 Out Of 10 Cats",
+        "artists": "8 Out of 10 Cats",
+        "art": "https://i.ytimg.com/vi/w1zmqqMWvIc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=cdERUjC0rYw",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "cdERUjC0rYw",
+      "person": "Conor Johnston",
+      "ts": 1785192660000,
+      "context": "",
+      "track": {
+        "title": "Led Zeppelin - All Of My Love",
+        "artists": "unofficialzoso",
+        "art": "https://i.ytimg.com/vi/cdERUjC0rYw/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/album/5k9nNGzp6ogw5bBULPeMSz?si=tLRtMsoRRAywY37s-b5yyw&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1785225720000,
+      "context": "This would’ve been my next choice (in case you guys care)",
+      "track": null
+    },
+    {
+      "url": "https://open.spotify.com/album/0NJRPgK15C8qoLuQv1hChv?si=RsQuAODGTjSKPA9wb77fDg&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Dave Jensen",
+      "ts": 1785232620000,
+      "context": "Im not going to submit this for that theme but man this is a weird album, guy claimed he developed it scientifically to help plants grow. Wacky stuff.",
+      "track": null
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=OXu1CONcXGQ",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "OXu1CONcXGQ",
+      "person": "Dave Jensen",
+      "ts": 1785257520000,
+      "context": "",
+      "track": {
+        "title": "COPROPHILIA - \"Grudgefuck\"",
+        "artists": "Hotelfire",
+        "art": "https://i.ytimg.com/vi/OXu1CONcXGQ/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/eYga_Kf98oM?is=dUxUYEs3yjA58SqA",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "eYga_Kf98oM",
+      "person": "Conor Johnston",
+      "ts": 1785258240000,
+      "context": "",
+      "track": {
+        "title": "Daniel Sloss: Jigsaw - Shave Your Butt",
+        "artists": "Daniel Sloss",
+        "art": "https://i.ytimg.com/vi/eYga_Kf98oM/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=k6EQAOmJrbw",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "k6EQAOmJrbw",
+      "person": "Conor Johnston",
+      "ts": 1785327660000,
+      "context": "I just heard this quasi-punk song on the radio. It jams.",
+      "track": {
+        "title": "My Chemical Romance - Teenagers [Official Music Video] [4K]",
+        "artists": "My Chemical Romance",
+        "art": "https://i.ytimg.com/vi/k6EQAOmJrbw/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=SG40b4owXGc",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "SG40b4owXGc",
+      "person": "Conor Johnston",
+      "ts": 1785328800000,
+      "context": "I'm like Jesus.",
+      "track": {
+        "title": "Family Guy - (S5xE1) Short Jesus",
+        "artists": "dontMINDmyCONTROLler",
+        "art": "https://i.ytimg.com/vi/SG40b4owXGc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/vMAPW7ZoOLw?is=_iKxySIkqhA_V0aD",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "vMAPW7ZoOLw",
+      "person": "Matt Mariani",
+      "ts": 1785402240000,
+      "context": "And if you don't like hearing those ladies talk about their icky sexual bits",
+      "track": {
+        "title": "Harry Styles - Wet Dream (Wet Leg cover) in the Live Lounge",
+        "artists": "BBCRadio1VEVO",
+        "art": "https://i.ytimg.com/vi/vMAPW7ZoOLw/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=7Z4nuE9GvRE",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "7Z4nuE9GvRE",
+      "person": "Dave Jensen",
+      "ts": 1785420480000,
+      "context": "Although this one is prettty good too",
+      "track": {
+        "title": "Mac and Me (1988) - Wheelchair cliff scene (in 4K!!)",
+        "artists": "Bananas About Movies",
+        "art": "https://i.ytimg.com/vi/7Z4nuE9GvRE/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/artist/44NX2ffIYHr6D4n7RaZF7A?si=NAdCq_FGSs-0hdgI3-EWjA&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Grant Koziol",
+      "ts": 1785450180000,
+      "context": "",
+      "track": null
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=-KoXt9pZLGM",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "-KoXt9pZLGM",
+      "person": "Conor Johnston",
+      "ts": 1785502080000,
+      "context": "",
+      "track": {
+        "title": "Lee Greenwood - God Bless The U.S.A.",
+        "artists": "LeeGreenwoodVEVO",
+        "art": "https://i.ytimg.com/vi/-KoXt9pZLGM/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3l-n64NWHS4",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "3l-n64NWHS4",
+      "person": "Conor Johnston",
+      "ts": 1785503940000,
+      "context": "",
+      "track": {
+        "title": "The Anacreontic Song—18c. Source Tune for U.S. National Anthem",
+        "artists": "starspangledmusic",
+        "art": "https://i.ytimg.com/vi/3l-n64NWHS4/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=U06jlgpMtQs",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "U06jlgpMtQs",
+      "person": "Conor Johnston",
+      "ts": 1785504120000,
+      "context": "I stand by this. Nobody does propaganda like murderous dictatorships.",
+      "track": {
+        "title": "National Anthem of USSR",
+        "artists": "rascrifice",
+        "art": "https://i.ytimg.com/vi/U06jlgpMtQs/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/MoqmaYHHP8Q?t=140",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "MoqmaYHHP8Q",
+      "person": "Matt Mariani",
+      "ts": 1785507240000,
+      "context": "For those of y'all still in the soul patrol, here's one more rendition by the man himself , Taylor Hicks. Fair warning I queued it up to include the 45 second pre song prayer, but as you SP'ers know, it's worth the wait.",
+      "track": {
+        "title": "Taylor Hicks sings the National Anthem - Nascar",
+        "artists": "wildrose76",
+        "art": "https://i.ytimg.com/vi/MoqmaYHHP8Q/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=qqV0QMeNvqo&t=1080s&pp=2AG4CJACAeIHDBIKcGVycGxleGl0eQ%3D%3D",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "qqV0QMeNvqo",
+      "person": "Matt Mariani",
+      "ts": 1785507900000,
+      "context": "On the Jesus-ish theme, a short moment from the wake of the late senator Lindsay Graham....don't worry not too political, just about one man's view of heaven as basically like playing the Sims with a strange twist",
+      "track": {
+        "title": "Lindsey Graham funeral: Sean Hannity delivers personal eulogy",
+        "artists": "LiveNOW from FOX",
+        "art": "https://i.ytimg.com/vi/qqV0QMeNvqo/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4CZWCG1KOEZPGdQqDL85VF?si=FBrjSoesRE--hwipd3T5dA&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "4CZWCG1KOEZPGdQqDL85VF",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785522000000,
+      "context": "",
+      "track": {
+        "title": "The Marriage of Figaro / \"Duettino\" Sull 'Aria",
+        "artists": "Wolfgang Amadeus Mozart, Deutsche Oper, Berlin, Karl Böhm, Edith Mathis, Gundula Janowitz",
+        "album": "The Shawshank Redemption",
+        "year": 2009,
+        "art": "https://i.scdn.co/image/ab67616d00004851e710c1f5b228046932790031",
+        "uri": "spotify:track:4CZWCG1KOEZPGdQqDL85VF",
+        "url": "https://open.spotify.com/track/4CZWCG1KOEZPGdQqDL85VF"
+      }
+    },
+    {
+      "url": "https://youtu.be/z_8vbppalKo?is=MEv5ePRlc7SZJBSs",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "z_8vbppalKo",
+      "person": "Matt Mariani",
+      "ts": 1785602280000,
+      "context": "",
+      "track": {
+        "title": "Isaiah Rashad - SAME SH!T (Official Video)",
+        "artists": "isaiah rashad",
+        "art": "https://i.ytimg.com/vi/z_8vbppalKo/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=_YmDcCpD1gc&pp=ygUSZG8gbm90IGRpZGRsZSBraWRz&ra=m",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "_YmDcCpD1gc",
+      "person": "Dave Jensen",
+      "ts": 1785602580000,
+      "context": "",
+      "track": {
+        "title": "Do Not Diddle Kids - It's Always Sunny in Philadelphia",
+        "artists": "The Vidhole",
+        "art": "https://i.ytimg.com/vi/_YmDcCpD1gc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/1musbempyJAw5gfSKZHXP9?si=q0TPEbScTh-TZm3kpYX3MA&utm_source=copy-link&sci=spotify%3Acard-config%3A3CHq2Uh8xLhEUiveIJwYci",
+      "kind": "spotify",
+      "trackId": "1musbempyJAw5gfSKZHXP9",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1785602700000,
+      "context": "Soemthing about this gotye sample and doeche talking about my mental illness",
+      "track": {
+        "title": "Anxiety",
+        "artists": "Doechii",
+        "album": "Anxiety",
+        "year": 2025,
+        "art": "https://i.scdn.co/image/ab67616d000048513de7e97b3e5aa3eaccfc19ec",
+        "uri": "spotify:track:1musbempyJAw5gfSKZHXP9",
+        "url": "https://open.spotify.com/track/1musbempyJAw5gfSKZHXP9"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/53pZ8y3yMYUNpclGwIufu0?si=e5c2sLXtRkOER_3ou7hrFg&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "53pZ8y3yMYUNpclGwIufu0",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1785602700000,
+      "context": "",
+      "track": {
+        "title": "Conga",
+        "artists": "Miami Sound Machine, Gloria Estefan",
+        "album": "Greatest Hits",
+        "year": 1992,
+        "art": "https://i.scdn.co/image/ab67616d00004851981a03926fd6675d6dc8d773",
+        "uri": "spotify:track:53pZ8y3yMYUNpclGwIufu0",
+        "url": "https://open.spotify.com/track/53pZ8y3yMYUNpclGwIufu0"
+      }
+    },
+    {
+      "url": "https://youtu.be/4a8pHjLkkz8?is=C_H9Pb3OJgVzcJTS",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "4a8pHjLkkz8",
+      "person": "Matt Mariani",
+      "ts": 1785603060000,
+      "context": "",
+      "track": {
+        "title": "Anxiety | COVEN MUSIC SESSION",
+        "artists": "Doechii",
+        "art": "https://i.ytimg.com/vi/4a8pHjLkkz8/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/FsZ_Copa7Lc?is=HZMljiQH5fwwNAvS",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "FsZ_Copa7Lc",
+      "person": "Matt Mariani",
+      "ts": 1785604860000,
+      "context": "",
+      "track": {
+        "title": "Ska Sucks",
+        "artists": "Propagandhi - Topic",
+        "art": "https://i.ytimg.com/vi/FsZ_Copa7Lc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5EYdTPdJD74r9EVZBztqGG?si=bYXZcwWvQF-1JBp4UWQ1zQ&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "5EYdTPdJD74r9EVZBztqGG",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785605580000,
+      "context": "So ready for BJs:",
+      "track": {
+        "title": "The Bad Touch",
+        "artists": "Bloodhound Gang",
+        "album": "Hooray For Boobies",
+        "year": 1999,
+        "art": "https://i.scdn.co/image/ab67616d00004851d6d86be2779b5b6b4980feb9",
+        "uri": "spotify:track:5EYdTPdJD74r9EVZBztqGG",
+        "url": "https://open.spotify.com/track/5EYdTPdJD74r9EVZBztqGG"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5p3JunprHCxClJjOmcLV8G?si=Hnte7-jHTHySogIyDXGjEg&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "5p3JunprHCxClJjOmcLV8G",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785624480000,
+      "context": "",
+      "track": {
+        "title": "Walk On the Wild Side",
+        "artists": "Lou Reed",
+        "album": "Transformer",
+        "year": 1972,
+        "art": "https://i.scdn.co/image/ab67616d00004851fe5213edd4f8550a8030efcf",
+        "uri": "spotify:track:5p3JunprHCxClJjOmcLV8G",
+        "url": "https://open.spotify.com/track/5p3JunprHCxClJjOmcLV8G"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/0S5CkITTeywtctE7hitYNO?si=DD2T0KUrS2-mVkBeBoCgMA&utm_source=copy-link&sci=spotify%3Acard-config%3A65accpA8xW1DSuU9GWHof6",
+      "kind": "spotify",
+      "trackId": "0S5CkITTeywtctE7hitYNO",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785624600000,
+      "context": "",
+      "track": {
+        "title": "Lola",
+        "artists": "The Kinx",
+        "album": "Brit Pop Legends, Vol. 2",
+        "year": 2024,
+        "art": "https://i.scdn.co/image/ab67616d000048515169110c6931f23753358ba3",
+        "uri": "spotify:track:0S5CkITTeywtctE7hitYNO",
+        "url": "https://open.spotify.com/track/0S5CkITTeywtctE7hitYNO"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3UbJXF3g7NcZMtGmeIARmM?si=9kri4ohJSXe8BL-Saf3f4Q&utm_source=copy-link&sci=spotify%3Acard-config%3A5E4BVtxuCjZL2NZvCv95m5",
+      "kind": "spotify",
+      "trackId": "3UbJXF3g7NcZMtGmeIARmM",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785624780000,
+      "context": "",
+      "track": {
+        "title": "Androgynous",
+        "artists": "The Replacements",
+        "album": "Let It Be",
+        "year": 1984,
+        "art": "https://i.scdn.co/image/ab67616d00004851827c73f85e4c50dfdbeef711",
+        "uri": "spotify:track:3UbJXF3g7NcZMtGmeIARmM",
+        "url": "https://open.spotify.com/track/3UbJXF3g7NcZMtGmeIARmM"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/66gQu4ZIHmDhB8H4wkwm5f?si=gJPYtj2ZTNCYxpU6341tuw&utm_source=copy-link&sci=spotify%3Acard-config%3A0hWbF9gGWRPXZKvoQ7iBhB",
+      "kind": "spotify",
+      "trackId": "66gQu4ZIHmDhB8H4wkwm5f",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785624900000,
+      "context": "",
+      "track": {
+        "title": "We Exist",
+        "artists": "Arcade Fire",
+        "album": "Reflektor",
+        "year": 2013,
+        "art": "https://i.scdn.co/image/ab67616d000048512b0c88ad3d7be225c955e08c",
+        "uri": "spotify:track:66gQu4ZIHmDhB8H4wkwm5f",
+        "url": "https://open.spotify.com/track/66gQu4ZIHmDhB8H4wkwm5f"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5rkppPnjJsBY23fyDda0iX?si=Zmr0etVHQQCIBasJEaP-WA&utm_source=copy-link&sci=spotify%3Acard-config%3A5NC4soqCJNwmysGMXjqkkn",
+      "kind": "spotify",
+      "trackId": "5rkppPnjJsBY23fyDda0iX",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785625020000,
+      "context": "",
+      "track": {
+        "title": "Body Was Made",
+        "artists": "Ezra Furman",
+        "album": "Perpetual Motion People",
+        "year": 2015,
+        "art": "https://i.scdn.co/image/ab67616d00004851d3b0cfc492f7a9b930d9c703",
+        "uri": "spotify:track:5rkppPnjJsBY23fyDda0iX",
+        "url": "https://open.spotify.com/track/5rkppPnjJsBY23fyDda0iX"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/23LlKjiPjpseAEbp7KLSbn?si=TY_QWAezShOSM2FiIaD9Tg&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "23LlKjiPjpseAEbp7KLSbn",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1785625140000,
+      "context": "",
+      "track": {
+        "title": "TIFFANY",
+        "artists": "YG",
+        "album": "THE GENTLEMEN'S CLUB",
+        "year": 2026,
+        "art": "https://i.scdn.co/image/ab67616d00004851c5b401fac443c20be56703b5",
+        "uri": "spotify:track:23LlKjiPjpseAEbp7KLSbn",
+        "url": "https://open.spotify.com/track/23LlKjiPjpseAEbp7KLSbn"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5sBAzJNV0E3rMGnCUgFnEw?si=lRgrMnFiSE6BRjjnUTN5Ag&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "5sBAzJNV0E3rMGnCUgFnEw",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1785665160000,
+      "context": "Just heard this",
+      "track": {
+        "title": "I Can Take the Sun Out of the Sky",
+        "artists": "Brigitte Calls Me Baby",
+        "album": "Irreversible",
+        "year": 2026,
+        "art": "https://i.scdn.co/image/ab67616d000048510c7956588bbccfbb69bce2f6",
+        "uri": "spotify:track:5sBAzJNV0E3rMGnCUgFnEw",
+        "url": "https://open.spotify.com/track/5sBAzJNV0E3rMGnCUgFnEw"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/1kPBHRXyXdrtYfUfeRwBko?si=85NQRDtDRgKAZOBloQfnKw&utm_source=whatsapp&rowId=721d95ca81732dca",
+      "kind": "spotify",
+      "trackId": "1kPBHRXyXdrtYfUfeRwBko",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1785670200000,
+      "context": "",
+      "track": {
+        "title": "I Wanna Sex You Up - Single Mix",
+        "artists": "Color Me Badd",
+        "album": "C.M.B.",
+        "year": 1991,
+        "art": "https://i.scdn.co/image/ab67616d00004851ced0c7756302458ab6daa6d5",
+        "uri": "spotify:track:1kPBHRXyXdrtYfUfeRwBko",
+        "url": "https://open.spotify.com/track/1kPBHRXyXdrtYfUfeRwBko"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/6mz1fBdKATx6qP4oP1I65G?si=JxaJGvTXSXakfQ_mmIsEXA&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "6mz1fBdKATx6qP4oP1I65G",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1785677100000,
+      "context": "",
+      "track": {
+        "title": "Pony",
+        "artists": "Ginuwine",
+        "album": "R&B: From Doo-Wop To Hip-Hop",
+        "year": 1999,
+        "art": "https://i.scdn.co/image/ab67616d00004851980caf4dd525a15f08f8cb87",
+        "uri": "spotify:track:6mz1fBdKATx6qP4oP1I65G",
+        "url": "https://open.spotify.com/track/6mz1fBdKATx6qP4oP1I65G"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=dl2PjWkwphc",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "dl2PjWkwphc",
+      "person": "Dave Steingart",
+      "ts": 1785687240000,
+      "context": "",
+      "track": {
+        "title": "Adult Baby Gathering",
+        "artists": "All Gas No Brakes",
+        "art": "https://i.ytimg.com/vi/dl2PjWkwphc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/ZyYE1e2Ll4o?is=P7cX94Rh0kydWET7",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "ZyYE1e2Ll4o",
+      "person": "Matt Mariani",
+      "ts": 1785688980000,
+      "context": "Also, I recently saw hunter Biden on this hip newish (video) podcast(flex) and was in turn annoyed and impressed with hunter's candor. He is a very hard person to judge imo -",
+      "track": {
+        "title": "The Hunter Biden Episode | Friends Keep Secrets",
+        "artists": "Friends Keep Secrets",
+        "art": "https://i.ytimg.com/vi/ZyYE1e2Ll4o/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/2RDIC609IQdmoQDVyeKT2S?si=lhdwTVz1S7iufHt6U_4G8Q&utm_source=copy-link&context=spotify%3Aartist%3A4ZOtVTO598nVtGVbsNNwWe",
+      "kind": "spotify",
+      "trackId": "2RDIC609IQdmoQDVyeKT2S",
+      "videoId": null,
+      "person": "Dave Jensen",
+      "ts": 1785705240000,
+      "context": "Unfortunately there are already white twins who are rappers from Marin City",
+      "track": {
+        "title": "Clout Chasin",
+        "artists": "Hoff twins, Chet Hanx",
+        "album": "Clout Chasin",
+        "year": 2024,
+        "art": "https://i.scdn.co/image/ab67616d0000485107665b3a64c4bf9401237b3b",
+        "uri": "spotify:track:2RDIC609IQdmoQDVyeKT2S",
+        "url": "https://open.spotify.com/track/2RDIC609IQdmoQDVyeKT2S"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/watch?v=zukaSaJ_zrs&si=MIryJLn6hkvSvOPY",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "zukaSaJ_zrs",
+      "person": "Matt Mariani",
+      "ts": 1785845280000,
+      "context": "",
+      "track": {
+        "title": "Fire for You",
+        "artists": "Cannons - Topic",
+        "art": "https://i.ytimg.com/vi/zukaSaJ_zrs/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/watch?v=PTv7cJjNig8&si=UHtaiwR_8RwTs234",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "PTv7cJjNig8",
+      "person": "Matt Mariani",
+      "ts": 1785845400000,
+      "context": "",
+      "track": {
+        "title": "ORANGE SODA",
+        "artists": "Baby Keem - Topic",
+        "art": "https://i.ytimg.com/vi/PTv7cJjNig8/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/album/1XCSEtQfTQmXNgAxSQFk7f",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1785854400000,
+      "context": "",
+      "track": null
+    },
+    {
+      "url": "https://music.youtube.com/playlist?list=PLKassWKwT20M",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1785924660000,
+      "context": "I forgot to send youtube music playlist -",
+      "track": null
+    },
+    {
+      "url": "https://youtu.be/kWdfRRtAs3o?is=ADyjr6fyjvWkDc_r",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "kWdfRRtAs3o",
+      "person": "Conor Johnston",
+      "ts": 1785967920000,
+      "context": "",
+      "track": {
+        "title": "Democracy simply doesn't work",
+        "artists": "Josh Reese",
+        "art": "https://i.ytimg.com/vi/kWdfRRtAs3o/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/6pka6k4NxACAPcSQiHhquT?si=8b6280883d0f4f73",
+      "kind": "spotify",
+      "trackId": "6pka6k4NxACAPcSQiHhquT",
+      "videoId": null,
+      "person": "Jon Black",
+      "ts": 1786019580000,
+      "context": "",
+      "track": {
+        "title": "My Vagina",
+        "artists": "NOFX",
+        "album": "Pump Up The Valuum",
+        "year": 2000,
+        "art": "https://i.scdn.co/image/ab67616d00004851530db954283883866bc21a95",
+        "uri": "spotify:track:6pka6k4NxACAPcSQiHhquT",
+        "url": "https://open.spotify.com/track/6pka6k4NxACAPcSQiHhquT"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4fEJGPsUojbKlMJGCVEZQq?si=U7wNEKkNSiWHfAzODgEjvg&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "4fEJGPsUojbKlMJGCVEZQq",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786019640000,
+      "context": "",
+      "track": {
+        "title": "Everything About You",
+        "artists": "Ugly Kid Joe",
+        "album": "Radio Waves of the '90s: Alternative Rock Hits",
+        "year": 2002,
+        "art": "https://i.scdn.co/image/ab67616d000048517192ec371ef6b81f6a154bc3",
+        "uri": "spotify:track:4fEJGPsUojbKlMJGCVEZQq",
+        "url": "https://open.spotify.com/track/4fEJGPsUojbKlMJGCVEZQq"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/549GpvaGssVVEv0zw4Gjer?si=0bf8aa7141794789",
+      "kind": "spotify",
+      "trackId": "549GpvaGssVVEv0zw4Gjer",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786101000000,
+      "context": "Spotify just force fed me this song. Pretty good.",
+      "track": {
+        "title": "Now That You're Gone",
+        "artists": "The Raconteurs",
+        "album": "Help Us Stranger (With Track-by-Track Commentary)",
+        "year": 2019,
+        "art": "https://i.scdn.co/image/ab67616d00004851ac4d663fbe0387d7ead8577e",
+        "uri": "spotify:track:549GpvaGssVVEv0zw4Gjer",
+        "url": "https://open.spotify.com/track/549GpvaGssVVEv0zw4Gjer"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3YgkTpILtOWngT7PVHg8kO?si=faaea25fe37d4d8e",
+      "kind": "spotify",
+      "trackId": "3YgkTpILtOWngT7PVHg8kO",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786211100000,
+      "context": "",
+      "track": {
+        "title": "Everything About You",
+        "artists": "Ugly Kid Joe",
+        "album": "America's Least Wanted",
+        "year": 1992,
+        "art": "https://i.scdn.co/image/ab67616d0000485159afd13f40fa2b0aab89bb0e",
+        "uri": "spotify:track:3YgkTpILtOWngT7PVHg8kO",
+        "url": "https://open.spotify.com/track/3YgkTpILtOWngT7PVHg8kO"
+      }
+    },
+    {
+      "url": "https://youtu.be/CiehMELBpME?is=p7lVguE2qiJwBtQp",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "CiehMELBpME",
+      "person": "Clements Johnson",
+      "ts": 1786274160000,
+      "context": "Anytime I see Steve winwood I think of this scene.",
+      "track": {
+        "title": "It's Always Sunny - Steve Winwood",
+        "artists": "Wife Soup",
+        "art": "https://i.ytimg.com/vi/CiehMELBpME/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/0x5wJ0cDp7miv49jSMTSkq?si=KrS50-j3QeOen50M4WtU1Q&utm_source=copy-link&sci=spotify%3Acard-config%3A4yuvwAc6e7G0f3mtGANRJi",
+      "kind": "spotify",
+      "trackId": "0x5wJ0cDp7miv49jSMTSkq",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786474680000,
+      "context": "",
+      "track": {
+        "title": "Bitin' List",
+        "artists": "Tyler Childers",
+        "album": "Snipe Hunter",
+        "year": 2025,
+        "art": "https://i.scdn.co/image/ab67616d00004851e47f3451435776271b3d43da",
+        "uri": "spotify:track:0x5wJ0cDp7miv49jSMTSkq",
+        "url": "https://open.spotify.com/track/0x5wJ0cDp7miv49jSMTSkq"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4BIMNBkz3OgRgARIMYh7QW?si=yBj5OKsxSpesnqehdyaHjA&utm_source=copy-link&sci=spotify%3Acard-config%3A0xDynuTNoewXfrQCc34Rco",
+      "kind": "spotify",
+      "trackId": "4BIMNBkz3OgRgARIMYh7QW",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786475220000,
+      "context": "",
+      "track": {
+        "title": "Get In The Ring",
+        "artists": "Guns N' Roses",
+        "album": "Use Your Illusion II",
+        "year": 1991,
+        "art": "https://i.scdn.co/image/ab67616d0000485192d21aef6c0d288cc4c05973",
+        "uri": "spotify:track:4BIMNBkz3OgRgARIMYh7QW",
+        "url": "https://open.spotify.com/track/4BIMNBkz3OgRgARIMYh7QW"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/0Z2J91b2iTGLVTZC4fKgxf?si=SkeYekoJSKizGQz5LG86qA&utm_source=whatsapp&rowId=1343b2e996a429a6",
+      "kind": "spotify",
+      "trackId": "0Z2J91b2iTGLVTZC4fKgxf",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1786475520000,
+      "context": "",
+      "track": {
+        "title": "Hit 'Em Up - Single Version",
+        "artists": "2Pac, Outlawz",
+        "album": "Greatest Hits",
+        "year": 1998,
+        "art": "https://i.scdn.co/image/ab67616d00004851d81a092eb373ded457d94eec",
+        "uri": "spotify:track:0Z2J91b2iTGLVTZC4fKgxf",
+        "url": "https://open.spotify.com/track/0Z2J91b2iTGLVTZC4fKgxf"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4In6YbLZkQsVnjXdXUKcEi?si=dlLfRMB0SsOAu8puZ8Sbfg&utm_source=copy-link&sci=spotify%3Acard-config%3A39wzffhJw8aOPR5U346L28",
+      "kind": "spotify",
+      "trackId": "4In6YbLZkQsVnjXdXUKcEi",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786475700000,
+      "context": "",
+      "track": {
+        "title": "She Hates Me",
+        "artists": "Puddle Of Mudd",
+        "album": "Come Clean (Repackaged International Version)",
+        "year": 2001,
+        "art": "https://i.scdn.co/image/ab67616d0000485111b9e65e0be3cae3d53c4f6f",
+        "uri": "spotify:track:4In6YbLZkQsVnjXdXUKcEi",
+        "url": "https://open.spotify.com/track/4In6YbLZkQsVnjXdXUKcEi"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/28p8NVXG9C4aO0Hu7tTgqZ?si=gEOhcc_CR3OBf_J09eyWEQ&utm_source=copy-link&context=spotify%3Asearch%3Afuck%2Bthe%2Bkids",
+      "kind": "spotify",
+      "trackId": "28p8NVXG9C4aO0Hu7tTgqZ",
+      "videoId": null,
+      "person": "Dave Jensen",
+      "ts": 1786477500000,
+      "context": "",
+      "track": {
+        "title": "F**k the Kids (Revisited)",
+        "artists": "NOFX",
+        "album": "45 or 46 Songs That Weren't Good Enough to Go on Our Other Records",
+        "year": 2002,
+        "art": "https://i.scdn.co/image/ab67616d00004851ef64db1301ec53b1939db7f3",
+        "uri": "spotify:track:28p8NVXG9C4aO0Hu7tTgqZ",
+        "url": "https://open.spotify.com/track/28p8NVXG9C4aO0Hu7tTgqZ"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/7nT9lGk3bf5rvnVbzPIE3N?si=8-8383_CTNGxMxqUeqcPiQ&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "7nT9lGk3bf5rvnVbzPIE3N",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1786542360000,
+      "context": "",
+      "track": {
+        "title": "Love & Reggae",
+        "artists": "Collie Buddz",
+        "album": "Hybrid",
+        "year": 2019,
+        "art": "https://i.scdn.co/image/ab67616d00004851866cbd169ed848217a792ffd",
+        "uri": "spotify:track:7nT9lGk3bf5rvnVbzPIE3N",
+        "url": "https://open.spotify.com/track/7nT9lGk3bf5rvnVbzPIE3N"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=j3OhV1och50",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "j3OhV1och50",
+      "person": "Matt Mariani",
+      "ts": 1786573440000,
+      "context": "anywho - I submitted the rap battle song - which i stand by - but here is the most hateful rap battle song I think of all time - K Lamar spending 1 verse on each of drakes family members - Dennis, you shoudl ahve worn a condom, sandra you raised a rapist, adnon - his son, i follow my example because your dad is s rapist and prevert who doesnt teahc you how to be a man, and he reveals another child that Drake has been hiding, a 12 year old girl. He says that drake shoudl die beacuse he is a child R-worder. it is not a good song or fun to listen to - but it fits the theme well -",
+      "track": {
+        "title": "Kendrick Lamar - meet the grahams (Lyrics) Drake Diss",
+        "artists": "BagOnly",
+        "art": "https://i.ytimg.com/vi/j3OhV1och50/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/dqpNOSenaR4?si=vvgdskeW_h-9r1fb",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "dqpNOSenaR4",
+      "person": "Matt Mariani",
+      "ts": 1786573560000,
+      "context": "Drake also has a pretty good rap beef song -",
+      "track": {
+        "title": "Drake - Back To Back (lyrics)",
+        "artists": "Core lyrics",
+        "art": "https://i.ytimg.com/vi/dqpNOSenaR4/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4oGTdOClZUxcM2H3UmXlwL?si=t-xmRZE-Rju0R1pNEKa9cQ&utm_source=copy-link&sci=spotify%3Acard-config%3A0DRJpRWJamssQTQmk7wZHH",
+      "kind": "spotify",
+      "trackId": "4oGTdOClZUxcM2H3UmXlwL",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786621980000,
+      "context": "Shane, did someone say ironic??",
+      "track": {
+        "title": "Ironic",
+        "artists": "Alanis Morissette",
+        "album": "Jagged Little Pill",
+        "year": 1995,
+        "art": "https://i.scdn.co/image/ab67616d0000485192c885317fbe4bfa680109b4",
+        "uri": "spotify:track:4oGTdOClZUxcM2H3UmXlwL",
+        "url": "https://open.spotify.com/track/4oGTdOClZUxcM2H3UmXlwL"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=IrVD0bP_ybg",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "IrVD0bP_ybg",
+      "person": "Conor Johnston",
+      "ts": 1786644540000,
+      "context": "Here's a song I very much like that is about Dylan.",
+      "track": {
+        "title": "Diamonds And Rust",
+        "artists": "Joan Baez - Topic",
+        "art": "https://i.ytimg.com/vi/IrVD0bP_ybg/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5VicH23MWaIKMmtkWJtqfY?si=4LnLRw0bTl-3wujHBw8vUQ&utm_source=copy-link&sci=spotify%3Acard-config%3A1VK7CdXYKMCUMymnsDorMB",
+      "kind": "spotify",
+      "trackId": "5VicH23MWaIKMmtkWJtqfY",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786656360000,
+      "context": "Here's a synthesis of snowflakery and punk.",
+      "track": {
+        "title": "Blood On Our Hands",
+        "artists": "The Linda Lindas",
+        "album": "Blood On Our Hands",
+        "year": 2026,
+        "art": "https://i.scdn.co/image/ab67616d00004851d9bbd53708754b6bbee1e351",
+        "uri": "spotify:track:5VicH23MWaIKMmtkWJtqfY",
+        "url": "https://open.spotify.com/track/5VicH23MWaIKMmtkWJtqfY"
+      }
+    },
+    {
+      "url": "https://youtu.be/SEVu1tcUGnc?si=oNnluhU3Diaq5xGA",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "SEVu1tcUGnc",
+      "person": "Matt Mariani",
+      "ts": 1786661280000,
+      "context": "",
+      "track": {
+        "title": "Sinead O'Connor - All Apologies (Official Music Video)",
+        "artists": "SineadOConnorVEVO",
+        "art": "https://i.ytimg.com/vi/SEVu1tcUGnc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/e6LOWKVq5sQ?is=q8gP8dmkxKtCrCP8",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "e6LOWKVq5sQ",
+      "person": "Conor Johnston",
+      "ts": 1786701120000,
+      "context": "You know I'm showing the greatest improvement rate, right?",
+      "track": {
+        "title": "Disco Stu - If these trends continue...",
+        "artists": "dumbmatter",
+        "art": "https://i.ytimg.com/vi/e6LOWKVq5sQ/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/d87VIQZeppA?t=27&is=OJLWItwDLOFYpHGE",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "d87VIQZeppA",
+      "person": "Conor Johnston",
+      "ts": 1786751340000,
+      "context": "Songs with a person's name as the title? There are a bajillion.",
+      "track": {
+        "title": "Family Guy - Songs Named After a Girl (Uncensored)",
+        "artists": "anthosm",
+        "art": "https://i.ytimg.com/vi/d87VIQZeppA/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/7JKpS5rKsKWeVPZ0ojBqv9?si=uWbLjiGpScu8ptwdBHNCCA&utm_source=whatsapp&sci=spotify%3Acard-config%3A2jaoA5PmNcxlRe4pBvHnjU",
+      "kind": "spotify",
+      "trackId": "7JKpS5rKsKWeVPZ0ojBqv9",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1786789320000,
+      "context": "",
+      "track": {
+        "title": "La Yugular",
+        "artists": "ROSALÍA",
+        "album": "LUX",
+        "year": 2025,
+        "art": "https://i.scdn.co/image/ab67616d0000485193ee2e2f2dfb7de9befcc164",
+        "uri": "spotify:track:7JKpS5rKsKWeVPZ0ojBqv9",
+        "url": "https://open.spotify.com/track/7JKpS5rKsKWeVPZ0ojBqv9"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=eG8wnLv59Oo",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "eG8wnLv59Oo",
+      "person": "Dave Jensen",
+      "ts": 1786800780000,
+      "context": "If he didn't say this to you, it's a missed opportunity",
+      "track": {
+        "title": "Three kids and no money | Homer Simpson",
+        "artists": "Andy Latino",
+        "art": "https://i.ytimg.com/vi/eG8wnLv59Oo/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4oVO4fGNRRvEn0CRuFO4qv?si=w5XDSIhrSOKtFjC6sLrd0Q&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "4oVO4fGNRRvEn0CRuFO4qv",
+      "videoId": null,
+      "person": "Grant Koziol",
+      "ts": 1786808880000,
+      "context": "",
+      "track": {
+        "title": "La Perla",
+        "artists": "ROSALÍA, Yahritza Y Su Esencia",
+        "album": "LUX",
+        "year": 2025,
+        "art": "https://i.scdn.co/image/ab67616d0000485193ee2e2f2dfb7de9befcc164",
+        "uri": "spotify:track:4oVO4fGNRRvEn0CRuFO4qv",
+        "url": "https://open.spotify.com/track/4oVO4fGNRRvEn0CRuFO4qv"
+      }
+    },
+    {
+      "url": "https://youtu.be/5y4qmWF9TIM?si=1zjbR_isbxSu0eCD",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "5y4qmWF9TIM",
+      "person": "Jon Black",
+      "ts": 1786818120000,
+      "context": "",
+      "track": {
+        "title": "The Dead South - Banjo Odyssey [Official Music Video]",
+        "artists": "The Dead South",
+        "art": "https://i.ytimg.com/vi/5y4qmWF9TIM/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/cFwTbsKkqxE?is=2AHFen2m7sMuvFb7",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "cFwTbsKkqxE",
+      "person": "Grant Koziol",
+      "ts": 1786823520000,
+      "context": "",
+      "track": {
+        "title": "Stevie Ray Vaughan ~Voodoo Child ~ Live From Austin T",
+        "artists": "Patricia Ni_Sol",
+        "art": "https://i.ytimg.com/vi/cFwTbsKkqxE/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/2Mq5MrlQ8j4PTGAo8zsdNs?si=374f5e8bf6dd4052",
+      "kind": "spotify",
+      "trackId": "2Mq5MrlQ8j4PTGAo8zsdNs",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786878060000,
+      "context": "",
+      "track": {
+        "title": "Why Can't We Be Friends",
+        "artists": "War",
+        "album": "Why Can't We Be Friends? (50th Anniversary Collector's Edition)",
+        "year": 1975,
+        "art": "https://i.scdn.co/image/ab67616d00004851eb61f4052a054abe26db1bbb",
+        "uri": "spotify:track:2Mq5MrlQ8j4PTGAo8zsdNs",
+        "url": "https://open.spotify.com/track/2Mq5MrlQ8j4PTGAo8zsdNs"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/1vgdbK87PSzFszWKYW1jEM?si=46efc594d0fc4604",
+      "kind": "spotify",
+      "trackId": "1vgdbK87PSzFszWKYW1jEM",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786879080000,
+      "context": "The recently departed Ozzie is not happy with you.",
+      "track": {
+        "title": "Mama, I'm Coming Home",
+        "artists": "Ozzy Osbourne",
+        "album": "The Essential Ozzy Osbourne",
+        "year": 2003,
+        "art": "https://i.scdn.co/image/ab67616d00004851698c9c30c686012b08bdbf71",
+        "uri": "spotify:track:1vgdbK87PSzFszWKYW1jEM",
+        "url": "https://open.spotify.com/track/1vgdbK87PSzFszWKYW1jEM"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/playlist?list=PLNhZ4Li0xHz8",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1786880940000,
+      "context": "youtube version of our playlist -",
+      "track": null
+    },
+    {
+      "url": "https://youtu.be/n-Bfkc6lZok?is=_zHGIxs9PqjfivFM",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "n-Bfkc6lZok",
+      "person": "Matt Mariani",
+      "ts": 1786907100000,
+      "context": "",
+      "track": {
+        "title": "Save Corncob TV | ﻿I ﻿Think You Should Leave | ﻿Netflix",
+        "artists": "Netflix Is A Joke",
+        "art": "https://i.ytimg.com/vi/n-Bfkc6lZok/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/B1pwyCl5ymE?t=116s",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "B1pwyCl5ymE",
+      "person": "Matt Mariani",
+      "ts": 1786907700000,
+      "context": "For 50 seconds, I thought there were monsters on the world",
+      "track": {
+        "title": "Darmine Doggy Door Full Sketch | I Think You Should Leave with Tim Robinson | Netflix Is a Joke",
+        "artists": "Netflix Is A Joke",
+        "art": "https://i.ytimg.com/vi/B1pwyCl5ymE/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/77bCgbwirSDVeBGHxg00A7?si=RDq6QhhHR22FT3zwMIPQzw&utm_source=copy-link&sci=spotify%3Acard-config%3A3hqZX6rOcb5zaYgZSnoiDp",
+      "kind": "spotify",
+      "trackId": "77bCgbwirSDVeBGHxg00A7",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1786961400000,
+      "context": "",
+      "track": {
+        "title": "Breakdown",
+        "artists": "Guns N' Roses",
+        "album": "Use Your Illusion II",
+        "year": 1991,
+        "art": "https://i.scdn.co/image/ab67616d0000485192d21aef6c0d288cc4c05973",
+        "uri": "spotify:track:77bCgbwirSDVeBGHxg00A7",
+        "url": "https://open.spotify.com/track/77bCgbwirSDVeBGHxg00A7"
+      }
+    },
+    {
+      "url": "https://youtu.be/WLPnHCXj8RA?is=xDVzRX0xyXOOlb1t",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "WLPnHCXj8RA",
+      "person": "Matt Mariani",
+      "ts": 1786961880000,
+      "context": "I know you won't like, but this cover is legitimate",
+      "track": {
+        "title": "AFI - My Michelle",
+        "artists": "Fearless Records",
+        "art": "https://i.ytimg.com/vi/WLPnHCXj8RA/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/auLBLk4ibAk?is=TESJ32hFvq8xjMTg&t=89",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "auLBLk4ibAk",
+      "person": "Matt Mariani",
+      "ts": 1786964700000,
+      "context": "",
+      "track": {
+        "title": "Rush - Tom Sawyer",
+        "artists": "RushVEVO",
+        "art": "https://i.ytimg.com/vi/auLBLk4ibAk/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/watch?v=hegodAykvY4&si=rBLNw7Oqxaq5T5fu",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "hegodAykvY4",
+      "person": "Matt Mariani",
+      "ts": 1786987980000,
+      "context": "",
+      "track": {
+        "title": "Archbishop Harold Holmes",
+        "artists": "Jack White - Topic",
+        "art": "https://i.ytimg.com/vi/hegodAykvY4/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=VJg4rwDkkBA&time_continue=1&source_ve_path=NzY3NTg&embeds_referring_euri=https%3A%2F%2Fwww.reddit.com%2F&embeds_referring_origin=https%3A%2F%2Fwww.reddit.com",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "VJg4rwDkkBA",
+      "person": "Dave Jensen",
+      "ts": 1786998120000,
+      "context": "@Shane Farkas as an Alanis fan, perhaps you'd enjoy this version of My Humps by alanis",
+      "track": {
+        "title": "Alanis Morissette - My Humps",
+        "artists": "Alanis Morissette",
+        "art": "https://i.ytimg.com/vi/VJg4rwDkkBA/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/album/40uCxIjfM2ixXThi8SHwdF?si=gzAULg5YSFGmBCm7A-wZ0Q",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Jon Black",
+      "ts": 1787001660000,
+      "context": "",
+      "track": null
+    },
+    {
+      "url": "https://open.spotify.com/track/61oXWlM80pXSYi17C7tzvL?si=KgDYmry0TA-lYJLG3CQv3g&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "61oXWlM80pXSYi17C7tzvL",
+      "videoId": null,
+      "person": "Shane Farkas",
+      "ts": 1787042220000,
+      "context": "Here’s mine",
+      "track": {
+        "title": "Choosin' Texas",
+        "artists": "Ella Langley",
+        "album": "Choosin' Texas",
+        "year": 2026,
+        "art": "https://i.scdn.co/image/ab6742d3000052b7326b9dabe6ac59739d58754c",
+        "uri": "spotify:track:61oXWlM80pXSYi17C7tzvL",
+        "url": "https://open.spotify.com/track/61oXWlM80pXSYi17C7tzvL"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5DrkhJaGka08ZK6QyuMK0W?si=a3rYFXKKQBiy3GwmHSkDEQ&utm_source=copy-link&rowId=58fdd265821923b9",
+      "kind": "spotify",
+      "trackId": "5DrkhJaGka08ZK6QyuMK0W",
+      "videoId": null,
+      "person": "Dave Steingart",
+      "ts": 1787045640000,
+      "context": "Here was my backup for I hope you shit your pants",
+      "track": {
+        "title": "Never Fight A Man With A Perm",
+        "artists": "IDLES",
+        "album": "Joy as an Act of Resistance.",
+        "year": 2018,
+        "art": "https://i.scdn.co/image/ab67616d00004851f247f4e8334b745fc2dd080f",
+        "uri": "spotify:track:5DrkhJaGka08ZK6QyuMK0W",
+        "url": "https://open.spotify.com/track/5DrkhJaGka08ZK6QyuMK0W"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/29tBdNJDDT3KbAkbWpckSd?si=d6e45acc346d4643",
+      "kind": "spotify",
+      "trackId": "29tBdNJDDT3KbAkbWpckSd",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787053440000,
+      "context": "im trying danny nedelko -",
+      "track": {
+        "title": "Danny Nedelko",
+        "artists": "IDLES",
+        "album": "Joy as an Act of Resistance.",
+        "year": 2018,
+        "art": "https://i.scdn.co/image/ab67616d00004851f247f4e8334b745fc2dd080f",
+        "uri": "spotify:track:29tBdNJDDT3KbAkbWpckSd",
+        "url": "https://open.spotify.com/track/29tBdNJDDT3KbAkbWpckSd"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/album/6NpTqYfk9dZfMbSbaHYNtP?si=G0M7vMo0RzuPglV-mFn58g&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": null,
+      "videoId": null,
+      "person": "Dave Steingart",
+      "ts": 1787054700000,
+      "context": "",
+      "track": null
+    },
+    {
+      "url": "https://youtube.com/shorts/XxvsQ0S8_Ro?is=EMr90Ws4KWoQvdZV",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "XxvsQ0S8_Ro",
+      "person": "Shane Farkas",
+      "ts": 1787149980000,
+      "context": "",
+      "track": {
+        "title": "Mansplaining at its finest #JimJefferies",
+        "artists": "Netflix Is A Joke",
+        "art": "https://i.ytimg.com/vi/XxvsQ0S8_Ro/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/Uc9_mxvP1K0?t=5",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "Uc9_mxvP1K0",
+      "person": "Conor Johnston",
+      "ts": 1787164440000,
+      "context": "",
+      "track": {
+        "title": "Power Bottom (It's Always Sunny in Philadelphia).wmv",
+        "artists": "Antoinette Kelley",
+        "art": "https://i.ytimg.com/vi/Uc9_mxvP1K0/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/kw1_BJ5faos?is=0lXLOchpM7ZdF-D_",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "kw1_BJ5faos",
+      "person": "Conor Johnston",
+      "ts": 1787185320000,
+      "context": "",
+      "track": {
+        "title": "Disturbing Behavior (1998) TV Spot - Flagpole Sitta",
+        "artists": "cosmicurgency",
+        "art": "https://i.ytimg.com/vi/kw1_BJ5faos/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/1ZLJ9IjSgPM?is=mgPzJKsC-MGdXikZ",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "1ZLJ9IjSgPM",
+      "person": "Conor Johnston",
+      "ts": 1787185620000,
+      "context": "There's a longer one. James Marsden!",
+      "track": {
+        "title": "Music That Made The Trailer - Disturbing Behavior (1998) - Harvey Danger - Flagpole Sitta",
+        "artists": "themorgue",
+        "art": "https://i.ytimg.com/vi/1ZLJ9IjSgPM/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/v-Rq-4spRz4?si=T67i-Ss_UZB16igY",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "v-Rq-4spRz4",
+      "person": "Jon Black",
+      "ts": 1787216400000,
+      "context": "",
+      "track": {
+        "title": "Townes Van Zandt, Waitin´ Around to Die, Heartworn Highways",
+        "artists": "After The GoldRush",
+        "art": "https://i.ytimg.com/vi/v-Rq-4spRz4/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/GbB3vFfiaVU?is=94d_RaMEtRj1YN1R",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "GbB3vFfiaVU",
+      "person": "Clements Johnson",
+      "ts": 1787221140000,
+      "context": "It’s falling apart. Comments are funny on this WSJ video.",
+      "track": {
+        "title": "Why the World’s Largest Megaproject Collapsed | WSJ",
+        "artists": "The Wall Street Journal",
+        "art": "https://i.ytimg.com/vi/GbB3vFfiaVU/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/watch?v=kmRyVolCH5A&si=j7F5CTznWOnws32R",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "kmRyVolCH5A",
+      "person": "Matt Mariani",
+      "ts": 1787241480000,
+      "context": "I was trying to submit a live banaroo performance by one of the big 4, but unfortunately Spotify didn't have the goods",
+      "track": {
+        "title": "Pearl Jam - Better Man [Bonnaroo 2008]",
+        "artists": "POLARIE",
+        "art": "https://i.ytimg.com/vi/kmRyVolCH5A/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=JXNTIM2_Zmc&ra=m",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "JXNTIM2_Zmc",
+      "person": "Dave Jensen",
+      "ts": 1787309580000,
+      "context": "This was a guy who asked chat to recreate the exact image with no changes 100 times, hallucinating up the wazoo",
+      "track": {
+        "title": "What if you ask AI to Recreate the Rock 101 times in a row?",
+        "artists": "ThinkBaseAI",
+        "art": "https://i.ytimg.com/vi/JXNTIM2_Zmc/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://music.youtube.com/playlist?list=PLPKMyLPXrIG0",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787425920000,
+      "context": "",
+      "track": null
+    },
+    {
+      "url": "https://open.spotify.com/track/7CK9Y1QkosOIEZKnBmtyV0?si=51c4675855f54770",
+      "kind": "spotify",
+      "trackId": "7CK9Y1QkosOIEZKnBmtyV0",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787426280000,
+      "context": "",
+      "track": {
+        "title": "All Hands on Deck",
+        "artists": "Dogwood",
+        "album": "Through Thick & Thin",
+        "year": 1997,
+        "art": "https://i.scdn.co/image/ab67616d0000485100971f3bc791f5344ff9ae2c",
+        "uri": "spotify:track:7CK9Y1QkosOIEZKnBmtyV0",
+        "url": "https://open.spotify.com/track/7CK9Y1QkosOIEZKnBmtyV0"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/5K5oUwfMJeRClJLQUSdKuD?si=fC_d2QOvSxm_tN5-HUlibw&utm_source=copy-link&context=spotify%3Asearch%3Aseeing%2Bsouble",
+      "kind": "spotify",
+      "trackId": "5K5oUwfMJeRClJLQUSdKuD",
+      "videoId": null,
+      "person": "Dave Jensen",
+      "ts": 1787426340000,
+      "context": "Ask and you shall receive",
+      "track": {
+        "title": "Seeing Double at the Triple Rock",
+        "artists": "NOFX",
+        "album": "Wolves in Wolves' Clothing",
+        "year": 2006,
+        "art": "https://i.scdn.co/image/ab67616d000048513378cd84027075dc7d6c2b23",
+        "uri": "spotify:track:5K5oUwfMJeRClJLQUSdKuD",
+        "url": "https://open.spotify.com/track/5K5oUwfMJeRClJLQUSdKuD"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/6QbyIrAZbeVs16IzrGSdjc?si=CwOjEfNMSweGjcPYfXoNpg&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "6QbyIrAZbeVs16IzrGSdjc",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787492940000,
+      "context": "",
+      "track": {
+        "title": "Chapter 319",
+        "artists": "clipping.",
+        "album": "Chapter 319",
+        "year": 2020,
+        "art": "https://i.scdn.co/image/ab67616d00004851517c567bdc6b3b185142b047",
+        "uri": "spotify:track:6QbyIrAZbeVs16IzrGSdjc",
+        "url": "https://open.spotify.com/track/6QbyIrAZbeVs16IzrGSdjc"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/1Zi2ezNOqt9y9irC11xYpN?si=25TxTD9wQFGl-R2ynpPyHA&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "1Zi2ezNOqt9y9irC11xYpN",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1787497620000,
+      "context": "Here's a song I considered.",
+      "track": {
+        "title": "Eve Of Destruction",
+        "artists": "Barry McGuire",
+        "album": "Eve Of Destruction",
+        "year": 1965,
+        "art": "https://i.scdn.co/image/ab67616d00004851d33bff23ded3e4ec3149429f",
+        "uri": "spotify:track:1Zi2ezNOqt9y9irC11xYpN",
+        "url": "https://open.spotify.com/track/1Zi2ezNOqt9y9irC11xYpN"
+      }
+    },
+    {
+      "url": "https://m.youtube.com/watch?v=S_4PrI8gB-k",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "S_4PrI8gB-k",
+      "person": "Dave Jensen",
+      "ts": 1787499720000,
+      "context": "This will explain it all Bonch",
+      "track": {
+        "title": "Twink, Twank, Bear, or Otter?",
+        "artists": "Sunfrost",
+        "art": "https://i.ytimg.com/vi/S_4PrI8gB-k/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4ooYQyW0AEnAr8sMBJecGn?si=__PCzUlnT9u6kZuJSqOidQ&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "4ooYQyW0AEnAr8sMBJecGn",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1787506020000,
+      "context": "",
+      "track": {
+        "title": "Mother Superior",
+        "artists": "Good Riddance",
+        "album": "For God and Country",
+        "year": 1995,
+        "art": "https://i.scdn.co/image/ab67616d000048519ce5e0f45e098d215162d2a6",
+        "uri": "spotify:track:4ooYQyW0AEnAr8sMBJecGn",
+        "url": "https://open.spotify.com/track/4ooYQyW0AEnAr8sMBJecGn"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3JNqdTMq1o7H7DWAV4nPGO?si=YVWj5Eq5QZmBKSMCiuQaLA&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "3JNqdTMq1o7H7DWAV4nPGO",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787506560000,
+      "context": "",
+      "track": {
+        "title": "Election Year",
+        "artists": "98 Mute",
+        "album": "Class of '98",
+        "year": 1998,
+        "art": "https://i.scdn.co/image/ab67616d00004851c27e31d4c88092b73aec4844",
+        "uri": "spotify:track:3JNqdTMq1o7H7DWAV4nPGO",
+        "url": "https://open.spotify.com/track/3JNqdTMq1o7H7DWAV4nPGO"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/59WN2psjkt1tyaxjspN8fp?si=f027Eb9mRK-0Pi0xALRWsQ&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "59WN2psjkt1tyaxjspN8fp",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787515980000,
+      "context": "",
+      "track": {
+        "title": "Killing In The Name",
+        "artists": "Rage Against The Machine",
+        "album": "Rage Against The Machine - XX (20th Anniversary Special Edition)",
+        "year": 1992,
+        "art": "https://i.scdn.co/image/ab67616d0000485154ab617bc2d4974ab6ffbece",
+        "uri": "spotify:track:59WN2psjkt1tyaxjspN8fp",
+        "url": "https://open.spotify.com/track/59WN2psjkt1tyaxjspN8fp"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4md4KRL6Z9ufa0je0Y3awL?si=1f934f8fd4ce46e0",
+      "kind": "spotify",
+      "trackId": "4md4KRL6Z9ufa0je0Y3awL",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1787664900000,
+      "context": "RIP Dolly. I almost submitted this for Seattle v. Nashville.",
+      "track": {
+        "title": "Shine",
+        "artists": "Dolly Parton",
+        "album": "Little Sparrow",
+        "year": 2001,
+        "art": "https://i.scdn.co/image/ab67616d000048518438d769b22aa5225b37d89d",
+        "uri": "spotify:track:4md4KRL6Z9ufa0je0Y3awL",
+        "url": "https://open.spotify.com/track/4md4KRL6Z9ufa0je0Y3awL"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/6dnco8haegnJYtylV26cBq?si=1f30f698b70845bd",
+      "kind": "spotify",
+      "trackId": "6dnco8haegnJYtylV26cBq",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1787665320000,
+      "context": "I've never actually gotten into her stuff. But I do know this classic from Marshall's wedding CD:",
+      "track": {
+        "title": "Islands In the Stream",
+        "artists": "Dolly Parton, Kenny Rogers",
+        "album": "Greatest Hits",
+        "year": 1982,
+        "art": "https://i.scdn.co/image/ab67616d00004851f4b9ecd2ef53484ca3206f82",
+        "uri": "spotify:track:6dnco8haegnJYtylV26cBq",
+        "url": "https://open.spotify.com/track/6dnco8haegnJYtylV26cBq"
+      }
+    },
+    {
+      "url": "https://youtu.be/O1v64GARceU?is=XuOMZeFpWQpZfM2M",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "O1v64GARceU",
+      "person": "Clements Johnson",
+      "ts": 1787693700000,
+      "context": "Try this one Jon",
+      "track": {
+        "title": "The Office - Dinner Party - Plasma TV Scene",
+        "artists": "PlayRightParent",
+        "art": "https://i.ytimg.com/vi/O1v64GARceU/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/hXVjhSNcqww?t=15&is=jW7KDwlX3THdVSMH",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "hXVjhSNcqww",
+      "person": "Conor Johnston",
+      "ts": 1787736180000,
+      "context": "",
+      "track": {
+        "title": "Homer Old People",
+        "artists": "Rob Martin",
+        "art": "https://i.ytimg.com/vi/hXVjhSNcqww/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/sAkL2-vh2Sk?is=Fn7OQ1mgi8GWldhw",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "sAkL2-vh2Sk",
+      "person": "Conor Johnston",
+      "ts": 1787772120000,
+      "context": "",
+      "track": {
+        "title": "X Men Opening Theme (High Quality)",
+        "artists": "jm3dina",
+        "art": "https://i.ytimg.com/vi/sAkL2-vh2Sk/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/ft0vkKCadgk",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "ft0vkKCadgk",
+      "person": "Shane Farkas",
+      "ts": 1787772600000,
+      "context": "This was my initial pick for anti war but I thought fortunate son would be a crowd favorite",
+      "track": {
+        "title": "Country Joe & the Fish - VietNam Song - Live Woodstock 1969 - Full HD Video",
+        "artists": "Dima T",
+        "art": "https://i.ytimg.com/vi/ft0vkKCadgk/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/0ME1eauLCzrULavpxMh6Ww?si=_gh-UO1DRYWnwUx5ZSKJPA&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "0ME1eauLCzrULavpxMh6Ww",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787772720000,
+      "context": "",
+      "track": {
+        "title": "Once Upon a Time",
+        "artists": "Toby Fox",
+        "album": "UNDERTALE Soundtrack",
+        "year": 2015,
+        "art": "https://i.scdn.co/image/ab67616d0000485184eb923a79ba98269f0a7390",
+        "uri": "spotify:track:0ME1eauLCzrULavpxMh6Ww",
+        "url": "https://open.spotify.com/track/0ME1eauLCzrULavpxMh6Ww"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/25lTenJPmSfwCRZi2hjCcB?si=Nd6Jb4doRnSGXe651njw6g&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "25lTenJPmSfwCRZi2hjCcB",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787772960000,
+      "context": "",
+      "track": {
+        "title": "Outer Wilds",
+        "artists": "Andrew Prahlow",
+        "album": "Outer Wilds (Original Soundtrack)",
+        "year": 2019,
+        "art": "https://i.scdn.co/image/ab67616d00004851db6b8ae97f69fee1d432334d",
+        "uri": "spotify:track:25lTenJPmSfwCRZi2hjCcB",
+        "url": "https://open.spotify.com/track/25lTenJPmSfwCRZi2hjCcB"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/2kguzEzSeQ52zueXsbPorp?si=b60587609de44f79",
+      "kind": "spotify",
+      "trackId": "2kguzEzSeQ52zueXsbPorp",
+      "videoId": null,
+      "person": "Jon Black",
+      "ts": 1787774160000,
+      "context": "",
+      "track": {
+        "title": "Boys from the County Hell",
+        "artists": "The Pogues",
+        "album": "Very Best of The Pogues",
+        "year": 2001,
+        "art": "https://i.scdn.co/image/ab67616d00004851271133ab6d376b19099743e0",
+        "uri": "spotify:track:2kguzEzSeQ52zueXsbPorp",
+        "url": "https://open.spotify.com/track/2kguzEzSeQ52zueXsbPorp"
+      }
+    },
+    {
+      "url": "https://youtu.be/WjLS581-DjY?t=36&is=8efixd8No4AMEVqi",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "WjLS581-DjY",
+      "person": "Conor Johnston",
+      "ts": 1787779020000,
+      "context": "",
+      "track": {
+        "title": "Litli trommuleikarinn",
+        "artists": "Ssdemetz",
+        "art": "https://i.ytimg.com/vi/WjLS581-DjY/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/76fqoIuUaPDZjX2AMzHIzK?si=xZjj_KvBRyux4FlYw_0sEg&utm_source=whatsapp&pi=_8nsY9ahS9KDf",
+      "kind": "spotify",
+      "trackId": "76fqoIuUaPDZjX2AMzHIzK",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787780040000,
+      "context": "",
+      "track": {
+        "title": "Zombie",
+        "artists": "The Cranberries",
+        "album": "Zombie",
+        "year": 2005,
+        "art": "https://i.scdn.co/image/ab6742d3000052b7c7887d44bcab36f48be94fc9",
+        "uri": "spotify:track:76fqoIuUaPDZjX2AMzHIzK",
+        "url": "https://open.spotify.com/track/76fqoIuUaPDZjX2AMzHIzK"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3oW6SWwGqiZSPTiAp7ZQoH?si=Dx6JuAjhTIWIkoRLzcCP_w&utm_source=whatsapp&rowId=538880faafc52ebf",
+      "kind": "spotify",
+      "trackId": "3oW6SWwGqiZSPTiAp7ZQoH",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1787780100000,
+      "context": "",
+      "track": {
+        "title": "It's A Great Day To Be Alive",
+        "artists": "Travis Tritt",
+        "album": "Down The Road I Go",
+        "year": 2000,
+        "art": "https://i.scdn.co/image/ab67616d000048519fd857fb9120e851eb0c68ea",
+        "uri": "spotify:track:3oW6SWwGqiZSPTiAp7ZQoH",
+        "url": "https://open.spotify.com/track/3oW6SWwGqiZSPTiAp7ZQoH"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=98k2DlQ9PMY",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "98k2DlQ9PMY",
+      "person": "Conor Johnston",
+      "ts": 1787780220000,
+      "context": "In case anyone missed this in my comment:",
+      "track": {
+        "title": "Family Guy - The incessant use of \"Fortunate Son\"",
+        "artists": "Mr. Rupert",
+        "art": "https://i.ytimg.com/vi/98k2DlQ9PMY/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3ATxgC4OtJ0beg9xEdQvMF?si=02d01717ec144752",
+      "kind": "spotify",
+      "trackId": "3ATxgC4OtJ0beg9xEdQvMF",
+      "videoId": null,
+      "person": "Jon Black",
+      "ts": 1787782980000,
+      "context": "",
+      "track": {
+        "title": "Solitaire",
+        "artists": "Strung Out",
+        "album": "Suburban Teenage Wasteland Blues (Reissue)",
+        "year": 2014,
+        "art": "https://i.scdn.co/image/ab67616d00004851506bdd0bccbd15abc1bc05d9",
+        "uri": "spotify:track:3ATxgC4OtJ0beg9xEdQvMF",
+        "url": "https://open.spotify.com/track/3ATxgC4OtJ0beg9xEdQvMF"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3QebYR26gRT9Bso2VSnUOR?si=1b7kX1fRTBmBP5E8qt0v9Q&utm_source=copy-link",
+      "kind": "spotify",
+      "trackId": "3QebYR26gRT9Bso2VSnUOR",
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787784120000,
+      "context": "",
+      "track": {
+        "title": "Anarchy Burger (Hold The Government)",
+        "artists": "The Vandals",
+        "album": "Peace Thru Vandalism (Deluxe Edition)",
+        "year": 1982,
+        "art": "https://i.scdn.co/image/ab67616d00004851594d33daeaeaf320767b0da3",
+        "uri": "spotify:track:3QebYR26gRT9Bso2VSnUOR",
+        "url": "https://open.spotify.com/track/3QebYR26gRT9Bso2VSnUOR"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/@BigJoel",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": null,
+      "person": "Matt Mariani",
+      "ts": 1787785620000,
+      "context": "if looking for youtube content - I have been making my way through the content of big joel recently -",
+      "track": null
+    },
+    {
+      "url": "https://youtu.be/ckmiO50anfg?si=9nI8W75EjBu4tC2i",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "ckmiO50anfg",
+      "person": "Matt Mariani",
+      "ts": 1787785740000,
+      "context": "- jokey or more political -",
+      "track": {
+        "title": "Click: The Worst Movie | Big Joel",
+        "artists": "Big Joel",
+        "art": "https://i.ytimg.com/vi/ckmiO50anfg/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://youtu.be/oV_yhvaU6Vk?si=VPqGWY_CsJuX_q6m",
+      "kind": "youtube",
+      "trackId": null,
+      "videoId": "oV_yhvaU6Vk",
+      "person": "Matt Mariani",
+      "ts": 1787785740000,
+      "context": "- jokey or more political -",
+      "track": {
+        "title": "Ben Shapiro and the Politics of Imagination | Big Joel",
+        "artists": "Big Joel",
+        "art": "https://i.ytimg.com/vi/oV_yhvaU6Vk/hqdefault.jpg"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/4jKF1H4eQu8A7Bofo0b6FA?si=RJR2G1o-RKmOBOSsCOmxyw&utm_source=whatsapp",
+      "kind": "spotify",
+      "trackId": "4jKF1H4eQu8A7Bofo0b6FA",
+      "videoId": null,
+      "person": "Jimmy",
+      "ts": 1787825700000,
+      "context": "",
+      "track": {
+        "title": "Bed Head",
+        "artists": "Joey Pecoraro",
+        "album": "Deep in a Dream of You",
+        "year": 2019,
+        "art": "https://i.scdn.co/image/ab67616d00004851abb56c58032f79ca3c27cb6d",
+        "uri": "spotify:track:4jKF1H4eQu8A7Bofo0b6FA",
+        "url": "https://open.spotify.com/track/4jKF1H4eQu8A7Bofo0b6FA"
+      }
+    },
+    {
+      "url": "https://open.spotify.com/track/3idMGeAs6ZEmPAZll9u1if?si=afde86a7736d446f",
+      "kind": "spotify",
+      "trackId": "3idMGeAs6ZEmPAZll9u1if",
+      "videoId": null,
+      "person": "Conor Johnston",
+      "ts": 1787825940000,
+      "context": "",
+      "track": {
+        "title": "East of Woodstock, West of Viet Nam",
+        "artists": "Tom Russell",
+        "album": "Blood And Candle Smoke",
+        "year": 2009,
+        "art": "https://i.scdn.co/image/ab67616d00004851438d7cc58b429f441560a5b1",
+        "uri": "spotify:track:3idMGeAs6ZEmPAZll9u1if",
+        "url": "https://open.spotify.com/track/3idMGeAs6ZEmPAZll9u1if"
       }
     }
   ]

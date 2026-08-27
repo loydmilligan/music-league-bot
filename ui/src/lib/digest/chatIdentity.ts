@@ -38,8 +38,9 @@ export const PEOPLE: Person[] = [
 	// players.id 36 is misspelled "Darren Paletz" in the DB; the export is right.
 	{ name: 'Darren Pallets', playerId: 36, mlCompetitorId: '7007caa2a0f24181a8024948c387ee8f', rookie: false },
 	{ name: 'Dave Steingart', playerId: 33, mlCompetitorId: '583049ce3b11466f94d937e933c49ae0', rookie: false },
-	// No players row, no competitor id — joined after round 1.
-	{ name: 'Jimmy', playerId: null, mlCompetitorId: null, rookie: true },
+	// Joined after round 1; competes as "Jimmy Troy" since the 2026-08-27
+	// refresh found him with 41 votes on the books.
+	{ name: 'Jimmy', playerId: 38, mlCompetitorId: '97d910dabc2d4bd09b42396581a722d2', rookie: false },
 ];
 
 /**
@@ -79,6 +80,9 @@ const NON_PARTICIPANTS = new Set([
 	'mentioned all',
 	'boarz ii men - music league',
 	'whatsapp',
+	// Our own bot posts into the group (since 2026-07-18); it is not a person
+	// and must not compete for awards.
+	'music league bot',
 ]);
 
 const BY_NAME = new Map(PEOPLE.map((p) => [p.name, p]));

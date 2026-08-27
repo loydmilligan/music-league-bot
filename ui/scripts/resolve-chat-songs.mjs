@@ -20,7 +20,19 @@ const jiti = createJiti(import.meta.url);
 const { parseExport } = await jiti.import(path.join(UI, 'src/lib/digest/chatExport.ts'));
 const { extractLinks } = await jiti.import(path.join(UI, 'src/lib/digest/chatLinks.ts'));
 
-const ZIP = path.join(ROOT, 'data/boarz-ii-men/season-1/WhatsApp Chat with Boarz II Men - Music League.zip');
+// Latest full-history export wins; BOARZ_EXPORT_ZIP overrides (mirrors
+// chat-superlatives-data.mjs).
+function latestExportZip() {
+	if (process.env.BOARZ_EXPORT_ZIP) return path.resolve(process.env.BOARZ_EXPORT_ZIP);
+	const dir = path.join(ROOT, 'data/boarz-ii-men/season-1');
+	const dated = fs
+		.readdirSync(dir)
+		.filter((f) => /^whatsapp-boarz-chat-export-.*\.zip$/.test(f))
+		.sort((a, b) => fs.statSync(path.join(dir, a)).mtimeMs - fs.statSync(path.join(dir, b)).mtimeMs);
+	if (dated.length) return path.join(dir, dated[dated.length - 1]);
+	return path.join(dir, 'WhatsApp Chat with Boarz II Men - Music League.zip');
+}
+const ZIP = latestExportZip();
 const OUT = path.join(UI, 'scripts/chat-songs.json');
 
 // ── env ───────────────────────────────────────────────────────────────────────

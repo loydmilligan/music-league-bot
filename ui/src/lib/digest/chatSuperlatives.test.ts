@@ -218,10 +218,17 @@ describe('computeSuperlatives', () => {
 	});
 
 	it('excludes rookies from the talk-to-ballot metric', () => {
-		const jimmy = result.people.find((p) => p.name === 'Jimmy')!;
-		expect(jimmy.rookie).toBe(true);
-		expect(jimmy.talkToBallot).toBeNull();
-		expect(result.notes.join(' ')).toMatch(/Jimmy/);
+		// Jimmy graduated to a real competitor in the 2026-08-27 refresh, so the
+		// roster no longer has a rookie — inject one rather than depend on it.
+		const r = computeSuperlatives(
+			[msg('Rook', 'hi there friend'), msg('Matt Mariani', 'one two three four five')],
+			[{ person: 'Matt Mariani', comment: 'good song' }],
+			{ resolve: (s) => (s === 'Rook' ? { name: 'Rook', rookie: true } : resolveSender(s)) },
+		);
+		const rook = r.people.find((p) => p.name === 'Rook')!;
+		expect(rook.rookie).toBe(true);
+		expect(rook.talkToBallot).toBeNull();
+		expect(r.notes.join(' ')).toMatch(/Rook/);
 	});
 
 	it('computes talk-to-ballot for people who did vote', () => {

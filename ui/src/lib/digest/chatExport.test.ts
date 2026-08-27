@@ -92,3 +92,28 @@ describe('parseExport', () => {
 		expect(out[0].text).toBe('the score was 3: nice');
 	});
 });
+
+describe('media-omitted exports (2026-08-27 refresh)', () => {
+	// "Export without media" writes `<Media omitted>` instead of
+	// `Filename.ext (file attached)`. Without handling, 339 of those lines
+	// would each contribute the words "Media omitted" to every text metric.
+	it('treats <Media omitted> as media contributing no words', () => {
+		const out = parseExport('8/1/26, 4:56 PM - Jimmy: <Media omitted>');
+		expect(out).toHaveLength(1);
+		expect(out[0].media).not.toBeNull();
+		expect(out[0].text).toBe('');
+	});
+
+	it('treats a deleted message as a message with no words', () => {
+		const gone = parseExport('8/1/26, 4:56 PM - Jimmy: This message was deleted')[0];
+		const mine = parseExport('8/1/26, 4:56 PM - Matt Mariani: You deleted this message')[0];
+		expect(gone.deleted).toBe(true);
+		expect(gone.text).toBe('');
+		expect(mine.deleted).toBe(true);
+		expect(mine.text).toBe('');
+	});
+
+	it('keeps an ordinary message undeleted', () => {
+		expect(parseExport('8/1/26, 4:56 PM - Jimmy: hello')[0].deleted).toBe(false);
+	});
+});
