@@ -56,6 +56,7 @@ export type RunState = {
   currentEp: number;
   state: 'running' | 'parked' | 'done' | 'failed';
   cuts: CutRunState[];
+  error?: string;
 };
 
 /** Active cut ids: declaration order minus anything disabled. */
