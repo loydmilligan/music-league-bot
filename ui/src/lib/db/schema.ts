@@ -585,6 +585,46 @@ export const SCHEMA = `
     generated_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS rollout_configs (
+    league_id       INTEGER PRIMARY KEY REFERENCES leagues(id),
+    definition_json TEXT NOT NULL,
+    enabled         INTEGER NOT NULL DEFAULT 0,
+    updated_at      TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS rollout_runs (
+    id              TEXT PRIMARY KEY,
+    league_id       INTEGER NOT NULL REFERENCES leagues(id),
+    round_id        INTEGER NOT NULL REFERENCES rounds(id),
+    definition_json TEXT NOT NULL,
+    state           TEXT NOT NULL CHECK(state IN ('running','parked','done','failed')),
+    current_ep      INTEGER NOT NULL DEFAULT 0,
+    resume_token    TEXT,
+    review_url      TEXT,
+    error           TEXT,
+    started_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    finished_at     TEXT
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS rollout_runs_round ON rollout_runs(round_id);
+
+  CREATE TABLE IF NOT EXISTS rollout_cut_runs (
+    run_id       TEXT NOT NULL REFERENCES rollout_runs(id) ON DELETE CASCADE,
+    cut_id       TEXT NOT NULL,
+    ep           INTEGER NOT NULL,
+    runtime      TEXT,
+    state        TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','skipped')),
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    remasters    INTEGER NOT NULL DEFAULT 0,
+    claimed_at   TEXT,
+    heartbeat_at TEXT,
+    output_json  TEXT,
+    error        TEXT,
+    started_at   TEXT,
+    finished_at  TEXT,
+    PRIMARY KEY (run_id, cut_id)
+  );
+
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
