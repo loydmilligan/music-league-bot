@@ -844,7 +844,11 @@ export function buildUserPrompt(
       // description rather than emitted as a block.
       const sectionNotes = notes?.bySection?.[k];
       if (sectionNotes?.length) {
-        line += ` [editor notes — true but NOT quotable, do not attribute: ${sectionNotes.map((n) => n.body.trim()).join(' | ')}]`;
+        // Note bodies can contain newlines (textarea input). Collapse them so
+        // the whole note stays inside this line's bracket — a raw newline
+        // here would land the tail of the note outside the envelope as
+        // unwrapped prompt text.
+        line += ` [editor notes — true but NOT quotable, do not attribute: ${sectionNotes.map((n) => n.body.trim().replace(/\s*\n+\s*/g, '; ')).join(' | ')}]`;
       }
       parts.push(line);
     }

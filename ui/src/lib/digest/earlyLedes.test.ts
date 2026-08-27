@@ -90,4 +90,27 @@ describe('generateEarlyLedes', () => {
 	it('returns null from getEarlyLedes when none exist', () => {
 		expect(getEarlyLedes(db, 149)).toBeNull();
 	});
+
+	it('uniquifies duplicate ids from the model before storing', async () => {
+		const d = deps([
+			{ id: 'x', title: 'T1', angle: 'A1', evidence: [] },
+			{ id: 'x', title: 'T2', angle: 'A2', evidence: [] },
+			{ id: 'x', title: 'T3', angle: 'A3', evidence: [] },
+		]);
+		const { ledes } = await generateEarlyLedes(db, 149, d);
+		const ids = ledes.map((l) => l.id);
+		expect(new Set(ids).size).toBe(3);
+		expect(ids[0]).toBe('x');
+		expect(ids[1]).not.toBe('x');
+		expect(ids[2]).not.toBe('x');
+		expect(ids[1]).not.toBe(ids[2]);
+		// Stored copy must match the (deduped) returned copy.
+		expect(getEarlyLedes(db, 149)!.ledes.map((l) => l.id)).toEqual(ids);
+	});
+
+	it('generates an id for a lede missing one', async () => {
+		const d = deps([{ title: 'T1', angle: 'A1', evidence: [] } as unknown as { id: string; title: string; angle: string; evidence: string[] }]);
+		const { ledes } = await generateEarlyLedes(db, 149, d);
+		expect(ledes[0].id).toBe('lede-0');
+	});
 });

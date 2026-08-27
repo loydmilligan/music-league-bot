@@ -134,6 +134,29 @@ function gatherInput(db: Database.Database, roundId: number, nowIso: string): Ea
 	};
 }
 
+/**
+ * The model's `id` field is unvalidated output: it may be missing or, worse,
+ * duplicated across ledes. PrepPanel keys `{#each ledes} (lede.id)` and keys
+ * ratings by id — a duplicate id is a fatal each_key_duplicate crash and a
+ * ratings collision, so ids are coerced to strings, defaulted, and uniquified
+ * before anything is stored.
+ */
+function uniquifyLedeIds(ledes: EarlyLede[]): EarlyLede[] {
+	const seen = new Map<string, number>();
+	return ledes.map((lede, i) => {
+		let id = typeof lede.id === 'string' && lede.id.trim() ? lede.id : `lede-${i}`;
+		const priorCount = seen.get(id);
+		if (priorCount !== undefined) {
+			const n = priorCount + 1;
+			seen.set(id, n);
+			id = `${id}-${n}`;
+		} else {
+			seen.set(id, 1);
+		}
+		return { ...lede, id };
+	});
+}
+
 export async function generateEarlyLedes(
 	db: Database.Database,
 	roundId: number,
@@ -157,6 +180,7 @@ export async function generateEarlyLedes(
 	} catch (e) {
 		throw new Error(`early ledes: failed to parse model output: ${e instanceof Error ? e.message : e}`);
 	}
+	ledes = uniquifyLedeIds(ledes);
 
 	// ON CONFLICT deliberately leaves ratings_json alone: a regeneration must
 	// never wipe the editor's mid-round ratings.

@@ -53,6 +53,19 @@
   };
   const targetFor = (rowId: string): NoteTarget => DEFAULT_TARGET[rowId] ?? 'general';
 
+  // Which row exclusively displays notes for a given target. The select in
+  // each note offers all nine NOTE_TARGETS, but only three rows have a
+  // material row uniquely tied to their target — a note retargeted to any
+  // other target (podium/villain/flow/consensus/quotes, or general) has no
+  // row of its own. The 'bridge' row is the general/orphan row: it shows its
+  // own 'general' notes plus every note whose target isn't claimed by one of
+  // the rows below, so every note is visible on exactly one row.
+  const ROW_TARGETS: Record<string, NoteTarget> = {
+    'early-ledes': 'ledes', chat: 'chat', storylines: 'storylines',
+  };
+  const ORPHAN_ROW_ID = 'bridge';
+  const CLAIMED_TARGETS = new Set<NoteTarget>(Object.values(ROW_TARGETS));
+
   let notes = $state<RoundNote[]>([]);
   let noteDrafts = $state<Record<string, string>>({});
   let noteBusy = $state<Record<string, boolean>>({});
@@ -71,8 +84,13 @@
   $effect(() => { void roundId; loadNotes(); });
 
   function notesForRow(rowId: string): RoundNote[] {
-    const target = targetFor(rowId);
-    return notes.filter((n) => n.target === target);
+    const ownTarget = ROW_TARGETS[rowId];
+    if (ownTarget) return notes.filter((n) => n.target === ownTarget);
+    if (rowId === ORPHAN_ROW_ID) return notes.filter((n) => !CLAIMED_TARGETS.has(n.target));
+    // Rows without a unique target (guesser, participation) never display
+    // notes themselves — those notes surface on the orphan row instead, so
+    // each note appears on exactly one row.
+    return [];
   }
 
   async function addNote(rowId: string) {
