@@ -360,10 +360,15 @@ A check fails → its remaster cover fires with the failing check ids and the
 draft as context → the check re-runs → it passes → the run continues, and the
 failure is visible only in run history.
 
-If the remaster budget is exhausted, **the run does not die.** It parks at the
-next hold *early*, carrying the unresolved failures, so the review screen shows
-the problems and offers fix-and-resume or override. A fixable problem never
-stops the run; an unfixable one never gets past a human.
+If the remaster budget is exhausted, **the run does not die.** It parks
+immediately at a **forced hold**, carrying the unresolved failures, so the
+review screen shows the problems and offers fix-and-resume or override. A
+fixable problem never stops the run; an unfixable one never gets past a human.
+
+A forced hold is an immediate park rather than a skip-ahead to the next
+configured hold: skipping intermediate cuts would mean deciding which of them
+are safe to omit, and parking where the failure happened is both simpler and
+more informative.
 
 ### Holds
 
