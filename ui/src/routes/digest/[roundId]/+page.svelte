@@ -18,6 +18,7 @@
   import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
+  import ReelSection from '$lib/digest/ReelSection.svelte';
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
   import ChatLabSection from '$lib/digest/ChatLabSection.svelte';
   import type { PartRecommendation } from '$lib/digest/chatSection.js';
@@ -664,6 +665,7 @@
     nextRound: NextRoundPreview,
     guesser: GuesserLeaderboard,
     storylines: StorylinesCast,
+    reel: ReelSection,
   };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
@@ -728,6 +730,31 @@
         return {};
       }
     })(),
+  );
+
+  // "The Reel" — weekly chat slideshow/video. Same shape as guesser: a synthetic
+  // draft-column section (reel_state / reel_position / reel_content_json), never
+  // a digest_sections row. Gates on media availability: no poster and no src
+  // means there is nothing to show OR export, so the section self-hides.
+  let reelExcluded = $state(
+    data.stage !== "prepare"
+      && (data.draft as unknown as { reel_state?: string } | undefined)?.reel_state === "excluded",
+  );
+  const reelContent = $derived(
+    (() => {
+      const raw = (data.draft as unknown as { reel_content_json?: string } | undefined)
+        ?.reel_content_json;
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw) as { title?: string; note?: string; media?: { src?: string; poster?: string } };
+      } catch {
+        return {};
+      }
+    })(),
+  );
+  const showReel = $derived(!!(reelContent.media?.poster || reelContent.media?.src));
+  const reelPosition = $derived(
+    (data.draft as unknown as { reel_position?: number } | undefined)?.reel_position ?? 0,
   );
 
   let discoverabilityOverride = $state<typeof data.discoverability>(null);
@@ -873,6 +900,14 @@
     } catch (err) { showError(err); }
   }
 
+  async function saveReelInlineEdit(content: unknown) {
+    try {
+      const res = await fetch("/api/digest/" + data.roundId + "/sections/reel", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ content }) });
+      if (!res.ok) throw new Error("reel save failed (" + res.status + ")");
+      await invalidateAll();
+    } catch (err) { showError(err); }
+  }
+
   // modalTarget: 'whole' or a specific section id
   let modalTarget = $state<string | 'whole' | null>(null);
 
@@ -963,7 +998,7 @@
     }
   }
 
-  type DataSectionKey = 'stats' | 'standings' | 'discoverability' | 'guesser';
+  type DataSectionKey = 'stats' | 'standings' | 'discoverability' | 'guesser' | 'reel';
   let dataSectionRunState = $state<Record<DataSectionKey, 'default' | 'locked' | 'queued' | 'regenerating'>>({
     stats: data.stage !== "prepare" && data.draft.stats_state === "locked" ? "locked" : "default",
     standings: 'default',
@@ -971,18 +1006,23 @@
     guesser: data.stage !== "prepare"
       && (data.draft as unknown as { guesser_state?: string } | undefined)?.guesser_state === "locked"
       ? "locked" : "default",
+    reel: data.stage !== "prepare"
+      && (data.draft as unknown as { reel_state?: string } | undefined)?.reel_state === "locked"
+      ? "locked" : "default",
   });
   const DATA_SECTION_LABEL: Record<DataSectionKey, string> = {
     stats: 'By the numbers',
     standings: 'Season standings',
     discoverability: 'Tastemaker',
     guesser: 'The Guesser',
+    reel: 'The Reel',
   };
 
   function dataSectionExcluded(key: DataSectionKey): boolean {
     if (key === 'stats') return statsExcluded;
     if (key === 'standings') return standingsExcluded;
     if (key === 'guesser') return guesserExcluded;
+    if (key === 'reel') return reelExcluded;
     return discoverabilityExcluded;
   }
   // 'stats' and 'guesser' persist their state server-side via a per-section
@@ -990,7 +1030,7 @@
   // guesser_state — see guesserExcluded above for the guesser_state cast).
   // 'standings'/'discoverability' don't have a corresponding column and stay
   // session-scoped only, as before.
-  function persistDataSectionState(key: 'stats' | 'guesser', state: "default" | "excluded" | "locked") {
+  function persistDataSectionState(key: 'stats' | 'guesser' | 'reel', state: "default" | "excluded" | "locked") {
     void fetch("/api/digest/" + data.roundId + "/sections/" + key, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ state }) }).catch((err) => showError(err));
   }
 
@@ -1003,15 +1043,16 @@
     if (key === 'stats') statsExcluded = !statsExcluded;
     else if (key === 'standings') standingsExcluded = !standingsExcluded;
     else if (key === 'guesser') guesserExcluded = !guesserExcluded;
+    else if (key === 'reel') reelExcluded = !reelExcluded;
     else discoverabilityExcluded = !discoverabilityExcluded;
     if (dataSectionExcluded(key)) dequeueData(key);
-    if (key === "stats" || key === "guesser") persistDataSectionState(key, dataSectionExcluded(key) ? "excluded" : dataSectionRunState[key] === "locked" ? "locked" : "default");
+    if (key === "stats" || key === "guesser" || key === "reel") persistDataSectionState(key, dataSectionExcluded(key) ? "excluded" : dataSectionRunState[key] === "locked" ? "locked" : "default");
   }
   function toggleDataLocked(key: DataSectionKey) {
     const next = dataSectionRunState[key] === 'locked' ? 'default' : 'locked';
     dataSectionRunState[key] = next;
     if (next === "locked") dequeueData(key);
-    if (key === "stats" || key === "guesser") persistDataSectionState(key, next);
+    if (key === "stats" || key === "guesser" || key === "reel") persistDataSectionState(key, next);
   }
 
   async function recomputeDataSection(key: DataSectionKey) {
@@ -1027,10 +1068,10 @@
         if (!res.ok) throw new Error(`standings recompute failed (${res.status})`);
         const body = (await res.json()) as StandingsResult;
         standingsOverride = body;
-      } else if (key === 'guesser') {
-        // The Guesser has no dedicated recompute endpoint (deterministic,
-        // computed once at page `load()` from the same source tables as
-        // everything else here) — re-running load() is the recompute.
+      } else if (key === 'guesser' || key === 'reel') {
+        // Neither has a dedicated recompute endpoint (guesser is deterministic
+        // from load(); the reel is hand-authored media) — re-running load() is
+        // the recompute.
         await invalidateAll();
       } else {
         const res = await fetch(`/api/digest/${data.roundId}/discoverability`);
@@ -1201,7 +1242,8 @@
     + (standingsExcluded ? 1 : 0)
     + (discoverabilityExcluded ? 1 : 0)
     + (nextRoundExcluded ? 1 : 0)
-    + (guesserExcluded ? 1 : 0),
+    + (guesserExcluded ? 1 : 0)
+    + (reelExcluded ? 1 : 0),
   );
   const lockedCount = $derived(
     sectionsList.filter((s) => sectionStates[s.id] === 'locked').length
@@ -1264,6 +1306,7 @@
       ...sectionsList,
       ...(!recap && showStats ? [{ id: "stats", kind: "stats", position: data.draft.stats_position ?? 0, content: data.insights?.statsContent ?? {}, variant: "visual" }] : []),
       ...(!recap && showGuesser ? [{ id: "guesser", kind: "guesser", position: data.guesserPosition ?? 0, content: guesserContent, variant: "visual" }] : []),
+      ...(!recap && showReel ? [{ id: "reel", kind: "reel", position: reelPosition, content: reelContent, variant: "visual" }] : []),
     ].sort((a, b) => a.position - b.position),
   );
 
@@ -1632,6 +1675,22 @@
           onRegen={() => openDataRegen("guesser")}
           onEditSave={saveGuesserInlineEdit}
           onKebabAction={(action) => kebabAction("guesser", action)}
+        />
+      {:else if section.kind === "reel"}
+        <DigestSection
+          kind="reel"
+          label="The Reel · from the chat"
+          sectionState={dataSectionState("reel")}
+          content={section.content}
+          visualComponent={VISUAL_COMPONENTS.reel}
+          variant="visual"
+          sectionId="reel"
+          roundId={data.roundId}
+          onToggleExcluded={() => toggleDataExcluded("reel")}
+          onToggleLocked={() => toggleDataLocked("reel")}
+          onRegen={() => openDataRegen("reel")}
+          onEditSave={saveReelInlineEdit}
+          onKebabAction={(action) => kebabAction("reel", action)}
         />
       {:else}
         <DigestSection
