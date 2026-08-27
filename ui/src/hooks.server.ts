@@ -4,6 +4,7 @@ import { runStartupImport } from '$lib/import/startupScan.js';
 import { startQueueWorker } from '$lib/queueWorker.js';
 import { startDigestRunner } from '$lib/digest/runnerLoop.js';
 import { startMlAuthHeartbeat } from '$lib/mlAuth.js';
+import { startRolloutAppExecutor } from '$lib/rollout/appExecutor.js';
 
 process.env.DATA_DIR ??= resolve(process.cwd(), '../data');
 const DATA_DIR = process.env.DATA_DIR;
@@ -15,4 +16,5 @@ runStartupImport(db, DATA_DIR).catch((err) =>
 
 startQueueWorker();
 startDigestRunner();
+startRolloutAppExecutor();
 startMlAuthHeartbeat();

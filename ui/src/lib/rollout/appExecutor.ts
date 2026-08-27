@@ -1,0 +1,146 @@
+/**
+ * The bot-ui half of the rollout. Runs `app` cuts — the ones that reuse the
+ * live HTTP endpoints the digest runner already drives — and promotes pending
+ * digest jobs into rollout runs for rollout-enabled leagues.
+ *
+ * DEGENERATE SAFETY: a league without an enabled rollout config is never
+ * touched here. Its digest_jobs row stays `pending` and runOneJob handles it
+ * exactly as before.
+ */
+import type Database from 'better-sqlite3';
+import { getRolloutConfig, createRun, loadRun, saveRun, claimCut, reapStaleCuts, hasActiveRun } from './store.js';
+import { advance, applyCutResult, claimable } from './engine.js';
+import { parkAtHold, type HoldDeps } from './holds.js';
+import type { Rollout, RunState } from './types.js';
+
+/** Marker status parking a promoted job out of runOneJob's claim query. */
+const PROMOTED = 'rollout';
+
+export type AppCutDeps = {
+  capture: (roundId: number) => Promise<void>;
+  generate: (roundId: number) => Promise<void>;
+  send: (roundId: number) => Promise<void>;
+  archive: (roundId: number) => Promise<void>;
+};
+
+export type AppExecutorDeps = AppCutDeps & {
+  db: Database.Database;
+  hold: HoldDeps;
+  now: () => string;
+};
+
+/**
+ * Turn `pending` digest jobs into rollout runs, but only for leagues whose
+ * rollout config is enabled. Returns how many were promoted.
+ */
+export function promotePendingJobs(db: Database.Database, nowIso: string): number {
+  const rows = db.prepare(
+    `SELECT round_id, league_id FROM digest_jobs WHERE status='pending' ORDER BY created_at`,
+  ).all() as { round_id: number; league_id: number }[];
+
+  let promoted = 0;
+  for (const row of rows) {
+    const cfg = getRolloutConfig(db, row.league_id);
+    if (!cfg.enabled) continue;              // not ours — leave it for runOneJob
+    if (hasActiveRun(db, row.league_id)) continue; // one active run per league
+    createRun(db, row.league_id, row.round_id, cfg.rollout, nowIso);
+    db.prepare('UPDATE digest_jobs SET status=?, updated_at=? WHERE round_id=?')
+      .run(PROMOTED, nowIso, row.round_id);
+    promoted++;
+  }
+  return promoted;
+}
+
+async function runAppCut(
+  deps: AppExecutorDeps, rollout: Rollout, run: RunState, cutId: string,
+): Promise<{ exitCode: number; error?: string }> {
+  const def = rollout.cuts[cutId];
+  if (def.kind !== 'script') return { exitCode: 1, error: `cut "${cutId}" is not a script cut` };
+  const verb = def.command[0];
+  const fn = { capture: deps.capture, generate: deps.generate, send: deps.send, archive: deps.archive }[verb];
+  if (!fn) return { exitCode: 1, error: `unknown app command "${verb}"` };
+  try {
+    await fn(run.roundId);
+    return { exitCode: 0 };
+  } catch (e) {
+    return { exitCode: 1, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** One pass: promote, reap, run at most one app cut, then advance/park. */
+export async function tickApp(deps: AppExecutorDeps): Promise<'idle' | 'worked'> {
+  const { db, now } = deps;
+  const nowIso = now();
+
+  promotePendingJobs(db, nowIso);
+  reapStaleCuts(db, nowIso);
+
+  const open = db.prepare(
+    `SELECT id FROM rollout_runs WHERE state IN ('running','parked') ORDER BY started_at`,
+  ).all() as { id: string }[];
+
+  let worked = false;
+  for (const { id } of open) {
+    let run = loadRun(db, id);
+    if (!run) continue;
+    const rollout = JSON.parse(
+      (db.prepare('SELECT definition_json FROM rollout_runs WHERE id=?').get(id) as { definition_json: string }).definition_json,
+    ) as Rollout;
+
+    if (run.state === 'parked') {
+      await parkAtHold(db, run, rollout, deps.hold); // idempotent: notifies once
+      continue;
+    }
+
+    const ready = claimable(run, rollout, 'app');
+    for (const cutId of ready) {
+      if (!claimCut(db, id, cutId, nowIso)) continue;
+      const result = await runAppCut(deps, rollout, run, cutId);
+      run = applyCutResult(loadRun(db, id)!, rollout, cutId, result);
+      saveRun(db, run, nowIso);
+      worked = true;
+    }
+
+    const advanced = advance(loadRun(db, id)!, rollout);
+    saveRun(db, advanced, nowIso);
+    if (advanced.state === 'parked') await parkAtHold(db, advanced, rollout, deps.hold);
+  }
+  return worked ? 'worked' : 'idle';
+}
+
+/**
+ * Start the app-side rollout executor. Called once from hooks.server.ts,
+ * next to startDigestRunner — the two coexist because a league is on exactly
+ * one of the two paths.
+ */
+export function startRolloutAppExecutor(): void {
+  const ms = Number(process.env.ROLLOUT_POLL_MS) || 60_000;
+  console.log(`[rollout-app] starting (poll every ${ms}ms)`);
+  const timer = setInterval(() => {
+    void (async () => {
+      const { getDb } = await import('$lib/db/client.js');
+      const { notify } = await import('$lib/notifications/dispatch.js');
+      const { captureRoundData } = await import('$lib/digest/capture.js');
+      const base = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
+      const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb37.mattmariani.com';
+      const post = async (roundId: number, path: string) => {
+        const res = await fetch(`${base}/api/digest/${roundId}/${path}`, { method: 'POST' });
+        if (!res.ok) throw new Error(`${path} ${res.status}`);
+      };
+      await tickApp({
+        db: getDb(),
+        capture: async (roundId) => { await captureRoundData(roundId); },
+        generate: (roundId) => post(roundId, 'draft'),
+        send: (roundId) => post(roundId, 'finalize'),
+        archive: (roundId) => post(roundId, 'archive-refresh'),
+        hold: {
+          notify: (payload) => notify(getDb(), payload, { botControlUrl: process.env.BOT_CONTROL_URL ?? 'http://bot:3003' }),
+          now: () => new Date().toISOString(),
+          appBase,
+        },
+        now: () => new Date().toISOString(),
+      });
+    })().catch((e) => console.error('[rollout-app] tick threw', e));
+  }, ms);
+  timer.unref?.();
+}
