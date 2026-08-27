@@ -7,6 +7,7 @@
   // where `id` is the section KIND (backend validates against SECTION_KINDS,
   // honors `enabled`, injects style/context, respects variant, and uses
   // pastedChat as the chat section's source).
+  import { onMount } from 'svelte';
   import { SECTION_KINDS, type SectionKind } from './llm.js';
   import { TOP_SECTION_VARIANTS, TOP_SECTION_VISUALS, TOP_SECTION_VARIANT_META, type TopSectionVariant, type TopSectionVisual } from './topSectionVariants.js';
   import {
@@ -69,6 +70,9 @@
     nextRoundAvailability?: DataAvailability;
     tastemakerCoverage?: DataAvailability;
     guesserAvailability?: DataAvailability;
+    /** Enables the read-only "N notes will be included" chip per section (fetches
+     *  GET /api/digest/:roundId/notes on open). Omitted → no chip fetch. */
+    roundId?: number;
     onCancel: () => void;
     onSubmit: (params: GenerateParams) => void;
   };
@@ -80,9 +84,27 @@
     nextRoundAvailability = 'incomplete',
     tastemakerCoverage = 'incomplete',
     guesserAvailability = 'incomplete',
+    roundId,
     onCancel,
     onSubmit,
   }: Props = $props();
+
+  // Read-only "N note(s) will be included" chip data (Task 6). Notes travel
+  // server-side into the prompt (see roundNotes.ts / noteEnvelope.ts) — this
+  // is purely informational and MUST NOT feed the `context` textarea above,
+  // or the note text would double up in the generated prompt.
+  type NoteRow = { id: string; target: string; body: string };
+  let roundNotes = $state<NoteRow[]>([]);
+  onMount(() => {
+    if (roundId == null) return;
+    fetch(`/api/digest/${roundId}/notes`)
+      .then((r) => (r.ok ? r.json() : { notes: [] }))
+      .then((body: { notes?: NoteRow[] }) => { roundNotes = body.notes ?? []; })
+      .catch(() => { roundNotes = []; });
+  });
+  function noteCountFor(sectionId: SectionKind): number {
+    return roundNotes.filter((n) => n.target === 'general' || n.target === sectionId).length;
+  }
 
   // Style / focus tags — plain descriptors (replaces the regen modal's
   // "more/less ___" phrasing). Combinable per section.
@@ -248,6 +270,11 @@
                 <span class="dg-gen-name">{sectionLabels[s.id] ?? s.id}</span>
               </label>
               <div class="dg-gen-rowmeta">
+                {#if noteCountFor(s.id) > 0}
+                  <span class="dg-gen-notechip" title="Editor notes travel server-side into the prompt — not shown in the context box above">
+                    {noteCountFor(s.id)} note{noteCountFor(s.id) === 1 ? '' : 's'} will be included
+                  </span>
+                {/if}
                 {#if s.style.length}<span class="dg-gen-count">{s.style.length} style</span>{/if}
                 {#if s.context.trim()}<span class="dg-gen-count">context</span>{/if}
                 {#if canVisual && s.variant !== 'textual'}<span class="dg-gen-count">{VARIANT_ICON[s.variant]}</span>{/if}
@@ -631,6 +658,18 @@
     letter-spacing: 0.04em;
     color: var(--mash-pulp);
     text-transform: uppercase;
+  }
+  /* Read-only "N notes will be included" chip (Task 6). Non-interactive on
+     purpose — notes are edited on the prep panel, not here. */
+  .dg-gen-notechip {
+    font: 600 10px/1.2 var(--font-mono);
+    letter-spacing: 0.02em;
+    color: var(--fg-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+    white-space: nowrap;
   }
   .dg-gen-expand {
     background: var(--surface);

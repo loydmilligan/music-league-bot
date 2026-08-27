@@ -18,6 +18,7 @@ import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
 import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
 import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
 import { gatherPrepMaterial, type MaterialRow } from '$lib/digest/prepMaterial.js';
+import { listNotes, type RoundNote } from '$lib/digest/roundNotes.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
@@ -170,7 +171,15 @@ type DigestPageBase = {
 };
 
 export type DigestPageData =
-  | (DigestPageBase & { stage: 'prepare'; checks: PrepareCheck[]; material: MaterialRow[] })
+  | (DigestPageBase & {
+      stage: 'prepare';
+      checks: PrepareCheck[];
+      material: MaterialRow[];
+      // Editor notes jotted before the draft exists — the prep panel affordance
+      // reads/writes these via /api/digest/:roundId/notes; loaded here so the
+      // panel doesn't need its own fetch on first paint.
+      notes: RoundNote[];
+    })
   | (DigestPageBase & {
       stage: 'refine' | 'finalize';
       draft: DigestDraftRow;
@@ -434,7 +443,8 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
   const material = gatherPrepMaterial(getDb(), roundId);
-  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks, material } satisfies DigestPageData;
+  const notes = listNotes(getDb(), roundId);
+  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks, material, notes } satisfies DigestPageData;
 };
 
 async function fetchRelContext(

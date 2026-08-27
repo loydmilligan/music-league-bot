@@ -1759,6 +1759,7 @@
   <GenerateModal
     sectionLabels={SECTION_LABELS}
     busy={drafting}
+    roundId={data.roundId}
     {statsAvailability}
     {standingsAvailability}
     {nextRoundAvailability}
