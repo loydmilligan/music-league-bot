@@ -669,6 +669,11 @@ export function openLeagueDb(path?: string): Database.Database {
 			db.exec(`ALTER TABLE digest_jobs ADD COLUMN ${col} ${ddl}`);
 		}
 	}
+	// Rollout: check_passed added after the initial rollout tables shipped.
+	const cutRunCols = db.prepare("PRAGMA table_info(rollout_cut_runs)").all() as { name: string }[];
+	if (cutRunCols.length > 0 && !cutRunCols.some(c => c.name === 'check_passed')) {
+		db.exec('ALTER TABLE rollout_cut_runs ADD COLUMN check_passed INTEGER');
+	}
 	return db;
 }
 

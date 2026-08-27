@@ -616,6 +616,7 @@ export const SCHEMA = `
     state        TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','skipped')),
     attempts     INTEGER NOT NULL DEFAULT 0,
     remasters    INTEGER NOT NULL DEFAULT 0,
+    check_passed INTEGER,
     claimed_at   TEXT,
     heartbeat_at TEXT,
     output_json  TEXT,
