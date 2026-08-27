@@ -14,7 +14,23 @@ import {
 } from './store.js';
 import { advance, applyCutResult, claimable } from './engine.js';
 import { parkAtHold, type HoldDeps } from './holds.js';
+import { modelForCut } from './modelForCut.js';
 import type { Rollout, RunState } from './types.js';
+
+/**
+ * Resolve each agent cut's model into the run snapshot (I9), so the host
+ * executor keeps reading a plain `model` string. An explicit model in the
+ * league config wins; the stored config itself is never mutated.
+ */
+function resolveAgentModels(db: Database.Database, rollout: Rollout): Rollout {
+  const cuts: Rollout['cuts'] = {};
+  for (const [cutId, def] of Object.entries(rollout.cuts)) {
+    cuts[cutId] = def.kind === 'agent' && !def.model
+      ? { ...def, model: modelForCut(cutId, db) }
+      : def;
+  }
+  return { ...rollout, cuts };
+}
 
 /** Marker status parking a promoted job out of runOneJob's claim query. */
 const PROMOTED = 'rollout';
@@ -50,7 +66,7 @@ export function promotePendingJobs(db: Database.Database, nowIso: string): numbe
     // failed, or otherwise) must never be promoted again, or createRun throws
     // on every future tick for a re-queued round (final review I6).
     if (loadRunByRound(db, row.round_id)) continue;
-    createRun(db, row.league_id, row.round_id, cfg.rollout, nowIso);
+    createRun(db, row.league_id, row.round_id, resolveAgentModels(db, cfg.rollout), nowIso);
     db.prepare('UPDATE digest_jobs SET status=?, updated_at=? WHERE round_id=?')
       .run(PROMOTED, nowIso, row.round_id);
     promoted++;

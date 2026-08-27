@@ -307,3 +307,39 @@ describe('archiveRefresh (I4)', () => {
       .rejects.toThrow(/league/);
   });
 });
+
+describe('agent cut model resolution at snapshot (I9)', () => {
+  const agentRollout: Rollout = {
+    order: ['ledes', 'punchup'],
+    cuts: {
+      ledes: { kind: 'agent', runtime: 'host', label: 'Ledes', job: 'ledes' },
+      punchup: { kind: 'agent', runtime: 'host', label: 'Punch-up', job: 'punchup', model: 'claude-opus-5' },
+    },
+    skipAfter: {},
+    covers: [],
+  };
+
+  it('bakes the resolved model into the run snapshot; an explicit model wins', () => {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
+      .run('digest_model_ledes', 'anthropic/claude-sonnet-4-5');
+    putRolloutConfig(db, 1, agentRollout, true, T0);
+    promotePendingJobs(db, T0);
+    const runId = loadRunByRound(db, 9)!.runId;
+    const row = db.prepare('SELECT definition_json FROM rollout_runs WHERE id=?').get(runId) as { definition_json: string };
+    const def = JSON.parse(row.definition_json) as Rollout;
+    const ledes = def.cuts.ledes as { model?: string };
+    const punchup = def.cuts.punchup as { model?: string };
+    expect(ledes.model).toBe('claude-sonnet-4-5');   // pinned key, CLI-translated
+    expect(punchup.model).toBe('claude-opus-5');     // explicit config wins
+  });
+
+  it('leaves the stored league config untouched — only the snapshot is resolved', () => {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
+      .run('digest_model_ledes', 'anthropic/claude-sonnet-4-5');
+    putRolloutConfig(db, 1, agentRollout, true, T0);
+    promotePendingJobs(db, T0);
+    const row = db.prepare('SELECT definition_json FROM rollout_configs WHERE league_id=1').get() as { definition_json: string };
+    const cfg = JSON.parse(row.definition_json) as Rollout;
+    expect((cfg.cuts.ledes as { model?: string }).model).toBeUndefined();
+  });
+});
