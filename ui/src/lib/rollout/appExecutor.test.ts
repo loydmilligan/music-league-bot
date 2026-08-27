@@ -223,3 +223,49 @@ describe('host cut reclassification (C2)', () => {
     expect(row.awaiting_classification).toBe(0);
   });
 });
+
+describe('app cut heartbeats (I5)', () => {
+  it('refreshes heartbeat_at while an app cut is still running', async () => {
+    vi.useFakeTimers();
+    try {
+      putRolloutConfig(db, 1, rollout, true, T0);
+      promotePendingJobs(db, T0);
+      const runId = loadRunByRound(db, 9)!.runId;
+
+      let finish!: () => void;
+      const gate = new Promise<void>((r) => { finish = r; });
+      const later = '2026-08-26T00:20:00Z'; // beyond the 600s lease
+      let clock = T0;                        // claim happens at T0…
+      const d = deps({
+        capture: vi.fn().mockImplementation(() => gate),
+        now: () => clock,
+      });
+
+      const tick = tickApp(d);
+      clock = later;                         // …the wall clock moves on while the cut runs
+      await vi.advanceTimersByTimeAsync(11 * 60_000); // 11 minutes of "still running"
+      const row = db.prepare(
+        `SELECT heartbeat_at FROM rollout_cut_runs WHERE run_id=? AND cut_id='capture'`,
+      ).get(runId) as { heartbeat_at: string };
+      expect(row.heartbeat_at).toBe(later);   // refreshed past claim time — reap can't take it
+
+      finish();
+      await tick;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  function deps(over = {}) {
+    return {
+      db,
+      capture: vi.fn().mockResolvedValue(undefined),
+      generate: vi.fn().mockResolvedValue(undefined),
+      send: vi.fn().mockResolvedValue(undefined),
+      archive: vi.fn().mockResolvedValue(undefined),
+      hold: { notify: vi.fn().mockResolvedValue([]), now: () => T0, appBase: 'https://x' },
+      now: () => T0,
+      ...over,
+    };
+  }
+});

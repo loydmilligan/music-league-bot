@@ -29,6 +29,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 
 CLAUDE_TIMEOUT = 900   # agent cuts are slow; 15 minutes before we call it hung
 SCRIPT_TIMEOUT = 600
+HEARTBEAT_SECONDS = 60  # must stay well under the app executor's 600s lease
 
 
 def load_env(path):
@@ -105,6 +106,48 @@ def build_context(db, run_id, cut_id):
 
 # ------------------------------------------------------------------- cuts
 
+class _Completed:
+    def __init__(self, returncode, stdout, stderr):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def _run_with_heartbeat(argv, timeout, hb, input_text=None, cwd=None):
+    """subprocess.run equivalent that calls hb() every HEARTBEAT_SECONDS.
+
+    A claude cut can legitimately run 900s; the app executor's lease is 600s
+    (I5). Without heartbeats, reapStaleCuts reclaims a cut that is still
+    running and it gets executed twice. Output goes through temp files so a
+    chatty child can never deadlock on a full pipe.
+    """
+    import tempfile
+    import time
+    with tempfile.TemporaryFile("w+") as out, tempfile.TemporaryFile("w+") as err:
+        stdin = subprocess.PIPE if input_text is not None else None
+        proc = subprocess.Popen(argv, cwd=cwd, stdin=stdin, stdout=out, stderr=err, text=True)
+        if input_text is not None:
+            try:
+                proc.stdin.write(input_text)
+            except BrokenPipeError:
+                pass  # child exited early; its exit code tells the story
+            proc.stdin.close()
+        deadline = time.monotonic() + timeout
+        next_hb = time.monotonic() + HEARTBEAT_SECONDS
+        while proc.poll() is None:
+            if time.monotonic() >= deadline:
+                proc.kill()
+                proc.wait()
+                raise subprocess.TimeoutExpired(argv, timeout)
+            if time.monotonic() >= next_hb:
+                hb()
+                next_hb = time.monotonic() + HEARTBEAT_SECONDS
+            time.sleep(min(0.05, HEARTBEAT_SECONDS / 4))
+        out.seek(0)
+        err.seek(0)
+        return _Completed(proc.returncode, out.read(), err.read())
+
+
 def _substitute(argv, subs):
     out = []
     for arg in argv:
@@ -114,13 +157,12 @@ def _substitute(argv, subs):
     return out
 
 
-def run_script_cut(cut, subs, cwd):
+def run_script_cut(cut, subs, cwd, hb=lambda: None):
     """Run a script cut. A missing binary or a timeout is TRANSIENT (`error`);
     a non-zero exit from a program that ran is a result, not an error."""
     argv = _substitute(cut["command"], subs)
     try:
-        proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
-                              timeout=SCRIPT_TIMEOUT)
+        proc = _run_with_heartbeat(argv, timeout=SCRIPT_TIMEOUT, hb=hb, cwd=cwd)
     except FileNotFoundError as e:
         return {"exit_code": 127, "output_json": None, "stdout": "", "error": f"{argv[0]}: {e}"}
     except subprocess.TimeoutExpired:
@@ -139,7 +181,7 @@ def run_script_cut(cut, subs, cwd):
             "stdout": stdout, "error": None}
 
 
-def run_agent_cut(cut, context, subs):
+def run_agent_cut(cut, context, subs, hb=lambda: None):
     """Hand headless Claude a job with its dossier slice.
 
     `claude -p` rather than the Agent SDK: generate_ledes.py and
@@ -161,8 +203,7 @@ def run_agent_cut(cut, context, subs):
     if cut.get("model"):
         argv += ["--model", cut["model"]]
     try:
-        proc = subprocess.run(argv, input=prompt, capture_output=True, text=True,
-                              timeout=CLAUDE_TIMEOUT)
+        proc = _run_with_heartbeat(argv, timeout=CLAUDE_TIMEOUT, hb=hb, input_text=prompt)
     except FileNotFoundError as e:
         return {"exit_code": 127, "output_json": None, "error": f"claude: {e}"}
     except subprocess.TimeoutExpired:
@@ -185,10 +226,13 @@ def _finish(db, run_id, cut_id, res, now):
     on its next pass (checks, retries, and remasters are otherwise dead for
     every host cut — final review C2)."""
     state = "done" if res["exit_code"] == 0 and not res.get("error") else "failed"
+    # state='running' guard (I5): if reapStaleCuts already presumed this
+    # executor dead and returned the row to pending, a late finish must not
+    # clobber it — the reap spent an attempt and the cut may be re-running.
     db.execute(
         "UPDATE rollout_cut_runs"
         "   SET state=?, output_json=?, error=?, finished_at=?, awaiting_classification=1"
-        " WHERE run_id=? AND cut_id=?",
+        " WHERE run_id=? AND cut_id=? AND state='running'",
         (state, res.get("output_json"), res.get("error"), now, run_id, cut_id))
     db.commit()
 
@@ -212,10 +256,11 @@ def tick(db, repo, now_fn=now_iso):
             if not claim(db, run["id"], cut_id, now):
                 continue
             cut = rollout["cuts"][cut_id]
+            hb = lambda: heartbeat(db, run["id"], cut_id, now_fn())  # noqa: B023 — bound per-iteration by call time
             if cut["kind"] == "agent":
-                res = run_agent_cut(cut, build_context(db, run["id"], cut_id), subs)
+                res = run_agent_cut(cut, build_context(db, run["id"], cut_id), subs, hb=hb)
             else:
-                res = run_script_cut(cut, subs, cwd=repo)
+                res = run_script_cut(cut, subs, cwd=repo, hb=hb)
             _finish(db, run["id"], cut_id, res, now_fn())
             ran += 1
     return ran

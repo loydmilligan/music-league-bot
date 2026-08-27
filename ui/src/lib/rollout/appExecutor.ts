@@ -10,7 +10,7 @@
 import type Database from 'better-sqlite3';
 import {
   getRolloutConfig, createRun, loadRun, loadRunByRound, saveRun,
-  claimCut, reapStaleCuts, hasActiveRun, hostRawResults,
+  claimCut, heartbeat, reapStaleCuts, hasActiveRun, hostRawResults,
 } from './store.js';
 import { advance, applyCutResult, claimable } from './engine.js';
 import { parkAtHold, type HoldDeps } from './holds.js';
@@ -119,7 +119,16 @@ export async function tickApp(deps: AppExecutorDeps): Promise<'idle' | 'worked'>
     const ready = claimable(run, rollout, 'app');
     for (const cutId of ready) {
       if (!claimCut(db, id, cutId, nowIso)) continue;
-      const result = await runAppCut(deps, rollout, run, cutId);
+      // Heartbeat while the cut runs (I5): a long generate can outlive the
+      // 600s lease, and a later tick's reapStaleCuts would reclaim it mid-run.
+      const beat = setInterval(() => heartbeat(db, id, cutId, now()), 60_000);
+      beat.unref?.();
+      let result;
+      try {
+        result = await runAppCut(deps, rollout, run, cutId);
+      } finally {
+        clearInterval(beat);
+      }
       run = applyCutResult(loadRun(db, id)!, rollout, cutId, result);
       saveRun(db, run, nowIso);
       worked = true;
@@ -140,7 +149,12 @@ export async function tickApp(deps: AppExecutorDeps): Promise<'idle' | 'worked'>
 export function startRolloutAppExecutor(): void {
   const ms = Number(process.env.ROLLOUT_POLL_MS) || 60_000;
   console.log(`[rollout-app] starting (poll every ${ms}ms)`);
+  // Ticks must not overlap: a tick awaiting a slow cut plus a second tick's
+  // reapStaleCuts is exactly the lease-expiry double-run I5 guards against.
+  let busy = false;
   const timer = setInterval(() => {
+    if (busy) return;
+    busy = true;
     void (async () => {
       const { getDb } = await import('$lib/db/client.js');
       const { notify } = await import('$lib/notifications/dispatch.js');
@@ -164,7 +178,9 @@ export function startRolloutAppExecutor(): void {
         },
         now: () => new Date().toISOString(),
       });
-    })().catch((e) => console.error('[rollout-app] tick threw', e));
+    })()
+      .catch((e) => console.error('[rollout-app] tick threw', e))
+      .finally(() => { busy = false; });
   }, ms);
   timer.unref?.();
 }

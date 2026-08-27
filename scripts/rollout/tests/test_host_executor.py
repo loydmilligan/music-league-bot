@@ -70,7 +70,7 @@ def test_run_script_cut_treats_a_missing_binary_as_transient(db):
 
 def test_tick_runs_a_claimable_cut_and_records_output(db, run, monkeypatch):
     monkeypatch.setattr(hx, "run_script_cut",
-                        lambda cut, subs, cwd: {"exit_code": 0, "output_json": '{"ok":1}', "error": None})
+                        lambda cut, subs, cwd, hb=None: {"exit_code": 0, "output_json": '{"ok":1}', "error": None})
     assert hx.tick(db, repo=".", now_fn=lambda: "t1") == 2  # both EP0 cuts
     row = db.execute("SELECT state, output_json FROM rollout_cut_runs"
                      " WHERE run_id=? AND cut_id='a'", (run,)).fetchone()
@@ -96,8 +96,55 @@ def test_tick_marks_finished_cuts_awaiting_classification(db, run, monkeypatch):
     """C2: the host has no notion of checks/retries/remasters — a finished cut
     must be flagged so the app executor's engine reclassifies it."""
     monkeypatch.setattr(hx, "run_script_cut",
-                        lambda cut, subs, cwd: {"exit_code": 0, "output_json": '{"ok":1}', "error": None})
+                        lambda cut, subs, cwd, hb=None: {"exit_code": 0, "output_json": '{"ok":1}', "error": None})
     hx.tick(db, repo=".", now_fn=lambda: "t1")
     row = db.execute("SELECT awaiting_classification FROM rollout_cut_runs"
                      " WHERE run_id=? AND cut_id='a'", (run,)).fetchone()
     assert row["awaiting_classification"] == 1
+
+
+# ------------------------------------------------------- heartbeats (I5)
+
+def test_run_with_heartbeat_fires_while_the_process_runs(monkeypatch):
+    monkeypatch.setattr(hx, "HEARTBEAT_SECONDS", 0.05)
+    beats = []
+    proc = hx._run_with_heartbeat(["sleep", "0.4"], timeout=5, hb=lambda: beats.append(1))
+    assert proc.returncode == 0
+    assert len(beats) >= 2  # a 900s claude cut would beat well inside the 600s lease
+
+
+def test_run_with_heartbeat_pipes_stdin_and_captures_stdout():
+    proc = hx._run_with_heartbeat(["cat"], timeout=5, hb=lambda: None, input_text="hello dossier")
+    assert proc.returncode == 0
+    assert proc.stdout == "hello dossier"
+
+
+def test_run_with_heartbeat_kills_on_timeout():
+    import subprocess
+    import pytest
+    with pytest.raises(subprocess.TimeoutExpired):
+        hx._run_with_heartbeat(["sleep", "5"], timeout=0.3, hb=lambda: None)
+
+
+def test_run_script_cut_heartbeats(monkeypatch):
+    monkeypatch.setattr(hx, "HEARTBEAT_SECONDS", 0.05)
+    beats = []
+    res = hx.run_script_cut({"kind": "script", "command": ["sleep", "0.3"]}, {}, cwd=".",
+                            hb=lambda: beats.append(1))
+    assert res["exit_code"] == 0
+    assert beats
+
+
+def test_finish_does_not_clobber_a_reaped_row(db, run):
+    """If reapStaleCuts already returned the cut to pending (executor presumed
+    dead), a late _finish from the old executor must not overwrite the row."""
+    hx.claim(db, run, "a", "t1")
+    db.execute("UPDATE rollout_cut_runs SET state='pending', attempts=attempts+1,"
+               " claimed_at=NULL, heartbeat_at=NULL WHERE run_id=? AND cut_id='a'", (run,))
+    db.commit()
+    hx._finish(db, run, "a", {"exit_code": 0, "output_json": '{"late":1}'}, "t2")
+    row = db.execute("SELECT state, output_json, awaiting_classification FROM rollout_cut_runs"
+                     " WHERE run_id=? AND cut_id='a'", (run,)).fetchone()
+    assert row["state"] == "pending"
+    assert row["output_json"] is None
+    assert row["awaiting_classification"] == 0
