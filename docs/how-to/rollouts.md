@@ -105,6 +105,30 @@ any change to `mlb-rollout-host.timer` itself.
 - **`remasters`** — how many times a *cover* has fired as a repair for this
   cut specifically because its check failed. Capped by the cover's `budget`.
 
+## Pinning an agent cut's model
+
+Agent cuts resolve their `claude -p` model at run-snapshot time via the
+modelFor cascade — each cut id is a pinnable settings key:
+`digest_model_<cutId>` (e.g. `digest_model_ledes`), falling through to the
+`digest_model` bucket default. OpenRouter ids are translated to claude CLI
+names (`anthropic/claude-opus-5` → `claude-opus-5`); a non-anthropic id
+cannot run on the claude CLI, so such a pin falls back to the CLI's default
+model. An explicit `model` in the league's rollout config beats the cascade.
+Because resolution is snapshotted into the run, re-pinning affects the NEXT
+run, not one in flight.
+
+## The archive cut
+
+The `archive-refresh` cut drives the league-scoped async content update
+(`POST /api/content/{leagueId}/update`, then polls `update-status` until the
+detached LLM work finishes). Two deliberate behaviors:
+
+- **`announce` is `silent`.** The digest already went out via the send cut;
+  an automated cut must not post an extra b-side card to chat without a hold
+  in front of it. Announce by hand from the b-side UI when wanted.
+- **A 409 "no pending update" counts as success**, so a re-run or cover of
+  the cut stays idempotent.
+
 ## Known open items (do not silently ship past these)
 
 - **`cover-art` cut's command is unverified.** `DEFAULT_ROLLOUT` assumes
