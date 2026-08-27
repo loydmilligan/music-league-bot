@@ -128,6 +128,28 @@ describe('tickApp', () => {
     expect(cut.state).toBe('pending');
     expect(cut.attempts).toBe(1);
   });
+
+  it('does not throw or create a second run when a completed round is re-queued (I6)', async () => {
+    // requeueJob (ui/src/lib/digest/jobs.ts, reachable from the live
+    // POST /api/digest/[roundId]/requeue button) sets digest_jobs.status
+    // back to 'pending' unconditionally — it has no idea a rollout run for
+    // this round already exists. rollout_runs_round is UNIQUE, so without a
+    // guard in promotePendingJobs, tickApp's own createRun throws on every
+    // future tick once the round is re-queued after its run completed.
+    putRolloutConfig(db, 1, rollout, true, T0);
+    promotePendingJobs(db, T0);
+    const runId = loadRunByRound(db, 9)!.runId;
+    db.prepare(`UPDATE rollout_runs SET state='done' WHERE id=?`).run(runId);
+
+    // Exactly requeueJob's UPDATE.
+    db.prepare(`UPDATE digest_jobs SET status='pending', attempts=0, error=NULL, updated_at=? WHERE round_id=?`)
+      .run(T0, 9);
+
+    const d = deps();
+    await expect(tickApp(d)).resolves.not.toThrow();
+    const runCount = db.prepare('SELECT COUNT(*) AS n FROM rollout_runs WHERE round_id=9').get() as { n: number };
+    expect(runCount.n).toBe(1);
+  });
 });
 
 describe('host cut reclassification (C2)', () => {
