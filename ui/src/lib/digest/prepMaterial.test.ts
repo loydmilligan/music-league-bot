@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { SCHEMA } from '$lib/db/schema.js';
 import { previousRoundId, gatherPrepMaterial } from './prepMaterial.js';
+import { STORYLINES_SETTINGS_KEY, storylinesSectionEnabledFor } from './storylinesSection.js';
 
 let db: Database.Database;
 
@@ -107,9 +108,23 @@ describe('gatherPrepMaterial — the other rows', () => {
 	});
 
 	it('distinguishes not-enabled from absent for storylines', () => {
-		db.prepare("INSERT INTO settings (key, value) VALUES ('storylines_section_leagues', ?)").run('["bz"]');
+		// Object shape, matching setStorylinesSectionEnabled/production data (a plan
+		// defect had this as a JSON array — the real settings value is {slug: bool}).
+		db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+			STORYLINES_SETTINGS_KEY,
+			JSON.stringify({ bz: true }),
+		);
 		const row = rows(149).storylines;
 		expect(row.status).not.toBe('not-enabled'); // opted in, so absent or present
+	});
+
+	it('mirrors storylinesSectionEnabledFor for a league absent from settings (the defaults fallback)', () => {
+		// Reuses the same helper the real digest draft route calls, rather than
+		// re-deriving the expected answer — whatever the helper says for this
+		// league's default is what the row must say too.
+		const helperEnabled = storylinesSectionEnabledFor(db, 'bz');
+		const row = rows(149).storylines;
+		expect(row.status === 'not-enabled').toBe(!helperEnabled);
 	});
 
 	it('reports participation absent when no vectors exist for the round', () => {

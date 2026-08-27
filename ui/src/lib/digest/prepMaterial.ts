@@ -10,6 +10,7 @@ import { chatWindowFor, loadChatWindow, chatSectionEnabledFor } from './chatSect
 import { getChatSettings } from '../chat/historyQuery.js';
 import { guesserSectionEnabledFor } from './guesserSection.js';
 import { gatherStorylineEvidence } from './storylineEvidence.js';
+import { storylinesSectionEnabledFor } from './storylinesSection.js';
 import { getGuesserData } from '../db/guesserInsights.js';
 
 /**
@@ -154,18 +155,7 @@ function storylinesRow(db: Database.Database, roundId: number): MaterialRow {
 	if (!slug) {
 		return { ...base, status: 'absent', src: 'round has no resolvable league' };
 	}
-	const row = db.prepare("SELECT value FROM settings WHERE key = 'storylines_section_leagues'").get() as
-		| { value?: string }
-		| undefined;
-	let enabled = false;
-	try {
-		const saved = row?.value ? JSON.parse(row.value) : undefined;
-		if (Array.isArray(saved)) enabled = saved.includes(slug);
-		else if (saved && typeof saved === 'object') enabled = !!(saved as Record<string, boolean>)[slug];
-	} catch {
-		enabled = false;
-	}
-	if (!enabled) {
+	if (!storylinesSectionEnabledFor(db, slug)) {
 		return { ...base, status: 'not-enabled', src: `storylines not enabled for ${slug}` };
 	}
 	const evidence = gatherStorylineEvidence(db, roundId);
