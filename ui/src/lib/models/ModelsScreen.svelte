@@ -8,6 +8,7 @@
   } from './qualify.js';
   import { DEFAULT_PIPELINE, type Pipeline, type Cover, type SectionKind } from '../digest/pipeline.js';
   import { solveClientEPs, type ClientEP, type ArchivePipelineInput } from './pipelineSolver.js';
+  import RolloutTab from '../rollout/RolloutTab.svelte';
 
   // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
   type SectionState = {
@@ -112,8 +113,10 @@
   let digestOpen = $state(true);
   let predictOpen = $state(true);
 
+  let { leagues = [] }: { leagues?: { id: number; name: string }[] } = $props();
+
   // ---- pipeline tab state --------------------------------------------------
-  let activeTab = $state<'models' | 'pipeline'>('models');
+  let activeTab = $state<'models' | 'pipeline' | 'rollouts'>('models');
   let pipelineMode = $state<'edit' | 'preview'>('edit');
   let pipelineKind = $state<'digest' | 'archive'>('digest');
   let workingCopy = $state<Pipeline>(structuredClone(DEFAULT_PIPELINE));
@@ -738,6 +741,12 @@
       aria-selected={activeTab === 'pipeline'}
       onclick={() => (activeTab = 'pipeline')}
     >Pipeline</button>
+    <button
+      role="tab"
+      class="mlm-tab {activeTab === 'rollouts' ? 'is-active' : ''}"
+      aria-selected={activeTab === 'rollouts'}
+      onclick={() => (activeTab = 'rollouts')}
+    >Rollouts</button>
   </div>
 
 {#if activeTab === 'models'}
@@ -1522,6 +1531,10 @@
     </div>
 
   </div>
+{/if}
+
+{#if activeTab === 'rollouts'}
+  <RolloutTab leagues={leagues} />
 {/if}
 
 </div>

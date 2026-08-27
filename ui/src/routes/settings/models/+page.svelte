@@ -1,6 +1,9 @@
 <script lang="ts">
+  import type { PageData } from './$types.js';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
   import ModelsScreen from '$lib/models/ModelsScreen.svelte';
+
+  let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head><title>Models & AI · music-league-bot</title></svelte:head>
@@ -17,5 +20,5 @@
 
   <SettingsTabs />
 
-  <ModelsScreen />
+  <ModelsScreen leagues={data.leagues} />
 </div>
