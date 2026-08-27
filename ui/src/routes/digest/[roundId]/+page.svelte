@@ -1679,7 +1679,7 @@
       {:else if section.kind === "reel"}
         <DigestSection
           kind="reel"
-          label="The Reel · from the chat"
+          label="Closing credits · chat moments"
           sectionState={dataSectionState("reel")}
           content={section.content}
           visualComponent={VISUAL_COMPONENTS.reel}
