@@ -39,6 +39,21 @@
 
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
+  // "Sound on" needs a user gesture: browsers (mobile especially) only allow
+  // unmuted playback after a tap, and the spec's no-player-UI frame gives the
+  // user nothing to tap. The whole frame is the tap target — one press
+  // unmutes (and re-kicks play(), which iOS requires inside the gesture),
+  // another re-mutes. A small mono tag invites the first tap and disappears
+  // once sound is on. Export stays inert.
+  let videoEl = $state<HTMLVideoElement | null>(null);
+  let soundOn = $state(false);
+  function toggleSound() {
+    if (isExport || !videoEl) return;
+    soundOn = !soundOn;
+    videoEl.muted = !soundOn;
+    if (soundOn) void videoEl.play().catch(() => {});
+  }
+
   /** The URL, but only if it is one and only if it is http(s). Else empty. */
   function safeUrl(url: string | undefined): string {
     const raw = (url ?? '').trim();
@@ -98,6 +113,7 @@
       <div class="reelB-frame">
         {#if showVideo}
           <video
+            bind:this={videoEl}
             src={src}
             poster={poster || undefined}
             autoplay
@@ -126,6 +142,18 @@
               <i style={`height:${h}; background:rgb(${accentRgb});`}></i>
             {/each}
           </div>
+        {/if}
+        {#if showVideo}
+          <button
+            type="button"
+            class="reelB-hit"
+            onclick={toggleSound}
+            aria-label={soundOn ? 'Mute the reel' : 'Unmute the reel'}
+          >
+            {#if !soundOn}
+              <span class="reelB-sound-tag" style={`color:rgb(${accentRgb});`}>tap for sound</span>
+            {/if}
+          </button>
         {/if}
       </div>
     </div>
@@ -207,6 +235,29 @@
     min-width: 2px;
     border-radius: 2px;
     opacity: 0.6;
+  }
+  .reelB-hit {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    /* the tag sits in the bottom letterbox, clear of the waveform's 34px band */
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .reelB-hit:focus-visible {
+    outline: 2px solid var(--mash-pulp);
+    outline-offset: -2px;
+    border-radius: var(--r-2);
+  }
+  .reelB-sound-tag {
+    margin: 0 18px 16px 0;
+    font: 700 9px/1 var(--font-mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
   }
   .reelB-caption {
     max-width: 480px;
