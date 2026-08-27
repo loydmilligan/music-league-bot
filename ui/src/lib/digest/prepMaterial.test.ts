@@ -82,3 +82,54 @@ describe('gatherPrepMaterial — bridge row', () => {
 		expect(bridgeRow(149).status).toBe('absent');
 	});
 });
+
+describe('gatherPrepMaterial — the other rows', () => {
+	const rows = (roundId: number) => {
+		const m = gatherPrepMaterial(db, roundId);
+		return Object.fromEntries(m.map((r) => [r.id, r]));
+	};
+
+	it('returns all six rows in a stable order', () => {
+		expect(gatherPrepMaterial(db, 149).map((r) => r.id))
+			.toEqual(['bridge', 'early-ledes', 'chat', 'storylines', 'guesser', 'participation']);
+	});
+
+	it('reports the early lede sheet absent until one is drafted', () => {
+		expect(rows(149)['early-ledes'].status).toBe('absent');
+	});
+
+	it('marks storylines not-enabled for a league that is not opted in', () => {
+		expect(rows(149).storylines.status).toBe('not-enabled');
+	});
+
+	it('marks the guesser not-enabled for a league that is not opted in', () => {
+		expect(rows(149).guesser.status).toBe('not-enabled');
+	});
+
+	it('distinguishes not-enabled from absent for storylines', () => {
+		db.prepare("INSERT INTO settings (key, value) VALUES ('storylines_section_leagues', ?)").run('["bz"]');
+		const row = rows(149).storylines;
+		expect(row.status).not.toBe('not-enabled'); // opted in, so absent or present
+	});
+
+	it('reports participation absent when no vectors exist for the round', () => {
+		expect(rows(149).participation.status).toBe('absent');
+	});
+
+	it('reports participation present with a count when vectors exist', () => {
+		db.prepare('INSERT INTO competitors (id, ml_competitor_id, name) VALUES (1, ?, ?)').run('mlc-1', 'Kozh');
+		db.prepare(`INSERT INTO player_participation (league_id, round_id, competitor_id, computed_at)
+                VALUES (1, 149, 1, ?)`).run('2026-08-26T00:00:00Z');
+		const row = rows(149).participation;
+		expect(row.status).toBe('present');
+		expect(row.count).toBe(1);
+	});
+
+	it('never throws when a downstream table is missing entirely', () => {
+		const bare = new Database(':memory:');
+		bare.exec('CREATE TABLE rounds (id INTEGER PRIMARY KEY, season_id INTEGER, name TEXT, voting_deadline TEXT)');
+		bare.prepare('INSERT INTO rounds (id, season_id, name, voting_deadline) VALUES (1, 1, ?, ?)')
+			.run('R', '2026-01-01T00:00:00Z');
+		expect(() => gatherPrepMaterial(bare, 1)).not.toThrow();
+	});
+});
