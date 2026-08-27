@@ -8,6 +8,7 @@
    */
   import { resolveRollout } from './solve.js';
   import type { Rollout, RolloutCover } from './types.js';
+  import RunsView from './RunsView.svelte';
 
   let { leagues }: { leagues: { id: number; name: string }[] } = $props();
 
@@ -15,6 +16,7 @@
   let rollout = $state<Rollout | null>(null);
   let enabled = $state(false);
   let mode = $state<'edit' | 'preview'>('edit');
+  let section = $state<'definition' | 'runs'>('definition');
   let saving = $state(false);
   let saved = $state(false);
 
@@ -94,6 +96,23 @@
     </div>
   </header>
 
+  <div class="rlt-sub-tabs" role="tablist">
+    <button
+      role="tab"
+      class="mash-btn mash-btn--secondary"
+      aria-selected={section === 'definition'}
+      onclick={() => (section = 'definition')}
+      disabled={section === 'definition'}
+    >Definition</button>
+    <button
+      role="tab"
+      class="mash-btn mash-btn--secondary"
+      aria-selected={section === 'runs'}
+      onclick={() => (section = 'runs')}
+      disabled={section === 'runs'}
+    >Runs</button>
+  </div>
+
   <div class="rlt-toolbar">
     <label class="rlt-field">
       <span>League</span>
@@ -101,73 +120,81 @@
         {#each leagues as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
       </select>
     </label>
-    <label class="rlt-enabled" title="While off, this league keeps the existing digest_jobs path.">
-      <input type="checkbox" bind:checked={enabled} /> Rollout enabled
-    </label>
-    <span class="rlt-summary">{eps.length} EPs · {holdCount} holds</span>
-    <div class="ml-btn-row rlt-toolbar-btns">
-      <button class="mash-btn mash-btn--secondary" onclick={() => (mode = 'edit')} disabled={mode === 'edit'}>Edit</button>
-      <button class="mash-btn mash-btn--secondary" onclick={() => (mode = 'preview')} disabled={mode === 'preview'}>Preview</button>
-      <button class="mash-btn mash-btn--primary" onclick={save} disabled={saving}>
-        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
-      </button>
-    </div>
+    {#if section === 'definition'}
+      <label class="rlt-enabled" title="While off, this league keeps the existing digest_jobs path.">
+        <input type="checkbox" bind:checked={enabled} /> Rollout enabled
+      </label>
+      <span class="rlt-summary">{eps.length} EPs · {holdCount} holds</span>
+      <div class="ml-btn-row rlt-toolbar-btns">
+        <button class="mash-btn mash-btn--secondary" onclick={() => (mode = 'edit')} disabled={mode === 'edit'}>Edit</button>
+        <button class="mash-btn mash-btn--secondary" onclick={() => (mode = 'preview')} disabled={mode === 'preview'}>Preview</button>
+        <button class="mash-btn mash-btn--primary" onclick={save} disabled={saving}>
+          {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
+    {/if}
   </div>
 
-  {#if !rollout}
-    <p class="ml-card-sub">Loading…</p>
-  {:else if mode === 'edit'}
-    <ol class="rlt-cutlist">
-      {#each rollout.order as id, idx (id)}
-        {@const cut = rollout.cuts[id]}
-        {@const off = (rollout.disabled ?? []).includes(id)}
-        {@const cover = coverOf(id)}
-        {@const hasSkip = !!rollout.skipAfter[id]}
-        <li class="rlt-cut" class:is-off={off}>
-          <div class="rlt-cut-row">
-            <div class="rlt-reorder-btns">
-              <button class="ml-icon-btn" disabled={idx === 0} onclick={() => move(idx, -1)} title="Move up">▲</button>
-              <button class="ml-icon-btn" disabled={idx === rollout.order.length - 1} onclick={() => move(idx, 1)} title="Move down">▼</button>
-            </div>
-            <span class="ml-chip rlt-kind-chip">{cut.kind}</span>
-            <strong class="rlt-cut-label">{cut.label}</strong>
-            <code class="rlt-cut-id">{id}</code>
-            {#if cut.kind !== 'human'}<span class="ml-chip">{cut.runtime}</span>{/if}
-            {#if 'check' in cut && cut.check}<span class="rlt-check-badge" title="This cut has a check">✓</span>{/if}
+  {#if section === 'definition'}
+    {#if !rollout}
+      <p class="ml-card-sub">Loading…</p>
+    {:else if mode === 'edit'}
+      <ol class="rlt-cutlist">
+        {#each rollout.order as id, idx (id)}
+          {@const cut = rollout.cuts[id]}
+          {@const off = (rollout.disabled ?? []).includes(id)}
+          {@const cover = coverOf(id)}
+          {@const hasSkip = !!rollout.skipAfter[id]}
+          <li class="rlt-cut" class:is-off={off}>
+            <div class="rlt-cut-row">
+              <div class="rlt-reorder-btns">
+                <button class="ml-icon-btn" disabled={idx === 0} onclick={() => move(idx, -1)} title="Move up">▲</button>
+                <button class="ml-icon-btn" disabled={idx === rollout.order.length - 1} onclick={() => move(idx, 1)} title="Move down">▼</button>
+              </div>
+              <span class="ml-chip rlt-kind-chip">{cut.kind}</span>
+              <strong class="rlt-cut-label">{cut.label}</strong>
+              <code class="rlt-cut-id">{id}</code>
+              {#if cut.kind !== 'human'}<span class="ml-chip">{cut.runtime}</span>{/if}
+              {#if 'check' in cut && cut.check}<span class="rlt-check-badge" title="This cut has a check">✓</span>{/if}
 
-            <label class="rlt-toggle"><input type="checkbox" checked={!off} onchange={() => toggleDisabled(id)} /> on</label>
-            <button
-              class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
-              onclick={() => toggleSkip(id)}
-              title={hasSkip ? 'Remove skip after this cut' : 'Add skip after this cut'}
-            >{hasSkip ? '- skip' : '+ skip'}</button>
-            <label class="rlt-toggle"><input type="checkbox" checked={!!cover} onchange={() => toggleCover(id)} /> cover</label>
-            {#if cover}
-              <label class="rlt-toggle" title="Fires only when this cut's check fails — this is how repair is expressed.">
-                <input type="checkbox" checked={!!cover.remaster} onchange={() => toggleRemaster(id)} /> remaster
-              </label>
-            {/if}
+              <label class="rlt-toggle"><input type="checkbox" checked={!off} onchange={() => toggleDisabled(id)} /> on</label>
+              <button
+                class="mlm-skip-toggle {hasSkip ? 'is-active' : ''}"
+                onclick={() => toggleSkip(id)}
+                title={hasSkip ? 'Remove skip after this cut' : 'Add skip after this cut'}
+              >{hasSkip ? '- skip' : '+ skip'}</button>
+              <label class="rlt-toggle"><input type="checkbox" checked={!!cover} onchange={() => toggleCover(id)} /> cover</label>
+              {#if cover}
+                <label class="rlt-toggle" title="Fires only when this cut's check fails — this is how repair is expressed.">
+                  <input type="checkbox" checked={!!cover.remaster} onchange={() => toggleRemaster(id)} /> remaster
+                </label>
+              {/if}
+            </div>
+            {#if hasSkip}<div class="rlt-skip-div">── skip ──</div>{/if}
+          </li>
+        {/each}
+      </ol>
+    {:else}
+      <div class="rlt-ep-cards">
+        {#each eps as ep, i (i)}
+          <div class="rlt-ep-card">
+            <div class="rlt-ep-card-label">EP {i}</div>
+            <ul class="rlt-ep-list">{#each ep.cuts as id (id)}<li>{rollout.cuts[id].label}</li>{/each}</ul>
+            {#each ep.covers as c (c.of)}
+              <p class="rlt-cover-row">{c.remaster ? 'remaster' : 'cover'} of {rollout.cuts[c.of]?.label ?? c.of}</p>
+            {/each}
           </div>
-          {#if hasSkip}<div class="rlt-skip-div">── skip ──</div>{/if}
-        </li>
-      {/each}
-    </ol>
+        {/each}
+      </div>
+    {/if}
   {:else}
-    <div class="rlt-ep-cards">
-      {#each eps as ep, i (i)}
-        <div class="rlt-ep-card">
-          <div class="rlt-ep-card-label">EP {i}</div>
-          <ul class="rlt-ep-list">{#each ep.cuts as id (id)}<li>{rollout.cuts[id].label}</li>{/each}</ul>
-          {#each ep.covers as c (c.of)}
-            <p class="rlt-cover-row">{c.remaster ? 'remaster' : 'cover'} of {rollout.cuts[c.of]?.label ?? c.of}</p>
-          {/each}
-        </div>
-      {/each}
-    </div>
+    <RunsView leagueId={leagueId} />
   {/if}
 </article>
 
 <style>
+  .rlt-sub-tabs { display: flex; gap: 8px; }
+
   .rlt-toolbar {
     display: flex;
     gap: 14px;

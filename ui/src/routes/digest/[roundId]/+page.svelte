@@ -1304,6 +1304,13 @@
   </div>
 </div>
 
+{#if data.rolloutRun}
+  <p class="dg-rollout-strip">
+    Rollout {data.rolloutRun.state} · EP{data.rolloutRun.current_ep}
+    <a href="/settings/models#rollouts">view run</a>
+  </p>
+{/if}
+
 <div class="dg-page-head">
   <p style="font: 700 10px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-muted); margin: 0 0 4px;">
     music-league-bot · /digest · r-{data.roundId}

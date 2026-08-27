@@ -167,6 +167,8 @@ type DigestPageBase = {
   // and re-served from the digest host, where a root-relative /content is a 404
   // (those routes only exist on bot-ui). Null hides the Archive tab entirely.
   archiveUrl: string | null;
+  /** Rollout run in flight for this round, if any; null hides the strip entirely. */
+  rolloutRun: { id: string; state: string; current_ep: number } | null;
 };
 
 export type DigestPageData =
@@ -233,6 +235,10 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
   };
 
   const archiveUrl = getArchiveUrl(db, round.league_id);
+
+  const rolloutRun = db.prepare(
+    `SELECT id, state, current_ep FROM rollout_runs WHERE round_id = ?`,
+  ).get(roundId) as { id: string; state: string; current_ep: number } | undefined ?? null;
 
   const relContext = await fetchRelContext(fetch, round.league_id);
 
@@ -428,7 +434,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       : nextRoundMeta;
 
     return {
-      roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage, draft, sections,
+      roundId, roundsIndex, currentRound, relContext, share, archiveUrl, rolloutRun, stage, draft, sections,
       standings, stats: statsOut, insights, discoverability, chatSection, chatRecommendations, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
       guesserData, guesserPosition,
     } satisfies DigestPageData;
@@ -438,7 +444,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
   if (!res.ok) throw error(res.status, `prepare failed (${res.status})`);
   const { checks } = (await res.json()) as { checks: PrepareCheck[] };
   const material = gatherPrepMaterial(getDb(), roundId);
-  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, stage: 'prepare', checks, material } satisfies DigestPageData;
+  return { roundId, roundsIndex, currentRound, relContext, share, archiveUrl, rolloutRun, stage: 'prepare', checks, material } satisfies DigestPageData;
 };
 
 async function fetchRelContext(
