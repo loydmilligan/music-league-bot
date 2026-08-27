@@ -99,6 +99,34 @@ describe('gatherPrepMaterial — the other rows', () => {
 		expect(rows(149)['early-ledes'].status).toBe('absent');
 	});
 
+	it('reports the early lede sheet present with the angles as preview and a count', () => {
+		db.prepare(
+			'INSERT INTO digest_early_ledes (round_id, content_json, generated_at) VALUES (?, ?, ?)',
+		).run(
+			149,
+			JSON.stringify({
+				ledes: [
+					{ id: 'a', title: 'One', angle: 'The comeback', evidence: [] },
+					{ id: 'b', title: 'Two', angle: 'The upset', evidence: [] },
+				],
+			}),
+			'2026-08-26T21:00:00Z',
+		);
+		const row = rows(149)['early-ledes'];
+		expect(row.status).toBe('present');
+		expect(row.count).toBe(2);
+		expect(row.preview).toEqual(['The comeback', 'The upset']);
+		expect(row.src).toContain('2026-08-26');
+	});
+
+	it('survives a malformed early lede payload rather than throwing', () => {
+		db.prepare(
+			'INSERT INTO digest_early_ledes (round_id, content_json, generated_at) VALUES (?, ?, ?)',
+		).run(149, '{ not json', '2026-08-26T21:00:00Z');
+		expect(() => rows(149)).not.toThrow();
+		expect(rows(149)['early-ledes'].status).toBe('absent');
+	});
+
 	it('marks storylines not-enabled for a league that is not opted in', () => {
 		expect(rows(149).storylines.status).toBe('not-enabled');
 	});

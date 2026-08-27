@@ -12,6 +12,7 @@ import { guesserSectionEnabledFor } from './guesserSection.js';
 import { gatherStorylineEvidence } from './storylineEvidence.js';
 import { storylinesSectionEnabledFor } from './storylinesSection.js';
 import { getGuesserData } from '../db/guesserInsights.js';
+import type { EarlyLede } from './earlyLedes.js';
 
 /**
  * `not-enabled` (the league is not opted in) is deliberately distinct from
@@ -100,11 +101,14 @@ function earlyLedesRow(db: Database.Database, roundId: number): MaterialRow {
 		return { ...base, status: 'absent', src: `digest_early_ledes · round ${roundId} · never drafted` };
 	}
 	try {
+		const parsed = JSON.parse(row.content_json) as { ledes?: EarlyLede[] };
+		if (!Array.isArray(parsed.ledes)) throw new Error('no ledes array');
 		return {
 			...base,
 			status: 'present',
 			src: `round ${roundId} · ${row.generated_at}`,
-			preview: JSON.parse(row.content_json),
+			count: parsed.ledes.length,
+			preview: parsed.ledes.map((l) => l.angle),
 		};
 	} catch {
 		return { ...base, status: 'absent', src: `round ${roundId} · malformed payload` };
