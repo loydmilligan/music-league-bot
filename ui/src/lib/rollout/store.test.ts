@@ -162,3 +162,38 @@ describe('hasActiveRun', () => {
     expect(hasActiveRun(db, 2)).toBe(false);
   });
 });
+
+describe('saveRun vs concurrent host writes (I8)', () => {
+  /** Mimic host_executor.py's _finish landing AFTER the app executor loaded its RunState. */
+  function hostWritesRaw(runId: string, cutId: string) {
+    db.prepare(
+      `UPDATE rollout_cut_runs SET state='done', output_json='{"ok":true}', finished_at=?, awaiting_classification=1
+        WHERE run_id=? AND cut_id=?`,
+    ).run(T0, runId, cutId);
+  }
+
+  it('does not clobber a host result that landed after the RunState was loaded', () => {
+    const runId = createRun(db, 1, 9, tiny, T0);
+    const stale = loadRun(db, runId)!;          // app executor's in-memory copy: cut a pending
+    hostWritesRaw(runId, 'a');                  // host finishes cut a meanwhile
+    saveRun(db, stale, T0);                     // unrelated save (e.g. after an app cut)
+    const row = db.prepare(
+      'SELECT state, output_json, awaiting_classification FROM rollout_cut_runs WHERE run_id=? AND cut_id=?',
+    ).get(runId, 'a') as { state: string; output_json: string | null; awaiting_classification: number };
+    expect(row.state).toBe('done');             // NOT reverted to pending
+    expect(row.output_json).toBe('{"ok":true}');
+    expect(row.awaiting_classification).toBe(1); // still awaiting the engine's classification
+  });
+
+  it('writes and clears the flag for a cut explicitly classified this save', () => {
+    const runId = createRun(db, 1, 9, tiny, T0);
+    hostWritesRaw(runId, 'a');
+    const run = loadRun(db, runId)!;            // fresh load INCLUDING the host result
+    saveRun(db, run, T0, ['a']);                // the reclassification fold passes the cut id
+    const row = db.prepare(
+      'SELECT state, awaiting_classification FROM rollout_cut_runs WHERE run_id=? AND cut_id=?',
+    ).get(runId, 'a') as { state: string; awaiting_classification: number };
+    expect(row.state).toBe('done');
+    expect(row.awaiting_classification).toBe(0);
+  });
+});

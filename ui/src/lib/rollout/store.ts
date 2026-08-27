@@ -109,8 +109,18 @@ export function loadRunByRound(db: Database.Database, roundId: number): RunState
   return row ? loadRun(db, row.id) : null;
 }
 
-/** Persist a whole RunState. Cheap enough at this size, and impossible to half-apply. */
-export function saveRun(db: Database.Database, run: RunState, nowIso: string): void {
+/**
+ * Persist a whole RunState. Cheap enough at this size, and impossible to half-apply.
+ *
+ * A cut row the host executor finished AFTER this RunState was loaded
+ * (`awaiting_classification=1`) is skipped, or a save from a stale in-memory
+ * copy would revert it to pending and drop its output before the engine ever
+ * classifies it (final review I8). The reclassification fold names the cuts it
+ * just classified in `classifiedCutIds`; only those may overwrite such a row.
+ */
+export function saveRun(
+  db: Database.Database, run: RunState, nowIso: string, classifiedCutIds: string[] = [],
+): void {
   db.transaction(() => {
     db.prepare(
       `UPDATE rollout_runs SET current_ep=?, state=?, error=?, updated_at=?,
@@ -120,13 +130,14 @@ export function saveRun(db: Database.Database, run: RunState, nowIso: string): v
     const upd = db.prepare(
       `UPDATE rollout_cut_runs
           SET state=?, attempts=?, remasters=?, check_passed=?, output_json=?, awaiting_classification=0
-        WHERE run_id=? AND cut_id=?`,
+        WHERE run_id=? AND cut_id=? AND (awaiting_classification=0 OR ?=1)`,
     );
     for (const c of run.cuts) {
       upd.run(
         c.state, c.attempts, c.remasters,
         c.checkPassed === undefined ? null : c.checkPassed ? 1 : 0,
         c.outputJson ?? null, run.runId, c.cutId,
+        classifiedCutIds.includes(c.cutId) ? 1 : 0,
       );
     }
   })();

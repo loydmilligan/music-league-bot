@@ -108,7 +108,7 @@ export async function tickApp(deps: AppExecutorDeps): Promise<'idle' | 'worked'>
       run = applyCutResult(loadRun(db, id)!, rollout, raw.cutId, {
         exitCode: raw.exitCode, outputJson: raw.outputJson, error: raw.error,
       });
-      saveRun(db, run, nowIso);
+      saveRun(db, run, nowIso, [raw.cutId]);
       worked = true;
     }
     if (run.state === 'parked') {
