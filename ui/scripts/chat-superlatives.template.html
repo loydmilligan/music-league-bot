@@ -923,8 +923,9 @@ P.forEach(p => addWho(p.short, p.name));
 paintHeat();
 
 // ── award roll ────────────────────────────────────────────────────────
+// Awards with a dedicated section (Motormouth, All Talk, Biggest Word) are
+// deliberately NOT in the roll — they were showing twice.
 const ROLL = [
-  ['motormouth','Motormouth'],
   ['vocabulary','Biggest Vocabulary'],
   ['variety','Least Repetitive'],
   ['linguist','Command of the Language'],
@@ -933,7 +934,6 @@ const ROLL = [
   ['simplest','Man of the People'],
   ['perfectionist','The Perfectionist'],
   ['explicit','Most Explicit'],
-  ['allTalk','All Talk, No Ballot'],
   ['lurker','The Lurker'],
   ['nightOwl','Night Owl'],
   ['fastest','Quickest Draw']
@@ -952,7 +952,7 @@ ROLL.forEach(([k,title]) => {
 });
 
 // ── trivia ────────────────────────────────────────────────────────────
-const TRIV = [['rambler','Longest single message'],['linker','Most links'],['emoji','Most emoji'],['motormouth','Most messages']];
+const TRIV = [['rambler','Longest single message'],['linker','Most links'],['emoji','Most emoji']];
 const trivBox = document.getElementById('triv');
 TRIV.forEach(([k,label]) => {
   const a = D.awards[k];
