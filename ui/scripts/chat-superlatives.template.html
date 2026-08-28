@@ -291,6 +291,53 @@ footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:50
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
+
+/* ── sticky section nav ────────────────────────────────────────────── */
+.nav{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -24px;padding:0 24px}
+.nav-in{max-width:var(--col);margin:0 auto;display:flex;gap:6px;overflow-x:auto;
+  padding:10px 0;scrollbar-width:none}
+.nav-in::-webkit-scrollbar{display:none}
+.nav a{flex:0 0 auto;font:600 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fg-muted);text-decoration:none;padding:7px 11px;border:1px solid var(--line);
+  border-radius:999px;white-space:nowrap}
+.nav a:hover{color:var(--fg);border-color:var(--fg-quiet)}
+
+/* ── the regulars ──────────────────────────────────────────────────── */
+.reg-tag-draft{font:700 10px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--bg);background:var(--mash-pulp);border-radius:3px;padding:4px 7px;margin-left:10px}
+.reg-player{margin:34px 0 0;border-top:1px solid var(--line);padding-top:20px}
+.reg-player-name{font:700 13px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--fg-muted)}
+.reg-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;margin-top:14px}
+.reg-card{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--ink-1,transparent);
+  display:flex;flex-direction:column;gap:10px}
+.reg-arch{font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--fg)}
+.reg-motif{font:500 11px/1.5 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mash-pulp)}
+.reg-note{font:400 13.5px/1.65 var(--font-body);color:var(--fg-2);margin:0}
+.reg-quote{font-style:italic;color:var(--fg);font-size:13px;line-height:1.55;margin:0;
+  padding-left:12px;border-left:2px solid var(--mash-pulp)}
+.reg-token{font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--fg);letter-spacing:-.02em}
+.reg-spot{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center}
+.reg-spot-t{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--fg)}
+.reg-spot-c{font:500 11px/1.5 var(--font-mono);color:var(--fg-quiet);margin-top:6px}
+.reg-pairs{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 10px;font:500 12.5px/1.4 var(--font-mono)}
+.reg-pairs .p-real{color:var(--fg-muted);text-align:right}
+.reg-pairs .p-arrow{color:var(--fg-quiet)}
+.reg-pairs .p-alias{color:var(--fg);font-weight:700}
+
+/* ── the glossary ──────────────────────────────────────────────────── */
+.gl-card{border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:18px}
+.gl-term{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.02em;color:var(--fg)}
+.gl-meta{font:500 12px/1.6 var(--font-mono);color:var(--fg-muted);margin-top:4px}
+.gl-def{font:400 14.5px/1.7 var(--font-body);color:var(--fg-2);margin:14px 0 0;white-space:pre-line}
+.gl-coined{font:500 12px/1.7 var(--font-mono);color:var(--fg-quiet);margin-top:12px}
+.gl-flag{font:600 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mash-pulp);margin-top:12px}
+.gl-usages{margin:14px 0 0;display:flex;flex-direction:column;gap:10px}
+.gl-u{padding-left:12px;border-left:2px solid var(--line)}
+.gl-u-l{font:600 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg-quiet)}
+.gl-u-t{font-style:italic;color:var(--fg);font-size:13.5px;line-height:1.55;margin-top:4px}
+.gl-u-s{font:500 11px/1 var(--font-mono);color:var(--fg-muted);margin-top:4px}
+.gl-src{font:500 10.5px/1 var(--font-mono);color:var(--fg-quiet);letter-spacing:.08em;text-transform:uppercase;margin-top:14px}
 </style>
 </head>
 <body>
@@ -299,10 +346,23 @@ footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:50
   <header class="mast">
     <div class="mast-tape">Side A · Chat Superlatives</div>
     <h1>The Boarz<br><em>Tape</em></h1>
-    <p class="mast-sub">Sixteen days of the Boarz II Men group chat, counted, measured and ranked. Nobody asked for this.</p>
+    <p class="mast-sub">The full season of the Boarz II Men group chat — forty-seven days of it — counted, measured and ranked. Nobody asked for this.</p>
     <div class="mast-meta" id="meta"></div>
   </header>
 
+  <nav class="nav" aria-label="Sections"><div class="nav-in">
+    <a href="#closer">Off Switch</a>
+    <a href="#awards">The Roll</a>
+    <a href="#board">Mixing Board</a>
+    <a href="#heatmap">Hours</a>
+    <a href="#bigword">Big Word</a>
+    <a href="#volume">Motormouth</a>
+    <a href="#ballot">Ballot</a>
+    <a href="#regulars">The Regulars</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#songs">Tracks</a>
+    <a href="#trivia">Loose Ends</a>
+  </div></nav>
 
   <section id="closer">
     <div class="sec-head">
@@ -489,6 +549,24 @@ footer{margin:64px 0 0;padding:26px 0 0;border-top:1px solid var(--line);font:50
       <div id="dumb"></div>
       <p class="axis-note" id="dumb-axis"></p>
     </div>
+  </section>
+
+  <section id="regulars">
+    <div class="sec-head">
+      <h2>The Regulars<span class="reg-tag-draft">draft</span></h2>
+      <span class="sec-tag">Recurring behavior</span>
+    </div>
+    <p class="sec-lede">Every member of this chat has a fingerprint — a thing they do, on the record, on multiple dates, that would identify them with the name scrubbed off. We mined the full season for them: chat, ballots, submissions, all of it. Up to three per man. If yours stings, remember: the evidence bar was three occurrences on separate dates, and you cleared it.</p>
+    <div id="reg-root"></div>
+  </section>
+
+  <section id="glossary">
+    <div class="sec-head">
+      <h2>The Glossary<span class="reg-tag-draft">draft</span></h2>
+      <span class="sec-tag">League language</span>
+    </div>
+    <p class="sec-lede">The coinages: words and phrases this league invented, adopted, or ruined for general use. Entries from the weekly digests are preserved here in perpetuity; new season-wide entries join them below.</p>
+    <div id="gl-root"></div>
   </section>
 
   <section id="songs">
@@ -961,6 +1039,78 @@ TRIV.forEach(([k,label]) => {
   const t = el('div','triv');
   t.append(el('p','triv-k', esc(label)), el('p','triv-w', esc(a.person)), el('p','triv-v', esc(a.value)));
   trivBox.append(t);
+});
+
+// ── the regulars ──────────────────────────────────────────────────────
+const ED = D.editorial || {};
+const regRoot = document.getElementById('reg-root');
+(ED.regulars || []).forEach(p => {
+  const blk = el('div','reg-player');
+  blk.append(el('div','reg-player-name', esc(p.player)));
+  const grid = el('div','reg-cards');
+  (p.entries || []).forEach(e => {
+    const c = el('div','reg-card');
+    c.append(el('div','reg-arch', esc(e.archetype)));
+    if (e.motif) c.append(el('div','reg-motif', esc(e.motif)));
+    if (e.token) c.append(el('div','reg-token', esc(e.token)));
+    if (e.note) c.append(el('p','reg-note', esc(e.note)));
+    if (e.spotlight) {
+      const s = el('div','reg-spot');
+      s.append(el('div','reg-spot-t', esc(e.spotlight.text)));
+      s.append(el('div','reg-spot-c', esc(e.spotlight.caption)));
+      c.append(s);
+    }
+    if (e.pairs && e.pairs.length) {
+      const pr = el('div','reg-pairs');
+      e.pairs.forEach(([real, alias]) => {
+        pr.append(el('span','p-real', esc(real)), el('span','p-arrow','→'), el('span','p-alias', esc(alias)));
+      });
+      c.append(pr);
+    }
+    (e.evidence || []).forEach(q => c.append(el('p','reg-quote', '“' + esc(q) + '”')));
+    grid.append(c);
+  });
+  blk.append(grid);
+  regRoot.append(blk);
+});
+
+// ── the glossary ──────────────────────────────────────────────────────
+const glRoot = document.getElementById('gl-root');
+(ED.glossary || []).forEach(g => {
+  const c = el('div','gl-card');
+  c.append(el('div','gl-term', esc(g.term)));
+  const meta = [g.pronunciation, g.part_of_speech].filter(Boolean).join(' · ');
+  if (meta) c.append(el('div','gl-meta', esc(meta)));
+  const def = g.definition || g.gloss;
+  if (def) c.append(el('p','gl-def', esc(def.trim())));
+  if (g.coined) {
+    const bits = [];
+    if (g.coined.by) bits.push('coined by ' + g.coined.by);
+    if (g.coined.date) bits.push(g.coined.date);
+    if (g.coined.at) bits.push('at ' + g.coined.at);
+    if (g.coined.context) bits.push('— ' + g.coined.context);
+    c.append(el('div','gl-coined', esc(bits.join(' · '))));
+  }
+  const st = g.stats || {};
+  const flag = [st.uses != null ? st.uses + ' uses' : null,
+                st.speakers != null ? st.speakers + ' speakers' : null,
+                st.prior_rounds != null ? 'prior rounds: ' + st.prior_rounds : null]
+    .filter(Boolean).join(' · ') || g.meta;
+  if (flag) c.append(el('div','gl-flag', esc(flag)));
+  const us = g.usages || g.quotes || [];
+  if (us.length) {
+    const box = el('div','gl-usages');
+    us.forEach(u => {
+      const w = el('div','gl-u');
+      if (u.label) w.append(el('div','gl-u-l', esc(u.label)));
+      w.append(el('div','gl-u-t', '“' + esc(u.text) + '”'));
+      if (u.speaker) w.append(el('div','gl-u-s', '— ' + esc(u.speaker)));
+      box.append(w);
+    });
+    c.append(box);
+  }
+  if (g._source && g._source !== 'tape') c.append(el('div','gl-src', 'from the ' + esc(g._source) + ' digest'));
+  glRoot.append(c);
 });
 
 // ── tracklist ─────────────────────────────────────────────────────────

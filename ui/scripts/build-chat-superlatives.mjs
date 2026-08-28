@@ -55,6 +55,15 @@ if (fs.existsSync(songsPath)) {
 	console.error('[warn] no chat-songs.json — track list will be omitted');
 }
 
+// Hand-authored Regulars + Glossary content, maintained separately so a
+// content pass never touches the template.
+const editorialPath = path.join(UI, 'scripts/chat-tape-editorial.json');
+if (fs.existsSync(editorialPath)) {
+	parsed.editorial = JSON.parse(fs.readFileSync(editorialPath, 'utf8'));
+} else {
+	console.error('[warn] no chat-tape-editorial.json — Regulars/Glossary sections will be empty');
+}
+
 // </script> inside the JSON would close the tag early and break the page.
 const safe = JSON.stringify(parsed, null, 2).replace(/<\//g, '<\\/');
 
