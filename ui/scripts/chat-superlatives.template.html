@@ -150,14 +150,15 @@ section{margin:76px 0 0}
 .row.is-top .row-rank{color:var(--mash-pulp)}
 .row-track{height:12px;background:var(--ink-3);border-radius:2px;overflow:hidden}
 .row-bar{
-  height:100%;background:var(--mash-pulp);border-radius:2px;width:0;
-  transition:width .62s var(--ease);
+  height:100%;background:var(--mash-pulp);border-radius:2px;width:100%;
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .62s var(--ease);
 }
 .row:not(.is-top) .row-bar{background:var(--ink-6)}
 .row-val{font:500 13px/1 var(--font-mono);color:var(--fg);text-align:right;white-space:nowrap}
 .row-val small{color:var(--fg-quiet);font-size:11px}
 .row.is-na .row-val{color:var(--fg-quiet)}
-.row.is-na .row-bar{background:repeating-linear-gradient(90deg,var(--ink-4) 0 4px,transparent 4px 8px);width:100%!important}
+.row.is-na .row-bar{background:repeating-linear-gradient(90deg,var(--ink-4) 0 4px,transparent 4px 8px);transform:scaleX(1)!important}
 
 /* ── triptych (3-series grouped bars) ──────────────────────────────── */
 .tri{margin:22px 0 0;border-top:1px solid var(--line)}
@@ -170,7 +171,7 @@ section{margin:76px 0 0}
 .tri-bars{display:flex;flex-direction:column;gap:4px}
 .tri-b{display:grid;grid-template-columns:1fr 66px;gap:12px;align-items:center}
 .tri-t{height:9px;background:var(--ink-2);border-radius:2px;overflow:hidden}
-.tri-f{height:100%;border-radius:2px;width:0;transition:width .8s var(--ease)}
+.tri-f{height:100%;border-radius:2px;width:100%;transform:scaleX(0);transform-origin:left;transition:transform .8s var(--ease)}
 .tri-v{font:500 11.5px/1 var(--font-mono);color:var(--fg-muted);text-align:right}
 
 /* ── dumbbell: all talk no ballot ──────────────────────────────────── */
@@ -756,7 +757,7 @@ function render() {
       ? '<small>no data</small>'
       : esc(fmt(s.v)) + (unit ? gap + '<small>' + esc(unit) + '</small>' : '')));
     rowsBox.append(row);
-    requestAnimationFrame(() => { bar.style.width = isNA ? '100%' : Math.max(1.5, (s.v / max) * 100) + '%'; });
+    requestAnimationFrame(() => { bar.style.transform = 'scaleX(' + (isNA ? 1 : Math.max(0.015, s.v / max)) + ')'; });
   });
 
   // FLIP: animate rows from their previous position to the new one.
@@ -795,7 +796,7 @@ P.slice().sort((a,b)=>b.messages-a.messages).forEach(p => {
     t.append(f);
     b.append(t, el('div','tri-v', p[s.key].toLocaleString()));
     bars.append(b);
-    requestAnimationFrame(()=>{ f.style.width = Math.max(1,(p[s.key]/s.max)*100) + '%'; });
+    requestAnimationFrame(()=>{ f.style.transform = 'scaleX(' + Math.max(0.01, p[s.key]/s.max) + ')'; });
   });
   row.append(bars);
   triBox.append(row);
