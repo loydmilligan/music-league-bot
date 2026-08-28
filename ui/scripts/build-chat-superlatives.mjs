@@ -23,7 +23,10 @@ const OUT =
 		? path.resolve(args[outIdx + 1])
 		: path.join(ROOT, 'digests/d/boarz-chat-superlatives');
 
-const TEMPLATE = path.join(UI, 'scripts/chat-superlatives.template.html');
+// CD "compact tape" redesign (2026-08-28) — tabs+bento home, section overlays.
+// The old long-scroll template is kept at chat-superlatives.template.html for
+// rollback: flip this constant back.
+const TEMPLATE = path.join(UI, 'scripts/chat-tape.template.html');
 const DATA_SCRIPT = path.join(UI, 'scripts/chat-superlatives-data.mjs');
 
 // ── data ──────────────────────────────────────────────────────────────────────

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Boarz Tape</title>
+<link rel="stylesheet" href="./_app/fonts.css">
+<style>
+/* fonts self-hosted — see ./_app/fonts.css linked in <head> */
+:root{
+  --mash-pulp:#ff5b2e;--mash-pulp-deep:#d94c23;--mash-pulp-edge:#8a2d15;--mash-pulp-soft:#ff5b2e22;
+  --ink-0:#07090c;--ink-1:#0d1116;--ink-2:#141921;--ink-3:#1c232c;--ink-4:#283039;--ink-5:#3a4451;--ink-6:#5a6773;--ink-7:#8b97a4;--ink-8:#c2cad3;--ink-9:#f1f4f7;--bone:#faf7f2;
+  --moss:#3ec27a;--amber:#e8a83a;--ember:#e6566c;--sky:#5aa3ff;
+  --fg:var(--ink-9);--fg-2:var(--ink-8);--fg-muted:var(--ink-7);--fg-quiet:var(--ink-6);--line:var(--ink-4);
+  --font-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"Inter Tight",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease-out:cubic-bezier(0.2,0.7,0.2,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--ink-0);color:var(--fg-2);font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--mash-pulp);text-decoration:none}
+a:hover{color:var(--mash-pulp-deep)}
+button{font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:0;height:0}
+*{scrollbar-width:none}
+.app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--ink-0);position:relative;overflow:hidden}
+.eyebrow{font-family:var(--font-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg-quiet)}
+.acc-pulp{--acc:var(--mash-pulp)}.acc-amber{--acc:var(--amber)}.acc-sky{--acc:var(--sky)}.acc-moss{--acc:var(--moss)}.acc-ember{--acc:var(--ember)}.acc-ink{--acc:var(--ink-7)}
+/* masthead */
+.mast{padding:34px 22px 10px}
+.mast .kick{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-quiet)}
+.mast h1{font-family:var(--font-display);font-weight:800;font-size:38px;line-height:.98;letter-spacing:-.03em;color:var(--fg);margin:8px 0 0}
+.mast h1 em{font-style:italic;color:var(--mash-pulp)}
+.mast .meta{font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);margin-top:10px}
+/* tabs */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 22px 12px;position:sticky;top:0;z-index:30;background:linear-gradient(var(--ink-0) 74%,transparent)}
+.tab{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:7px 13px;border-radius:999px;white-space:nowrap;flex:none;border:1px solid var(--ink-4);background:var(--ink-1);color:var(--fg-muted);transition:all .18s}
+.tab.on{background:var(--mash-pulp);color:var(--bone);border-color:var(--mash-pulp);font-weight:700}
+/* bento */
+.bento{padding:2px 16px 60px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tile{grid-column:span 1;text-align:left;background:var(--ink-1);border:1px solid var(--ink-4);border-radius:12px;padding:13px 14px;min-height:118px;display:flex;flex-direction:column;transition:border-color .18s,transform .1s}
+.tile.wide{grid-column:span 2}
+.tile:active{transform:scale(.985)}
+.tile:hover{border-color:var(--acc)}
+.tile .th{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.tile .ttag{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.tile .draft{font-family:var(--font-mono);font-size:7.5px;letter-spacing:.08em;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:0 3px}
+.tile .tname{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--fg);line-height:1.05;margin-top:7px}
+.tile .tval{font-family:var(--font-display);font-weight:800;color:var(--acc);line-height:1;margin-top:auto;padding-top:10px}
+.tile .tlabel{font-family:var(--font-mono);font-size:9.5px;color:var(--fg-muted);margin-top:3px;line-height:1.3}
+/* overlay */
+.ov{position:fixed;inset:0;max-width:480px;margin:0 auto;background:var(--ink-0);z-index:50;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s var(--ease-out);will-change:transform}
+.ov.open{transform:translateX(0)}
+.ov-top{padding:34px 20px 14px;border-bottom:1px solid var(--ink-4);display:flex;align-items:center;gap:12px;flex:none}
+.ov-back{background:var(--ink-2);border:1px solid var(--ink-4);color:var(--fg);width:34px;height:34px;border-radius:999px;font-size:17px;flex:none;display:flex;align-items:center;justify-content:center}
+.ov-top .otag{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.ov-top .oname{font-family:var(--font-display);font-weight:700;font-size:21px;color:var(--fg);line-height:1.05}
+.ov-body{flex:1;overflow-y:auto;padding:18px 20px 60px}
+.lead{font-size:14.5px;line-height:1.6;color:var(--fg-muted);margin:0 0 18px}
+.lead b{color:var(--fg-2)}
+/* generic bits */
+.card{border:1px solid var(--ink-4);border-radius:12px;padding:15px 16px;background:var(--ink-1)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:999px;white-space:nowrap;flex:none;border:1px solid var(--ink-4);background:var(--ink-1);color:var(--fg-muted);transition:all .16s}
+.chip.on{background:var(--mash-pulp);color:var(--bone);border-color:var(--mash-pulp);font-weight:700}
+.chip.on.sky{background:var(--sky);border-color:var(--sky);color:var(--ink-0)}
+.bar{height:7px;background:var(--ink-3);border-radius:99px;overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:99px;transition:width .45s var(--ease-out)}
+.quote{font-size:13px;line-height:1.55;color:var(--fg-2);border-left:2px solid var(--acc);padding-left:12px;font-style:italic}
+.mono{font-family:var(--font-mono)}
+.sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-quiet)}
+/* award */
+.award{border:1px solid var(--ink-4);border-radius:12px;padding:14px 15px;background:var(--ink-1);display:flex;flex-direction:column;gap:7px}
+.award .an{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.award .aw{font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--fg);line-height:1.05}
+.award .av{font-family:var(--font-mono);font-size:12px;color:var(--fg-2)}
+.award .ac{font-size:13px;line-height:1.5;color:var(--fg-muted)}
+/* rank row */
+.rrow{padding:6px;border-radius:8px}
+.rrow.sel{background:rgba(90,163,255,.08)}
+.rrow .rh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:10px}
+.rrow .rn{display:flex;gap:8px;align-items:baseline;min-width:0}
+.rrow .rk{font-family:var(--font-mono);font-size:10px;color:var(--fg-quiet);width:22px;flex:none}
+.rrow .rname{font-size:13.5px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .rv{font-family:var(--font-mono);font-size:12px;color:var(--fg-2);flex:none}
+.youbox{padding:12px 14px;background:rgba(90,163,255,.08);border:1px solid var(--sky);border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.youbox .yl{font-size:13px;color:var(--fg-2)}
+.youbox .yl b{color:var(--sky)}
+.youbox .yr{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--sky)}
+/* heatmap */
+.hm{display:grid;grid-template-columns:22px repeat(24,1fr);gap:2px;margin-top:6px}
+.hm .hcell{aspect-ratio:1;border-radius:2px;background:var(--ink-2)}
+.hm .hday{font-family:var(--font-mono);font-size:9px;color:var(--fg-quiet);display:flex;align-items:center}
+.hm .hhr{font-family:var(--font-mono);font-size:7px;color:var(--fg-quiet);text-align:center}
+/* accordion */
+.acc{border:1px solid var(--ink-4);border-radius:12px;overflow:hidden;background:var(--ink-1)}
+.acc>button{width:100%;text-align:left;background:none;border:none;padding:13px 15px;display:flex;align-items:center;gap:11px}
+.av{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--ink-0);flex:none}
+.acc .amid{flex:1;min-width:0}
+.acc .aname{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--fg)}
+.acc .acount{font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:2px;display:block}
+.chev{font-family:var(--font-mono);font-size:15px;color:var(--fg-quiet);transition:transform .2s}
+.acc-body{padding:0 15px 13px;display:flex;flex-direction:column;gap:12px}
+.entry{border-top:1px solid var(--ink-3);padding-top:11px;display:flex;flex-direction:column;gap:7px}
+.entry .earch{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--acc)}
+.entry .emotif{font-family:var(--font-mono);font-size:10px;color:var(--fg-quiet)}
+.entry .enote{font-size:13px;line-height:1.55;color:var(--fg-2)}
+.spot{background:var(--acc);color:var(--ink-0);border-radius:10px;padding:12px 14px}
+.spot .st{font-family:var(--font-display);font-weight:800;font-size:22px;line-height:1}
+.spot .sc{font-family:var(--font-mono);font-size:10px;margin-top:5px;opacity:.85}
+.tok{display:inline-block;font-family:var(--font-mono);font-size:11px;color:var(--acc);border:1px solid var(--acc);border-radius:6px;padding:2px 8px;align-self:flex-start}
+.pairs{display:flex;flex-direction:column;gap:4px}
+.pair{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--ink-3)}
+.pair .pr{color:var(--fg-muted)}.pair .pa{color:var(--fg);font-weight:600}
+/* glossary */
+.gl{border:1px solid var(--ink-4);border-radius:12px;padding:16px 17px;background:var(--ink-1);display:flex;flex-direction:column;gap:10px}
+.gl .gterm{font-family:var(--font-display);font-weight:800;font-size:23px;color:var(--fg);line-height:1}
+.gl .gpron{font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);margin-top:3px}
+.gl .gpos{font-family:var(--font-mono);font-style:italic;font-size:11px;color:var(--moss)}
+.gl .gdef{font-size:14px;line-height:1.62;color:var(--fg-2);white-space:pre-wrap}
+.gl .gcoin{font-family:var(--font-mono);font-size:10px;letter-spacing:.03em;color:var(--fg-quiet);border-top:1px solid var(--ink-3);padding-top:9px;line-height:1.5}
+.gl .gsrc{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--moss);border:1px solid var(--moss);border-radius:4px;padding:1px 5px;align-self:flex-start}
+.usage{display:flex;flex-direction:column;gap:3px}
+.usage .ul{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-quiet)}
+.usage .ut{font-size:13px;line-height:1.5;color:var(--fg-2);border-left:2px solid var(--moss);padding-left:11px}
+.usage .ut b{color:var(--fg);font-weight:600}
+/* songs */
+.podium{background:var(--ink-1);border:1px solid var(--amber);border-radius:12px;padding:14px 15px;margin-bottom:14px}
+.podium .ph{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+.prow{display:flex;align-items:center;gap:11px;padding:6px 0}
+.prow .pl{font-family:var(--font-display);font-weight:800;font-size:20px;width:24px;flex:none;text-align:center}
+.prow .pmid{flex:1;min-width:0}
+.prow .pt{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--fg);line-height:1.15}
+.prow .pa{font-size:12px;color:var(--fg-muted)}
+.prow .pv{font-family:var(--font-mono);font-size:11px;color:var(--fg-quiet);text-align:right;flex:none}
+.trow{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--ink-3)}
+.trow .tn{font-family:var(--font-mono);font-size:11px;color:var(--fg-quiet);width:26px;flex:none;padding-top:2px}
+.trow .tmid{flex:1;min-width:0}
+.trow .tt{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg);line-height:1.2}
+.trow .ta{font-size:12px;color:var(--fg-muted)}
+.trow .tby{font-family:var(--font-mono);font-size:9.5px;color:var(--acc);margin-top:2px;display:block}
+.plbtn{display:block;text-align:center;background:var(--moss);color:var(--ink-0);font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:12px;border-radius:10px;margin:6px 0 16px}
+.note{font-size:13.5px;line-height:1.62;color:var(--fg-2);padding:12px 0;border-bottom:1px solid var(--ink-3)}
+.note:before{content:"§";color:var(--fg-quiet);font-family:var(--font-mono);margin-right:8px}
+.foot{padding:26px 22px 60px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--fg-quiet);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="mast">
+    <div class="kick">Chat Superlatives · 47 days, counted</div>
+    <h1>The Boarz <em>Tape</em></h1>
+    <div class="meta" id="mast-meta"></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="bento" id="bento"></div>
+  <div class="foot">Built from <span id="foot-msgs"></span> messages · one static file · b/side · Mash Co.</div>
+</div>
+<div class="ov" id="ov"><div class="ov-top" id="ov-top"></div><div class="ov-body" id="ov-body"></div></div>
+
+<script id="tape-data" type="application/json">__DATA__</script>
+<script>
+"use strict";
+const TAPE = JSON.parse(document.getElementById('tape-data').textContent);
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const nf = n => Number(n).toLocaleString('en-US');
+const accVar = a => ({pulp:'var(--mash-pulp)',amber:'var(--amber)',sky:'var(--sky)',moss:'var(--moss)',ember:'var(--ember)',ink:'var(--ink-7)'}[a]||'var(--mash-pulp)');
+
+/* ---- section registry (locked design: tabs+bento home, pivots, accordion regulars, full-card glossary, podium+rounds tracks) ---- */
+const SIDES = ['Overview','Side A','Side B','Regulars','Tracks'];
+const SECTIONS = [
+  {id:'awards',      side:'Side A',   tag:'Every winner',      name:'The Full Roll',        acc:'pulp',  val:()=>String(Object.keys(TAPE.awards).length), label:'awards handed out', valSize:'34px'},
+  {id:'biggestWord', side:'Side A',   tag:'Longest word',      name:'The Biggest Word',     acc:'amber', val:()=>'18', label:'letters · compartmentalizing', valSize:'34px'},
+  {id:'allTalk',     side:'Side A',   tag:'Chat vs ballots',   name:'All Talk, No Ballot',  acc:'amber', val:()=>'1175:1', label:'Shane Farkas', valSize:'26px'},
+  {id:'motormouth',  side:'Side B',   tag:'Volume',            name:'Motormouth',           acc:'pulp',  val:()=>nf(topPerson('messages').messages), label:'messages · Matt Mariani', valSize:'28px'},
+  {id:'mixingBoard', side:'Side B',   tag:'Find yourself',     name:'The Mixing Board',     acc:'sky',   val:()=>'▤', label:'every stat, one board', valSize:'26px'},
+  {id:'heatmap',     side:'Side B',   tag:'Filter by person',  name:'When The Boarz Post',  acc:'sky',   val:()=>'▦', label:'day × hour', valSize:'26px'},
+  {id:'regulars',    side:'Regulars', tag:'Recurring behavior',name:'The Regulars',         acc:'moss',  draft:true, val:()=>String(regCount()), label:'fingerprints · 10 players', valSize:'34px'},
+  {id:'glossary',    side:'Regulars', tag:'League language',    name:'The Glossary',         acc:'moss',  draft:true, val:()=>String(TAPE.editorial.glossary.length), label:'coinages, kept forever', valSize:'34px'},
+  {id:'songs',       side:'Tracks',   tag:'Every song shared',  name:'The Track List',       acc:'pulp',  val:()=>String(TAPE.songs.links.length), label:'tracks · one playlist', valSize:'30px'},
+  {id:'method',      side:'Tracks',   tag:'Methodology',        name:'How This Was Counted', acc:'ink',   val:()=>'§', label:'caveats & definitions', valSize:'26px'},
+];
+const AWARD_TITLES = {motormouth:'Motormouth',lurker:'The Lurker',vocabulary:'The Vocabulary',variety:'The Variety',biggestWord:'The Biggest Word',professor:'The Professor',simplest:'The Simplest',linguist:'The Linguist',wordsmith:'The Wordsmith',perfectionist:'The Perfectionist',explicit:'Most Explicit',allTalk:'All Talk, No Ballot',nightOwl:'The Night Owl',rambler:'The Rambler',linker:'The Linker',emoji:'Most Emoji',fastest:'Quickest Draw'};
+const AWARD_ACC = {motormouth:'pulp',lurker:'ink',vocabulary:'sky',variety:'sky',biggestWord:'amber',professor:'sky',simplest:'moss',linguist:'sky',wordsmith:'amber',perfectionist:'amber',explicit:'ember',allTalk:'amber',nightOwl:'sky',rambler:'pulp',linker:'moss',emoji:'pulp',fastest:'moss'};
+const PCOLOR = {'Matt Mariani':'var(--mash-pulp)','Jon Black':'var(--sky)','Conor Johnston':'var(--ember)','Grant Koziol':'var(--moss)','Dave Jensen':'var(--sky)','Shane Farkas':'var(--amber)','Clements Johnson':'var(--moss)','Jimmy':'var(--ink-7)','Dave Steingart':'var(--amber)','Darren Pallets':'var(--ink-6)'};
+const REG_FULLNAME = {Matt:'Matt Mariani',JB:'Jon Black',Grant:'Grant Koziol',Conor:'Conor Johnston',Jensen:'Dave Jensen',Shane:'Shane Farkas',Jimmy:'Jimmy',Steiny:'Dave Steingart',Darren:'Darren Pallets',Clements:'Clements Johnson'};
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function topPerson(k){return TAPE.people.slice().sort((a,b)=>b[k]-a[k])[0];}
+function regCount(){return TAPE.editorial.regulars.reduce((n,p)=>n+p.entries.length,0);}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2);}
+function pcolor(name){return PCOLOR[name]||'var(--ink-7)';}
+
+/* ---- state ---- */
+const state = {tab:'Overview', drill:null,
+  mb:{metric:'Messages', norm:'Total', person:'Matt Mariani'},
+  heat:{person:'Everyone'},
+  reg:{open:{}}, tl:{filter:'All'}};
+
+/* ---- home ---- */
+function renderTabs(){
+  $('#tabs').innerHTML = SIDES.map(s=>`<button class="tab ${s===state.tab?'on':''}" data-tab="${esc(s)}">${esc(s)}</button>`).join('');
+}
+function renderBento(){
+  const list = state.tab==='Overview' ? SECTIONS : SECTIONS.filter(s=>s.side===state.tab);
+  $('#bento').innerHTML = list.map(s=>{
+    const wide = ['mixingBoard','songs','awards'].includes(s.id);
+    return `<button class="tile acc-${s.acc} ${wide?'wide':''}" data-drill="${s.id}">
+      <span class="th"><span class="ttag">${esc(s.tag)}</span>${s.draft?'<span class="draft">DRAFT</span>':''}</span>
+      <span class="tname">${esc(s.name)}</span>
+      <span class="tval" style="font-size:${s.valSize}">${s.val()}</span>
+      <span class="tlabel">${esc(s.label)}</span>
+    </button>`;
+  }).join('');
+}
+
+/* ---- overlay ---- */
+function openDrill(id){ state.drill=id; renderOverlay(); $('#ov').classList.add('open'); $('#ov-body').scrollTop=0; }
+function closeDrill(){ $('#ov').classList.remove('open'); state.drill=null; }
+function renderOverlay(){
+  const s = SECTIONS.find(x=>x.id===state.drill); if(!s) return;
+  $('#ov-top').className = 'ov-top acc-'+s.acc;
+  $('#ov-top').innerHTML = `<button class="ov-back" data-close>‹</button><div><div class="otag">${esc(s.tag)}${s.draft?' · Draft':''}</div><div class="oname">${esc(s.name)}</div></div>`;
+  $('#ov-body').className = 'ov-body acc-'+s.acc;
+  $('#ov-body').innerHTML = VIEWS[s.id]();
+}
+
+const VIEWS = {
+  awards(){
+    const keys = Object.keys(TAPE.awards);
+    return `<p class="lead">Ten days of counting, condensed to the only part anyone quotes back — <b>${keys.length} award cards</b>, one winner each.</p>
+    <div class="stack">${keys.map(k=>{const a=TAPE.awards[k];return `<div class="award acc-${AWARD_ACC[k]||'pulp'}">
+      <div class="an">${esc(AWARD_TITLES[k]||k)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="aw">${esc(a.person)}</span><span class="av">${esc(a.value)}</span></div>
+      <div class="ac">${esc(a.caption)}</div></div>`;}).join('')}</div>`;
+  },
+  biggestWord(){
+    return `<p class="lead">The longest real word anybody typed, checked against a 64,000-word dictionary — so "aaaaahhhhh" doesn't count. <b>Matt's "compartmentalizing"</b> took it at 18 letters; here's the field.</p>
+    <div class="stack">${TAPE.biggestWords.map((w,i)=>`<div class="card acc-amber" style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--fg)">${esc(w.word)}</span><span class="mono" style="font-size:11px;color:var(--fg-quiet)">${w.word.length} letters</span></div>
+      <div class="mono" style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)">${esc(w.person)}</div>
+      <div class="quote acc-amber">${esc(w.quote)}</div></div>`).join('')}</div>`;
+  },
+  allTalk(){
+    const ranked = TAPE.people.slice().filter(p=>p.voted).sort((a,b)=>b.talkToBallot-a.talkToBallot);
+    const max = ranked[0].talkToBallot;
+    return `<p class="lead">Words typed into the group chat versus words written in actual vote comments. <b>Shane's 1175:1</b> is the whole joke of the award — four people voted without a single comment.</p>
+    <div class="stack">${ranked.map((p,i)=>`<div class="rrow" style="background:none">
+      <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname">${esc(p.name)}</span></span><span class="rv">${p.talkToBallot>=1000?Math.round(p.talkToBallot):p.talkToBallot.toFixed(1)}:1</span></div>
+      <div class="bar"><span style="width:${Math.max(3,p.talkToBallot/max*100)}%;background:var(--amber)"></span></div>
+      <div class="mono" style="font-size:9.5px;color:var(--fg-quiet);margin-top:4px">${nf(p.words)} chat words · ${nf(p.voteCommentWords)} ballot words</div></div>`).join('')}</div>`;
+  },
+  motormouth(){
+    const ranked = TAPE.people.slice().sort((a,b)=>b.messages-a.messages);
+    const max = ranked[0].messages;
+    return `<p class="lead">Three ways to be loud — how often you speak, how much you say, how long you take. This is the headline: <b>raw message count.</b> Open the Mixing Board to change the measure.</p>
+    <div class="stack">${ranked.map((p,i)=>`<div class="rrow" style="background:none">
+      <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname">${esc(p.name)}</span></span><span class="rv">${nf(p.messages)}</span></div>
+      <div class="bar"><span style="width:${Math.max(3,p.messages/max*100)}%;background:${pcolor(p.name)}"></span></div>
+      <div class="mono" style="font-size:9.5px;color:var(--fg-quiet);margin-top:4px">${nf(p.words)} words · ${nf(p.characters)} chars · ${p.avgWordsPerMessage.toFixed(1)} words/msg</div></div>`).join('')}</div>`;
+  },
+  mixingBoard(){
+    const metrics = {'Messages':'messages','Words':'words','Characters':'characters','Edits':'edits','Media':'mediaShared','Links':'links'};
+    const mk = metrics[state.mb.metric];
+    const val = p => { const v=p[mk]; return state.mb.norm==='Per message'? v/p.messages : state.mb.norm==='Per 1k words'? v/p.words*1000 : v; };
+    const fmt = n => state.mb.norm==='Total'? nf(Math.round(n)) : n.toFixed(state.mb.norm==='Per message'?2:1);
+    const ranked = TAPE.people.map(p=>({name:p.name,v:val(p)})).sort((a,b)=>b.v-a.v);
+    const max = ranked[0].v||1;
+    const youRank = ranked.findIndex(p=>p.name===state.mb.person)+1;
+    const pill=(arr,cur,key)=>arr.map(m=>`<button class="chip ${m===cur?'on':''}${key==='person'?' ':''}" data-mb="${key}" data-val="${esc(m)}">${key==='person'?esc(m.split(' ')[0]):esc(m)}</button>`).join('');
+    return `<div class="chips" style="margin-bottom:10px">${pill(TAPE.people.map(p=>p.name),state.mb.person,'person')}</div>
+    <div class="youbox"><span class="yl"><b>${esc(state.mb.person.split(' ')[0])}</b> ranks</span><span class="yr">#${youRank}</span></div>
+    <div class="sub" style="margin-bottom:6px">Measure</div><div class="chips" style="margin-bottom:10px">${pill(Object.keys(metrics),state.mb.metric,'metric')}</div>
+    <div class="sub" style="margin-bottom:6px">Per what</div><div class="chips" style="margin-bottom:16px">${pill(['Total','Per message','Per 1k words'],state.mb.norm,'norm')}</div>
+    <div class="mono" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:10px">${esc(state.mb.metric)} · ${esc(state.mb.norm)}</div>
+    <div class="stack" style="gap:9px">${ranked.map((p,i)=>{const sel=p.name===state.mb.person;return `<div class="rrow ${sel?'sel':''}">
+      <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname" style="color:${sel?'var(--sky)':'var(--fg)'}">${esc(p.name)}</span></span><span class="rv">${fmt(p.v)}</span></div>
+      <div class="bar"><span style="width:${Math.max(3,p.v/max*100)}%;background:${sel?'var(--sky)':i===0?'var(--mash-pulp)':'var(--ink-5)'}"></span></div></div>`;}).join('')}</div>`;
+  },
+  heatmap(){
+    const people = TAPE.people;
+    const grid = state.heat.person==='Everyone'
+      ? DAYS.map((_,d)=>Array.from({length:24},(_,h)=>people.reduce((s,p)=>s+((p.heatmap&&p.heatmap[d]&&p.heatmap[d][h])||0),0)))
+      : (people.find(p=>p.name===state.heat.person).heatmap);
+    let max=1; grid.forEach(r=>r.forEach(v=>{if(v>max)max=v;}));
+    const pills = ['Everyone'].concat(people.map(p=>p.name)).map(n=>`<button class="chip ${n===state.heat.person?'on sky':''}" data-heat="${esc(n)}">${n==='Everyone'?'Everyone':esc(n.split(' ')[0])}</button>`).join('');
+    const rows = grid.map((row,d)=>`<div class="hday">${DAYS[d]}</div>`+row.map(v=>{const a=v?0.12+0.88*Math.pow(v/max,0.6):0;return `<div class="hcell" title="${v}" style="background:${v?`rgba(90,163,255,${a.toFixed(3)})`:'var(--ink-2)'}"></div>`;}).join('')).join('');
+    const hrs = '<div></div>'+[0,3,6,9,12,15,18,21].map(h=>`<div class="hhr" style="grid-column:span 3">${h}</div>`).join('');
+    return `<p class="lead">Day of week against hour of day. Switch to one person to see their own shape — <b>the night posters give themselves away.</b></p>
+    <div class="chips" style="margin-bottom:14px">${pills}</div>
+    <div class="hm">${rows}</div>
+    <div class="hm" style="margin-top:4px">${hrs}</div>
+    <div class="mono" style="font-size:9.5px;color:var(--fg-quiet);margin-top:10px;text-align:center">midnight ← hour of day → 9pm · brighter = more messages</div>`;
+  },
+  regulars(){
+    return `<p class="lead">Every member has a fingerprint — a thing they do, on the record, on separate dates, that would identify them with the name scrubbed off. <b>${regCount()} of them, up to three per man.</b></p>
+    <div class="stack">${TAPE.editorial.regulars.map(p=>{
+      const full = REG_FULLNAME[p.player]||p.player; const col=pcolor(full); const open=!!state.reg.open[p.player];
+      const hasSpot = p.entries.some(e=>e.spotlight);
+      return `<div class="acc" style="border-color:${open?col:'var(--ink-4)'}">
+        <button data-reg="${esc(p.player)}"><span class="av" style="background:${col}">${esc(initials(full))}</span>
+          <span class="amid"><span class="aname">${esc(full)}</span><span class="acount">${p.entries.length} on file${hasSpot?' · spotlight':''}</span></span>
+          <span class="chev" style="transform:rotate(${open?90:0}deg)">›</span></button>
+        ${open?`<div class="acc-body">${p.entries.map(e=>renderEntry(e,col)).join('')}</div>`:''}
+      </div>`;
+    }).join('')}</div>`;
+  },
+  glossary(){
+    return `<p class="lead">The words and phrases this league invented, adopted, or ruined for general use — <b>preserved in perpetuity.</b> Entries tagged "digest" came from the weekly recaps.</p>
+    <div class="stack" style="gap:12px">${TAPE.editorial.glossary.map(g=>{
+      const digest = /digest/.test(g._source||'');
+      const c = g.coined||{};
+      const coinLine = ['coined by '+(c.by||'—'), c.date, c.at?('at '+c.at):'', c.context].filter(Boolean).join(' · ');
+      return `<div class="gl">
+        <div><div class="gterm">${esc(g.term)}</div><div class="gpron">${esc(g.pronunciation||'')} &nbsp;<span class="gpos">${esc(g.part_of_speech||'')}</span></div></div>
+        <div class="gdef">${esc((g.definition||'').trim())}</div>
+        ${(g.usages||[]).map(u=>`<div class="usage"><span class="ul">${esc(u.label)} · ${esc(u.speaker)}</span><span class="ut">${esc(u.text)}</span></div>`).join('')}
+        <div class="gcoin">${esc(coinLine)}${g.stats?('  ·  '+Object.entries(g.stats).map(([k,v])=>v+' '+k.replace('_',' ')).join(' · ')):''}</div>
+        <span class="gsrc">${digest?'from the digest':'from the tape'}</span>
+      </div>`;
+    }).join('')}</div>`;
+  },
+  songs(){
+    const s = TAPE.songs;
+    const sharers = ['All'].concat([...new Set(s.links.map(l=>l.person))]);
+    const list = state.tl.filter==='All'? s.links : s.links.filter(l=>l.person===state.tl.filter);
+    return `<p class="lead"><b>Round one's podium</b> — "${esc(s.round)}" — then every song anybody dropped into the chat, in the order posted. <b>${s.links.length} tracks</b>, all a real playlist.</p>
+    <div class="podium"><div class="ph">The podium · ${esc(s.round)}</div>${s.podium.map(p=>`<div class="prow">
+      <span class="pl" style="color:${p.place===1?'var(--amber)':p.place===2?'var(--fg-2)':'var(--mash-pulp-deep)'}">${p.place}</span>
+      <span class="pmid"><span class="pt">${esc(p.title)}</span><span class="pa">${esc(p.artists)}</span></span>
+      <span class="pv">${p.points} pts<br>${esc(p.submitter.split(' ')[0])}</span></div>`).join('')}</div>
+    <a class="plbtn" href="${esc(s.playlistUrl)}" target="_blank" rel="noopener">Open the ${s.playlistTracks}-track playlist ▸</a>
+    <div class="sub" style="margin-bottom:8px">Everything shared — filter by who dropped it</div>
+    <div class="chips" style="margin-bottom:12px">${sharers.map(n=>`<button class="chip ${n===state.tl.filter?'on':''}" data-tl="${esc(n)}">${n==='All'?'All '+s.links.length:esc(n.split(' ')[0])}</button>`).join('')}</div>
+    <div>${list.map((l,i)=>`<div class="trow acc-pulp"><span class="tn">${i+1}</span><span class="tmid">
+      <span class="tt">${esc(l.track&&l.track.title?l.track.title:'(unresolved link)')}</span>
+      <span class="ta">${esc(l.track&&l.track.artists?l.track.artists:l.kind)}</span>
+      <span class="tby">${esc(l.person)}${l.context?' · "'+esc(l.context)+'"':''}</span></span></div>`).join('')}</div>`;
+  },
+  method(){
+    const g = TAPE.generatedFrom;
+    return `<p class="lead">The caveats worth knowing and the confidence behind each finding — <b>because somebody is going to argue with their ranking.</b></p>
+    <div class="card acc-ink" style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      ${[['messages',nf(g.messages)],['days',g.days],['people',TAPE.people.length],['songs',TAPE.songs.links.length]].map(([k,v])=>`<div><div style="font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--fg)">${v}</div><div class="mono" style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-quiet)">${k}</div></div>`).join('')}
+    </div>
+    ${TAPE.notes.map(n=>`<div class="note">${esc(n)}</div>`).join('')}`;
+  }
+};
+
+function renderEntry(e,col){
+  let extra='';
+  if(e.spotlight) extra += `<div class="spot" style="background:${col}"><div class="st">"${esc(e.spotlight.text)}"</div><div class="sc">${esc(e.spotlight.caption)}</div></div>`;
+  if(e.pairs&&e.pairs.length) extra += `<div class="pairs">${e.pairs.map(([r,a])=>`<div class="pair"><span class="pr">${esc(r)}</span><span class="pa">${esc(a)}</span></div>`).join('')}</div>`;
+  if(e.token) extra += `<span class="tok" style="color:${col};border-color:${col}">“${esc(e.token)}”</span>`;
+  if(e.evidence&&e.evidence.length) extra += e.evidence.map(q=>`<div class="quote" style="border-color:${col}">${esc(q)}</div>`).join('');
+  return `<div class="entry"><div class="earch" style="color:${col}">${esc(e.archetype)}</div><div class="emotif">${esc(e.motif)}</div><div class="enote">${esc(e.note)}</div>${extra}</div>`;
+}
+
+/* ---- events ---- */
+document.addEventListener('click', ev=>{
+  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tl]');
+  if(!t) return;
+  if(t.dataset.tab!=null){ state.tab=t.dataset.tab; renderTabs(); renderBento(); }
+  else if(t.dataset.drill){ openDrill(t.dataset.drill); }
+  else if(t.dataset.close!=null){ closeDrill(); }
+  else if(t.dataset.mb){ state.mb[t.dataset.mb]=t.dataset.val; renderOverlay(); }
+  else if(t.dataset.heat){ state.heat.person=t.dataset.heat; renderOverlay(); }
+  else if(t.dataset.reg){ const k=t.dataset.reg; state.reg.open[k]=!state.reg.open[k]; renderOverlay(); }
+  else if(t.dataset.tl){ state.tl.filter=t.dataset.tl; renderOverlay(); }
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.drill) closeDrill(); });
+
+/* ---- boot ---- */
+$('#mast-meta').textContent = nf(TAPE.generatedFrom.messages)+' messages · '+TAPE.people.length+' players · '+TAPE.songs.links.length+' songs';
+$('#foot-msgs').textContent = nf(TAPE.generatedFrom.messages);
+renderTabs(); renderBento();
+</script>
+</body>
+</html>
