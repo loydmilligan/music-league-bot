@@ -1,0 +1,252 @@
+{
+  "round": {
+    "id": 149,
+    "name": "Surrender Monkeys"
+  },
+  "tracks": 10,
+  "scoreGte60": 10,
+  "hitRate": 1,
+  "quotaUsed": 1000,
+  "rows": [
+    {
+      "query": "B.Y.O.B. System Of A Down",
+      "spotify_uri": "spotify:track:0EYOdF5FCkgOJJla8DI2Md",
+      "top": {
+        "videoId": "zUzd9KyIDrM",
+        "title": "System Of A Down - B.Y.O.B. (Official HD Video)",
+        "channel": "systemofadownVEVO",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "6pwSgOK22U4",
+          "title": "System Of A Down - B.Y.O.B / Lyrics",
+          "channel": "riot wav",
+          "score": 1
+        },
+        {
+          "videoId": "w00v2zVkX9g",
+          "title": "System Of A Down - B.Y.O.B. live (HD/DVD Quality)",
+          "channel": "ObeyYourSysteM",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "And The Band Played Waltzing Matilda The Pogues",
+      "spotify_uri": "spotify:track:1O2SlAUcjIoFFt9vpI3P1i",
+      "top": {
+        "videoId": "PKURhqmSLmM",
+        "title": "And The Band Played Waltzing Matilda",
+        "channel": "The Pogues - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "gsXEGvX_ksI",
+          "title": "And The Band Played Waltzing Matilda - The Pogues, 1985",
+          "channel": "CR's Video Vaults",
+          "score": 1
+        },
+        {
+          "videoId": "TThjY_qlEfg",
+          "title": "The Pogues - The Band Played Waltzing Matilda",
+          "channel": "TheLightningMan",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Franco Un-American NOFX",
+      "spotify_uri": "spotify:track:1d6aWHZ6VTwZh9qQhsBmap",
+      "top": {
+        "videoId": "ZSb3nG4oTNQ",
+        "title": "NOFX - Franco Un-American (Official Video)",
+        "channel": "FAT WRECK CHORDS",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "1k57HJ0SBEg",
+          "title": "Franco Un-American",
+          "channel": "NOFX - Topic",
+          "score": 1
+        },
+        {
+          "videoId": "jphxuUenkX8",
+          "title": "nofx franco unamerican lyrics",
+          "channel": "FUCKyourFLAGandGOD",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Firecracker Strung Out",
+      "spotify_uri": "spotify:track:1smjeqxH0eg4koL4TIq9uY",
+      "top": {
+        "videoId": "7ojj0bgSfp8",
+        "title": "Firecracker",
+        "channel": "Strung Out - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "DPhzsSJ-B4k",
+          "title": "Strung Out - Firecracker",
+          "channel": "jaymtz78",
+          "score": 1
+        },
+        {
+          "videoId": "sRpCvLpkOX0",
+          "title": "Firecracker",
+          "channel": "Strung Out - Topic",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Bring 'Em Home Bruce Springsteen",
+      "spotify_uri": "spotify:track:20NMvQ7078gahRN511FACT",
+      "top": {
+        "videoId": "OS5WlDWJlhM",
+        "title": "Bring &#39;Em Home",
+        "channel": "Bruce Springsteen - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "Mv4vW1FGnCQ",
+          "title": "Bruce Springsteen - Bring &#39;Em Home (Live Tour Video)",
+          "channel": "BruceSpringsteenVEVO",
+          "score": 1
+        },
+        {
+          "videoId": "wXUiV6SwOBw",
+          "title": "Bring ‘Em Home - Bruce Springsteen (live on Late Night with Conan O’Brien 2006)",
+          "channel": "Springsteen Recordings",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Fortunate Son Creedence Clearwater Revival",
+      "spotify_uri": "spotify:track:4BP3uh0hFLFRb5cjsgLqDh",
+      "top": {
+        "videoId": "ZWijx_AgPiA",
+        "title": "Creedence Clearwater Revival - Fortunate Son",
+        "channel": "CCRVEVO",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "3RmQTYLD398",
+          "title": "Fortunate Son",
+          "channel": "Creedence Clearwater Revival - Topic",
+          "score": 1
+        },
+        {
+          "videoId": "N7qkQewyubs",
+          "title": "CCR-Fortunate Son.",
+          "channel": "abgreyd",
+          "score": 0.4
+        }
+      ]
+    },
+    {
+      "query": "The 4th Branch Immortal Technique",
+      "spotify_uri": "spotify:track:4RNEfrpALlfQ46hWAamoH7",
+      "top": {
+        "videoId": "2ffxUT7Puf0",
+        "title": "Immortal Technique - The 4th Branch (Lyrics)",
+        "channel": "Raul Gavidia",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "C0-kqooyQdg",
+          "title": "Immortal Technique - The 4th Branch",
+          "channel": "inmortaltecnica",
+          "score": 1
+        },
+        {
+          "videoId": "MQbyaVR5VBY",
+          "title": "Immortal Technique - The 4th Branch Lyrics | HD",
+          "channel": "mastersun",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Chanbara At the Drive-In",
+      "spotify_uri": "spotify:track:5Gh7uZTnZx3bpCyGaY7wpt",
+      "top": {
+        "videoId": "5jIRX3YGXeY",
+        "title": "Chanbara",
+        "channel": "At The Drive-In - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "-RHaql1mab0",
+          "title": "At the Drive-In - &quot;Chanbara&quot; (HD)",
+          "channel": "Thomas Tyson",
+          "score": 1
+        },
+        {
+          "videoId": "8WG1yFW3ht4",
+          "title": "At the Drive-In - Chanbara - Bass Cover",
+          "channel": "Haida",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Vietnam Blues J.B. Lenoir",
+      "spotify_uri": "spotify:track:5ZpVobfGruhqxatBb3WGVQ",
+      "top": {
+        "videoId": "ne0p9ziIT3o",
+        "title": "Vietnam Blues",
+        "channel": "J.B. Lenoir - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "niBgI9-_338",
+          "title": "JB Lenoir - Vietnam Blues",
+          "channel": "drew pickles",
+          "score": 1
+        },
+        {
+          "videoId": "GMfdMeSfJyA",
+          "title": "J.B. Lenoir - Vietnam Blues",
+          "channel": "Monkey D. Sound",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Masters of War Bob Dylan",
+      "spotify_uri": "spotify:track:7xVpkVkd1klTzLJEysIR7z",
+      "top": {
+        "videoId": "JEmI_FT4YHU",
+        "title": "Bob Dylan - Masters of War (Official Audio)",
+        "channel": "BobDylanVEVO",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "K4uMQRQzVmc",
+          "title": "Bob Dylan - Masters of War (Lyrics)",
+          "channel": "RVibes",
+          "score": 1
+        },
+        {
+          "videoId": "-4wgB-04wHw",
+          "title": "Bob Dylan - Masters of War (original)",
+          "channel": "Bob Dylan",
+          "score": 1
+        }
+      ]
+    }
+  ]
+}
