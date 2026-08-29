@@ -180,6 +180,7 @@ const SECTIONS = [
   {id:'awards',      side:'Side A',   tag:'Every winner',      name:'The Full Roll',        acc:'pulp',  val:()=>String(Object.keys(TAPE.awards).length), label:'awards handed out', valSize:'34px'},
   {id:'biggestWord', side:'Side A',   tag:'Longest word',      name:'The Biggest Word',     acc:'amber', val:()=>'18', label:'letters · compartmentalizing', valSize:'34px'},
   {id:'allTalk',     side:'Side A',   tag:'Chat vs ballots',   name:'All Talk, No Ballot',  acc:'amber', val:()=>'1175:1', label:'Shane Farkas', valSize:'26px'},
+  {id:'guessLedger', side:'Side A',   tag:'The guessing game', name:'Who Submitted What',   acc:'amber', draft:true, val:()=>'5/18', label:'guesses landed · scored vs the reveal', valSize:'30px'},
   {id:'motormouth',  side:'Side B',   tag:'Volume',            name:'Motormouth',           acc:'pulp',  val:()=>nf(topPerson('messages').messages), label:'messages · Matt Mariani', valSize:'28px'},
   {id:'mixingBoard', side:'Side B',   tag:'Find yourself',     name:'The Mixing Board',     acc:'sky',   val:()=>'▤', label:'every stat, one board', valSize:'26px'},
   {id:'heatmap',     side:'Side B',   tag:'Filter by person',  name:'When The Boarz Post',  acc:'sky',   val:()=>'▦', label:'day × hour', valSize:'26px'},
@@ -253,6 +254,33 @@ const VIEWS = {
       <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname">${esc(n)}</span></span><span class="rv">${p} pts</span></div>
       <div class="bar"><span style="width:${Math.max(3,p/max*100)}%;background:${pcolor(n)}"></span></div></div>`).join('')}</div>
     <p class="lead" style="margin-top:20px;margin-bottom:0">${esc(sr.outro)}</p>`;
+  },
+  guessLedger(){
+    const gl = TAPE.editorial.guessLedger;
+    // First names collide (two Daves) — use the league's own short names.
+    const shortName = n => Object.keys(REG_FULLNAME).find(k=>REG_FULLNAME[k]===n) || n.split(' ')[0];
+    const mark = h => `<span class="mono" style="font-size:11px;font-weight:700;flex:none;color:${h?'var(--moss)':'var(--ember)'}">${h?'✓ HIT':'✗ MISS'}</span>`;
+    const grow = r => `<div style="display:flex;flex-direction:column;gap:3px;padding:9px 0;border-bottom:1px solid var(--ink-3)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-weight:600;font-size:13.5px;color:var(--fg)">${esc(r.song)}</span>${mark(r.hit)}</div>
+      <div class="mono" style="font-size:10.5px;color:var(--fg-muted)">guessed ${esc(shortName(r.guess))} · was ${esc(shortName(r.actual))}</div>
+      <div style="font-size:12px;font-style:italic;color:var(--fg-quiet);line-height:1.45">"${esc(r.quote)}"</div></div>`;
+    return `<p class="lead">${esc(gl.intro)}</p>
+    <div class="stack" style="margin-bottom:20px">${gl.ballots.map(b=>`<div class="card acc-amber">
+      <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:4px">R${b.num} · ${esc(b.round)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px"><span style="font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--fg)">${esc(b.guesser)}'s ballot</span><span class="mono" style="font-size:12px;color:var(--amber);flex:none">${esc(b.score)}</span></div>
+      <div style="font-size:13px;line-height:1.55;color:var(--fg-2);margin-bottom:6px">${esc(b.note)}</div>
+      ${b.rows.map(grow).join('')}</div>`).join('')}</div>
+    <div class="sub" style="margin-bottom:8px">Scattered fire</div>
+    <div class="card" style="margin-bottom:20px"><div style="font-size:13px;line-height:1.55;color:var(--fg-2);margin-bottom:6px">${esc(gl.extrasNote)}</div>
+      ${gl.extras.map(x=>`<div style="display:flex;flex-direction:column;gap:3px;padding:9px 0;border-bottom:1px solid var(--ink-3)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-weight:600;font-size:13.5px;color:var(--fg)">${esc(shortName(x.voter))} on ${esc(x.song)}</span>${mark(x.hit)}</div>
+      <div class="mono" style="font-size:10.5px;color:var(--fg-muted)">guessed ${esc(shortName(x.guess))} · was ${esc(shortName(x.actual))} · ${esc(x.round)}</div>
+      <div style="font-size:12px;font-style:italic;color:var(--fg-quiet);line-height:1.45">"${esc(x.quote)}"</div></div>`).join('')}</div>
+    <div class="sub" style="margin-bottom:8px">From the wire</div>
+    <div class="stack" style="margin-bottom:20px">${gl.wire.map(q=>`<div class="card" style="display:flex;flex-direction:column;gap:7px">
+      <div class="mono" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber)">${esc(q.date)}</div>
+      <div class="quote acc-amber"><b style="font-style:normal">${esc(q.speaker)}:</b> ${esc(q.text)}</div></div>`).join('')}</div>
+    <p class="lead" style="margin-bottom:0">${esc(gl.outro)}</p>`;
   },
   awards(){
     const keys = Object.keys(TAPE.awards);

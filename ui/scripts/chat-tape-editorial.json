@@ -675,5 +675,203 @@
       ]
     ],
     "outro": "Jon Black leads on fifty-six without once claiming a carrot box, which is either integrity or the best one anybody has run all season. Conor sits last on twelve and maintains the losses are the plan. There is no way to disprove this, and that is the whole genius of the box."
+  },
+  "guessLedger": {
+    "intro": "The league submits anonymously, which makes every playlist a whodunnit and every ballot a chance to be wrong in writing. In August Matt started signing his guesses — a name on every vote — and the comments became a ledger. Scored here against the reveal.",
+    "ballots": [
+      {
+        "round": "Smells Like Teen Cousin Fuckers",
+        "num": 5,
+        "guesser": "Matt Mariani",
+        "score": "2 of 7",
+        "note": "The first signed ballot. Two direct hits — JB and Jimmy — then five straight misses, including 'going with conor' on the song actually submitted by Clements, the league's designated Connor-misspeller.",
+        "rows": [
+          {
+            "song": "Waiting Around To Die",
+            "guess": "Jon Black",
+            "actual": "Jon Black",
+            "hit": true,
+            "quote": "Guessing JB - plus 1 for the combo"
+          },
+          {
+            "song": "Dixieland Delight",
+            "guess": "Jimmy",
+            "actual": "Jimmy",
+            "hit": true,
+            "quote": "This feels like Jimmy - but its just not my style"
+          },
+          {
+            "song": "Cousin Dupree",
+            "guess": "Dave Steingart",
+            "actual": "Shane Farkas",
+            "hit": false,
+            "quote": "Steiny revealed he did not leave a comment - this my best guess with that info"
+          },
+          {
+            "song": "Pedestrian at Best",
+            "guess": "Dave Jensen",
+            "actual": "Dave Steingart",
+            "hit": false,
+            "quote": "I feel like Jensen has been coming with the interesting picks"
+          },
+          {
+            "song": "The Man Who Sold The World - Live",
+            "guess": "Grant Koziol",
+            "actual": "Dave Jensen",
+            "hit": false,
+            "quote": "guessing koziol"
+          },
+          {
+            "song": "Drain You",
+            "guess": "Shane Farkas",
+            "actual": "Grant Koziol",
+            "hit": false,
+            "quote": "Process of elimination - Shane?"
+          },
+          {
+            "song": "All My Ex's Live In Texas",
+            "guess": "Conor Johnston",
+            "actual": "Clements Johnson",
+            "hit": false,
+            "quote": "Something about this is screaming conor at me - but I want to say Shane - either way - not for me - actually, going with conor -1"
+          }
+        ]
+      },
+      {
+        "round": "Surrender Monkeys",
+        "num": 6,
+        "guesser": "Matt Mariani",
+        "score": "2 of 7",
+        "note": "Same method, same score, and the misses form a perfect closed loop: the Steiny song went to Shane, the Shane song went to Koziol, the Koziol song went to JB, and the JB song went to Steiny. Every name was in play. Every name was one seat off.",
+        "rows": [
+          {
+            "song": "B.Y.O.B.",
+            "guess": "Shane Farkas",
+            "actual": "Dave Steingart",
+            "hit": false,
+            "quote": "Thes guys good shane"
+          },
+          {
+            "song": "Franco Un-American",
+            "guess": "Dave Jensen",
+            "actual": "Dave Jensen",
+            "hit": true,
+            "quote": "close enough for me jensen"
+          },
+          {
+            "song": "And The Band Played Waltzing Matilda",
+            "guess": "Dave Steingart",
+            "actual": "Jon Black",
+            "hit": false,
+            "quote": "not good enough for +1 not bad enough for -1, steiny"
+          },
+          {
+            "song": "Bring 'Em Home",
+            "guess": "Conor Johnston",
+            "actual": "Conor Johnston",
+            "hit": true,
+            "quote": "This is the bad kind of antiwar song, conor"
+          },
+          {
+            "song": "Fortunate Son",
+            "guess": "Grant Koziol",
+            "actual": "Shane Farkas",
+            "hit": false,
+            "quote": "Koziol and forest gump"
+          },
+          {
+            "song": "The 4th Branch",
+            "guess": "Darren Pallets",
+            "actual": "Clements Johnson",
+            "hit": false,
+            "quote": "Pallets?"
+          },
+          {
+            "song": "Masters of War",
+            "guess": "Jon Black",
+            "actual": "Grant Koziol",
+            "hit": false,
+            "quote": "Maybe jb"
+          }
+        ]
+      }
+    ],
+    "extras": [
+      {
+        "round": "¡No Entiendo, Cabron!",
+        "voter": "Jon Black",
+        "song": "Tequila",
+        "guess": "Conor Johnston",
+        "actual": "Jimmy",
+        "hit": false,
+        "quote": "Still, assuming this was Conor's pick, a vast improvement"
+      },
+      {
+        "round": "I Hope You Shit Your Pants at Target",
+        "voter": "Clements Johnson",
+        "song": "Fuck You Bitch",
+        "guess": "Conor Johnston",
+        "actual": "Dave Jensen",
+        "hit": false,
+        "quote": "Gotta give Connor a vote."
+      },
+      {
+        "round": "I Hope You Shit Your Pants at Target",
+        "voter": "Jon Black",
+        "song": "Fuck You Bitch",
+        "guess": "Conor Johnston",
+        "actual": "Dave Jensen",
+        "hit": false,
+        "quote": "Hoping for a category one day where Conor decides to stop trolling."
+      },
+      {
+        "round": "Surrender Monkeys",
+        "voter": "Dave Jensen",
+        "song": "Bring 'Em Home",
+        "guess": "Conor Johnston",
+        "actual": "Conor Johnston",
+        "hit": true,
+        "quote": "Conor?"
+      }
+    ],
+    "extrasNote": "Outside the signed ballots, the league has one default guess: Conor. It has been played four times, landed once, and one of the misses required a public apology.",
+    "wire": [
+      {
+        "date": "Jul 19",
+        "speaker": "Conor",
+        "text": "Can there be a rule against deducing who submitted the song and then downvoting him mercilessly bc he's never been likable and is only on this thread bc Jon's wife made him?"
+      },
+      {
+        "date": "Jul 27",
+        "speaker": "Matt",
+        "text": "Polls about who submitted what before it's revealed, that seems to be a favorite past time is guessing"
+      },
+      {
+        "date": "Aug 12",
+        "speaker": "Jon Black",
+        "text": "Sorry for assuming you were the jerk who submitted Wheeler Walker."
+      },
+      {
+        "date": "Aug 19",
+        "speaker": "Matt",
+        "text": "I did try to guess who submitted each song this time - as I sort of realzied as soon as I submitted that I fucked it up - compounded by the new comment rules. I had fun doing that - I also had the ai attempt to do the same after I made my guesses - curious how I (and it) did. I think I will try to do this each round"
+      },
+      {
+        "date": "Aug 19",
+        "speaker": "Matt",
+        "text": "Btw the ai guessed 5 right"
+      },
+      {
+        "date": "Aug 26",
+        "speaker": "Jon Black",
+        "text": "Sarah didn't rat you out - I guessed your song right away."
+      },
+      {
+        "date": "Aug 27",
+        "speaker": "Clements",
+        "text": "Matt how did you miss every single song. Did you match one to the person who submitted it?"
+      }
+    ],
+    "outro": "Eighteen scored guesses across the season, five landed. For completeness the record shows that the AI Matt consulted went five for the same round he went two, per Matt's own report. I am only the archivist here."
   }
 }
