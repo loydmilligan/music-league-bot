@@ -21,10 +21,12 @@ const ROOT = path.resolve(UI, '..');
 const jiti = createJiti(import.meta.url);
 
 const { parseExport } = await jiti.import(path.join(UI, 'src/lib/digest/chatExport.ts'));
-const { computeSuperlatives } = await jiti.import(
+const { computeSuperlatives, prose, words } = await jiti.import(
 	path.join(UI, 'src/lib/digest/chatSuperlatives.ts'),
 );
-const { PEOPLE, isUnknownSender } = await jiti.import(path.join(UI, 'src/lib/digest/chatIdentity.ts'));
+const { PEOPLE, isUnknownSender, resolveSender } = await jiti.import(
+	path.join(UI, 'src/lib/digest/chatIdentity.ts'),
+);
 
 // Latest full-history export wins; BOARZ_EXPORT_ZIP overrides. The dated
 // `whatsapp-boarz-chat-export-*.zip` drops supersede the original July export.
@@ -148,4 +150,41 @@ const result = computeSuperlatives(
 	{ dictionary, commonWords, commonCutoff: 1000 },
 	voters,
 );
+
+// Recency window — the six Mixing Board metrics over the last 14 days of the
+// export, so charts can pivot between "season" and "lately".
+const RECENT_DAYS = 14;
+const URL_RE = /https?:\/\/\S+/g;
+const maxTs = messages.reduce((m, x) => Math.max(m, x.ts), 0);
+const cutoff = maxTs - RECENT_DAYS * 24 * 60 * 60 * 1000;
+const recent = new Map();
+for (const m of messages) {
+	if (m.ts < cutoff) continue;
+	const p = resolveSender(m.sender);
+	if (!p) continue;
+	let a = recent.get(p.name);
+	if (!a) {
+		a = { name: p.name, messages: 0, words: 0, characters: 0, edits: 0, mediaShared: 0, links: 0 };
+		recent.set(p.name, a);
+	}
+	a.messages++;
+	if (m.edited) a.edits++;
+	if (m.media) a.mediaShared++;
+	const links = m.text.match(URL_RE);
+	if (links) a.links += links.length;
+	const body = prose(m);
+	a.words += words(body).length;
+	a.characters += body.length;
+}
+result.recent = {
+	days: RECENT_DAYS,
+	since: new Date(cutoff).toISOString(),
+	people: result.people.map(
+		(p) =>
+			recent.get(p.name) ?? {
+				name: p.name, messages: 0, words: 0, characters: 0, edits: 0, mediaShared: 0, links: 0,
+			},
+	),
+};
+
 process.stdout.write(JSON.stringify(result, null, 2));

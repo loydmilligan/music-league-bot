@@ -202,7 +202,7 @@ function pcolor(name){return PCOLOR[name]||'var(--ink-7)';}
 
 /* ---- state ---- */
 const state = {tab:'Overview', drill:null,
-  mb:{metric:'Messages', norm:'Total', person:'Matt Mariani'},
+  mb:{metric:'Messages', norm:'Total', person:'Matt Mariani', win:'Season'},
   heat:{person:'Everyone'},
   reg:{open:{}}, tl:{filter:'All', open:{1:true}}};
 
@@ -322,7 +322,15 @@ const VIEWS = {
       !(n==='Per message'&&state.mb.metric==='Messages') && !(n==='Per 1k words'&&state.mb.metric==='Words'));
     if(!norms.includes(state.mb.norm)) state.mb.norm='Total';
     const mk = metrics[state.mb.metric];
-    const val = p => { const v=p[mk]; return state.mb.norm==='Per message'? v/p.messages : state.mb.norm==='Per 1k words'? v/p.words*1000 : v; };
+    // Recency pivot: same metrics restricted to the last N days of the export.
+    const hasRecent = !!(TAPE.recent&&TAPE.recent.people);
+    const winOpts = ['Season','Last '+(hasRecent?TAPE.recent.days:14)+' days'];
+    if(!hasRecent) state.mb.win='Season';
+    const useRecent = hasRecent && state.mb.win!=='Season';
+    const rb = useRecent? new Map(TAPE.recent.people.map(p=>[p.name,p])) : null;
+    const zero = {messages:0,words:0,characters:0,edits:0,mediaShared:0,links:0};
+    const stat = p => useRecent? (rb.get(p.name)||zero) : p;
+    const val = p => { const s=stat(p); const v=s[mk]||0; return state.mb.norm==='Per message'? (s.messages? v/s.messages:0) : state.mb.norm==='Per 1k words'? (s.words? v/s.words*1000:0) : v; };
     const fmt = n => state.mb.norm==='Total'? nf(Math.round(n)) : n.toFixed(state.mb.norm==='Per message'?2:1);
     const ranked = TAPE.people.map(p=>({name:p.name,v:val(p)})).sort((a,b)=>b.v-a.v);
     const max = ranked[0].v||1;
@@ -331,8 +339,9 @@ const VIEWS = {
     return `<div class="chips" style="margin-bottom:10px">${pill(TAPE.people.map(p=>p.name),state.mb.person,'person')}</div>
     <div class="youbox"><span class="yl"><b>${esc(state.mb.person.split(' ')[0])}</b> ranks</span><span class="yr">#${youRank}</span></div>
     <div class="sub" style="margin-bottom:6px">Measure</div><div class="chips" style="margin-bottom:10px">${pill(Object.keys(metrics),state.mb.metric,'metric')}</div>
-    <div class="sub" style="margin-bottom:6px">Per what</div><div class="chips" style="margin-bottom:16px">${pill(norms,state.mb.norm,'norm')}</div>
-    <div class="mono" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:10px">${esc(state.mb.metric)} · ${esc(state.mb.norm)}</div>
+    <div class="sub" style="margin-bottom:6px">Per what</div><div class="chips" style="margin-bottom:10px">${pill(norms,state.mb.norm,'norm')}</div>
+    ${hasRecent?`<div class="sub" style="margin-bottom:6px">Window</div><div class="chips" style="margin-bottom:16px">${pill(winOpts,state.mb.win,'win')}</div>`:''}
+    <div class="mono" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:10px">${esc(state.mb.metric)} · ${esc(state.mb.norm)} · ${esc(state.mb.win)}</div>
     <div class="stack" style="gap:9px">${ranked.map((p,i)=>{const sel=p.name===state.mb.person;return `<div class="rrow ${sel?'sel':''}">
       <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname" style="color:${sel?'var(--sky)':'var(--fg)'}">${esc(p.name)}</span></span><span class="rv">${fmt(p.v)}</span></div>
       <div class="bar"><span style="width:${Math.max(3,p.v/max*100)}%;background:${sel?'var(--sky)':i===0?'var(--mash-pulp)':'var(--ink-5)'}"></span></div></div>`;}).join('')}</div>`;
