@@ -1,0 +1,13 @@
+{
+  "round": {
+    "id": 149,
+    "name": "Surrender Monkeys"
+  },
+  "playlistId": "PLKAJL1FE1lpk",
+  "ytmUrl": "https://music.youtube.com/playlist?list=PLKAJL1FE1lpk",
+  "tracks": 10,
+  "target": "120363428945055429@g.us",
+  "say": "200 {\"ok\":true,\"action\":\"say\",\"target\":\"120363428945055429@g.us\"}",
+  "notes": "first send attempt hit Puppeteer wedge (bot up 42h); docker restart + retry succeeded",
+  "at": "2026-08-29T22:54:41.680Z"
+}
