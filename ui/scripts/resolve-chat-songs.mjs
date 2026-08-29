@@ -123,7 +123,9 @@ const resolved = links.map((l) => ({
 const unresolved = resolved.filter((l) => l.trackId && !l.track).length;
 if (unresolved) console.error(`[warn] ${unresolved} Spotify id(s) did not resolve`);
 
-// ── round 1 podium ────────────────────────────────────────────────────────────
+// ── season podium ─────────────────────────────────────────────────────────────
+// Top 3 submissions across ALL rounds to date (no round filter — the template
+// labels this "season to date"; it was mislabelled "round one" until 2026-08-29).
 // Competitor display names differ from chat names ("Mashew", "djensen37"), so
 // map through ml_competitor_id the same way the stats do.
 const { PEOPLE } = await jiti.import(path.join(UI, 'src/lib/digest/chatIdentity.ts'));

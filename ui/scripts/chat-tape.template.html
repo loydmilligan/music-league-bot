@@ -176,6 +176,7 @@ const accVar = a => ({pulp:'var(--mash-pulp)',amber:'var(--amber)',sky:'var(--sk
 /* ---- section registry (locked design: tabs+bento home, pivots, accordion regulars, full-card glossary, podium+rounds tracks) ---- */
 const SIDES = ['Overview','Side A','Side B','Regulars','Tracks'];
 const SECTIONS = [
+  {id:'seasonReview',side:'Side A',   tag:'Season so far',     name:'The Carrot Box',       acc:'ember', draft:true, val:()=>String(TAPE.editorial.seasonReview.rounds.length), label:'rounds reviewed · one long con', valSize:'34px'},
   {id:'awards',      side:'Side A',   tag:'Every winner',      name:'The Full Roll',        acc:'pulp',  val:()=>String(Object.keys(TAPE.awards).length), label:'awards handed out', valSize:'34px'},
   {id:'biggestWord', side:'Side A',   tag:'Longest word',      name:'The Biggest Word',     acc:'amber', val:()=>'18', label:'letters · compartmentalizing', valSize:'34px'},
   {id:'allTalk',     side:'Side A',   tag:'Chat vs ballots',   name:'All Talk, No Ballot',  acc:'amber', val:()=>'1175:1', label:'Shane Farkas', valSize:'26px'},
@@ -211,7 +212,7 @@ function renderTabs(){
 function renderBento(){
   const list = state.tab==='Overview' ? SECTIONS : SECTIONS.filter(s=>s.side===state.tab);
   $('#bento').innerHTML = list.map(s=>{
-    const wide = ['mixingBoard','songs','awards'].includes(s.id);
+    const wide = ['mixingBoard','songs','awards','seasonReview'].includes(s.id);
     return `<button class="tile acc-${s.acc} ${wide?'wide':''}" data-drill="${s.id}">
       <span class="th"><span class="ttag">${esc(s.tag)}</span>${s.draft?'<span class="draft">DRAFT</span>':''}</span>
       <span class="tname">${esc(s.name)}</span>
@@ -233,6 +234,26 @@ function renderOverlay(){
 }
 
 const VIEWS = {
+  seasonReview(){
+    const sr = TAPE.editorial.seasonReview;
+    const max = sr.standings[0][1];
+    return `<p class="lead">${esc(sr.intro)}</p>
+    <div class="sub" style="margin-bottom:8px">Six rounds, reviewed</div>
+    <div class="stack" style="margin-bottom:20px">${sr.rounds.map(r=>`<div class="card acc-ember" style="display:flex;flex-direction:column;gap:6px">
+      <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)">R${r.num} · ${esc(r.name)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--fg)">${esc(r.song)}</span><span class="mono" style="font-size:11px;color:var(--fg-quiet);flex:none">${r.pts} pts</span></div>
+      <div class="mono" style="font-size:10.5px;color:var(--fg-muted)">${esc(r.artists)} · won by ${esc(r.winner)}</div>
+      <div style="font-size:13px;line-height:1.55;color:var(--fg-2)">${esc(r.note)}</div></div>`).join('')}</div>
+    <div class="sub" style="margin-bottom:8px">The carrot log</div>
+    <div class="stack" style="margin-bottom:20px">${sr.log.map(q=>`<div class="card" style="display:flex;flex-direction:column;gap:7px">
+      <div class="mono" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember)">${esc(q.date)} · ${esc(q.label)}</div>
+      <div class="quote acc-ember"><b style="font-style:normal">${esc(q.speaker)}:</b> ${esc(q.text)}</div></div>`).join('')}</div>
+    <div class="sub" style="margin-bottom:8px">Standings after six</div>
+    <div class="stack">${sr.standings.map(([n,p],i)=>`<div class="rrow" style="background:none">
+      <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname">${esc(n)}</span></span><span class="rv">${p} pts</span></div>
+      <div class="bar"><span style="width:${Math.max(3,p/max*100)}%;background:${pcolor(n)}"></span></div></div>`).join('')}</div>
+    <p class="lead" style="margin-top:20px;margin-bottom:0">${esc(sr.outro)}</p>`;
+  },
   awards(){
     const keys = Object.keys(TAPE.awards);
     return `<p class="lead">Ten days of counting, condensed to the only part anyone quotes back — <b>${keys.length} award cards</b>, one winner each.</p>
@@ -358,8 +379,8 @@ const VIEWS = {
     } else {
       body = `<div>${list.map(row).join('')}</div>`;
     }
-    return `<p class="lead"><b>Round one's podium</b> — "${esc(s.round)}" — then every song anybody dropped into the chat, folded by the round that was in play. <b>${s.links.length} tracks</b>, all a real playlist.</p>
-    <div class="podium"><div class="ph">The podium · ${esc(s.round)}</div>${s.podium.map(p=>`<div class="prow">
+    return `<p class="lead"><b>The season podium</b> — the three highest-scoring submissions to date — then every song anybody dropped into the chat, folded by the round that was in play. <b>${s.links.length} tracks</b>, all a real playlist.</p>
+    <div class="podium"><div class="ph">The podium · season to date</div>${s.podium.map(p=>`<div class="prow">
       <span class="pl" style="color:${p.place===1?'var(--amber)':p.place===2?'var(--fg-2)':'var(--mash-pulp-deep)'}">${p.place}</span>
       ${p.art?`<img class="part" loading="lazy" src="${esc(p.art)}" alt="" onerror="this.style.visibility='hidden'">`:''}
       <span class="pmid"><span class="pt">${esc(p.title)}</span><span class="pa">${esc(p.artists)}</span></span>

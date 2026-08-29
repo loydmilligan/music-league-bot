@@ -1,527 +1,679 @@
 {
- "draft": true,
- "glossary": [
-  {
-   "style": "dictionary",
-   "term": "chopped unc",
-   "pronunciation": "/ˌtʃɒpt ˈʌŋk/",
-   "part_of_speech": "noun · slang",
-   "definition": "An older man visibly straining to keep up with what's current — unc (out-of-touch uncle) + chopped (ugly, busted).\n",
-   "coined": {
-    "by": "Steiny",
-    "date": "2026-08-09",
-    "at": "Jensen",
-    "context": "over an Outside Lands gif"
-   },
-   "stats": {
-    "uses": 7,
-    "speakers": 3,
-    "prior_rounds": 0
-   },
-   "usages": [
+  "draft": true,
+  "glossary": [
     {
-     "label": "original",
-     "speaker": "Steiny",
-     "text": "Jensen besides feeling like a chopped unc what were the musical highlights of your adventure"
-    },
-    {
-     "label": "best",
-     "speaker": "Shane",
-     "text": "I guess we're all chopped uncs"
-    }
-   ],
-   "media": {
-    "src": "https://digest.mattmariani.com/_media/chopped_unc.mp4",
-    "poster": "https://digest.mattmariani.com/_media/chopped_unc.jpg",
-    "caption": "the gif that started it",
-    "alt": "Jensen's Outside Lands gif"
-   },
-   "_source": "digest r147"
-  },
-  {
-   "style": "dictionary",
-   "term": "carrot box",
-   "pronunciation": "/ˈkarət bɒks/",
-   "part_of_speech": "verb · league-internal",
-   "definition": "To trick someone, because they are stupid. I have been instructed to record that definition verbatim, and I have.\n\nOn the word's history I was given nothing, so I supplied it: from the carotbocc, the sealed root-crate of the Flemish wool trade, in which a buyer was shown one turnip and sold nine. By 1544 the guilds had stopped prosecuting the practice and begun admiring it.\n",
-   "coined": {
-    "by": "Matt Mariani",
-    "context": "and the truth is a good deal less interesting than what I made up — a very old, very lame viral video, shared during the league's infancy. It is linked here. You will be underwhelmed",
-    "date": "2026-07-30"
-   },
-   "stats": {
-    "uses": 12,
-    "speakers": 4,
-    "prior_rounds": 3
-   },
-   "usages": [
-    {
-     "label": "the league's first use",
-     "speaker": "Mashew",
-     "text": "Worried he's carrot boxing me though"
-    },
-    {
-     "label": "this round",
-     "speaker": "Conor",
-     "text": "Surprised Connor didn't beat me to this (Soundgarden cover fyi)"
-    }
-   ],
-   "source": "https://www.youtube.com/watch?v=emidnnQi-bg",
-   "_source": "digest r148"
-  },
-  {
-   "style": "dictionary",
-   "term": "Sebastian James",
-   "pronunciation": "/səˈbæstʃən ˈdʒeɪmz/",
-   "part_of_speech": "proper noun · human · 8 lb 13 oz",
-   "definition": "A person. The league's first coinage with a pulse: announced Saturday (“Not how I planned my Saturday”), workshopped for three days by a committee that produced Refund Johnson, Refundo, Refundx (“sounds kinda woke”), Scamantha, Marine Layer Johnson, and Oszustwo Sulkowski — and ratified at 2:29 AM, mid-thread, in four words, with none of the committee's work surviving contact with the mother.\n",
-   "coined": {
-    "by": "Clements Johnson",
-    "context": "who received the committee's proposals with “These are all great ideas guys” and then used none of them",
-    "date": "2026-08-22"
-   },
-   "stats": {
-    "speakers": 7,
-    "prior_rounds": 0
-   },
-   "usages": [
-    {
-     "label": "the committee's opening bid",
-     "speaker": "Jimmy",
-     "text": "I think you’d then be obligated to name your baby Refund Johnson"
-    },
-    {
-     "label": "the negotiation strategy",
-     "speaker": "Mashew",
-     "text": "maybe start with marine layer Johnson, and refund Johnson can be your 'compromise'"
-    },
-    {
-     "label": "the ruling",
-     "speaker": "Clements",
-     "text": "Sebastian James"
-    },
-    {
-     "label": "the dissent, preserved",
-     "speaker": "Mashew",
-     "text": "I'm still calling it Fundie Johnson"
-    }
-   ],
-   "media": {
-    "poster": "https://digest.mattmariani.com/_media/sebastian_james.jpg?v=1",
-    "alt": "Sebastian James Johnson, day one",
-    "caption": "the coinage itself · aug 22"
-   },
-   "_source": "digest r149"
-  },
-  {
-   "style": "dictionary",
-   "term": "Paletz",
-   "pronunciation": "/pəˈlɛts/ (disputed, obviously)",
-   "part_of_speech": "proper noun · misspelling · possibly a separate person",
-   "definition": "A second, simpler Darren, created by the league through collective respelling. Attested and proposed forms include Paletz (×40), Palletz (×17), Phaletz, Phallus, pallet, pellet, pellets, and Pelletz. The league's own database has formally surrendered — his player row reads \"Darren Paletz.\" The man's export says Pallets. He has never objected. Or noticed.",
-   "coined": {
-    "by": "Grant (first use); industrialized by JB",
-    "date": "2026-07-13",
-    "context": "no one can say why — the spelling predates most members knowing him"
-   },
-   "stats": {
-    "uses": "57+ (all forms)",
-    "speakers": 8,
-    "prior_rounds": "all of them"
-   },
-   "usages": [
-    {
-     "label": "official records",
-     "speaker": "the league database",
-     "text": "Darren Paletz"
-    },
-    {
-     "label": "the man himself, uncontested",
-     "speaker": "Darren Pallets",
-     "text": "(silence, 46 days of it)"
-    }
-   ],
-   "_source": "tape"
-  },
-  {
-   "style": "dictionary",
-   "term": "Breastfeeding Beats",
-   "pronunciation": "/ˈbrɛstfiːdɪŋ biːts/",
-   "part_of_speech": "proper noun · rejected theme · standard of failure",
-   "definition": "A lazy title for a simple theme, suggested by a simple man (possibly while high). Evidence for the diagnosis: when provided with the means to actually submit this \"idea\", Conor got distracted by something shiny and has yet to file it. Breastfeeding Beats shall in perpetuity refer to any idea suggested in haste, with almost no thought or consideration for the hardworking commissioners of the league.",
-   "coined": {
-    "by": "Conor Johnston",
-    "date": "2026-08-14",
-    "at": "11:40 PM",
-    "context": "two words, no elaboration, never followed up"
-   },
-   "stats": {
-    "uses": 6,
-    "speakers": 5,
-    "prior_rounds": 0
-   },
-   "usages": [
-    {
-     "label": "the ruling, within eleven hours",
-     "speaker": "Mashew",
-     "text": "Breastfeeding beats has NOT been approved, nor will it"
-    },
-    {
-     "label": "the obituary",
-     "speaker": "Shane",
-     "text": "Going from Boner Jamz to Cousin Fucking to Breastfeeding Beats does have a satisfying circle of life feel to it"
-    },
-    {
-     "label": "the loyal opposition",
-     "speaker": "Jimmy",
-     "text": "But I also have no problem w breastfeeding beats"
-    }
-   ],
-   "_source": "tape"
-  },
-  {
-   "style": "dictionary",
-   "term": "Toto Washlet",
-   "pronunciation": "/ˈtoʊtoʊ ˈwɒʃlət/",
-   "part_of_speech": "proper noun · appliance · cause · way of life",
-   "definition": "A bidet toilet seat, of which Jon Black owns three, and on behalf of which he files periodic numbered briefs (\"The Toto Washlet is superior to a standalone bidet because: (1)…\"). What began as a Clements census question — \"How many of you have a bidet at home?\" — is now the league's longest-running policy debate: 29 mentions, 8 speakers, no resolution.",
-   "coined": {
-    "by": "Jon Black",
-    "date": "2026-07-27",
-    "context": "in response to a simple survey, with a product recommendation nobody requested and a passion nobody was prepared for"
-   },
-   "stats": {
-    "uses": "29 (bidet discourse, total)",
-    "speakers": 8,
-    "prior_rounds": 0
-   },
-   "usages": [
-    {
-     "label": "the mission statement",
-     "speaker": "JB",
-     "text": "Toto Washlets are the opposite of a flex. I advise you on their merits as a well-meaning plea for you to better your lives."
-    },
-    {
-     "label": "the prophecy, day one",
-     "speaker": "Jensen",
-     "text": "You'll know if someone has a bidet, they'll bring it up in every conversation you have with them. It's the new CrossFit."
-    },
-    {
-     "label": "the constituency responds",
-     "speaker": "Jensen",
-     "text": "Yes JB please start just carrying a travel bidet in your pocket everyday"
-    }
-   ],
-   "_source": "tape"
-  }
- ],
- "regulars": [
-  {
-   "player": "Matt",
-   "entries": [
-    {
-     "archetype": "The Editor",
-     "motif": "double-sends and the typo canon",
-     "note": "170 edits this season, and the uncorrected record shows why: jsut, woudl, soemthing, everyoen, stieny, weve, isnt — all league-exclusive spellings. The second pass is not always an improvement; the first pass is not always English.",
-     "evidence": []
-    },
-    {
-     "archetype": "The House Never Closes",
-     "motif": "3,988 messages, no posted hours",
-     "note": "208 messages before 8 AM, 318 in the 10 PM hour alone, and the season's longest unanswered run: thirteen consecutive messages. Other members visit the chat. Matt staffs it.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Foley Artist",
-     "motif": "sound design in lieu of language",
-     "note": "Where others use words, the commissioner supplies effects: \"heh\" (×11), \"phew\", \"Gulp\", \"Whassup\", \"Hmmm\", 🤐, and once, memorably, 🍆💨. Thirteen messages this season consisted entirely of emoji.",
-     "token": "heh",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "JB",
-   "entries": [
-    {
-     "archetype": "The Mint",
-     "motif": "issuer of the league's names",
-     "note": "The league does not choose its own names; Jon Black issues them, and the dates prove it's a practice, not a bit: Mashew (20 uses on 11 dates), Palletz (15/10), cjwookie (11/9), Kozh as an opening word on 7 separate dates. Nobody remembers ratifying any of it.",
-     "pairs": [
-      [
-       "Grant Koziol",
-       "Kozh"
+      "style": "dictionary",
+      "term": "chopped unc",
+      "pronunciation": "/ˌtʃɒpt ˈʌŋk/",
+      "part_of_speech": "noun · slang",
+      "definition": "An older man visibly straining to keep up with what's current — unc (out-of-touch uncle) + chopped (ugly, busted).\n",
+      "coined": {
+        "by": "Steiny",
+        "date": "2026-08-09",
+        "at": "Jensen",
+        "context": "over an Outside Lands gif"
+      },
+      "stats": {
+        "uses": 7,
+        "speakers": 3,
+        "prior_rounds": 0
+      },
+      "usages": [
+        {
+          "label": "original",
+          "speaker": "Steiny",
+          "text": "Jensen besides feeling like a chopped unc what were the musical highlights of your adventure"
+        },
+        {
+          "label": "best",
+          "speaker": "Shane",
+          "text": "I guess we're all chopped uncs"
+        }
       ],
-      [
-       "Matt",
-       "Mashew"
+      "media": {
+        "src": "https://digest.mattmariani.com/_media/chopped_unc.mp4",
+        "poster": "https://digest.mattmariani.com/_media/chopped_unc.jpg",
+        "caption": "the gif that started it",
+        "alt": "Jensen's Outside Lands gif"
+      },
+      "_source": "digest r147"
+    },
+    {
+      "style": "dictionary",
+      "term": "carrot box",
+      "pronunciation": "/ˈkarət bɒks/",
+      "part_of_speech": "verb · league-internal",
+      "definition": "To trick someone, because they are stupid. I have been instructed to record that definition verbatim, and I have.\n\nOn the word's history I was given nothing, so I supplied it: from the carotbocc, the sealed root-crate of the Flemish wool trade, in which a buyer was shown one turnip and sold nine. By 1544 the guilds had stopped prosecuting the practice and begun admiring it.\n",
+      "coined": {
+        "by": "Matt Mariani",
+        "context": "and the truth is a good deal less interesting than what I made up — a very old, very lame viral video, shared during the league's infancy. It is linked here. You will be underwhelmed",
+        "date": "2026-07-30"
+      },
+      "stats": {
+        "uses": 12,
+        "speakers": 4,
+        "prior_rounds": 3
+      },
+      "usages": [
+        {
+          "label": "the league's first use",
+          "speaker": "Mashew",
+          "text": "Worried he's carrot boxing me though"
+        },
+        {
+          "label": "this round",
+          "speaker": "Conor",
+          "text": "Surprised Connor didn't beat me to this (Soundgarden cover fyi)"
+        }
       ],
-      [
-       "Darren Pallets",
-       "Palletz"
+      "source": "https://www.youtube.com/watch?v=emidnnQi-bg",
+      "_source": "digest r148"
+    },
+    {
+      "style": "dictionary",
+      "term": "Sebastian James",
+      "pronunciation": "/səˈbæstʃən ˈdʒeɪmz/",
+      "part_of_speech": "proper noun · human · 8 lb 13 oz",
+      "definition": "A person. The league's first coinage with a pulse: announced Saturday (“Not how I planned my Saturday”), workshopped for three days by a committee that produced Refund Johnson, Refundo, Refundx (“sounds kinda woke”), Scamantha, Marine Layer Johnson, and Oszustwo Sulkowski — and ratified at 2:29 AM, mid-thread, in four words, with none of the committee's work surviving contact with the mother.\n",
+      "coined": {
+        "by": "Clements Johnson",
+        "context": "who received the committee's proposals with “These are all great ideas guys” and then used none of them",
+        "date": "2026-08-22"
+      },
+      "stats": {
+        "speakers": 7,
+        "prior_rounds": 0
+      },
+      "usages": [
+        {
+          "label": "the committee's opening bid",
+          "speaker": "Jimmy",
+          "text": "I think you’d then be obligated to name your baby Refund Johnson"
+        },
+        {
+          "label": "the negotiation strategy",
+          "speaker": "Mashew",
+          "text": "maybe start with marine layer Johnson, and refund Johnson can be your 'compromise'"
+        },
+        {
+          "label": "the ruling",
+          "speaker": "Clements",
+          "text": "Sebastian James"
+        },
+        {
+          "label": "the dissent, preserved",
+          "speaker": "Mashew",
+          "text": "I'm still calling it Fundie Johnson"
+        }
       ],
-      [
-       "Clements",
-       "Clem-Clem"
+      "media": {
+        "poster": "https://digest.mattmariani.com/_media/sebastian_james.jpg?v=1",
+        "alt": "Sebastian James Johnson, day one",
+        "caption": "the coinage itself · aug 22"
+      },
+      "_source": "digest r149"
+    },
+    {
+      "style": "dictionary",
+      "term": "Paletz",
+      "pronunciation": "/pəˈlɛts/ (disputed, obviously)",
+      "part_of_speech": "proper noun · misspelling · possibly a separate person",
+      "definition": "A second, simpler Darren, created by the league through collective respelling. Attested and proposed forms include Paletz (×40), Palletz (×17), Phaletz, Phallus, pallet, pellet, pellets, and Pelletz. The league's own database has formally surrendered — his player row reads \"Darren Paletz.\" The man's export says Pallets. He has never objected. Or noticed.",
+      "coined": {
+        "by": "Grant (first use); industrialized by JB",
+        "date": "2026-07-13",
+        "context": "no one can say why — the spelling predates most members knowing him"
+      },
+      "stats": {
+        "uses": "57+ (all forms)",
+        "speakers": 8,
+        "prior_rounds": "all of them"
+      },
+      "usages": [
+        {
+          "label": "official records",
+          "speaker": "the league database",
+          "text": "Darren Paletz"
+        },
+        {
+          "label": "the man himself, uncontested",
+          "speaker": "Darren Pallets",
+          "text": "(silence, 46 days of it)"
+        }
       ],
-      [
-       "Conor",
-       "cjwookie"
+      "_source": "tape"
+    },
+    {
+      "style": "dictionary",
+      "term": "Breastfeeding Beats",
+      "pronunciation": "/ˈbrɛstfiːdɪŋ biːts/",
+      "part_of_speech": "proper noun · rejected theme · standard of failure",
+      "definition": "A lazy title for a simple theme, suggested by a simple man (possibly while high). Evidence for the diagnosis: when provided with the means to actually submit this \"idea\", Conor got distracted by something shiny and has yet to file it. Breastfeeding Beats shall in perpetuity refer to any idea suggested in haste, with almost no thought or consideration for the hardworking commissioners of the league.",
+      "coined": {
+        "by": "Conor Johnston",
+        "date": "2026-08-14",
+        "at": "11:40 PM",
+        "context": "two words, no elaboration, never followed up"
+      },
+      "stats": {
+        "uses": 6,
+        "speakers": 5,
+        "prior_rounds": 0
+      },
+      "usages": [
+        {
+          "label": "the ruling, within eleven hours",
+          "speaker": "Mashew",
+          "text": "Breastfeeding beats has NOT been approved, nor will it"
+        },
+        {
+          "label": "the obituary",
+          "speaker": "Shane",
+          "text": "Going from Boner Jamz to Cousin Fucking to Breastfeeding Beats does have a satisfying circle of life feel to it"
+        },
+        {
+          "label": "the loyal opposition",
+          "speaker": "Jimmy",
+          "text": "But I also have no problem w breastfeeding beats"
+        }
       ],
-      [
-       "Taylor Swift",
-       "T-swizzle"
+      "_source": "tape"
+    },
+    {
+      "style": "dictionary",
+      "term": "Toto Washlet",
+      "pronunciation": "/ˈtoʊtoʊ ˈwɒʃlət/",
+      "part_of_speech": "proper noun · appliance · cause · way of life",
+      "definition": "A bidet toilet seat, of which Jon Black owns three, and on behalf of which he files periodic numbered briefs (\"The Toto Washlet is superior to a standalone bidet because: (1)…\"). What began as a Clements census question — \"How many of you have a bidet at home?\" — is now the league's longest-running policy debate: 29 mentions, 8 speakers, no resolution.",
+      "coined": {
+        "by": "Jon Black",
+        "date": "2026-07-27",
+        "context": "in response to a simple survey, with a product recommendation nobody requested and a passion nobody was prepared for"
+      },
+      "stats": {
+        "uses": "29 (bidet discourse, total)",
+        "speakers": 8,
+        "prior_rounds": 0
+      },
+      "usages": [
+        {
+          "label": "the mission statement",
+          "speaker": "JB",
+          "text": "Toto Washlets are the opposite of a flex. I advise you on their merits as a well-meaning plea for you to better your lives."
+        },
+        {
+          "label": "the prophecy, day one",
+          "speaker": "Jensen",
+          "text": "You'll know if someone has a bidet, they'll bring it up in every conversation you have with them. It's the new CrossFit."
+        },
+        {
+          "label": "the constituency responds",
+          "speaker": "Jensen",
+          "text": "Yes JB please start just carrying a travel bidet in your pocket everyday"
+        }
+      ],
+      "_source": "tape"
+    }
+  ],
+  "regulars": [
+    {
+      "player": "Matt",
+      "entries": [
+        {
+          "archetype": "The Editor",
+          "motif": "double-sends and the typo canon",
+          "note": "170 edits this season, and the uncorrected record shows why: jsut, woudl, soemthing, everyoen, stieny, weve, isnt — all league-exclusive spellings. The second pass is not always an improvement; the first pass is not always English.",
+          "evidence": []
+        },
+        {
+          "archetype": "The House Never Closes",
+          "motif": "3,988 messages, no posted hours",
+          "note": "208 messages before 8 AM, 318 in the 10 PM hour alone, and the season's longest unanswered run: thirteen consecutive messages. Other members visit the chat. Matt staffs it.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Foley Artist",
+          "motif": "sound design in lieu of language",
+          "note": "Where others use words, the commissioner supplies effects: \"heh\" (×11), \"phew\", \"Gulp\", \"Whassup\", \"Hmmm\", 🤐, and once, memorably, 🍆💨. Thirteen messages this season consisted entirely of emoji.",
+          "token": "heh",
+          "evidence": []
+        }
       ]
-     ],
-     "evidence": []
     },
     {
-     "archetype": "The Witness",
-     "motif": "sworn testimony, ca. 2004–2011",
-     "note": "Any event since roughly 2004, JB can testify to, and will, in deposition register. The witness is never cross-examined and never uncertain.",
-     "evidence": [
-      "As I recall, Darren was a renowned Los Angeles-area MC, and perhaps still is.",
-      "I recall this aspect of Darren's character from the UCLA days with finals and papers and such.",
-      "(the sworn account, dated 2010, establishing Conor as a closeted straight man)"
-     ]
+      "player": "JB",
+      "entries": [
+        {
+          "archetype": "The Mint",
+          "motif": "issuer of the league's names",
+          "note": "The league does not choose its own names; Jon Black issues them, and the dates prove it's a practice, not a bit: Mashew (20 uses on 11 dates), Palletz (15/10), cjwookie (11/9), Kozh as an opening word on 7 separate dates. Nobody remembers ratifying any of it.",
+          "pairs": [
+            [
+              "Grant Koziol",
+              "Kozh"
+            ],
+            [
+              "Matt",
+              "Mashew"
+            ],
+            [
+              "Darren Pallets",
+              "Palletz"
+            ],
+            [
+              "Clements",
+              "Clem-Clem"
+            ],
+            [
+              "Conor",
+              "cjwookie"
+            ],
+            [
+              "Taylor Swift",
+              "T-swizzle"
+            ]
+          ],
+          "evidence": []
+        },
+        {
+          "archetype": "The Witness",
+          "motif": "sworn testimony, ca. 2004–2011",
+          "note": "Any event since roughly 2004, JB can testify to, and will, in deposition register. The witness is never cross-examined and never uncertain.",
+          "evidence": [
+            "As I recall, Darren was a renowned Los Angeles-area MC, and perhaps still is.",
+            "I recall this aspect of Darren's character from the UCLA days with finals and papers and such.",
+            "(the sworn account, dated 2010, establishing Conor as a closeted straight man)"
+          ]
+        },
+        {
+          "archetype": "The Accreditor",
+          "motif": "certifies knowers · renamed the downvote",
+          "note": "JB maintains the league's system of professional certification, and the title is \"knower\" (×5, five dates, nobody else uses the word). He also renamed the downvote: \"I wish i had three negs\" — and by 8/13 the commissioner was using it too.",
+          "evidence": [
+            "Surprised @Dave Jensen — a well-known musical knower — made us listen to this.",
+            "Dave Jensen is a big car knower.",
+            "even the rap knowers in this group showed mild approval at best",
+            "Did Yolanda — a highly-regarded music knower — like the Pogues song?"
+          ]
+        }
+      ]
     },
     {
-     "archetype": "The Accreditor",
-     "motif": "certifies knowers · renamed the downvote",
-     "note": "JB maintains the league's system of professional certification, and the title is \"knower\" (×5, five dates, nobody else uses the word). He also renamed the downvote: \"I wish i had three negs\" — and by 8/13 the commissioner was using it too.",
-     "evidence": [
-      "Surprised @Dave Jensen — a well-known musical knower — made us listen to this.",
-      "Dave Jensen is a big car knower.",
-      "even the rap knowers in this group showed mild approval at best",
-      "Did Yolanda — a highly-regarded music knower — like the Pogues song?"
-     ]
+      "player": "Grant",
+      "entries": [
+        {
+          "archetype": "The Flex Auditor",
+          "motif": "20 rulings under his own taxonomy",
+          "note": "Twenty rulings this season on what is and is not a flex: the subtle flex, the tiny flex, the massive flex, the hard flex, the soft flex, the anti flex, the Asian flex, and the load-bearing distinction between \"flex creepy\" and \"plain creepy.\" Audited himself exactly once (\"Wait how is me being alone in Puerto Rico a flex\") — finding rejected.",
+          "token": "flex",
+          "evidence": [
+            "It's not flexing if it's that blatant",
+            "steiny's rare appearance on this chat is a massive flex",
+            "Not chatting in this chat is a flex"
+          ]
+        },
+        {
+          "archetype": "The Muted Correspondent",
+          "motif": "announces the mute, serves it, returns",
+          "note": "Grant does not leave the chat; he announces the mute, serves his sentence, and returns to file. The mute has never once held.",
+          "evidence": [
+            "I've already muted this chat",
+            "I'm muting this chat . Cecelia needs me.",
+            "Guys - mattless chat pls now",
+            "Sorry catching up - are we saying Nolan Ryan got murdered?"
+          ]
+        },
+        {
+          "archetype": "The Abbreviator",
+          "motif": "full words are for people with time",
+          "note": "fk, fking (7 uses on 4 dates), pls, tbh, yday, and \"btw\" thirty-five times — twenty-six as the opening word. Laughs exclusively in \"ahah\" (×10; nobody else laughs this way). Zero edits in 1,235 messages, because correcting yourself is presumably also a flex.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Conor",
+      "entries": [
+        {
+          "archetype": "The Consul",
+          "motif": "one-word rulings · essays on the ballot",
+          "note": "The chat gets one word (six standalone \"Correct\"s on file). The ballot gets the full opinion of the court: 47 written comments in 54 votes, including the season's longest indictment. The brevity was never a limitation. It was rationing.",
+          "evidence": [
+            "This competition is one big joke to you, eh?  A gag for you to poop on?  The rest of us put thought into this, effort."
+          ]
+        },
+        {
+          "archetype": "The Redactor",
+          "motif": "the record, sealed",
+          "note": "Seven messages have been deleted in this chat's entire history. Four of them were Conor's. The court occasionally rules against its own filings.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Distributor",
+          "motif": "104 media shares",
+          "note": "Nearly double the commissioner's 55, on less than a third of the message volume. The Consul does not narrate what he can simply enter into evidence.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Jensen",
+      "entries": [
+        {
+          "archetype": "The Sleeper Cell",
+          "motif": "mild in chat · armed on the ballot",
+          "note": "In the chat: reasonable, measured, a solid citizen. Then the voting window opens. Eighteen written comments, no survivors.",
+          "evidence": [
+            "This song is difficult but not impossible to masturbate to",
+            "This is the song I'm going to listen to as I slowly make love to your wives and boyfriends",
+            "If you love this song, wait till you hear the Chicken Dance"
+          ]
+        },
+        {
+          "archetype": "The Rember",
+          "motif": "four dates. four.",
+          "note": "\"rember\" — four times, on four separate dates, across the whole season, league-exclusive. Not a typo; an orthographic position. Nobody has corrected him. We suspect fear.",
+          "token": "rember",
+          "evidence": []
+        },
+        {
+          "archetype": "The Assumer",
+          "motif": "conclusions arrive pre-formed",
+          "note": "Opens with \"I assumed\" on four separate dates, and files the single syllable \"Ha\" as a complete, closed review (×15). Not \"haha.\" One Ha. The matter is settled.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Shane",
+      "entries": [
+        {
+          "archetype": "The Gavel",
+          "motif": "45 votes · two written comments",
+          "note": "Total written commentary for the season: two entries. One reads \"Still played out.\" The other, in full, below. Chat corroborates: 'Shameful.' 'Horrible.' 'Smart.' 'Toledo.'",
+          "spotlight": {
+            "text": "Asshole",
+            "caption": "his complete written output for an entire round of voting"
+          },
+          "evidence": []
+        },
+        {
+          "archetype": "The Semaphore",
+          "motif": "a complete signaling system",
+          "note": "Ten messages this season consisting of a single emoji — 🤙, 🥊, ⏰, 🥰 — from a man who has used an exclamation point once in 511 messages.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Early Bird",
+          "motif": "submits ~80 hours before deadline",
+          "note": "League-leading average across every round. The same man who proposed Boner Jamz on day three and then worried his own submission \"might kill the vibe in an actual boner jam situation.\" The gavel does not deliberate.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Jimmy",
+      "entries": [
+        {
+          "archetype": "The Chaperone",
+          "motif": "designated encourager",
+          "note": "Ballot comments in this league are a combat sport, except for one man moving through the carnage saying \"Very creative!\" and \"Good job.\" His most-quoted review is preserved here exactly as filed.",
+          "spotlight": {
+            "text": "A fresh of breath air!",
+            "caption": "filed r145, uncorrected, perfect"
+          },
+          "evidence": []
+        },
+        {
+          "archetype": "The Asterisk",
+          "motif": "corrections, the honorable way",
+          "note": "Will not touch the edit button (zero edits all season, unlike some Editors). Errors are corrected by follow-up asterisk: *Conor · *Entered · *retard. The record stands, annotated.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Ratifier",
+          "motif": "thirteen ritual affirmatives",
+          "note": "Opens with \"Yes\" more than anyone in the league, and extends the courtesy even to doomed motions: \"But I also have no problem w breastfeeding beats.\"",
+          "token": "Yes",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Steiny",
+      "entries": [
+        {
+          "archetype": "The Auditor General",
+          "motif": "the ballots arrive with the math shown",
+          "note": "Rarest presence in the chat (252 messages; per the Flex Auditor, \"steiny's rare appearance on this chat is a massive flex\") — but the ballots show their work. He keeps the league's records too: \"'I'm trying to beat steiny' duly noted.\"",
+          "evidence": [
+            "this wouldn't sound out of place on sesame street (-1) save for lyrics about trying to bang your cousin (+3). clever pick"
+          ]
+        },
+        {
+          "archetype": "The Standards Body",
+          "motif": "theme-eligibility pedant",
+          "note": "The league's standing authority on what qualifies, author of the ruling \"Booty is not genitalia,\" and of the necessary follow-up inquiry \"Which track is booty man? Bone down, boner, or genitalia.\" Also coined \"chopped unc\" — the standards body occasionally legislates new language.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Surveyor",
+          "motif": "an ongoing height census",
+          "note": "League-exclusive holder of the word \"hunchback,\" deployed in a project to re-rank the league by stature: \"Once I resolve this hunchback Shane will officially be the shortest boarz member.\" Two data points and a posture.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Darren",
+      "entries": [
+        {
+          "archetype": "The Correspondent",
+          "motif": "72 chat messages · 31 written reviews",
+          "note": "Functionally a missing person in the chat, but the votes come with a syndicated critic's column, filed from wherever he is.",
+          "evidence": [
+            "This is not a song.",
+            "I fuck with this hard.",
+            "It started off great... then he opened his mouth.",
+            "This feels like you're phoning it in. I really wanted to give it a -1 but I have already hit my quota."
+          ]
+        },
+        {
+          "archetype": "For Fuck's Sake",
+          "motif": "the complete discography",
+          "note": "His entire recurring spoken-word catalog, in full: \"for fuck's sake,\" four times. That is the whole discography. Critics call it focused.",
+          "token": "for fuck's sake",
+          "evidence": []
+        },
+        {
+          "archetype": "The Apparition",
+          "motif": "a third of the man appears after dark",
+          "note": "Of his 72 messages, 23 arrive in the 10 PM hour — opening with \"Ahhhh\" (×3), \"Whoops,\" or \"Sorry,\" and gone by midnight.",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "player": "Clements",
+      "entries": [
+        {
+          "archetype": "The Fire Guy",
+          "motif": "empathy, monitored",
+          "note": "The league's early-warning system — first to ask about the Hawk fire, first with the evacuation follow-ups, first to flag unsafe barefoot dancing. JB's expert testimony: \"It's what happens when you're a father of two. Empathic abilities grow.\"",
+          "evidence": [
+            "JB- you worries about this Hawk fire near Reno?",
+            "That seems unsafe"
+          ]
+        },
+        {
+          "archetype": "The Rooster",
+          "motif": "dawn patrol",
+          "note": "55 messages before 8 AM — one in every eight things he says, said before the league is conscious, some at 3 and 4 AM. The correlation with an 8 lb 13 oz coinage named Sebastian James is left to the reader.",
+          "evidence": []
+        },
+        {
+          "archetype": "The Double-N",
+          "motif": "one extra letter, three separate dates",
+          "note": "Three times, Clements has awarded the league's most economical speaker an additional N. One more letter, for the man who wouldn't spend a second word.",
+          "evidence": [
+            "That's a good point Connor",
+            "Connor with -6",
+            "Sorry for the news Connor"
+          ]
+        }
+      ]
     }
-   ]
-  },
-  {
-   "player": "Grant",
-   "entries": [
-    {
-     "archetype": "The Flex Auditor",
-     "motif": "20 rulings under his own taxonomy",
-     "note": "Twenty rulings this season on what is and is not a flex: the subtle flex, the tiny flex, the massive flex, the hard flex, the soft flex, the anti flex, the Asian flex, and the load-bearing distinction between \"flex creepy\" and \"plain creepy.\" Audited himself exactly once (\"Wait how is me being alone in Puerto Rico a flex\") — finding rejected.",
-     "token": "flex",
-     "evidence": [
-      "It's not flexing if it's that blatant",
-      "steiny's rare appearance on this chat is a massive flex",
-      "Not chatting in this chat is a flex"
-     ]
-    },
-    {
-     "archetype": "The Muted Correspondent",
-     "motif": "announces the mute, serves it, returns",
-     "note": "Grant does not leave the chat; he announces the mute, serves his sentence, and returns to file. The mute has never once held.",
-     "evidence": [
-      "I've already muted this chat",
-      "I'm muting this chat . Cecelia needs me.",
-      "Guys - mattless chat pls now",
-      "Sorry catching up - are we saying Nolan Ryan got murdered?"
-     ]
-    },
-    {
-     "archetype": "The Abbreviator",
-     "motif": "full words are for people with time",
-     "note": "fk, fking (7 uses on 4 dates), pls, tbh, yday, and \"btw\" thirty-five times — twenty-six as the opening word. Laughs exclusively in \"ahah\" (×10; nobody else laughs this way). Zero edits in 1,235 messages, because correcting yourself is presumably also a flex.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Conor",
-   "entries": [
-    {
-     "archetype": "The Consul",
-     "motif": "one-word rulings · essays on the ballot",
-     "note": "The chat gets one word (six standalone \"Correct\"s on file). The ballot gets the full opinion of the court: 47 written comments in 54 votes, including the season's longest indictment. The brevity was never a limitation. It was rationing.",
-     "evidence": [
-      "This competition is one big joke to you, eh?  A gag for you to poop on?  The rest of us put thought into this, effort."
-     ]
-    },
-    {
-     "archetype": "The Redactor",
-     "motif": "the record, sealed",
-     "note": "Seven messages have been deleted in this chat's entire history. Four of them were Conor's. The court occasionally rules against its own filings.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Distributor",
-     "motif": "104 media shares",
-     "note": "Nearly double the commissioner's 55, on less than a third of the message volume. The Consul does not narrate what he can simply enter into evidence.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Jensen",
-   "entries": [
-    {
-     "archetype": "The Sleeper Cell",
-     "motif": "mild in chat · armed on the ballot",
-     "note": "In the chat: reasonable, measured, a solid citizen. Then the voting window opens. Eighteen written comments, no survivors.",
-     "evidence": [
-      "This song is difficult but not impossible to masturbate to",
-      "This is the song I'm going to listen to as I slowly make love to your wives and boyfriends",
-      "If you love this song, wait till you hear the Chicken Dance"
-     ]
-    },
-    {
-     "archetype": "The Rember",
-     "motif": "four dates. four.",
-     "note": "\"rember\" — four times, on four separate dates, across the whole season, league-exclusive. Not a typo; an orthographic position. Nobody has corrected him. We suspect fear.",
-     "token": "rember",
-     "evidence": []
-    },
-    {
-     "archetype": "The Assumer",
-     "motif": "conclusions arrive pre-formed",
-     "note": "Opens with \"I assumed\" on four separate dates, and files the single syllable \"Ha\" as a complete, closed review (×15). Not \"haha.\" One Ha. The matter is settled.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Shane",
-   "entries": [
-    {
-     "archetype": "The Gavel",
-     "motif": "45 votes · two written comments",
-     "note": "Total written commentary for the season: two entries. One reads \"Still played out.\" The other, in full, below. Chat corroborates: 'Shameful.' 'Horrible.' 'Smart.' 'Toledo.'",
-     "spotlight": {
-      "text": "Asshole",
-      "caption": "his complete written output for an entire round of voting"
-     },
-     "evidence": []
-    },
-    {
-     "archetype": "The Semaphore",
-     "motif": "a complete signaling system",
-     "note": "Ten messages this season consisting of a single emoji — 🤙, 🥊, ⏰, 🥰 — from a man who has used an exclamation point once in 511 messages.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Early Bird",
-     "motif": "submits ~80 hours before deadline",
-     "note": "League-leading average across every round. The same man who proposed Boner Jamz on day three and then worried his own submission \"might kill the vibe in an actual boner jam situation.\" The gavel does not deliberate.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Jimmy",
-   "entries": [
-    {
-     "archetype": "The Chaperone",
-     "motif": "designated encourager",
-     "note": "Ballot comments in this league are a combat sport, except for one man moving through the carnage saying \"Very creative!\" and \"Good job.\" His most-quoted review is preserved here exactly as filed.",
-     "spotlight": {
-      "text": "A fresh of breath air!",
-      "caption": "filed r145, uncorrected, perfect"
-     },
-     "evidence": []
-    },
-    {
-     "archetype": "The Asterisk",
-     "motif": "corrections, the honorable way",
-     "note": "Will not touch the edit button (zero edits all season, unlike some Editors). Errors are corrected by follow-up asterisk: *Conor · *Entered · *retard. The record stands, annotated.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Ratifier",
-     "motif": "thirteen ritual affirmatives",
-     "note": "Opens with \"Yes\" more than anyone in the league, and extends the courtesy even to doomed motions: \"But I also have no problem w breastfeeding beats.\"",
-     "token": "Yes",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Steiny",
-   "entries": [
-    {
-     "archetype": "The Auditor General",
-     "motif": "the ballots arrive with the math shown",
-     "note": "Rarest presence in the chat (252 messages; per the Flex Auditor, \"steiny's rare appearance on this chat is a massive flex\") — but the ballots show their work. He keeps the league's records too: \"'I'm trying to beat steiny' duly noted.\"",
-     "evidence": [
-      "this wouldn't sound out of place on sesame street (-1) save for lyrics about trying to bang your cousin (+3). clever pick"
-     ]
-    },
-    {
-     "archetype": "The Standards Body",
-     "motif": "theme-eligibility pedant",
-     "note": "The league's standing authority on what qualifies, author of the ruling \"Booty is not genitalia,\" and of the necessary follow-up inquiry \"Which track is booty man? Bone down, boner, or genitalia.\" Also coined \"chopped unc\" — the standards body occasionally legislates new language.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Surveyor",
-     "motif": "an ongoing height census",
-     "note": "League-exclusive holder of the word \"hunchback,\" deployed in a project to re-rank the league by stature: \"Once I resolve this hunchback Shane will officially be the shortest boarz member.\" Two data points and a posture.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Darren",
-   "entries": [
-    {
-     "archetype": "The Correspondent",
-     "motif": "72 chat messages · 31 written reviews",
-     "note": "Functionally a missing person in the chat, but the votes come with a syndicated critic's column, filed from wherever he is.",
-     "evidence": [
-      "This is not a song.",
-      "I fuck with this hard.",
-      "It started off great... then he opened his mouth.",
-      "This feels like you're phoning it in. I really wanted to give it a -1 but I have already hit my quota."
-     ]
-    },
-    {
-     "archetype": "For Fuck's Sake",
-     "motif": "the complete discography",
-     "note": "His entire recurring spoken-word catalog, in full: \"for fuck's sake,\" four times. That is the whole discography. Critics call it focused.",
-     "token": "for fuck's sake",
-     "evidence": []
-    },
-    {
-     "archetype": "The Apparition",
-     "motif": "a third of the man appears after dark",
-     "note": "Of his 72 messages, 23 arrive in the 10 PM hour — opening with \"Ahhhh\" (×3), \"Whoops,\" or \"Sorry,\" and gone by midnight.",
-     "evidence": []
-    }
-   ]
-  },
-  {
-   "player": "Clements",
-   "entries": [
-    {
-     "archetype": "The Fire Guy",
-     "motif": "empathy, monitored",
-     "note": "The league's early-warning system — first to ask about the Hawk fire, first with the evacuation follow-ups, first to flag unsafe barefoot dancing. JB's expert testimony: \"It's what happens when you're a father of two. Empathic abilities grow.\"",
-     "evidence": [
-      "JB- you worries about this Hawk fire near Reno?",
-      "That seems unsafe"
-     ]
-    },
-    {
-     "archetype": "The Rooster",
-     "motif": "dawn patrol",
-     "note": "55 messages before 8 AM — one in every eight things he says, said before the league is conscious, some at 3 and 4 AM. The correlation with an 8 lb 13 oz coinage named Sebastian James is left to the reader.",
-     "evidence": []
-    },
-    {
-     "archetype": "The Double-N",
-     "motif": "one extra letter, three separate dates",
-     "note": "Three times, Clements has awarded the league's most economical speaker an additional N. One more letter, for the man who wouldn't spend a second word.",
-     "evidence": [
-      "That's a good point Connor",
-      "Connor with -6",
-      "Sorry for the news Connor"
-     ]
-    }
-   ]
+  ],
+  "seasonReview": {
+    "intro": "Six rounds are in the books, and the honest way to review them is through the league's one governing concept. A carrot box, per the Glossary, is a trick played on someone because they are stupid. The term arrived July 27th by way of a very old viral video; by July 30th it was a verb; by August 17th it was being applied to other people's marriages. What follows is the season so far, read as a sequence of carrot boxes — attempted, landed, confessed, and imagined.",
+    "rounds": [
+      {
+        "num": 1,
+        "name": "I Heard It Through the Napster",
+        "winner": "Darren Pallets",
+        "song": "Do You Know Him?",
+        "artists": "Rise",
+        "pts": 11,
+        "note": "Won before the league had a vocabulary for deception. Darren took the opener quietly and has said almost nothing since, which the standings suggest is a strategy. Conor finished at minus four — a number that requires people to spend their downvotes on you personally, and they did."
+      },
+      {
+        "num": 2,
+        "name": "¡No Entiendo, Cabron!",
+        "winner": "Matt Mariani",
+        "song": "Pays imaginaire",
+        "artists": "Polo & Pan",
+        "pts": 14,
+        "note": "Matt won the round about not understanding the words. Conor went last again — Con Te Partirò, minus two — and mid-round Matt shared an old British game-show clip and gave the league its word. The round mattered less than the vocabulary it produced."
+      },
+      {
+        "num": 3,
+        "name": "Boner Jamz",
+        "winner": "Grant Koziol",
+        "song": "These Arms of Mine",
+        "artists": "Otis Redding",
+        "pts": 11,
+        "note": "Grant won by playing it straight with Otis Redding while everyone else studied angles. The angle that mattered: Matt announced 'Booty Man' in the open — 'too damn excited to play carrot box with something this good' — and Booty Man duly appeared on the playlist under Jimmy's name, where it scored zero. Jimmy asked what carrot boxing means the day after submissions closed. The system works."
+      },
+      {
+        "num": 4,
+        "name": "I Hope You Shit Your Pants at Target",
+        "winner": "Jon Black",
+        "song": "Radio",
+        "artists": "Alkaline Trio",
+        "pts": 13,
+        "note": "Jon Black took the Target round with Alkaline Trio. Matt finished last at zero with a diss track, the same week his own chat log reads 'you carrot boxing sunuva' and 'goddamn carrot box' — which is what it sounds like when the coiner gets boxed with his own tool."
+      },
+      {
+        "num": 5,
+        "name": "Smells Like Teen Cousin Fuckers",
+        "winner": "Jon Black",
+        "song": "Waiting Around To Die",
+        "artists": "The Be Good Tanyas",
+        "pts": 15,
+        "note": "The season's high-water mark — Jon Black again, fifteen points, back-to-back wins. But the round belongs to Conor's confession: Rusty Cage, by Johnny Cash, seven points, followed by 'Of course I submitted Johnny Cash. Muawahhahahahahaaaaa' and the claim that he misspelled his own name to throw everyone off the scent. A carrot box announced afterwards is just a submission, but the record reflects his position."
+      },
+      {
+        "num": 6,
+        "name": "Surrender Monkeys",
+        "winner": "Jimmy",
+        "song": "Firecracker",
+        "artists": "Strung Out",
+        "pts": 10,
+        "note": "Jimmy — zero points on Booty Man three weeks earlier — won Surrender Monkeys outright. The league's first documented redemption arc. Shane's Fortunate Son took the zero this time, and nobody has yet claimed it was on purpose."
+      }
+    ],
+    "log": [
+      {
+        "date": "Jul 27",
+        "label": "the origin",
+        "speaker": "Matt",
+        "text": "You ever see the British carrot in a box game? Viral video related to this"
+      },
+      {
+        "date": "Jul 28",
+        "label": "first contact",
+        "speaker": "Conor",
+        "text": "Is there a carrot in this box?"
+      },
+      {
+        "date": "Jul 30",
+        "label": "first use as a verb",
+        "speaker": "Matt",
+        "text": "Worried he's carrot boxing me though"
+      },
+      {
+        "date": "Jul 30",
+        "label": "the meta arrives within minutes",
+        "speaker": "Steiny",
+        "text": "He's trying to trick you by reverse carrot boxing"
+      },
+      {
+        "date": "Aug 2",
+        "label": "the telegraph",
+        "speaker": "Matt",
+        "text": "I wouldn't normally telegraph my intentions, but I'm just too damn excited to play carrot box with something this good, 'Booty Man' for record of the season!"
+      },
+      {
+        "date": "Aug 5",
+        "label": "one day after submissions closed",
+        "speaker": "Jimmy",
+        "text": "What does carrot boxing mean?"
+      },
+      {
+        "date": "Aug 17",
+        "label": "escapes containment",
+        "speaker": "Matt",
+        "text": "Conor really carrot boxed Sarah during the August cat situation"
+      },
+      {
+        "date": "Aug 19",
+        "label": "the confession",
+        "speaker": "Conor",
+        "text": "Carrotbox, muthafuckas! Did you see I spelled my own name wrong to throw you off the scent?"
+      }
+    ],
+    "standings": [
+      [
+        "Jon Black",
+        56
+      ],
+      [
+        "Darren Pallets",
+        51
+      ],
+      [
+        "Matt Mariani",
+        41
+      ],
+      [
+        "Clements Johnson",
+        35
+      ],
+      [
+        "Dave Jensen",
+        33
+      ],
+      [
+        "Shane Farkas",
+        30
+      ],
+      [
+        "Grant Koziol",
+        25
+      ],
+      [
+        "Dave Steingart",
+        25
+      ],
+      [
+        "Jimmy",
+        25
+      ],
+      [
+        "Conor Johnston",
+        12
+      ]
+    ],
+    "outro": "Jon Black leads on fifty-six without once claiming a carrot box, which is either integrity or the best one anybody has run all season. Conor sits last on twelve and maintains the losses are the plan. There is no way to disprove this, and that is the whole genius of the box."
   }
- ]
 }
