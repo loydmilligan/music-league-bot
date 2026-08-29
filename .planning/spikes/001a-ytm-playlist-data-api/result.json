@@ -1,0 +1,41 @@
+{
+  "playlistId": "PLHf4lRzTsx0A",
+  "youtube": "https://www.youtube.com/playlist?list=PLHf4lRzTsx0A",
+  "youtubeMusic": "https://music.youtube.com/playlist?list=PLHf4lRzTsx0A",
+  "quotaUsed": 200,
+  "durationMs": 2944,
+  "log": [
+    {
+      "ts": "2026-08-29T22:45:05.657Z",
+      "tag": "auth",
+      "ok": true,
+      "scope": "https://www.googleapis.com/auth/youtube",
+      "expires_in": 3599
+    },
+    {
+      "ts": "2026-08-29T22:45:06.316Z",
+      "tag": "playlist.created",
+      "id": "PLHf4lRzTsx0A",
+      "title": "SPIKE 001a — Boarz YTM test (delete me)",
+      "privacy": "unlisted"
+    },
+    {
+      "ts": "2026-08-29T22:45:06.919Z",
+      "tag": "item.inserted",
+      "videoId": "w-l5FyA3pgo",
+      "position": 0
+    },
+    {
+      "ts": "2026-08-29T22:45:07.687Z",
+      "tag": "item.inserted",
+      "videoId": "dQw4w9WgXcQ",
+      "position": 1
+    },
+    {
+      "ts": "2026-08-29T22:45:08.333Z",
+      "tag": "item.inserted",
+      "videoId": "hTWKbfoikeg",
+      "position": 2
+    }
+  ]
+}

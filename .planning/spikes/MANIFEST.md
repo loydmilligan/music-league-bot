@@ -16,8 +16,8 @@ Decisions made during decomposition (2026-08-29, approved by Matt):
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
-| 001a | ytm-playlist-data-api | comparison | Given Matt's OAuth (new refresh token, youtube scope), when we create a playlist + insert videos via YouTube Data API v3, then a playlist exists that is visible/playable in YouTube Music | PENDING | youtube, oauth, playlist |
-| 001b | ytm-playlist-ytmusicapi | comparison | Same, via ytmusicapi (Python) — only if 001a fails or quota-blocks | PENDING | youtube, ytmusicapi, playlist |
+| 001a | ytm-playlist-data-api | comparison | Given Matt's OAuth (new refresh token, youtube scope), when we create a playlist + insert videos via YouTube Data API v3, then a playlist exists that is visible/playable in YouTube Music | VALIDATED ✓ | youtube, oauth, playlist |
+| 001b | ytm-playlist-ytmusicapi | comparison | Same, via ytmusicapi (Python) — only if 001a fails or quota-blocks | SKIPPED (001a won) | youtube, ytmusicapi, playlist |
 | 002a | ytm-link-songlink | comparison | Given a round's Spotify track ids, when resolved via Songlink/Odesli, then ≥80% yield YTM video ids (and the 0-for-10 cache failure is explained) | PENDING | songlink, resolver |
 | 002b | ytm-link-ytmusicapi-search | comparison | Same, via ytmusicapi search on title+artist | PENDING | ytmusicapi, resolver |
 | 003 | ytm-trigger-send | standard | Given a completed round playlist, when the round trigger fires, then the YTM link posts to the TEST group only | PENDING | whatsapp, trigger |
