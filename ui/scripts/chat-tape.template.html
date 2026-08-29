@@ -239,7 +239,24 @@ const VIEWS = {
   seasonReview(){
     const sr = TAPE.editorial.seasonReview;
     const max = sr.standings[0][1];
+    // The definition lives in the Glossary — borrow it here rather than fork it.
+    const g = (TAPE.editorial.glossary||[]).find(x=>x.term==='carrot box');
+    const defCard = g?`<div class="gl" style="margin-bottom:20px">
+      <div><div class="gterm">${esc(g.term)}</div><div class="gpron">${esc(g.pronunciation||'')} &nbsp;<span class="gpos">${esc(g.part_of_speech||'')}</span></div></div>
+      <div class="mono" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ember)">TL;DR — to trick someone, because they are stupid</div>
+      <div class="gdef">${esc((g.definition||'').trim())}</div>
+      ${g.source?`<a href="${esc(g.source)}" target="_blank" rel="noopener" class="mono" style="font-size:11px">Watch the origin video ▸ <span style="color:var(--fg-quiet)">(you will be underwhelmed)</span></a>`:''}
+    </div>`:'';
+    const boxCards = (sr.boxes&&sr.boxes.length)?`<div class="sub" style="margin-bottom:8px">The documented boxes</div>
+    <div class="stack" style="margin-bottom:20px">${sr.boxes.map(b=>`<div class="card acc-ember" style="display:flex;flex-direction:column;gap:7px">
+      <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)">${esc(b.when)}</div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--fg)">${esc(b.title)}</div>
+      <div style="font-size:13px;line-height:1.55;color:var(--fg-2)">${esc(b.play)}</div>
+      ${(b.evidence||[]).map(q=>`<div class="quote acc-ember">${esc(q)}</div>`).join('')}
+      <div class="mono" style="font-size:10.5px;color:var(--amber)">VERDICT — ${esc(b.verdict)}</div></div>`).join('')}</div>`:'';
     return `<p class="lead">${esc(sr.intro)}</p>
+    ${defCard}
+    ${boxCards}
     <div class="sub" style="margin-bottom:8px">Six rounds, reviewed</div>
     <div class="stack" style="margin-bottom:20px">${sr.rounds.map(r=>`<div class="card acc-ember" style="display:flex;flex-direction:column;gap:6px">
       <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)">R${r.num} · ${esc(r.name)}</div>

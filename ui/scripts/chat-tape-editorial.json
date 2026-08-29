@@ -674,7 +674,66 @@
         12
       ]
     ],
-    "outro": "Jon Black leads on fifty-six without once claiming a carrot box, which is either integrity or the best one anybody has run all season. Conor sits last on twelve and maintains the losses are the plan. There is no way to disprove this, and that is the whole genius of the box."
+    "outro": "Jon Black leads on fifty-six without once claiming a carrot box, which is either integrity or the best one anybody has run all season. Conor sits last on twelve and maintains the losses are the plan. There is no way to disprove this, and that is the whole genius of the box.",
+    "boxes": [
+      {
+        "title": "The Shawshank Suspicion",
+        "when": "R2 · Jul 30",
+        "play": "Conor's Con Te Partirò arrived wearing a Shawshank quote, and Matt — at a self-declared 10% certainty — smelled a trap. This is the first recorded use of the verb: a box suspected before anyone had actually run one.",
+        "verdict": "Not a box. Per Jensen: 'Used the quote and botched the song.'",
+        "evidence": [
+          "Matt: Worried he's carrot boxing me though",
+          "Steiny: I don't know what that means"
+        ]
+      },
+      {
+        "title": "Steiny's Tequila Claim",
+        "when": "R2 · Jul 31",
+        "play": "Steiny verbally claimed Tequila — actually Jimmy's submission — and let Matt carry the belief through the reveal.",
+        "verdict": "Landed. The season's first confirmed box.",
+        "evidence": [
+          "Matt: I'm pretty sure steiny carrot boxed the fuck outta me",
+          "Matt: Steiny didn't you claim tequila at one point"
+        ]
+      },
+      {
+        "title": "The Booty Man Gambit",
+        "when": "R3 · Aug 2",
+        "play": "Matt announced he was 'too damn excited to play carrot box' with Booty Man — 'record of the season!' — then asked, seven minutes later, which one of y'all is bootyman. The song was Jimmy's. It scored zero, and Jimmy defended it daily for the following week, which answered the question.",
+        "verdict": "Unclear who boxed whom. The song lost either way.",
+        "evidence": [
+          "Jimmy, Aug 5: Wide range of genres on this one. Booty Man was clearly the best song on so many levels.",
+          "Jon, Aug 26: You also submitted Tequila and Booty Man. They didn't help your late start."
+        ]
+      },
+      {
+        "title": "The No-Comment Tip",
+        "when": "R5",
+        "play": "Steiny told Matt he hadn't left a submission comment. His submission — Pedestrian at Best — carried a visible comment the whole time. Matt, working from the tip, spent his Steiny guess on the round's actually comment-less song: Shane's Cousin Dupree.",
+        "verdict": "Landed. Cost Matt a guess on the signed ballot. Steiny's second.",
+        "evidence": [
+          "Matt's ballot: Steiny revealed he did not leave a comment - this my best guess with that info"
+        ]
+      },
+      {
+        "title": "The Rusty Cage Signature",
+        "when": "R5 · Aug 19",
+        "play": "Conor's own submission comment: 'Surprised Connor didn't beat me to this (Soundgarden cover fyi)' — himself, in the third person, wearing the league's favorite misspelling of his name as a disguise.",
+        "verdict": "Confessed and celebrated. Seven points.",
+        "evidence": [
+          "Conor: Carrotbox, muthafuckas! Did you see I spelled my own name wrong to throw you off the scent?"
+        ]
+      },
+      {
+        "title": "The Sincerely-Conner Frame",
+        "when": "R6",
+        "play": "Jimmy signed his Firecracker submission comment 'sincerely, Conner.' — a false flag using the house misspelling, planted on the man the league already guesses by default. The song won the round.",
+        "verdict": "The only documented box attached to a round win.",
+        "evidence": [
+          "Submission comment: This anti-war song happens to be the best opening track ever which happens to be on the best album of all time… sincerely, Conner."
+        ]
+      }
+    ]
   },
   "guessLedger": {
     "intro": "The league submits anonymously, which makes every playlist a whodunnit and every ballot a chance to be wrong in writing. In August Matt started signing his guesses — a name on every vote — and the comments became a ledger. Scored here against the reveal.",
