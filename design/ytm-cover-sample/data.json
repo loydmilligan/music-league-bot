@@ -1,0 +1,120 @@
+{
+  "note": "REAL round data for the worked example in ytm-cover-brief.md §5. Submitters/scores intentionally absent — not available at send time.",
+  "league": {
+    "name": "Boarz II Men",
+    "season": 1,
+    "players": 10,
+    "playerColors": {
+      "Matt": "#ff5b2e",
+      "Jon Black": "#5aa3ff",
+      "Conor": "#e6566c",
+      "Grant": "#3ec27a",
+      "Jensen": "#5aa3ff",
+      "Shane": "#e8a83a",
+      "Clements": "#3ec27a",
+      "Jimmy": "#8b97a4",
+      "Steiny": "#e8a83a",
+      "Darren": "#5a6773"
+    }
+  },
+  "round": {
+    "number": 4,
+    "name": "I Hope You Shit Your Pants at Target",
+    "theme": "Songs that make it clear—I don't like you.\n\nTheme submitted by cjWookie",
+    "trackCount": 10,
+    "totalRuntimeSec": 2003,
+    "ytmUrl": "https://music.youtube.com/playlist?list=PLHKiA_BwFvKQ"
+  },
+  "songs": [
+    {
+      "title": "You Oughta Know",
+      "artists": "Alanis Morissette",
+      "album": "Jagged Little Pill",
+      "year": 1995,
+      "durationSec": 249,
+      "albumArt": "art/you-oughta-know.jpg",
+      "ytThumb": "yt/you-oughta-know.jpg"
+    },
+    {
+      "title": "Radio",
+      "artists": "Alkaline Trio",
+      "album": "Maybe I'll Catch Fire",
+      "year": 2000,
+      "durationSec": 281,
+      "albumArt": "art/radio.jpg",
+      "ytThumb": "yt/radio.jpg"
+    },
+    {
+      "title": "Cage",
+      "artists": "Sallie Ford & The Sound Outside",
+      "album": "Dirty Radio",
+      "year": 2011,
+      "durationSec": 157,
+      "albumArt": "art/cage.jpg",
+      "ytThumb": "yt/cage.jpg"
+    },
+    {
+      "title": "The Story of Adidon",
+      "artists": "Pusha",
+      "album": "The Story of Adidon",
+      "year": 2023,
+      "durationSec": 146,
+      "albumArt": "art/the-story-of-adidon.jpg",
+      "ytThumb": "yt/the-story-of-adidon.jpg"
+    },
+    {
+      "title": "Positively 4th Street",
+      "artists": "Bob Dylan",
+      "album": "The Very Best Of",
+      "year": 2024,
+      "durationSec": 235,
+      "albumArt": "art/positively-4th-street.jpg",
+      "ytThumb": "yt/positively-4th-street.jpg"
+    },
+    {
+      "title": "Dog Shit (feat. Ol' Dirty Bastard, RZA & Method Man)",
+      "artists": "Wu-Tang Clan, Ol' Dirty Bastard, RZA, Method Man",
+      "album": "Wu-Tang Forever",
+      "year": 1997,
+      "durationSec": 215,
+      "albumArt": "art/dog-shit-feat-ol-dirty-bastard-rza-metho.jpg",
+      "ytThumb": "yt/dog-shit-feat-ol-dirty-bastard-rza-metho.jpg"
+    },
+    {
+      "title": "Fuck You Bitch",
+      "artists": "Wheeler Walker Jr.",
+      "album": "Redneck Shit",
+      "year": 2016,
+      "durationSec": 203,
+      "albumArt": "art/fuck-you-bitch.jpg",
+      "ytThumb": "yt/fuck-you-bitch.jpg"
+    },
+    {
+      "title": "Die, Die My Darling",
+      "artists": "Misfits",
+      "album": "Collection",
+      "year": 1986,
+      "durationSec": 190,
+      "albumArt": "art/die-die-my-darling.jpg",
+      "ytThumb": "yt/die-die-my-darling.jpg"
+    },
+    {
+      "title": "No Children",
+      "artists": "The Mountain Goats",
+      "album": "Tallahassee",
+      "year": 2003,
+      "durationSec": 168,
+      "albumArt": "art/no-children.jpg",
+      "ytThumb": "yt/no-children.jpg"
+    },
+    {
+      "title": "Wind in Your Sail",
+      "artists": "Lagwagon",
+      "album": "Let's Talk About Leftovers",
+      "year": 2000,
+      "durationSec": 159,
+      "albumArt": "art/wind-in-your-sail.jpg",
+      "ytThumb": "yt/wind-in-your-sail.jpg"
+    }
+  ]
+}
