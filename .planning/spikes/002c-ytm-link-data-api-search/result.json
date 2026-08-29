@@ -1,249 +1,250 @@
 {
   "round": {
-    "id": 149,
-    "name": "Surrender Monkeys"
+    "id": 147,
+    "name": "I Hope You Shit Your Pants at Target"
   },
   "tracks": 10,
-  "scoreGte60": 10,
-  "hitRate": 1,
+  "scoreGte60": 9,
+  "hitRate": 0.9,
   "quotaUsed": 1000,
   "rows": [
     {
-      "query": "B.Y.O.B. System Of A Down",
-      "spotify_uri": "spotify:track:0EYOdF5FCkgOJJla8DI2Md",
+      "query": "You Oughta Know Alanis Morissette",
+      "spotify_uri": "spotify:track:0Dw9z44gXhplDh5HCWZIxP",
       "top": {
-        "videoId": "zUzd9KyIDrM",
-        "title": "System Of A Down - B.Y.O.B. (Official HD Video)",
-        "channel": "systemofadownVEVO",
+        "videoId": "NPcyTyilmYY",
+        "title": "Alanis Morissette - You Oughta Know (Official 4K Music Video)",
+        "channel": "Alanis Morissette",
         "score": 1
       },
       "alternates": [
         {
-          "videoId": "6pwSgOK22U4",
-          "title": "System Of A Down - B.Y.O.B / Lyrics",
-          "channel": "riot wav",
+          "videoId": "daR1a1jPfK8",
+          "title": "You Oughta Know",
+          "channel": "Alanis Morissette - Topic",
           "score": 1
         },
         {
-          "videoId": "w00v2zVkX9g",
-          "title": "System Of A Down - B.Y.O.B. live (HD/DVD Quality)",
-          "channel": "ObeyYourSysteM",
+          "videoId": "LuzCwXB4AJQ",
+          "title": "Alanis Morissette - You Oughta Know (lyrics) [HD]",
+          "channel": "RSMJ",
           "score": 1
         }
       ]
     },
     {
-      "query": "And The Band Played Waltzing Matilda The Pogues",
-      "spotify_uri": "spotify:track:1O2SlAUcjIoFFt9vpI3P1i",
+      "query": "Radio Alkaline Trio",
+      "spotify_uri": "spotify:track:0YJvSDPuh3MmmpHkvMFJc5",
       "top": {
-        "videoId": "PKURhqmSLmM",
-        "title": "And The Band Played Waltzing Matilda",
-        "channel": "The Pogues - Topic",
+        "videoId": "QUV-WqhuihM",
+        "title": "Alkaline Trio - Radio",
+        "channel": "David Sarasin",
         "score": 1
       },
       "alternates": [
         {
-          "videoId": "gsXEGvX_ksI",
-          "title": "And The Band Played Waltzing Matilda - The Pogues, 1985",
-          "channel": "CR's Video Vaults",
+          "videoId": "0V0tXkYY_ho",
+          "title": "Alkaline Trio - Radio Live Legendado (LK) HD",
+          "channel": "Luki Soares",
           "score": 1
         },
         {
-          "videoId": "TThjY_qlEfg",
-          "title": "The Pogues - The Band Played Waltzing Matilda",
-          "channel": "TheLightningMan",
+          "videoId": "9V0l_PLQ448",
+          "title": "Alkaline Trio-Radio Lyrics",
+          "channel": "yankees9868",
           "score": 1
         }
       ]
     },
     {
-      "query": "Franco Un-American NOFX",
-      "spotify_uri": "spotify:track:1d6aWHZ6VTwZh9qQhsBmap",
+      "query": "Cage Sallie Ford & The Sound Outside",
+      "spotify_uri": "spotify:track:0am9yIkNQxn8UGFIqS9By8",
       "top": {
-        "videoId": "ZSb3nG4oTNQ",
-        "title": "NOFX - Franco Un-American (Official Video)",
-        "channel": "FAT WRECK CHORDS",
+        "videoId": "xouwQVy3wEQ",
+        "title": "Sallie Ford &amp; the Sound Outside - Cage - 5/3/2011 - Wolfgang&#39;s Vault",
+        "channel": "Paste Magazine",
         "score": 1
       },
       "alternates": [
         {
-          "videoId": "1k57HJ0SBEg",
-          "title": "Franco Un-American",
-          "channel": "NOFX - Topic",
-          "score": 1
+          "videoId": "p5QlF5qaLQs",
+          "title": "Sallie Ford - Cage",
+          "channel": "Partisan Records",
+          "score": 0.5
         },
         {
-          "videoId": "jphxuUenkX8",
-          "title": "nofx franco unamerican lyrics",
-          "channel": "FUCKyourFLAGandGOD",
+          "videoId": "7Seyofd8uCg",
+          "title": "Sallie Ford &amp; the Sound Outside | Cage | Take Away",
+          "channel": "Guerrilla Waltz",
           "score": 1
         }
       ]
     },
     {
-      "query": "Firecracker Strung Out",
-      "spotify_uri": "spotify:track:1smjeqxH0eg4koL4TIq9uY",
+      "query": "The Story of Adidon Pusha",
+      "spotify_uri": "spotify:track:1JXXYoQcBbJVnQ1rRXLDP6",
       "top": {
-        "videoId": "7ojj0bgSfp8",
-        "title": "Firecracker",
-        "channel": "Strung Out - Topic",
+        "videoId": "bx1mzA873CM",
+        "title": "The Story Of Adidon",
+        "channel": "Pusha - Topic",
         "score": 1
       },
       "alternates": [
         {
-          "videoId": "DPhzsSJ-B4k",
-          "title": "Strung Out - Firecracker",
-          "channel": "jaymtz78",
+          "videoId": "BAzOhr-v5Cs",
+          "title": "Pusha T&#39;s Diss Crushed Drake&#39;s Adidas Deal &amp; Son Reveal – The Story of Adidon Explained",
+          "channel": "Tech Rap Trends",
           "score": 1
         },
         {
-          "videoId": "sRpCvLpkOX0",
-          "title": "Firecracker",
-          "channel": "Strung Out - Topic",
+          "videoId": "QHo7c8x7wb0",
+          "title": "Pusha T&#39;s &quot;The Story of Adidon&quot; Explained | Song Stories",
+          "channel": "Genius",
           "score": 1
         }
       ]
     },
     {
-      "query": "Bring 'Em Home Bruce Springsteen",
-      "spotify_uri": "spotify:track:20NMvQ7078gahRN511FACT",
+      "query": "Positively 4th Street Bob Dylan",
+      "spotify_uri": "spotify:track:23DUfcqeNvJqgxuahLz9ip",
       "top": {
-        "videoId": "OS5WlDWJlhM",
-        "title": "Bring &#39;Em Home",
-        "channel": "Bruce Springsteen - Topic",
-        "score": 1
-      },
-      "alternates": [
-        {
-          "videoId": "Mv4vW1FGnCQ",
-          "title": "Bruce Springsteen - Bring &#39;Em Home (Live Tour Video)",
-          "channel": "BruceSpringsteenVEVO",
-          "score": 1
-        },
-        {
-          "videoId": "wXUiV6SwOBw",
-          "title": "Bring ‘Em Home - Bruce Springsteen (live on Late Night with Conan O’Brien 2006)",
-          "channel": "Springsteen Recordings",
-          "score": 1
-        }
-      ]
-    },
-    {
-      "query": "Fortunate Son Creedence Clearwater Revival",
-      "spotify_uri": "spotify:track:4BP3uh0hFLFRb5cjsgLqDh",
-      "top": {
-        "videoId": "ZWijx_AgPiA",
-        "title": "Creedence Clearwater Revival - Fortunate Son",
-        "channel": "CCRVEVO",
-        "score": 1
-      },
-      "alternates": [
-        {
-          "videoId": "3RmQTYLD398",
-          "title": "Fortunate Son",
-          "channel": "Creedence Clearwater Revival - Topic",
-          "score": 1
-        },
-        {
-          "videoId": "N7qkQewyubs",
-          "title": "CCR-Fortunate Son.",
-          "channel": "abgreyd",
-          "score": 0.4
-        }
-      ]
-    },
-    {
-      "query": "The 4th Branch Immortal Technique",
-      "spotify_uri": "spotify:track:4RNEfrpALlfQ46hWAamoH7",
-      "top": {
-        "videoId": "2ffxUT7Puf0",
-        "title": "Immortal Technique - The 4th Branch (Lyrics)",
-        "channel": "Raul Gavidia",
-        "score": 1
-      },
-      "alternates": [
-        {
-          "videoId": "C0-kqooyQdg",
-          "title": "Immortal Technique - The 4th Branch",
-          "channel": "inmortaltecnica",
-          "score": 1
-        },
-        {
-          "videoId": "MQbyaVR5VBY",
-          "title": "Immortal Technique - The 4th Branch Lyrics | HD",
-          "channel": "mastersun",
-          "score": 1
-        }
-      ]
-    },
-    {
-      "query": "Chanbara At the Drive-In",
-      "spotify_uri": "spotify:track:5Gh7uZTnZx3bpCyGaY7wpt",
-      "top": {
-        "videoId": "5jIRX3YGXeY",
-        "title": "Chanbara",
-        "channel": "At The Drive-In - Topic",
-        "score": 1
-      },
-      "alternates": [
-        {
-          "videoId": "-RHaql1mab0",
-          "title": "At the Drive-In - &quot;Chanbara&quot; (HD)",
-          "channel": "Thomas Tyson",
-          "score": 1
-        },
-        {
-          "videoId": "8WG1yFW3ht4",
-          "title": "At the Drive-In - Chanbara - Bass Cover",
-          "channel": "Haida",
-          "score": 1
-        }
-      ]
-    },
-    {
-      "query": "Vietnam Blues J.B. Lenoir",
-      "spotify_uri": "spotify:track:5ZpVobfGruhqxatBb3WGVQ",
-      "top": {
-        "videoId": "ne0p9ziIT3o",
-        "title": "Vietnam Blues",
-        "channel": "J.B. Lenoir - Topic",
-        "score": 1
-      },
-      "alternates": [
-        {
-          "videoId": "niBgI9-_338",
-          "title": "JB Lenoir - Vietnam Blues",
-          "channel": "drew pickles",
-          "score": 1
-        },
-        {
-          "videoId": "GMfdMeSfJyA",
-          "title": "J.B. Lenoir - Vietnam Blues",
-          "channel": "Monkey D. Sound",
-          "score": 1
-        }
-      ]
-    },
-    {
-      "query": "Masters of War Bob Dylan",
-      "spotify_uri": "spotify:track:7xVpkVkd1klTzLJEysIR7z",
-      "top": {
-        "videoId": "JEmI_FT4YHU",
-        "title": "Bob Dylan - Masters of War (Official Audio)",
+        "videoId": "aehwEu8SBSo",
+        "title": "Bob Dylan - Positively 4th Street (Official Audio)",
         "channel": "BobDylanVEVO",
         "score": 1
       },
       "alternates": [
         {
-          "videoId": "K4uMQRQzVmc",
-          "title": "Bob Dylan - Masters of War (Lyrics)",
-          "channel": "RVibes",
+          "videoId": "p25zkOlcRi4",
+          "title": "Positively 4th Street ~ Bob Dylan ~ with lyrics",
+          "channel": "LMFerko",
           "score": 1
         },
         {
-          "videoId": "-4wgB-04wHw",
-          "title": "Bob Dylan - Masters of War (original)",
-          "channel": "Bob Dylan",
+          "videoId": "xc2yCWsR07U",
+          "title": "Positively 4th Street",
+          "channel": "Bob Dylan - Topic",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Dog Shit (feat. Ol' Dirty Bastard, RZA & Method Man) Wu-Tang Clan, Ol' Dirty Bastard, RZA, Method Man",
+      "spotify_uri": "spotify:track:28uZLk1NszbSLOlJoBfgLu",
+      "top": {
+        "videoId": "Od1DmX_8SXs",
+        "title": "Dog Sh*t",
+        "channel": "Wu-Tang Clan - Topic",
+        "score": 1,
+        "note": "YTM catalog entry, exact duration match (215s)"
+      },
+      "alternates": [
+        {
+          "videoId": "vE9OLZoxgiI",
+          "title": "Wu-Tang Clan - Dog Shit (HD)",
+          "channel": "Brooklyn Zoo",
+          "score": 0.26666666666666666
+        },
+        {
+          "videoId": "aT9FEraHKQc",
+          "title": "Wu-Tang Clan - Dog Shit (Visual Playlist)",
+          "channel": "WuTangClanVEVO",
+          "score": 0.26666666666666666
+        }
+      ]
+    },
+    {
+      "query": "Fuck You Bitch Wheeler Walker Jr.",
+      "spotify_uri": "spotify:track:43JK3XJKQ5MJ7ddlF0ylUX",
+      "top": {
+        "videoId": "myJDBos5Vyw",
+        "title": "Wheeler Walker Jr. - Fuck You Bitch",
+        "channel": "WheelerWalkerJrVEVO",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "ygGH53KXlPI",
+          "title": "Fuck You Bitch - Remastered 2020",
+          "channel": "Wheeler Walker Jr. - Topic",
+          "score": 1
+        },
+        {
+          "videoId": "i6VoIcnTYds",
+          "title": "Fuck You Bitch - Wheeler Walker, Jr. | Karaoke Version | KaraFun",
+          "channel": "KaraFun Karaoke",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Die, Die My Darling Misfits",
+      "spotify_uri": "spotify:track:4Rme8TxEaNV09wp64AWd2y",
+      "top": {
+        "videoId": "rE11yXfKDNU",
+        "title": "Die, Die My Darling",
+        "channel": "Misfits - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "SXKW4Vo32u0",
+          "title": "Misfits - Die , Die Die My Darling (Lyrics)",
+          "channel": "MrDeathStudio312",
+          "score": 1
+        },
+        {
+          "videoId": "0li-Vnp3WQs",
+          "title": "The Misfits - Die, Die My Darling 2014 Remaster",
+          "channel": "MarchX",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "No Children The Mountain Goats",
+      "spotify_uri": "spotify:track:5cxnSTLzGD1t9xcdmJYFVB",
+      "top": {
+        "videoId": "fqGKZ3fzN1M",
+        "title": "No Children",
+        "channel": "The Mountain Goats - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "QS27S3mspjU",
+          "title": "the mountain goats - no children",
+          "channel": "deer vs headlights",
+          "score": 1
+        },
+        {
+          "videoId": "s2DCdI-XXQ4",
+          "title": "the Mountain Goats - No Children (Jordan Lake Sessions)",
+          "channel": "the Mountain Goats",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Wind in Your Sail Lagwagon",
+      "spotify_uri": "spotify:track:7xd6EJJY0GtPmRoLMk737N",
+      "top": {
+        "videoId": "E7MWY-oz-uU",
+        "title": "Wind In Your Sail",
+        "channel": "Lagwagon - Topic",
+        "score": 1
+      },
+      "alternates": [
+        {
+          "videoId": "0zEfN4jb0l4",
+          "title": "Lagwagon - Wind in your sail",
+          "channel": "MrSpiz",
+          "score": 1
+        },
+        {
+          "videoId": "aDmO4SMq_do",
+          "title": "Lagwagon - Wind In Your Sail (Live in Sydney) | Moshcam",
+          "channel": "Moshcam",
           "score": 1
         }
       ]

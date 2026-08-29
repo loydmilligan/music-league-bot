@@ -21,6 +21,6 @@ Decisions made during decomposition (2026-08-29, approved by Matt):
 | 002a | ytm-link-songlink | comparison | Given a round's Spotify track ids, when resolved via Songlink/Odesli, then ≥80% yield YTM video ids (and the 0-for-10 cache failure is explained) | INVALIDATED ✗ (Songlink public API shut down — 401 PUBLIC_API_ACCESS_DEPRECATED) | songlink, resolver |
 | 002b | ytm-link-ytmusicapi-search | comparison | Same, via ytmusicapi search on title+artist | SKIPPED (002c won) | ytmusicapi, resolver |
 | 002c | ytm-link-data-api-search | comparison | Given a round's Spotify submissions, when searched via Data API search.list, then ≥80% yield correct video ids | VALIDATED ✓ 10/10 | youtube, resolver |
-| 003 | ytm-trigger-send | standard | Given a completed round playlist, when the round trigger fires, then the YTM link posts to the TEST group only | PENDING | whatsapp, trigger |
+| 003 | ytm-trigger-send | standard | Given a completed round playlist, when the round trigger fires, then the YTM link posts to the TEST group only | VALIDATED ✓ | whatsapp, trigger |
 
 Risk order: 001a first — if playlist creation on the personal account fails, the idea dies.

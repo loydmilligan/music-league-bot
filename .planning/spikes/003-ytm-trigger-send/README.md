@@ -3,7 +3,7 @@ spike: 003
 name: ytm-trigger-send
 type: standard
 validates: "Given a completed round playlist, when the round trigger fires, then the YTM link posts to the TEST group only"
-verdict: PENDING
+verdict: VALIDATED
 related: [001a-ytm-playlist-data-api, 002c-ytm-link-data-api-search]
 tags: [whatsapp, trigger, youtube]
 ---
@@ -40,4 +40,10 @@ a 🎧 message with the music.youtube.com link in the Chat bot test group.
   message delivered to the test group. Awaiting Matt's phone confirmation.
 
 ## Results
-PENDING
+**VALIDATED** (Matt confirmed message + playlist on phone, 2026-08-29 16:01).
+
+- Full pipeline works: DB round → search.list resolve → playlist create →
+  control /say to the test group.
+- Build must include: 409/503 retry with backoff + paced inserts, and
+  tolerance for the Puppeteer wedge on the send leg (or send via a freshly
+  restarted/healthy client).
