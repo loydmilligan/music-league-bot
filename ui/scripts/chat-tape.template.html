@@ -177,16 +177,16 @@ const accVar = a => ({pulp:'var(--mash-pulp)',amber:'var(--amber)',sky:'var(--sk
 /* ---- section registry (locked design: tabs+bento home, pivots, accordion regulars, full-card glossary, podium+rounds tracks) ---- */
 const SIDES = ['Overview','Side A','Side B','Regulars','Tracks'];
 const SECTIONS = [
-  {id:'seasonReview',side:'Side A',   tag:'Season so far',     name:'The Carrot Box',       acc:'ember', draft:true, val:()=>String(TAPE.editorial.seasonReview.rounds.length), label:'rounds reviewed · one long con', valSize:'34px'},
+  {id:'seasonReview',side:'Side A',   tag:'Season so far',     name:'The Carrot Box',       acc:'ember', draft:TAPE.editorial.draft, val:()=>String(TAPE.editorial.seasonReview.rounds.length), label:'rounds reviewed · one long con', valSize:'34px'},
   {id:'awards',      side:'Side A',   tag:'Every winner',      name:'The Full Roll',        acc:'pulp',  val:()=>String(Object.keys(TAPE.awards).length), label:'awards handed out', valSize:'34px'},
   {id:'biggestWord', side:'Side A',   tag:'Longest word',      name:'The Biggest Word',     acc:'amber', val:()=>'18', label:'letters · compartmentalizing', valSize:'34px'},
   {id:'allTalk',     side:'Side A',   tag:'Chat vs ballots',   name:'All Talk, No Ballot',  acc:'amber', val:()=>'1175:1', label:'Shane Farkas', valSize:'26px'},
-  {id:'guessLedger', side:'Side A',   tag:'The guessing game', name:'Who Submitted What',   acc:'amber', draft:true, val:()=>'5/18', label:'guesses landed · scored vs the reveal', valSize:'30px'},
+  {id:'guessLedger', side:'Side A',   tag:'The guessing game', name:'Who Submitted What',   acc:'amber', draft:TAPE.editorial.draft, val:()=>'5/18', label:'guesses landed · scored vs the reveal', valSize:'30px'},
   {id:'motormouth',  side:'Side B',   tag:'Volume',            name:'Motormouth',           acc:'pulp',  val:()=>nf(topPerson('messages').messages), label:'messages · Matt Mariani', valSize:'28px'},
   {id:'mixingBoard', side:'Side B',   tag:'Find yourself',     name:'The Mixing Board',     acc:'sky',   val:()=>'▤', label:'every stat, one board', valSize:'26px'},
   {id:'heatmap',     side:'Side B',   tag:'Filter by person',  name:'When The Boarz Post',  acc:'sky',   val:()=>'▦', label:'day × hour', valSize:'26px'},
-  {id:'regulars',    side:'Regulars', tag:'Recurring behavior',name:'The Regulars',         acc:'moss',  draft:true, val:()=>String(regCount()), label:'fingerprints · 10 players', valSize:'34px'},
-  {id:'glossary',    side:'Regulars', tag:'League language',    name:'The Glossary',         acc:'moss',  draft:true, val:()=>String(TAPE.editorial.glossary.length), label:'coinages, kept forever', valSize:'34px'},
+  {id:'regulars',    side:'Regulars', tag:'Recurring behavior',name:'The Regulars',         acc:'moss',  draft:TAPE.editorial.draft, val:()=>String(regCount()), label:'fingerprints · 10 players', valSize:'34px'},
+  {id:'glossary',    side:'Regulars', tag:'League language',    name:'The Glossary',         acc:'moss',  draft:TAPE.editorial.draft, val:()=>String(TAPE.editorial.glossary.length), label:'coinages, kept forever', valSize:'34px'},
   {id:'songs',       side:'Tracks',   tag:'Every song shared',  name:'The Track List',       acc:'pulp',  val:()=>String(TAPE.songs.links.length), label:'tracks · one playlist', valSize:'30px'},
   {id:'method',      side:'Tracks',   tag:'Methodology',        name:'How This Was Counted', acc:'ink',   val:()=>'§', label:'caveats & definitions', valSize:'26px'},
 ];
