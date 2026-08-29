@@ -32,6 +32,48 @@
       "url": "https://open.spotify.com/track/0YJvSDPuh3MmmpHkvMFJc5"
     }
   ],
+  "rounds": [
+    {
+      "name": "I Heard It Through the Napster",
+      "num": 1
+    },
+    {
+      "name": "¡No Entiendo, Cabron!",
+      "num": 2
+    },
+    {
+      "name": "Boner Jamz",
+      "num": 3
+    },
+    {
+      "name": "I Hope You Shit Your Pants at Target",
+      "num": 4
+    },
+    {
+      "name": "Smells Like Teen Cousin Fuckers",
+      "num": 5
+    },
+    {
+      "name": "Surrender Monkeys",
+      "num": 6
+    },
+    {
+      "name": "Stranger Danger",
+      "num": 7
+    },
+    {
+      "name": "Couple of Lines, an Empty Thermos of Joe",
+      "num": 8
+    },
+    {
+      "name": "Plot so Thicc",
+      "num": 9
+    },
+    {
+      "name": "These Go to 11",
+      "num": 10
+    }
+  ],
   "links": [
     {
       "url": "https://www.youtube.com/watch?v=w-l5FyA3pgo&t=31s",
@@ -45,7 +87,9 @@
         "title": "KC & The Sunshine Band - Please don't go (hi quality sound)",
         "artists": "mikoozzy",
         "art": "https://i.ytimg.com/vi/w-l5FyA3pgo/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/1rDw0SkL3h2U4D2XpeQESi?si=eb20e23775c74976",
@@ -63,7 +107,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851b91b84cb929be6516bc64ce5",
         "uri": "spotify:track:1rDw0SkL3h2U4D2XpeQESi",
         "url": "https://open.spotify.com/track/1rDw0SkL3h2U4D2XpeQESi"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://youtu.be/ESS0eKJpEZQ?is=NcnCFnFRcYeAuw95",
@@ -77,7 +123,9 @@
         "title": "Janis Ian - At Seventeen (Audio)",
         "artists": "JanisIanVEVO",
         "art": "https://i.ytimg.com/vi/ESS0eKJpEZQ/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://m.youtube.com/shorts/UMWf3z0Zo_o?ra=m",
@@ -91,7 +139,9 @@
         "title": "Grindr To Fly All Flags At Half Mast In Honor Of Lindsey Graham. #news #funny #comedy",
         "artists": "Spencer Hakimian",
         "art": "https://i.ytimg.com/vi/UMWf3z0Zo_o/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/5IFCyWplye09HytIP80RCF?si=s9-33DB4THmkQbCTDlF8lQ&utm_source=copy-link",
@@ -109,7 +159,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048514ca1daad1145dec4618ea671",
         "uri": "spotify:track:5IFCyWplye09HytIP80RCF",
         "url": "https://open.spotify.com/track/5IFCyWplye09HytIP80RCF"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/0diXtwfuLfREon1LOMk6BO?si=9zfYyN",
@@ -127,7 +179,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048513cefe88a6172e280334d4b49",
         "uri": "spotify:track:0diXtwfuLfREon1LOMk6BO",
         "url": "https://open.spotify.com/track/0diXtwfuLfREon1LOMk6BO"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/2EophOpSBiQkq8tKm5Mva0?si=Bbh684XHQhC_mB9AMfeExg&utm_source=copy-link",
@@ -145,7 +199,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851dcf7ced01e6e244ac15fc191",
         "uri": "spotify:track:2EophOpSBiQkq8tKm5Mva0",
         "url": "https://open.spotify.com/track/2EophOpSBiQkq8tKm5Mva0"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/7B0XWr4O3lvYjNHSXPLsbI?si=uV22v10YQE2pKDqoqbeDfg&utm_source=copy-link",
@@ -163,7 +219,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851b53c62ca6ef14971dc8c48dc",
         "uri": "spotify:track:7B0XWr4O3lvYjNHSXPLsbI",
         "url": "https://open.spotify.com/track/7B0XWr4O3lvYjNHSXPLsbI"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/7KFKekUmBedCbqUYjrhHyr?si=7OvMTRHxRw-LehBqpXZ2ig&utm_source=copy-link",
@@ -181,7 +239,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048513378cd84027075dc7d6c2b23",
         "uri": "spotify:track:7KFKekUmBedCbqUYjrhHyr",
         "url": "https://open.spotify.com/track/7KFKekUmBedCbqUYjrhHyr"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/album/2jsx1hY0O2of9lgG4lKZjc?si=sv2ve1trRBqMNIKfYfqCqg&utm_source=whatsapp",
@@ -191,7 +251,9 @@
       "person": "Dave Jensen",
       "ts": 1784485920000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://youtu.be/zA52uNzx7Y4?is=NOmznYSuB007tedN",
@@ -205,7 +267,9 @@
         "title": "Eiffel 65 - Blue (Da Ba Dee)",
         "artists": "malawolf85",
         "art": "https://i.ytimg.com/vi/zA52uNzx7Y4/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/65IpX5n4xwWeoXQNdtXHos?si=nYCbC6X0Smu_k0JuzlgpAg&utm_source=copy-link",
@@ -223,7 +287,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851b9e9300fa6ad779c7d58708a",
         "uri": "spotify:track:65IpX5n4xwWeoXQNdtXHos",
         "url": "https://open.spotify.com/track/65IpX5n4xwWeoXQNdtXHos"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://www.youtube.com/watch?v=HcYli81JqBs",
@@ -237,7 +303,9 @@
         "title": "Homer vs Marge record collection",
         "artists": "audibleangel222",
         "art": "https://i.ytimg.com/vi/HcYli81JqBs/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://www.youtube.com/watch?v=mYAi5aI_NPc",
@@ -251,7 +319,9 @@
         "title": "Family Guy | Peter does not care for The Godfather",
         "artists": "CutawayGuyX",
         "art": "https://i.ytimg.com/vi/mYAi5aI_NPc/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://youtu.be/J6UG1Jlwiow?is=9CXZPVAbejaxm5Tt",
@@ -265,7 +335,9 @@
         "title": "Dueling Banjos",
         "artists": "Eric Weissberg - Topic",
         "art": "https://i.ytimg.com/vi/J6UG1Jlwiow/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/18ThXUp9jiQg26iD1w8reE?si=cb6a6efcfca44b76",
@@ -283,7 +355,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048512c96d9855d5d448df661c4c8",
         "uri": "spotify:track:18ThXUp9jiQg26iD1w8reE",
         "url": "https://open.spotify.com/track/18ThXUp9jiQg26iD1w8reE"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/6VWsWgliFma9IFL2NlQ1H7?si=rl-tqZD4T5ayer1HYibpeQ&utm_source=copy-link",
@@ -301,7 +375,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851b63780c667c5cc123273294b",
         "uri": "spotify:track:6VWsWgliFma9IFL2NlQ1H7",
         "url": "https://open.spotify.com/track/6VWsWgliFma9IFL2NlQ1H7"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/5u3LixvEX1twpOW6v3V2H7?si=n88xLj8TT8SeHQTt3w6SUQ&utm_source=copy-link",
@@ -319,7 +395,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851e1d8ed663a5575b0d1f35b62",
         "uri": "spotify:track:5u3LixvEX1twpOW6v3V2H7",
         "url": "https://open.spotify.com/track/5u3LixvEX1twpOW6v3V2H7"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/5uxZ7bEBWDpZZEtzuo5VB1?si=BKPB2yPKTim0gINl3U0wrQ&utm_source=copy-link",
@@ -337,7 +415,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851509d6cb2577d0b2f23328147",
         "uri": "spotify:track:5uxZ7bEBWDpZZEtzuo5VB1",
         "url": "https://open.spotify.com/track/5uxZ7bEBWDpZZEtzuo5VB1"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://open.spotify.com/track/5LYMamLv12UPbemOaTPyeV?si=EXyEWlBnRsS1obY7z0sH4Q&utm_source=copy-link",
@@ -355,7 +435,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485182ce362511fb3d9dda6578ee",
         "uri": "spotify:track:5LYMamLv12UPbemOaTPyeV",
         "url": "https://open.spotify.com/track/5LYMamLv12UPbemOaTPyeV"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://www.youtube.com/watch?v=sqSA-SY5Hro",
@@ -369,7 +451,9 @@
         "title": "Oliver Anthony - Rich Men North Of Richmond",
         "artists": "radiowv",
         "art": "https://i.ytimg.com/vi/sqSA-SY5Hro/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://www.youtube.com/watch?v=SiaaegoOXm0",
@@ -383,7 +467,9 @@
         "title": "TV Live - The Rapture \"House of Jealous Lovers\" (Letterman 2003)",
         "artists": "Music City Mike",
         "art": "https://i.ytimg.com/vi/SiaaegoOXm0/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://youtu.be/ux0ijnseN-Y?is=sgJkQbRnSCzYPOuz",
@@ -397,7 +483,9 @@
         "title": "Whoo! Alright - Yeah...Uh Huh.  (the Rapture)",
         "artists": "waverlyflams",
         "art": "https://i.ytimg.com/vi/ux0ijnseN-Y/hqdefault.jpg"
-      }
+      },
+      "round": "I Heard It Through the Napster",
+      "roundNum": 1
     },
     {
       "url": "https://youtu.be/6gBV-Nzq7Pg?is=GemDRSuA5HIvY5kx",
@@ -411,7 +499,9 @@
         "title": "Sturgill Simpson - Turtles All The Way Down (Official 4K Video)",
         "artists": "SturgillSimpsonVEVO",
         "art": "https://i.ytimg.com/vi/6gBV-Nzq7Pg/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/jHnSj9Ls6pU?is=Ab8e7w604TrBMlyA",
@@ -425,7 +515,9 @@
         "title": "Ryan Bingham - Southside Of Heaven (Official Video)",
         "artists": "RyanBinghamVEVO",
         "art": "https://i.ytimg.com/vi/jHnSj9Ls6pU/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/5qYNVfNO6nJvJwuREjBVTH?si=QgyNPVyHRwSGk04EWlJozA&utm_source=copy-link",
@@ -443,7 +535,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851e6a945e3924ef353cf2e11c4",
         "uri": "spotify:track:5qYNVfNO6nJvJwuREjBVTH",
         "url": "https://open.spotify.com/track/5qYNVfNO6nJvJwuREjBVTH"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/3eMpWrJhO6XsiOanQTDpax?si=lZYER8ABTWKZaueVcEn_xQ&utm_source=whatsapp",
@@ -461,7 +555,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851b4d6e44a1a58a9bdcd1edee7",
         "uri": "spotify:track:3eMpWrJhO6XsiOanQTDpax",
         "url": "https://open.spotify.com/track/3eMpWrJhO6XsiOanQTDpax"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtube.com/shorts/BNG7ImuGyuE?is=XMYx_Kd0VJW5gAx2",
@@ -475,7 +571,9 @@
         "title": "Fergus McCreadie: one of Scotland’s most exciting young talents. #editionrecords #jazz",
         "artists": "Edition Records",
         "art": "https://i.ytimg.com/vi/BNG7ImuGyuE/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/uaPveVjBQss?is=n0QboVq3Z1127nHx",
@@ -489,7 +587,9 @@
         "title": "Bad as I Used to Be - Chris Stapleton (Clint Eastwood Tribute)",
         "artists": "Thergothon1",
         "art": "https://i.ytimg.com/vi/uaPveVjBQss/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/12JhMUlD0vAEQhTpWakkNn?si=Ca_BYGAXQNOgWJESvoIyyw&utm_source=whatsapp",
@@ -507,7 +607,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851f083fffc7868af88d9d39bbd",
         "uri": "spotify:track:12JhMUlD0vAEQhTpWakkNn",
         "url": "https://open.spotify.com/track/12JhMUlD0vAEQhTpWakkNn"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/7MRyJPksH3G2cXHN8UKYzP?si=VLM3Yz78QkGETzSKeHV5UA&utm_source=whatsapp&rowId=00363f50a1759684",
@@ -525,7 +627,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048510e8f67afe794200ccb01ac73",
         "uri": "spotify:track:7MRyJPksH3G2cXHN8UKYzP",
         "url": "https://open.spotify.com/track/7MRyJPksH3G2cXHN8UKYzP"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=nzzP0Zqjv6w",
@@ -539,7 +643,9 @@
         "title": "Mmm Mmm Mmm Mmm",
         "artists": "Crash Test Dummies - Topic",
         "art": "https://i.ytimg.com/vi/nzzP0Zqjv6w/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://music.youtube.com/playlist?list=PLBmPJp4MneYw&si=l5BFhNcwRbWZGKNj",
@@ -549,7 +655,9 @@
       "person": "Matt Mariani",
       "ts": 1785075000000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/UVKsd8z6scw?si=6vTWaLvuxgYpgg6u",
@@ -563,7 +671,9 @@
         "title": "Pee Wee Herman - Tequila",
         "artists": "Sooner Craig",
         "art": "https://i.ytimg.com/vi/UVKsd8z6scw/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/7BsI7o91xaPgwUk4NMXJIB?si=5RCenNFiSRuMPTaRp8fdrA&utm_source=whatsapp",
@@ -581,7 +691,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048518c7920b8417a69e56476bf57",
         "uri": "spotify:track:7BsI7o91xaPgwUk4NMXJIB",
         "url": "https://open.spotify.com/track/7BsI7o91xaPgwUk4NMXJIB"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/2mNmKVBJ1U1nuPFJ5VGjCl?si=QAjQdeAhRKW_4oONvcW04Q&utm_source=copy-link",
@@ -599,7 +711,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485112b8e784c6b04a8a7a34a3d0",
         "uri": "spotify:track:2mNmKVBJ1U1nuPFJ5VGjCl",
         "url": "https://open.spotify.com/track/2mNmKVBJ1U1nuPFJ5VGjCl"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/3yndKI4zWEyC36BQYrdKBA?si=Shla9K0qRt-xj8Y1w76bpw&utm_source=copy-link",
@@ -617,7 +731,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d06c36953d960e241f1522f8",
         "uri": "spotify:track:3yndKI4zWEyC36BQYrdKBA",
         "url": "https://open.spotify.com/track/3yndKI4zWEyC36BQYrdKBA"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/4sf4Lq52b2iCoAgpge7a9g?si=8fs6rVSaSwCbuRHaSs_ZYg&utm_source=copy-link",
@@ -635,7 +751,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048517e10f86e4f1f376ff2b26e15",
         "uri": "spotify:track:4sf4Lq52b2iCoAgpge7a9g",
         "url": "https://open.spotify.com/track/4sf4Lq52b2iCoAgpge7a9g"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/5T3yTmOJ1hJxnH8boXgm3l?si=V6BAS10kQ4aTCf7cfd4slQ&utm_source=whatsapp",
@@ -653,7 +771,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485151541b7c6d0793b87d37290d",
         "uri": "spotify:track:5T3yTmOJ1hJxnH8boXgm3l",
         "url": "https://open.spotify.com/track/5T3yTmOJ1hJxnH8boXgm3l"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/6IHQYCcVjN6byEKKsx5n1K?si=AruWBbVyTfyediWEOxI1tg&utm_source=whatsapp",
@@ -671,7 +791,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851a5c12e25bc4f24fe17c32cc8",
         "uri": "spotify:track:6IHQYCcVjN6byEKKsx5n1K",
         "url": "https://open.spotify.com/track/6IHQYCcVjN6byEKKsx5n1K"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/0yzcqtdu85erFxmgeZp0zW?si=hERSiPIUQgq1lmb9IOkvZQ&utm_source=copy-link",
@@ -689,7 +811,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048512e14823908a9560013673d14",
         "uri": "spotify:track:0yzcqtdu85erFxmgeZp0zW",
         "url": "https://open.spotify.com/track/0yzcqtdu85erFxmgeZp0zW"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/o24g21iJmRM?is=apw-vBM1JyMdsAnh",
@@ -703,7 +827,9 @@
         "title": "BREAKING BAD: Gale sings \"Crapa pelada\"",
         "artists": "Marknopfler88",
         "art": "https://i.ytimg.com/vi/o24g21iJmRM/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/64cXzzaUXgjCqXzMgwd2re?si=JN81LS5jTj6EFGLpRz2AvQ&utm_source=copy-link",
@@ -721,7 +847,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048519d90fd5dd6c89cd39a1e2418",
         "uri": "spotify:track:64cXzzaUXgjCqXzMgwd2re",
         "url": "https://open.spotify.com/track/64cXzzaUXgjCqXzMgwd2re"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/6S3JlDAGk3uu3NtZbPnuhS?si=5L_vEvrOT1yNmT23uYPuMw&utm_source=copy-link",
@@ -739,7 +867,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851e2dd29cdaa3fadbdc26d59c4",
         "uri": "spotify:track:6S3JlDAGk3uu3NtZbPnuhS",
         "url": "https://open.spotify.com/track/6S3JlDAGk3uu3NtZbPnuhS"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/6FXwTBdpv4wD0G0Sz3Wxn4?si=ZfdecuqXQgqJwxDrYjGHrg&utm_source=copy-link",
@@ -757,7 +887,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851719a6ab21c5a7a245163c11b",
         "uri": "spotify:track:6FXwTBdpv4wD0G0Sz3Wxn4",
         "url": "https://open.spotify.com/track/6FXwTBdpv4wD0G0Sz3Wxn4"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/6QsrI9SzvWHRoccdaNeBDN?si=tKyNOcCBRJ6EQrt72AhVMw&utm_source=copy-link",
@@ -775,7 +907,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048518714773849bb585911f7c382",
         "uri": "spotify:track:6QsrI9SzvWHRoccdaNeBDN",
         "url": "https://open.spotify.com/track/6QsrI9SzvWHRoccdaNeBDN"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://m.youtube.com/watch?v=ffW4YD5WErI&t=86s",
@@ -789,7 +923,9 @@
         "title": "Jurassic Park - Shoot Her!! Raptor Attacks Park Worker",
         "artists": "Adrian Anis",
         "art": "https://i.ytimg.com/vi/ffW4YD5WErI/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/5YHerCdiAcONYQl36jqOqc?si=U8yooQ7LSiyjuDNOH-0RQA&utm_source=copy-link",
@@ -807,7 +943,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851f27440af8db751f9d41d7a3e",
         "uri": "spotify:track:5YHerCdiAcONYQl36jqOqc",
         "url": "https://open.spotify.com/track/5YHerCdiAcONYQl36jqOqc"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://m.youtube.com/watch?v=D3klYIA89-Q",
@@ -821,7 +959,9 @@
         "title": "Klingon Drinking Song [Extended/Remastered]",
         "artists": "Bunnylord Music",
         "art": "https://i.ytimg.com/vi/D3klYIA89-Q/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtube.com/shorts/w1zmqqMWvIc?is=i6x4KQ30gKqIlFMe",
@@ -835,7 +975,9 @@
         "title": "Sean Lock and Jon Richardson's legendary carrot in a box showdown | 8 Out Of 10 Cats",
         "artists": "8 Out of 10 Cats",
         "art": "https://i.ytimg.com/vi/w1zmqqMWvIc/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=cdERUjC0rYw",
@@ -849,7 +991,9 @@
         "title": "Led Zeppelin - All Of My Love",
         "artists": "unofficialzoso",
         "art": "https://i.ytimg.com/vi/cdERUjC0rYw/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/album/5k9nNGzp6ogw5bBULPeMSz?si=tLRtMsoRRAywY37s-b5yyw&utm_source=copy-link",
@@ -859,7 +1003,9 @@
       "person": "Jimmy",
       "ts": 1785225720000,
       "context": "This would’ve been my next choice (in case you guys care)",
-      "track": null
+      "track": null,
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/album/0NJRPgK15C8qoLuQv1hChv?si=RsQuAODGTjSKPA9wb77fDg&utm_source=copy-link",
@@ -869,7 +1015,9 @@
       "person": "Dave Jensen",
       "ts": 1785232620000,
       "context": "Im not going to submit this for that theme but man this is a weird album, guy claimed he developed it scientifically to help plants grow. Wacky stuff.",
-      "track": null
+      "track": null,
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://m.youtube.com/watch?v=OXu1CONcXGQ",
@@ -883,7 +1031,9 @@
         "title": "COPROPHILIA - \"Grudgefuck\"",
         "artists": "Hotelfire",
         "art": "https://i.ytimg.com/vi/OXu1CONcXGQ/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/eYga_Kf98oM?is=dUxUYEs3yjA58SqA",
@@ -897,7 +1047,9 @@
         "title": "Daniel Sloss: Jigsaw - Shave Your Butt",
         "artists": "Daniel Sloss",
         "art": "https://i.ytimg.com/vi/eYga_Kf98oM/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=k6EQAOmJrbw",
@@ -911,7 +1063,9 @@
         "title": "My Chemical Romance - Teenagers [Official Music Video] [4K]",
         "artists": "My Chemical Romance",
         "art": "https://i.ytimg.com/vi/k6EQAOmJrbw/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=SG40b4owXGc",
@@ -925,7 +1079,9 @@
         "title": "Family Guy - (S5xE1) Short Jesus",
         "artists": "dontMINDmyCONTROLler",
         "art": "https://i.ytimg.com/vi/SG40b4owXGc/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/vMAPW7ZoOLw?is=_iKxySIkqhA_V0aD",
@@ -939,7 +1095,9 @@
         "title": "Harry Styles - Wet Dream (Wet Leg cover) in the Live Lounge",
         "artists": "BBCRadio1VEVO",
         "art": "https://i.ytimg.com/vi/vMAPW7ZoOLw/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://m.youtube.com/watch?v=7Z4nuE9GvRE",
@@ -953,7 +1111,9 @@
         "title": "Mac and Me (1988) - Wheelchair cliff scene (in 4K!!)",
         "artists": "Bananas About Movies",
         "art": "https://i.ytimg.com/vi/7Z4nuE9GvRE/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/artist/44NX2ffIYHr6D4n7RaZF7A?si=NAdCq_FGSs-0hdgI3-EWjA&utm_source=whatsapp",
@@ -963,7 +1123,9 @@
       "person": "Grant Koziol",
       "ts": 1785450180000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=-KoXt9pZLGM",
@@ -977,7 +1139,9 @@
         "title": "Lee Greenwood - God Bless The U.S.A.",
         "artists": "LeeGreenwoodVEVO",
         "art": "https://i.ytimg.com/vi/-KoXt9pZLGM/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=3l-n64NWHS4",
@@ -991,7 +1155,9 @@
         "title": "The Anacreontic Song—18c. Source Tune for U.S. National Anthem",
         "artists": "starspangledmusic",
         "art": "https://i.ytimg.com/vi/3l-n64NWHS4/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://www.youtube.com/watch?v=U06jlgpMtQs",
@@ -1005,7 +1171,9 @@
         "title": "National Anthem of USSR",
         "artists": "rascrifice",
         "art": "https://i.ytimg.com/vi/U06jlgpMtQs/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/MoqmaYHHP8Q?t=140",
@@ -1019,7 +1187,9 @@
         "title": "Taylor Hicks sings the National Anthem - Nascar",
         "artists": "wildrose76",
         "art": "https://i.ytimg.com/vi/MoqmaYHHP8Q/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://m.youtube.com/watch?v=qqV0QMeNvqo&t=1080s&pp=2AG4CJACAeIHDBIKcGVycGxleGl0eQ%3D%3D",
@@ -1033,7 +1203,9 @@
         "title": "Lindsey Graham funeral: Sean Hannity delivers personal eulogy",
         "artists": "LiveNOW from FOX",
         "art": "https://i.ytimg.com/vi/qqV0QMeNvqo/hqdefault.jpg"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://open.spotify.com/track/4CZWCG1KOEZPGdQqDL85VF?si=FBrjSoesRE--hwipd3T5dA&utm_source=copy-link",
@@ -1051,7 +1223,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851e710c1f5b228046932790031",
         "uri": "spotify:track:4CZWCG1KOEZPGdQqDL85VF",
         "url": "https://open.spotify.com/track/4CZWCG1KOEZPGdQqDL85VF"
-      }
+      },
+      "round": "¡No Entiendo, Cabron!",
+      "roundNum": 2
     },
     {
       "url": "https://youtu.be/z_8vbppalKo?is=MEv5ePRlc7SZJBSs",
@@ -1065,7 +1239,9 @@
         "title": "Isaiah Rashad - SAME SH!T (Official Video)",
         "artists": "isaiah rashad",
         "art": "https://i.ytimg.com/vi/z_8vbppalKo/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://m.youtube.com/watch?v=_YmDcCpD1gc&pp=ygUSZG8gbm90IGRpZGRsZSBraWRz&ra=m",
@@ -1079,7 +1255,9 @@
         "title": "Do Not Diddle Kids - It's Always Sunny in Philadelphia",
         "artists": "The Vidhole",
         "art": "https://i.ytimg.com/vi/_YmDcCpD1gc/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/1musbempyJAw5gfSKZHXP9?si=q0TPEbScTh-TZm3kpYX3MA&utm_source=copy-link&sci=spotify%3Acard-config%3A3CHq2Uh8xLhEUiveIJwYci",
@@ -1097,7 +1275,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048513de7e97b3e5aa3eaccfc19ec",
         "uri": "spotify:track:1musbempyJAw5gfSKZHXP9",
         "url": "https://open.spotify.com/track/1musbempyJAw5gfSKZHXP9"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/53pZ8y3yMYUNpclGwIufu0?si=e5c2sLXtRkOER_3ou7hrFg&utm_source=whatsapp",
@@ -1115,7 +1295,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851981a03926fd6675d6dc8d773",
         "uri": "spotify:track:53pZ8y3yMYUNpclGwIufu0",
         "url": "https://open.spotify.com/track/53pZ8y3yMYUNpclGwIufu0"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://youtu.be/4a8pHjLkkz8?is=C_H9Pb3OJgVzcJTS",
@@ -1129,7 +1311,9 @@
         "title": "Anxiety | COVEN MUSIC SESSION",
         "artists": "Doechii",
         "art": "https://i.ytimg.com/vi/4a8pHjLkkz8/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://youtu.be/FsZ_Copa7Lc?is=HZMljiQH5fwwNAvS",
@@ -1143,7 +1327,9 @@
         "title": "Ska Sucks",
         "artists": "Propagandhi - Topic",
         "art": "https://i.ytimg.com/vi/FsZ_Copa7Lc/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/5EYdTPdJD74r9EVZBztqGG?si=bYXZcwWvQF-1JBp4UWQ1zQ&utm_source=copy-link",
@@ -1161,7 +1347,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d6d86be2779b5b6b4980feb9",
         "uri": "spotify:track:5EYdTPdJD74r9EVZBztqGG",
         "url": "https://open.spotify.com/track/5EYdTPdJD74r9EVZBztqGG"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/5p3JunprHCxClJjOmcLV8G?si=Hnte7-jHTHySogIyDXGjEg&utm_source=copy-link",
@@ -1179,7 +1367,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851fe5213edd4f8550a8030efcf",
         "uri": "spotify:track:5p3JunprHCxClJjOmcLV8G",
         "url": "https://open.spotify.com/track/5p3JunprHCxClJjOmcLV8G"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/0S5CkITTeywtctE7hitYNO?si=DD2T0KUrS2-mVkBeBoCgMA&utm_source=copy-link&sci=spotify%3Acard-config%3A65accpA8xW1DSuU9GWHof6",
@@ -1197,7 +1387,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048515169110c6931f23753358ba3",
         "uri": "spotify:track:0S5CkITTeywtctE7hitYNO",
         "url": "https://open.spotify.com/track/0S5CkITTeywtctE7hitYNO"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/3UbJXF3g7NcZMtGmeIARmM?si=9kri4ohJSXe8BL-Saf3f4Q&utm_source=copy-link&sci=spotify%3Acard-config%3A5E4BVtxuCjZL2NZvCv95m5",
@@ -1215,7 +1407,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851827c73f85e4c50dfdbeef711",
         "uri": "spotify:track:3UbJXF3g7NcZMtGmeIARmM",
         "url": "https://open.spotify.com/track/3UbJXF3g7NcZMtGmeIARmM"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/66gQu4ZIHmDhB8H4wkwm5f?si=gJPYtj2ZTNCYxpU6341tuw&utm_source=copy-link&sci=spotify%3Acard-config%3A0hWbF9gGWRPXZKvoQ7iBhB",
@@ -1233,7 +1427,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048512b0c88ad3d7be225c955e08c",
         "uri": "spotify:track:66gQu4ZIHmDhB8H4wkwm5f",
         "url": "https://open.spotify.com/track/66gQu4ZIHmDhB8H4wkwm5f"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/5rkppPnjJsBY23fyDda0iX?si=Zmr0etVHQQCIBasJEaP-WA&utm_source=copy-link&sci=spotify%3Acard-config%3A5NC4soqCJNwmysGMXjqkkn",
@@ -1251,7 +1447,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d3b0cfc492f7a9b930d9c703",
         "uri": "spotify:track:5rkppPnjJsBY23fyDda0iX",
         "url": "https://open.spotify.com/track/5rkppPnjJsBY23fyDda0iX"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/23LlKjiPjpseAEbp7KLSbn?si=TY_QWAezShOSM2FiIaD9Tg&utm_source=copy-link",
@@ -1269,7 +1467,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851c5b401fac443c20be56703b5",
         "uri": "spotify:track:23LlKjiPjpseAEbp7KLSbn",
         "url": "https://open.spotify.com/track/23LlKjiPjpseAEbp7KLSbn"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/5sBAzJNV0E3rMGnCUgFnEw?si=lRgrMnFiSE6BRjjnUTN5Ag&utm_source=copy-link",
@@ -1287,7 +1487,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048510c7956588bbccfbb69bce2f6",
         "uri": "spotify:track:5sBAzJNV0E3rMGnCUgFnEw",
         "url": "https://open.spotify.com/track/5sBAzJNV0E3rMGnCUgFnEw"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/1kPBHRXyXdrtYfUfeRwBko?si=85NQRDtDRgKAZOBloQfnKw&utm_source=whatsapp&rowId=721d95ca81732dca",
@@ -1305,7 +1507,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851ced0c7756302458ab6daa6d5",
         "uri": "spotify:track:1kPBHRXyXdrtYfUfeRwBko",
         "url": "https://open.spotify.com/track/1kPBHRXyXdrtYfUfeRwBko"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/6mz1fBdKATx6qP4oP1I65G?si=JxaJGvTXSXakfQ_mmIsEXA&utm_source=copy-link",
@@ -1323,7 +1527,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851980caf4dd525a15f08f8cb87",
         "uri": "spotify:track:6mz1fBdKATx6qP4oP1I65G",
         "url": "https://open.spotify.com/track/6mz1fBdKATx6qP4oP1I65G"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://www.youtube.com/watch?v=dl2PjWkwphc",
@@ -1337,7 +1543,9 @@
         "title": "Adult Baby Gathering",
         "artists": "All Gas No Brakes",
         "art": "https://i.ytimg.com/vi/dl2PjWkwphc/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://youtu.be/ZyYE1e2Ll4o?is=P7cX94Rh0kydWET7",
@@ -1351,7 +1559,9 @@
         "title": "The Hunter Biden Episode | Friends Keep Secrets",
         "artists": "Friends Keep Secrets",
         "art": "https://i.ytimg.com/vi/ZyYE1e2Ll4o/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/2RDIC609IQdmoQDVyeKT2S?si=lhdwTVz1S7iufHt6U_4G8Q&utm_source=copy-link&context=spotify%3Aartist%3A4ZOtVTO598nVtGVbsNNwWe",
@@ -1369,7 +1579,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485107665b3a64c4bf9401237b3b",
         "uri": "spotify:track:2RDIC609IQdmoQDVyeKT2S",
         "url": "https://open.spotify.com/track/2RDIC609IQdmoQDVyeKT2S"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://music.youtube.com/watch?v=zukaSaJ_zrs&si=MIryJLn6hkvSvOPY",
@@ -1383,7 +1595,9 @@
         "title": "Fire for You",
         "artists": "Cannons - Topic",
         "art": "https://i.ytimg.com/vi/zukaSaJ_zrs/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://music.youtube.com/watch?v=PTv7cJjNig8&si=UHtaiwR_8RwTs234",
@@ -1397,7 +1611,9 @@
         "title": "ORANGE SODA",
         "artists": "Baby Keem - Topic",
         "art": "https://i.ytimg.com/vi/PTv7cJjNig8/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/album/1XCSEtQfTQmXNgAxSQFk7f",
@@ -1407,7 +1623,9 @@
       "person": "Matt Mariani",
       "ts": 1785854400000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://music.youtube.com/playlist?list=PLKassWKwT20M",
@@ -1417,7 +1635,9 @@
       "person": "Matt Mariani",
       "ts": 1785924660000,
       "context": "I forgot to send youtube music playlist -",
-      "track": null
+      "track": null,
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://youtu.be/kWdfRRtAs3o?is=ADyjr6fyjvWkDc_r",
@@ -1431,7 +1651,9 @@
         "title": "Democracy simply doesn't work",
         "artists": "Josh Reese",
         "art": "https://i.ytimg.com/vi/kWdfRRtAs3o/hqdefault.jpg"
-      }
+      },
+      "round": "Boner Jamz",
+      "roundNum": 3
     },
     {
       "url": "https://open.spotify.com/track/6pka6k4NxACAPcSQiHhquT?si=8b6280883d0f4f73",
@@ -1449,7 +1671,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851530db954283883866bc21a95",
         "uri": "spotify:track:6pka6k4NxACAPcSQiHhquT",
         "url": "https://open.spotify.com/track/6pka6k4NxACAPcSQiHhquT"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/4fEJGPsUojbKlMJGCVEZQq?si=U7wNEKkNSiWHfAzODgEjvg&utm_source=copy-link",
@@ -1467,7 +1691,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048517192ec371ef6b81f6a154bc3",
         "uri": "spotify:track:4fEJGPsUojbKlMJGCVEZQq",
         "url": "https://open.spotify.com/track/4fEJGPsUojbKlMJGCVEZQq"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/549GpvaGssVVEv0zw4Gjer?si=0bf8aa7141794789",
@@ -1485,7 +1711,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851ac4d663fbe0387d7ead8577e",
         "uri": "spotify:track:549GpvaGssVVEv0zw4Gjer",
         "url": "https://open.spotify.com/track/549GpvaGssVVEv0zw4Gjer"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/3YgkTpILtOWngT7PVHg8kO?si=faaea25fe37d4d8e",
@@ -1503,7 +1731,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485159afd13f40fa2b0aab89bb0e",
         "uri": "spotify:track:3YgkTpILtOWngT7PVHg8kO",
         "url": "https://open.spotify.com/track/3YgkTpILtOWngT7PVHg8kO"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://youtu.be/CiehMELBpME?is=p7lVguE2qiJwBtQp",
@@ -1517,7 +1747,9 @@
         "title": "It's Always Sunny - Steve Winwood",
         "artists": "Wife Soup",
         "art": "https://i.ytimg.com/vi/CiehMELBpME/hqdefault.jpg"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/0x5wJ0cDp7miv49jSMTSkq?si=KrS50-j3QeOen50M4WtU1Q&utm_source=copy-link&sci=spotify%3Acard-config%3A4yuvwAc6e7G0f3mtGANRJi",
@@ -1535,7 +1767,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851e47f3451435776271b3d43da",
         "uri": "spotify:track:0x5wJ0cDp7miv49jSMTSkq",
         "url": "https://open.spotify.com/track/0x5wJ0cDp7miv49jSMTSkq"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/4BIMNBkz3OgRgARIMYh7QW?si=yBj5OKsxSpesnqehdyaHjA&utm_source=copy-link&sci=spotify%3Acard-config%3A0xDynuTNoewXfrQCc34Rco",
@@ -1553,7 +1787,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485192d21aef6c0d288cc4c05973",
         "uri": "spotify:track:4BIMNBkz3OgRgARIMYh7QW",
         "url": "https://open.spotify.com/track/4BIMNBkz3OgRgARIMYh7QW"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/0Z2J91b2iTGLVTZC4fKgxf?si=SkeYekoJSKizGQz5LG86qA&utm_source=whatsapp&rowId=1343b2e996a429a6",
@@ -1571,7 +1807,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d81a092eb373ded457d94eec",
         "uri": "spotify:track:0Z2J91b2iTGLVTZC4fKgxf",
         "url": "https://open.spotify.com/track/0Z2J91b2iTGLVTZC4fKgxf"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/4In6YbLZkQsVnjXdXUKcEi?si=dlLfRMB0SsOAu8puZ8Sbfg&utm_source=copy-link&sci=spotify%3Acard-config%3A39wzffhJw8aOPR5U346L28",
@@ -1589,7 +1827,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485111b9e65e0be3cae3d53c4f6f",
         "uri": "spotify:track:4In6YbLZkQsVnjXdXUKcEi",
         "url": "https://open.spotify.com/track/4In6YbLZkQsVnjXdXUKcEi"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/28p8NVXG9C4aO0Hu7tTgqZ?si=gEOhcc_CR3OBf_J09eyWEQ&utm_source=copy-link&context=spotify%3Asearch%3Afuck%2Bthe%2Bkids",
@@ -1607,7 +1847,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851ef64db1301ec53b1939db7f3",
         "uri": "spotify:track:28p8NVXG9C4aO0Hu7tTgqZ",
         "url": "https://open.spotify.com/track/28p8NVXG9C4aO0Hu7tTgqZ"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/7nT9lGk3bf5rvnVbzPIE3N?si=8-8383_CTNGxMxqUeqcPiQ&utm_source=whatsapp",
@@ -1625,7 +1867,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851866cbd169ed848217a792ffd",
         "uri": "spotify:track:7nT9lGk3bf5rvnVbzPIE3N",
         "url": "https://open.spotify.com/track/7nT9lGk3bf5rvnVbzPIE3N"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://www.youtube.com/watch?v=j3OhV1och50",
@@ -1639,7 +1883,9 @@
         "title": "Kendrick Lamar - meet the grahams (Lyrics) Drake Diss",
         "artists": "BagOnly",
         "art": "https://i.ytimg.com/vi/j3OhV1och50/hqdefault.jpg"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://youtu.be/dqpNOSenaR4?si=vvgdskeW_h-9r1fb",
@@ -1653,7 +1899,9 @@
         "title": "Drake - Back To Back (lyrics)",
         "artists": "Core lyrics",
         "art": "https://i.ytimg.com/vi/dqpNOSenaR4/hqdefault.jpg"
-      }
+      },
+      "round": "I Hope You Shit Your Pants at Target",
+      "roundNum": 4
     },
     {
       "url": "https://open.spotify.com/track/4oGTdOClZUxcM2H3UmXlwL?si=t-xmRZE-Rju0R1pNEKa9cQ&utm_source=copy-link&sci=spotify%3Acard-config%3A0DRJpRWJamssQTQmk7wZHH",
@@ -1671,7 +1919,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485192c885317fbe4bfa680109b4",
         "uri": "spotify:track:4oGTdOClZUxcM2H3UmXlwL",
         "url": "https://open.spotify.com/track/4oGTdOClZUxcM2H3UmXlwL"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://www.youtube.com/watch?v=IrVD0bP_ybg",
@@ -1685,7 +1935,9 @@
         "title": "Diamonds And Rust",
         "artists": "Joan Baez - Topic",
         "art": "https://i.ytimg.com/vi/IrVD0bP_ybg/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/5VicH23MWaIKMmtkWJtqfY?si=4LnLRw0bTl-3wujHBw8vUQ&utm_source=copy-link&sci=spotify%3Acard-config%3A1VK7CdXYKMCUMymnsDorMB",
@@ -1703,7 +1955,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d9bbd53708754b6bbee1e351",
         "uri": "spotify:track:5VicH23MWaIKMmtkWJtqfY",
         "url": "https://open.spotify.com/track/5VicH23MWaIKMmtkWJtqfY"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/SEVu1tcUGnc?si=oNnluhU3Diaq5xGA",
@@ -1717,7 +1971,9 @@
         "title": "Sinead O'Connor - All Apologies (Official Music Video)",
         "artists": "SineadOConnorVEVO",
         "art": "https://i.ytimg.com/vi/SEVu1tcUGnc/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/e6LOWKVq5sQ?is=q8gP8dmkxKtCrCP8",
@@ -1731,7 +1987,9 @@
         "title": "Disco Stu - If these trends continue...",
         "artists": "dumbmatter",
         "art": "https://i.ytimg.com/vi/e6LOWKVq5sQ/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/d87VIQZeppA?t=27&is=OJLWItwDLOFYpHGE",
@@ -1745,7 +2003,9 @@
         "title": "Family Guy - Songs Named After a Girl (Uncensored)",
         "artists": "anthosm",
         "art": "https://i.ytimg.com/vi/d87VIQZeppA/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/7JKpS5rKsKWeVPZ0ojBqv9?si=uWbLjiGpScu8ptwdBHNCCA&utm_source=whatsapp&sci=spotify%3Acard-config%3A2jaoA5PmNcxlRe4pBvHnjU",
@@ -1763,7 +2023,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485193ee2e2f2dfb7de9befcc164",
         "uri": "spotify:track:7JKpS5rKsKWeVPZ0ojBqv9",
         "url": "https://open.spotify.com/track/7JKpS5rKsKWeVPZ0ojBqv9"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://m.youtube.com/watch?v=eG8wnLv59Oo",
@@ -1777,7 +2039,9 @@
         "title": "Three kids and no money | Homer Simpson",
         "artists": "Andy Latino",
         "art": "https://i.ytimg.com/vi/eG8wnLv59Oo/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/4oVO4fGNRRvEn0CRuFO4qv?si=w5XDSIhrSOKtFjC6sLrd0Q&utm_source=whatsapp",
@@ -1795,7 +2059,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485193ee2e2f2dfb7de9befcc164",
         "uri": "spotify:track:4oVO4fGNRRvEn0CRuFO4qv",
         "url": "https://open.spotify.com/track/4oVO4fGNRRvEn0CRuFO4qv"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/5y4qmWF9TIM?si=1zjbR_isbxSu0eCD",
@@ -1809,7 +2075,9 @@
         "title": "The Dead South - Banjo Odyssey [Official Music Video]",
         "artists": "The Dead South",
         "art": "https://i.ytimg.com/vi/5y4qmWF9TIM/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/cFwTbsKkqxE?is=2AHFen2m7sMuvFb7",
@@ -1823,7 +2091,9 @@
         "title": "Stevie Ray Vaughan ~Voodoo Child ~ Live From Austin T",
         "artists": "Patricia Ni_Sol",
         "art": "https://i.ytimg.com/vi/cFwTbsKkqxE/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/2Mq5MrlQ8j4PTGAo8zsdNs?si=374f5e8bf6dd4052",
@@ -1841,7 +2111,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851eb61f4052a054abe26db1bbb",
         "uri": "spotify:track:2Mq5MrlQ8j4PTGAo8zsdNs",
         "url": "https://open.spotify.com/track/2Mq5MrlQ8j4PTGAo8zsdNs"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/1vgdbK87PSzFszWKYW1jEM?si=46efc594d0fc4604",
@@ -1859,7 +2131,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851698c9c30c686012b08bdbf71",
         "uri": "spotify:track:1vgdbK87PSzFszWKYW1jEM",
         "url": "https://open.spotify.com/track/1vgdbK87PSzFszWKYW1jEM"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://music.youtube.com/playlist?list=PLNhZ4Li0xHz8",
@@ -1869,7 +2143,9 @@
       "person": "Matt Mariani",
       "ts": 1786880940000,
       "context": "youtube version of our playlist -",
-      "track": null
+      "track": null,
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/n-Bfkc6lZok?is=_zHGIxs9PqjfivFM",
@@ -1883,7 +2159,9 @@
         "title": "Save Corncob TV | ﻿I ﻿Think You Should Leave | ﻿Netflix",
         "artists": "Netflix Is A Joke",
         "art": "https://i.ytimg.com/vi/n-Bfkc6lZok/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/B1pwyCl5ymE?t=116s",
@@ -1897,7 +2175,9 @@
         "title": "Darmine Doggy Door Full Sketch | I Think You Should Leave with Tim Robinson | Netflix Is a Joke",
         "artists": "Netflix Is A Joke",
         "art": "https://i.ytimg.com/vi/B1pwyCl5ymE/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/77bCgbwirSDVeBGHxg00A7?si=RDq6QhhHR22FT3zwMIPQzw&utm_source=copy-link&sci=spotify%3Acard-config%3A3hqZX6rOcb5zaYgZSnoiDp",
@@ -1915,7 +2195,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485192d21aef6c0d288cc4c05973",
         "uri": "spotify:track:77bCgbwirSDVeBGHxg00A7",
         "url": "https://open.spotify.com/track/77bCgbwirSDVeBGHxg00A7"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/WLPnHCXj8RA?is=xDVzRX0xyXOOlb1t",
@@ -1929,7 +2211,9 @@
         "title": "AFI - My Michelle",
         "artists": "Fearless Records",
         "art": "https://i.ytimg.com/vi/WLPnHCXj8RA/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/auLBLk4ibAk?is=TESJ32hFvq8xjMTg&t=89",
@@ -1943,7 +2227,9 @@
         "title": "Rush - Tom Sawyer",
         "artists": "RushVEVO",
         "art": "https://i.ytimg.com/vi/auLBLk4ibAk/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://music.youtube.com/watch?v=hegodAykvY4&si=rBLNw7Oqxaq5T5fu",
@@ -1957,7 +2243,9 @@
         "title": "Archbishop Harold Holmes",
         "artists": "Jack White - Topic",
         "art": "https://i.ytimg.com/vi/hegodAykvY4/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://m.youtube.com/watch?v=VJg4rwDkkBA&time_continue=1&source_ve_path=NzY3NTg&embeds_referring_euri=https%3A%2F%2Fwww.reddit.com%2F&embeds_referring_origin=https%3A%2F%2Fwww.reddit.com",
@@ -1971,7 +2259,9 @@
         "title": "Alanis Morissette - My Humps",
         "artists": "Alanis Morissette",
         "art": "https://i.ytimg.com/vi/VJg4rwDkkBA/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/album/40uCxIjfM2ixXThi8SHwdF?si=gzAULg5YSFGmBCm7A-wZ0Q",
@@ -1981,7 +2271,9 @@
       "person": "Jon Black",
       "ts": 1787001660000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/61oXWlM80pXSYi17C7tzvL?si=KgDYmry0TA-lYJLG3CQv3g&utm_source=copy-link",
@@ -1999,7 +2291,9 @@
         "art": "https://i.scdn.co/image/ab6742d3000052b7326b9dabe6ac59739d58754c",
         "uri": "spotify:track:61oXWlM80pXSYi17C7tzvL",
         "url": "https://open.spotify.com/track/61oXWlM80pXSYi17C7tzvL"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/5DrkhJaGka08ZK6QyuMK0W?si=a3rYFXKKQBiy3GwmHSkDEQ&utm_source=copy-link&rowId=58fdd265821923b9",
@@ -2017,7 +2311,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851f247f4e8334b745fc2dd080f",
         "uri": "spotify:track:5DrkhJaGka08ZK6QyuMK0W",
         "url": "https://open.spotify.com/track/5DrkhJaGka08ZK6QyuMK0W"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/track/29tBdNJDDT3KbAkbWpckSd?si=d6e45acc346d4643",
@@ -2035,7 +2331,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851f247f4e8334b745fc2dd080f",
         "uri": "spotify:track:29tBdNJDDT3KbAkbWpckSd",
         "url": "https://open.spotify.com/track/29tBdNJDDT3KbAkbWpckSd"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://open.spotify.com/album/6NpTqYfk9dZfMbSbaHYNtP?si=G0M7vMo0RzuPglV-mFn58g&utm_source=copy-link",
@@ -2045,7 +2343,9 @@
       "person": "Dave Steingart",
       "ts": 1787054700000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtube.com/shorts/XxvsQ0S8_Ro?is=EMr90Ws4KWoQvdZV",
@@ -2059,7 +2359,9 @@
         "title": "Mansplaining at its finest #JimJefferies",
         "artists": "Netflix Is A Joke",
         "art": "https://i.ytimg.com/vi/XxvsQ0S8_Ro/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/Uc9_mxvP1K0?t=5",
@@ -2073,7 +2375,9 @@
         "title": "Power Bottom (It's Always Sunny in Philadelphia).wmv",
         "artists": "Antoinette Kelley",
         "art": "https://i.ytimg.com/vi/Uc9_mxvP1K0/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/kw1_BJ5faos?is=0lXLOchpM7ZdF-D_",
@@ -2087,7 +2391,9 @@
         "title": "Disturbing Behavior (1998) TV Spot - Flagpole Sitta",
         "artists": "cosmicurgency",
         "art": "https://i.ytimg.com/vi/kw1_BJ5faos/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/1ZLJ9IjSgPM?is=mgPzJKsC-MGdXikZ",
@@ -2101,7 +2407,9 @@
         "title": "Music That Made The Trailer - Disturbing Behavior (1998) - Harvey Danger - Flagpole Sitta",
         "artists": "themorgue",
         "art": "https://i.ytimg.com/vi/1ZLJ9IjSgPM/hqdefault.jpg"
-      }
+      },
+      "round": "Smells Like Teen Cousin Fuckers",
+      "roundNum": 5
     },
     {
       "url": "https://youtu.be/v-Rq-4spRz4?si=T67i-Ss_UZB16igY",
@@ -2115,7 +2423,9 @@
         "title": "Townes Van Zandt, Waitin´ Around to Die, Heartworn Highways",
         "artists": "After The GoldRush",
         "art": "https://i.ytimg.com/vi/v-Rq-4spRz4/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://youtu.be/GbB3vFfiaVU?is=94d_RaMEtRj1YN1R",
@@ -2129,7 +2439,9 @@
         "title": "Why the World’s Largest Megaproject Collapsed | WSJ",
         "artists": "The Wall Street Journal",
         "art": "https://i.ytimg.com/vi/GbB3vFfiaVU/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://music.youtube.com/watch?v=kmRyVolCH5A&si=j7F5CTznWOnws32R",
@@ -2143,7 +2455,9 @@
         "title": "Pearl Jam - Better Man [Bonnaroo 2008]",
         "artists": "POLARIE",
         "art": "https://i.ytimg.com/vi/kmRyVolCH5A/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://m.youtube.com/watch?v=JXNTIM2_Zmc&ra=m",
@@ -2157,7 +2471,9 @@
         "title": "What if you ask AI to Recreate the Rock 101 times in a row?",
         "artists": "ThinkBaseAI",
         "art": "https://i.ytimg.com/vi/JXNTIM2_Zmc/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://music.youtube.com/playlist?list=PLPKMyLPXrIG0",
@@ -2167,7 +2483,9 @@
       "person": "Matt Mariani",
       "ts": 1787425920000,
       "context": "",
-      "track": null
+      "track": null,
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/7CK9Y1QkosOIEZKnBmtyV0?si=51c4675855f54770",
@@ -2185,7 +2503,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485100971f3bc791f5344ff9ae2c",
         "uri": "spotify:track:7CK9Y1QkosOIEZKnBmtyV0",
         "url": "https://open.spotify.com/track/7CK9Y1QkosOIEZKnBmtyV0"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/5K5oUwfMJeRClJLQUSdKuD?si=fC_d2QOvSxm_tN5-HUlibw&utm_source=copy-link&context=spotify%3Asearch%3Aseeing%2Bsouble",
@@ -2203,7 +2523,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048513378cd84027075dc7d6c2b23",
         "uri": "spotify:track:5K5oUwfMJeRClJLQUSdKuD",
         "url": "https://open.spotify.com/track/5K5oUwfMJeRClJLQUSdKuD"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/6QbyIrAZbeVs16IzrGSdjc?si=CwOjEfNMSweGjcPYfXoNpg&utm_source=copy-link",
@@ -2221,7 +2543,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851517c567bdc6b3b185142b047",
         "uri": "spotify:track:6QbyIrAZbeVs16IzrGSdjc",
         "url": "https://open.spotify.com/track/6QbyIrAZbeVs16IzrGSdjc"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/1Zi2ezNOqt9y9irC11xYpN?si=25TxTD9wQFGl-R2ynpPyHA&utm_source=copy-link",
@@ -2239,7 +2563,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851d33bff23ded3e4ec3149429f",
         "uri": "spotify:track:1Zi2ezNOqt9y9irC11xYpN",
         "url": "https://open.spotify.com/track/1Zi2ezNOqt9y9irC11xYpN"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://m.youtube.com/watch?v=S_4PrI8gB-k",
@@ -2253,7 +2579,9 @@
         "title": "Twink, Twank, Bear, or Otter?",
         "artists": "Sunfrost",
         "art": "https://i.ytimg.com/vi/S_4PrI8gB-k/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/4ooYQyW0AEnAr8sMBJecGn?si=__PCzUlnT9u6kZuJSqOidQ&utm_source=whatsapp",
@@ -2271,7 +2599,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048519ce5e0f45e098d215162d2a6",
         "uri": "spotify:track:4ooYQyW0AEnAr8sMBJecGn",
         "url": "https://open.spotify.com/track/4ooYQyW0AEnAr8sMBJecGn"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/3JNqdTMq1o7H7DWAV4nPGO?si=YVWj5Eq5QZmBKSMCiuQaLA&utm_source=copy-link",
@@ -2289,7 +2619,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851c27e31d4c88092b73aec4844",
         "uri": "spotify:track:3JNqdTMq1o7H7DWAV4nPGO",
         "url": "https://open.spotify.com/track/3JNqdTMq1o7H7DWAV4nPGO"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/59WN2psjkt1tyaxjspN8fp?si=f027Eb9mRK-0Pi0xALRWsQ&utm_source=copy-link",
@@ -2307,7 +2639,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485154ab617bc2d4974ab6ffbece",
         "uri": "spotify:track:59WN2psjkt1tyaxjspN8fp",
         "url": "https://open.spotify.com/track/59WN2psjkt1tyaxjspN8fp"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/4md4KRL6Z9ufa0je0Y3awL?si=1f934f8fd4ce46e0",
@@ -2325,7 +2659,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048518438d769b22aa5225b37d89d",
         "uri": "spotify:track:4md4KRL6Z9ufa0je0Y3awL",
         "url": "https://open.spotify.com/track/4md4KRL6Z9ufa0je0Y3awL"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://open.spotify.com/track/6dnco8haegnJYtylV26cBq?si=1f30f698b70845bd",
@@ -2343,7 +2679,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851f4b9ecd2ef53484ca3206f82",
         "uri": "spotify:track:6dnco8haegnJYtylV26cBq",
         "url": "https://open.spotify.com/track/6dnco8haegnJYtylV26cBq"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://youtu.be/O1v64GARceU?is=XuOMZeFpWQpZfM2M",
@@ -2357,7 +2695,9 @@
         "title": "The Office - Dinner Party - Plasma TV Scene",
         "artists": "PlayRightParent",
         "art": "https://i.ytimg.com/vi/O1v64GARceU/hqdefault.jpg"
-      }
+      },
+      "round": "Surrender Monkeys",
+      "roundNum": 6
     },
     {
       "url": "https://youtu.be/hXVjhSNcqww?t=15&is=jW7KDwlX3THdVSMH",
@@ -2371,7 +2711,9 @@
         "title": "Homer Old People",
         "artists": "Rob Martin",
         "art": "https://i.ytimg.com/vi/hXVjhSNcqww/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://youtu.be/sAkL2-vh2Sk?is=Fn7OQ1mgi8GWldhw",
@@ -2385,7 +2727,9 @@
         "title": "X Men Opening Theme (High Quality)",
         "artists": "jm3dina",
         "art": "https://i.ytimg.com/vi/sAkL2-vh2Sk/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://youtu.be/ft0vkKCadgk",
@@ -2399,7 +2743,9 @@
         "title": "Country Joe & the Fish - VietNam Song - Live Woodstock 1969 - Full HD Video",
         "artists": "Dima T",
         "art": "https://i.ytimg.com/vi/ft0vkKCadgk/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/0ME1eauLCzrULavpxMh6Ww?si=_gh-UO1DRYWnwUx5ZSKJPA&utm_source=whatsapp",
@@ -2417,7 +2763,9 @@
         "art": "https://i.scdn.co/image/ab67616d0000485184eb923a79ba98269f0a7390",
         "uri": "spotify:track:0ME1eauLCzrULavpxMh6Ww",
         "url": "https://open.spotify.com/track/0ME1eauLCzrULavpxMh6Ww"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/25lTenJPmSfwCRZi2hjCcB?si=Nd6Jb4doRnSGXe651njw6g&utm_source=whatsapp",
@@ -2435,7 +2783,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851db6b8ae97f69fee1d432334d",
         "uri": "spotify:track:25lTenJPmSfwCRZi2hjCcB",
         "url": "https://open.spotify.com/track/25lTenJPmSfwCRZi2hjCcB"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/2kguzEzSeQ52zueXsbPorp?si=b60587609de44f79",
@@ -2453,7 +2803,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851271133ab6d376b19099743e0",
         "uri": "spotify:track:2kguzEzSeQ52zueXsbPorp",
         "url": "https://open.spotify.com/track/2kguzEzSeQ52zueXsbPorp"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://youtu.be/WjLS581-DjY?t=36&is=8efixd8No4AMEVqi",
@@ -2467,7 +2819,9 @@
         "title": "Litli trommuleikarinn",
         "artists": "Ssdemetz",
         "art": "https://i.ytimg.com/vi/WjLS581-DjY/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/76fqoIuUaPDZjX2AMzHIzK?si=xZjj_KvBRyux4FlYw_0sEg&utm_source=whatsapp&pi=_8nsY9ahS9KDf",
@@ -2485,7 +2839,9 @@
         "art": "https://i.scdn.co/image/ab6742d3000052b7c7887d44bcab36f48be94fc9",
         "uri": "spotify:track:76fqoIuUaPDZjX2AMzHIzK",
         "url": "https://open.spotify.com/track/76fqoIuUaPDZjX2AMzHIzK"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/3oW6SWwGqiZSPTiAp7ZQoH?si=Dx6JuAjhTIWIkoRLzcCP_w&utm_source=whatsapp&rowId=538880faafc52ebf",
@@ -2503,7 +2859,9 @@
         "art": "https://i.scdn.co/image/ab67616d000048519fd857fb9120e851eb0c68ea",
         "uri": "spotify:track:3oW6SWwGqiZSPTiAp7ZQoH",
         "url": "https://open.spotify.com/track/3oW6SWwGqiZSPTiAp7ZQoH"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://www.youtube.com/watch?v=98k2DlQ9PMY",
@@ -2517,7 +2875,9 @@
         "title": "Family Guy - The incessant use of \"Fortunate Son\"",
         "artists": "Mr. Rupert",
         "art": "https://i.ytimg.com/vi/98k2DlQ9PMY/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/3ATxgC4OtJ0beg9xEdQvMF?si=02d01717ec144752",
@@ -2535,7 +2895,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851506bdd0bccbd15abc1bc05d9",
         "uri": "spotify:track:3ATxgC4OtJ0beg9xEdQvMF",
         "url": "https://open.spotify.com/track/3ATxgC4OtJ0beg9xEdQvMF"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/3QebYR26gRT9Bso2VSnUOR?si=1b7kX1fRTBmBP5E8qt0v9Q&utm_source=copy-link",
@@ -2553,7 +2915,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851594d33daeaeaf320767b0da3",
         "uri": "spotify:track:3QebYR26gRT9Bso2VSnUOR",
         "url": "https://open.spotify.com/track/3QebYR26gRT9Bso2VSnUOR"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://www.youtube.com/@BigJoel",
@@ -2563,7 +2927,9 @@
       "person": "Matt Mariani",
       "ts": 1787785620000,
       "context": "if looking for youtube content - I have been making my way through the content of big joel recently -",
-      "track": null
+      "track": null,
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://youtu.be/ckmiO50anfg?si=9nI8W75EjBu4tC2i",
@@ -2577,7 +2943,9 @@
         "title": "Click: The Worst Movie | Big Joel",
         "artists": "Big Joel",
         "art": "https://i.ytimg.com/vi/ckmiO50anfg/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://youtu.be/oV_yhvaU6Vk?si=VPqGWY_CsJuX_q6m",
@@ -2591,7 +2959,9 @@
         "title": "Ben Shapiro and the Politics of Imagination | Big Joel",
         "artists": "Big Joel",
         "art": "https://i.ytimg.com/vi/oV_yhvaU6Vk/hqdefault.jpg"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/4jKF1H4eQu8A7Bofo0b6FA?si=RJR2G1o-RKmOBOSsCOmxyw&utm_source=whatsapp",
@@ -2609,7 +2979,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851abb56c58032f79ca3c27cb6d",
         "uri": "spotify:track:4jKF1H4eQu8A7Bofo0b6FA",
         "url": "https://open.spotify.com/track/4jKF1H4eQu8A7Bofo0b6FA"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     },
     {
       "url": "https://open.spotify.com/track/3idMGeAs6ZEmPAZll9u1if?si=afde86a7736d446f",
@@ -2627,7 +2999,9 @@
         "art": "https://i.scdn.co/image/ab67616d00004851438d7cc58b429f441560a5b1",
         "uri": "spotify:track:3idMGeAs6ZEmPAZll9u1if",
         "url": "https://open.spotify.com/track/3idMGeAs6ZEmPAZll9u1if"
-      }
+      },
+      "round": "Stranger Danger",
+      "roundNum": 7
     }
   ]
 }

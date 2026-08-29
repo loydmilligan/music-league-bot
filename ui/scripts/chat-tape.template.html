@@ -133,13 +133,17 @@ button{font-family:inherit;cursor:pointer}
 .prow .pl{font-family:var(--font-display);font-weight:800;font-size:20px;width:24px;flex:none;text-align:center}
 .prow .pmid{flex:1;min-width:0}
 .prow .pt{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--fg);line-height:1.15}
-.prow .pa{font-size:12px;color:var(--fg-muted)}
+.prow .pa{font-size:12px;color:var(--fg-muted);display:block}
 .prow .pv{font-family:var(--font-mono);font-size:11px;color:var(--fg-quiet);text-align:right;flex:none}
+.prow .part{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:none;background:var(--ink-2)}
 .trow{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--ink-3)}
+.trow .tart{width:34px;height:34px;border-radius:6px;object-fit:cover;flex:none;background:var(--ink-2)}
+.trow:last-child{border-bottom:none}
+.racc .rbadge{width:34px;flex:none;text-align:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--mash-pulp)}
 .trow .tn{font-family:var(--font-mono);font-size:11px;color:var(--fg-quiet);width:26px;flex:none;padding-top:2px}
 .trow .tmid{flex:1;min-width:0}
 .trow .tt{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg);line-height:1.2}
-.trow .ta{font-size:12px;color:var(--fg-muted)}
+.trow .ta{font-size:12px;color:var(--fg-muted);display:block}
 .trow .tby{font-family:var(--font-mono);font-size:9.5px;color:var(--acc);margin-top:2px;display:block}
 .plbtn{display:block;text-align:center;background:var(--moss);color:var(--ink-0);font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:12px;border-radius:10px;margin:6px 0 16px}
 .note{font-size:13.5px;line-height:1.62;color:var(--fg-2);padding:12px 0;border-bottom:1px solid var(--ink-3)}
@@ -198,7 +202,7 @@ function pcolor(name){return PCOLOR[name]||'var(--ink-7)';}
 const state = {tab:'Overview', drill:null,
   mb:{metric:'Messages', norm:'Total', person:'Matt Mariani'},
   heat:{person:'Everyone'},
-  reg:{open:{}}, tl:{filter:'All'}};
+  reg:{open:{}}, tl:{filter:'All', open:{1:true}}};
 
 /* ---- home ---- */
 function renderTabs(){
@@ -264,6 +268,10 @@ const VIEWS = {
   },
   mixingBoard(){
     const metrics = {'Messages':'messages','Words':'words','Characters':'characters','Edits':'edits','Media':'mediaShared','Links':'links'};
+    // Same-dimension pairs are degenerate (Messages/message ≡ 1, Words per 1k words ≡ 1000) — don't offer them.
+    const norms = ['Total','Per message','Per 1k words'].filter(n=>
+      !(n==='Per message'&&state.mb.metric==='Messages') && !(n==='Per 1k words'&&state.mb.metric==='Words'));
+    if(!norms.includes(state.mb.norm)) state.mb.norm='Total';
     const mk = metrics[state.mb.metric];
     const val = p => { const v=p[mk]; return state.mb.norm==='Per message'? v/p.messages : state.mb.norm==='Per 1k words'? v/p.words*1000 : v; };
     const fmt = n => state.mb.norm==='Total'? nf(Math.round(n)) : n.toFixed(state.mb.norm==='Per message'?2:1);
@@ -274,7 +282,7 @@ const VIEWS = {
     return `<div class="chips" style="margin-bottom:10px">${pill(TAPE.people.map(p=>p.name),state.mb.person,'person')}</div>
     <div class="youbox"><span class="yl"><b>${esc(state.mb.person.split(' ')[0])}</b> ranks</span><span class="yr">#${youRank}</span></div>
     <div class="sub" style="margin-bottom:6px">Measure</div><div class="chips" style="margin-bottom:10px">${pill(Object.keys(metrics),state.mb.metric,'metric')}</div>
-    <div class="sub" style="margin-bottom:6px">Per what</div><div class="chips" style="margin-bottom:16px">${pill(['Total','Per message','Per 1k words'],state.mb.norm,'norm')}</div>
+    <div class="sub" style="margin-bottom:6px">Per what</div><div class="chips" style="margin-bottom:16px">${pill(norms,state.mb.norm,'norm')}</div>
     <div class="mono" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:10px">${esc(state.mb.metric)} · ${esc(state.mb.norm)}</div>
     <div class="stack" style="gap:9px">${ranked.map((p,i)=>{const sel=p.name===state.mb.person;return `<div class="rrow ${sel?'sel':''}">
       <div class="rh"><span class="rn"><span class="rk">#${i+1}</span><span class="rname" style="color:${sel?'var(--sky)':'var(--fg)'}">${esc(p.name)}</span></span><span class="rv">${fmt(p.v)}</span></div>
@@ -327,18 +335,39 @@ const VIEWS = {
     const s = TAPE.songs;
     const sharers = ['All'].concat([...new Set(s.links.map(l=>l.person))]);
     const list = state.tl.filter==='All'? s.links : s.links.filter(l=>l.person===state.tl.filter);
-    return `<p class="lead"><b>Round one's podium</b> — "${esc(s.round)}" — then every song anybody dropped into the chat, in the order posted. <b>${s.links.length} tracks</b>, all a real playlist.</p>
+    const num = new Map(s.links.map((l,i)=>[l,i+1]));
+    const art = l => l.track&&l.track.art
+      ? `<img class="tart" loading="lazy" src="${esc(l.track.art)}" alt="" onerror="this.style.visibility='hidden'">`
+      : `<span class="tart"></span>`;
+    const row = l => `<div class="trow acc-pulp"><span class="tn">${num.get(l)}</span>${art(l)}<span class="tmid">
+      <span class="tt">${esc(l.track&&l.track.title?l.track.title:'(unresolved link)')}</span>
+      <span class="ta">${esc(l.track&&l.track.artists?l.track.artists:l.kind)}</span>
+      <span class="tby">${esc(l.person)}${l.context?' · "'+esc(l.context)+'"':''}</span></span></div>`;
+    // Folded-by-round when the data carries round tags; flat chronological otherwise.
+    let body;
+    if(Array.isArray(s.rounds)&&s.links.some(l=>l.roundNum)){
+      const groups = s.rounds.map(r=>({...r, links:list.filter(l=>l.roundNum===r.num)})).filter(g=>g.links.length);
+      body = `<div class="stack" style="gap:10px">${groups.map(g=>{
+        const open = !!state.tl.open[g.num];
+        return `<div class="acc racc" style="border-color:${open?'var(--mash-pulp)':'var(--ink-4)'}">
+          <button data-tlr="${g.num}"><span class="rbadge">R${g.num}</span>
+            <span class="amid"><span class="aname">${esc(g.name)}</span><span class="acount">${g.links.length} track${g.links.length===1?'':'s'}</span></span>
+            <span class="chev" style="transform:rotate(${open?90:0}deg)">›</span></button>
+          ${open?`<div class="acc-body" style="gap:0">${g.links.map(row).join('')}</div>`:''}</div>`;
+      }).join('')}</div>`;
+    } else {
+      body = `<div>${list.map(row).join('')}</div>`;
+    }
+    return `<p class="lead"><b>Round one's podium</b> — "${esc(s.round)}" — then every song anybody dropped into the chat, folded by the round that was in play. <b>${s.links.length} tracks</b>, all a real playlist.</p>
     <div class="podium"><div class="ph">The podium · ${esc(s.round)}</div>${s.podium.map(p=>`<div class="prow">
       <span class="pl" style="color:${p.place===1?'var(--amber)':p.place===2?'var(--fg-2)':'var(--mash-pulp-deep)'}">${p.place}</span>
+      ${p.art?`<img class="part" loading="lazy" src="${esc(p.art)}" alt="" onerror="this.style.visibility='hidden'">`:''}
       <span class="pmid"><span class="pt">${esc(p.title)}</span><span class="pa">${esc(p.artists)}</span></span>
       <span class="pv">${p.points} pts<br>${esc(p.submitter.split(' ')[0])}</span></div>`).join('')}</div>
     <a class="plbtn" href="${esc(s.playlistUrl)}" target="_blank" rel="noopener">Open the ${s.playlistTracks}-track playlist ▸</a>
     <div class="sub" style="margin-bottom:8px">Everything shared — filter by who dropped it</div>
     <div class="chips" style="margin-bottom:12px">${sharers.map(n=>`<button class="chip ${n===state.tl.filter?'on':''}" data-tl="${esc(n)}">${n==='All'?'All '+s.links.length:esc(n.split(' ')[0])}</button>`).join('')}</div>
-    <div>${list.map((l,i)=>`<div class="trow acc-pulp"><span class="tn">${i+1}</span><span class="tmid">
-      <span class="tt">${esc(l.track&&l.track.title?l.track.title:'(unresolved link)')}</span>
-      <span class="ta">${esc(l.track&&l.track.artists?l.track.artists:l.kind)}</span>
-      <span class="tby">${esc(l.person)}${l.context?' · "'+esc(l.context)+'"':''}</span></span></div>`).join('')}</div>`;
+    ${body}`;
   },
   method(){
     const g = TAPE.generatedFrom;
@@ -361,7 +390,7 @@ function renderEntry(e,col){
 
 /* ---- events ---- */
 document.addEventListener('click', ev=>{
-  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tl]');
+  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tlr],[data-tl]');
   if(!t) return;
   if(t.dataset.tab!=null){ state.tab=t.dataset.tab; renderTabs(); renderBento(); }
   else if(t.dataset.drill){ openDrill(t.dataset.drill); }
@@ -369,6 +398,7 @@ document.addEventListener('click', ev=>{
   else if(t.dataset.mb){ state.mb[t.dataset.mb]=t.dataset.val; renderOverlay(); }
   else if(t.dataset.heat){ state.heat.person=t.dataset.heat; renderOverlay(); }
   else if(t.dataset.reg){ const k=t.dataset.reg; state.reg.open[k]=!state.reg.open[k]; renderOverlay(); }
+  else if(t.dataset.tlr){ const k=t.dataset.tlr; state.tl.open[k]=!state.tl.open[k]; renderOverlay(); }
   else if(t.dataset.tl){ state.tl.filter=t.dataset.tl; renderOverlay(); }
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.drill) closeDrill(); });

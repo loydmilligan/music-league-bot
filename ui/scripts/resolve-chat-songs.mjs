@@ -153,7 +153,25 @@ const roundName = db
 		  ORDER BY r.id LIMIT 1`,
 	)
 	.get()?.name ?? 'Round 1';
+
+// Round eras, for tagging links: a link belongs to the earliest round whose
+// voting deadline hadn't passed when it was posted — the round in play.
+const eras = db
+	.prepare(
+		`SELECT r.name, r.voting_deadline AS vd
+		   FROM rounds r JOIN seasons se ON r.season_id = se.id
+		  WHERE se.league_id = 5 AND r.voting_deadline IS NOT NULL
+		  ORDER BY r.voting_deadline`,
+	)
+	.all()
+	.map((r, i) => ({ name: r.name, num: i + 1, end: Date.parse(r.vd) }));
 db.close();
+
+for (const l of resolved) {
+	const era = eras.find((e) => l.ts <= e.end) ?? eras[eras.length - 1] ?? null;
+	l.round = era?.name ?? null;
+	l.roundNum = era?.num ?? null;
+}
 
 const podium = podiumRows.map((r, i) => ({
 	place: i + 1,
@@ -168,7 +186,14 @@ const podium = podiumRows.map((r, i) => ({
 		: null,
 }));
 
-fs.writeFileSync(OUT, JSON.stringify({ round: roundName, podium, links: resolved }, null, 2));
+fs.writeFileSync(
+	OUT,
+	JSON.stringify(
+		{ round: roundName, podium, rounds: eras.map((e) => ({ name: e.name, num: e.num })), links: resolved },
+		null,
+		2,
+	),
+);
 console.error(
 	`[ok] ${path.relative(ROOT, OUT)} — ${resolved.length} links, ` +
 		`${Object.keys(meta).length} tracks resolved, podium for "${roundName}"`,
