@@ -67,7 +67,8 @@ button{font-family:inherit;cursor:pointer}
 .chip.on{background:var(--mash-pulp);color:var(--bone);border-color:var(--mash-pulp);font-weight:700}
 .chip.on.sky{background:var(--sky);border-color:var(--sky);color:var(--ink-0)}
 .bar{height:7px;background:var(--ink-3);border-radius:99px;overflow:hidden}
-.bar>span{display:block;height:100%;border-radius:99px;transition:width .45s var(--ease-out)}
+.bar>span{display:block;height:100%;border-radius:99px;transform-origin:left;animation:barIn .45s var(--ease-out)}
+@keyframes barIn{from{transform:scaleX(0)}}
 .quote{font-size:13px;line-height:1.55;color:var(--fg-2);border-left:2px solid var(--acc);padding-left:12px;font-style:italic}
 .mono{font-family:var(--font-mono)}
 .sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-quiet)}
