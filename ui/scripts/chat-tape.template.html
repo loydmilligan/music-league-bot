@@ -438,15 +438,135 @@ function renderBento(){
   }).join('');
 }
 
-/* ---- overlay ---- */
-function openDrill(id){ state.drill=id; renderOverlay(); $('#ov').classList.add('open'); $('#ov-body').scrollTop=0; }
-function closeDrill(){ $('#ov').classList.remove('open'); state.drill=null; }
+/* ---- overlay + deep-linking ---- */
+// Hash scheme: #<sectionId> or, for readTheRoom, #readTheRoom:sel=<idx>&round=<id>
+// (params omitted when at default). Kept in sync via replaceState on every
+// pivot so the "copy link" and per-card share buttons always capture the
+// exact visible state; open/close uses pushState so the back button works.
+function currentHash(){
+  if(!state.drill) return '';
+  if(state.drill==='readTheRoom'){
+    const parts=[];
+    if(state.rtr.sel!==null) parts.push('sel='+state.rtr.sel);
+    if(state.rtr.ledgerRound!=='season') parts.push('round='+state.rtr.ledgerRound);
+    return '#'+state.drill+(parts.length? ':'+parts.join('&') : '');
+  }
+  return '#'+state.drill;
+}
+function parseHash(){
+  const h = location.hash.slice(1);
+  if(!h) return null;
+  const [id, qs] = h.split(':');
+  const params = {};
+  if(qs) for(const pair of qs.split('&')){ const [k,v]=pair.split('='); if(k) params[k]=decodeURIComponent(v??''); }
+  return {id, params};
+}
+function applyHashParams(parsed){
+  if(parsed.id!=='readTheRoom') return;
+  state.rtr.sel = parsed.params.sel!=null ? (parsed.params.sel==='all'?null:Number(parsed.params.sel)) : null;
+  state.rtr.ledgerRound = parsed.params.round!=null ? (parsed.params.round==='season'?'season':Number(parsed.params.round)) : 'season';
+}
+function syncHash(push){
+  const url = location.pathname+location.search+currentHash();
+  if(push) history.pushState({drill:state.drill}, '', url);
+  else history.replaceState({drill:state.drill}, '', url);
+}
+function openDrill(id){ state.drill=id; syncHash(true); renderOverlay(); $('#ov').classList.add('open'); $('#ov-body').scrollTop=0; }
+function closeDrill(){ $('#ov').classList.remove('open'); state.drill=null; history.pushState(null,'', location.pathname+location.search); }
+window.addEventListener('popstate', ()=>{
+  const parsed = parseHash();
+  if(parsed && SECTIONS.find(x=>x.id===parsed.id)){
+    applyHashParams(parsed);
+    state.drill = parsed.id;
+    renderOverlay(); $('#ov').classList.add('open');
+  } else {
+    $('#ov').classList.remove('open'); state.drill=null;
+  }
+});
 function renderOverlay(){
   const s = SECTIONS.find(x=>x.id===state.drill); if(!s) return;
   $('#ov-top').className = 'ov-top acc-'+s.acc;
-  $('#ov-top').innerHTML = `<button class="ov-back" data-close>‹</button><div><div class="otag">${esc(s.tag)}${s.draft?' · Draft':''}</div><div class="oname">${esc(s.name)}</div></div>`;
+  $('#ov-top').innerHTML = `<button class="ov-back" data-close>‹</button><div style="flex:1;min-width:0"><div class="otag">${esc(s.tag)}${s.draft?' · Draft':''}</div><div class="oname">${esc(s.name)}</div></div><button class="ov-back" data-copylink title="Copy link to this view" style="flex:none;font-size:15px">🔗</button>`;
   $('#ov-body').className = 'ov-body acc-'+s.acc;
   $('#ov-body').innerHTML = VIEWS[s.id]();
+  syncHash(false);
+}
+
+/* ---- Read The Room: export a card as a shareable/saveable PNG ---- */
+function unescapeHtml(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
+function rtrWrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines){
+  const words = text.split(' '); let line='', ly=y, lines=0;
+  for(const w of words){
+    const test = line? line+' '+w : w;
+    if(ctx.measureText(test).width > maxWidth && line){
+      ctx.fillText(line, x, ly); lines++; if(lines>=maxLines) return;
+      line=w; ly+=lineHeight;
+    } else line=test;
+  }
+  if(line) ctx.fillText(line, x, ly);
+}
+// SVG -> canvas rasterization (in-chart text falls back to system sans/mono —
+// isolated SVG-image rendering can't see the page's @font-face fonts; the
+// caption band below uses canvas fillText, which CAN, so headline/eyebrow
+// stay pixel-faithful). No external libraries, no network requests.
+async function rtrExportCard(svgEl, opts){
+  await (document.fonts && document.fonts.ready);
+  const xml = new XMLSerializer().serializeToString(svgEl);
+  const blobUrl = URL.createObjectURL(new Blob([xml], {type:'image/svg+xml;charset=utf-8'}));
+  const img = new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=blobUrl; });
+  URL.revokeObjectURL(blobUrl);
+
+  const vb = svgEl.viewBox.baseVal;
+  const scale = 2, capH = 260, pad = 56;
+  const W = Math.round(vb.width*scale), chartH = Math.round(vb.height*scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = chartH+capH;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#050608'; ctx.fillRect(0,0,W,chartH+capH);
+  ctx.drawImage(img, 0, 0, W, chartH);
+  ctx.fillStyle = '#0d1116'; ctx.fillRect(0, chartH, W, capH);
+  ctx.strokeStyle = '#283039'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0,chartH); ctx.lineTo(W,chartH); ctx.stroke();
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ff5b2e';
+  ctx.font = "700 26px 'JetBrains Mono', monospace";
+  ctx.fillText(unescapeHtml(opts.eyebrow).toUpperCase(), pad, chartH+56);
+  ctx.fillStyle = '#f1f4f7';
+  ctx.font = "800 40px 'Bricolage Grotesque', sans-serif";
+  rtrWrapText(ctx, unescapeHtml(opts.headline), pad, chartH+110, W-pad*2, 48, 2);
+  ctx.fillStyle = '#5a6773';
+  ctx.font = "600 22px 'JetBrains Mono', monospace";
+  ctx.fillText('BOARZ II MEN · READ THE ROOM', pad, chartH+capH-30);
+
+  const blob = await new Promise(res=>canvas.toBlob(res,'image/png'));
+  const file = new File([blob], opts.filename, {type:'image/png'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:opts.eyebrow, text:opts.shareText}); return 'shared'; }
+    catch(e){ if(e && e.name==='AbortError') return 'cancelled'; /* fall through to download */ }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = opts.filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  return 'saved';
+}
+function rtrHandleExport(btn){
+  const kind = btn.dataset.rtrexport;
+  const vh = TAPE.votingHabits;
+  const cardEl = btn.closest('[data-rtrcard]');
+  const svgEl = cardEl && cardEl.querySelector('svg');
+  if(!vh || !svgEl) return;
+  const ex = rtrExplainers(vh, state.rtr.sel);
+  const eyebrowMap = {web:'The Favor Web', orbit:'The Reception Orbit', ledger:'The Heat Ledger', contra:'Against the Grain'};
+  const headMap = {web:ex.webHead, orbit:ex.orbitHead, ledger:ex.ledgerHead, contra:ex.contraHead};
+  const who = state.rtr.sel===null? 'everyone' : vh.roster[state.rtr.sel].first.toLowerCase().replace(/\s+/g,'-');
+  const roundTag = kind==='ledger' ? '-'+(state.rtr.ledgerRound==='season'?'season':(vh.rounds.find(r=>r.id===state.rtr.ledgerRound)?.short||'round').toLowerCase().replace(/\s+/g,'-')) : '';
+  const filename = `boarz-read-the-room-${kind}-${who}${roundTag}.png`;
+  const shareUrl = location.origin+location.pathname+location.search+currentHash();
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = '…';
+  rtrExportCard(svgEl, {eyebrow:eyebrowMap[kind], headline:headMap[kind], filename, shareText:shareUrl})
+    .catch(()=>{})
+    .finally(()=>{ btn.disabled=false; btn.textContent=label; });
 }
 
 const VIEWS = {
@@ -608,8 +728,11 @@ const VIEWS = {
       ${vh.rounds.map(r=>`<button class="chip ${ledgerRound===r.id?'on':''}" data-rtrround="${r.id}">${esc(r.short)}</button>`).join('')}
     </div>`;
 
-    const card = (eyebrow, head, body, svg, keyHtml) => `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
-      <div style="background:#050608;padding:14px">${svg}</div>
+    const card = (kind, eyebrow, head, body, svg, keyHtml) => `<div class="card" data-rtrcard="${kind}" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <div style="position:relative;background:#050608;padding:14px">
+        <button data-rtrexport="${kind}" title="Share or save this view as an image" style="position:absolute;top:10px;right:10px;z-index:2;background:rgba(13,17,22,.85);border:1px solid var(--ink-4);color:var(--fg-2);border-radius:999px;padding:6px 12px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;display:flex;align-items:center;gap:5px">⇪ Share</button>
+        ${svg}
+      </div>
       <div style="padding:18px 17px;display:flex;flex-direction:column;gap:10px">
         <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-quiet)">${esc(eyebrow)}</div>
         <div style="font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--fg);line-height:1.15">${head}</div>
@@ -642,12 +765,12 @@ const VIEWS = {
 
     return `<p class="lead">Pick a player to light up everything the league already knows about how they vote — and how the room votes on them. Leave it on Everyone for the lay of the land.</p>
     ${chips}
-    ${card('The Favor Web', ex.webHead, ex.webBody, rtrWeb(vh, sel), webKey)}
-    ${card('The Reception Orbit', ex.orbitHead, ex.orbitBody, rtrOrbit(vh, sel), orbitKey)}
+    ${card('web', 'The Favor Web', ex.webHead, ex.webBody, rtrWeb(vh, sel), webKey)}
+    ${card('orbit', 'The Reception Orbit', ex.orbitHead, ex.orbitBody, rtrOrbit(vh, sel), orbitKey)}
     <div class="sub" style="margin-bottom:8px">The Heat Ledger · filter by round</div>
     ${roundChips}
-    ${card('The Heat Ledger', ex.ledgerHead, ex.ledgerBody, rtrLedger(vh, sel, ledgerRound), ledgerKey)}
-    ${card('Against the Grain', ex.contraHead, ex.contraBody, rtrContra(vh, sel), contraKey)}`;
+    ${card('ledger', 'The Heat Ledger', ex.ledgerHead, ex.ledgerBody, rtrLedger(vh, sel, ledgerRound), ledgerKey)}
+    ${card('contra', 'Against the Grain', ex.contraHead, ex.contraBody, rtrContra(vh, sel), contraKey)}`;
   },
   regulars(){
     return `<p class="lead">Every member has a fingerprint — a thing they do, on the record, on separate dates, that would identify them with the name scrubbed off. <b>${regCount()} of them, up to three per man.</b></p>
@@ -736,11 +859,16 @@ function renderEntry(e,col){
 
 /* ---- events ---- */
 document.addEventListener('click', ev=>{
-  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tlr],[data-tl],[data-rtrsel],[data-rtrround]');
+  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-copylink],[data-mb],[data-heat],[data-reg],[data-tlr],[data-tl],[data-rtrsel],[data-rtrround],[data-rtrexport]');
   if(!t) return;
   if(t.dataset.tab!=null){ state.tab=t.dataset.tab; renderTabs(); renderBento(); }
   else if(t.dataset.drill){ openDrill(t.dataset.drill); }
   else if(t.dataset.close!=null){ closeDrill(); }
+  else if(t.dataset.copylink!=null){
+    const url = location.origin+location.pathname+location.search+currentHash();
+    (navigator.clipboard?.writeText(url) ?? Promise.reject()).then(()=>{ t.textContent='✓'; setTimeout(()=>{t.textContent='🔗';},1400); }).catch(()=>{ prompt('Copy this link:', url); });
+  }
+  else if(t.dataset.rtrexport){ rtrHandleExport(t); }
   else if(t.dataset.mb){ state.mb[t.dataset.mb]=t.dataset.val; renderOverlay(); }
   else if(t.dataset.heat){ state.heat.person=t.dataset.heat; renderOverlay(); }
   else if(t.dataset.reg){ const k=t.dataset.reg; state.reg.open[k]=!state.reg.open[k]; renderOverlay(); }
@@ -755,6 +883,13 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.drill) cl
 $('#mast-meta').textContent = nf(TAPE.generatedFrom.messages)+' messages · '+TAPE.people.length+' players · '+TAPE.songs.links.length+' songs';
 $('#foot-msgs').textContent = nf(TAPE.generatedFrom.messages);
 renderTabs(); renderBento();
+{ const parsed = parseHash();
+  if(parsed && SECTIONS.find(x=>x.id===parsed.id)){
+    applyHashParams(parsed);
+    state.drill = parsed.id;
+    renderOverlay(); $('#ov').classList.add('open');
+  }
+}
 </script>
 </body>
 </html>
