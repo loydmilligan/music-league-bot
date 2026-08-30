@@ -4,10 +4,13 @@
  *
  *   node scripts/ytm-cover/generate.mjs <roundId> <1a|1b|1c> [--ytm-url URL] [--out PATH]
  *
- * Implements CD's handoff (design_handoff_ytm_cover/README.md, 2026-08-29):
+ * Implements CD's handoffs (design_handoff_ytm_cover*, 2026-08-29; the
+ * 1b/1d/1e revision supersedes the first drop for those concepts):
  *   1a Mosaic Frame    — textless 4×3 cover grid + pulp badge cells
- *   1b Marquee Title   — blurred art wash, round name dominates (auto-fit)
+ *   1b Marquee Title   — tiled 4×4 art wash, round name bottom-right (auto-fit)
  *   1c Track Manifest  — mono receipt, zero album art
+ *   1d Filmstrip Band  — pulp header band + cover strip + theme text
+ *   1e Pulp Stamp      — full tiled art grid behind a rotated pulp stamp
  *
  * Send-time data only: no winners, scores, or submitter identities.
  * Deterministic: all art is fetched up front and inlined as data URIs;
@@ -29,8 +32,8 @@ const FONTS_CSS = path.join(ROOT, 'digests/d/boarz-chat-superlatives/_app/fonts.
 // ── args ──────────────────────────────────────────────────────────────────────
 const [roundIdArg, variant] = process.argv.slice(2);
 const ROUND_ID = Number(roundIdArg);
-if (!ROUND_ID || !['1a', '1b', '1c'].includes(variant)) {
-	console.error('usage: generate.mjs <roundId> <1a|1b|1c> [--ytm-url URL] [--out PATH]');
+if (!ROUND_ID || !['1a', '1b', '1c', '1d', '1e'].includes(variant)) {
+	console.error('usage: generate.mjs <roundId> <1a|1b|1c|1d|1e> [--ytm-url URL] [--out PATH]');
 	process.exit(1);
 }
 const flag = (name) => {
@@ -68,6 +71,7 @@ db.close();
 if (!songs.length) throw new Error(`round ${ROUND_ID} has no submissions`);
 
 const themeBy = round.description?.match(/Theme submitted by\s+(.+?)\s*$/im)?.[1] ?? null;
+const themeText = round.description?.replace(/\s*Theme submitted by\s+.+$/im, '').trim() ?? '';
 
 // Total runtime via one Spotify batch call; cover degrades to trackCount-only on failure.
 async function totalRuntimeMin() {
@@ -105,6 +109,14 @@ async function dataUri(url) {
 
 const runtimeMin = await totalRuntimeMin();
 const arts = variant === '1c' ? [] : await Promise.all(songs.map((s) => dataUri(s.album_art_url)));
+
+// Grid-fill helper (CD 1b/1e): tile the resolved covers to fill N cells so no
+// cell is ever blank, whatever the track count.
+const gridFill = (n) => {
+	const covers = arts.filter(Boolean);
+	if (!covers.length) return Array.from({ length: n }, () => null);
+	return Array.from({ length: n }, (_, i) => covers[i % covers.length]);
+};
 
 // ── shared style ──────────────────────────────────────────────────────────────
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -149,7 +161,8 @@ if (variant === '1a') {
 		</div>
 	</div></body>`;
 } else if (variant === '1b') {
-	const wash = arts
+	// Revised per the 1b/1d/1e handoff: 4×4 grid-fill backdrop, title block bottom-right.
+	const wash = gridFill(16)
 		.map((a) => (a ? `<img src="${a}" style="width:100%;height:100%;object-fit:cover">` : `<div style="background:var(--ink-2)"></div>`))
 		.join('');
 	html = `${head}<body>
@@ -157,18 +170,71 @@ if (variant === '1a') {
 	<div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 40%, rgba(7,9,12,.35), rgba(7,9,12,.92))"></div>
 	<div style="position:absolute;inset:0;padding:56px;display:flex;flex-direction:column;justify-content:space-between">
 		<div style="font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.14em"><span style="color:var(--mash-pulp)">ROUND ${rr}</span><span style="color:var(--fg-muted)"> · THE DROP</span></div>
-		<h1 id="title" style="font-family:var(--font-display);font-weight:800;font-size:73px;line-height:.98;letter-spacing:-.03em;color:var(--bone);text-shadow:0 4px 24px rgba(0,0,0,.6);text-wrap:balance">${esc(round.name)}</h1>
-		<div style="display:flex;justify-content:space-between;align-items:flex-end">
-			<span style="font-family:var(--font-body);font-size:17px;color:var(--fg-muted)">${themeBy ? `Themed by <b style="color:var(--fg-2)">${esc(themeBy)}</b> · ` : ''}${songs.length} tracks</span>
-			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:26px;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge)">B-II-M</span>
+		<div style="align-self:flex-end;text-align:right;max-width:80%">
+			<h1 id="title" style="font-family:var(--font-display);font-weight:800;font-size:67px;line-height:.98;letter-spacing:-.03em;color:var(--bone);text-shadow:0 4px 24px rgba(0,0,0,.7);text-wrap:balance">${esc(round.name)}</h1>
+			<div style="display:flex;justify-content:flex-end;align-items:baseline;gap:16px;margin-top:20px">
+				<span style="font-family:var(--font-body);font-weight:500;font-size:17px;color:var(--fg-muted)">${themeBy ? `Themed by <b style="color:var(--fg-2)">${esc(themeBy)}</b> · ` : ''}${songs.length} tracks</span>
+				<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:26px;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge)">B-II-M</span>
+			</div>
 		</div>
 	</div>
 	<script>
-		// Auto-fit: shrink from 73px until the title fits its flex slot (min 46px).
+		// Auto-fit: shrink from 67px until the title fits its share of the frame (min 46px).
 		const t = document.getElementById('title');
-		const max = 640 - 56*2 - 120; let size = 73;
+		const max = 640 - 56*2 - 140; let size = 67;
 		while (t.scrollHeight > max && size > 46) { size -= 2; t.style.fontSize = size + 'px'; }
 	</script></body>`;
+} else if (variant === '1d') {
+	const k = songs.length <= 7 ? songs.length - 1 : 4;
+	const strip = arts
+		.map((a, i) => ({ a, i }))
+		.filter((x) => x.a)
+		.slice(0, k)
+		.map((x) => `<div style="flex:1;aspect-ratio:1;overflow:hidden"><img src="${x.a}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`)
+		.join('');
+	const overflow = songs.length - k;
+	html = `${head}<body>
+	<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:var(--ink-0)">
+		<div style="background:var(--mash-pulp);padding:27px 37px;display:flex;justify-content:space-between;align-items:center">
+			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:32px;letter-spacing:-.04em;color:var(--bone);text-shadow:0 3px 0 var(--mash-pulp-edge)">BOARZ II MEN</span>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:17px;color:var(--bone);background:rgba(0,0,0,.28);padding:4px 8px;border-radius:5px">R${rr} · S1</span>
+		</div>
+		<div style="display:flex;gap:3px">
+			${strip}
+			${overflow > 0 ? `<div style="flex:1;aspect-ratio:1;background:var(--ink-2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:25px;color:var(--mash-pulp)">+${overflow}</div>` : ''}
+		</div>
+		<div style="flex:1;padding:37px;display:flex;flex-direction:column;justify-content:space-between">
+			<div style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.12em;color:var(--mash-pulp)">THIS WEEK'S THEME</div>
+			<h1 id="title" style="font-family:var(--font-display);font-weight:700;font-size:37px;line-height:1.1;color:var(--fg);text-wrap:balance">${esc(round.name)}</h1>
+			<div style="font-family:var(--font-body);font-size:21px;line-height:1.4;color:var(--fg-muted)">${esc(themeText)}</div>
+			<div style="display:flex;justify-content:space-between;align-items:baseline">
+				<span style="font-family:var(--font-body);font-weight:500;font-size:17px;color:var(--fg-quiet)">${themeBy ? `Themed by ${esc(themeBy)}` : ''}</span>
+				<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--mash-pulp)">▶ ${songs.length} tracks</span>
+			</div>
+		</div>
+	</div>
+	<script>
+		const t = document.getElementById('title');
+		let size = 37; while (t.scrollHeight > 130 && size > 26) { size -= 2; t.style.fontSize = size + 'px'; }
+	</script></body>`;
+} else if (variant === '1e') {
+	const grid = gridFill(16)
+		.map((a) => (a ? `<img src="${a}" style="width:100%;height:100%;object-fit:cover">` : `<div style="background:var(--mash-pulp-edge)"></div>`))
+		.join('');
+	html = `${head}<body>
+	<div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr">${grid}</div>
+	<div style="position:absolute;inset:0;background:radial-gradient(90% 90% at 50% 50%, rgba(7,9,12,.15), rgba(7,9,12,.82))"></div>
+	<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+		<div style="position:relative;width:357px;height:357px;border-radius:50%;border:3px solid var(--mash-pulp);transform:rotate(-8deg);box-shadow:0 0 0 8px rgba(255,91,46,.1);backdrop-filter:blur(3px);background:radial-gradient(circle, rgba(255,91,46,.16) 0%, rgba(7,9,12,.62) 55%, rgba(7,9,12,.86) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+			<div style="position:absolute;inset:20px;border-radius:50%;border:1.5px dashed var(--mash-pulp)"></div>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.24em;color:var(--mash-pulp)">★ SEASON 1 ★</span>
+			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:110px;line-height:1;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge)">R${roundNum}</span>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.16em;color:var(--bone)">BOARZ II MEN</span>
+		</div>
+	</div>
+	<div style="position:absolute;left:0;right:0;bottom:0;padding:18px 0 16px;text-align:center;background:linear-gradient(transparent, rgba(7,9,12,.7))">
+		<span style="font-family:var(--font-mono);font-weight:600;font-size:17px;letter-spacing:.14em;color:rgba(255,255,255,.72)">WEEKLY YTM DROP</span>
+	</div></body>`;
 } else {
 	const rows = songs
 		.map(
