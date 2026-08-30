@@ -31,7 +31,7 @@ const LEAGUE_ID = 5; // Boarz II Men only, by design
 const TEST_GROUP = '120363428945055429@g.us';
 const BOT_CONTAINER = 'music-league-bot-bot-1';
 const WINDOW_DAYS = 7; // never backfill older transitions
-const COVER_VARIANT = '1b';
+const COVER_VARIANT = '1d'; // Matt's pick, 2026-08-29
 
 const argvHas = (f) => process.argv.includes(f);
 const argvVal = (f) => {
@@ -63,12 +63,16 @@ db.exec(`CREATE TABLE IF NOT EXISTS ytm_drops (
 )`);
 
 // ── candidates ────────────────────────────────────────────────────────────────
+// BOTH paths are league-scoped: this pipeline sends to the Boarz group, so it
+// must never pick up a Second Best / SSSC / any other league's round — even
+// via the manual --round override.
 const candidates = FORCE_ROUND
 	? db.prepare(`SELECT r.id, r.name, r.description,
 	              COALESCE(re.playlist_url, r.spotify_playlist_url) AS playlistUrl
 	         FROM rounds r
+	         JOIN seasons s ON s.id = r.season_id
 	         LEFT JOIN round_events re ON re.round_id = r.id AND re.event_type='voting_started'
-	        WHERE r.id = ?`).all(FORCE_ROUND)
+	        WHERE r.id = ? AND s.league_id = ${LEAGUE_ID}`).all(FORCE_ROUND)
 	: db.prepare(
 			`SELECT r.id, r.name, r.description,
 			        COALESCE(re.playlist_url, r.spotify_playlist_url) AS playlistUrl
