@@ -1,0 +1,5874 @@
+{
+  "note": "Real Boarz II Men (league_id=5) voting data across all completed rounds. roster is ordered/colored per the CD handoff's identity table. pairwiseSeason = season-long voter->submitter matrix. pairwiseByRound[roundId] = the same shape restricted to one round's ballots (for the Heat Ledger's round filter). Both include leanScorePerBallot AND raw netPoints/ballotCount so a tooltip can show the actual number, not just a qualitative read. contrarian.csigned[personIndex][roundIndex] = that person's avg deviation from each song's consensus that round (null = didn't vote); contrarian.cabs[personIndex] = season-average absolute deviation ('maverick' score). Self-submission 0-point comment rows are excluded (not a preference signal).",
+  "league": {
+    "name": "Boarz II Men",
+    "season": 1,
+    "roundsCounted": 6
+  },
+  "roster": [
+    {
+      "name": "Clements Johnson",
+      "first": "Clements",
+      "hue": 15
+    },
+    {
+      "name": "Conor Johnston",
+      "first": "Conor",
+      "hue": 50
+    },
+    {
+      "name": "Darren Pallets",
+      "first": "Darren",
+      "hue": 85
+    },
+    {
+      "name": "Dave Jensen",
+      "first": "Dave J",
+      "hue": 120
+    },
+    {
+      "name": "Dave Steingart",
+      "first": "Dave S",
+      "hue": 155
+    },
+    {
+      "name": "Grant Koziol",
+      "first": "Grant",
+      "hue": 190
+    },
+    {
+      "name": "Jimmy",
+      "first": "Jimmy",
+      "hue": 225
+    },
+    {
+      "name": "Jon Black",
+      "first": "Jon",
+      "hue": 260
+    },
+    {
+      "name": "Matt Mariani",
+      "first": "Matt",
+      "hue": 300
+    },
+    {
+      "name": "Shane Farkas",
+      "first": "Shane",
+      "hue": 335
+    }
+  ],
+  "rounds": [
+    {
+      "id": 135,
+      "name": "I Heard It Through the Napster",
+      "short": "Napster"
+    },
+    {
+      "id": 145,
+      "name": "¡No Entiendo, Cabron!",
+      "short": "No Entiendo"
+    },
+    {
+      "id": 146,
+      "name": "Boner Jamz",
+      "short": "Boner Jamz"
+    },
+    {
+      "id": 147,
+      "name": "I Hope You Shit Your Pants at Target",
+      "short": "Target"
+    },
+    {
+      "id": 148,
+      "name": "Smells Like Teen Cousin Fuckers",
+      "short": "Teen Cousin"
+    },
+    {
+      "id": 149,
+      "name": "Surrender Monkeys",
+      "short": "Surrender"
+    }
+  ],
+  "pairwiseSeason": [
+    {
+      "from": "Clements Johnson",
+      "to": "Conor Johnston",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Darren Pallets",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.17
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Dave Jensen",
+      "upvotePoints": 3,
+      "downvotePoints": 3,
+      "netPoints": 0,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Dave Steingart",
+      "upvotePoints": 3,
+      "downvotePoints": 3,
+      "netPoints": 0,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Grant Koziol",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Jimmy",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Jon Black",
+      "upvotePoints": 12,
+      "downvotePoints": 0,
+      "netPoints": 12,
+      "ballotCount": 5,
+      "leanScorePerBallot": 2.4
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Matt Mariani",
+      "upvotePoints": 2,
+      "downvotePoints": 2,
+      "netPoints": 0,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0
+    },
+    {
+      "from": "Clements Johnson",
+      "to": "Shane Farkas",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Clements Johnson",
+      "upvotePoints": 8,
+      "downvotePoints": 1,
+      "netPoints": 7,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.17
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Darren Pallets",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.17
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Dave Jensen",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.17
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Dave Steingart",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Grant Koziol",
+      "upvotePoints": 5,
+      "downvotePoints": 0,
+      "netPoints": 5,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.83
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Jimmy",
+      "upvotePoints": 0,
+      "downvotePoints": 4,
+      "netPoints": -4,
+      "ballotCount": 5,
+      "leanScorePerBallot": -0.8
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Jon Black",
+      "upvotePoints": 9,
+      "downvotePoints": 2,
+      "netPoints": 7,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.4
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Matt Mariani",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Conor Johnston",
+      "to": "Shane Farkas",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Clements Johnson",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.6
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Conor Johnston",
+      "upvotePoints": 6,
+      "downvotePoints": 2,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Dave Jensen",
+      "upvotePoints": 3,
+      "downvotePoints": 1,
+      "netPoints": 2,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.4
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Dave Steingart",
+      "upvotePoints": 3,
+      "downvotePoints": 0,
+      "netPoints": 3,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.6
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Grant Koziol",
+      "upvotePoints": 8,
+      "downvotePoints": 2,
+      "netPoints": 6,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.2
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Jimmy",
+      "upvotePoints": 1,
+      "downvotePoints": 1,
+      "netPoints": 0,
+      "ballotCount": 2,
+      "leanScorePerBallot": 0
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Jon Black",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.75
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Matt Mariani",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Darren Pallets",
+      "to": "Shane Farkas",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Clements Johnson",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.17
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Conor Johnston",
+      "upvotePoints": 2,
+      "downvotePoints": 3,
+      "netPoints": -1,
+      "ballotCount": 4,
+      "leanScorePerBallot": -0.25
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Darren Pallets",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.6
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Dave Steingart",
+      "upvotePoints": 5,
+      "downvotePoints": 2,
+      "netPoints": 3,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Grant Koziol",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.75
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Jimmy",
+      "upvotePoints": 9,
+      "downvotePoints": 1,
+      "netPoints": 8,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.6
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Jon Black",
+      "upvotePoints": 8,
+      "downvotePoints": 0,
+      "netPoints": 8,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.33
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Matt Mariani",
+      "upvotePoints": 9,
+      "downvotePoints": 0,
+      "netPoints": 9,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.8
+    },
+    {
+      "from": "Dave Jensen",
+      "to": "Shane Farkas",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.2
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Clements Johnson",
+      "upvotePoints": 6,
+      "downvotePoints": 0,
+      "netPoints": 6,
+      "ballotCount": 4,
+      "leanScorePerBallot": 1.5
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Conor Johnston",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Darren Pallets",
+      "upvotePoints": 8,
+      "downvotePoints": 0,
+      "netPoints": 8,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.33
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Dave Jensen",
+      "upvotePoints": 8,
+      "downvotePoints": 0,
+      "netPoints": 8,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.6
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Grant Koziol",
+      "upvotePoints": 1,
+      "downvotePoints": 5,
+      "netPoints": -4,
+      "ballotCount": 5,
+      "leanScorePerBallot": -0.8
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Jimmy",
+      "upvotePoints": 6,
+      "downvotePoints": 1,
+      "netPoints": 5,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Jon Black",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Matt Mariani",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.6
+    },
+    {
+      "from": "Dave Steingart",
+      "to": "Shane Farkas",
+      "upvotePoints": 4,
+      "downvotePoints": 3,
+      "netPoints": 1,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.2
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Clements Johnson",
+      "upvotePoints": 2,
+      "downvotePoints": 1,
+      "netPoints": 1,
+      "ballotCount": 3,
+      "leanScorePerBallot": 0.33
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Conor Johnston",
+      "upvotePoints": 3,
+      "downvotePoints": 4,
+      "netPoints": -1,
+      "ballotCount": 4,
+      "leanScorePerBallot": -0.25
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Darren Pallets",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.4
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Dave Jensen",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 3,
+      "leanScorePerBallot": 0.33
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Dave Steingart",
+      "upvotePoints": 4,
+      "downvotePoints": 0,
+      "netPoints": 4,
+      "ballotCount": 4,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Jimmy",
+      "upvotePoints": 0,
+      "downvotePoints": 1,
+      "netPoints": -1,
+      "ballotCount": 2,
+      "leanScorePerBallot": -0.5
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Jon Black",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 4,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Matt Mariani",
+      "upvotePoints": 9,
+      "downvotePoints": 1,
+      "netPoints": 8,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.6
+    },
+    {
+      "from": "Grant Koziol",
+      "to": "Shane Farkas",
+      "upvotePoints": 6,
+      "downvotePoints": 0,
+      "netPoints": 6,
+      "ballotCount": 3,
+      "leanScorePerBallot": 2
+    },
+    {
+      "from": "Jimmy",
+      "to": "Clements Johnson",
+      "upvotePoints": 6,
+      "downvotePoints": 2,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Jimmy",
+      "to": "Conor Johnston",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.2
+    },
+    {
+      "from": "Jimmy",
+      "to": "Darren Pallets",
+      "upvotePoints": 12,
+      "downvotePoints": 0,
+      "netPoints": 12,
+      "ballotCount": 5,
+      "leanScorePerBallot": 2.4
+    },
+    {
+      "from": "Jimmy",
+      "to": "Dave Jensen",
+      "upvotePoints": 2,
+      "downvotePoints": 0,
+      "netPoints": 2,
+      "ballotCount": 3,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Jimmy",
+      "to": "Dave Steingart",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.25
+    },
+    {
+      "from": "Jimmy",
+      "to": "Grant Koziol",
+      "upvotePoints": 1,
+      "downvotePoints": 2,
+      "netPoints": -1,
+      "ballotCount": 4,
+      "leanScorePerBallot": -0.25
+    },
+    {
+      "from": "Jimmy",
+      "to": "Jon Black",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.4
+    },
+    {
+      "from": "Jimmy",
+      "to": "Matt Mariani",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.25
+    },
+    {
+      "from": "Jimmy",
+      "to": "Shane Farkas",
+      "upvotePoints": 3,
+      "downvotePoints": 0,
+      "netPoints": 3,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.75
+    },
+    {
+      "from": "Jon Black",
+      "to": "Clements Johnson",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1.17
+    },
+    {
+      "from": "Jon Black",
+      "to": "Conor Johnston",
+      "upvotePoints": 5,
+      "downvotePoints": 3,
+      "netPoints": 2,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.33
+    },
+    {
+      "from": "Jon Black",
+      "to": "Darren Pallets",
+      "upvotePoints": 5,
+      "downvotePoints": 2,
+      "netPoints": 3,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Jon Black",
+      "to": "Dave Jensen",
+      "upvotePoints": 6,
+      "downvotePoints": 2,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Jon Black",
+      "to": "Dave Steingart",
+      "upvotePoints": 6,
+      "downvotePoints": 2,
+      "netPoints": 4,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.67
+    },
+    {
+      "from": "Jon Black",
+      "to": "Grant Koziol",
+      "upvotePoints": 6,
+      "downvotePoints": 0,
+      "netPoints": 6,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Jon Black",
+      "to": "Jimmy",
+      "upvotePoints": 3,
+      "downvotePoints": 2,
+      "netPoints": 1,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.2
+    },
+    {
+      "from": "Jon Black",
+      "to": "Matt Mariani",
+      "upvotePoints": 5,
+      "downvotePoints": 0,
+      "netPoints": 5,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.83
+    },
+    {
+      "from": "Jon Black",
+      "to": "Shane Farkas",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Clements Johnson",
+      "upvotePoints": 6,
+      "downvotePoints": 1,
+      "netPoints": 5,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.83
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Conor Johnston",
+      "upvotePoints": 2,
+      "downvotePoints": 5,
+      "netPoints": -3,
+      "ballotCount": 6,
+      "leanScorePerBallot": -0.5
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Darren Pallets",
+      "upvotePoints": 2,
+      "downvotePoints": 1,
+      "netPoints": 1,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.25
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Dave Jensen",
+      "upvotePoints": 11,
+      "downvotePoints": 1,
+      "netPoints": 10,
+      "ballotCount": 5,
+      "leanScorePerBallot": 2
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Dave Steingart",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.8
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Grant Koziol",
+      "upvotePoints": 1,
+      "downvotePoints": 1,
+      "netPoints": 0,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Jimmy",
+      "upvotePoints": 9,
+      "downvotePoints": 0,
+      "netPoints": 9,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.8
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Jon Black",
+      "upvotePoints": 6,
+      "downvotePoints": 1,
+      "netPoints": 5,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.83
+    },
+    {
+      "from": "Matt Mariani",
+      "to": "Shane Farkas",
+      "upvotePoints": 5,
+      "downvotePoints": 1,
+      "netPoints": 4,
+      "ballotCount": 4,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Clements Johnson",
+      "upvotePoints": 4,
+      "downvotePoints": 3,
+      "netPoints": 1,
+      "ballotCount": 5,
+      "leanScorePerBallot": 0.2
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Conor Johnston",
+      "upvotePoints": 3,
+      "downvotePoints": 1,
+      "netPoints": 2,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Darren Pallets",
+      "upvotePoints": 6,
+      "downvotePoints": 3,
+      "netPoints": 3,
+      "ballotCount": 6,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Dave Jensen",
+      "upvotePoints": 5,
+      "downvotePoints": 0,
+      "netPoints": 5,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Dave Steingart",
+      "upvotePoints": 3,
+      "downvotePoints": 1,
+      "netPoints": 2,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.5
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Grant Koziol",
+      "upvotePoints": 8,
+      "downvotePoints": 2,
+      "netPoints": 6,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Jimmy",
+      "upvotePoints": 4,
+      "downvotePoints": 1,
+      "netPoints": 3,
+      "ballotCount": 4,
+      "leanScorePerBallot": 0.75
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Jon Black",
+      "upvotePoints": 7,
+      "downvotePoints": 1,
+      "netPoints": 6,
+      "ballotCount": 6,
+      "leanScorePerBallot": 1
+    },
+    {
+      "from": "Shane Farkas",
+      "to": "Matt Mariani",
+      "upvotePoints": 7,
+      "downvotePoints": 0,
+      "netPoints": 7,
+      "ballotCount": 5,
+      "leanScorePerBallot": 1.4
+    }
+  ],
+  "pairwiseByRound": {
+    "135": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      }
+    ],
+    "145": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      }
+    ],
+    "146": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 4,
+        "downvotePoints": 0,
+        "netPoints": 4,
+        "ballotCount": 1,
+        "leanScorePerBallot": 4
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      }
+    ],
+    "147": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 4,
+        "downvotePoints": 0,
+        "netPoints": 4,
+        "ballotCount": 1,
+        "leanScorePerBallot": 4
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 4,
+        "downvotePoints": 0,
+        "netPoints": 4,
+        "ballotCount": 1,
+        "leanScorePerBallot": 4
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      }
+    ],
+    "148": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 4,
+        "downvotePoints": 0,
+        "netPoints": 4,
+        "ballotCount": 1,
+        "leanScorePerBallot": 4
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 4,
+        "downvotePoints": 0,
+        "netPoints": 4,
+        "ballotCount": 1,
+        "leanScorePerBallot": 4
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      }
+    ],
+    "149": [
+      {
+        "from": "Clements Johnson",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jimmy",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Clements Johnson",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Jon Black",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Conor Johnston",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Grant Koziol",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Matt Mariani",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Darren Pallets",
+        "to": "Shane Farkas",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jimmy",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Jensen",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Dave Steingart",
+        "to": "Shane Farkas",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Darren Pallets",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jimmy",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Grant Koziol",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 0,
+        "leanScorePerBallot": null
+      },
+      {
+        "from": "Jimmy",
+        "to": "Clements Johnson",
+        "upvotePoints": 0,
+        "downvotePoints": 2,
+        "netPoints": -2,
+        "ballotCount": 1,
+        "leanScorePerBallot": -2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Conor Johnston",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jimmy",
+        "to": "Matt Mariani",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jimmy",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Conor Johnston",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Jon Black",
+        "to": "Darren Pallets",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Jensen",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Jon Black",
+        "to": "Dave Steingart",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Jon Black",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Clements Johnson",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Jensen",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Dave Steingart",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Grant Koziol",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jimmy",
+        "upvotePoints": 3,
+        "downvotePoints": 0,
+        "netPoints": 3,
+        "ballotCount": 1,
+        "leanScorePerBallot": 3
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Jon Black",
+        "upvotePoints": 0,
+        "downvotePoints": 0,
+        "netPoints": 0,
+        "ballotCount": 1,
+        "leanScorePerBallot": 0
+      },
+      {
+        "from": "Matt Mariani",
+        "to": "Shane Farkas",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Clements Johnson",
+        "upvotePoints": 2,
+        "downvotePoints": 0,
+        "netPoints": 2,
+        "ballotCount": 1,
+        "leanScorePerBallot": 2
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Conor Johnston",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Darren Pallets",
+        "upvotePoints": 0,
+        "downvotePoints": 1,
+        "netPoints": -1,
+        "ballotCount": 1,
+        "leanScorePerBallot": -1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Jensen",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Dave Steingart",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Grant Koziol",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jimmy",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Jon Black",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      },
+      {
+        "from": "Shane Farkas",
+        "to": "Matt Mariani",
+        "upvotePoints": 1,
+        "downvotePoints": 0,
+        "netPoints": 1,
+        "ballotCount": 1,
+        "leanScorePerBallot": 1
+      }
+    ]
+  },
+  "contrarian": {
+    "csigned": [
+      [
+        0.12,
+        0.06,
+        -0.03,
+        -0.1,
+        -0.19,
+        -0.02
+      ],
+      [
+        -0.15,
+        -0.27,
+        -0.21,
+        -0.06,
+        -0.05,
+        -0.11
+      ],
+      [
+        -0.02,
+        -0.07,
+        -0.08,
+        0.22,
+        null,
+        0.18
+      ],
+      [
+        0.07,
+        0.06,
+        -0.15,
+        -0.12,
+        0.2,
+        -0.06
+      ],
+      [
+        -0.18,
+        0,
+        0.44,
+        -0.07,
+        -0.09,
+        0
+      ],
+      [
+        0.16,
+        -0.17,
+        0.6,
+        null,
+        0.3,
+        0.15
+      ],
+      [
+        null,
+        0.28,
+        -0.03,
+        -0.04,
+        0.09,
+        0.05
+      ],
+      [
+        -0.06,
+        -0.11,
+        -0.15,
+        0.05,
+        0.07,
+        -0.01
+      ],
+      [
+        0.2,
+        0.65,
+        0.2,
+        -0.19,
+        -0.15,
+        0
+      ],
+      [
+        -0.06,
+        -0.16,
+        -0.15,
+        0.56,
+        -0.01,
+        -0.13
+      ]
+    ],
+    "cabs": [
+      1.03,
+      1.21,
+      1.05,
+      1.08,
+      1.09,
+      1.24,
+      1.09,
+      0.79,
+      1.27,
+      1.14
+    ]
+  }
+}

@@ -58,6 +58,15 @@ if (fs.existsSync(songsPath)) {
 	console.error('[warn] no chat-songs.json — track list will be omitted');
 }
 
+// Voting-habits matrix data (Read the Room) — produced by resolve-voting-habits.mjs
+// from live Music League vote data, not chat text.
+const votingHabitsPath = path.join(UI, 'scripts/voting-habits.json');
+if (fs.existsSync(votingHabitsPath)) {
+	parsed.votingHabits = JSON.parse(fs.readFileSync(votingHabitsPath, 'utf8'));
+} else {
+	console.error('[warn] no voting-habits.json — Read the Room section will be empty');
+}
+
 // Hand-authored Regulars + Glossary content, maintained separately so a
 // content pass never touches the template.
 const editorialPath = path.join(UI, 'scripts/chat-tape-editorial.json');

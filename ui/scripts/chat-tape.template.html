@@ -185,6 +185,7 @@ const SECTIONS = [
   {id:'motormouth',  side:'Side B',   tag:'Volume',            name:'Motormouth',           acc:'pulp',  val:()=>nf(topPerson('messages').messages), label:'messages · Matt Mariani', valSize:'28px'},
   {id:'mixingBoard', side:'Side B',   tag:'Find yourself',     name:'The Mixing Board',     acc:'sky',   val:()=>'▤', label:'every stat, one board', valSize:'26px'},
   {id:'heatmap',     side:'Side B',   tag:'Filter by person',  name:'When The Boarz Post',  acc:'sky',   val:()=>'▦', label:'day × hour', valSize:'26px'},
+  {id:'readTheRoom', side:'Side B',   tag:'Mid-round culture check', name:'Read The Room',  acc:'sky',   val:()=>TAPE.votingHabits?nf(TAPE.votingHabits.pairwiseSeason.reduce((s,p)=>s+p.ballotCount,0)):'—', label:'ballots, mapped · who loves who', valSize:'28px'},
   {id:'regulars',    side:'Regulars', tag:'Recurring behavior',name:'The Regulars',         acc:'moss',  draft:TAPE.editorial.draft, val:()=>String(regCount()), label:'fingerprints · 10 players', valSize:'34px'},
   {id:'glossary',    side:'Regulars', tag:'League language',    name:'The Glossary',         acc:'moss',  draft:TAPE.editorial.draft, val:()=>String(TAPE.editorial.glossary.length), label:'coinages, kept forever', valSize:'34px'},
   {id:'songs',       side:'Tracks',   tag:'Every song shared',  name:'The Track List',       acc:'pulp',  val:()=>String(TAPE.songs.links.length), label:'tracks · one playlist', valSize:'30px'},
@@ -201,11 +202,224 @@ function regCount(){return TAPE.editorial.regulars.reduce((n,p)=>n+p.entries.len
 function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2);}
 function pcolor(name){return PCOLOR[name]||'var(--ink-7)';}
 
+/* ---- Read The Room: OKLCH color + 4 SVG builders, ported from CD's handoff ---- */
+function rtrCol(h,l=0.72,c=0.15){ return `oklch(${l} ${c} ${h})`; }
+
+function rtrWeb(vh, sel){
+  const roster = vh.roster, N = roster.length;
+  const idxByName = new Map(roster.map((r,i)=>[r.name,i]));
+  const W=1080,H=1180, cx=540,cy=650,rad=392;
+  const pos = roster.map((m,i)=>{ const a=-Math.PI/2+i*(2*Math.PI/N); return {x:cx+rad*Math.cos(a), y:cy+rad*Math.sin(a), a, m}; });
+  const fav=[];
+  roster.forEach((m,i)=>{
+    const top = vh.pairwiseSeason.filter(p=>p.from===m.name).sort((a,b)=>b.netPoints-a.netPoints)[0];
+    if(top && top.netPoints>0) fav.push({i, j:idxByName.get(top.to), net:top.netPoints});
+  });
+  const beef = vh.pairwiseSeason.filter(p=>p.netPoints<=-1).map(p=>({i:idxByName.get(p.from), j:idxByName.get(p.to)}));
+  const rel = (i,j)=> sel===null || i===sel || j===sel;
+  const dimE = (on)=> sel===null?1:(on?1:0.1);
+  const curve=(p,q,k)=>{ const mx=(p.x+q.x)/2, my=(p.y+q.y)/2; const kx=mx+(cx-mx)*k, ky=my+(cy-my)*k; return {d:`M ${p.x.toFixed(1)} ${p.y.toFixed(1)} Q ${kx.toFixed(1)} ${ky.toFixed(1)} ${q.x.toFixed(1)} ${q.y.toFixed(1)}`, kx, ky}; };
+  const ptAt=(p,q,kx,ky,t)=>{ const it=1-t; return {x:it*it*p.x+2*it*t*kx+t*t*q.x, y:it*it*p.y+2*it*t*ky+t*t*q.y}; };
+
+  const beefPaths = beef.map(b=>{ const c=curve(pos[b.i],pos[b.j],0.28);
+    return `<path d="${c.d}" fill="none" stroke="#5aa3ff" stroke-width="2.5" stroke-opacity="${(0.5*dimE(rel(b.i,b.j))).toFixed(2)}" stroke-dasharray="3 9" stroke-linecap="round"><title>${esc(roster[b.i].first)} has beef with ${esc(roster[b.j].first)} (net-negative)</title></path>`; }).join('');
+  const favGlow = fav.map(f=>{ const c=curve(pos[f.i],pos[f.j],0.5); const w=4+(f.net/12)*16; const o=dimE(rel(f.i,f.j));
+    return `<path d="${c.d}" fill="none" stroke="${rtrCol(roster[f.i].hue,0.78,0.17)}" stroke-width="${(w+10).toFixed(1)}" stroke-opacity="${(0.1*o).toFixed(2)}" stroke-linecap="round"/>`; }).join('');
+  const favCore = fav.map(f=>{ const c=curve(pos[f.i],pos[f.j],0.5); const w=4+(f.net/12)*16; const o=dimE(rel(f.i,f.j));
+    return `<path d="${c.d}" fill="none" stroke="${rtrCol(roster[f.i].hue,0.8,0.18)}" stroke-width="${w.toFixed(1)}" stroke-opacity="${(0.92*o).toFixed(2)}" stroke-linecap="round" filter="url(#rtr-w-glow)"><title>${esc(roster[f.i].first)} carries ${esc(roster[f.j].first)} hardest (+${f.net} net points)</title></path>`; }).join('');
+  const favDots = fav.map(f=>{ const c=curve(pos[f.i],pos[f.j],0.5); const pt=ptAt(pos[f.i],pos[f.j],c.kx,c.ky,0.8);
+    return `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7" fill="${rtrCol(roster[f.i].hue,0.9,0.15)}" fill-opacity="${dimE(rel(f.i,f.j)).toFixed(2)}"/>`; }).join('');
+  const nodes = pos.map((p,i)=>{ const isSel=i===sel; const o=sel===null?1:(isSel?1:0.28);
+    const ring = isSel? `<circle cx="${p.x}" cy="${p.y}" r="56" fill="none" stroke="${rtrCol(p.m.hue)}" stroke-width="2" stroke-opacity="0.6"/>` : '';
+    return `${ring}<circle cx="${p.x}" cy="${p.y}" r="34" fill="${rtrCol(p.m.hue,0.55,0.13)}" stroke="${rtrCol(p.m.hue)}" stroke-width="${isSel?4:2.5}" fill-opacity="${o}" stroke-opacity="${o}"><title>${esc(p.m.name)}</title></circle>`; }).join('');
+  const labels = pos.map((p,i)=>{ const isSel=i===sel; const o=sel===null?1:(isSel?1:0.4);
+    const dx=Math.cos(p.a), dy=Math.sin(p.a); const lx=cx+(rad+50)*dx, ly=cy+(rad+50)*dy;
+    const anchor = dx>0.25?'start':(dx<-0.25?'end':'middle');
+    return `<text x="${lx.toFixed(1)}" y="${(ly+6).toFixed(1)}" text-anchor="${anchor}" fill="${isSel?rtrCol(p.m.hue,0.92,0.08):'#c2cad3'}" font-family="'Inter Tight',sans-serif" font-size="26" font-weight="${isSel?800:600}" opacity="${o}">${esc(p.m.first)}</text>`; }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <defs><radialGradient id="rtr-w-bg" cx="50%" cy="52%" r="62%"><stop offset="0%" stop-color="#0f1524"/><stop offset="100%" stop-color="#050608"/></radialGradient>
+    <filter id="rtr-w-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <rect width="${W}" height="${H}" fill="url(#rtr-w-bg)"/>
+    ${beefPaths}${favGlow}${favCore}${favDots}${nodes}${labels}
+    <text x="${cx}" y="${H-40}" text-anchor="middle" fill="#5a6773" font-family="'JetBrains Mono',monospace" font-size="22" letter-spacing="4">BOARZ II MEN</text>
+  </svg>`;
+}
+
+function rtrOrbit(vh, sel){
+  const roster = vh.roster;
+  const idxByName = new Map(roster.map((r,i)=>[r.name,i]));
+  const heroDefault = roster.findIndex(r=>r.name==='Matt Mariani');
+  const hero = sel===null? (heroDefault<0?0:heroDefault) : sel;
+  const isExample = sel===null;
+  const W=1080,H=1180, cx=540, cy=640, hue=roster[hero].hue;
+  const incoming = vh.pairwiseSeason.filter(p=>p.to===roster[hero].name)
+    .map(p=>({i:idxByName.get(p.from), lean:p.leanScorePerBallot??0, ballots:p.ballotCount}))
+    .sort((a,b)=>b.lean-a.lean);
+  const rOf = l=>{ const t=(2.4-l)/(2.4-(-0.8)); return 148+t*408; };
+  const zones=[{r:148,lab:'RIDE OR DIE'},{r:320,lab:'FAIR'},{r:500,lab:'TOUGH ROOM'}];
+  const nodes = incoming.map((e,k)=>{ const a=-Math.PI/2+k*(2*Math.PI/(incoming.length||1)); const r=rOf(e.lean);
+    return {...e, x:cx+r*Math.cos(a), y:cy+r*Math.sin(a), warm:e.lean>0.5, cold:e.lean<=0.05}; });
+
+  const zoneRings = zones.map(z=>`<circle cx="${cx}" cy="${cy}" r="${z.r}" fill="none" stroke="#3a4451" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="2 7"/>`).join('');
+  const zoneLabels = zones.map(z=>`<text x="${cx}" y="${cy-z.r-10}" text-anchor="middle" fill="#5a6773" font-family="'JetBrains Mono',monospace" font-size="15" font-weight="700" letter-spacing="3">${z.lab}</text>`).join('');
+  const tethers = nodes.map(n=> n.cold
+    ? `<line x1="${cx}" y1="${cy}" x2="${n.x.toFixed(1)}" y2="${n.y.toFixed(1)}" stroke="#5aa3ff" stroke-width="2" stroke-opacity="0.4" stroke-dasharray="3 10"/>`
+    : `<line x1="${cx}" y1="${cy}" x2="${n.x.toFixed(1)}" y2="${n.y.toFixed(1)}" stroke="${rtrCol(roster[n.i].hue,0.7,0.16)}" stroke-width="${n.warm?7:3}" stroke-opacity="${n.warm?0.6:0.3}" stroke-linecap="round"/>`).join('');
+  const orbNodes = nodes.map(n=>{ const m=roster[n.i]; const rr=24+n.ballots*2;
+    const tier = n.cold?'scores them cold (≤ 0)':(n.warm?'ride-or-die (very generous)':'fair');
+    const title = `<title>${esc(m.name)} — ${tier} · ${n.ballots} votes cast on ${esc(roster[hero].first)}</title>`;
+    return n.cold
+      ? `<circle cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="${rr}" fill="#0c1018" stroke="#5aa3ff" stroke-width="2" stroke-opacity="0.7" stroke-dasharray="5 5">${title}</circle>`
+      : `<circle cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="${rr}" fill="${rtrCol(m.hue,n.warm?0.55:0.42,0.13)}" stroke="${rtrCol(m.hue)}" stroke-width="${n.warm?4:2.5}" ${n.warm?'filter="url(#rtr-o-glow)"':''}>${title}</circle>`; }).join('');
+  const orbLabels = nodes.map(n=>{ const m=roster[n.i]; const rr=24+n.ballots*2;
+    return `<text x="${n.x.toFixed(1)}" y="${(n.y+rr+26).toFixed(1)}" text-anchor="middle" fill="${n.cold?'#7fb2ff':rtrCol(m.hue,0.9,0.09)}" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="700">${esc(m.first)}</text>`; }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <defs><radialGradient id="rtr-o-bg" cx="50%" cy="52%" r="62%"><stop offset="0%" stop-color="#12182a"/><stop offset="100%" stop-color="#050608"/></radialGradient>
+    <filter id="rtr-o-glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <rect width="${W}" height="${H}" fill="url(#rtr-o-bg)"/>
+    ${isExample?`<text x="${cx}" y="70" text-anchor="middle" fill="#5a6773" font-family="'JetBrains Mono',monospace" font-size="22" font-weight="700" letter-spacing="5">EXAMPLE — PICK ANYONE ABOVE</text>`:''}
+    ${zoneRings}${zoneLabels}${tethers}${orbNodes}${orbLabels}
+    <circle cx="${cx}" cy="${cy}" r="92" fill="${rtrCol(hue,0.55,0.13)}" stroke="${rtrCol(hue)}" stroke-width="6" filter="url(#rtr-o-glow)"/>
+    <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="${rtrCol(hue,0.96,0.04)}" font-family="'Bricolage Grotesque',sans-serif" font-size="40" font-weight="800">${esc(roster[hero].first)}</text>
+  </svg>`;
+}
+
+function rtrLedger(vh, sel, roundKey){
+  const roster = vh.roster, N = roster.length;
+  const pairs = roundKey==='season'? vh.pairwiseSeason : (vh.pairwiseByRound[roundKey]||[]);
+  const lean = new Map(pairs.map(p=>[p.from+'>'+p.to, p]));
+  const W=1080,H=1080, gx=210, gy=250, cell=80;
+  const litRC = (r,c)=> sel===null || r===sel || c===sel;
+  let cells='';
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const x=gx+c*cell, y=gy+r*cell, o = sel===null?1:(litRC(r,c)?1:0.12);
+    if(r===c){
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="#0a0d13" opacity="${o}"/>`;
+      cells += `<line x1="${x+26}" y1="${y+cell-26}" x2="${x+cell-26}" y2="${y+26}" stroke="#283039" stroke-width="3" stroke-linecap="round" opacity="${o}"/>`;
+      continue;
+    }
+    const p = lean.get(roster[r].name+'>'+roster[c].name);
+    if(!p || !p.ballotCount){
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="none" stroke="#1c232c" stroke-width="1" stroke-dasharray="2 4" opacity="${o}"><title>${esc(roster[r].first)} → ${esc(roster[c].first)}: no ballots</title></rect>`;
+      continue;
+    }
+    const l = p.leanScorePerBallot;
+    const numTip = `net ${p.netPoints>0?'+':''}${p.netPoints} pts over ${p.ballotCount} ballot${p.ballotCount===1?'':'s'} (lean ${l>0?'+':''}${l})`;
+    if(l>0){ const op=(0.12+Math.min(l,2.4)/2.4*0.88)*o, hueMix=42-Math.min(l,2.4)/2.4*30;
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="${rtrCol(hueMix,0.68,0.2)}" fill-opacity="${op.toFixed(2)}"><title>${esc(roster[r].first)} → ${esc(roster[c].first)}: gives love — ${numTip}</title></rect>`;
+    } else if(l<0){ const op=(0.35+Math.min(Math.abs(l),0.8)/0.8*0.55)*o;
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="#0e1a2b" opacity="${o}"/>`;
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="url(#rtr-hatch)" fill-opacity="${op.toFixed(2)}"/>`;
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="none" stroke="#5aa3ff" stroke-width="1.5" stroke-opacity="${op.toFixed(2)}"><title>${esc(roster[r].first)} → ${esc(roster[c].first)}: a grudge — ${numTip}</title></rect>`;
+    } else {
+      cells += `<rect x="${x+2}" y="${y+2}" width="${cell-4}" height="${cell-4}" rx="5" fill="#141921" fill-opacity="${(0.6*o).toFixed(2)}"><title>${esc(roster[r].first)} → ${esc(roster[c].first)}: neutral — ${numTip}</title></rect>`;
+    }
+  }
+  const colLabels = roster.map((m,c)=>{ const o=sel===null?1:(c===sel?1:0.4); const lx=gx+c*cell+cell/2, ly=gy-14;
+    return `<text x="${lx}" y="${ly}" text-anchor="start" fill="${rtrCol(m.hue,0.82,0.12)}" font-family="'Inter Tight',sans-serif" font-size="19" font-weight="${c===sel?800:600}" opacity="${o}" transform="rotate(-42 ${lx} ${ly})">${esc(m.first)}</text>`; }).join('');
+  const rowLabels = roster.map((m,r)=>{ const o=sel===null?1:(r===sel?1:0.4);
+    return `<text x="${gx-16}" y="${gy+r*cell+cell/2+7}" text-anchor="end" fill="${rtrCol(m.hue,0.82,0.12)}" font-family="'Inter Tight',sans-serif" font-size="20" font-weight="${r===sel?800:600}" opacity="${o}">${esc(m.first)}</text>`; }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <defs><pattern id="rtr-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#12233a"/><line x1="0" y1="0" x2="0" y2="8" stroke="#5aa3ff" stroke-width="3"/></pattern></defs>
+    <rect width="${W}" height="${H}" fill="#070a0f"/>
+    <text x="${gx-150}" y="${gy-84}" fill="#8b97a4" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">row gives to ↓ → column</text>
+    ${cells}${colLabels}${rowLabels}
+    <g transform="translate(${gx},${gy+N*cell+50})">
+      <rect x="0" y="-22" width="28" height="28" rx="5" fill="${rtrCol(20,0.68,0.2)}" fill-opacity="0.95"/><text x="38" y="0" fill="#c2cad3" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">more love</text>
+      <rect x="230" y="-22" width="28" height="28" rx="5" fill="url(#rtr-hatch)"/><rect x="230" y="-22" width="28" height="28" rx="5" fill="none" stroke="#5aa3ff" stroke-width="1.5"/><text x="268" y="0" fill="#c2cad3" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">a grudge</text>
+    </g>
+  </svg>`;
+}
+
+function rtrContra(vh, sel){
+  const roster=vh.roster, rounds=vh.rounds, csigned=vh.contrarian.csigned, cabs=vh.contrarian.cabs;
+  const N=roster.length, M=rounds.length;
+  const W=1080,H=1080, gx=210, gy=250, cw=84, ch=60, maxSig=0.65;
+  let cells='';
+  for(let r=0;r<N;r++) for(let c=0;c<M;c++){
+    const x=gx+c*cw, y=gy+r*ch, v=csigned[r][c], o=sel===null?1:(r===sel?1:0.12);
+    if(v===null||v===undefined){
+      cells += `<rect x="${x+3}" y="${y+3}" width="${cw-6}" height="${ch-6}" rx="4" fill="#0c0f15" stroke="#1c232c" stroke-width="1" stroke-dasharray="2 4" opacity="${o}"><title>${esc(roster[r].first)} didn't vote in ${esc(rounds[c].short)}</title></rect>`;
+      continue;
+    }
+    const t = Math.min(Math.abs(v),maxSig)/maxSig, color = v>0? rtrCol(36,0.7,0.19) : '#5aa3ff';
+    const tip = `${esc(roster[r].first)} in ${esc(rounds[c].short)}: ${v>0?'kinder':'harsher'} than the room (${v>0?'+':''}${v})`;
+    cells += `<rect x="${x+3}" y="${y+3}" width="${cw-6}" height="${ch-6}" rx="4" fill="${color}" fill-opacity="${((0.1+t*0.85)*o).toFixed(2)}"><title>${tip}</title></rect>`;
+  }
+  const maxC=Math.max(...cabs), minC=Math.min(...cabs), barX=gx+M*cw+34, barW=150;
+  const roundHeaders = rounds.map((rd,c)=>{ const lx=gx+c*cw+cw/2, ly=gy-14;
+    return `<text x="${lx}" y="${ly}" text-anchor="start" fill="#8b97a4" font-family="'Inter Tight',sans-serif" font-size="18" font-weight="600" transform="rotate(-42 ${lx} ${ly})">${esc(rd.short)}</text>`; }).join('');
+  const rowLabels = roster.map((m,r)=>{ const o=sel===null?1:(r===sel?1:0.4);
+    return `<text x="${gx-16}" y="${gy+r*ch+ch/2+7}" text-anchor="end" fill="${rtrCol(m.hue,0.82,0.12)}" font-family="'Inter Tight',sans-serif" font-size="20" font-weight="${r===sel?800:600}" opacity="${o}">${esc(m.first)}</text>`; }).join('');
+  const bars = roster.map((m,r)=>{ const t=(cabs[r]-minC)/((maxC-minC)||1); const w=26+t*(barW-26); const y=gy+r*ch+ch/2; const o=sel===null?1:(r===sel?1:0.2);
+    return `<g opacity="${o}"><rect x="${barX}" y="${y-8}" width="${barW}" height="16" rx="8" fill="#12161d"/><rect x="${barX}" y="${y-8}" width="${w.toFixed(1)}" height="16" rx="8" fill="${rtrCol(m.hue,0.66,0.16)}" fill-opacity="0.9"/></g>`; }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <rect width="${W}" height="${H}" fill="#070a0f"/>
+    <text x="${gx}" y="${gy-92}" fill="#8b97a4" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">each vote vs the room, round by round</text>
+    ${roundHeaders}${rowLabels}${cells}
+    <text x="${barX}" y="${gy-14}" fill="#8b97a4" font-family="'JetBrains Mono',monospace" font-size="16" font-weight="700">MAVERICK</text>
+    ${bars}
+    <g transform="translate(${gx},${gy+N*ch+52})">
+      <rect x="0" y="-22" width="28" height="28" rx="5" fill="${rtrCol(36,0.7,0.19)}" fill-opacity="0.95"/><text x="38" y="0" fill="#c2cad3" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">kinder</text>
+      <rect x="180" y="-22" width="28" height="28" rx="5" fill="#5aa3ff" fill-opacity="0.95"/><text x="218" y="0" fill="#c2cad3" font-family="'Inter Tight',sans-serif" font-size="22" font-weight="600">harsher</text>
+    </g>
+  </svg>`;
+}
+
+function rtrExplainers(vh, sel){
+  const roster=vh.roster, rounds=vh.rounds, csigned=vh.contrarian.csigned, cabs=vh.contrarian.cabs;
+  const idxByName=new Map(roster.map((r,i)=>[r.name,i]));
+  const fn=i=>roster[i].first;
+  const outEdges=i=> vh.pairwiseSeason.filter(p=>p.from===roster[i].name).map(p=>({...p, j:idxByName.get(p.to)}));
+  const inEdges=i=> vh.pairwiseSeason.filter(p=>p.to===roster[i].name).map(p=>({...p, j:idxByName.get(p.from)}));
+
+  if(sel===null){
+    return {
+      webHead:'The whole favor economy, in one loop.',
+      webBody:'Every warm cord runs from a player to whoever they lift hardest — follow the chain around. The cold dashed lines are the handful of genuine grudges.',
+      orbitHead:'Pick anyone to make the room orbit them.',
+      orbitBody:'Distance is the read: ride-or-dies pull into the core, a tough crowd gets flung to the cold edge on a broken line. Shown here as an example — Matt.',
+      ledgerHead:'Who lifts who, top to bottom.',
+      ledgerBody:'Each cell is one player’s lean toward another; brighter warm = more love given. Downvotes get their own language — a cold hatched cell — so a grudge reads as its own thing, not just faint praise.',
+      contraHead:'Who votes with the room, and who fights it.',
+      contraBody:'A column per round, a row per player. Warm = kinder than the room that round, cold = harsher. The bar is the season maverick score.'
+    };
+  }
+  const f = esc(fn(sel));
+  const myOut = outEdges(sel).sort((a,b)=>b.netPoints-a.netPoints);
+  const carry = myOut[0];
+  const inTop = inEdges(sel).sort((a,b)=>b.netPoints-a.netPoints)[0];
+  const myBeef = myOut.filter(e=>e.netPoints<0).sort((a,b)=>a.netPoints-b.netPoints)[0];
+  const inc = inEdges(sel).map(e=>({j:e.j, lean:e.leanScorePerBallot??0})).sort((a,b)=>b.lean-a.lean);
+  const closest = inc[0], tough = inc[inc.length-1];
+  const gWarm = myOut[0], gCold = myOut[myOut.length-1];
+  const row = csigned[sel]||[];
+  let gi=-1,hi=-1,gv=-9,hv=9;
+  row.forEach((v,i)=>{ if(v===null||v===undefined) return; if(v>gv){gv=v;gi=i;} if(v<hv){hv=v;hi=i;} });
+  const rank = [...cabs].map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v).findIndex(x=>x.i===sel)+1;
+
+  return {
+    webHead: carry? `${f} carries ${esc(fn(carry.j))} the hardest.` : `${f} hasn’t handed out enough points to carry anyone yet.`,
+    webBody: `${inTop?`The player who lifts ${f} back the most is ${esc(fn(inTop.j))}. `:''}${myBeef?`The one bit of real beef: ${f} → ${esc(fn(myBeef.j))}.`:`${f} keeps no genuine grudges — no negative bonds at all.`}`,
+    orbitHead: closest? `${f}’s ride-or-die is ${esc(fn(closest.j))}.` : `Not enough incoming votes yet to chart ${f}’s orbit.`,
+    orbitBody: (closest&&tough)? `Closest in is ${esc(fn(closest.j))}, who scores ${f} generously nearly every time. Out on the cold edge sits ${esc(fn(tough.j))} — the toughest room ${f} plays to.` : '',
+    ledgerHead: gWarm? `${f} gives the most love to ${esc(fn(gWarm.j))}.` : `${f} hasn’t cast enough ballots yet for a clear favorite.`,
+    ledgerBody: gCold? `Read across ${f}’s row to see who they reward. ${gCold.netPoints<0?`The hatched cell is the tell: ${f} holds a real grudge against ${esc(fn(gCold.j))}.`:`Nothing hatched — ${f} spreads points around without a true grudge.`} Read down the column to see how the league treats ${f} back.` : '',
+    contraHead: gi>=0? `${f} was most generous in “${esc(rounds[gi].short)}”.` : `${f} hasn’t voted in enough rounds yet for a consensus read.`,
+    contraBody: gi>=0? `Against the room, ${f} leaned kindest in ${esc(rounds[gi].short)} and harshest in ${esc(rounds[hi].short)}. Season-long, ${f} ranks #${rank} of ${roster.length} for landing furthest off consensus.` : ''
+  };
+}
+
 /* ---- state ---- */
 const state = {tab:'Overview', drill:null,
   mb:{metric:'Messages', norm:'Total', person:'Matt Mariani', win:'Season'},
   heat:{person:'Everyone'},
-  reg:{open:{}}, tl:{filter:'All', open:{1:true}}};
+  reg:{open:{}}, tl:{filter:'All', open:{1:true}},
+  rtr:{sel:null, ledgerRound:'season'}};
 
 /* ---- home ---- */
 function renderTabs(){
@@ -214,7 +428,7 @@ function renderTabs(){
 function renderBento(){
   const list = state.tab==='Overview' ? SECTIONS : SECTIONS.filter(s=>s.side===state.tab);
   $('#bento').innerHTML = list.map(s=>{
-    const wide = ['mixingBoard','songs','awards','seasonReview'].includes(s.id);
+    const wide = ['mixingBoard','songs','awards','seasonReview','readTheRoom'].includes(s.id);
     return `<button class="tile acc-${s.acc} ${wide?'wide':''}" data-drill="${s.id}">
       <span class="th"><span class="ttag">${esc(s.tag)}</span>${s.draft?'<span class="draft">DRAFT</span>':''}</span>
       <span class="tname">${esc(s.name)}</span>
@@ -379,6 +593,62 @@ const VIEWS = {
     <div class="hm" style="margin-top:4px">${hrs}</div>
     <div class="mono" style="font-size:9.5px;color:var(--fg-quiet);margin-top:10px;text-align:center">midnight ← hour of day → 9pm · brighter = more messages</div>`;
   },
+  readTheRoom(){
+    const vh = TAPE.votingHabits;
+    if(!vh) return `<p class="lead">Voting data isn't wired up yet.</p>`;
+    const sel = state.rtr.sel, ledgerRound = state.rtr.ledgerRound;
+    const ex = rtrExplainers(vh, sel);
+
+    const chips = `<div class="chips" style="margin-bottom:18px">
+      <button class="chip ${sel===null?'on':''}" data-rtrsel="all">Everyone</button>
+      ${vh.roster.map((m,i)=>`<button class="chip ${sel===i?'on':''}" data-rtrsel="${i}" style="${sel===i?`background:${rtrCol(m.hue,0.6,0.16)};color:#050608;border-color:${rtrCol(m.hue)}`:''}">${esc(m.first)}</button>`).join('')}
+    </div>`;
+    const roundChips = `<div class="chips" style="margin-bottom:12px">
+      <button class="chip ${ledgerRound==='season'?'on':''}" data-rtrround="season">Season</button>
+      ${vh.rounds.map(r=>`<button class="chip ${ledgerRound===r.id?'on':''}" data-rtrround="${r.id}">${esc(r.short)}</button>`).join('')}
+    </div>`;
+
+    const card = (eyebrow, head, body, svg, keyHtml) => `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <div style="background:#050608;padding:14px">${svg}</div>
+      <div style="padding:18px 17px;display:flex;flex-direction:column;gap:10px">
+        <div class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-quiet)">${esc(eyebrow)}</div>
+        <div style="font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--fg);line-height:1.15">${head}</div>
+        <div style="font-size:13.5px;line-height:1.6;color:var(--fg-2)">${body}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;margin-top:4px;border-top:1px solid var(--ink-4)">
+          <div class="mono" style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-quiet)">What you're seeing</div>
+          ${keyHtml}
+        </div>
+      </div>
+    </div>`;
+    const legendRow = (icon, html) => `<div style="display:flex;align-items:center;gap:10px"><span style="flex:none">${icon}</span><span style="font-size:12px;line-height:1.5;color:var(--fg-2)">${html}</span></div>`;
+
+    const webKey = legendRow(`<svg width="34" height="13"><line x1="2" y1="6" x2="30" y2="6" stroke="#ff8a2e" stroke-width="6" stroke-linecap="round"/><circle cx="24" cy="6" r="3.5" fill="#ffd0a8"/></svg>`,
+        `<b style="color:var(--fg)">Cord + dot</b> — points to who they carry hardest; the dot is the arrowhead.`)
+      + legendRow(`<svg width="34" height="13"><line x1="2" y1="6" x2="30" y2="6" stroke="#5aa3ff" stroke-width="2.5" stroke-dasharray="3 5"/></svg>`,
+        `<b style="color:var(--fg)">Cold dashed</b> — genuine beef (net-negative points).`)
+      + `<div style="padding:8px 11px;background:#16263f;border-radius:8px;font-size:11.5px;line-height:1.5;color:#bcd6ff"><b>No line ≠ dislike.</b> Only each player's single strongest bond is drawn.</div>`;
+    const orbitKey = `<div style="font-size:12px;color:var(--fg-2)"><b style="color:var(--fg)">Distance from center</b> = how kindly that person scores this player. Closer = kinder.</div>`
+      + legendRow(`<svg width="34" height="13"><line x1="2" y1="6" x2="30" y2="6" stroke="#7cd6a0" stroke-width="6" stroke-linecap="round"/></svg>`, `<b style="color:var(--fg)">Thick solid</b> — ride-or-die.`)
+      + legendRow(`<svg width="34" height="13"><line x1="2" y1="6" x2="30" y2="6" stroke="#8b97a4" stroke-width="3" stroke-linecap="round"/></svg>`, `<b style="color:var(--fg)">Thin solid</b> — fair.`)
+      + legendRow(`<svg width="34" height="13"><line x1="2" y1="6" x2="30" y2="6" stroke="#5aa3ff" stroke-width="2" stroke-dasharray="3 6"/></svg>`, `<b style="color:var(--fg)">Dotted</b> — cold room (scores at/below zero).`)
+      + `<div style="font-size:12px;color:var(--fg-2)"><b style="color:var(--fg)">Dot size</b> = how many times they've voted on this player.</div>`;
+    const ledgerKey = `<div style="font-size:12px;color:var(--fg-2)"><b style="color:var(--fg)">Row</b> = points given. <b style="color:var(--fg)">Column</b> = points received.</div>`
+      + legendRow(`<svg width="34" height="14"><rect x="1" y="1" width="12" height="12" rx="3" fill="#ff8a2e" fill-opacity="0.35"/><rect x="18" y="1" width="12" height="12" rx="3" fill="#ff8a2e" fill-opacity="0.95"/></svg>`, `<b style="color:var(--fg)">Warm, brighter</b> = more love.`)
+      + legendRow(`<svg width="34" height="14"><rect x="1" y="1" width="12" height="12" rx="3" fill="#12233a" stroke="#5aa3ff"/></svg>`, `<b style="color:var(--fg)">Hatched blue</b> = a real grudge, not dim love.`)
+      + `<div style="font-size:12px;color:var(--fg-2)">Tap Season or a round above to filter. Every cell's tooltip shows the real number.</div>`;
+    const contraKey = `<div style="font-size:12px;color:var(--fg-2)"><b style="color:var(--fg)">Row</b> = a player. <b style="color:var(--fg)">Column</b> = a round.</div>`
+      + legendRow(`<svg width="34" height="14"><rect x="1" y="1" width="14" height="12" rx="3" fill="#ff8a2e" fill-opacity="0.9"/><rect x="18" y="1" width="14" height="12" rx="3" fill="#5aa3ff" fill-opacity="0.9"/></svg>`, `<b style="color:var(--fg)">Warm</b> = kinder than the room; <b style="color:var(--fg)">cold</b> = harsher.`)
+      + `<div style="font-size:12px;color:var(--fg-2)"><b style="color:var(--fg)">Bar</b> = season maverick score — how far off consensus, either direction.</div>`;
+
+    return `<p class="lead">Pick a player to light up everything the league already knows about how they vote — and how the room votes on them. Leave it on Everyone for the lay of the land.</p>
+    ${chips}
+    ${card('The Favor Web', ex.webHead, ex.webBody, rtrWeb(vh, sel), webKey)}
+    ${card('The Reception Orbit', ex.orbitHead, ex.orbitBody, rtrOrbit(vh, sel), orbitKey)}
+    <div class="sub" style="margin-bottom:8px">The Heat Ledger · filter by round</div>
+    ${roundChips}
+    ${card('The Heat Ledger', ex.ledgerHead, ex.ledgerBody, rtrLedger(vh, sel, ledgerRound), ledgerKey)}
+    ${card('Against the Grain', ex.contraHead, ex.contraBody, rtrContra(vh, sel), contraKey)}`;
+  },
   regulars(){
     return `<p class="lead">Every member has a fingerprint — a thing they do, on the record, on separate dates, that would identify them with the name scrubbed off. <b>${regCount()} of them, up to three per man.</b></p>
     <div class="stack">${TAPE.editorial.regulars.map(p=>{
@@ -466,7 +736,7 @@ function renderEntry(e,col){
 
 /* ---- events ---- */
 document.addEventListener('click', ev=>{
-  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tlr],[data-tl]');
+  const t = ev.target.closest('[data-tab],[data-drill],[data-close],[data-mb],[data-heat],[data-reg],[data-tlr],[data-tl],[data-rtrsel],[data-rtrround]');
   if(!t) return;
   if(t.dataset.tab!=null){ state.tab=t.dataset.tab; renderTabs(); renderBento(); }
   else if(t.dataset.drill){ openDrill(t.dataset.drill); }
@@ -476,6 +746,8 @@ document.addEventListener('click', ev=>{
   else if(t.dataset.reg){ const k=t.dataset.reg; state.reg.open[k]=!state.reg.open[k]; renderOverlay(); }
   else if(t.dataset.tlr){ const k=t.dataset.tlr; state.tl.open[k]=!state.tl.open[k]; renderOverlay(); }
   else if(t.dataset.tl){ state.tl.filter=t.dataset.tl; renderOverlay(); }
+  else if(t.dataset.rtrsel!=null){ state.rtr.sel = t.dataset.rtrsel==='all'? null : Number(t.dataset.rtrsel); renderOverlay(); }
+  else if(t.dataset.rtrround){ state.rtr.ledgerRound = t.dataset.rtrround==='season'? 'season' : Number(t.dataset.rtrround); renderOverlay(); }
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.drill) closeDrill(); });
 
