@@ -42,6 +42,10 @@ const flag = (name) => {
 };
 const OUT = flag('--out') ?? path.join(ROOT, `data/tmp/r${ROUND_ID}-cover-${variant}.png`);
 const YTM_URL = flag('--ytm-url') ?? null;
+// At voting_started the round's ml_submissions aren't imported yet (exports
+// ship completed rounds only) — the live pipeline reads the round's Spotify
+// playlist instead.
+const PLAYLIST_URL = flag('--playlist-url') ?? null;
 
 // ── round data (send-time only) ───────────────────────────────────────────────
 const env = {};
@@ -61,14 +65,15 @@ const eras = db
 	)
 	.all(LEAGUE_ID);
 const roundNum = eras.findIndex((e) => e.id === ROUND_ID) + 1 || ROUND_ID;
-const songs = db
-	.prepare(
-		`SELECT title, artists, spotify_uri, album_art_url FROM ml_submissions
-		  WHERE round_id = ? ORDER BY spotify_uri`,
-	)
-	.all(ROUND_ID);
+let songs = PLAYLIST_URL
+	? []
+	: db
+			.prepare(
+				`SELECT title, artists, spotify_uri, album_art_url FROM ml_submissions
+				  WHERE round_id = ? ORDER BY spotify_uri`,
+			)
+			.all(ROUND_ID);
 db.close();
-if (!songs.length) throw new Error(`round ${ROUND_ID} has no submissions`);
 
 const themeBy = round.description?.match(/Theme submitted by\s+(.+?)\s*$/im)?.[1] ?? null;
 const themeText = round.description?.replace(/\s*Theme submitted by\s+.+$/im, '').trim() ?? '';
@@ -107,7 +112,49 @@ async function dataUri(url) {
 	}
 }
 
-const runtimeMin = await totalRuntimeMin();
+async function spotifyToken() {
+	const res = await fetch('https://accounts.spotify.com/api/token', {
+		method: 'POST',
+		headers: {
+			Authorization:
+				'Basic ' + Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		body: 'grant_type=client_credentials',
+	});
+	if (!res.ok) throw new Error(`Spotify token failed HTTP ${res.status}`);
+	return (await res.json()).access_token;
+}
+
+let playlistRuntimeMin = null;
+if (PLAYLIST_URL) {
+	const id = PLAYLIST_URL.match(/playlist\/([A-Za-z0-9]+)/)?.[1];
+	if (!id) throw new Error(`cannot parse playlist id from ${PLAYLIST_URL}`);
+	const tok = await spotifyToken();
+	const items = [];
+	let url = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=100&fields=next,items(track(name,uri,duration_ms,artists(name),album(images)))`;
+	while (url) {
+		const res = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
+		if (!res.ok) throw new Error(`Spotify playlist fetch HTTP ${res.status}`);
+		const body = await res.json();
+		items.push(...(body.items ?? []));
+		url = body.next;
+	}
+	songs = items
+		.map((i) => i.track)
+		.filter(Boolean)
+		.map((t) => ({
+			title: t.name,
+			artists: t.artists?.map((a) => a.name).join(', ') ?? '',
+			spotify_uri: t.uri,
+			album_art_url: t.album?.images?.[0]?.url ?? null,
+			duration_ms: t.duration_ms,
+		}));
+	playlistRuntimeMin = Math.round(songs.reduce((n, s) => n + (s.duration_ms ?? 0), 0) / 60000) || null;
+}
+if (!songs.length) throw new Error(`round ${ROUND_ID} has no songs (no submissions and no --playlist-url)`);
+
+const runtimeMin = playlistRuntimeMin ?? (await totalRuntimeMin());
 const arts = variant === '1c' ? [] : await Promise.all(songs.map((s) => dataUri(s.album_art_url)));
 
 // Grid-fill helper (CD 1b/1e): tile the resolved covers to fill N cells so no
@@ -172,9 +219,9 @@ if (variant === '1a') {
 		<div style="font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.14em"><span style="color:var(--mash-pulp)">ROUND ${rr}</span><span style="color:var(--fg-muted)"> · THE DROP</span></div>
 		<div style="align-self:flex-end;text-align:right;max-width:80%">
 			<h1 id="title" style="font-family:var(--font-display);font-weight:800;font-size:67px;line-height:.98;letter-spacing:-.03em;color:var(--bone);text-shadow:0 4px 24px rgba(0,0,0,.7);text-wrap:balance">${esc(round.name)}</h1>
-			<div style="display:flex;justify-content:flex-end;align-items:baseline;gap:16px;margin-top:20px">
+			<div style="display:flex;justify-content:flex-end;align-items:baseline;gap:16px;margin-top:20px;align-items:baseline">
 				<span style="font-family:var(--font-body);font-weight:500;font-size:17px;color:var(--fg-muted)">${themeBy ? `Themed by <b style="color:var(--fg-2)">${esc(themeBy)}</b> · ` : ''}${songs.length} tracks</span>
-				<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:26px;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge)">B-II-M</span>
+				<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:26px;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge);white-space:nowrap;flex:none">B-II-M</span>
 			</div>
 		</div>
 	</div>

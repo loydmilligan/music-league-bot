@@ -1,0 +1,12 @@
+[Unit]
+Description=Check for fresh voting_started rounds every 15 minutes
+Requires=mlb-ytm-drop.service
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
