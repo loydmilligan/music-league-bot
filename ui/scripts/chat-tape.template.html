@@ -62,7 +62,7 @@ button{font-family:inherit;cursor:pointer}
 /* generic bits */
 .card{border:1px solid var(--ink-4);border-radius:12px;padding:15px 16px;background:var(--ink-1)}
 .stack{display:flex;flex-direction:column;gap:10px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent);mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent)}
 .chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:999px;white-space:nowrap;flex:none;border:1px solid var(--ink-4);background:var(--ink-1);color:var(--fg-muted);transition:all .16s}
 .chip.on{background:var(--mash-pulp);color:var(--bone);border-color:var(--mash-pulp);font-weight:700}
 .chip.on.sky{background:var(--sky);border-color:var(--sky);color:var(--ink-0)}
@@ -878,6 +878,17 @@ document.addEventListener('click', ev=>{
   else if(t.dataset.rtrround){ state.rtr.ledgerRound = t.dataset.rtrround==='season'? 'season' : Number(t.dataset.rtrround); renderOverlay(); }
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.drill) closeDrill(); });
+// PC: tab/chip strips scroll sideways on a plain (vertical) mouse-wheel
+// gesture, no shift-key required — a normal trackpad swipe or shift+wheel
+// already produces horizontal delta, so this only kicks in when the strip
+// actually has room to scroll and the gesture is genuinely vertical.
+document.addEventListener('wheel', e=>{
+  const strip = e.target.closest('.tabs,.chips');
+  if(!strip || strip.scrollWidth<=strip.clientWidth) return;
+  if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
+  strip.scrollLeft += e.deltaY;
+  e.preventDefault();
+}, {passive:false});
 
 /* ---- boot ---- */
 $('#mast-meta').textContent = nf(TAPE.generatedFrom.messages)+' messages · '+TAPE.people.length+' players · '+TAPE.songs.links.length+' songs';
