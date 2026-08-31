@@ -1,0 +1,102 @@
+{
+  "rated_at": "2026-08-31T06:49:25.165Z",
+  "incident": "incident-01",
+  "ratings": {
+    "receipts": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "real receipt"
+      ],
+      "note": "This is likely not pointed enough, but it is the right idea for this type of thing - someone says something that is refuted by actual recepits - ie explicit facts that are too obscure or minor for a human to notice - but an AI watching could spot it and call it out in a timely fashion. The key to a joke like this is the direct contradiciton that is small enough to be overlooked by humans, noticed by the AI AND pointed out with specificity AND doneso ASAP - ie quickly"
+    },
+    "previously_on": {
+      "funny": "😐",
+      "fifth": "No",
+      "why": [
+        "format"
+      ],
+      "note": "the receipts works better for this situation - this framing seems made for drama - so perhaps as a new round starts this could be good with some dramatic music - if it highligted a situation that was not very dramatic, ie when jon and I get in a fight or maybe if we identify some \"story lines\" that seem persistent"
+    },
+    "song_autopsy": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "format"
+      ],
+      "note": "again this is not terrible - but requires the right setup. I woudl say for this to work, it woudl likely best be used on the villain- the rounds dog - and I woudl say it should be laid out like a series of wounds or injuries, laid out clicnically, explaining the series of cirucmstances that led to the sunhect (song) being killed(downvoted or not voted for)"
+    },
+    "official_correction": {
+      "fifth": "Maybe",
+      "funny": "🙂",
+      "why": [
+        "callback",
+        "player specificity",
+        "format",
+        "other"
+      ],
+      "note": "Id say this has small potential - woudl need to be a pile on. For example, in week 2 of boarz, someone submitted the peeweeherman song tequila - everyone spent the whole week talkigna bout how bad it was and how it didnt fit the theme, and how it was going to do really poorly.  duirng that time - there was s discussion if \"tequilla\" - the word - was in fact an english word (the theme was songs with lyrics not in english) - if this correction was put out, explaining that the tequilla is an english word, but tis also a sp andish word, so, tehcincal it does count, ufnorutnately, according to our league rules, this clarificaiton is not necessary as the song, let me find the exact phrasing form the bylaws, yes here it is, blow ass. "
+    },
+    "attack_ad": {
+      "funny": "😂",
+      "fifth": "Maybe",
+      "why": [
+        "format",
+        "real receipt",
+        "callback",
+        "player specificity"
+      ],
+      "note": "the button at the end is important. This is actually funny adn i coudl see this palying as a video clip. I like it because its potentially veryy short as well.  This makes me think that one thing that seems to work - is things that directly reference a specific palyer doign something bad or embarassing, or dishonest, especially against anotehr sepcific palyer"
+    },
+    "court": {
+      "funny": "🙂",
+      "fifth": "Yes",
+      "why": [
+        "format",
+        "surprise",
+        "performance",
+        "real receipt",
+        "player specificity"
+      ],
+      "note": "I liek this one too - it feels liek a cousin of the  one before it - pointing out clearly ywhy someone is shady - with another player being agreived genuinely. "
+    },
+    "documentary": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "note": "doesnt feel like a setup that wil be understood - the idea of an educaitonal film does sound like it has potential though - it woudl require soemthign that is more like reefer madness. After school special. or even somethign like the old D.A.R.E commercial - this is your brain on.... or actually - the famous one - where a dad finds a stash of drugs under his kids bed ( i think a joint maybe) and then then dad confrotnse the kid \"where did you get this, where di you learn to do this stuff\" the kid, \"I LEARNED IT FROM WATCHING YOU OK?!\"\nANy time the AI detects someone behaving with hypocrisy, it coudl invent a play where it represents anotehr palyer being called out by the hypocritical person for osemthing, and the otehr person coudl say - I leanred it form wathicng you!!!!\"\" woudl be ebtter if the second scenario had actuall happened. IE with the ska rule - letes say that after that, mara had given some votres to ac ountry song, and then it coudl show me callign out mara (how could you vote for a country song when we all know you hate country, where did you get that form??\") -, adn then she says to me I leanred it from wathicng you...vote for a ska song ok.  ",
+      "why": [
+        "other"
+      ]
+    },
+    "dramatic_reading": {
+      "funny": "😐",
+      "fifth": "Maybe",
+      "note": "i woudl need an example - i chose AI BS  - but its because i am not sure its amusing without seeing a good example 0- this exmaple is confusing. "
+    },
+    "scouting_report": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "player specificity",
+        "performance"
+      ],
+      "note": "The example doesnt work great - but i think it has real potential. this exmaple is not the problem - its how itse written - tis hard ot follow. "
+    },
+    "breaking_news": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "player specificity",
+        "real receipt",
+        "musical data",
+        "format"
+      ],
+      "note": "I think we need to see all of these with a few exmaples - its hard to judge as this example is doing a lot of work. I like this cocnept for sure.  It seems to me that - perhaps unsuprisingly - the underlying incident is the most important piece.  "
+    },
+    "no_bit": {
+      "funny": "😐",
+      "fifth": "Maybe",
+      "note": "I dont get this - perhaps explain it to me better - how is htis performed - is this audio? is the white text read?"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "id": "tequila-attack-ad",
+  "format": "attack_ad",
+  "incident": "incident-04",
+  "voice": "ash",
+  "style": "Hostile political attack-ad narrator. Low, grave, contemptuous. Keep a brisk broadcast pace — do NOT add dramatic pauses or slow down; the edit supplies the pauses.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "Conor Johnston\nwants you to know\nhe put thought into it.",
+      "say": "Conor Johnston wants you to know he put thought into it.",
+      "hold": 0.45
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"The rest of us put thought into this, effort.\n>>And you come here why? To mock us for caring?\n>>To flaunt your ignorance?\"\n\nhis downvote on the new guy — round 145",
+      "say": "Here he is, downvoting the new guy. Quote: The rest of us put thought into this, effort. And you come here why? To flaunt your ignorance?",
+      "hold": 0.55
+    },
+    {
+      "card": "Same round.\nHis own song.\nHis own words.",
+      "say": "Same round. His own song. His own words.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I have no idea to this day what those 2\n>>Italian ladies were signing about.\n>>Truth is, I don't want to know.\"\n\nthe theme was: lyrics not in English",
+      "say": "Quote: I have no idea to this day what those two Italian ladies were singing about. Truth is, I don't want to know. The theme that week was lyrics not in English.",
+      "hold": 0.6
+    },
+    {
+      "kind": "stat",
+      "card": "The song he called a joke:      0\nConor:                                    −2\n\nLast place.",
+      "say": "The song he called a joke finished on zero. Conor finished on minus two. Last.",
+      "hold": 0.5
+    },
+    {
+      "card": "Grant Koziol reviewed it\nin two words.",
+      "say": "Grant Koziol reviewed it in two words.",
+      "hold": 0.25
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Fuck you\"",
+      "hold": 1.4
+    },
+    {
+      "kind": "title",
+      "card": "Conor Johnston.\nHe put thought into it.",
+      "say": "Conor Johnston. He put thought into it.",
+      "hold": 0.8
+    },
+    {
+      "card": "Not paid for by Jimmy Troy,\nwho gave Conor's song a point anyway.",
+      "say": "Not paid for by Jimmy Troy, who gave Conor's song a point anyway.",
+      "hold": 1.0
+    }
+  ],
+  "rate": 1.35
+}

@@ -1,0 +1,92 @@
+{
+  "id": "bocelli-autopsy",
+  "format": "song_autopsy",
+  "incident": "incident-04",
+  "voice": "sage",
+  "rate": 1.3,
+  "style": "Forensic pathologist dictating findings into a recorder. Clinical, unhurried, entirely without emotion. Reads injuries as data. No dramatic pauses.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "ROUND 145\nPOST-MORTEM\n\nsubject: last place",
+      "say": "Round 145. Post-mortem. Subject: last place.",
+      "hold": 0.5
+    },
+    {
+      "card": "Subject: “Con Te Partirò.”\nAndrea Bocelli.\n\nFour minutes forty-one.\nEnergy: 26 of 100 — lowest in the round.\n218,927 monthly listeners.",
+      "say": "Subject: Con Te Partirò. Andrea Bocelli. Four minutes forty-one. Energy, twenty-six out of one hundred — the lowest in the round. Two hundred eighteen thousand monthly listeners.",
+      "hold": 0.4
+    },
+    {
+      "kind": "stat",
+      "card": "The best-known song\nin the field.",
+      "say": "The best-known song in the field.",
+      "hold": 0.5
+    },
+    {
+      "card": "Cause of death:\nfour separate wounds.\nAll antemortem.",
+      "say": "Cause of death: four separate wounds. All antemortem.",
+      "hold": 0.6
+    },
+    {
+      "card": "WOUND ONE — familiarity.\n\nMashew, minus one.\nComment, in full:",
+      "say": "Wound one. Familiarity. Mashew, minus one. Comment, in full:",
+      "hold": 0.2
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Played\"",
+      "say": "His comment, in full: Played.",
+      "hold": 0.8
+    },
+    {
+      "card": "WOUND TWO — misidentification.",
+      "say": "Wound two. Misidentification.",
+      "hold": 0.25
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Which one of ladies was supposed to be\n>>Andrea bocelli? ...I would have upvoted this\n>>to the max with the correct song\n>>to go with the description\"\n\n— Dave Jensen",
+      "say": "Dave Jensen: Which one of the ladies was supposed to be Andrea Bocelli? I would have upvoted this to the max, with the correct song to go with the description.",
+      "hold": 0.5
+    },
+    {
+      "kind": "stat",
+      "card": "The deceased submitted\nthe wrong song.",
+      "say": "The deceased submitted the wrong song.",
+      "hold": 0.7
+    },
+    {
+      "card": "WOUND THREE — class.",
+      "say": "Wound three. Class.",
+      "hold": 0.2
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Andrea Bocelli is the Appleby's\n>>of opera singers.\"\n\n— Jonathan Black",
+      "say": "Jonathan Black: Andrea Bocelli is the Applebee's of opera singers.",
+      "hold": 0.7
+    },
+    {
+      "card": "WOUND FOUR — Grant Koziol.\nMinus two.\n\nComment, in full:",
+      "say": "Wound four. Grant Koziol. Minus two. Comment, in full:",
+      "hold": 0.25
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Fuck you\"",
+      "hold": 1.5
+    },
+    {
+      "kind": "stat",
+      "card": "Final: −2.\nLast of ten.",
+      "say": "Final: minus two. Last of ten.",
+      "hold": 0.5
+    },
+    {
+      "card": "Two points below the song\nthe deceased had called\na joke.",
+      "say": "Two points below the song the deceased had, that same evening, called a joke.",
+      "hold": 1.3
+    }
+  ]
+}

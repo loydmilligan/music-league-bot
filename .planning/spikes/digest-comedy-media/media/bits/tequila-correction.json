@@ -1,0 +1,75 @@
+{
+  "id": "tequila-correction",
+  "format": "official_correction",
+  "incident": "incident-04",
+  "voice": "echo",
+  "rate": 1.3,
+  "style": "Flat institutional announcer reading a filing. Bored, precise, faintly weary. No warmth, no emphasis, no dramatic pauses. This is paperwork.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "OFFICE OF THE COMMISSIONER\n\nCorrection & Clarification\nRound 145",
+      "say": "A correction and clarification from the Office of the Commissioner. Round 145.",
+      "hold": 0.5
+    },
+    {
+      "card": "The theme required vocals in a\nlanguage other than English.\n\nA question was raised in the group chat\non July 29th.",
+      "say": "The theme required vocals in a language other than English. A question was raised in the group chat on July twenty-ninth.",
+      "hold": 0.35
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Jb brought up an interesting question,\n>>is tequila an English word\"",
+      "say": "Quote: J B brought up an interesting question. Is tequila an English word.",
+      "hold": 0.5
+    },
+    {
+      "card": "The Office has reviewed the matter.",
+      "say": "The Office has reviewed the matter.",
+      "hold": 0.4
+    },
+    {
+      "card": "“Tequila” is an English word.\n\nIt is also a Spanish word.\n\nIt is also a town in Jalisco.",
+      "say": "Tequila is an English word. It is also a Spanish word. It is also a town in Jalisco.",
+      "hold": 0.45
+    },
+    {
+      "kind": "stat",
+      "card": "The submission satisfies the theme.",
+      "say": "The submission satisfies the theme.",
+      "hold": 0.7
+    },
+    {
+      "card": "This clarification changes nothing.\n\nThe song took four downvotes\nand finished on zero points.",
+      "say": "This clarification changes nothing. The song took four downvotes and finished on zero points.",
+      "hold": 0.6
+    },
+    {
+      "card": "The Office notes the question was\nresearched by a player who consulted\na chatbot —",
+      "say": "The Office notes the question was researched by a player who consulted a chatbot.",
+      "hold": 0.25
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I did check with chatgtp on the origins\n>>of tequila - he said it it not english\"",
+      "say": "Quote: I did check with chat G T P on the origins of tequila. He said it is not English.",
+      "hold": 0.5
+    },
+    {
+      "card": "— and argued, at length,\nby the man who submitted it.",
+      "say": "And argued, at length, by the man who submitted it.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"Definitely is an English word.\n>>Else what do you call tequila in English?\"\n\n— Jimmy Troy, arguing his own song\n    out of the round",
+      "say": "Quote: Definitely is an English word. Else what do you call tequila in English?",
+      "hold": 0.8
+    },
+    {
+      "card": "The Office thanks him\nfor his assistance.",
+      "say": "The Office thanks him for his assistance.",
+      "hold": 1.2
+    }
+  ]
+}

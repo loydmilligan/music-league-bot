@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comedy Spike v2 — Performed</title>
+<style>
+  :root{--bg:#12100f;--panel:#1b1817;--edge:#2e2a28;--ink:#ece6df;
+        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);padding:28px 18px 96px;
+       font:16px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:1.55rem;margin:0 0 4px}
+  h2{font-size:1.05rem;margin:34px 0 10px;color:var(--hot);
+     border-bottom:1px solid var(--edge);padding-bottom:6px}
+  .sub{color:var(--dim);font-size:.9rem}
+  .note{color:var(--dim);font-size:.84rem;border-left:2px solid var(--edge);
+        padding-left:11px;margin:16px 0 24px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+        padding:16px 18px;margin:0 0 18px}
+  .hd{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
+  .fmt{font-size:1.12rem;font-weight:650}
+  .meta{color:var(--dim);font-size:.8rem}
+  .you{font-size:.82rem;color:var(--dim);background:#141211;border:1px solid var(--edge);
+       border-left:3px solid var(--hot);border-radius:0 7px 7px 0;padding:9px 12px;margin:10px 0}
+  .you b{color:var(--ink)}
+  video{width:100%;border-radius:8px;border:1px solid var(--edge);background:#000;margin:10px 0 6px}
+  audio{width:100%;margin:8px 0}
+  ul.facts{font-size:.85rem;color:var(--dim);margin:8px 0 10px;padding-left:18px}
+  ul.facts li{margin:3px 0}
+  .q{color:var(--quote)}
+  details summary{cursor:pointer;color:var(--dim);font-size:.85rem;user-select:none;margin:6px 0}
+  .rate{border-top:1px solid var(--edge);padding-top:12px;display:grid;gap:10px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .row .lbl{font-size:.78rem;color:var(--dim);min-width:150px}
+  button.opt{background:#211d1c;border:1px solid var(--edge);color:var(--ink);
+             border-radius:7px;padding:5px 11px;font-size:.85rem;cursor:pointer}
+  button.opt:hover{border-color:#4a4442}
+  button.opt[aria-pressed="true"]{background:var(--hot);border-color:var(--hot);
+                                  color:#1a1512;font-weight:600}
+  textarea{width:100%;background:#100e0d;border:1px solid var(--edge);border-radius:7px;
+           color:var(--ink);padding:8px 10px;font:inherit;font-size:.85rem;min-height:54px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#0d0b0aee;border-top:1px solid var(--edge);
+       padding:10px 18px;display:flex;gap:12px;align-items:center;justify-content:center;
+       backdrop-filter:blur(6px)}
+  .bar button{background:var(--hot);border:0;color:#1a1512;font-weight:650;border-radius:7px;
+              padding:8px 16px;cursor:pointer;font-size:.9rem}
+  .bar .count{color:var(--dim);font-size:.82rem}
+  table{border-collapse:collapse;font-size:.85rem;margin:8px 0}
+  td,th{border:1px solid var(--edge);padding:5px 10px;text-align:left}
+  th{color:var(--dim);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Comedy spike v2 — a second incident, performed</h1>
+  <div class="sub">Boarz II Men · Round 145 “¡No Entiendo, Cabrón!” · four formats, same incident</div>
+
+  <div class="note">
+    Your v1 notes drove this: you said the <b>underlying incident matters more than the format</b>,
+    that what works is <b>one specific player doing something dishonest to another specific player</b>,
+    that the autopsy belongs on <b>the round's villain as a catalogue of wounds</b>, and you wanted
+    the Tequila bylaws correction. All four are below, on a new incident, performed.
+    Green text is verbatim from <code>league.db</code>. Voices are OpenRouter
+    <code>gpt-audio</code>; cards and cuts are ffmpeg.
+  </div>
+
+  <h2>The incident</h2>
+  <div class="card">
+    <p style="margin:0 0 10px">Round 145's theme was <b>songs with vocals in a language other than
+    English</b>. Jimmy Troy — new — submitted The Champs' <b>“Tequila”</b>, an instrumental whose
+    only vocal is the word <i>tequila</i>. Conor Johnston downvoted it with a sermon about effort.
+    In the <b>same round, on the same ballot sheet</b>, Conor submitted a song he cannot identify,
+    and finished last.</p>
+    <table>
+      <tr><th>His downvote on Jimmy</th>
+          <td class="q">“The rest of us put thought into this, effort. And you come here why? To mock us for caring? To flaunt your ignorance?”</td></tr>
+      <tr><th>His own submission comment</th>
+          <td class="q">“I have no idea to this day what those 2 Italian ladies were signing about. Truth is, I don't want to know.”</td></tr>
+      <tr><th>Result</th><td>Jimmy: <b>0</b> · Conor: <b>−2</b>, last of 10. Jimmy gave Conor's song <b>+1</b>.</td></tr>
+      <tr><th>He sentences himself</th>
+          <td class="q">“I went pretty hard after Tequila. Then it beat me. Soooo...I should keep my lard ass mouth closed.”</td></tr>
+    </table>
+    <p style="margin:10px 0 0;font-size:.85rem;color:var(--dim)">
+      Full evidence: <code>incident-04-tequila.md</code></p>
+  </div>
+
+  <h2>The four bits</h2>
+  <div id="cards"></div>
+</div>
+
+<div class="bar">
+  <span class="count" id="count">0 of 4 rated</span>
+  <button id="export">Export ratings (JSON)</button>
+</div>
+
+<script>
+const BITS = [
+  { id:'tequila-attack-ad', fmt:'Attack Ad', dur:'39s', file:'media/out/tequila-attack-ad.mp4',
+    you:'You gave this the only 😂 in v1 — <b>“things that directly reference a specific player doing something bad or embarrassing or dishonest, especially against another specific player.”</b> Also: “the button at the end is important.” Kept the button; the disclaimer is now a real fact (Jimmy really did upvote him).',
+    facts:['Same-round contradiction — both quotes are from one ballot sheet',
+           'Ends on the scoreboard (0 vs −2), not on a written joke',
+           'Grant Koziol\'s two-word review is a <b>silent card</b> — the VO declines to read it, which lands better than saying it'] },
+
+  { id:'tequila-correction', fmt:'Official Correction', dur:'55s', file:'media/out/tequila-correction.mp4',
+    you:'This is the bit you drafted yourself — <b>“explaining that tequila is an English word, but it\'s also a Spanish word, so technically it does count.”</b> The real chat thread is better than the hypothetical: the submitter argued the side that <i>disqualifies his own song</i>, and nobody ever ruled.',
+    facts:['The whole bylaws thread is real, 2026-07-29',
+           'A player resolved it by asking a chatbot: <span class="q">“I did check with chatgtp… he said it it not english”</span>',
+           'Ends on the Office thanking Jimmy for arguing himself out of the round'] },
+
+  { id:'bocelli-autopsy', fmt:'Song Autopsy', dur:'58s', file:'media/out/bocelli-autopsy.mp4',
+    you:'Built to your spec: <b>“use it on the villain — the round\'s dog — laid out like a series of wounds, clinically, explaining the series of circumstances that led to the subject being killed.”</b> Four wounds, each a real ballot.',
+    facts:['Wound 2 is the strongest and is pure data: <b>he submitted the wrong song</b>',
+           'Metadata is real: energy 26/100 (lowest in round), 218,927 listeners — the best-known song in the field',
+           'Final line ties it back to the incident: two points below the song he called a joke'] },
+
+  { id:'tequila-court', fmt:'Court of Musical Appeals', dur:'54s', file:'media/out/tequila-court.mp4',
+    you:'Your only <b>“funny the 5th time: Yes”</b> in v1 — <b>“pointing out clearly why someone is shady, with another player being aggrieved genuinely.”</b> Three voices here. The verdict is deliberately <i>not</i> the AI\'s: the court reads Conor\'s own chat message as the sentence.',
+    facts:['Multi-voice: clerk (echo), judge (ash), defendant (ballad)',
+           'Only one line of invented dialogue, labelled “(parody)” on the card',
+           'The rule this establishes: <b>end on the subject\'s own words, never on the AI\'s verdict</b>'] },
+];
+
+const FUNNY=[['😂','Actually funny'],['🙂','Amusing'],['😐','AI bullshit'],['💀','Never again']];
+const FIFTH=[['Yes','Yes'],['Maybe','Maybe'],['No','No']];
+const WHY=['callback','player specificity','real receipt','musical data','format','performance','voice/VO','surprise','other'];
+const state={};
+
+const grp=(id,k,label,opts,multi)=>`<div class="row"><span class="lbl">${label}</span>`+
+  opts.map(o=>{const[v,l]=Array.isArray(o)?o:[o,o];
+    return `<button class="opt" data-c="${id}" data-k="${k}" data-v="${v}" data-multi="${multi?1:0}" aria-pressed="false">${l}</button>`;}).join('')+`</div>`;
+
+document.getElementById('cards').innerHTML = BITS.map(b=>`
+  <div class="card">
+    <div class="hd"><span class="fmt">${b.fmt}</span>
+      <span class="meta">${b.dur} · <code>${b.id}</code></span></div>
+    <div class="you">Your v1 note → ${b.you}</div>
+    <video controls preload="metadata" src="${b.file}"></video>
+    <details><summary>audio only</summary>
+      <audio controls preload="none" src="media/out/${b.id}.mp3"></audio></details>
+    <ul class="facts">${b.facts.map(f=>`<li>${f}</li>`).join('')}</ul>
+    <details open><summary>rate it</summary><div class="rate">
+      ${grp(b.id,'funny','Verdict',FUNNY,false)}
+      ${grp(b.id,'fifth','Funny the 5th time?',FIFTH,false)}
+      ${grp(b.id,'why','What made it work?',WHY,true)}
+      <textarea data-note="${b.id}" placeholder="notes…"></textarea>
+    </div></details>
+  </div>`).join('');
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button.opt'); if(!b) return;
+  const {c,k,v}=b.dataset, multi=b.dataset.multi==='1';
+  state[c]??={};
+  if(multi){ state[c][k]??=[];
+    const i=state[c][k].indexOf(v);
+    i<0?state[c][k].push(v):state[c][k].splice(i,1);
+    b.setAttribute('aria-pressed',String(i<0));
+  } else { state[c][k]=v;
+    b.parentElement.querySelectorAll('button.opt').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); }
+  tally();
+});
+document.addEventListener('input',e=>{
+  const t=e.target.closest('textarea[data-note]'); if(!t) return;
+  state[t.dataset.note]??={}; state[t.dataset.note].note=t.value; tally();
+});
+function tally(){
+  document.getElementById('count').textContent =
+    `${Object.values(state).filter(s=>s.funny).length} of ${BITS.length} rated`;
+}
+document.getElementById('export').onclick=()=>{
+  const blob=new Blob([JSON.stringify({rated_at:new Date().toISOString(),
+    round:'v2',incident:'incident-04',ratings:state},null,2)],{type:'application/json'});
+  const a=Object.assign(document.createElement('a'),
+    {href:URL.createObjectURL(blob),download:'comedy-spike-v2-ratings.json'});
+  a.click();
+};
+</script>
+</body>
+</html>

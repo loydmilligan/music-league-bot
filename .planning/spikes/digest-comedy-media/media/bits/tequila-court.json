@@ -1,0 +1,82 @@
+{
+  "id": "tequila-court",
+  "format": "court_of_musical_appeals",
+  "incident": "incident-04",
+  "voice": "ash",
+  "rate": 1.3,
+  "style": "Courtroom. Dry, procedural, faintly tired. No dramatic pauses.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "THE COURT OF\nMUSICAL APPEALS\n\ndocket 145",
+      "say": "The Court of Musical Appeals. Docket one four five.",
+      "voice": "echo",
+      "hold": 0.5
+    },
+    {
+      "card": "In re: Tequila.\n\nThe league v. Conor Johnston.\nOne count of sanctimony.",
+      "say": "In re: Tequila. The league versus Conor Johnston. One count of sanctimony.",
+      "voice": "echo",
+      "hold": 0.5
+    },
+    {
+      "card": "THE COURT:\nExhibit A. Your ballot.",
+      "say": "Exhibit A. Your ballot.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"This competition is one big joke to you, eh?\n>>A gag for you to poop on? The rest of us put\n>>thought into this, effort. And you come here\n>>why? To mock us for caring?\"",
+      "say": "This competition is one big joke to you, eh? A gag for you to poop on? The rest of us put thought into this, effort. And you come here why? To mock us for caring?",
+      "hold": 0.6
+    },
+    {
+      "card": "THE COURT:\nExhibit B. Your submission,\nthe same week.",
+      "say": "Exhibit B. Your submission. The same week.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I have no idea to this day what those 2\n>>Italian ladies were signing about.\n>>Truth is, I don't want to know.\"",
+      "say": "I have no idea to this day what those two Italian ladies were singing about. Truth is, I don't want to know.",
+      "hold": 0.6
+    },
+    {
+      "card": "THE COURT:\nThe theme was “lyrics not in English.”",
+      "say": "The theme was lyrics not in English.",
+      "hold": 0.4
+    },
+    {
+      "card": "THE DEFENDANT:\n(parody)\n\nI stand by my ballot.",
+      "say": "I stand by my ballot.",
+      "voice": "ballad",
+      "hold": 0.4
+    },
+    {
+      "card": "THE COURT:\nYou finished last.\n\nTwo points below the man\nyou called ignorant.",
+      "say": "You finished last. Two points below the man you called ignorant.",
+      "hold": 0.6
+    },
+    {
+      "card": "THE COURT:\nThe court would sentence you.\n\nThe record shows you\nhave already done it yourself.",
+      "say": "The court would sentence you. The record shows you have already done it yourself.",
+      "hold": 0.4
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I went pretty hard after Tequila.\n>>Then it beat me. Soooo...I should keep\n>>my lard ass mouth closed.\"\n\n— Conor, in the group chat, August 1",
+      "say": "I went pretty hard after Tequila. Then it beat me. So. I should keep my lard ass mouth closed.",
+      "voice": "ballad",
+      "hold": 1.0,
+      "model": "openai/gpt-audio",
+      "retries": 8
+    },
+    {
+      "kind": "title",
+      "card": "CASE CLOSED",
+      "say": "Case closed.",
+      "voice": "echo",
+      "hold": 1.2
+    }
+  ]
+}
