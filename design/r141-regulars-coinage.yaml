@@ -1,0 +1,120 @@
+# R141 (second-best) — hand-authored Regulars + Coinage, punch-up pass 2026-08-30.
+# Written straight into digest_sections.content_json (draft-141-d62e9c29-storylines)
+# and digest_drafts.stats_content_json. Generation SKIPS storylines for this league
+# (settings.storylines_section_leagues = {"sssc":true}), so a full regen drops it —
+# re-apply from this file. Same shape as design/r140-regulars-coinage.yaml.
+
+round: 141
+league: second-best
+storylines:
+  title: The Usual Suspects
+  cast:
+  - name: The Investigator
+    player: Michael Layous
+    type: internal affairs
+    style: quote-led
+    motif: an accusation, then a disclaimer
+    note: 'Off the bench, because this is the week he filed. He opened a case against both commissioners
+      for coordinated vote-rigging, established motive, canvassed half the league for support before posting
+      a word of it in public, and attached a disclaimer to his own evidence. The case collapsed inside
+      forty minutes. He has not withdrawn it.
+
+      '
+    evidence:
+    - This is odd behavior by each of them individually. But, together, to both be waiting until the end,
+      statistically the odds almost aren't possible.
+    - I actually texted with the three Chapin's, older Blackie, and BP….(I knew they couldn't be the moles)
+    - To John's point, I do not have statistical data to support this statement. But, it could be researched
+      (which I am not going to do)
+    - I bring up cheating and Mara and Sarah are suspiciously amiss all night. Noted
+    highlight:
+    - statistically
+    - moles
+    - researched
+    - Noted
+  - name: The Broadcast
+    player: jac Chapin
+    type: intermittent transmitter
+    style: spotlight
+    motif: silent for a week, then all of it at once
+    note: 'He described the pattern himself last round — good for a day or two, then gone for a week —
+      and then ran it to schedule. This week''s transmission arrived after a nap, ninety-five minutes
+      before the voting deadline, and contained a Britney Spears link, a Gilbert & Sullivan double feature
+      earlier in the week, a defence of the family''s taste, and a phrase Matt filed on the spot as a
+      new jacism.
+
+      '
+    spotlight:
+      text: My wheels are greased!
+      caption: posted after a nap, ninety-five minutes before the deadline · aug 29
+    evidence:
+    - I took a nap. Now I'm awake.
+    - My eyes are open.
+    - It's one of my favorite Dubliners songs! I heard a guy sing it without a breather.
+    - We loved Dr. Demento fans as kids.
+    - All of the irreverent. Not as a jerk, but as a way to laugh at ourselves.
+    highlight:
+    - wheels
+    - greased
+    - irreverent
+    - Dr. Demento
+  note: 'One man spent the week building a case that the league was rigged; the other slept through most
+    of it and woke up greased. Neither was affected by the other in any way, which is roughly how this
+    chat works.
+
+
+    On the bubble — Brian Pascoe, who appointed himself steward of a 2:30 a.m. song contest nobody asked
+    him to judge and disqualified two entrants inside two minutes, one of them the commissioner''s wife.
+    Tommy Chapin, whose bit this week was a religious conversion and is filed under Phrase of the Round
+    instead. And Jonathan Black, who holds a card already and this week added a demand for reparations
+    and a rowboat duel; his week is on the back cover.
+
+
+    Regulars are recurring Second Best bits caught in the wild. One only appears when this round''s chat
+    or ballots back the bit with a real quote — every line above is verbatim.'
+stats:
+  phrase:
+    style: dictionary
+    term: bloopin'
+    pronunciation: /ˈbluːpɪn/
+    part_of_speech: verb · gerund · doctrinal
+    definition: '1. To let it go — specifically, to decline a grudge that is available to you. 2. (literal,
+      original) To play frog music on a wind synthesizer.
+
+
+      Introduced to the league as a song and adopted within the hour as a way of life. Seventy-three minutes
+      separate the first use from the first convert, who used it to renounce two seasons of spite voting
+      mid-argument. The word arrived with its hashtags attached — #FrogMusic, #GloopyMusic, #YoinkySploinky
+      — and not one of them slowed it down.
+
+      '
+    coined:
+      by: Tj Cook
+      date: '2026-08-29'
+      at: the league
+      context: posted as a track by eddie.ewi, a man who plays frog music on a wind synth, with the instruction
+        attached
+    stats:
+      uses: 14
+      speakers: 5
+      prior_rounds: 0
+    usages:
+    - label: the instruction
+      speaker: Tj Cook
+      text: You both need to relax and bloop.
+    - label: the first review
+      speaker: Brian Pascoe
+      text: Diarrea funk
+    - label: the conversion
+      speaker: Tommy Chapin
+      text: I ain't like that no more.  TJ showed me a better way.  Bloopin' is the way.
+    - label: the doctrine
+      speaker: Tommy Chapin
+      text: I been deliver't. If you were bloopin' you'd see that. that shit doesn't matter.
+    - label: the correction
+      speaker: Tj Cook
+      text: Not to derail....*blooping
+    - label: the catechism
+      speaker: Tj Cook
+      text: Blooping ain't easy. But it works.
+    source: https://open.spotify.com/track/19sgHQjCYliXCE4fwA64D2
