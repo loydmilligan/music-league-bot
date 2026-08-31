@@ -409,3 +409,32 @@ time from the deadline window; the stored column is vestigial."
   `how-to/`, `workflows/`, `archive/`, and the handoff folders), which were outside the named
   scope. `docs/coordination/` is cited above only as evidence, not audited as docs.
 - Nothing was edited or committed. This file is the only artifact.
+
+---
+
+## Follow-up — 2026-08-30 sanitization pass
+
+Only the findings actually acted on are listed. Everything else in this audit stands as
+written and is still unverified against the tree as of today.
+
+| Finding | Status |
+|---|---|
+| 1.1 `AGENTS.md` dead branch reference (`base_ref: "main"`) | **FIXED** in `AGENTS.md` → `master`. `git branch -a --list "*main*"` still returns nothing. GitNexus regenerates the block with `"main"` (it is the tool's template default, not a local edit), so this will regress on the next block sync — a note to that effect now sits inline. |
+| 1.x `AGENTS.md` stale index counts | **FIXED** — 17517/35728/1014 → 17802/36183/1015, from `analyze --index-only` at commit `f3382c7`. |
+| `PSI_INDEX.md` coverage gap: `AGENTS.md` unindexed | **FIXED** — `AGENTS.md` now has a PSI row, along with `deploy/`, `design/` and `.planning/spikes/`. |
+| `CLAUDE.md` carries the same two defects | **NOT FIXED — deliberately.** `CLAUDE.md` is ACM-managed and says so in its own first line; the fix belongs in the ACM golden set, not here. See the ownership conflict below. |
+
+**Unresolved: two systems both claim `CLAUDE.md`.** ACM's golden set manages the file
+(`PSI_INDEX.md` deploy-surface note), while GitNexus injects and regenerates a
+`<!-- gitnexus:start -->` block *inside* it — which is how the `base_ref: "main"` error got
+in and why commit `5206f71` had to hand-sync the block in both files. Until one owner wins,
+`CLAUDE.md` will keep drifting from `AGENTS.md`. Worth deciding, not worth patching around.
+
+**New finding — the GitNexus MCP server is unusable, and the mandate depends on it.**
+Every `mcp__gitnexus__*` call fails with `Database file version: 43, Current build storage
+version: 42`. Cause: two different npx caches. The analyzer behind `.gitnexus/run.cjs` is
+**1.6.10** (`_npx/e46929201c1128dd`, writes storage v43); the running MCP server process is
+**1.6.9** (`_npx/5e786f48223a616c`, reads v42). The MCP server is long-lived and predates the
+CLI upgrade. Restarting it (or Claude Code) re-resolves to 1.6.10 and should clear it.
+Until then the CLI fallback documented in `AGENTS.md` is the only working path — it is what
+the impact and detect-changes analysis in this pass actually ran on.
