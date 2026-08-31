@@ -31,7 +31,7 @@ const audioOnly = process.argv.includes('--audio-only');
 
 const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 const W = spec.width ?? 1280, H = spec.height ?? 720;
-const outDir = path.join(HERE, 'out');
+const outDir = path.join(HERE, 'renders');
 const work = path.join(outDir, '.work', spec.id);
 fs.mkdirSync(work, { recursive: true });
 

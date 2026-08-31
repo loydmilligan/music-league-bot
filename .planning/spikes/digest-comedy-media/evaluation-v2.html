@@ -97,25 +97,25 @@
 
 <script>
 const BITS = [
-  { id:'tequila-attack-ad', fmt:'Attack Ad', dur:'39s', file:'media/out/tequila-attack-ad.mp4',
+  { id:'tequila-attack-ad', fmt:'Attack Ad', dur:'39s', file:'media/renders/tequila-attack-ad.mp4',
     you:'You gave this the only 😂 in v1 — <b>“things that directly reference a specific player doing something bad or embarrassing or dishonest, especially against another specific player.”</b> Also: “the button at the end is important.” Kept the button; the disclaimer is now a real fact (Jimmy really did upvote him).',
     facts:['Same-round contradiction — both quotes are from one ballot sheet',
            'Ends on the scoreboard (0 vs −2), not on a written joke',
            'Grant Koziol\'s two-word review is a <b>silent card</b> — the VO declines to read it, which lands better than saying it'] },
 
-  { id:'tequila-correction', fmt:'Official Correction', dur:'55s', file:'media/out/tequila-correction.mp4',
+  { id:'tequila-correction', fmt:'Official Correction', dur:'55s', file:'media/renders/tequila-correction.mp4',
     you:'This is the bit you drafted yourself — <b>“explaining that tequila is an English word, but it\'s also a Spanish word, so technically it does count.”</b> The real chat thread is better than the hypothetical: the submitter argued the side that <i>disqualifies his own song</i>, and nobody ever ruled.',
     facts:['The whole bylaws thread is real, 2026-07-29',
            'A player resolved it by asking a chatbot: <span class="q">“I did check with chatgtp… he said it it not english”</span>',
            'Ends on the Office thanking Jimmy for arguing himself out of the round'] },
 
-  { id:'bocelli-autopsy', fmt:'Song Autopsy', dur:'58s', file:'media/out/bocelli-autopsy.mp4',
+  { id:'bocelli-autopsy', fmt:'Song Autopsy', dur:'58s', file:'media/renders/bocelli-autopsy.mp4',
     you:'Built to your spec: <b>“use it on the villain — the round\'s dog — laid out like a series of wounds, clinically, explaining the series of circumstances that led to the subject being killed.”</b> Four wounds, each a real ballot.',
     facts:['Wound 2 is the strongest and is pure data: <b>he submitted the wrong song</b>',
            'Metadata is real: energy 26/100 (lowest in round), 218,927 listeners — the best-known song in the field',
            'Final line ties it back to the incident: two points below the song he called a joke'] },
 
-  { id:'tequila-court', fmt:'Court of Musical Appeals', dur:'54s', file:'media/out/tequila-court.mp4',
+  { id:'tequila-court', fmt:'Court of Musical Appeals', dur:'54s', file:'media/renders/tequila-court.mp4',
     you:'Your only <b>“funny the 5th time: Yes”</b> in v1 — <b>“pointing out clearly why someone is shady, with another player being aggrieved genuinely.”</b> Three voices here. The verdict is deliberately <i>not</i> the AI\'s: the court reads Conor\'s own chat message as the sentence.',
     facts:['Multi-voice: clerk (echo), judge (ash), defendant (ballad)',
            'Only one line of invented dialogue, labelled “(parody)” on the card',
@@ -138,7 +138,7 @@ document.getElementById('cards').innerHTML = BITS.map(b=>`
     <div class="you">Your v1 note → ${b.you}</div>
     <video controls preload="metadata" src="${b.file}"></video>
     <details><summary>audio only</summary>
-      <audio controls preload="none" src="media/out/${b.id}.mp3"></audio></details>
+      <audio controls preload="none" src="media/renders/${b.id}.mp3"></audio></details>
     <ul class="facts">${b.facts.map(f=>`<li>${f}</li>`).join('')}</ul>
     <details open><summary>rate it</summary><div class="rate">
       ${grp(b.id,'funny','Verdict',FUNNY,false)}

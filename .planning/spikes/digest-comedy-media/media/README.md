@@ -1,7 +1,7 @@
 # media/ — script → voice → video
 
 Everything here is spike scaffolding. No app code imports it; it reads nothing but
-`.env` (for `OPENROUTER_API_KEY`) and writes only to `out/`.
+`.env` (for `OPENROUTER_API_KEY`) and writes only to `renders/`.
 
 ```
 node render.mjs bits/tequila-attack-ad.json              # audio + video
@@ -9,7 +9,7 @@ node render.mjs bits/foo.json --audio-only               # just the mp3
 node say.mjs --text "..." --out x.wav --voice ash        # one line
 ```
 
-Re-runs are cached per segment (`out/.work/<id>/NN.wav`), so editing one line only
+Re-runs are cached per segment (`renders/.work/<id>/NN.wav`), so editing one line only
 re-voices that line. Delete the work dir to force a full re-render.
 
 ## Pipeline
