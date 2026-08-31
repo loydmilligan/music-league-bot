@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 
 export type GuessPhase = 'gut' | 'fetch' | 'ai' | 'refine' | 'vote' | 'output' | 'done';
 export type SyncState = 'unverified' | 'ok' | 'mismatch';
+export type RehearsalMode = 'live' | 'rehearsal';
 
 export interface RoundState {
   roundId: number;
@@ -12,6 +13,8 @@ export interface RoundState {
   submittedAt: string | null;
   commentsFetchedAt: string | null;
   syncState: SyncState;
+  mode: RehearsalMode;
+  asOf: string | null;
 }
 
 interface StateRow {
@@ -19,6 +22,7 @@ interface StateRow {
   gut_locked_at: string | null; slate_locked_at: string | null;
   votes_locked_at: string | null; submitted_at: string | null;
   comments_fetched_at: string | null; sync_state: SyncState;
+  mode: RehearsalMode; as_of: string | null;
 }
 
 /** Reads the round's state, creating the default row the first time. */
@@ -37,6 +41,8 @@ export function getRoundState(db: Database.Database, roundId: number): RoundStat
     submittedAt: r.submitted_at,
     commentsFetchedAt: r.comments_fetched_at,
     syncState: r.sync_state,
+    mode: r.mode,
+    asOf: r.as_of,
   };
 }
 

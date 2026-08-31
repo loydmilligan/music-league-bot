@@ -40,4 +40,22 @@ describe('guess round state', () => {
     expect(s.gutLockedAt).toBe('2026-01-02T00:00:00Z');
     expect(s.phase).toBe('fetch');
   });
+
+  it('a fresh round defaults to live mode with no as_of', () => {
+    const { db, roundId } = seedRound();
+    const s = getRoundState(db, roundId);
+    expect(s.mode).toBe('live');
+    expect(s.asOf).toBeNull();
+  });
+
+  it('reports rehearsal mode and as_of once the row is set', () => {
+    const { db, roundId } = seedRound();
+    getRoundState(db, roundId); // ensure the row exists
+    db.prepare(
+      `UPDATE guess_round_state SET mode='rehearsal', as_of='2026-08-20T06:30:00Z' WHERE round_id=?`,
+    ).run(roundId);
+    const s = getRoundState(db, roundId);
+    expect(s.mode).toBe('rehearsal');
+    expect(s.asOf).toBe('2026-08-20T06:30:00Z');
+  });
 });
