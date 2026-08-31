@@ -1,0 +1,49 @@
+{
+  "rated_at": "2026-08-31T07:37:30.325Z",
+  "round": "v2",
+  "incident": "incident-04",
+  "ratings": {
+    "tequila-attack-ad": {
+      "funny": "😂",
+      "why": [
+        "player specificity",
+        "real receipt",
+        "surprise"
+      ],
+      "note": "The funniest line in the video was grant's 2 word review - and the final jimmyy beat.  The part that didnt maek sense was the reference to conors pick - i thin it works better if it just said - and hten conor picked a confusing and terrile song that nobody liked or osemthjign liek that - his comment made it ocnfusing.  Other htan that - pretty good.  "
+    },
+    "tequila-correction": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "real receipt",
+        "format"
+      ],
+      "note": "It needs a surprising punch- it didnt lean hard enough into the \"it doesnt matter - its bad.  it works best if the AI says something out of character.  one thing i note abotu these sampels is that they all soudn like robots - which makes a difference - humor realll depends on tonea dn timing. we eitehr need to lean into robot and use it for laughs or try to make ti seem lek peopel are really talkigna bout this.  "
+    },
+    "bocelli-autopsy": {
+      "funny": "🙂",
+      "fifth": "Maybe",
+      "why": [
+        "surprise",
+        "callback",
+        "real receipt",
+        "format"
+      ],
+      "note": "Needs ot read more like a medical examner - and agian the surpose of grants comment is the funiest part of the bit -  I think this coudl work -w e also ened ebtter graphics "
+    },
+    "tequila-court": {
+      "funny": "😂",
+      "fifth": "Maybe",
+      "why": [
+        "player specificity",
+        "callback",
+        "real receipt",
+        "performance",
+        "surprise",
+        "voice/VO"
+      ],
+      "note": "This worked fairly well-  part of the humor is makign conor seem like abritish worm.  any funny voice woudl help. the visual need work - i suggest we paly a ssnippet of his song and m ybe hsow the thumbnail - and show the \"leaderboard\" showign jimmy and tequila doing better than conor - and again need to make the \"lawyer\" sound like a lawyer and conor sound like a scared wimp - focs on making hte language more dcourlike mayeb - ue ask a long leading quetions that requires a yes or no answer the answer of whihc is conor shaky voice saying \"yes...sir\" and you agree that yo suybmitted a song that made almost no sense\" yes sir \"and youu agree that eeryoen hated your song and by inference, your very presence\" yes...sir.\""
+    }
+  }
+}

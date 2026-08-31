@@ -47,6 +47,15 @@ for (const [i, s] of segs.entries()) {
 	s.wav = path.join(work, `${String(i).padStart(2, '0')}.wav`);
 	if (fs.existsSync(s.wav)) { s.dur = dur(s.wav); continue; }   // cache across reruns
 
+	// a pre-recorded clip (a song snippet, a sting) stands in for the voice
+	if (s.clip) {
+		sh('ffmpeg', ['-y', '-v', 'error', '-i', path.resolve(HERE, s.clip),
+			'-ar', '24000', '-ac', '1', s.wav]);
+		s.dur = dur(s.wav);
+		console.log(`  ${i} ${s.dur.toFixed(1)}s  [clip ${s.clip}]`);
+		continue;
+	}
+
 	if (!s.say) {
 		// silent beat — synthesise the pause rather than voicing it
 		const secs = s.hold ?? 1.2;
@@ -87,26 +96,53 @@ if (audioOnly) process.exit(0);
 
 // ── 3. render one PNG card per segment ───────────────────────────────────────
 const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const cardHtml = (s, i) => {
+
+/** `rows: [[label, value, flag]]` → a round-145-style standings table. */
+const boardHtml = rows => `<table class="board">` + rows.map(([a, b, flag]) =>
+	`<tr class="${flag ?? ''}"><td>${esc(a)}</td><td class="pts">${esc(b)}</td></tr>`
+).join('') + `</table>`;
+
+const cardHtml = s => {
 	const lines = (s.card ?? '').split('\n');
 	const body = lines.map(l => {
 		const q = l.startsWith('>>');
 		const txt = esc(q ? l.slice(2).trim() : l);
 		return `<div class="${q ? 'q' : 'l'}">${txt || '&nbsp;'}</div>`;
 	}).join('');
+
+	// inlined, not file:// — setContent gives the page an about:blank origin and
+	// local file requests are blocked, which silently renders a broken-image icon
+	const art = s.img
+		? `<img class="art" src="data:image/jpeg;base64,${
+			fs.readFileSync(path.resolve(HERE, s.img)).toString('base64')}">`
+		: '';
+	const board = s.board ? boardHtml(s.board) : '';
+	const centred = s.kind === 'title' || art || board;
+
 	return `<!doctype html><meta charset="utf-8"><style>
     @page{margin:0}
     html,body{margin:0;padding:0;width:${W}px;height:${H}px;background:#0d0b0a;overflow:hidden}
     body{display:flex;align-items:center;justify-content:center;
          font-family:"DejaVu Sans","Liberation Sans",sans-serif;color:#ece6df}
-    .wrap{max-width:${Math.round(W * 0.82)}px;text-align:${s.kind === 'title' ? 'center' : 'left'}}
-    .l{font-size:${s.kind === 'title' ? 62 : s.kind === 'stat' ? 54 : 38}px;
+    .wrap{max-width:${Math.round(W * 0.82)}px;text-align:${centred ? 'center' : 'left'};
+          display:flex;flex-direction:column;align-items:center;gap:22px}
+    .txt{width:100%;text-align:${centred ? 'center' : 'left'}}
+    .l{font-size:${s.kind === 'title' ? 62 : s.kind === 'stat' ? 54 : art || board ? 32 : 38}px;
        font-weight:${s.kind === 'title' ? 750 : 500};line-height:1.32;
        letter-spacing:${s.kind === 'title' ? '-.02em' : '0'};margin:.16em 0;
        color:${s.kind === 'stat' ? '#e8b04b' : '#ece6df'}}
-    .q{font-size:40px;line-height:1.36;margin:.2em 0;color:#7fd1a8;
-       font-style:italic;padding-left:.7em;border-left:4px solid #2e6b4f}
-  </style><div class="wrap">${body}</div>`;
+    .q{font-size:40px;line-height:1.36;margin:.2em 0;color:#7fd1a8;font-style:italic}
+    .art{width:300px;height:300px;object-fit:cover;border-radius:10px;
+         box-shadow:0 18px 50px #000a}
+    .board{border-collapse:collapse;font-size:31px;min-width:${Math.round(W * 0.6)}px}
+    .board td{padding:11px 20px;border-bottom:1px solid #2e2a28;text-align:left;color:#9b918a}
+    .board td.pts{text-align:right;font-variant-numeric:tabular-nums;width:1%;white-space:nowrap}
+    .board tr.up td{color:#ece6df}
+    .board tr.down td{color:#d3706a;font-weight:650}
+  </style><div class="wrap">${art}${
+		// a board is a document being entered into evidence — it wants its heading first
+		board ? `<div class="txt">${body}</div>${board}` : `${board}<div class="txt">${body}</div>`
+	}</div>`;
 };
 
 const puppeteer = (await import(path.join(process.cwd(), 'node_modules/puppeteer/lib/esm/puppeteer/puppeteer.js')))
@@ -117,7 +153,9 @@ await page.setViewport({ width: W, height: H });
 
 for (const [i, s] of segs.entries()) {
 	s.png = path.join(work, `${String(i).padStart(2, '0')}.png`);
-	await page.setContent(cardHtml(s, i), { waitUntil: 'load' });
+	await page.setContent(cardHtml(s), { waitUntil: 'load' });
+	if (s.img) await page.evaluate(() => Promise.all(
+		[...document.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))));
 	await page.screenshot({ path: s.png });
 }
 await browser.close();

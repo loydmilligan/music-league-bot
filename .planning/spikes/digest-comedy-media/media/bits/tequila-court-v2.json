@@ -1,0 +1,166 @@
+{
+  "id": "tequila-court-v2",
+  "format": "court_of_musical_appeals",
+  "incident": "incident-04",
+  "rate": 1.28,
+  "model": "openai/gpt-audio",
+  "voice": "ash",
+  "style": "Courtroom cross-examination. Dry, procedural, relentless.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "THE COURT OF\nMUSICAL APPEALS\n\ndocket 145",
+      "say": "The Court of Musical Appeals is now in session. Docket one four five. The league versus Conor Johnston.",
+      "voice": "echo",
+      "style": "Court clerk calling a room to order. Formal, bored, institutional.",
+      "hold": 0.4
+    },
+    {
+      "card": "COUNSEL:\nMr. Johnston. You are the author\nof this document, are you not?",
+      "say": "Mr. Johnston. You are the author of this document, are you not?",
+      "style": "Prosecuting counsel beginning a cross-examination. Silky, patient, absolutely certain of the answer.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"This competition is one big joke to you, eh?\n>>A gag for you to poop on? The rest of us put\n>>thought into this, effort. And you come here\n>>why? To mock us for caring?\"",
+      "say": "This competition is one big joke to you, eh? A gag for you to poop on? The rest of us put thought into this, effort. And you come here why? To mock us for caring?",
+      "style": "Counsel reading a damning document aloud into the record, with quiet relish.",
+      "hold": 0.5
+    },
+    {
+      "card": "WITNESS:",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "style": "A timid, reedy Englishman in a witness box. Cornered. Voice tight and higher than natural, trailing off. He knows exactly where this is going.",
+      "rate": 1.18,
+      "hold": 0.55
+    },
+    {
+      "card": "COUNSEL:\nAnd you wrote it about a man\nin his first round\nin this league.",
+      "say": "And you wrote it about a man in his very first round in this league.",
+      "style": "Prosecuting counsel. Not a question. Flat, devastating.",
+      "hold": 0.3
+    },
+    {
+      "card": "COUNSEL:\nAnd you agree that on that same\nevening, on that same ballot,\nyou submitted this.",
+      "say": "And you agree that on that same evening, on that same ballot, you yourself submitted this.",
+      "style": "Prosecuting counsel producing an exhibit.",
+      "hold": 0.3
+    },
+    {
+      "img": "assets/bocelli.jpg",
+      "card": "Andrea Bocelli — “Con Te Partirò”\nsubmitted by Conor Johnston",
+      "clip": "assets/bocelli-clip.wav",
+      "hold": 0
+    },
+    {
+      "kind": "quote",
+      "card": "COUNSEL: ...which, by your own\ndescription, you could not identify.\n\n>>\"I have no idea to this day what those 2\n>>Italian ladies were signing about.\n>>Truth is, I don't want to know.\"",
+      "say": "I have no idea to this day what those two Italian ladies were singing about. Truth is, I don't want to know.",
+      "style": "Counsel reading the defendant's own words back at him, slowly.",
+      "hold": 0.45
+    },
+    {
+      "card": "COUNSEL:\nThere is one singer.\nHe is a man.",
+      "say": "There is one singer, Mr. Johnston. He is a man.",
+      "style": "Prosecuting counsel delivering a small, lethal correction.",
+      "hold": 0.5
+    },
+    {
+      "card": "WITNESS:",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "style": "Timid reedy Englishman, thoroughly beaten now, almost a whisper.",
+      "rate": 1.18,
+      "hold": 0.55
+    },
+    {
+      "card": "COUNSEL:\nAnd the theme that week was —\nread it to the court.",
+      "say": "And the theme that week was — read it to the court.",
+      "style": "Prosecuting counsel, closing the trap.",
+      "hold": 0.25
+    },
+    {
+      "kind": "stat",
+      "card": "“Songs must contain vocals\nentirely or mostly in a language\nother than English.”",
+      "say": "Songs must contain vocals entirely or mostly in a language other than English.",
+      "voice": "shimmer",
+      "style": "A timid Englishman reading his own indictment aloud, getting quieter with every word.",
+      "rate": 1.0,
+      "hold": 0.8
+    },
+    {
+      "card": "COUNSEL:\nAnd you agree that everyone hated\nyour song — and by inference,\nyour very presence.",
+      "say": "And you agree that everyone hated your song. And by inference, your very presence.",
+      "style": "Prosecuting counsel. Cruel, calm, enjoying it.",
+      "hold": 0.3
+    },
+    {
+      "card": "WITNESS:",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "style": "Timid reedy Englishman. Utterly defeated. Barely audible.",
+      "rate": 1.18,
+      "hold": 0.55
+    },
+    {
+      "board": [
+        [
+          "7.  Grupo Soñador — El Paso Del Gigante",
+          "3"
+        ],
+        [
+          "8.  The Champs — “Tequila”  (Jimmy Troy)",
+          "0",
+          "up"
+        ],
+        [
+          "9.  Sigur Rós — Glósóli",
+          "−1"
+        ],
+        [
+          "10. Andrea Bocelli — Con Te Partirò  (Conor)",
+          "−2",
+          "down"
+        ]
+      ],
+      "card": "ROUND 145 — FINAL",
+      "say": "Let the record show the final standings.",
+      "voice": "echo",
+      "style": "Court clerk entering a document into the record.",
+      "hold": 0.9
+    },
+    {
+      "card": "COUNSEL:\nYou finished beneath\nthe man you called ignorant.\n\nNo further questions.",
+      "say": "You finished beneath the man you called ignorant. No further questions.",
+      "style": "Prosecuting counsel sitting down, satisfied.",
+      "hold": 0.7
+    },
+    {
+      "card": "THE COURT:\nThe court would pass sentence.\n\nThe defendant has already\ndone it himself.",
+      "say": "The court would pass sentence. The defendant has already done it himself.",
+      "voice": "echo",
+      "style": "A weary judge who has seen everything. Dry.",
+      "hold": 0.5
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I went pretty hard after Tequila.\n>>Then it beat me. Soooo...I should keep\n>>my lard ass mouth closed.\"\n\n— Conor, group chat, August 1",
+      "say": "I went pretty hard after Tequila. Then it beat me. Soooo. I should keep my lard ass mouth closed.",
+      "voice": "shimmer",
+      "style": "The same timid Englishman, reading his own confession quietly to an empty room.",
+      "rate": 1.0,
+      "retries": 8,
+      "hold": 1.0
+    },
+    {
+      "kind": "title",
+      "card": "CASE CLOSED",
+      "say": "Case closed.",
+      "voice": "echo",
+      "style": "Court clerk. Final. A gavel in voice form.",
+      "hold": 1.3
+    }
+  ]
+}
