@@ -12,6 +12,10 @@ This file indexes items unique to THIS project. Every row MUST state why the ite
 | Theme-rating tool | tools | Bespoke theme-rating web tool + README (P3). |
 | Agent eval harness | musicleague/agent-harness | musicleague eval/CLI agent harness incl. its own skills (P3). |
 | Env / secrets | .env | BOT_UI_*/Spotify etc. Value stays local, never committed; overlay uses ${VAR} only (P8). |
+| Agent instructions (non-Claude) | AGENTS.md | Sibling to the ACM-managed CLAUDE.md for agents that read AGENTS.md. Carries the tool-injected GitNexus block (P3). |
+| Host scheduler units | deploy | systemd **user** units for the four host-scheduled jobs (auth probe, HiL ledes, YTM drop, rollout host). Prod scheduling lives here, not in docker-compose (P3/P7). |
+| Feasibility spikes | .planning/spikes | Time-boxed spikes with recorded verdicts (YTM 001a/002a/002c/003) + MANIFEST. An INVALIDATED spike is a recorded dead end (P3). |
+| Design surface | design | Live CD briefs, the digest-flavor guide, player dossiers, and hand-authored per-round Regulars/Coinage YAML the digest reads (P3). |
 | Project README | README.md | Project overview + setup entry point (P3). |
 | Quickstart | QUICKSTART.md | Getting-started guide (P3). |
 | Roadmap | roadmap.md | Project roadmap (P3). |

@@ -174,6 +174,42 @@ Small, and half the work is already done.
 of it (`ui/src/lib/db/client.ts:316-322`). `theme_submitted_by` (FK → `players`)
 superseded it. Dropping `theme_chooser_id` is a cleanup worth folding in here.
 
+### 6b. `master` is red — 13 failing tests  (added 2026-08-30)
+
+Found in the sanitization pass. All 13 pre-date it (verified by running both
+suites at `2d02377` in a clean worktree — the failure sets are identical), so
+these have been red for a while with nobody looking. Two suites:
+
+**Root (`npm test`) — 1 failure.**
+
+- `tests/handler.test.ts > processes !song messages sent by the bot account
+  (fromMe)` — `spotify.searchTrack` is never called. This matters more than it
+  did: since 2026-07-18 the bot sends as its *own* dedicated WhatsApp account, so
+  `fromMe` is now a normal case, not an edge case. **Decide whether the test or
+  the handler is wrong before touching either.**
+- *(`tests/emailParser.test.ts` also failed, but only because `mailparser` was
+  missing from the local `node_modules` despite being a declared dependency.
+  `npm install` fixed it; it is not a code defect.)*
+
+**UI (`cd ui && npm test`) — 12 failures, mostly stale expectations.**
+
+- `src/lib/db/leagues.test.ts` (×2) — asserts the SEED produces 5 leagues; it
+  produces 6. `nostalgia-pit` was added and the test was not. Trivially stale.
+- `src/routes/api/model-vars/sections/server.test.ts` — asserts exactly 16
+  section keys; there are 17. Same shape of staleness.
+- `src/routes/api/content/server.test.ts` (×5) — the route now answers `202`
+  where the test expects `200`, and the follow-on assertions cascade from that.
+  Looks like the b-side update went async and the test did not follow. **Check
+  this one properly** — a 202 that the caller treats as success is exactly how a
+  silent write failure hides.
+- `src/lib/queueWorker.test.ts`, `src/lib/song/adapters.test.ts`,
+  `src/routes/api/leagues/leagues.test.ts`,
+  `src/lib/db/metadataQueue.test.ts` (the YTM readiness check — see item 2).
+
+**Do this before the next feature, not after.** A red suite is why the four
+stale-expectation failures above went unnoticed long enough to become archaeology,
+and it is why nobody caught the `202`.
+
 ### 7. Small cleanups
 
 - **`--color-rating-voting` token** — voting-phase rating dots still use stock
