@@ -644,6 +644,11 @@ export const SCHEMA = `
     round_id INTEGER PRIMARY KEY REFERENCES rounds(id),
     phase TEXT NOT NULL DEFAULT 'gut'
       CHECK (phase IN ('gut','fetch','ai','refine','vote','output','done')),
+    -- Rehearsal mode (spec §14): replay a completed round as if live. as_of is the
+    -- effective "now"; NULL when live. Archiving a rehearsal deletes its rows, so
+    -- no scorecard query has to remember to exclude them.
+    mode TEXT NOT NULL DEFAULT 'live' CHECK (mode IN ('live','rehearsal')),
+    as_of TEXT,
     gut_locked_at TEXT,
     slate_locked_at TEXT,
     votes_locked_at TEXT,

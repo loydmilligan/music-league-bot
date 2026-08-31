@@ -61,4 +61,17 @@ describe('guess spine schema', () => {
       ).run(),
     ).toThrow();
   });
+
+  it('guess_round_state carries rehearsal mode and horizon', () => {
+    expect(cols(db, 'guess_round_state')).toEqual(expect.arrayContaining(['mode', 'as_of']));
+  });
+
+  it('mode is constrained to live/rehearsal', () => {
+    expect(() =>
+      db.prepare(
+        `INSERT INTO guess_round_state (round_id, mode, updated_at)
+         VALUES (99,'bogus','2026-01-01')`,
+      ).run(),
+    ).toThrow();
+  });
 });
