@@ -20,7 +20,7 @@ This file indexes items unique to THIS project. Every row MUST state why the ite
 | Quickstart | QUICKSTART.md | Getting-started guide (P3). |
 | Roadmap | roadmap.md | Project roadmap (P3). |
 | agent-bus participation | agent-bus:music-league-bot | Coordinates via agent-bus (handle music-league-bot). Awareness routed here per P10, not inline CLAUDE.md. |
-| orc-tower artifacts (SUNSET) | .orc-tower | SUPERFLUOUS — orc-tower retired (P10 sunset). Machine-local; dead Stop hook also in settings.local.json. Pending removal. |
+| orc-tower artifacts | .orc-tower | Machine-local. The in-repo dir is empty, but the Stop hook it feeds is **live, not retired** — see the note below before removing anything. |
 | Agent worktrees (transient) | .claude/worktrees | Ephemeral agent worktree checkouts (machine-local, gitignored) — transient/superfluous. |
 | superpowers runtime | .superpowers | superpowers skills/session state (machine-local, gitignored) — reference-only (P8/P10). |
 | remember memory | .remember | Local session memory (machine-local, ephemeral) (P8). |
@@ -31,4 +31,5 @@ This file indexes items unique to THIS project. Every row MUST state why the ite
 
 - **Deploy surface:** ACM golden manages only `CLAUDE.md`, `.claude/settings.json`, `.mcp.json` (+ opted-in feature files: `.claude/skills/drawio/`, `.claude/agents/example-reviewer.md`). Everything else above is untouched by deploy.
 - **Machine-local caveat:** items under `.claude/` (incl. the `musicleague-cli` skill), `.orc-tower/`, `.superpowers/`, `.remember/`, `.env` are gitignored — durable only on this machine, independent of ACM.
-- **settings.local.json:** per-repo permissions + additionalDirectories stay local (P8). The orc-tower Stop hook there is dead (retired) — remove when convenient.
+- **settings.local.json:** per-repo permissions + additionalDirectories stay local (P8). It also carries a `Stop` hook running `$HOME/.orc-tower/hooks/agent-stopped.sh`.
+  **Correction (2026-08-30):** this index previously called that hook dead and marked it for removal. It is not dead. `~/.orc-tower/hooks-enabled` contains `1`, `~/.orc-tower/hook-mode` is `mailbox`, and both `hooks.log` (4.4 MB) and `hook-inbox.log` were being written the moment this was checked. It fires on every Stop in this project. Do not delete it as cleanup. If it *should* go, the kill switch is `echo 0 > ~/.orc-tower/hooks-enabled` — which disables it globally, for every project, not just this one.
