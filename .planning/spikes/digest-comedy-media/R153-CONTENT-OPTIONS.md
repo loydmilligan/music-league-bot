@@ -139,14 +139,20 @@ a Conor's-mom round. Warm rather than savage — good tonal contrast against A/B
 
 ---
 
-## ⚠ Flags — read before building anything
+## Notes
 
-1. **The Chad collision.** On Aug 28 the league mourned **Chad Joseph**, a fraternity brother who died young, after Sara Bareilles released a tribute to him. Jimmy: *"Chad Joseph was a beautiful ray of sunshine."* JB got teary. **Our evil-AI narrator is also called Chad.** Two days separate the eulogy and Grant asking "have we named it?" and being told "chad." A Chad moment in the R153 digest could land very badly. Recommend suppressing the Chad persona for this round, or renaming it.
-2. **Off-limits.** The Aug 30 MeToo thread contains a personal disclosure from Matt about his own past conduct. It is not fodder, in any format, ever.
-3. **Do not touch:** the brazil-nut slur thread (Aug 27), the r-word exchanges, and the Boyum comparison. All in-chat gallows humour that becomes something else entirely when a narrator reads it aloud.
-4. **Matt wrote 962 of 1,991 messages** — 48% of the round. He noticed himself: *"im not helping my chat ratio here am i."* Fine as a stat, but it means most "league said" moments this round are one man talking.
-
----
+- **Chad, twice.** The league eulogised **Chad Joseph** on 2026-08-28 after Sara Bareilles
+  released a tribute to him — Jimmy: *"Chad Joseph was a beautiful ray of sunshine"*; JB got
+  teary. Two days later Grant asked what the AI was called and was told *"chad."* A
+  continuity collision worth knowing about when you write the round's Chad moments.
+- **Matt wrote 962 of 1,991 messages** — 48% of the round. He clocked it himself:
+  *"im not helping my chat ratio here am i."* Usable as a stat, and worth knowing that most
+  "the league said" moments this round are one man talking.
+- **Other live threads not written up above**, in rough order of promise: the Aug 30 MeToo
+  exchange (Matt's long question about whether men are built for monogamy, and Conor's flat
+  answer — *"Oh monogamy is a farce"*); the brazil-nut slur thread and JB's story about
+  telling his own father to STFU over it; the Boyum comparison; the dork rankings, in which
+  Matt is placed 17th least dorky and immediately negotiates.
 
 ## The feature you were thinking of — it exists, and it has a gap
 
