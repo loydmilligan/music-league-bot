@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jon Voice Lab</title>
+<style>
+  :root{--bg:#12100f;--panel:#1b1817;--edge:#2e2a28;--ink:#ece6df;
+        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);padding:30px 18px 60px;
+       font:16px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto}
+  /* four sizes only: .8 / 1 / 1.3 / 1.8rem */
+  h1{font-size:1.8rem;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:1.3rem;color:var(--hot);margin:36px 0 4px}
+  .sub,.note,.meta,table{font-size:.8rem}
+  .sub{color:var(--dim)}
+  .note{color:var(--dim);max-width:70ch;margin:14px 0 0}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+        padding:15px 17px;margin:14px 0}
+  .who{font-size:1rem;font-weight:650;margin-bottom:2px}
+  .meta{color:var(--dim);margin-bottom:9px}
+  .said{color:var(--quote);font-style:italic;margin:0 0 11px}
+  audio{width:100%}
+  table{border-collapse:collapse;margin:10px 0 0}
+  td,th{border:1px solid var(--edge);padding:5px 11px;text-align:left}
+  th{color:var(--dim);font-weight:600}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .hit{color:var(--hot);font-weight:650}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Jon Voice Lab</h1>
+<div class="sub">the league's impersonation, measured and synthesised · target register <b>118 Hz</b></div>
+<p class="note">Not a clone of Jonathan Black — a synthesis of the character three people
+already perform in the Boarz chat. Play a reference, then a synth, back to back.</p>
+
+<h2>References — real impressions, Boarz chat, 2026-08-30</h2>
+
+<div class="card">
+  <div class="who">Matt</div>
+  <div class="meta">4.5s · median 117.6 Hz · pitch range 53.7 Hz · 53% silence — the most Butthead-shaped of the three</div>
+  <p class="said">“Oh, so— uh, it's not really the same.”</p>
+  <audio controls preload="metadata" src="assets/jon-ref/00-matt.mp3"></audio>
+</div>
+
+<div class="card">
+  <div class="who">Conor <span style="color:var(--hot)">— the best specimen</span></div>
+  <div class="meta">11.8s · median 121.8 Hz · range 208.5 Hz · theatrical</div>
+  <p class="said">“I'm a bit underwhelmed and incredulous about your recording because it
+    wasn't that well thought out and I don't want to similarly reciprocate with something
+    that is poorly thought through.”</p>
+  <audio controls preload="metadata" src="assets/jon-ref/01-conor.mp3"></audio>
+  <p class="note">He's doing Jon <em>reacting to being impersonated</em> — built out of Jon's
+    own vocabulary, minutes after Jon called Matt's attempt “pretty uninspired… you rushed
+    off, blew your load, and left us slightly underwhelmed.”</p>
+</div>
+
+<div class="card">
+  <div class="who">Mara</div>
+  <div class="meta">7.2s · median 226.4 Hz — doesn't pitch down at all</div>
+  <p class="said">“Uh, the statistics clearly show that Mashew talks way more than I do in the Boarz chat.”</p>
+  <audio controls preload="metadata" src="assets/jon-ref/02-mara.mp3"></audio>
+  <p class="note">Carried entirely by cadence and word choice. Good evidence the writing
+    matters more than the voice.</p>
+</div>
+
+<h2>Synthesised</h2>
+
+<div class="card">
+  <div class="who">A/B — Conor's exact line, synthesised</div>
+  <div class="meta">voice <code>verse</code> · 107.6 Hz · range 49 Hz · play against Conor above</div>
+  <audio controls preload="metadata" src="assets/jon-ref/03-synth-conorline.mp3"></audio>
+</div>
+
+<div class="card">
+  <div class="who">Test 1 — dramatic reading of his own words</div>
+  <div class="meta">21.6s · pitch-locked to 118 Hz · <b>nothing here was written</b></div>
+  <p class="said">“I taught this song to some village youth on a two-week camping trip in the
+    Kazakhstan wilderness in the summer of '05. As a so-called English teacher, I managed to
+    learn them the climactic refrain ‘Add it Up,’ which they sang with gusto, likely in
+    relief that my mediocre guitar playing and singing was almost done. The other word from
+    the song they learned was ‘fuck.’ Overall, a successful expedition.”</p>
+  <audio controls preload="metadata" src="renders/jon-kazakhstan.mp3"></audio>
+  <p class="note">His real submission comment for Violent Femmes “Add It Up” (Second Best
+    R132). A song entry that becomes a Peace Corps anecdote.</p>
+</div>
+
+<div class="card">
+  <div class="who">Test 2 — Jonifying somebody else</div>
+  <div class="meta">36.2s · pitch-locked to 118 Hz · source: Matt's downvote hierarchy, Boarz chat 2026-08-27</div>
+  <p class="said">“Uh. I would like to propose a framework for the allocation of downvotes,
+    in descending order of culpability… I could have simply said, downvote what you have
+    heard. But I was trying to be thorough. I have a spreadsheet, if anyone would like to
+    borrow it.”</p>
+  <audio controls preload="metadata" src="renders/jon-jonified-mashew.mp3"></audio>
+  <p class="note">Source picked because Jon flagged it as Jon-behaviour himself at the time —
+    “Look whose developed a hard on for scoring rules… you want to borrow one of my
+    spreadsheets?” It closes by handing him back his own line.</p>
+</div>
+
+<h2>Why <code>verse</code></h2>
+<table>
+  <tr><th>voice</th><th>median f0</th><th></th></tr>
+  <tr><td>ash</td><td class="n">96.0 Hz</td><td>too low</td></tr>
+  <tr class="hit"><td>verse</td><td class="n">119.1 Hz</td><td>dead on target</td></tr>
+  <tr><td>echo</td><td class="n">134.1 Hz</td><td>slightly high</td></tr>
+  <tr><td>sage</td><td class="n">177.8 Hz</td><td>way high</td></tr>
+</table>
+<p class="note">Register drifts ±30 Hz between runs on an identical prompt (119, then 148,
+then 142) — fatal for a recurring character — so output is pinned in post with
+<code>pitchlock.mjs</code> rather than hoped for.</p>
+
+</div></body>
+</html>
