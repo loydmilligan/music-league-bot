@@ -82,6 +82,54 @@ describe('derived scoring', () => {
     expect(a).toEqual(b);
   });
 
+  /**
+   * A single statement naming both ml_submissions and competitor_id is reaching
+   * submitter identity, whatever alias it uses. Checked per-SQL-string, not
+   * whole-file: a whole-file co-occurrence check false-positives on assignment.ts,
+   * which legitimately reads competitor_id from season_standings in one query
+   * while a separate query names ml_submissions for spotify_uri only.
+   *
+   * The `SELECT *` clause is flagged too when it targets ml_submissions: selecting
+   * every column exposes competitor_id even when the string never names it —
+   * the reflection escape hatch (`SELECT * ...` then `row.competitor_id` in JS).
+   */
+  function readsSubmitterIdentity(src: string): boolean {
+    const sqlStrings = src.match(/`[^`]*`|'[^']*'|"[^"]*"/g) ?? [];
+    return sqlStrings.some((q) => {
+      if (!/\bml_submissions\b/.test(q)) return false;
+      return /\bcompetitor_id\b/.test(q) || /select\s+\*/i.test(q);
+    });
+  }
+
+  describe('readsSubmitterIdentity (guard detector, unit-tested directly)', () => {
+    const bad: [string, string][] = [
+      ['aliased ms.', "db.prepare(`SELECT ms.competitor_id FROM ml_submissions ms`)"],
+      ['aliased s. (not "ms")', "db.prepare(`SELECT s.competitor_id AS actual FROM ml_submissions s`)"],
+      ['aliased sub. with a JOIN before the column', "db.prepare(`SELECT sub.competitor_id FROM ml_submissions sub JOIN votes v ON v.round_id = sub.round_id`)"],
+      ['unaliased, column before FROM', "db.prepare(`SELECT competitor_id FROM ml_submissions WHERE round_id = ?`)"],
+      ['reflection via SELECT *', "db.prepare(`SELECT * FROM ml_submissions WHERE round_id = ?`)"],
+    ];
+    for (const [label, src] of bad) {
+      it(`flags: ${label}`, () => {
+        expect(readsSubmitterIdentity(src)).toBe(true);
+      });
+    }
+
+    const clean: [string, string][] = [
+      ['ml_submissions and competitor_id in separate query strings (assignment.ts shape)',
+        "db.prepare(`SELECT ms.spotify_uri FROM ml_submissions ms`); db.prepare(`SELECT ss.competitor_id FROM season_standings ss`)"],
+      ['competitor_id from an unrelated table, no ml_submissions anywhere',
+        "db.prepare(`SELECT competitor_id FROM season_standings`)"],
+      ['ml_submissions referenced with neither competitor_id nor SELECT *',
+        "db.prepare(`SELECT spotify_uri, title FROM ml_submissions WHERE round_id = ?`)"],
+    ];
+    for (const [label, src] of clean) {
+      it(`does not flag: ${label}`, () => {
+        expect(readsSubmitterIdentity(src)).toBe(false);
+      });
+    }
+  });
+
   it('no live-phase module can read submitter identity (spec §5)', () => {
     const dir = join(process.cwd(), 'src/lib/guessing');
     const allowed = new Set(['scoring.ts', 'sync.ts', 'fixtures.ts']);
@@ -90,9 +138,7 @@ describe('derived scoring', () => {
     for (const f of readdirSync(dir)) {
       if (!f.endsWith('.ts') || f.endsWith('.test.ts') || allowed.has(f)) continue;
       const src = readFileSync(join(dir, f), 'utf8');
-      if (/ms\.competitor_id|ml_submissions[\s\S]{0,200}?\bcompetitor_id\b/.test(src)) {
-        offenders.push(f);
-      }
+      if (readsSubmitterIdentity(src)) offenders.push(f);
     }
     expect(offenders, `these modules reach submitter identity: ${offenders.join(', ')}`).toEqual([]);
   });
