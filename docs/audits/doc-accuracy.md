@@ -434,7 +434,28 @@ in and why commit `5206f71` had to hand-sync the block in both files. Until one 
 Every `mcp__gitnexus__*` call fails with `Database file version: 43, Current build storage
 version: 42`. Cause: two different npx caches. The analyzer behind `.gitnexus/run.cjs` is
 **1.6.10** (`_npx/e46929201c1128dd`, writes storage v43); the running MCP server process is
-**1.6.9** (`_npx/5e786f48223a616c`, reads v42). The MCP server is long-lived and predates the
-CLI upgrade. Restarting it (or Claude Code) re-resolves to 1.6.10 and should clear it.
+**1.6.9** (`_npx/5e786f48223a616c`, reads v42).
+
+**Correction:** an earlier revision of this note said restarting the MCP server or Claude
+Code would clear it. **It will not.** `~/.claude.json` pins the server to an absolute path
+inside the 1.6.9 npx cache:
+
+```json
+"gitnexus": { "command": "~/.npm/_npx/5e786f48223a616c/node_modules/.bin/gitnexus", "args": ["mcp"] }
+```
+
+so every restart relaunches the same 1.6.9 binary. The pin is the bug, not the uptime. The
+fix is to repoint that `command`. Note that both candidates today are npx cache directories,
+which npm garbage-collects — pinning to one is why this broke. `gitnexus` is on neither PATH
+nor the global npm root, so a stable install (`npm i -g gitnexus`, already the documented
+workaround for the npm 11 npx crash, #1939) is the durable target.
+
 Until then the CLI fallback documented in `AGENTS.md` is the only working path — it is what
 the impact and detect-changes analysis in this pass actually ran on.
+
+**Related, and the reason this surfaced:** GitNexus runs constantly. `~/.claude/settings.json`
+wires the hook to `PreToolUse` on `Grep|Glob|Bash` and `PostToolUse` on `Bash`, and the
+PreToolUse path spawns a `gitnexus augment` child process per matching call. Separately,
+each Claude session starts its own MCP server and none are reaped: 8 were alive at the time
+of writing, the oldest up 4 days, ~290 MB RSS combined — all of them non-functional against
+a v43 index.
