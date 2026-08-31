@@ -97,7 +97,7 @@ describe('derived scoring', () => {
     const sqlStrings = src.match(/`[^`]*`|'[^']*'|"[^"]*"/g) ?? [];
     return sqlStrings.some((q) => {
       if (!/\bml_submissions\b/.test(q)) return false;
-      return /\bcompetitor_id\b/.test(q) || /select\s+\*/i.test(q);
+      return /\bcompetitor_id\b/.test(q) || /select\s+([\w]+\.)?\*/i.test(q);
     });
   }
 
@@ -108,6 +108,7 @@ describe('derived scoring', () => {
       ['aliased sub. with a JOIN before the column', "db.prepare(`SELECT sub.competitor_id FROM ml_submissions sub JOIN votes v ON v.round_id = sub.round_id`)"],
       ['unaliased, column before FROM', "db.prepare(`SELECT competitor_id FROM ml_submissions WHERE round_id = ?`)"],
       ['reflection via SELECT *', "db.prepare(`SELECT * FROM ml_submissions WHERE round_id = ?`)"],
+      ['reflection via alias-qualified SELECT ms.*', "db.prepare(`SELECT ms.* FROM ml_submissions ms`)"],
     ];
     for (const [label, src] of bad) {
       it(`flags: ${label}`, () => {
@@ -122,6 +123,8 @@ describe('derived scoring', () => {
         "db.prepare(`SELECT competitor_id FROM season_standings`)"],
       ['ml_submissions referenced with neither competitor_id nor SELECT *',
         "db.prepare(`SELECT spotify_uri, title FROM ml_submissions WHERE round_id = ?`)"],
+      ['COUNT(*) is not a star-select — must not be confused with reflection',
+        "db.prepare(`SELECT COUNT(*) AS n FROM ml_submissions WHERE round_id = ?`)"],
     ];
     for (const [label, src] of clean) {
       it(`does not flag: ${label}`, () => {
