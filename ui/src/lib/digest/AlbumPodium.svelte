@@ -32,6 +32,7 @@
 </script>
 
 <script lang="ts">
+  import { page } from '$app/state';
   import type { VisualComponentProps } from './variants.js';
 
   let { content }: VisualComponentProps = $props();
@@ -65,6 +66,13 @@
   const medalWord = (rank: number) =>
     rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : `#${rank}`;
   const initial = (s: PodiumSong) => (s.title?.trim()?.[0] ?? '♪').toUpperCase();
+
+  // Static export (PNG/PDF) can't open a dialog, and hover doesn't exist there —
+  // detected the same way ChatMoments does it, from the URL the export path sets.
+  const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
+
+  // Lightbox for the small list-row thumbs. null = closed.
+  let zoom = $state<{ src: string; label: string } | null>(null);
 </script>
 
 <div class="apod" data-component="album-podium">
@@ -110,13 +118,27 @@
         {@const pts = ptsOf(s)}
         <li class="apod-row">
           <span class="apod-row-rank">{String(s._rank).padStart(2, '0')}</span>
-          <div class="apod-row-art">
-            {#if s._cover}
+          {#if s._cover && !isExport}
+            <!-- click-to-enlarge: the row thumb is small by design, so the
+                 artwork gets a lightbox. Suppressed in export (a PNG can't
+                 open a dialog) — see isExport. -->
+            <button
+              type="button"
+              class="apod-row-art is-zoomable"
+              aria-label={`Enlarge artwork for ${s.title ?? 'this entry'}`}
+              onclick={() => (zoom = { src: s._cover!, label: s.title ?? '' })}
+            >
               <img src={s._cover} alt="" loading="lazy" />
-            {:else}
-              <span class="apod-art-fallback sm" aria-hidden="true">{initial(s)}</span>
-            {/if}
-          </div>
+            </button>
+          {:else}
+            <div class="apod-row-art">
+              {#if s._cover}
+                <img src={s._cover} alt="" loading="lazy" />
+              {:else}
+                <span class="apod-art-fallback sm" aria-hidden="true">{initial(s)}</span>
+              {/if}
+            </div>
+          {/if}
           <div class="apod-row-cap">
             <span class="apod-row-title" title={s.title ?? ''}>{s.title ?? ''}</span>
             <span class="apod-row-artist" title={s.artist ?? ''}>{s.artist ?? ''}</span>
@@ -136,6 +158,23 @@
     <p class="apod-empty">(no ranked songs)</p>
   {/if}
 </div>
+
+<svelte:window onkeydown={(e) => zoom && e.key === 'Escape' && (zoom = null)} />
+
+{#if zoom}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div
+    class="apod-lightbox"
+    role="dialog"
+    aria-modal="true"
+    aria-label={zoom.label ? `Artwork: ${zoom.label}` : 'Artwork'}
+    tabindex="-1"
+    onclick={() => (zoom = null)}
+  >
+    <img src={zoom.src} alt={zoom.label ?? ''} />
+    {#if zoom.label}<p class="apod-lightbox-cap">{zoom.label}</p>{/if}
+  </div>
+{/if}
 
 <style>
   .apod {
@@ -329,7 +368,7 @@
   }
   .apod-row {
     display: grid;
-    grid-template-columns: auto 36px 1fr auto auto;
+    grid-template-columns: auto 64px 1fr auto auto;
     align-items: center;
     gap: 10px;
     padding: 8px 2px;
@@ -343,9 +382,59 @@
     color: var(--fg-quiet);
     font-variant-numeric: tabular-nums;
   }
+  .apod-row-art.is-zoomable {
+    padding: 0;
+    border: 1px solid var(--line);
+    cursor: zoom-in;
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      border-color 120ms ease;
+  }
+  .apod-row-art.is-zoomable:hover,
+  .apod-row-art.is-zoomable:focus-visible {
+    transform: scale(1.6);
+    border-color: var(--line-strong, var(--ink-5));
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+    position: relative;
+    z-index: 3;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .apod-row-art.is-zoomable {
+      transition: none;
+    }
+  }
+  .apod-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    gap: 10px;
+    grid-auto-flow: row;
+    align-content: center;
+    padding: 24px;
+    background: rgba(7, 9, 12, 0.88);
+    backdrop-filter: blur(2px);
+    cursor: zoom-out;
+  }
+  .apod-lightbox img {
+    max-width: min(560px, 88vw);
+    max-height: 78vh;
+    width: auto;
+    height: auto;
+    border-radius: var(--r-2);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  }
+  .apod-lightbox-cap {
+    margin: 0;
+    font: 600 13px/1.3 var(--font-mono);
+    color: var(--fg-muted);
+    text-align: center;
+  }
   .apod-row-art {
-    width: 36px;
-    height: 36px;
+    width: 64px;
+    height: 64px;
     border-radius: var(--r-1);
     overflow: hidden;
     background: var(--ink-2);
@@ -448,12 +537,12 @@
       font-size: 13.5px;
     }
     .apod-row {
-      grid-template-columns: auto 30px 1fr auto;
+      grid-template-columns: auto 52px 1fr auto;
       gap: 8px;
     }
     .apod-row-art {
-      width: 30px;
-      height: 30px;
+      width: 52px;
+      height: 52px;
     }
     .apod-row-sub {
       display: none;
