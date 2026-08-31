@@ -97,7 +97,10 @@ describe('derived scoring', () => {
     const sqlStrings = src.match(/`[^`]*`|'[^']*'|"[^"]*"/g) ?? [];
     return sqlStrings.some((q) => {
       if (!/\bml_submissions\b/.test(q)) return false;
-      return /\bcompetitor_id\b/.test(q) || /select\s+([\w]+\.)?\*/i.test(q);
+      if (/\bcompetitor_id\b/.test(q)) return true;
+      if (/select\s+\*/i.test(q)) return true;   // bare SELECT *
+      if (/\b\w+\.\*/.test(q)) return true;      // alias.* anywhere, not anchored to SELECT
+      return false;
     });
   }
 
@@ -109,6 +112,8 @@ describe('derived scoring', () => {
       ['unaliased, column before FROM', "db.prepare(`SELECT competitor_id FROM ml_submissions WHERE round_id = ?`)"],
       ['reflection via SELECT *', "db.prepare(`SELECT * FROM ml_submissions WHERE round_id = ?`)"],
       ['reflection via alias-qualified SELECT ms.*', "db.prepare(`SELECT ms.* FROM ml_submissions ms`)"],
+      ['reflection via DISTINCT before the alias-qualified star', "db.prepare(`SELECT DISTINCT ms.* FROM ml_submissions ms`)"],
+      ['reflection via a leading column before the alias-qualified star', "db.prepare(`SELECT id, ms.* FROM ml_submissions ms`)"],
     ];
     for (const [label, src] of bad) {
       it(`flags: ${label}`, () => {
