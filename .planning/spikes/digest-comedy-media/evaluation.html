@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digest Comedy Spike — Evaluation</title>
+<style>
+  :root{
+    --bg:#12100f; --panel:#1b1817; --edge:#2e2a28; --ink:#ece6df;
+    --dim:#9b918a; --hot:#e8b04b; --quote:#7fd1a8; --bad:#d3706a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+       padding:28px 18px 90px;}
+  .wrap{max-width:940px;margin:0 auto}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:.9rem;margin-bottom:6px}
+  .warn{color:var(--dim);font-size:.82rem;border-left:2px solid var(--edge);
+        padding-left:10px;margin:16px 0 26px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+        padding:16px 18px;margin:0 0 18px}
+  .card.nobit{border-style:dashed;opacity:.9}
+  .hd{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;
+      justify-content:space-between;margin-bottom:6px}
+  .fmt{font-size:1.1rem;font-weight:650}
+  .meta{color:var(--dim);font-size:.8rem}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+  .tag{font-size:.72rem;letter-spacing:.02em;padding:2px 8px;border-radius:999px;
+       border:1px solid var(--edge);color:var(--dim);white-space:nowrap}
+  .tag.s3{border-color:var(--hot);color:var(--hot)}
+  .tag.s2{border-color:#6f8fbf;color:#9db6da}
+  .tag.music{border-color:var(--quote);color:var(--quote)}
+  details summary{cursor:pointer;color:var(--dim);font-size:.85rem;
+                  margin-bottom:8px;user-select:none}
+  pre{background:#100e0d;border:1px solid var(--edge);border-radius:8px;
+      padding:12px 14px;overflow-x:auto;font-size:.83rem;line-height:1.5;
+      white-space:pre-wrap;margin:0 0 12px}
+  .facts{font-size:.83rem;color:var(--dim);margin:0 0 12px;padding-left:18px}
+  .facts li{margin:3px 0}
+  .facts code{color:var(--quote);font-size:.95em}
+  .rate{border-top:1px solid var(--edge);padding-top:12px;margin-top:4px;
+        display:grid;gap:10px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .row .lbl{font-size:.78rem;color:var(--dim);min-width:150px}
+  button.opt{background:#211d1c;border:1px solid var(--edge);color:var(--ink);
+             border-radius:7px;padding:5px 11px;font-size:.85rem;cursor:pointer}
+  button.opt:hover{border-color:#4a4442}
+  button.opt[aria-pressed="true"]{background:var(--hot);border-color:var(--hot);
+                                  color:#1a1512;font-weight:600}
+  textarea{width:100%;background:#100e0d;border:1px solid var(--edge);
+           border-radius:7px;color:var(--ink);padding:8px 10px;font:inherit;
+           font-size:.85rem;resize:vertical;min-height:52px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#0d0b0aee;
+       border-top:1px solid var(--edge);padding:10px 18px;
+       display:flex;gap:12px;align-items:center;justify-content:center;
+       backdrop-filter:blur(6px)}
+  .bar button{background:var(--hot);border:0;color:#1a1512;font-weight:650;
+              border-radius:7px;padding:8px 16px;cursor:pointer;font-size:.9rem}
+  .bar .count{color:var(--dim);font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Digest Comedy / Media Spike — evaluation</h1>
+  <div class="sub">Second Best · Incident 01, “The Ska Rule” · 10 treatments + 1 NO BIT</div>
+  <div class="warn">
+    All <span style="color:var(--quote)">green</span> text is <strong>verbatim</strong> from
+    <code>data/league.db</code> (vote comments and chat messages). Everything else is
+    generated narration or clearly-labelled parody dialogue. No quote here is invented.
+    Ratings are held in memory only — hit <em>Export</em> to keep them.
+  </div>
+  <div id="cards"></div>
+</div>
+
+<div class="bar">
+  <span class="count" id="count">0 of 11 rated</span>
+  <button id="export">Export ratings (JSON)</button>
+</div>
+
+<script>
+const Q = s => `<span style="color:var(--quote)">${s}</span>`;
+
+const CANDIDATES = [
+  { id:'receipts', fmt:'Receipts', dur:21, spec:3, music:false, file:'incident-01-receipts.md',
+    facts:['Chat 2026-08-02: Sarah Zucker names <code>No Use For A Name</code> as her runner-up, in the same message where she asks what the Ska Rule is',
+           'R139: Mashew submits No Use For A Name and <strong>wins the round</strong>, 15 pts',
+           'Sarah Zucker&rsquo;s ballot on it: 0 points'],
+    script:`August second.
+Sarah Zucker, in the chat, asking what the Ska Rule is.
+In the same message, unprompted, she lists what she almost submitted instead:
+
+    ${Q('"My runner ups were No Use For A Name\'s Fairytale of New York\n     or Frank Sinatra\'s Chicago."')}
+
+Four minutes later:
+
+    ${Q('"Dang I didn\'t know how intensely you disliked ska! Noted."')}
+
+Two rounds later, Mashew submits No Use For A Name.
+
+He wins the round.
+
+Sarah Zucker gave it zero points.
+
+    ${Q('"I wish I had a point for this song."')}` },
+
+  { id:'previously_on', fmt:'Previously On…', dur:14, spec:3, music:false, file:'incident-01-previously-on.md',
+    facts:['Contains <strong>zero</strong> current-round content — 100% archive',
+           'Same four artefacts as Receipts, in TV-recap framing'],
+    script:`VO:  Previously — on Second Best.
+
+    [CARD]  ${Q('"Ska rule -1, sorry"')}          — Mashew, August 2
+
+    [CARD]  ${Q('"Dang I didn\'t know how intensely you disliked ska! Noted."')}
+                                    — Sarah Zucker, August 2
+
+    [CARD]  ROUND WINNER, AUGUST 16
+            No Use For A Name — "Not Your Savior"   submitted by Mashew
+
+    [CARD]  ${Q('"I wish I had a point for this song."')}   — Sarah Zucker, 0 points
+
+[MUSIC STOPS DEAD]
+
+    [CARD]  SEASON 2` },
+
+  { id:'song_autopsy', fmt:'Song Autopsy', dur:23, spec:3, music:true, file:'incident-01-song-autopsy.md',
+    facts:['<code>duration 224s · bpm 85.2 · energy 34.6 · 44,883 listeners</code>',
+           '“My Town” finished 4th of 12 on <strong>12</strong> pts — level with Mashew&rsquo;s own submission (12)',
+           'His was the round&rsquo;s only downvote on it. Remove it and she finishes above him.'],
+    script:`CORONER:
+    Subject: "My Town." Buck-O-Nine.
+    Three minutes forty-four. Eighty-five beats per minute.
+    Energy: thirty-four out of a hundred — second-lowest in the round.
+    Forty-four thousand monthly listeners. Unremarkable.
+
+    Cause of death.
+
+    [LONGER BEAT]
+
+    There isn't one.
+
+    Seven voters scored it. It finished fourth of twelve on twelve points —
+    level with the song submitted by the man who downvoted it.
+
+    ${Q('"Ska rule -1, sorry"')}
+
+    Remove that one point and it finishes above him.
+
+    The subject was in good health.
+    Somebody just didn't care for the genre.` },
+
+  { id:'official_correction', fmt:'Official Correction', dur:19, spec:3, music:false, file:'incident-01-official-correction.md',
+    facts:['“Ska rule” appears in the entire corpus exactly twice, both in vote comments',
+           'Matt is both the commissioner and the voter in question'],
+    script:`    A correction from the Office of the Commissioner.
+
+    A ballot filed in Round 137 referred to "the Ska Rule."
+
+    Second Best does not have a Ska Rule.
+    Second Best has never had a Ska Rule.
+    No such rule was proposed, discussed, ratified, or written down.
+
+    The Office regrets that between August second and August twenty-third,
+    at least one player altered his vote in anticipation of it.
+
+    ${Q('"Will Mariani view this as too Ska"')}
+
+    The Office notes that the Commissioner is also the voter who filed
+    the original ballot.
+
+    No further action will be taken.` },
+
+  { id:'attack_ad', fmt:'Attack Ad', dur:24, spec:3, music:false, file:'incident-01-attack-ad.md',
+    facts:['R140: Mashew gives NOFX 3 pts — tied-highest on his ballot',
+           'Chat 2026-08-28, chasing a late submission: <code>i will even accept ska</code>'],
+    script:`VO:  Mashew says he has standards.
+
+     ${Q('"Ska rule -1, sorry"')}
+
+VO:  One downvote. The only one that song got.
+     It finished the round tied with his own submission.
+     Without him, it beats him.
+
+VO:  Three weeks later — NOFX. Horns and all.
+     Mashew gave it three points.
+     Tied for the most he gave anybody that night.
+
+VO:  And on August twenty-eighth, chasing a submission he needed,
+     Mashew wrote:
+
+     ${Q('"i will even accept ska"')}
+
+VO:  Mashew. He'll take ska. When it's for him.
+
+     Not actually paid for by Sarah Zucker, who is still down one point.` },
+
+  { id:'court', fmt:'Court of Musical Appeals', dur:32, spec:3, music:false, file:'incident-01-court.md',
+    facts:['Dialogue is <strong>invented parody</strong>; the two exhibits are verbatim'],
+    script:`CLERK:  Docket one-thirty-seven, stroke, one-forty. The league versus Mashew.
+        One count of selective enforcement.
+
+JUDGE:  You wrote — and this is in the record —
+
+        ${Q('"Ska rule -1, sorry"')}
+
+        Twenty-one days later you gave a NOFX song three points.
+        Tied for the most you gave anyone that night.
+
+DEFENDANT [PARODY]:  I stated my reasons.
+
+JUDGE:  You did.
+
+        ${Q('"Always love this album more than others"')}
+
+        That is not a genre defence. That is a preference.
+
+        The court finds that the Ska Rule was never a rule.
+        It was a mood.
+        And Sarah Zucker was standing next to it.` },
+
+  { id:'documentary', fmt:'Educational Film', dur:27, spec:3, music:false, file:'incident-01-documentary.md',
+    facts:['Layous never voted on the original song — he inherited the rule secondhand',
+           'NOFX took zero downvotes; the rule never produced a second casualty'],
+    script:`NARRATOR:
+    Second Best is a music league of fourteen people.
+    It has ten written rules.
+
+    On the second of August, an eleventh appeared.
+    It was six words long and it was attached to a downvote.
+
+    ${Q('"Ska rule -1, sorry"')}
+
+    It was never proposed. It was never agreed to.
+    It was applied once, to one song, by one man.
+
+    Twenty-one days later it changed the behaviour of a player
+    who had never voted on the original song at all.
+
+    ${Q('"Will Mariani view this as too Ska"')}
+
+    By then the rule had been abandoned by its author,
+    who was in the middle of giving that very song three points.
+
+    This is how law works in a group chat.` },
+
+  { id:'dramatic_reading', fmt:'Dramatic Reading', dur:34, spec:2, music:false, file:'incident-01-dramatic-reading.md',
+    facts:['One real chat message read complete and unaltered, then the follow-up sent four minutes later',
+           'Performance direction is explicitly <em>not</em> an impression'],
+    script:`READER [VERBATIM, 2026-08-02T04:49:47Z]:
+
+    ${Q('"Mash what is the ska rule!? Automatic downvote?\n     Loved everyone\'s comments. JB you\'re so right: My Town is likable but so\n     simple and safe. I came across a really terrible song called San Diego by\n     Bruce Springsteen about a drug mule and there is Blink 182\'s San Diego song\n     but it wasn\'t a great candidate. And Crazy Poway Kids by Unwritten Law.\n     For some reason I became fixated on representing my hometown.\n     My runner ups were No Use For A Name\'s Fairytale of New York\n     or Frank Sinatra\'s Chicago."')}
+
+[FOUR SECONDS OF NOTHING]
+
+CARD:  four minutes later
+
+    ${Q('"Dang I didn\'t know how intensely you disliked ska!\n\n     Noted."')}` },
+
+  { id:'scouting_report', fmt:'Player Scouting Report', dur:26, spec:2, music:true, file:'incident-01-scouting-report.md',
+    facts:['Has downvoted 11 different players; <strong>never</strong> missmara (0 for 15)',
+           'Highest rate against a regular: Sarah Black, 3 of 15',
+           '⚠ First draft led on a stat that turned out to be true of <em>every</em> player — see the file'],
+    script:`ANALYST 1:  Seventeen submissions. Digs deeper than anyone who's played a full
+            season — lowest average listener count of any regular in the league.
+
+ANALYST 2:  Sure. But look at the downvote.
+            Eleven different players. Highest rate against Sarah Black —
+            three of fifteen. He's downvoted both Sarahs in this league.
+
+ANALYST 1:  And the reasons?
+
+ANALYST 2:  Mostly not about music.
+            ${Q('"no thank you" / "Still don\'t appreciate" / "Nope" / "Too jokey"')}
+
+ANALYST 1:  Twice he's admitted on the ballot it was random. Quote —
+            ${Q('"Flipped a tuna can and landed on edge"')}
+
+ANALYST 2:  One player has never taken a downvote from him in fifteen chances.
+
+ANALYST 1:  Who?
+
+ANALYST 2:  His wife.` },
+
+  { id:'breaking_news', fmt:'Breaking News', dur:17, spec:3, music:false, file:'incident-01-breaking-news.md',
+    facts:['Deliberately built from beats 1 and 4 only — the control for the memory experiment'],
+    script:`ANCHOR:
+The Ska Rule is not being enforced.
+
+Introduced August second by a single voter, applied once, never written down —
+on August twenty-third its author gave a NOFX song three points.
+His stated reason, in full:
+
+    ${Q('"Always love this album more than others"')}
+
+Voting on the same song, Michael Layous wrote — and we are quoting the ballot —
+    ${Q('"Will Mariani view this as too Ska"')}
+
+Mr. Layous was complying with a rule that had already been abandoned.
+Nobody has told him.` },
+
+  { id:'no_bit', fmt:'NO BIT — “The Frank Black Embargo”', dur:0, spec:null, music:false,
+    nobit:true, file:'incident-03-NO-BIT.md',
+    facts:['Listed as a “running joke” in the player dossier',
+           'Total surviving evidence: <strong>two</strong> chat messages, eight minutes apart'],
+    script:`NO BIT.
+
+Material: two chat messages, eight minutes apart, 2026-08-01.
+No contradiction. No consequence. No recurrence. No callback.
+The joke was already made, by a player, in one line.
+
+    ${Q('~ bp   "Frank Black didn’t make the playlist?"')}
+    ${Q('~ JB   "Maybe a casualty of the trade war. Embargo on Frank Black."')}` },
+];
+
+const FUNNY = [['😂','Actually funny'],['🙂','Amusing'],['😐','AI bullshit'],['💀','Never again']];
+const FIFTH = [['Yes','Yes'],['Maybe','Maybe'],['No','No']];
+const WHY   = ['callback','player specificity','real receipt','musical data','format','performance','surprise','other'];
+
+const state = {};
+
+function group(cid, key, opts, multi){
+  return `<div class="row"><span class="lbl">${key.label}</span>` +
+    opts.map(o=>{
+      const [val,lbl] = Array.isArray(o) ? o : [o,o];
+      return `<button class="opt" data-c="${cid}" data-k="${key.k}" data-v="${val}"
+              data-multi="${multi?1:0}" aria-pressed="false">${lbl}</button>`;
+    }).join('') + `</div>`;
+}
+
+document.getElementById('cards').innerHTML = CANDIDATES.map(c=>{
+  const spec = c.spec===null ? '' :
+    `<span class="tag s${c.spec}">specificity ${c.spec}${c.spec===3?' — deep lore':c.spec===2?' — player-specific':''}</span>`;
+  return `<div class="card${c.nobit?' nobit':''}">
+    <div class="hd">
+      <span class="fmt">${c.fmt}</span>
+      <span class="meta">${c.dur?`~${c.dur}s · `:''}<code>candidates/${c.file}</code></span>
+    </div>
+    <div class="tags">${spec}${c.music?'<span class="tag music">music-specific</span>':''}</div>
+    <ul class="facts">${c.facts.map(f=>`<li>${f}</li>`).join('')}</ul>
+    <pre>${c.script}</pre>
+    <details><summary>rate this one</summary>
+      <div class="rate">
+        ${group(c.id,{k:'funny',label:'Verdict'},FUNNY,false)}
+        ${group(c.id,{k:'fifth',label:'Funny the 5th time?'},FIFTH,false)}
+        ${group(c.id,{k:'why',label:'What made it work?'},WHY,true)}
+        <textarea data-note="${c.id}" placeholder="notes…"></textarea>
+      </div>
+    </details>
+  </div>`;
+}).join('');
+
+document.addEventListener('click', e=>{
+  const b = e.target.closest('button.opt'); if(!b) return;
+  const {c,k,v} = b.dataset, multi = b.dataset.multi==='1';
+  state[c] ??= {};
+  if(multi){
+    state[c][k] ??= [];
+    const i = state[c][k].indexOf(v);
+    i<0 ? state[c][k].push(v) : state[c][k].splice(i,1);
+    b.setAttribute('aria-pressed', String(i<0));
+  } else {
+    state[c][k] = v;
+    b.parentElement.querySelectorAll('button.opt')
+      .forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+  }
+  tally();
+});
+
+document.addEventListener('input', e=>{
+  const t = e.target.closest('textarea[data-note]'); if(!t) return;
+  const c = t.dataset.note; state[c] ??= {}; state[c].note = t.value; tally();
+});
+
+function tally(){
+  const n = Object.values(state).filter(s=>s.funny).length;
+  document.getElementById('count').textContent = `${n} of ${CANDIDATES.length} rated`;
+}
+
+document.getElementById('export').onclick = ()=>{
+  const out = { rated_at:new Date().toISOString(), incident:'incident-01', ratings:state };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
+  const a = Object.assign(document.createElement('a'),
+    { href:url, download:'comedy-spike-ratings.json' });
+  a.click(); URL.revokeObjectURL(url);
+};
+</script>
+</body>
+</html>

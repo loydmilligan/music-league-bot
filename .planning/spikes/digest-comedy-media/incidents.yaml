@@ -1,0 +1,151 @@
+# Phase 3 — Incident Sheet
+# Second Best (league_id 3), Season 2. Extracted before any comedy was written.
+# Every `evidence` entry is a real row or message; re-check with evidence.sh.
+# Ratings are qualitative on purpose. No scores, no fake precision.
+
+league: second-best
+corpus_span: "2026-05-07 .. 2026-08-31"
+extracted: 2026-08-30
+
+incidents:
+
+  - id: incident-01
+    title: "The Ska Rule"
+    summary: >
+      Mashew (Matt Mariani, commissioner) invented a genre statute in a vote comment,
+      used it exactly once — against Sarah Zucker — then abandoned it silently while at
+      least two other players kept voting as though it were still in force. He then won
+      a later round with the band Sarah had named, in chat, as her runner-up.
+    comedy_potential: very high
+    why_it_might_be_funny:
+      - "A rule that was never written, never ratified, and enforced exactly once."
+      - "Its author breaks it in public 21 days later, for 3 points, without comment."
+      - "A third party (Layous) obeys a repealed law nobody told him was repealed."
+      - "The victim's own runner-up band wins the author the next-but-one round."
+      - "The punchline is a vote total, not a quip: the downvote is the sole reason her song didn't finish above his."
+    beats:
+      - n: 1
+        when: "2026-08-02 (R137 'Wish You Were Here' close)"
+        what: "Mashew downvotes Sarah Zucker's Buck-O-Nine 'My Town' — the round's only downvote on it."
+        exact_quote: "Ska rule -1, sorry"
+        source: "votes / round_id=137 / voter Mashew — evidence.sh E1"
+      - n: 2
+        when: "2026-08-02T04:49:47Z and 04:53:18Z"
+        what: >
+          Sarah Zucker asks what the rule is, and in the same message lists the songs she
+          nearly submitted instead — one of them by No Use For A Name. Four minutes later
+          she closes the subject.
+        exact_quotes:
+          - "Mash what is the ska rule!? Automatic downvote?"
+          - "My runner ups were No Use For A Name's Fairytale of New York or Frank Sinatra's Chicago."
+          - "Dang I didn't know how intensely you disliked ska! Noted."
+        source: "chat_messages / Second Best / sender '~ Sarah' — evidence.sh E2"
+      - n: 3
+        when: "R139 'They Dead' (voting closed 2026-08-16)"
+        what: >
+          Mashew submits No Use For A Name — 'Not Your Savior' — and WINS the round with 15.
+          Sarah Zucker gives it 0. Tj gives it 3 with a comment about what is 'still allowed'.
+        exact_quotes:
+          - "I wish I had a point for this song."      # Sarah Zucker, 0 pts
+          - "I am glad punk is still allowed."          # Tj, 3 pts
+          - "You just had to go and submit my favorite No Use song, didn't you?"  # Jonathan Black, 3 pts
+        source: "votes+ml_submissions / round_id=139 — evidence.sh E3, E4"
+      - n: 4
+        when: "R140 'More Cowbell!' (voting closed 2026-08-23)"
+        what: >
+          Tj submits NOFX 'Philthy Phil Philanthropist'. Michael Layous votes 1 and says
+          out loud that he is worried about the rule. Mashew gives it 3 — tied for the
+          highest score on his ballot — and says nothing about ska. The song takes zero
+          downvotes and finishes 4th of 13.
+        exact_quotes:
+          - "Will Mariani view this as too Ska"          # Michael Layous, 1 pt
+          - "Always love this album more than others"    # Mashew, 3 pts
+        source: "votes / round_id=140 — evidence.sh E5, E6"
+      - n: 5
+        when: "2026-08-28T04:02:30Z"
+        what: "Chasing a late submission from Layous, Mashew offers ska as an amnesty."
+        exact_quotes:
+          - "no pressure michael"
+          - "i will even accept ska"
+        source: "chat_messages / Second Best / Matt Mariani — evidence.sh E7"
+    supporting_data:
+      - "'My Town' finished 4th of 12 on 12 pts, TIED with Mashew's own 'Norf Norf' (12). Absent his -1 it finishes 13 — one point above him. (evidence.sh E9)"
+      - "NOFX took zero downvotes in R140. The Ska Rule has never produced a second casualty. (E5)"
+      - "Mashew has cast a downvote in all 16 Second Best rounds he has voted in — 16 for 16. (E8)"
+      - "4 of those 16 downvotes went to a player named Sarah. There are two Sarahs. He has downvoted both. (E8, E11)"
+    relevant_players: [Mashew, Sarah Zucker, Michael Layous, Tj, Jonathan Black]
+    music_specific: true          # the whole dispute is about genre and it decides a placement
+    retrieval_dependent: true     # beats 2 and 3 are unreachable from R140 alone
+    candidate_formats: [breaking_news, court, previously_on, receipts, dramatic_reading, attack_ad, correction, documentary, song_autopsy, scouting_report]
+    risks:
+      - "Five beats is more than a 20-second bit can carry — every treatment must drop at least two."
+      - "The target is Matt himself, which is the safest possible target but also the one he can least judge objectively."
+      - "No Use For A Name is skate punk, not ska. The joke is genre adjacency; do not assert it is a ska band."
+
+  - id: incident-02
+    title: "The Nottingham Tribute"
+    summary: >
+      Three days after Jonathan Black posted an unprompted multi-message historiography of
+      Disney's Robin Hood, Philip Chapin submitted 'Not In Nottingham' with the comment
+      "For my brudder." It is the most obscure song in the database — 23 monthly listeners.
+      Sarah Zucker downvoted it and apologised at length for doing so.
+    comedy_potential: medium-high
+    why_it_might_be_funny:
+      - "23 monthly listeners is a number that does the joke by itself."
+      - "The dedication's target is genuinely ambiguous, and the league argued about it."
+      - "Sarah Zucker's downvote is a 46-word apology — the least confident downvote in the corpus."
+      - "Jonathan Black then voted 2 for a song he had effectively commissioned by accident."
+    beats:
+      - n: 1
+        when: "2026-07-29T17:30Z"
+        what: "JB posts a three-message Robin Hood dissertation, ending with a self-aware disclaimer."
+        exact_quote: "No offense, and my dissertation would probably only be appreciated, if at all, by someone who has watched the Disney Robin Hood movie at least 50 times."
+        source: "chat_messages — evidence.sh (grep 'nottingham|robin hood')"
+      - n: 2
+        when: "R137"
+        what: "Philip Chapin submits 'Not In Nottingham' (Allison Young / The Bygones / Joshua Lee Turner), comment: 'For my brudder'."
+        source: "ml_submissions / round_id=137"
+      - n: 3
+        when: "R137 ballots"
+        what: "Sarah Zucker downvotes it with an apology; JB gives 2; Tommy gives 1 with a pre-emptive defence of Disney adults."
+        exact_quotes:
+          - "I'm so sorry I didn't want to do this, especially if it's for your brudder. I didn't love this particular song but there is nothing wrong with it at all."
+          - "Although this song is best when sung by a medieval troubadour cartoon rooster, these humans do justice to this classic protest anthem."
+        source: "votes / round_id=137 — evidence.sh E10"
+      - n: 4
+        when: "2026-08-02 / 2026-08-03"
+        what: "JB claims credit adjacency twice, and misnames the submitter once."
+        exact_quotes:
+          - "Props to David for Nottingham. I may not have been clear, but I am quite a fan of that movie."
+          - "Tommy owes Phil after the Nottingham submission."
+        source: "chat_messages"
+    supporting_data:
+      - "23 monthly listeners, Spotify popularity 26 — by far the lowest in R137; next lowest is 484. (E9)"
+      - "Finished 8th of 12 on 9 pts."
+    relevant_players: [Philip Chapin, Jonathan Black, Sarah Zucker, Tommy Chapin]
+    music_specific: true
+    retrieval_dependent: true
+    candidate_formats: [song_autopsy, correction, documentary]
+    risks:
+      - "AMBIGUOUS: 'my brudder' is undetermined. JB says 'Props to David' (no David is in this round) and separately 'Tommy owes Phil'. Do not assert who it was for."
+      - "The best line in it (Tommy's Disney-adult vote) is a player's own joke; a bit that repeats it adds nothing."
+
+  - id: incident-03
+    title: "The Frank Black Embargo"
+    summary: >
+      Joe Quinto's Frank Black submission failed to appear on someone's playlist. Jonathan
+      Black offered a one-line explanation. Nothing followed.
+    comedy_potential: none
+    verdict: NO BIT
+    why_no_bit:
+      - "Total surviving evidence is two chat messages, 8 minutes apart, from two people."
+      - "The joke is already complete and already landed. Any treatment restates it at greater length."
+      - "No contradiction, no consequence, no callback, no second occurrence."
+      - "The dossier lists 'The Frank Black Embargo' as a running joke. The data does not support that — it ran for eight minutes."
+    evidence:
+      - "2026-08-01T15:56:44Z ~ bp: 'Frank Black didn’t make the playlist?'"
+      - "2026-08-01T16:04:57Z ~ JB: 'Maybe a casualty of the trade war. Embargo on Frank Black.'"
+      - "evidence.sh E12 — that is the entire corpus."
+    kept_as: >
+      Calibration case. An incident selector that rates this as usable material is
+      broken. It looks like lore (it has a name, it is in the dossier) and is not.

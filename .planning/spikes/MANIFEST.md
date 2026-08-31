@@ -24,3 +24,14 @@ Decisions made during decomposition (2026-08-29, approved by Matt):
 | 003 | ytm-trigger-send | standard | Given a completed round playlist, when the round trigger fires, then the YTM link posts to the TEST group only | VALIDATED ✓ | whatsapp, trigger |
 
 Risk order: 001a first — if playlist creation on the personal account fails, the idea dies.
+
+---
+
+## Unrelated spikes in this directory
+
+This manifest covers the YTM idea only. Other spikes live here but decompose different
+ideas and are self-describing:
+
+| Directory | Idea | Verdict |
+|---|---|---|
+| `digest-comedy-media/` | Can real league history support short, genuinely funny generated digest formats? (brief: `digest-comedy-media-spike.md`) | VALIDATED (mechanism), UNMEASURED (frequency) — see its `findings.md` |
