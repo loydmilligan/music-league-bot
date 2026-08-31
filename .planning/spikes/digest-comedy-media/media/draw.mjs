@@ -46,7 +46,17 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 	body: JSON.stringify({
 		model: arg('model', 'google/gemini-2.5-flash-image'),
 		modalities: ['image', 'text'],
-		messages: [{ role: 'user', content: prompt }],
+		// --ref lets a real photo drive the likeness while the prompt keeps the
+		// output a drawing. That is the whole trick for putting an actual player
+		// in a scene without generating photoreal footage of them.
+		messages: [{
+			role: 'user',
+			content: arg('ref')
+				? [{ type: 'text', text: prompt },
+				   { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${
+					   fs.readFileSync(arg('ref')).toString('base64')}` } }]
+				: prompt,
+		}],
 	}),
 });
 

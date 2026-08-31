@@ -69,6 +69,7 @@ for (const [i, s] of segs.entries()) {
 	sh('node', [path.join(HERE, 'say.mjs'), '--text', s.say, '--out', s.wav,
 		'--voice', s.voice ?? spec.voice ?? 'ash', '--style', s.style ?? spec.style ?? '',
 		'--rate', String(s.rate ?? spec.rate ?? 1),
+		'--pitch', String(s.pitch ?? spec.pitch ?? 1),
 		// gpt-audio-mini refuses even mild profanity mid-quote; the full model reads it.
 		'--model', s.model ?? spec.model ?? 'openai/gpt-audio-mini',
 		'--retries', String(s.retries ?? spec.retries ?? 3)]);
@@ -121,7 +122,8 @@ const cardHtml = s => {
 
 	return `<!doctype html><meta charset="utf-8"><style>
     @page{margin:0}
-    html,body{margin:0;padding:0;width:${W}px;height:${H}px;background:#0d0b0a;overflow:hidden}
+    html,body{margin:0;padding:0;width:${W}px;height:${H}px;overflow:hidden;
+              background:${s.video ? 'transparent' : '#0d0b0a'}}
     body{display:flex;align-items:center;justify-content:center;
          font-family:"DejaVu Sans","Liberation Sans",sans-serif;color:#ece6df}
     .wrap{max-width:${Math.round(W * 0.82)}px;text-align:${centred ? 'center' : 'left'};
@@ -140,7 +142,7 @@ const cardHtml = s => {
     .art{width:300px;height:300px;object-fit:cover;border-radius:10px;
          box-shadow:0 18px 50px #000a}
     /* scene: the illustration fills the frame and the line rides underneath it */
-    .scene{position:fixed;inset:0}
+    .scene{position:fixed;inset:0;max-width:none;gap:0}
     .scene .art{position:absolute;inset:0;width:100%;height:100%;border-radius:0;
                 box-shadow:none;object-fit:cover;object-position:center 28%}
     .scene .txt{position:absolute;left:0;right:0;bottom:0;padding:34px 60px 40px;
@@ -171,7 +173,7 @@ for (const [i, s] of segs.entries()) {
 	await page.setContent(cardHtml(s), { waitUntil: 'load' });
 	if (s.img) await page.evaluate(() => Promise.all(
 		[...document.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))));
-	await page.screenshot({ path: s.png });
+	await page.screenshot({ path: s.png, omitBackground: !!s.video });
 }
 await browser.close();
 
@@ -183,6 +185,21 @@ const clips = segs.map((s, i) => {
 	const out = path.join(work, `${String(i).padStart(2, '0')}.mp4`);
 	const frames = Math.max(2, Math.round(s.dur * FPS));
 	const zoom = s.zoom ?? (s.img ? 1.09 : 0);       // end scale; 0 = locked off
+
+	if (s.video) {
+		const src = path.resolve(HERE, s.video);
+		const start = s.videoStart ?? 0;
+		sh('ffmpeg', ['-y', '-v', 'error',
+			'-stream_loop', '-1', '-ss', String(start), '-i', src,
+			'-i', s.png, '-t', s.dur.toFixed(3),
+			'-filter_complex',
+			`[0:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},`
+			+ `colorbalance=rm=0.06:gm=0.02:bm=-0.07,eq=saturation=1.3,fps=${FPS}[bg];`
+			+ `[bg][1:v]overlay=0:0:format=auto,format=yuv420p`,
+			'-r', String(FPS), '-an',
+			'-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', out]);
+		return out;
+	}
 
 	const vf = zoom
 		// zoompan works on the upscaled still so the push stays free of stair-stepping

@@ -1,0 +1,138 @@
+{
+  "id": "court-short",
+  "format": "court_of_musical_appeals",
+  "incident": "incident-04",
+  "note": "The tight cut. Cards carry the evidence; only the two principals move.",
+  "rate": 1.32,
+  "model": "openai/gpt-audio",
+  "voice": "ash",
+  "style": "Courtroom cross-examination. Dry, procedural, relentless. Brisk — no dramatic pauses.",
+  "segments": [
+    {
+      "kind": "title",
+      "card": "THE COURT OF\nMUSICAL APPEALS\n\ndocket 145",
+      "say": "The Court of Musical Appeals. Docket one four five.",
+      "voice": "echo",
+      "style": "Court clerk. Flat, administrative, fast.",
+      "hold": 0.3
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-jb-counsel.png",
+      "zoom": 1.08,
+      "card": "You are the author of this\ndocument, are you not?",
+      "say": "Mr. Johnston. You are the author of this document, are you not?",
+      "style": "Prosecuting counsel. Silky, patient, certain of the answer.",
+      "hold": 0.3
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"The rest of us put thought into this, effort.\n>>And you come here why? To mock us for caring?\n>>To flaunt your ignorance?\"\n\nhis downvote on a man in his first round",
+      "say": "The rest of us put thought into this, effort. And you come here why? To mock us for caring? To flaunt your ignorance?",
+      "style": "Counsel reading a damning document into the record, with relish.",
+      "hold": 0.25
+    },
+    {
+      "video": "assets/mo-witness.mp4",
+      "videoStart": 0.4,
+      "card": "Yes... sir.",
+      "kind": "scene",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "pitch": 1.3,
+      "style": "A timid, reedy man cornered in a witness box. Trailing off.",
+      "rate": 1.15,
+      "hold": 0.25
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-jb-counsel.png",
+      "zoom": 1.11,
+      "card": "And on that same ballot,\nyou submitted this.",
+      "say": "And on that same ballot, the same night, you submitted this.",
+      "style": "Prosecuting counsel producing an exhibit.",
+      "hold": 0.25
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"I have no idea to this day what those 2\n>>Italian ladies were signing about.\n>>Truth is, I don't want to know.\"\n\nit is one man. Andrea Bocelli.",
+      "say": "I have no idea to this day what those two Italian ladies were singing about. Truth is, I don't want to know.",
+      "style": "Counsel reading the defendant's own words back at him.",
+      "hold": 0.25
+    },
+    {
+      "kind": "stat",
+      "card": "The theme was:\nlyrics not in English.",
+      "say": "The theme was lyrics not in English.",
+      "style": "Prosecuting counsel closing the trap. Flat.",
+      "hold": 0.25
+    },
+    {
+      "video": "assets/mo-witness.mp4",
+      "videoStart": 2.6,
+      "kind": "scene",
+      "card": "Yes... sir.",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "pitch": 1.34,
+      "style": "The same timid man, thoroughly beaten now. Almost a whisper.",
+      "rate": 1.15,
+      "hold": 0.25
+    },
+    {
+      "board": [
+        [
+          "The song he called a joke  (Jimmy Troy)",
+          "0",
+          "up"
+        ],
+        [
+          "Conor",
+          "−2",
+          "down"
+        ]
+      ],
+      "card": "ROUND 145 — FINAL\nyou finished beneath the man you called ignorant",
+      "say": null,
+      "hold": 2.0
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-jb-counsel.png",
+      "zoom": 1.13,
+      "card": "The court needn't take my word for it.\nRead your own comment.",
+      "say": "The court needn't take my word for it. Read the court your own comment.",
+      "style": "Prosecuting counsel, unhurried, handing him the rope.",
+      "hold": 0.3
+    },
+    {
+      "video": "assets/mo-witness.mp4",
+      "videoStart": 1.2,
+      "kind": "scene",
+      "card": "\"I went pretty hard after Tequila. Then it beat me.\nSoooo...I should keep my lard ass mouth closed.\"",
+      "say": "I went pretty hard after Tequila. Then it beat me. Soooo. I should keep my lard ass mouth closed.",
+      "voice": "shimmer",
+      "pitch": 1.3,
+      "style": "The same timid man reading his own confession aloud, hating every syllable.",
+      "rate": 1.42,
+      "retries": 8,
+      "hold": 0.25
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-judge.png",
+      "zoom": 1.09,
+      "card": "For excessive and wholly unearned\nsanctimony, the court finds\nthe defendant —",
+      "say": "For excessive and wholly unearned sanctimony, the court finds the defendant —",
+      "voice": "echo",
+      "style": "A weary judge. Building, then cut off hard on the last word.",
+      "hold": 0.15
+    },
+    {
+      "kind": "stamp",
+      "card": "GUILTY",
+      "clip": "assets/stamp.wav",
+      "hold": 0
+    }
+  ]
+}

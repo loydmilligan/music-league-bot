@@ -140,8 +140,15 @@ fs.writeFileSync(raw, Buffer.concat(chunks));
 // The model inserts its own dramatic pauses regardless of the direction it is
 // given, so pace is fixed here rather than asked for.
 const rate = +arg('rate', 1);
+// --pitch shifts the voice without changing pace: resample up, then slow back
+// down. Asking the model for "higher and reedier" is unreliable; this isn't.
+const pitch = +arg('pitch', 1);
+const af = [];
+if (pitch !== 1) af.push(`asetrate=${Math.round(PCM_RATE * pitch)}`,
+	`aresample=${PCM_RATE}`, `atempo=${(1 / pitch).toFixed(4)}`);
+if (rate !== 1) af.push(`atempo=${rate}`);
 execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 's16le', '-ar', String(PCM_RATE), '-ac', '1',
-	'-i', raw, ...(rate !== 1 ? ['-af', `atempo=${rate}`] : []), out]);
+	'-i', raw, ...(af.length ? ['-af', af.join(',')] : []), out]);
 fs.unlinkSync(raw);
 
 const dur = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration',
