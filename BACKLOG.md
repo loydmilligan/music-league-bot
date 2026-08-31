@@ -197,14 +197,30 @@ these have been red for a while with nobody looking. Two suites:
   produces 6. `nostalgia-pit` was added and the test was not. Trivially stale.
 - `src/routes/api/model-vars/sections/server.test.ts` — asserts exactly 16
   section keys; there are 17. Same shape of staleness.
-- `src/routes/api/content/server.test.ts` (×5) — the route now answers `202`
-  where the test expects `200`, and the follow-on assertions cascade from that.
-  Looks like the b-side update went async and the test did not follow. **Check
-  this one properly** — a 202 that the caller treats as success is exactly how a
-  silent write failure hides.
-- `src/lib/queueWorker.test.ts`, `src/lib/song/adapters.test.ts`,
-  `src/routes/api/leagues/leagues.test.ts`,
-  `src/lib/db/metadataQueue.test.ts` (the YTM readiness check — see item 2).
+- `src/routes/api/content/server.test.ts` (×5) — the route answers `202` where
+  the test expects `200`, and the other four assertions cascade from that one.
+  **Checked: the 202 is deliberate**, not a silent failure. The update endpoint
+  was made fire-and-forget — it returns `{jobId}` immediately and the caller
+  polls `GET /update-status/:jobId` (`+server.ts:75,147,266`). The test simply
+  never followed. Stale.
+- `src/routes/api/leagues/leagues.test.ts` — expects 4 leagues, gets 6. Same
+  drift as above. Stale.
+
+**Triage: 9 of the 12 are stale expectations** (the two league counts, the
+section-key count, the five `202`s, and the API league count) — mechanical
+fixes, no behavior question to answer.
+
+**Three need an actual decision** about whether the test or the code is wrong,
+and should not be swept in with the rest:
+
+- `src/lib/queueWorker.test.ts > calls fetchTags and marks done` — `fetchTags`
+  is called **zero** times. Either the lastfm_tags path stopped firing or the
+  worker was rewired.
+- `src/lib/song/adapters.test.ts > fromChat > sets intent` — `intent` comes back
+  `undefined`, expected `'ALT'`.
+- `src/lib/db/metadataQueue.test.ts > ytm: ok=true only when 100% of
+  submissions have a ytm_link_cache row` — expected 1, got 0. This is the same
+  readiness check item 2 is about, so resolve them together.
 
 **Do this before the next feature, not after.** A red suite is why the four
 stale-expectation failures above went unnoticed long enough to become archaeology,
