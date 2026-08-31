@@ -131,6 +131,11 @@ const cardHtml = s => {
        font-weight:${s.kind === 'title' ? 750 : 500};line-height:1.32;
        letter-spacing:${s.kind === 'title' ? '-.02em' : '0'};margin:.16em 0;
        color:${s.kind === 'stat' ? '#e8b04b' : '#ece6df'}}
+    /* a rubber stamp: ink-red, rotated off-square, roughed at the edges */
+    .stamp .l{font-size:140px;font-weight:800;letter-spacing:.06em;color:#c0332b;
+       border:9px solid #c0332b;border-radius:8px;padding:14px 46px 20px;
+       display:inline-block;transform:rotate(-7deg);opacity:.92;
+       text-shadow:0 0 3px #c0332b55}
     .q{font-size:40px;line-height:1.36;margin:.2em 0;color:#7fd1a8;font-style:italic}
     .art{width:300px;height:300px;object-fit:cover;border-radius:10px;
          box-shadow:0 18px 50px #000a}
@@ -139,7 +144,7 @@ const cardHtml = s => {
     .board td.pts{text-align:right;font-variant-numeric:tabular-nums;width:1%;white-space:nowrap}
     .board tr.up td{color:#ece6df}
     .board tr.down td{color:#d3706a;font-weight:650}
-  </style><div class="wrap">${art}${
+  </style><div class="wrap ${s.kind === 'stamp' ? 'stamp' : ''}">${art}${
 		// a board is a document being entered into evidence — it wants its heading first
 		board ? `<div class="txt">${body}</div>${board}` : `${board}<div class="txt">${body}</div>`
 	}</div>`;
