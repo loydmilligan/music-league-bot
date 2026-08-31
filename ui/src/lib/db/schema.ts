@@ -633,6 +633,79 @@ export const SCHEMA = `
     PRIMARY KEY (run_id, cut_id)
   );
 
+  -- Guess the Submitter (2026-08-31). Per-round state machine for the guessing
+  -- workflow. Spec: docs/superpowers/specs/2026-08-31-submitter-guessing-design.md
+  -- Scoring is DERIVED at read time by joining ml_submissions; no correctness
+  -- column exists here on purpose, so a zip re-import cannot strand a stale
+  -- scoreline.
+  -- "player" in these tables means a row in \`competitors\` — this schema has no
+  -- separate players table. The *_player_id names follow the spec's vocabulary.
+  CREATE TABLE IF NOT EXISTS guess_round_state (
+    round_id INTEGER PRIMARY KEY REFERENCES rounds(id),
+    phase TEXT NOT NULL DEFAULT 'gut'
+      CHECK (phase IN ('gut','fetch','ai','refine','vote','output','done')),
+    gut_locked_at TEXT,
+    slate_locked_at TEXT,
+    votes_locked_at TEXT,
+    submitted_at TEXT,
+    comments_fetched_at TEXT,
+    sync_state TEXT NOT NULL DEFAULT 'unverified'
+      CHECK (sync_state IN ('unverified','ok','mismatch')),
+    updated_at TEXT NOT NULL
+  );
+  -- One row per (round, song). gut_pick is frozen once the round's gut_locked_at
+  -- is stamped; confidence shares the 0..100 scale with guess_candidates.certainty
+  -- so both compare directly against the AI's percentages.
+  CREATE TABLE IF NOT EXISTS guess_picks (
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    spotify_uri TEXT NOT NULL,
+    gut_pick_player_id INTEGER REFERENCES competitors(id),
+    final_pick_player_id INTEGER REFERENCES competitors(id),
+    confidence INTEGER CHECK (confidence IS NULL OR (confidence BETWEEN 0 AND 100)),
+    second_pick_player_id INTEGER REFERENCES competitors(id),
+    explanation TEXT NOT NULL DEFAULT '',
+    second_explanation TEXT NOT NULL DEFAULT '',
+    comment TEXT NOT NULL DEFAULT '',
+    comment_notes TEXT NOT NULL DEFAULT '',
+    locked_at TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (round_id, spotify_uri)
+  );
+  -- The sudoku grid. 'prime' dims that player on other songs (advisory);
+  -- 'locked' removes them (hard). Persisted rather than client-side so the
+  -- grid survives a refresh mid-round.
+  CREATE TABLE IF NOT EXISTS guess_candidates (
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    spotify_uri TEXT NOT NULL,
+    player_id INTEGER NOT NULL REFERENCES competitors(id),
+    status TEXT NOT NULL DEFAULT 'possible'
+      CHECK (status IN ('possible','prime','locked')),
+    certainty INTEGER CHECK (certainty IS NULL OR (certainty BETWEEN 0 AND 100)),
+    factors TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (round_id, spotify_uri, player_id)
+  );
+  -- Project D writes these; A only defines them so the shape is settled.
+  CREATE TABLE IF NOT EXISTS guess_ai_distribution (
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    spotify_uri TEXT NOT NULL,
+    player_id INTEGER NOT NULL REFERENCES competitors(id),
+    pct REAL NOT NULL,
+    reasoning TEXT NOT NULL DEFAULT '',
+    generated_at TEXT NOT NULL,
+    PRIMARY KEY (round_id, spotify_uri, player_id)
+  );
+  CREATE TABLE IF NOT EXISTS guess_ai_song (
+    round_id INTEGER NOT NULL REFERENCES rounds(id),
+    spotify_uri TEXT NOT NULL,
+    ai_pick_player_id INTEGER REFERENCES competitors(id),
+    ai_certainty INTEGER CHECK (ai_certainty IS NULL OR (ai_certainty BETWEEN 0 AND 100)),
+    ai_factors TEXT NOT NULL DEFAULT '',
+    generated_at TEXT NOT NULL,
+    PRIMARY KEY (round_id, spotify_uri)
+  );
+
 `;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
