@@ -1,0 +1,73 @@
+{
+  "id": "court-illustrated-demo",
+  "format": "court_of_musical_appeals",
+  "incident": "incident-04",
+  "note": "Proof-of-look only — the four strongest beats of tequila-court-v2, illustrated. Not a replacement cut.",
+  "rate": 1.28,
+  "model": "openai/gpt-audio",
+  "voice": "ash",
+  "style": "Courtroom cross-examination. Dry, procedural, relentless.",
+  "segments": [
+    {
+      "kind": "scene",
+      "img": "assets/sk-counsel.png",
+      "card": "Mr. Johnston. You are the author\nof this document, are you not?",
+      "say": "Mr. Johnston. You are the author of this document, are you not?",
+      "style": "Prosecuting counsel beginning a cross-examination. Silky, patient, absolutely certain of the answer.",
+      "hold": 0.35
+    },
+    {
+      "kind": "quote",
+      "card": ">>\"This competition is one big joke to you, eh?\n>>A gag for you to poop on? The rest of us put\n>>thought into this, effort. And you come here\n>>why? To mock us for caring?\"",
+      "say": "This competition is one big joke to you, eh? A gag for you to poop on? The rest of us put thought into this, effort. And you come here why? To mock us for caring?",
+      "style": "Counsel reading a damning document aloud into the record, with quiet relish.",
+      "hold": 0.5
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-witness.png",
+      "card": "Yes... sir.",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "style": "A timid, reedy Englishman in a witness box. Cornered. Voice tight and higher than natural, trailing off.",
+      "rate": 1.18,
+      "hold": 0.6
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-counsel.png",
+      "zoom": 1.12,
+      "card": "And you agree that everyone hated your song —\nand by inference, your very presence.",
+      "say": "And you agree that everyone hated your song. And by inference, your very presence.",
+      "style": "Prosecuting counsel. Cruel, calm, enjoying it.",
+      "hold": 0.35
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-witness.png",
+      "zoom": 1.14,
+      "card": "Yes... sir.",
+      "say": "Yes... sir.",
+      "voice": "shimmer",
+      "style": "Timid reedy Englishman. Utterly defeated. Barely audible.",
+      "rate": 1.18,
+      "hold": 0.7
+    },
+    {
+      "kind": "scene",
+      "img": "assets/sk-judge.png",
+      "zoom": 1.11,
+      "card": "For the offense of excessive and wholly\nunearned sanctimony, the court finds\nthe defendant —",
+      "say": "For the offense of excessive and wholly unearned sanctimony, the court finds the defendant —",
+      "voice": "echo",
+      "style": "A weary judge delivering a verdict. Building, then cutting off hard on the last word.",
+      "hold": 0.3
+    },
+    {
+      "kind": "stamp",
+      "card": "GUILTY",
+      "clip": "assets/stamp.wav",
+      "hold": 0
+    }
+  ]
+}

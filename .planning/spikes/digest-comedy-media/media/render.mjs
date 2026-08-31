@@ -139,12 +139,22 @@ const cardHtml = s => {
     .q{font-size:40px;line-height:1.36;margin:.2em 0;color:#7fd1a8;font-style:italic}
     .art{width:300px;height:300px;object-fit:cover;border-radius:10px;
          box-shadow:0 18px 50px #000a}
+    /* scene: the illustration fills the frame and the line rides underneath it */
+    .scene{position:fixed;inset:0}
+    .scene .art{position:absolute;inset:0;width:100%;height:100%;border-radius:0;
+                box-shadow:none;object-fit:cover;object-position:center 28%}
+    .scene .txt{position:absolute;left:0;right:0;bottom:0;padding:34px 60px 40px;
+                text-align:center;
+                background:linear-gradient(transparent,#0a0806e0 42%,#0a0806f5)}
+    .scene .l{font-size:40px;font-weight:600;color:#f4efe8;
+              text-shadow:0 2px 14px #000c}
+    .scene .q{font-size:40px;color:#a8e6c4;text-shadow:0 2px 14px #000c}
     .board{border-collapse:collapse;font-size:31px;min-width:${Math.round(W * 0.6)}px}
     .board td{padding:11px 20px;border-bottom:1px solid #2e2a28;text-align:left;color:#9b918a}
     .board td.pts{text-align:right;font-variant-numeric:tabular-nums;width:1%;white-space:nowrap}
     .board tr.up td{color:#ece6df}
     .board tr.down td{color:#d3706a;font-weight:650}
-  </style><div class="wrap ${s.kind === 'stamp' ? 'stamp' : ''}">${art}${
+  </style><div class="wrap ${s.kind === 'stamp' ? 'stamp' : ''} ${s.kind === 'scene' ? 'scene' : ''}">${art}${
 		// a board is a document being entered into evidence — it wants its heading first
 		board ? `<div class="txt">${body}</div>${board}` : `${board}<div class="txt">${body}</div>`
 	}</div>`;
@@ -165,18 +175,36 @@ for (const [i, s] of segs.entries()) {
 }
 await browser.close();
 
-// ── 4. mux: each card holds for its own clip's duration ──────────────────────
+// ── 4. one clip per card, then concat ────────────────────────────────────────
+// Illustrated cards get a slow push-in; text cards stay still, because drifting
+// type reads as a screensaver rather than as camera movement.
+const FPS = 25;
+const clips = segs.map((s, i) => {
+	const out = path.join(work, `${String(i).padStart(2, '0')}.mp4`);
+	const frames = Math.max(2, Math.round(s.dur * FPS));
+	const zoom = s.zoom ?? (s.img ? 1.09 : 0);       // end scale; 0 = locked off
+
+	const vf = zoom
+		// zoompan works on the upscaled still so the push stays free of stair-stepping
+		? `scale=${W * 2}:${H * 2},zoompan=z='min(1+(${zoom - 1})*on/${frames},${zoom})'`
+		  + `:d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'`
+		  + `:s=${W}x${H}:fps=${FPS},format=yuv420p`
+		: `scale=${W}:${H},format=yuv420p`;
+
+	sh('ffmpeg', ['-y', '-v', 'error', '-loop', '1', '-i', s.png,
+		'-t', s.dur.toFixed(3), '-vf', vf, '-r', String(FPS),
+		'-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', out]);
+	return out;
+});
+
 const vlist = path.join(work, 'video.txt');
-fs.writeFileSync(vlist,
-	segs.map(s => `file '${s.png}'\nduration ${s.dur.toFixed(3)}`).join('\n') +
-	`\nfile '${segs.at(-1).png}'\n`);   // concat demuxer needs the last frame repeated
+fs.writeFileSync(vlist, clips.map(c => `file '${c}'`).join('\n'));
 
 const videoOut = path.join(outDir, `${spec.id}.mp4`);
 sh('ffmpeg', ['-y', '-v', 'error',
 	'-f', 'concat', '-safe', '0', '-i', vlist,
 	'-i', audioOut,
-	'-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', '25',
-	'-vf', `scale=${W}:${H},format=yuv420p`,
+	'-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(FPS),
 	'-c:a', 'aac', '-b:a', '160k', '-shortest', videoOut]);
 
 console.log(`video → ${path.relative(process.cwd(), videoOut)} (${dur(videoOut).toFixed(1)}s)`);
