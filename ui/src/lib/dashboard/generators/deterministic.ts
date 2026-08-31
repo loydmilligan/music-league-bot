@@ -52,6 +52,26 @@ export interface DeterministicLeagueSlice {
 export const TIER_CUTOFF_RATIO = 0.5;
 const TIER_MIN_SUBMISSIONS = 3;
 
+// Per-league manual promotions: settings key `dashboard_tier_full_<leagueId>` holding a
+// JSON array of player ids that resolve to 'full' regardless of submission count. Used
+// for members who are central to the league but short of the cutoff (late joiners).
+// There is no manual demotion — the cutoff already handles that direction.
+export const TIER_OVERRIDE_KEY_PREFIX = 'dashboard_tier_full_';
+
+export function loadTierOverrides(db: Database.Database, leagueId: number): Set<number> {
+	try {
+		const row = db
+			.prepare<[string], { value: string }>('SELECT value FROM settings WHERE key = ?')
+			.get(`${TIER_OVERRIDE_KEY_PREFIX}${leagueId}`);
+		if (!row) return new Set();
+		const parsed: unknown = JSON.parse(row.value);
+		if (!Array.isArray(parsed)) return new Set();
+		return new Set(parsed.filter((id): id is number => typeof id === 'number'));
+	} catch {
+		return new Set();
+	}
+}
+
 // ── Internal row types ─────────────────────────────────────────────────────────
 
 interface SubPointsRow {
@@ -174,6 +194,7 @@ export function buildDeterministicSlices(
 
 	// 5. Tier cutoff + assemble member slices (fan/hater filled below)
 	const tierCutoff = Math.max(TIER_MIN_SUBMISSIONS, Math.round(totalRounds * TIER_CUTOFF_RATIO));
+	const forcedFull = loadTierOverrides(db, leagueId);
 	const memberSlices = new Map<number, DeterministicMemberSlice>();
 
 	for (const [playerId, acc] of playerAccum) {
@@ -183,7 +204,7 @@ export function buildDeterministicSlices(
 				: 0;
 		memberSlices.set(playerId, {
 			stat: { submitted: acc.submitted, avgPts, wins: acc.wins },
-			tier: acc.submitted >= tierCutoff ? 'full' : 'lite',
+			tier: forcedFull.has(playerId) || acc.submitted >= tierCutoff ? 'full' : 'lite',
 			biggestFan: null,
 			biggestHater: null,
 		});

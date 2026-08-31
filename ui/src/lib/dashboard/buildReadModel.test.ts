@@ -124,6 +124,9 @@ beforeEach(() => {
 	seasonId = (db.prepare('SELECT last_insert_rowid() AS id').get() as { id: number }).id;
 });
 
+/** rounds.phase is nullable — import paths routinely leave it unset. */
+const NO_PHASE = null as unknown as string;
+
 function addRound(name: string, phase: string = 'complete'): number {
 	db.prepare(
 		"INSERT INTO rounds (season_id, ml_round_id, name, created_at, voting_deadline, phase) VALUES (?, ?, ?, '2026-01-01', '2026-01-07', ?)",
@@ -414,5 +417,32 @@ describe('buildReadModel — full + lite members', () => {
 		// Complete rounds with no digest share (digestUrl = null) are kept —
 		// a missing share link does not disqualify a complete round.
 		expect(model.archive.every((e) => e.digestUrl === null)).toBe(true);
+	});
+
+	it('archive keeps voted rounds whose phase was never set (Second Best S2 regression)', async () => {
+		const { alice, bob } = seedTwoMemberLeague(); // 4 rounds, phase = 'complete'
+
+		// A finished round that email/zip import left with a NULL phase — this is the
+		// state every Second Best Season 2 round was in, which emptied the live archive.
+		const orphan = addRound('Phaseless But Finished', NO_PHASE);
+		addSubmission(orphan, alice.competitorId, alice.playerId, 'uri:orphan', 'Orphan Song', 'Orphan Band');
+		addVote(orphan, bob.competitorId, bob.playerId, 'uri:orphan', 5);
+
+		// A round with no votes at all and no phase stays out.
+		addRound('Not Started Yet', NO_PHASE);
+
+		const model = await buildReadModel(db, leagueId);
+		const themes = model.archive.map((e) => e.theme);
+
+		expect(themes).toContain('Phaseless But Finished');
+		expect(themes).not.toContain('Not Started Yet');
+		expect(model.archive).toHaveLength(5);
+
+		const entry = model.archive.find((e) => e.theme === 'Phaseless But Finished')!;
+		expect(entry.winnerSong).toBe('Orphan Song');
+		expect(entry.votes).toBe(1);
+
+		// n stays a contiguous 1..N sequence, newest first.
+		expect(model.archive.map((e) => e.n)).toEqual([5, 4, 3, 2, 1]);
 	});
 });

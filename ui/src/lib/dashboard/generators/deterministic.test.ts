@@ -3,7 +3,9 @@ import type Database from 'better-sqlite3';
 import { openLeagueDb } from '../../db/client.js';
 import {
 	buildDeterministicSlices,
+	loadTierOverrides,
 	TIER_CUTOFF_RATIO,
+	TIER_OVERRIDE_KEY_PREFIX,
 } from './deterministic.js';
 
 // ── Seed helpers ───────────────────────────────────────────────────────────────
@@ -167,6 +169,57 @@ describe('member tier — full vs lite', () => {
 
 	it('TIER_CUTOFF_RATIO is 0.5', () => {
 		expect(TIER_CUTOFF_RATIO).toBe(0.5);
+	});
+
+	it('override promotes a below-cutoff member to full', () => {
+		for (let i = 0; i < 6; i++) addRound(`R${i}`);
+		const rounds = db
+			.prepare<[number], { id: number }>(
+				`SELECT r.id FROM rounds r JOIN seasons s ON s.id = r.season_id WHERE s.league_id = ? LIMIT 2`,
+			)
+			.all(leagueId);
+		const late = addPlayer('LateJoiner');
+		rounds.forEach((r, idx) => {
+			addSubmission(r.id, late.competitorId, late.playerId, `uri:l${idx}`, `L${idx}`);
+		});
+
+		// Without the override: lite.
+		expect(buildDeterministicSlices(db, leagueId).members.get(late.playerId)!.tier).toBe('lite');
+
+		db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+			`${TIER_OVERRIDE_KEY_PREFIX}${leagueId}`,
+			JSON.stringify([late.playerId]),
+		);
+
+		expect(buildDeterministicSlices(db, leagueId).members.get(late.playerId)!.tier).toBe('full');
+	});
+
+	it('override is scoped per league and ignores malformed values', () => {
+		for (let i = 0; i < 6; i++) addRound(`R${i}`);
+		const rounds = db
+			.prepare<[number], { id: number }>(
+				`SELECT r.id FROM rounds r JOIN seasons s ON s.id = r.season_id WHERE s.league_id = ? LIMIT 2`,
+			)
+			.all(leagueId);
+		const late = addPlayer('LateJoiner');
+		rounds.forEach((r, idx) => {
+			addSubmission(r.id, late.competitorId, late.playerId, `uri:l${idx}`, `L${idx}`);
+		});
+
+		// Override stored against a different league id — must not apply here.
+		db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+			`${TIER_OVERRIDE_KEY_PREFIX}${leagueId + 1}`,
+			JSON.stringify([late.playerId]),
+		);
+		expect(buildDeterministicSlices(db, leagueId).members.get(late.playerId)!.tier).toBe('lite');
+
+		// Malformed JSON for this league — degrades to no override, not a throw.
+		db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+			`${TIER_OVERRIDE_KEY_PREFIX}${leagueId}`,
+			'not json',
+		);
+		expect(loadTierOverrides(db, leagueId).size).toBe(0);
+		expect(buildDeterministicSlices(db, leagueId).members.get(late.playerId)!.tier).toBe('lite');
 	});
 });
 

@@ -364,14 +364,19 @@ function buildArchive(
 		.all(leagueId) as { round_id: number; slug: string }[];
 	const digestSlugByRound = new Map(digestShareRows.map((r) => [r.round_id, r.slug]));
 
-	// Completed rounds only — submission/not-started rounds have no result to archive
+	// Rounds with a result to archive. `rounds.phase` is unreliable — zip-imported and
+	// email-driven rounds routinely keep an empty phase forever (every Second Best S2
+	// round did, which silently emptied that league's archive of its whole live season),
+	// so a cast vote is the load-bearing signal that a round finished. Phase stays in the
+	// predicate for seeded/complete rounds that have no votes at all.
 	const roundRows = db
 		.prepare(
 			`SELECT r.id AS round_id, r.name AS round_name, se.season_number, r.voting_deadline
          FROM rounds r
          JOIN seasons se ON se.id = r.season_id
-         WHERE se.league_id = ? AND r.phase = 'complete'
-         ORDER BY se.season_number, r.id`,
+         WHERE se.league_id = ?
+           AND (r.phase = 'complete' OR EXISTS (SELECT 1 FROM votes v WHERE v.round_id = r.id))
+         ORDER BY se.season_number, COALESCE(r.voting_deadline, ''), r.id`,
 		)
 		.all(leagueId) as ArchiveRoundRow[];
 
