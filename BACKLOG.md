@@ -4,6 +4,11 @@
 > against code, git history, or the live DB — not carried forward on faith.
 > Items that shipped or were overtaken have been deleted; see the triage report
 > in that session for what was removed and why.
+>
+> **Re-triaged 2026-08-30.** Items 0 and 2 were rewritten — both were partly
+> overtaken and would have sent someone to build a thing that exists. Ranks are
+> unchanged otherwise; nothing else was verified in this pass, so treat items
+> 1 and 3–12 as carrying their 2026-07-16 evidence, not fresh evidence.
 
 ## What this project is
 
@@ -51,9 +56,19 @@ round's window, and (iii) is used by 3+ distinct speakers. Round 147's was
 "chopped unc" — coined by Steiny about Jensen, 7 uses across 4 speakers inside
 36 hours. Deterministic and cheap; the LLM only writes the explanation.
 
-Both were added to the round-147 digest by hand (a `storylines` section row
-inserted directly, since only the seven CHECK-constrained kinds exist). Until
-this is built, adding one costs a manual INSERT + render.
+**Status 2026-08-30 — half of this shipped, and not the half described.** The
+*output* side is built: the style shelf (2026-08-13) renders The Regulars in
+seven layouts and The Coinage as a full Urban-Dictionary card, both authored as
+YAML with a Fields ⇄ YAML toggle in the section inline editor. Adding one no
+longer costs a manual INSERT — see `design/rNNN-regulars-coinage.yaml` for
+R140/R141/R147/R148, all hand-authored this way.
+
+**What is still open is the *mining*, i.e. both (a) and (b) as written above.**
+Every shipped Regular and every Coinage to date was picked by a human reading
+chat. (a) verbal-tic mining and (b) deterministic phrase-of-round detection would
+feed the YAML instead of a person doing it; the value is now "stop hand-curating
+every week", not "make it renderable". `docs/regular-types.md` is the taxonomy
+the candidates should be tagged against.
 
 
 ### 1. Live submission / vote counts
@@ -72,7 +87,28 @@ different source.
 submitted, who has/hasn't voted, vote totals"). The capability exists and is not
 wired into the dashboard. This is plumbing, not research.
 
-### 2. YTM links never reach the digest
+### 2. YTM links never reach the digest — *the want is met elsewhere; decide if this survives*
+
+**Status 2026-08-30 — overtaken, but not by this.** The underlying want ("YouTube
+Music listeners get left out of the weekly playlist") was closed on 2026-08-29 by
+the **YTM drop**: a `voting_started` email triggers `scripts/ytm-drop/run.mjs`,
+which mirrors the round's Spotify playlist into a real YTM playlist, generates a
+cover, and posts both into the group chat. It runs on the host as
+`mlb-ytm-drop.timer`, and is **Boarz-only by SQL scope**.
+
+So the remaining question is narrower than the item below suggests, and there are
+two of them:
+
+1. **Do the other five leagues get the drop?** The scoping is deliberate, not an
+   oversight — but nobody has decided it is permanent.
+2. **Does the digest still need per-song YTM links at all**, now that the
+   playlist arrives by a different route? The gate, the cache and
+   `attachYtmLinks()` all still exist unused, described below. If the answer is
+   no, delete the prepChecks entry rather than leaving a passing check that gates
+   on data nothing reads.
+
+The original item, unchanged, for the second question:
+
 
 `ui/src/lib/digest/prepChecks.ts:170` defines an optional readiness check named
 **"YTM playlist links"**, which passes only when 100% of a round's submissions
@@ -213,6 +249,13 @@ auto-send). The first three are the whole-branch review's Minor findings (logged
 in `.superpowers/sdd/progress.md`); the fourth is a behavior the live smoke
 exposed. None block the pipeline — all fail closed — but revisit before relying on
 it unattended at scale. Several fold naturally into Plan 2 (the ntfy approval gate).
+
+**Status 2026-08-30 — still open, and do not close them against the Rollout.**
+The Rollout entity (2026-08-26) was built to supersede this orchestration, and it
+addresses several of these by design (leases, claims, parking, resume). But it
+has **never run** — `rollout_configs` and `rollout_runs` are empty and
+`mlb-rollout-host.timer` is disabled, so every item below is still live against
+the pipeline that actually executes. Revisit at cutover, not before.
 
 - **Failed jobs are terminal — no retry.** `digest_jobs.round_id` is PK and
   enqueue is `INSERT OR IGNORE` (`ui/src/lib/digest/jobs.ts`), so a transient

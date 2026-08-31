@@ -51,6 +51,13 @@ don't re-download it. Rebuild the base only when `Dockerfile.base` changes:
 `digest-static` sits behind a separate public Cloudflare tunnel → `digest.mattmariani.com`;
 everything else is private.
 
+**Not everything is a container.** Four scheduled jobs run on the host as systemd *user*
+units, not in Docker — the ML auth heartbeat, the round-end lede autorun (`mlb-hil-ledes`,
+which owns round-end today), the YouTube-Music playlist drop, and the rollout host executor
+(built, not enabled). The units and their install steps are in
+[deploy/README.md](deploy/README.md). If something scheduled did not happen, read
+`journalctl --user -u <unit>` — a failed oneshot leaves no trace in the timer list.
+
 ## Repo layout
 
 ```
@@ -66,10 +73,15 @@ ui/                # SvelteKit operator app — most of the product lives here
   src/lib/digest/  #   the digest pipeline (see below)
   src/lib/db/      #   read models over league.db
   src/routes/api/  #   ~34 endpoint groups the UI and MCP server call
-bside/             # Svelte SPA for the public per-league site
+bside/             # Svelte SPA for the public per-league site ("The Boarz Tape")
 mcp-server/        # stdio MCP server over the bot-ui API (round + digest tools)
 extension/         # Chrome MV3 extension — one-click song ingest, no build step
 scripts/           # one-off + operational scripts (ML rebuild, imports, auth)
+  digest-qa/       #   Python verification suite (facts, dupes, mentions, participation)
+  ytm-drop/        #   YouTube-Music playlist mirror + cover, posted on voting_started
+  ytm-cover/ cover-gen/ rollout/
+deploy/            # systemd user units for the host-scheduled jobs — see deploy/README.md
+design/            # design briefs + hand-authored round content (Regulars/Coinage YAML)
 docs/              # see docs/README.md
 data/              # SQLite + per-league exports (gitignored)
 digests/           # rendered digest artifacts, served by digest-static (gitignored)
@@ -148,6 +160,11 @@ ideas ride on an existing kind rather than adding one.
   `fetch failed` — re-authenticate rather than requeueing the job.
 - **The bot's own SQLite is separate.** `src/index.ts` opens `data/submissions.db`; the
   league/digest data everything else reads is `data/league.db`.
+- **The Rollout entity is built but has never run.** `ui/src/lib/rollout/`, the Rollouts
+  tab and `scripts/rollout/host_executor.py` are complete, but `rollout_configs` and
+  `rollout_runs` are both empty and `mlb-rollout-host.timer` is disabled. Round-end is
+  still owned by `mlb-hil-ledes.timer`. Do not read rollout code as a description of what
+  production does; cutover is a deliberate task ([docs/how-to/rollouts.md](docs/how-to/rollouts.md)).
 
 ## Docs
 
@@ -156,6 +173,7 @@ ideas ride on an existing kind rather than adding one.
 | [QUICKSTART.md](QUICKSTART.md) | Setting the project up from scratch |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Tests, branch conventions, where docs go |
 | [docs/README.md](docs/README.md) | Looking for any other document |
+| [deploy/README.md](deploy/README.md) | A scheduled job (ledes, YTM drop, auth probe) misbehaved, or you're installing them |
 | [docs/HIGH_LEVEL_DESIGN.md](docs/HIGH_LEVEL_DESIGN.md) | You need the architecture in depth |
 | [ui/README.md](ui/README.md) · [bside/README.md](bside/README.md) · [extension/README.md](extension/README.md) · [mcp-server/README.md](mcp-server/README.md) | Working inside that subproject |
 | [CHANGELOG.md](CHANGELOG.md) | "When did this change?" |

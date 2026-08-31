@@ -10,6 +10,156 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-08-27 → 2026-08-30 — The Boarz Tape and the YTM drop
+
+**A season site of its own, and the playlist finally reaches YouTube Music.**
+The b-side site got a compact redesign and four new sections; separately, the
+long-standing "YTM listeners are left out of the weekly playlist" gap closed —
+not in the digest, but as an automatic post into the group chat.
+
+### Visible (UI)
+
+- **The Boarz Tape, compact redesign** — tabs plus a bento home with overlay
+  drill-in, replacing the single long scroll. Round-folded Track List, album art,
+  a season masthead, sticky nav, and degenerate norm combos hidden rather than
+  rendered empty. (`bside/`)
+- **Four new sections:** **The Regulars** and **The Glossary**; **The Carrot
+  Box** — a season-review section with a definition card and six documented
+  boxes; **Who Submitted What** — the submitter-guessing ledger; and **Read The
+  Room** — the voting-habits piece (four visuals) ported from the CD handoff,
+  with real vote data and a contrarian score.
+- **Deep links to any section**, plus per-card share / save-as-PNG export on Read
+  The Room.
+- **Recency pivot on the Mixing Board** — Season vs. Last 14 days.
+- **The Reel** — a weekly chat slideshow/video digest section, framed as
+  Register B / Newsroom per the design handoff.
+
+### Under the hood
+
+- **The YTM drop, live.** A `voting_started` email now triggers
+  `scripts/ytm-drop/run.mjs`, which mirrors the round's Spotify playlist into a
+  YouTube Music playlist (YouTube Data API), generates a cover, and posts both to
+  the live Boarz group. Scheduled by `deploy/mlb-ytm-drop.timer` (every 15 min);
+  the SQL scope is Boarz-only by design, and the target is `YTM_DROP_TARGET`.
+- **Round cover generator** (`scripts/ytm-cover/generate.mjs`) — CD concepts
+  1a/1b/1c from send-time round data, revised to grid-fill tiling with 1d
+  Filmstrip and 1e Pulp Stamp added. **1d is the shipping variant.**
+- **Spikes, recorded** (`.planning/spikes/`): 001a validated playlist creation
+  via the Data API; 002a was **invalidated** — the Songlink API is dead — and
+  002c validated Spotify→YTM resolution 10/10 via Data API search; 003 ran the
+  end-to-end trigger and send.
+
+### Fixes
+
+- **Awards with dedicated sections no longer repeat** in the roll/trivia.
+- **Chart bars animate via `scaleX`**, not `width` — on both the tape and the CD
+  template. A width transition relayouts every frame.
+- **PC wheel-scroll works on the tab and chip strips** without holding shift.
+- **The Reel's sound was unreachable**, especially on mobile — now tap-to-unmute.
+
+## 2026-08-26 → 2026-08-27 — The Rollout entity and the round prep panel
+
+**Two pieces of round-end machinery: one shipped into the operator app, one
+built but deliberately not switched on.**
+
+### Visible (UI)
+
+- **The round prep panel** — pre-generation material rendered on the prepare
+  stage: the previous-round bridge row, chat, Regulars, Guesser and participation
+  rows, a notes affordance, and an early-lede row. Editor notes written here are
+  injected into the generation prompts, so the human's steer reaches the LLM
+  before the draft exists rather than after.
+- **Round notes** — a `round_notes` table, store and editorial envelope, a notes
+  API route, and read-only modal chips.
+- **Early ledes** — generated from the early sheet and editor notes, with a
+  rating-preserving upsert so re-generating does not discard a human rating.
+- **A Rollouts tab** with the definition editor, a runs view, and a run strip on
+  the digest page.
+
+### Under the hood
+
+- **The Rollout — per-league round-end orchestration**, built end to end: types
+  and a default definition with structural validation; `rollout_configs`,
+  `rollout_runs` and `rollout_cut_runs`; an EP solver over the shared `epCore`
+  primitives; a pure engine (claiming, EP advance, parking); a store with atomic
+  claims and lease reaping; checks, remaster covers and forced hold; holds that
+  park, notify once, and lift with a spent token; host and app executors; and
+  config / runs / resume endpoints. Triggered by **email ingest**, not a
+  scheduler.
+- **NOT LIVE.** `rollout_configs` and `rollout_runs` are both empty and have
+  never had a row; `mlb-hil-ledes.timer` still owns round-end on the host, and
+  `mlb-rollout-host.timer` is not installed. Cutover is its own task — see
+  [docs/how-to/rollouts.md](docs/how-to/rollouts.md).
+- **Shared EP bucketing and cover placement extracted** from the digest pipeline
+  so the Rollout's solver and the pipeline cannot drift.
+
+### Fixes
+
+- **I4** — the archive cut 404'd; wired to the real async content update.
+- **I5** — running cuts now heartbeat, so the 600s lease cannot reap them
+  mid-run.
+- **I8** — `saveRun` no longer clobbers an unclassified concurrent host result.
+- **I9** — agent cut models resolve through the `modelFor` cascade at snapshot
+  time.
+- **I6 regression test** — `requeueJob` after a completed rollout run must not
+  throw.
+
+## 2026-08-15 → 2026-08-24 — The digest quality program
+
+**Stop shipping fabrications.** A round of hand-QA on R147/R148/R140 turned into
+a Python verification suite and a participation metric, so the same classes of
+error are caught before a human reads the draft.
+
+### Visible (UI)
+
+- **Size-adaptive style shelf** — hero quotes and long spotlights pick a layout
+  from the content's size rather than the author's guess.
+- **Body `**bold**` runs**, a single-open chat accordion with the first moment
+  open, and a 1s shimmer on the chat-moment chevrons.
+- **Phrase-of-round clip lightbox** (web only, focus-trapped) plus a `/_media`
+  Caddy route and a word-list generator.
+- **Round punch-ups shipped:** R148 boarz (Paletz villain fix, Regulars +
+  Coinage), R140 More Cowbell (Regulars, farkas Coinage, full mention sweep) and
+  its v2 rebuild, with coinage media carrying all four cat exhibits.
+
+### Under the hood
+
+- **`scripts/digest-qa/`** — `verify_facts.py` (deterministic F1–F4 pass plus
+  verbatim quote checks), `dedupe_scan.py` and `mention_inventory.py` (F6/F7 and
+  the mention ledger), `mention_matrix.py` (per-section mention breakdown) and
+  `dupe_review_page.py` (marked-up duplicate review), with a pytest harness and
+  fixture DB. Runtime is stdlib-only.
+- **The chat participation metric** — a `player_participation` schema and vector
+  store, ballot dimensions, burst / elicited / temporal-overlap dimensions, chat
+  volume and kind dimensions, a composite score with an opportunity adjustment
+  and percentile-among-active, a review page, and a backfill across both
+  leagues. Baselines in [docs/metrics/](docs/metrics/).
+- **Per-league rulecards** ([docs/league-rulecards/](docs/league-rulecards/)) —
+  second-best and fam-jam verified, boarz and sssc derived from the ballots
+  themselves (budgets, penalties, the no-downvote rule). The tiebreak cascade is
+  league-universal.
+- **HiL round-end automation (WS10)** — a round bridge, story-lede generators, a
+  `/hil` review page, and a host-side round-end trigger. Runs on the host as
+  `mlb-hil-ledes.timer`.
+- **Chat timestamp normalisation** migration script and tests (dry-run verified,
+  **not applied**).
+- **Cover-gen pipeline** (`scripts/cover-gen/`) — player/cover ingest, face
+  crops, prompt assembly and a generation CLI.
+- **Documentation accuracy audit** ([docs/audits/doc-accuracy.md](docs/audits/doc-accuracy.md))
+  and a top-level docs refresh: HLD rewrite, `docs/` index, digest-sections and
+  regular-types references.
+
+### Fixes
+
+- **Four fabricated ballot readings in R140** caught by the facts pass, plus a
+  budget override.
+- **Edge-aware highlight boundaries in `markRuns`.**
+- **Markdown that never rendered is stripped**, and date stamps dropped from
+  chat.
+- **ntfy sends survive the real world** — ASCII `Title` header (the header is
+  latin-1), a Cloudflare-safe `User-Agent`, and a click URL pointing at bot-ui.
+- **Shared round windows in `chat_participation`**, and relay noise rows dropped.
+
 ## 2026-08-13 — The style shelf
 
 **One YAML field picks the layout.** The Regulars and The Coinage are now

@@ -1,0 +1,11 @@
+[Unit]
+Description=music-league-bot rollout host executor (script + agent cuts)
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 %h/Projects/music-league-bot/scripts/rollout/host_executor.py --once
+StandardOutput=journal
+StandardError=journal

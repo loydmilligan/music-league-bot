@@ -1,0 +1,11 @@
+[Unit]
+Description=Music League HiL lede autorun (generate_ledes --notify for fresh hil drafts)
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 %h/Projects/music-league-bot/scripts/digest-qa/hil_autorun.py
+StandardOutput=journal
+StandardError=journal
