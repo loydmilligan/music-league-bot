@@ -137,9 +137,7 @@
     <div class="step"><div class="num">$</div><h2>Lifetime cost</h2></div>
     <p class="stepsub">Refreshes after every paid call.</p>
     <div class="big" id="spikeTotal">—</div>
-    <div class="hint">spent by this spike, all time</div>
-    <table id="costTable"></table>
-    <div class="stat" id="acct" style="margin-top:12px"></div>
+    <div class="hint">spent by this tool, all time</div>
   </div>
 
 </div>
@@ -279,15 +277,6 @@ document.getElementById('say').onclick=async()=>{
 async function loadCost(){
   const c=await (await fetch('/cost')).json();
   document.getElementById('spikeTotal').textContent='$'+c.spike.total.toFixed(2);
-  const label={say:'voices (TTS)',draw:'images',film:'video'};
-  document.getElementById('costTable').innerHTML=Object.entries(c.spike.byTool)
-    .sort((a,b)=>b[1].cost-a[1].cost)
-    .map(([k,v])=>`<tr><td>${label[k]||k} <span style="color:#6f6862">· ${v.n} calls</span></td>
-      <td class="n">$${v.cost.toFixed(2)}</td></tr>`).join('')
-    + `<tr><td>local ffmpeg renders</td><td class="n" style="color:var(--quote)">$0.00</td></tr>`;
-  if(c.account) document.getElementById('acct').innerHTML =
-    `whole OpenRouter key, all projects: <b>$${c.account.used.toFixed(2)}</b> used of
-     $${c.account.credits} — <b>$${(c.account.credits-c.account.used).toFixed(2)}</b> left`;
 }
 loadCost(); sync();
 </script>

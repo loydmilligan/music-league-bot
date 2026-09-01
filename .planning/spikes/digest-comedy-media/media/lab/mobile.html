@@ -150,9 +150,7 @@
   <div class="head"><div class="num">$</div><h2>Lifetime cost</h2><span class="chev">›</span></div>
   <div class="body">
     <div class="big" id="spikeTotal">—</div>
-    <div class="hint" style="margin:0 0 10px">spent by this spike, all time</div>
-    <div id="costRows"></div>
-    <div class="mono" id="acct" style="margin-top:12px"></div>
+    <div class="hint" style="margin:0">spent by this tool, all time</div>
   </div>
 </section>
 
@@ -307,15 +305,6 @@ document.getElementById('say').onclick=async()=>{
 async function loadCost(){
   const c=await (await fetch('/cost')).json();
   document.getElementById('spikeTotal').textContent='$'+c.spike.total.toFixed(2);
-  const label={say:'voices (TTS)',draw:'images',film:'video'};
-  document.getElementById('costRows').innerHTML=Object.entries(c.spike.byTool)
-    .sort((a,b)=>b[1].cost-a[1].cost)
-    .map(([k,v])=>`<div class="costrow"><span>${label[k]||k} · ${v.n} calls</span>
-      <b>$${v.cost.toFixed(2)}</b></div>`).join('')
-    +`<div class="costrow"><span>local renders</span><b style="color:var(--quote)">$0.00</b></div>`;
-  if(c.account) document.getElementById('acct').innerHTML=
-    `whole key, all projects: <b>$${c.account.used.toFixed(2)}</b> of $${c.account.credits} —
-     <b>$${(c.account.credits-c.account.used).toFixed(2)}</b> left`;
 }
 loadCost(); sync();
 </script>

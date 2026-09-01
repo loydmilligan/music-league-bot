@@ -82,19 +82,11 @@ http.createServer(async (req, res) => {
 		res.writeHead(204); return res.end();
 	}
 
-	// two different numbers: what this spike has spent, and what the whole
-	// OpenRouter key has ever spent (everything, not just this project)
+	// only what this tool has spent. The key's overall balance is deliberately
+	// not served — nothing renders it, and this listens on the LAN.
 	if (req.method === 'GET' && url.pathname === '/cost') {
-		const spike = totals();
-		let account = null;
-		try {
-			const r = await fetch('https://openrouter.ai/api/v1/credits', {
-				headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` } });
-			const j = await r.json();
-			account = { used: j?.data?.total_usage, credits: j?.data?.total_credits };
-		} catch { /* offline is fine, spike total still works */ }
 		res.writeHead(200, { 'content-type': 'application/json' });
-		return res.end(JSON.stringify({ spike, account }));
+		return res.end(JSON.stringify({ spike: { total: totals().total } }));
 	}
 
 	// fresh TTS take, so you can audition new copy without leaving the lab

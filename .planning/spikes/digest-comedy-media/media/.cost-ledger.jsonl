@@ -7,3 +7,4 @@
 {"ts": "2026-08-31T01:19Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-judge", "backfilled": true}
 {"ts": "2026-08-31T01:44Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-jb-counsel (from photo)", "backfilled": true}
 {"ts": "2026-08-31T00:30Z", "tool": "say", "model": "openai/gpt-audio*", "cost": 0.42, "note": "~60 TTS takes across 6 bits + persona tests (estimated)", "backfilled": true}
+{"ts":"2026-09-01T01:57:33.144Z","tool":"say","model":"openai/gpt-audio","cost":0.013647,"note":"Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you "}
