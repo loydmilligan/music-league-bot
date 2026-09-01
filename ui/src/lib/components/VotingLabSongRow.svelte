@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { BallotEntry, LabRow } from '$lib/voting-lab/types.js';
   import type { VotingTakeOutput } from '$lib/predict/tasks/votingTake.js';
+  import { getCachedTake, setCachedTake } from '$lib/voting-lab/takeCache.js';
 
   let {
     row,
@@ -17,7 +18,7 @@
     flushSaves: () => Promise<void>;
   } = $props();
 
-  let take = $state<VotingTakeOutput | null>(null);
+  let take = $state<VotingTakeOutput | null>(getCachedTake(roundId, row.song.spotifyUri));
   let takeLoading = $state(false);
   let takeError = $state<string | null>(null);
   let drafting = $state(false);
@@ -34,6 +35,7 @@
       });
       if (res.ok) {
         take = (await res.json()).output as VotingTakeOutput;
+        setCachedTake(roundId, row.song.spotifyUri, take);
       } else {
         takeError = `Failed to get take (${res.status})`;
       }
