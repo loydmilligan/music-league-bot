@@ -202,19 +202,23 @@ describe('setIsMine', () => {
     });
   });
 
-  // DISCRIMINATING: only the MARK path zeroes points. Unmarking must leave the
-  // row alone apart from the flag, so a mis-mark costs nothing beyond the mark.
+  // DISCRIMINATING: the clear path's UPDATE is scoped to the row(s) it
+  // flips (WHERE is_mine = 1), so this only passes if that UPDATE leaves
+  // up_points/down_points untouched. An implementation that folds
+  // `up_points = 0, down_points = 0` into the clear-path UPDATE would zero
+  // the points this test put on the very row being cleared, failing here.
   it('does not zero points on the clear path', () => {
     const db = freshDb();
-    setIsMine(db, 1, 'spotify:track:a');
+    setIsMine(db, 1, 'spotify:track:b');
     saveBallotEntry(db, 1, {
       spotifyUri: 'spotify:track:b',
-      upPoints: 2, downPoints: 0, rating: null,
+      upPoints: 2, downPoints: 1, rating: null,
       notes: '', draftComment: '', isMine: false,
     });
     setIsMine(db, 1, null);
     const byUri = new Map(getBallot(db, 1).map((r) => [r.spotifyUri, r]));
     expect(byUri.get('spotify:track:b')!.upPoints).toBe(2);
+    expect(byUri.get('spotify:track:b')!.downPoints).toBe(1);
   });
 
   // DISCRIMINATING: 'a' is already mine, so an implementation that only sets
