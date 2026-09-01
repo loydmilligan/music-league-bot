@@ -86,6 +86,43 @@ export function getBallot(db: Database.Database, roundId: number): BallotEntry[]
   }));
 }
 
+/**
+ * The narrow, exclusive `is_mine` writer — the guess workspace's mark-first
+ * control (spec §6, §4a). Deliberately NOT `saveBallotEntry`: that upserts all
+ * seven ballot columns, so using it here would zero any points/notes/comment
+ * already on the row.
+ *
+ * Exclusive by construction: exactly one song per round may be the owner's, and
+ * `assignment.ts:eligibleSongs` excludes every `is_mine=1` song — two marked
+ * songs would silently shrink the slate. Pass `null` to clear the round.
+ *
+ * Wrapped in a transaction so a round can never be observed with two marked
+ * songs, or with none when one was intended.
+ */
+export function setIsMine(
+  db: Database.Database,
+  roundId: number,
+  spotifyUri: string | null,
+): void {
+  const now = new Date().toISOString();
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE voting_lab_ballot SET is_mine = 0, updated_at = ?
+        WHERE round_id = ? AND is_mine = 1`,
+    ).run(now, roundId);
+
+    if (spotifyUri === null) return;
+
+    db.prepare(
+      `INSERT INTO voting_lab_ballot (round_id, spotify_uri, is_mine, updated_at)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(round_id, spotify_uri) DO UPDATE SET
+         is_mine = 1,
+         updated_at = excluded.updated_at`,
+    ).run(roundId, spotifyUri, now);
+  })();
+}
+
 export function saveBallotEntry(db: Database.Database, roundId: number, entry: BallotEntry): void {
   db.prepare(
     `INSERT INTO voting_lab_ballot

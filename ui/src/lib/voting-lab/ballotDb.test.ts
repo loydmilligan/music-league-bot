@@ -1,9 +1,9 @@
-import { it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
 import { SCHEMA } from '../db/schema.js';
 import {
   DEFAULT_BUDGET, resolveBudget, setRoundBudget, setSeasonBudget, getSeasonBudget,
-  getBallot, saveBallotEntry,
+  getBallot, saveBallotEntry, setIsMine,
 } from './ballotDb.js';
 import type { BallotEntry } from './types.js';
 
@@ -17,6 +17,16 @@ function freshDb() {
   db.prepare(
     `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, phase)
      VALUES (100, 10, 'ml-100', 'Round 1', '2026-07-01T00:00:00Z', 'voting')`,
+  ).run();
+  // Rounds 1 and 2 exist purely so setIsMine's FK-backed inserts have a
+  // round to reference; the setIsMine tests below use these small ids.
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, phase)
+     VALUES (1, 10, 'ml-1', 'Round A', '2026-07-01T00:00:00Z', 'voting')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, phase)
+     VALUES (2, 10, 'ml-2', 'Round B', '2026-07-01T00:00:00Z', 'voting')`,
   ).run();
   return db;
 }
@@ -115,4 +125,57 @@ it('round-trips a null rating without coercing it to 0', () => {
   const [row] = getBallot(db, 100);
   expect(row.rating).toBeNull();
   db.close();
+});
+
+describe('setIsMine', () => {
+  it('creates a ballot row when none exists', () => {
+    const db = freshDb();
+    setIsMine(db, 1, 'spotify:track:a');
+    const rows = getBallot(db, 1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ spotifyUri: 'spotify:track:a', isMine: true });
+  });
+
+  // DISCRIMINATING: the row already has real values. A naive implementation
+  // that reuses saveBallotEntry's whole-row upsert would zero these.
+  it('does not clobber the other columns of an existing row', () => {
+    const db = freshDb();
+    saveBallotEntry(db, 1, {
+      spotifyUri: 'spotify:track:a',
+      upPoints: 3, downPoints: 1, rating: 4,
+      notes: 'kept', draftComment: 'also kept', isMine: false,
+    });
+    setIsMine(db, 1, 'spotify:track:a');
+    const row = getBallot(db, 1)[0];
+    expect(row).toMatchObject({
+      upPoints: 3, downPoints: 1, rating: 4,
+      notes: 'kept', draftComment: 'also kept', isMine: true,
+    });
+  });
+
+  // DISCRIMINATING: 'a' is already mine, so an implementation that only sets
+  // the target and never clears leaves TWO marked songs and this fails.
+  it('is exclusive — marking a second song unmarks the first', () => {
+    const db = freshDb();
+    setIsMine(db, 1, 'spotify:track:a');
+    setIsMine(db, 1, 'spotify:track:b');
+    const byUri = new Map(getBallot(db, 1).map((r) => [r.spotifyUri, r.isMine]));
+    expect(byUri.get('spotify:track:a')).toBe(false);
+    expect(byUri.get('spotify:track:b')).toBe(true);
+  });
+
+  it('clears the round when passed null', () => {
+    const db = freshDb();
+    setIsMine(db, 1, 'spotify:track:a');
+    setIsMine(db, 1, null);
+    expect(getBallot(db, 1).every((r) => r.isMine === false)).toBe(true);
+  });
+
+  // DISCRIMINATING: round 2 must be untouched by a round-1 write.
+  it('does not leak across rounds', () => {
+    const db = freshDb();
+    setIsMine(db, 2, 'spotify:track:a');
+    setIsMine(db, 1, 'spotify:track:b');
+    expect(getBallot(db, 2)[0].isMine).toBe(true);
+  });
 });
