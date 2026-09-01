@@ -341,9 +341,13 @@ git commit -m "feat(guessing): PATCH /api/guess/:roundId/mine, gated on the gut 
 
 ---
 
-### Task 4: Mark-first UI in the gut phase
+### Task 4: Mark-first UI in the gut phase — "my song" as an option in the existing select
 
 **Why this exists:** without a reachable `is_mine` writer in the tab, the gut slate is **unsatisfiable** on any round where songs outnumber eligible players — real today on Boarz R148 (10 songs, 9 players). This is the control that unblocks removing the round-page embed in Task 8.
+
+**Design (Matt's call, 2026-09-01 — do not substitute a separate button):** there is **no separate "Mine" button**. You mark your own song by choosing **"— my song —"** in the song's existing submitter `<select>`. `data.roster` comes from `eligiblePlayers(db, roundId, me)`, which deliberately excludes Matt (spec §6), so this option is a **synthetic entry with the sentinel value `"__mine__"`** — it is not a roster member and must never be treated as a guessable player. Selecting it calls the mine endpoint instead of the gut-pick endpoint. Rationale: one control instead of two, and the affordance sits exactly where the unsatisfiable-slate problem is visible.
+
+⚠️ **This adds a third branch to the code path that produced two desync bugs today** (`13f99a6`, `12680fb`). Read the comment at `GuessWorkspace.svelte:31-39` before writing a line: a `<select>` is uncontrolled once the user edits it, so **every** path that does not end in a changed `gutPickPlayerId` must explicitly restore the element from freshly-reloaded data. The `"__mine__"` path is such a path — the song leaves `data.songs` entirely — so it needs the same treatment as the blank and 409 paths, not an assumption that the re-render handles it.
 
 **Files:**
 - Modify: `ui/src/lib/components/GuessWorkspace.svelte`
@@ -405,18 +409,33 @@ Insert immediately **above** the `<!-- Validation summary -->` block:
   </div>
 ```
 
-- [ ] **Step 3: Add the per-row "mine" control**
+- [ ] **Step 3: Add "— my song —" to the existing select, and branch the change handler**
 
-Inside the gut slate `<li>`, **between** the `<div class="flex-1 min-w-0">…</div>` and the `<select>`:
+**Do not add a button.** Add a synthetic option to each song's existing submitter `<select>`, above the roster options and below the blank placeholder:
 
 ```svelte
-        <button
-          type="button"
-          disabled={mineBusy || data.gutLockedAt !== null}
-          onclick={() => setMine(song.spotifyUri)}
-          class="shrink-0 self-center font-mono text-xs tracking-widest uppercase text-fg-faint hover:text-accent disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-        >Mine</button>
+          <option value="__mine__">— my song —</option>
 ```
+
+Then branch `onPickChange` on the sentinel. Read the existing comment at the top of that function first (`GuessWorkspace.svelte:31-39`) — it explains why every non-standard path must explicitly restore the DOM. Insert this **immediately after** the existing `if (raw === '')` block and before the `gutError = null;` line that begins the gut-pick PATCH:
+
+```ts
+    if (raw === '__mine__') {
+      // Marking removes this song from data.songs entirely (eligibleSongs
+      // excludes is_mine=1), so this <select> is about to be unmounted on the
+      // success path. On any FAILURE path it survives, still showing
+      // "__mine__" — a value that is not a real pick. setMine() reloads, and
+      // the restore below puts it back to the server's truth either way.
+      // Same hazard as the blank and 409 paths; same fix.
+      await setMine(song.spotifyUri);
+      restoreFromFreshData();
+      return;
+    }
+```
+
+`restoreFromFreshData()` already resolves to `''` when the song is gone from fresh data, which is correct — but note it reads `data?.songs.find(...)`, so confirm by reading it that a missing song yields the blank value rather than throwing.
+
+⚠️ **The sentinel must never reach the roster.** `data.roster` excludes Matt by design (spec §6). `"__mine__"` is a UI-only value: it must not be sent to the gut endpoint, must not be counted as a duplicate by validation, and must not appear in `data.roster`. Verify by reading that the branch above returns before any `/gut` PATCH can fire.
 
 - [ ] **Step 4: Type-check**
 
@@ -435,11 +454,14 @@ DATA_DIR=/tmp/c2b-check PORT=5199 node build
 
 Open Boarz R148's round page → **Guess** tab. Confirm, in order:
 1. The warning line shows and the slate reports "10 songs missing a pick" style validation.
-2. Clicking **Mine** on one song makes it vanish from the slate and appear in the banner.
-3. Clicking **Mine** on a *different* song moves the banner and returns the first song to the slate — exclusivity, end to end.
-4. **Unmark** returns it and restores the warning.
-5. With the own-song marked, the slate can be fully assigned and **Lock gut slate** enables — the thing that was impossible before this task.
-6. After locking, **Mine** and **Unmark** are both disabled.
+2. Every song's dropdown offers **"— my song —"** above the roster names, and the roster itself does **not** contain Matt.
+3. Choosing "— my song —" on one song makes it vanish from the slate and appear in the banner.
+4. Choosing "— my song —" on a *different* song moves the banner and returns the first song to the slate — exclusivity, end to end.
+5. Choosing it on a song that **already has a guess** works too, and that guess does not linger anywhere visible.
+6. **Unmark** returns the song to the slate and restores the warning.
+7. With the own-song marked, the slate can be fully assigned and **Lock gut slate** enables — the thing that was impossible before this task.
+8. After locking, the selects are disabled and **Unmark** is disabled.
+9. **The desync check** (this is the bug class that cost two commits today): with the gut slate already locked in another browser tab, choose "— my song —" — the error line must appear AND the dropdown must snap back to the server's true value rather than sitting on "— my song —".
 
 Stop the server with `TaskStop`, **not `pkill`** (pkill has matched the agent's own shell here before).
 
