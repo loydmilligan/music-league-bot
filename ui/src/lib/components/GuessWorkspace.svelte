@@ -53,6 +53,18 @@
       return;
     }
 
+    if (raw === '__mine__') {
+      // Marking removes this song from data.songs entirely (eligibleSongs
+      // excludes is_mine=1), so this <select> is about to be unmounted on the
+      // success path. On any FAILURE path it survives, still showing
+      // "__mine__" — a value that is not a real pick. setMine() reloads, and
+      // the restore below puts it back to the server's truth either way.
+      // Same hazard as the blank and 409 paths; same fix.
+      await setMine(song.spotifyUri);
+      restoreFromFreshData();
+      return;
+    }
+
     gutError = null;
     const res = await fetch(`/api/guess/${roundId}/gut`, {
       method: 'PATCH',
@@ -120,6 +132,31 @@
       rehearsalBusy = false;
     }
   }
+
+  let mineBusy = $state(false);
+
+  /**
+   * Mark or clear the owner's own song. Always reloads afterwards — marking a
+   * song removes it from `data.songs` (eligibleSongs excludes it) and changes
+   * `data.validation`, so nothing about the rendered slate survives this write.
+   */
+  async function setMine(spotifyUri: string | null) {
+    mineBusy = true;
+    try {
+      const res = await fetch(`/api/guess/${roundId}/mine`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ spotifyUri }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { message?: string } | null;
+        gutError = body?.message ?? `Failed to save your song (${res.status})`;
+      }
+      await load();
+    } finally {
+      mineBusy = false;
+    }
+  }
 </script>
 
 {#if loadError}
@@ -177,6 +214,22 @@
     <p class="mb-4 font-mono text-sm text-red-400">{gutError}</p>
   {/if}
 
+  <!-- spec §6: exactly one song is Matt's own; it leaves the slate once marked,
+       so it is surfaced here or it becomes unreachable. -->
+  <div class="mb-4 flex items-center gap-3 font-mono text-xs">
+    {#if data.mine}
+      <span class="text-fg-muted">your song: <span class="text-fg">{data.mine.title}</span> — {data.mine.artists}</span>
+      <button
+        type="button"
+        disabled={mineBusy || data.gutLockedAt !== null}
+        onclick={() => setMine(null)}
+        class="text-fg-faint hover:text-fg disabled:opacity-60 disabled:cursor-not-allowed tracking-widest uppercase transition-colors"
+      >Unmark</button>
+    {:else}
+      <span class="text-warn">mark your own song first — the slate cannot balance until you do</span>
+    {/if}
+  </div>
+
   <!-- Validation summary -->
   <div class="mb-4 font-mono text-xs text-fg-muted">
     {#if data.validation.ok}
@@ -221,6 +274,7 @@
           {#if song.gutPickPlayerId === null}
             <option value="">— pick a player —</option>
           {/if}
+          <option value="__mine__">— my song —</option>
           {#each data.roster as p (p.id)}
             <option value={p.id}>{p.name}</option>
           {/each}
