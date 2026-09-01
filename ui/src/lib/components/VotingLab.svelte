@@ -169,43 +169,6 @@
     data ? validateBallot(data.rows.map((r) => r.ballot), data.budget) : [],
   );
 
-  /**
-   * The text you paste into Music League. Never includes submitter identity —
-   * only song metadata and the voter's own allocation/comment.
-   */
-  function ballotText(): string {
-    if (!data) return '';
-    const songLines: string[] = [];
-    for (const r of data.rows) {
-      const { upPoints, downPoints, draftComment } = r.ballot;
-      if (upPoints === 0 && downPoints === 0) continue;
-      let pts: string;
-      if (upPoints > 0 && downPoints > 0) {
-        pts = `+${upPoints} / -${downPoints}`;
-      } else if (downPoints > 0) {
-        pts = `-${downPoints}`;
-      } else {
-        pts = `+${upPoints}`;
-      }
-      songLines.push(`${pts}  ${r.song.artist} — ${r.song.title}`);
-      if (draftComment) songLines.push(`     "${draftComment}"`);
-    }
-    if (songLines.length === 0) return '';
-    return [`${data.themeName}`, '', ...songLines].join('\n');
-  }
-
-  let copied = $state(false);
-  let copyError = $state<string | null>(null);
-  async function copyBallot() {
-    try {
-      await navigator.clipboard.writeText(ballotText());
-      copyError = null;
-      copied = true;
-      setTimeout(() => (copied = false), 1500);
-    } catch {
-      copyError = 'Failed to copy — select and copy the text manually.';
-    }
-  }
 </script>
 
 <section class="voting-lab">
@@ -298,13 +261,6 @@
         <ul class="mb-2 text-sm text-ember">
           {#each problems as p}<li>{p}</li>{/each}
         </ul>
-      {/if}
-      <pre class="whitespace-pre-wrap rounded bg-bg-elevated p-2 text-sm">{ballotText() || 'No votes allocated yet.'}</pre>
-      <button class="mt-2 rounded border border-border px-3 py-1 text-sm" onclick={copyBallot}>
-        {copied ? 'Copied!' : 'Copy whole ballot'}
-      </button>
-      {#if copyError}
-        <p class="mt-1 text-sm text-ember">{copyError}</p>
       {/if}
     </footer>
   {/if}
