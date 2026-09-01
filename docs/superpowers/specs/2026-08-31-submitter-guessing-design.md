@@ -79,6 +79,25 @@ The gut → refine chain has no public counterpart and is private analytics only
 Prime Suspect **dims**; Locked **removes**. The distinction is the whole point:
 dimming supports reasoning, removal asserts a decision.
 
+## 3b. The six projects (added 2026-08-31)
+
+The letters are used throughout this document but were never listed in one place,
+and **C was never labelled at all**. For the record:
+
+| | Project | Covers | Status |
+|---|---|---|---|
+| **A** | Guess spine | §5 anonymity, §6 assignment, §7.1 gut, §8 data model, §14 storage half | **Shipped 2026-08-31** — 11 commits, 54 tests |
+| **C** | The workspace | §4 placement, §7.4 refine grid, §7.5 comment shell, §7.6 vote, §7.7 output, and §14.3/14.5/14.6 (the rehearsal replay behaviour) | Next |
+| **B** | Comment fetch | §7.2 — headless scrape of the ML voting page | Speced |
+| **D** | AI analysis | §7.3 — writes `guess_ai_distribution` / `guess_ai_song` | Speced |
+| **E** | Scorecard | §9, plus §12's no-data case | Speced |
+| **F** | Voice drafting | §7.5's "Draft with AI" in Matt's voice | Speced |
+
+Build order is **A → C → B → D → E → F**. C precedes B and D because both feed a
+workspace that must exist to receive them, and because §7.4 — the grid — is the
+part of this tool that carries the reasoning. Rehearsal mode (§14) is only half
+built until C lands: A stores the mode, C enforces the horizon.
+
 ## 4. Placement
 
 A tab on the active-round screen, beside ML playlist, chat songs, chat history,
@@ -380,6 +399,84 @@ enough evidence to factor out what is genuinely shared.
 - **Scoring** — derived accuracy against a seeded revealed round, including
   gut-vs-refined with skipped gut songs correctly excluded.
 - **Scorecard with almost no data** — renders sensibly at one round.
+
+## 14. Rehearsal mode (added 2026-08-31, after A was planned)
+
+Run the whole workflow against an **already-completed round**, with the app behaving
+as if it were live in that round's voting phase. Boarz 148 and 149 are the intended
+first subjects: 10 submissions each, all revealed, and Matt's real hand-written
+guesses already sit in `votes` where `guessResolver` can parse them.
+
+### 14.1 Why it is nearly free
+
+§5 already forbids every live-phase module from reading `ml_submissions.competitor_id`,
+and Task 5's guard test fails the build if one does. The guessing layer is therefore
+*structurally* incapable of seeing the answer, whether the round closed yesterday or
+has not opened. Replaying a completed round needs no scrubbing in that layer. What is
+not free is the evidence horizon (§14.3).
+
+### 14.2 State
+
+Two columns on `guess_round_state`:
+
+- `mode TEXT NOT NULL DEFAULT 'live' CHECK (mode IN ('live','rehearsal'))`
+- `as_of TEXT` — the effective "now" for a rehearsal; NULL when live.
+
+### 14.3 The horizon, and the trap in it
+
+Clamping evidence by `timestamp < as_of` alone is **wrong**, and the mistake is easy
+to make. `as_of` is naturally the round's voting deadline, but every vote on that
+round was cast *before* its deadline — so a naive timestamp clamp leaks the whole
+round's votes and vote comments, which are the answer in all but name.
+
+The correct rule is stated per source, not as one comparison:
+
+- **The round being rehearsed:** submissions visible, filtered to
+  `visible_to_voters = 1`. Votes, vote comments, results and submitter identity are
+  hidden entirely, regardless of timestamp.
+- **Other rounds:** visible only if strictly prior — same league, `voting_deadline <`
+  the rehearsed round's `voting_deadline`. Fully visible, including identities.
+- **Chat:** messages with `ts < as_of`.
+
+The `visible_to_voters` filter is load-bearing, not a nicety. In both 148 and 149 only
+**5 of 10** submission comments were visible during voting. Showing all ten makes the
+rehearsal easier than the real thing was and inflates the score.
+
+### 14.4 Marking your own song
+
+Rehearsal does **not** pre-seed `voting_lab_ballot.is_mine` from the answer key.
+Matt marks his own song exactly as he does live — same gesture, same code path, no
+special case. Rehearsal start only creates the round's ballot rows with `is_mine = 0`
+when they are absent (rounds 148 and 149 have no `voting_lab_ballot` rows at all), so
+there is something to toggle. This also keeps the answer key out of setup entirely.
+
+### 14.5 Fetch phase is skipped
+
+§7.2's CLI comment fetch is unnecessary — submission comments are already in
+`ml_submissions.comment`. Rehearsal goes straight from gut to AI, subject to §14.3's
+visibility filter.
+
+### 14.6 Sync is deferred to reveal
+
+§2's sync check reads Matt's own posted comment, which names his prior conclusion.
+That is not a leak of the answer, but it contaminates the experiment. `verifyRoundSync`
+must not run while `mode = 'rehearsal'` and the round is unrevealed; it runs at reveal,
+where it becomes the interesting output: what the tool made him guess versus what he
+guessed by hand, on the same songs.
+
+### 14.7 Archiving, and why the scorecard stays clean
+
+A rehearsal run ends by being **archived**: every `guess_*` row for the round is
+serialized to a JSON file under `data/rehearsals/`, then deleted, and the state row
+with it. The round returns to having no guessing data at all.
+
+This is deliberately structural rather than a filter. Matt half-remembers these
+rounds — he lived them — so rehearsal scores must never pool with live scores in §9's
+scorecard. Deleting the rows means no query anywhere has to remember to exclude them,
+and re-running a rehearsal is just archiving and starting again.
+
+It also answers open question 2: rehearsal supersedes backfilling the two existing
+Boarz rounds, and produces a richer artifact than a backfill would.
 
 ## 13. Open questions
 
