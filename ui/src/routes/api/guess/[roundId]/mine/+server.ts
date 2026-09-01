@@ -26,6 +26,17 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   const uri = body.spotifyUri;
   if (uri !== null && typeof uri !== 'string') throw error(400, 'spotifyUri must be a string or null');
 
+  // Only the mark path: an unknown or cross-round uri would create a
+  // voting_lab_ballot row with is_mine=1 on a phantom song, consuming the
+  // round's single exclusive mark while the UI still says "mark your own song
+  // first" — a 200 with no visible effect. Clearing (null) needs no song.
+  if (typeof uri === 'string') {
+    const inRound = db.prepare(
+      `SELECT 1 FROM ml_submissions WHERE round_id = ? AND spotify_uri = ?`,
+    ).get(roundId, uri);
+    if (!inRound) throw error(400, 'spotifyUri is not a submission in this round');
+  }
+
   setIsMine(db, roundId, uri ?? null);
   return json({ ok: true });
 };

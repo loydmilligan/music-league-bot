@@ -51,6 +51,10 @@ export function verifyRoundSync(
           .all(...pool) as GuessCandidate[]);
   const match = buildGuessMatcher(candidates);
 
+  // The is_mine join matches assignment.ts:eligibleSongs and scoring.ts: the
+  // owner's own song is never part of the guess set, so it must never be part
+  // of the sync comparison either. Inert today (eligibleSongs already keeps a
+  // marked song out of guess_picks), but sync should not be the odd one out.
   const rows = db.prepare(
     `SELECT gp.spotify_uri          AS uri,
             gp.final_pick_player_id AS stored,
@@ -61,7 +65,10 @@ export function verifyRoundSync(
               ON v.round_id = gp.round_id
              AND v.spotify_uri = gp.spotify_uri
              AND v.voter_id = ?
+       LEFT JOIN voting_lab_ballot b
+              ON b.round_id = gp.round_id AND b.spotify_uri = gp.spotify_uri
       WHERE gp.round_id = ?
+        AND COALESCE(b.is_mine, 0) = 0
       ORDER BY gp.spotify_uri`,
   ).all(mePlayerId, roundId) as {
     uri: string; stored: number | null; storedComment: string; postedComment: string | null;

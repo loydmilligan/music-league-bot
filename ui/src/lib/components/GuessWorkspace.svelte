@@ -144,6 +144,9 @@
   async function setMine(spotifyUri: string | null) {
     mineBusy = true;
     try {
+      // gutError is shared with the gut-pick writer; a stale line from a failed
+      // mark would otherwise survive a subsequent successful one.
+      gutError = null;
       const res = await fetch(`/api/guess/${roundId}/mine`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -213,8 +216,15 @@
 
   <!-- spec §7.6: the transplanted Voting Lab is this workspace's vote phase.
        Conditional mounting matches the guess tab's own pattern; the "Get take"
-       result survives the remount via takeCache. -->
-  {#if data.phase === 'vote'}
+       result survives the remount via takeCache.
+
+       Gated on the gut lock, not on the phase alone: nothing in this repo
+       writes phase = 'vote' yet (lockGut sets 'fetch'), so a phase-only test
+       would never fire. Locking the gut slate IS a reachable event and is the
+       point at which the vote phase begins, so this makes the lab reachable
+       today; the `phase === 'vote'` arm keeps working once a later project
+       builds the intermediate phase machine. -->
+  {#if data.gutLockedAt !== null || data.phase === 'vote'}
     <VotingLab {roundId} />
   {/if}
 

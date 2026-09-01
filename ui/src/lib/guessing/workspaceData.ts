@@ -68,12 +68,16 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
 
   // The marked song is excluded from `songs` by eligibleSongs, so it must be
   // surfaced separately or there is no way to unmark it (spec §6).
+  // ORDER BY s.id: two competitors can submit the same spotify_uri in one
+  // round, so the join can match two rows and LIMIT 1 would otherwise pick
+  // non-deterministically.
   const mine = (db.prepare(
     `SELECT s.spotify_uri AS spotifyUri, s.title, s.artists
        FROM voting_lab_ballot b
        JOIN ml_submissions s
          ON s.round_id = b.round_id AND s.spotify_uri = b.spotify_uri
       WHERE b.round_id = ? AND b.is_mine = 1
+      ORDER BY s.id
       LIMIT 1`,
   ).get(roundId) ?? null) as WorkspaceMine | null;
 
