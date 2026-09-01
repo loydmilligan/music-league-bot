@@ -1,0 +1,2581 @@
+<html data-bs-theme="light" data-x-template="vote.html">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<meta name="theme-color" content="#9E00C4">
+
+<link rel="icon" type="image/x-icon" href="https://musicleague-static-assets.b-cdn.net/icons_2/favicon.ico">
+
+
+
+
+
+<link rel="manifest" href="https://progressier.app/hRHh77g3xd7xRmlk7fMA/progressier.json" />
+<script defer src="https://progressier.app/hRHh77g3xd7xRmlk7fMA/script.js"></script>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+    crossorigin="anonymous"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"
+    integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
+    crossorigin="anonymous"></script>
+<script defer src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/1.30.1/date_fns.min.js"
+    integrity="sha512-F+u8eWHrfY8Xw9BLzZ8rG/0wIvs0y+JyRJrXjp3VjtFPylAEEGwKbua5Ip/oiVhaTDaDs4eU2Xtsxjs/9ag2bQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.4/dist/sweetalert2.all.min.js"
+    integrity="sha256-SrfCZ78qS4YeGNB8awBuKLepMKtLR86uP4oomyg4pUc=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.4/dist/sweetalert2.min.css"
+    integrity="sha256-h2Gkn+H33lnKlQTNntQyLXMWq7/9XI2rlPCsLsVcUBs=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<link rel="stylesheet" href="/style-1.1.9.css">
+
+<script src="https://cdn.jsdelivr.net/npm/linkifyjs@4.1.3/dist/linkify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/linkify-string@4.1.3/dist/linkify-string.min.js"></script>
+
+<script>
+    document.addEventListener('htmx:afterRequest', function (evt) {
+        const u = new URL(evt.detail.xhr.responseURL);
+        if ('/login/' === u.pathname) {
+            evt.preventDefault();
+            window.location = u;
+            return false;
+        }
+    });
+</script>
+
+    <title>Music League | Boarz II Men | Stranger Danger</title></head>
+<body class="bg-body-tertiary fs-p8em pb-5" hx-boost="true" x-data>
+<div data-x-template="vote.html">
+
+    <nav class="navbar navbar-dark fixed-top" style="background-color: #9E00C4; z-index: 1030;">
+    <div class="container">
+        <a href="/" class="navbar-brand" hx-boost="false">
+            <img src="https://musicleague.b-cdn.net/images/adaptive-icon.png" alt="Music League logo" style="height: 75px; margin: -20px 0 -20px 0;">
+        </a>
+        <div class="d-flex align-items-center">
+            
+            <button class="d-none d-sm-inline-block text-body-light navbar-toggler ms-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-nav" aria-controls="offcanvas-nav" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+        <div class="offcanvas offcanvas-end" id="offcanvas-nav" tabindex="-1" aria-labelledby="offcanvas-nav-label" hx-boost="false">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="offcanvas-nav-label">Menu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body pb-5 pb-sm-3">
+                <div class="mb-3">
+                    <div class="row">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        <div class="col-auto">
+                            <div class="card bg-body-tertiary">
+                                <div class="card-body">
+                                    <a href="#" title="Toggle color mode" hx-put="/settings/-/color-mode" hx-swap="none" class="stretched-link text-body" hx-on::after-settle="{
+                                        const currentTheme = document.querySelector('html').getAttribute('data-bs-theme');
+                                        if (currentTheme === 'dark')
+                                            document.querySelector('html').setAttribute('data-bs-theme', 'light');
+                                        else
+                                            document.querySelector('html').setAttribute('data-bs-theme', 'dark');
+                                    }">
+                                        <i class="bi bi-moon-fill"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                    <li class="nav-item">
+                        <a href="/" class="fs-6 nav-link text-body">Home</a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a href="/user/2f0b5460e6ad4c9a9203f605c3ca0ad5/" class="fs-6 nav-link text-body">View Profile</a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a href="/l/create/" class="fs-6 nav-link text-body">Create League</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/open/" class="fs-6 nav-link text-body">Open Leagues</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/completed/" class="fs-6 nav-link text-body">Completed Leagues</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/settings/" class="fs-6 nav-link text-body">Settings</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="https://install.page/musicleague" class="fs-6 nav-link text-body" target="_blank">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <span>Install App</span>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-chevron-right flex-stretch-0"></i>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="https://store.musicleague.com" class="fs-6 nav-link text-body" target="_blank">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <span>Store</span>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-chevron-right flex-stretch-0"></i>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+
+
+
+
+
+
+
+
+
+
+
+
+                    <li class="card mt-3">
+                        <div class="card-body rounded">
+                            <div class="card-title fw-semibold">
+                                <b class="text-turquoise"><i class="bi bi-chat flex-stretch-0 me-2"></i>Contact Us</b>
+                            </div>
+                            <ul class="navbar-nav">
+                                <li class="nav-item">
+                                    <a href="#" class="fs-6 nav-link text-body"
+                                       data-bs-dismiss="offcanvas"
+                                       x-on:click="console.log('get support'); Beacon('prefill', {subject: 'In-App Support'}); Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'}); Beacon('open'); Beacon('navigate', '/');">
+                                        Get Support
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#" class="fs-6 nav-link text-body" data-bs-dismiss="offcanvas" x-on:click="console.log('request feature'); Beacon('prefill', {subject: 'Feature Request'}); Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'}); Beacon('open'); Beacon('navigate', 'ask/message/');">Request a Feature</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <li class="nav-item my-3">
+                        <a href="/logout/" class="fs-6 nav-link text-fuschia fw-semibold" hx-boost="false">Sign Out</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+<nav class="navbar-expand navbar-dark fixed-bottom d-sm-none border-0 text-white safe-bottom" style="background-color: #9E00C4; z-index: 999999;">
+    <div class="container-fluid">
+        <div class="row py-3 align-items-start row-cols-4">
+            <div class="col text-center position-relative">
+                <a href="/" class="stretched-link text-decoration-none text-white">
+                    <i class="bi bi-house-door fs-3"></i>
+                </a>
+
+            </div>
+            <div class="col text-center position-relative">
+                <a href="/completed/" class="stretched-link text-decoration-none text-white">
+                    <i class="bi bi-clock-history fs-3"></i>
+                </a>
+
+            </div>
+            <div class="col text-center position-relative">
+                <a href="/l/create/" class="stretched-link text-decoration-none text-white" hx-boost="false">
+                    <i class="bi bi-plus-lg fs-3"></i>
+                </a>
+
+            </div>
+            <div class="col text-center position-relative">
+                <a href="/open/" class="stretched-link text-decoration-none text-white">
+                    <i class="bi bi-grid fs-3"></i>
+                </a>
+
+            </div>
+
+
+
+
+
+        </div>
+    </div>
+</nav>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const offcanvasNav = document.getElementById('offcanvas-nav');
+
+    if (offcanvasNav) {
+      
+      let cachedNitroElements = [];
+      let adElementsFound = false;
+
+      
+      const AD_LOAD_TIMEOUT_MS = 5000;
+
+      
+      const findNitroAdElements = () => {
+        
+        const selectors = [
+          '#nitro-anchor',        
+          '#nitro-rail-left',     
+          '#nitro-rail-right',    
+          '[id^="nitro-ad-"]'     
+        ];
+
+        const foundElements = new Set();
+
+        selectors.forEach(selector => {
+          try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+              
+              const style = window.getComputedStyle(el);
+              if (style.position === 'fixed' || style.position === 'sticky' || style.position === 'absolute') {
+                foundElements.add(el);
+              }
+            });
+          } catch (e) {
+            console.warn('Error finding NitroAds elements:', e);
+          }
+        });
+
+        return Array.from(foundElements);
+      };
+
+      
+      const hideAds = () => {
+        
+        cachedNitroElements = findNitroAdElements();
+        cachedNitroElements.forEach(el => {
+          el.style.setProperty('z-index', '0', 'important');
+        });
+      };
+
+      
+      const restoreAds = () => {
+        cachedNitroElements.forEach(el => {
+          el.style.removeProperty('z-index');
+        });
+      };
+
+      
+      offcanvasNav.addEventListener('show.bs.offcanvas', hideAds);
+      offcanvasNav.addEventListener('hide.bs.offcanvas', restoreAds);
+
+      
+      document.addEventListener('nitroAds.loaded', function() {
+        adElementsFound = true;
+        cachedNitroElements = findNitroAdElements();
+      });
+
+      
+      const observer = new MutationObserver((mutations) => {
+        if (!adElementsFound) {
+          
+          let relevantMutation = false;
+          const nitroSelectors = [
+            'nitro-anchor',
+            'nitro-rail-left',
+            'nitro-rail-right'
+          ];
+          
+          const nitroSelectorIds = nitroSelectors.map(sel => `#${sel}`);
+
+          mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) { 
+                const id = node.id || '';
+                
+                if (nitroSelectors.includes(id)) {
+                  relevantMutation = true;
+                }
+                
+                if (id.startsWith('nitro-ad-')) {
+                  relevantMutation = true;
+                }
+                
+                if (!relevantMutation && node.querySelector) {
+                  const combinedSelector = nitroSelectorIds.join(',') + ',[id^="nitro-ad-"]';
+                  if (node.querySelector(combinedSelector)) {
+                    relevantMutation = true;
+                  }
+                }
+              }
+            });
+          });
+          if (relevantMutation) {
+            const elements = findNitroAdElements();
+            if (elements.length > 0) {
+              adElementsFound = true;
+              cachedNitroElements = elements;
+
+              
+              if (offcanvasNav.classList.contains('show')) {
+                
+                elements.forEach(el => {
+                  el.style.setProperty('z-index', '0', 'important');
+                });
+              }
+            }
+          }
+        }
+      });
+
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      
+      setTimeout(() => observer.disconnect(), AD_LOAD_TIMEOUT_MS);
+    }
+
+    
+    const offcanvasElement = document.getElementById('offcanvas-nav');
+    const bottomNav = document.querySelector('.fixed-bottom');
+
+    if (offcanvasElement && bottomNav) {
+      offcanvasElement.addEventListener('show.bs.offcanvas', function () {
+        bottomNav.style.display = 'none';
+      });
+
+      offcanvasElement.addEventListener('hide.bs.offcanvas', function () {
+        bottomNav.style.display = '';
+      });
+    }
+  });
+</script>
+
+<div class=" container">
+    
+    <div id="main" class="container">
+    <div x-data="{
+        downvoteBankSize: 2,
+        downvotesEnabled: true,
+        maxDownvotesPerSong: 0,
+        maxUpvotesPerSong: 4,
+        upvoteBankSize: 8,
+        viewerIsAdmin: true,
+        colorMode: 'light',
+        weights: {},
+        get totalUpvotes() { return Object.values(this.weights).reduce((acc, val) => val > 0 ? acc + val : acc, 0); },
+        get totalDownvotes() { return Object.values(this.weights).reduce((acc, val) => val < 0 ? acc + Math.abs(val) : acc, 0); }
+    }"
+>
+
+    <div>
+    <div class="container">
+        <div class="row mb-3 pt-sm-3 align-items-stretch">
+            <div class="col-12 col-lg-8 offset-lg-2 p-0" x-data="{unreadChat: false}" x-init="unreadChat = (await (await fetch('/l/71598b6952064ca4afe4baf437495604/chat/-/meta/unread')).status) === 200">
+                <div class="d-block d-sm-none">
+                    <div class="card rounded-0 border-0">
+    <img class="card-img-top rounded-0" src="https://musicleague-static-assets.b-cdn.net/images/league/8.png?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;width=300" alt="League image">
+    <div class="card-header bg-body border-0 text-body-secondary">
+        <div class="row g-0 fs-p7em">
+    <div class="col-4 text-start">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-lock-fill" viewBox="0 0 16 16">
+            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+        </svg>
+        
+        UNLISTED
+    </div>
+    <div class="col-4 text-center">
+        
+        <i class="bi bi-play-fill flex-shrink-0"></i>
+        
+        ACCELERATED
+    </div>
+    <div class="col-4 text-end">
+        
+        <svg width="10" height="10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path fill="none" d="M0 0h24v24H0z"/><path fill="currentColor" d="M22 15h-3V3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zm-5.293 1.293l-6.4 6.4a.5.5 0 0 1-.654.047L8.8 22.1a1.5 1.5 0 0 1-.553-1.57L9.4 16H3a2 2 0 0 1-2-2v-2.104a2 2 0 0 1 .15-.762L4.246 3.62A1 1 0 0 1 5.17 3H16a1 1 0 0 1 1 1v11.586a1 1 0 0 1-.293.707z"/></g></svg>
+        DOWNVOTES ON
+        
+    </div>
+</div>
+
+    </div>
+    <div class="card-body">
+        <h4 class="card-title">
+            <i class="bi bi-chevron-left flex-shrink-0 me-2 pointer" @click="history.back()"></i>
+            <a href="/l/71598b6952064ca4afe4baf437495604/" class="text-body text-decoration-none">Boarz II Men</a>
+        </h4>
+        
+        <p class="card-text fw-light" data-description="In hoc we vote...on music." x-html="linkifyStr($el.dataset.description || '', {defaultProtocol: 'https', target: '_blank', nl2br: true})"></p>
+        
+        <div>
+            <button class="btn btn-sm rounded-circle p-2" type="button" data-bs-toggle="modal" data-bs-target="#league-options-modal" :class="{'btn-outline-dark': colorMode === 'light', 'btn-outline-light': colorMode === 'dark'}">
+                <i class="bi bi-three-dots"></i>
+            </button>
+        </div>
+        <div class="row my-3 gx-2 gy-0">
+            
+            
+            <div class="col-auto text-center">
+                <a href="/user/2f0b5460e6ad4c9a9203f605c3ca0ad5/" title="Mashew">
+                    <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="User avatar" title="Mashew" class="rounded-circle" style="height: 36px; width: 36px;">
+                    <br>
+                    
+                    <div class="badge rounded-pill bg-purple fw-semibold" style="margin-top: -6px;">Admin</div>
+                    
+                </a>
+            </div>
+            
+            
+            
+            <div class="col-auto text-center">
+                <a href="/user/02b8d5a0363f474bae7230a9d12cd34e/" title="Jonathan Black">
+                    <img src="https://musicleague-user-assets.b-cdn.net/users/02b8d5a0363f474bae7230a9d12cd34e/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=9d2053b8-7d57-4acb-a2f2-7ef2a5a11b42&amp;width=300" alt="User avatar" title="Jonathan Black" class="rounded-circle" style="height: 36px; width: 36px;">
+                    <br>
+                    
+                    <div class="badge rounded-pill bg-purple fw-semibold" style="margin-top: -6px;">Admin</div>
+                    
+                </a>
+            </div>
+            
+            
+            
+            <div class="col-auto text-center">
+                <a href="/user/4a21ed3e261643088654ff2f906c3b7a/" title="Shane Farkas">
+                    <img src="https://musicleague-user-assets.b-cdn.net/users/4a21ed3e261643088654ff2f906c3b7a/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=494a231f-c568-4e46-949c-c8b26bbe26d4&amp;width=300" alt="User avatar" title="Shane Farkas" class="rounded-circle" style="height: 36px; width: 36px;">
+                    <br>
+                    
+                </a>
+            </div>
+            
+            
+            
+            <div class="col-auto text-center">
+                <a href="/user/cceba45dc2fe404693d8f58bb496882b/" title="Clements">
+                    <img src="https://musicleague-user-assets.b-cdn.net/users/cceba45dc2fe404693d8f58bb496882b/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=bdcbe324-298e-4c48-adb5-b60fce2e97c7&amp;width=300" alt="User avatar" title="Clements" class="rounded-circle" style="height: 36px; width: 36px;">
+                    <br>
+                    
+                </a>
+            </div>
+            
+            
+            
+            <div class="col-auto text-center">
+                <a href="/user/abf2c22836f14f1f887f753839331c49/" title="djensen37">
+                    <img src="https://musicleague-user-assets.b-cdn.net/users/abf2c22836f14f1f887f753839331c49/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=4e92f5e1-e021-4137-80f8-be6177855a86&amp;width=300" alt="User avatar" title="djensen37" class="rounded-circle" style="height: 36px; width: 36px;">
+                    <br>
+                    
+                </a>
+            </div>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <div class="col-auto">
+                <a href="/l/71598b6952064ca4afe4baf437495604/standings/" class="text-body text-decoration-none">
+                    <span class="d-inline-block align-middle rounded-circle border text-center text-body" style="height: 36px; line-height: 36px; width: 36px;">
+                        &plus;5
+                    </span>
+                </a>
+            </div>
+            
+        </div>
+        <div class="card-text row fs-p8em">
+            <div class="col text-center"><strong class="d-block">10</strong><span class="fw-light">ROUNDS</span></div>
+            <div class="col-auto border-end border-secondary-subtle p-0">&nbsp;</div>
+            <div class="col text-center"><strong class="d-block">1</strong><span class="fw-light">SONG/ROUND</span></div>
+            <div class="col-auto border-end border-secondary-subtle p-0">&nbsp;</div>
+            <div class="col text-center"><strong class="d-block">10 / 10</strong><span class="fw-light">PLAYERS</span></div>
+        </div>
+    </div>
+    <div class="card-footer bg-transparent pb-0 pt-3 border-0">
+        <div class="row row-cols-3 pt-1">
+    <div class="col">
+        <div class="text-center ">
+            <a href="/l/71598b6952064ca4afe4baf437495604/" class="text-decoration-none" style="color: inherit;">
+                <h6>Rounds</h6>
+            </a>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center ">
+            <a href="/l/71598b6952064ca4afe4baf437495604/standings/" class="text-decoration-none" style="color: inherit;">
+                <h6>Standings</h6>
+            </a>
+        </div>
+    </div>
+    <div class="col position-relative">
+        <div class="text-center ">
+            <a href="#offcanvas-chat" role="button" class="text-decoration-none" style="color: inherit;" data-bs-toggle="offcanvas">
+                <h6>
+                    Chat
+                    <span x-show="unreadChat" class="position-absolute top-0 translate-middle p-2 ms-3 bg-danger border border-light rounded-circle">
+                        <span class="visually-hidden">Unread messages</span>
+                    </span>
+                </h6>
+            </a>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<div class="modal" tabindex="-1" id="league-options-modal" hx-boost="false">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-opacity-25">
+            <div class="modal-header border-0" data-bs-theme="light">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="row gy-4">
+                    <div class="col-12" x-data="{shareData: {url: 'https://app.musicleague.com/l/71598b6952064ca4afe4baf437495604/'}}">
+                        <a x-show="navigator.canShare(shareData)" href="#" @click="navigator.share(shareData)" class="my-3 text-decoration-none text-body">
+                            <h5>Share League</h5>
+                        </a>
+                        <a x-show="!navigator.canShare || !navigator.canShare(shareData)" href="#" @click="navigator.clipboard.writeText(shareData.url)" class="my-3 text-decoration-none text-body">
+                            <h5>Share League</h5>
+                        </a>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a href="/l/71598b6952064ca4afe4baf437495604/-/data" target="_blank" class="my-3 text-decoration-none text-body">
+                            <h5>Export Data</h5>
+                        </a>
+                    </div>
+                    <div class="col-12" x-data="{
+                        adminCount: 2,
+                        handleLeaveClick(event) {
+                            // Close the modal first
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('league-options-modal'));
+                            if (modal) modal.hide();
+
+                            // Show toast and redirect
+                            setTimeout(() => {
+                                Swal.mixin({
+                                    toast: true,
+                                    position: 'top',
+                                    iconColor: 'white',
+                                    customClass: {popup: 'toast text-bg-warning'},
+                                    showConfirmButton: false,
+                                    timer: 6000,
+                                    timerProgressBar: true
+                                }).fire({
+                                    icon: 'warning',
+                                    title: 'You must promote another member to admin before leaving this league.'
+                                });
+                                setTimeout(() => window.location.href = '/l/71598b6952064ca4afe4baf437495604/edit/players', 2500);
+                            }, 300);
+                        }
+                    }">
+                        <template x-if="!true || adminCount > 1">
+                            <a href="#" hx-put="/l/71598b6952064ca4afe4baf437495604/leave" hx-confirm="Are you sure you want to leave this league?" class="my-3 text-decoration-none text-body">
+                                <h5>Leave League</h5>
+                            </a>
+                        </template>
+                        <template x-if="true && adminCount === 1">
+                            <a href="#" @click.prevent="handleLeaveClick($event)" class="my-3 text-decoration-none text-body">
+                                <h5><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Leave League</h5>
+                            </a>
+                        </template>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a class="my-3 text-decoration-none text-body" data-bs-dismiss="modal" href="#"
+                           @click="Beacon('prefill', {subject: 'Reporting League'}); Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'}); Beacon('open'); Beacon('navigate', 'ask/message/');">
+                            <h5>Report League</h5>
+                        </a>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a href="/l/71598b6952064ca4afe4baf437495604/edit/" class="my-3 text-decoration-none text-body">
+                            <h5>Edit League</h5>
+                        </a>
+                    </div>
+                    
+                    
+                    <div class="col-12">
+                        <a href="#" class="my-3 text-decoration-none text-danger" @click.prevent="
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('league-options-modal'));
+                            if (modal) modal.hide();
+                            setTimeout(() => {
+                            
+                            Swal.fire({
+                                title: 'Delete League',
+                                html: `<div class='alert alert-light text-start small'><i class='bi bi-info-circle me-1 text-primary'></i>Leagues that have progressed into the Voting Stage of Round One cannot be deleted unless there is only one song submitted.<br><br>Click <strong>Delete League</strong> below. If the league is not automatically deleted, our support team will review your request.</div>`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#dc3545',
+                                confirmButtonText: 'Delete League',
+                                cancelButtonText: 'Cancel'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    fetch('/l/71598b6952064ca4afe4baf437495604/', {method: 'DELETE'}).then(resp => {
+                                        if (resp.ok) {
+                                            window.location.href = '/home/';
+                                        } else if (resp.status === 403) {
+                                            resp.text().then(msg => {
+                                                Swal.fire({
+                                                    icon: 'info',
+                                                    title: 'Unable to Delete',
+                                                    html: msg.trim() + '<br><br>Would you like to contact support?',
+                                                    showCancelButton: true,
+                                                    confirmButtonText: 'Contact Support',
+                                                    cancelButtonText: 'Close'
+                                                }).then((r) => {
+                                                    if (r.isConfirmed) {
+                                                        Beacon('prefill', {subject: 'League Deletion Request'});
+                                                        Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'});
+                                                        Beacon('open');
+                                                        Beacon('navigate', 'ask/message/');
+                                                    }
+                                                });
+                                            });
+                                        } else {
+                                            Swal.fire({icon: 'error', title: 'Error', text: 'Something went wrong. Please contact support.'});
+                                        }
+                                    }).catch(() => {
+                                        Swal.fire({icon: 'error', title: 'Error', text: 'Something went wrong. Please contact support.'});
+                                    });
+                                }
+                            })
+                            
+                            }, 300);
+                        ">
+                            <h5>Delete League</h5>
+                        </a>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+
+    if (error === 'promote_admin') {
+        Swal.mixin({
+            toast: true,
+            position: 'top',
+            iconColor: 'white',
+            customClass: {popup: 'toast text-bg-warning'},
+            showConfirmButton: false,
+            timer: 6000,
+            timerProgressBar: true
+        }).fire({
+            icon: 'warning',
+            title: 'You must promote another member to admin before leaving this league.'
+        });
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('error');
+        window.history.replaceState({}, '', url);
+    }
+});
+</script>
+
+                </div>
+                <div class="d-none d-sm-block">
+                    <div class="card rounded-0 border-0">
+    <div class="row g-0">
+        <div class="col-3">
+            <img src="https://musicleague-static-assets.b-cdn.net/images/league/8.png?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;width=300" alt="League image" class="object-fit-cover w-100" style="min-height: 100%">
+        </div>
+        <div class="col-9">
+            <div class="card-header bg-body border-0 text-body-secondary">
+                <div class="row g-0 fs-p7em">
+    <div class="col-4 text-start">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-lock-fill" viewBox="0 0 16 16">
+            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+        </svg>
+        
+        UNLISTED
+    </div>
+    <div class="col-4 text-center">
+        
+        <i class="bi bi-play-fill flex-shrink-0"></i>
+        
+        ACCELERATED
+    </div>
+    <div class="col-4 text-end">
+        
+        <svg width="10" height="10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><path fill="none" d="M0 0h24v24H0z"/><path fill="currentColor" d="M22 15h-3V3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zm-5.293 1.293l-6.4 6.4a.5.5 0 0 1-.654.047L8.8 22.1a1.5 1.5 0 0 1-.553-1.57L9.4 16H3a2 2 0 0 1-2-2v-2.104a2 2 0 0 1 .15-.762L4.246 3.62A1 1 0 0 1 5.17 3H16a1 1 0 0 1 1 1v11.586a1 1 0 0 1-.293.707z"/></g></svg>
+        DOWNVOTES ON
+        
+    </div>
+</div>
+
+            </div>
+            <div class="card-body p-3">
+                <div class="row">
+                    <div class="col">
+                        <h4 class="card-title text-wrap"><a href="/l/71598b6952064ca4afe4baf437495604/" class="text-body text-decoration-none">Boarz II Men</a></h4>
+                    </div>
+                    <div class="col-auto">
+                        <div class="dropdown">
+                            <button class="btn rounded-circle p-1" type="button" data-bs-toggle="dropdown" onClick="{e => e.stopPropagation()}" :class="{'btn-outline-dark': colorMode === 'light', 'btn-outline-light': colorMode === 'dark'}">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a href="/l/71598b6952064ca4afe4baf437495604/-/data" class="dropdown-item" target="_blank">Export Data</a>
+                                </li>
+                                <li x-data="{
+                                    adminCount: 2,
+                                    handleLeaveClick() {
+                                        Swal.mixin({
+                                            toast: true,
+                                            position: 'top',
+                                            iconColor: 'white',
+                                            customClass: {popup: 'toast text-bg-warning'},
+                                            showConfirmButton: false,
+                                            timer: 6000,
+                                            timerProgressBar: true
+                                        }).fire({
+                                            icon: 'warning',
+                                            title: 'You must promote another member to admin before leaving this league.'
+                                        });
+                                        setTimeout(() => window.location.href = '/l/71598b6952064ca4afe4baf437495604/edit/players', 2500);
+                                    }
+                                }">
+                                    <template x-if="!true || adminCount > 1">
+                                        <button class="dropdown-item" hx-put="/l/71598b6952064ca4afe4baf437495604/leave" hx-confirm="Are you sure you want to leave this league?">Leave League</button>
+                                    </template>
+                                    <template x-if="true && adminCount === 1">
+                                        <button class="dropdown-item" @click.prevent="handleLeaveClick()">
+                                            <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Leave League
+                                        </button>
+                                    </template>
+                                </li>
+                                <li x-show="viewerIsSystemAdmin"><button class="dropdown-item" @click="navigator.clipboard.writeText('71598b6952064ca4afe4baf437495604')">Copy League ID</button></li>
+                                <li><a href="/l/71598b6952064ca4afe4baf437495604/edit/" class="dropdown-item" hx-boost="false">Edit League</a></li>
+                                <li><a href="#" class="dropdown-item text-danger" @click.prevent="
+                                    
+                                    Swal.fire({
+                                        title: 'Delete League',
+                                        html: `<div class='alert alert-light text-start small'><i class='bi bi-info-circle me-1 text-primary'></i>Leagues that have progressed into the Voting Stage of Round One cannot be deleted unless there is only one song submitted.<br><br>Click <strong>Delete League</strong> below. If the league is not automatically deleted, our support team will review your request.</div>`,
+                                        icon: 'warning',
+                                        showCancelButton: true,
+                                        confirmButtonColor: '#dc3545',
+                                        confirmButtonText: 'Delete League',
+                                        cancelButtonText: 'Cancel'
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            fetch('/l/71598b6952064ca4afe4baf437495604/', {method: 'DELETE'}).then(resp => {
+                                                if (resp.ok) {
+                                                    window.location.href = '/home/';
+                                                } else if (resp.status === 403) {
+                                                    resp.text().then(msg => {
+                                                        Swal.fire({
+                                                            icon: 'info',
+                                                            title: 'Unable to Delete',
+                                                            html: msg.trim() + '<br><br>Would you like to contact support?',
+                                                            showCancelButton: true,
+                                                            confirmButtonText: 'Contact Support',
+                                                            cancelButtonText: 'Close'
+                                                        }).then((r) => {
+                                                            if (r.isConfirmed) {
+                                                                Beacon('prefill', {subject: 'League Deletion Request'});
+                                                                Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'});
+                                                                Beacon('open');
+                                                                Beacon('navigate', 'ask/message/');
+                                                            }
+                                                        });
+                                                    });
+                                                } else {
+                                                    Swal.fire({icon: 'error', title: 'Error', text: 'Something went wrong. Please contact support.'});
+                                                }
+                                            }).catch(() => {
+                                                Swal.fire({icon: 'error', title: 'Error', text: 'Something went wrong. Please contact support.'});
+                                            });
+                                        }
+                                    })
+                                    
+                                ">Delete League</a></li>
+                                <li><button class="dropdown-item" @click="Beacon('prefill', {subject: 'Reporting League'}); Beacon('session-data', {'User ID': '2f0b5460e6ad4c9a9203f605c3ca0ad5'}); Beacon('open'); Beacon('navigate', 'ask/message/');">Report League</button></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="card-text fw-light" data-description="In hoc we vote...on music." x-html="linkifyStr($el.dataset.description || '', {defaultProtocol: 'https', target: '_blank', nl2br: true})"></p>
+                
+                <div class="row my-3 gx-2 gy-0">
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/2f0b5460e6ad4c9a9203f605c3ca0ad5/" title="Mashew">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="User avatar" title="Mashew" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                            <div class="badge rounded-pill bg-purple fw-semibold" style="margin-top: -6px;">Admin</div>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/02b8d5a0363f474bae7230a9d12cd34e/" title="Jonathan Black">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/02b8d5a0363f474bae7230a9d12cd34e/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=9d2053b8-7d57-4acb-a2f2-7ef2a5a11b42&amp;width=300" alt="User avatar" title="Jonathan Black" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                            <div class="badge rounded-pill bg-purple fw-semibold" style="margin-top: -6px;">Admin</div>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/4a21ed3e261643088654ff2f906c3b7a/" title="Shane Farkas">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/4a21ed3e261643088654ff2f906c3b7a/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=494a231f-c568-4e46-949c-c8b26bbe26d4&amp;width=300" alt="User avatar" title="Shane Farkas" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/cceba45dc2fe404693d8f58bb496882b/" title="Clements">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/cceba45dc2fe404693d8f58bb496882b/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=bdcbe324-298e-4c48-adb5-b60fce2e97c7&amp;width=300" alt="User avatar" title="Clements" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/abf2c22836f14f1f887f753839331c49/" title="djensen37">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/abf2c22836f14f1f887f753839331c49/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=4e92f5e1-e021-4137-80f8-be6177855a86&amp;width=300" alt="User avatar" title="djensen37" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/52f8833c8da44d93b3476a9937f1ea4a/" title="CJ Wookie">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/52f8833c8da44d93b3476a9937f1ea4a/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=d2b77382-c5f1-42ee-a39e-0b3856a6ec6f&amp;width=300" alt="User avatar" title="CJ Wookie" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    <div class="col-auto text-center">
+                        <a href="/user/460d237b12ff453f95f8d6c11e56d7c4/" title="Grant Koziol">
+                            <img src="https://musicleague-user-assets.b-cdn.net/users/460d237b12ff453f95f8d6c11e56d7c4/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=78b7ba23-5de7-474f-b684-7095a5a04162&amp;width=300" alt="User avatar" title="Grant Koziol" class="rounded-circle" style="height: 36px; width: 36px;">
+                            <br>
+                            
+                        </a>
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    <div class="col-auto">
+                        <a href="/l/71598b6952064ca4afe4baf437495604/standings/" class="text-body text-decoration-none">
+                            <span class="d-inline-block align-middle rounded-circle border text-center text-body" style="height: 36px; line-height: 36px; width: 36px;">
+                                &plus;3
+                            </span>
+                        </a>
+                    </div>
+                    
+                </div>
+                <div class="card-text row fs-p8em">
+                    <div class="col text-center"><strong class="d-block">10</strong><span class="fw-light">ROUNDS</span></div>
+                    <div class="col-auto border-end border-secondary-subtle p-0">&nbsp;</div>
+                    <div class="col text-center"><strong class="d-block">1</strong><span class="fw-light">SONG/ROUND</span></div>
+                    <div class="col-auto border-end border-secondary-subtle p-0">&nbsp;</div>
+                    <div class="col text-center"><strong class="d-block">10 / 10</strong><span class="fw-light">PLAYERS</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="row row-cols-3 pt-1">
+    <div class="col">
+        <div class="text-center ">
+            <a href="/l/71598b6952064ca4afe4baf437495604/" class="text-decoration-none" style="color: inherit;">
+                <h6>Rounds</h6>
+            </a>
+        </div>
+    </div>
+    <div class="col">
+        <div class="text-center ">
+            <a href="/l/71598b6952064ca4afe4baf437495604/standings/" class="text-decoration-none" style="color: inherit;">
+                <h6>Standings</h6>
+            </a>
+        </div>
+    </div>
+    <div class="col position-relative">
+        <div class="text-center ">
+            <a href="#offcanvas-chat" role="button" class="text-decoration-none" style="color: inherit;" data-bs-toggle="offcanvas">
+                <h6>
+                    Chat
+                    <span x-show="unreadChat" class="position-absolute top-0 translate-middle p-2 ms-3 bg-danger border border-light rounded-circle">
+                        <span class="visually-hidden">Unread messages</span>
+                    </span>
+                </h6>
+            </a>
+        </div>
+    </div>
+</div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+
+    if (error === 'promote_admin') {
+        Swal.mixin({
+            toast: true,
+            position: 'top',
+            iconColor: 'white',
+            customClass: {popup: 'toast text-bg-warning'},
+            showConfirmButton: false,
+            timer: 6000,
+            timerProgressBar: true
+        }).fire({
+            icon: 'warning',
+            title: 'You must promote another member to admin before leaving this league.'
+        });
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('error');
+        window.history.replaceState({}, '', url);
+    }
+});
+</script>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <div class="mb-5 mt-3" hx-post="./?draft=1" hx-trigger="pointChange from:body delay:1s" hx-swap="none" hx-indicator="#saving-indicator" hx-include="body">
+        <div class="row">
+            <div class="col-12 col-lg-8 offset-lg-2">
+                <div class="row pt-3 pb-1">
+                    <div class="col-12">
+                        <div class="card">
+    <div class="card-body">
+        <span class="card-text text-body-tertiary">ROUND 7</span>
+        <h5 class="card-title">Stranger Danger</h5>
+        <p class="card-text" data-description="Songs that you think no one in this League has ever heard before.  
+
+*** YOU ARE NOT ALLOWED TO GIVE ANY POSITIVE POINTS TO A SONG YOU HAVE HEARD BEFORE ***
+
+ Theme submitted by Jimmy Troy (after changing his mind at the last minute)" x-html="linkifyStr($el.dataset.description || '', {defaultProtocol: 'https', target: '_blank', nl2br: true})"></p>
+    </div>
+</div>
+
+                    </div>
+                </div>
+                <div class="row py-3 bg-body-tertiary sticky-top">
+                    <div class="col text-center">
+                        <h5 class="m-0">
+                            <i class="bi bi-hand-thumbs-up flex-shrink-0 me-1 text-purple fw-bold"></i>
+                            <span x-text="totalUpvotes"></span> of <span x-text="upvoteBankSize"></span>
+                        </h5>
+                        <div class="row gx-0 mt-2 align-items-center">
+                            <div class="col">
+                                <div class="progress" role="progressbar" style="height: 2px;">
+                                    <div class="progress-bar bg-purple" :style="`width: ${(totalUpvotes/upvoteBankSize)*100}%`"></div>
+                                </div>
+                            </div>
+                            <div class="ms-2 col-auto">
+                                <i class="bi" :class="{
+                                    'text-body-tertiary': totalUpvotes < upvoteBankSize,
+                                    'text-purple': totalUpvotes === upvoteBankSize,
+                                    'text-danger': totalUpvotes > upvoteBankSize,
+                                    'bi-check-circle-fill': totalUpvotes === upvoteBankSize,
+                                    'bi-exclamation-circle': totalUpvotes < upvoteBankSize,
+                                    'bi-exclamation-circle-fill': totalUpvotes > upvoteBankSize
+                                }"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div x-show="downvotesEnabled" class="col text-center">
+                        <h5 class="m-0">
+                            <i class="bi bi-hand-thumbs-down flex-shrink-0 me-1 text-purple fw-bold"></i>
+                            <span x-text="totalDownvotes"></span> of <span x-text="downvoteBankSize"></span>
+                        </h5>
+                        <div class="row gx-0 mt-2 align-items-center">
+                            <div class="col">
+                                <div class="progress" role="progressbar" style="height: 2px;">
+                                    <div class="progress-bar bg-purple" :style="`width: ${(totalDownvotes/downvoteBankSize)*100}%`"></div>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi" :class="{
+                                    'text-body-tertiary': totalDownvotes < downvoteBankSize,
+                                    'text-purple': totalDownvotes === downvoteBankSize,
+                                    'text-danger': totalDownvotes > downvoteBankSize,
+                                    'bi-check-circle-fill': totalDownvotes === downvoteBankSize,
+                                    'bi-exclamation-circle': totalDownvotes < downvoteBankSize,
+                                    'bi-exclamation-circle-fill': totalDownvotes > downvoteBankSize
+                                }"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-center">
+                        <div id="saving-indicator" class="htmx-indicator persistent badge rounded-pill text-white bg-turquoise py-2">Saving progress...</div>
+                    </div>
+                </div>
+
+                <div class="songs">
+                    
+                    
+                    <div id="song-0" class="song"
+                        x-data="{
+                            mine: true,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:03W2WiY9OSnUI4F9dy9L60'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e0236b1b73f91b8b3a5d8243473" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Watermelon</h6>
+        <span class="d-block text-truncate">John &#43; Jane Q. Public</span>
+        <span class="text-body-secondary">Dinner in America Soundtrack</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:03W2WiY9OSnUI4F9dy9L60">
+            <source src="https://p.scdn.co/mp3-preview/ad527d33055342e9d288c1d27ffbd98a9d4383d3?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:03W2WiY9OSnUI4F9dy9L60');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:03W2WiY9OSnUI4F9dy9L60'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:03W2WiY9OSnUI4F9dy9L60'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:03W2WiY9OSnUI4F9dy9L60">
+                    </div>
+                    
+                    <div id="song-1" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:0yVCSfDBVf5GjFVUb4kQDx'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e027ad8e1e32de2e57f75a88bbd" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Another Year</h6>
+        <span class="d-block text-truncate">Animals As Leaders</span>
+        <span class="text-body-secondary">The Joy of Motion</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:0yVCSfDBVf5GjFVUb4kQDx">
+            <source src="https://p.scdn.co/mp3-preview/b69097613307714f72f9710f41db25b382c5cff2?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:0yVCSfDBVf5GjFVUb4kQDx');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:0yVCSfDBVf5GjFVUb4kQDx'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:0yVCSfDBVf5GjFVUb4kQDx'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:0yVCSfDBVf5GjFVUb4kQDx">
+                    </div>
+                    
+                    <div id="song-2" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:2YpeDb67231RjR0MgVLzsG'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e026239187793c9e492e687db01" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Old Town Road (feat. Billy Ray Cyrus) - Remix</h6>
+        <span class="d-block text-truncate">Lil Nas X, Billy Ray Cyrus</span>
+        <span class="text-body-secondary">7</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:2YpeDb67231RjR0MgVLzsG">
+            <source src="https://p.scdn.co/mp3-preview/6d51966d496e703bd512b63793235fafcaf7173b?cid=14ced677d7f74665ba1084960d990ffb" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:2YpeDb67231RjR0MgVLzsG');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:2YpeDb67231RjR0MgVLzsG'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:2YpeDb67231RjR0MgVLzsG'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="true" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap">I’m hoping this crossover banger has escaped the notice of the punk contingent until now </span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:2YpeDb67231RjR0MgVLzsG">
+                    </div>
+                    
+                    <div id="song-3" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:3ABx6PStRO5lyN3Emo8dns'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e02069a434e32ddf15c11428771" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Once in a Lifetime</h6>
+        <span class="d-block text-truncate">Stick Figure</span>
+        <span class="text-body-secondary">World on Fire</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:3ABx6PStRO5lyN3Emo8dns">
+            <source src="https://p.scdn.co/mp3-preview/e222e16ced7d48ba38a3eadc2ba080c27dcfb56b?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:3ABx6PStRO5lyN3Emo8dns');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:3ABx6PStRO5lyN3Emo8dns'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:3ABx6PStRO5lyN3Emo8dns'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:3ABx6PStRO5lyN3Emo8dns">
+                    </div>
+                    
+                    <div id="song-4" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:5oDIAO4seNRKDz01fLWAh1'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e022114a88eca54deb9d3a57e1e" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Stony Gate</h6>
+        <span class="d-block text-truncate">Fergus McCreadie</span>
+        <span class="text-body-secondary">Stream</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:5oDIAO4seNRKDz01fLWAh1">
+            <source src="https://p.scdn.co/mp3-preview/026b3f841f8139078ea9eae64bf887ef4466d954?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:5oDIAO4seNRKDz01fLWAh1');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:5oDIAO4seNRKDz01fLWAh1'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:5oDIAO4seNRKDz01fLWAh1'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:5oDIAO4seNRKDz01fLWAh1">
+                    </div>
+                    
+                    <div id="song-5" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:6AcR8k0DgiLnei1nX7hBG3'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e02cdf9ea757b3b0ffc0c90da5a" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Who&#39;s Gonna Build Your Wall?</h6>
+        <span class="d-block text-truncate">Tom Russell</span>
+        <span class="text-body-secondary">Wounded Heart Of America</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:6AcR8k0DgiLnei1nX7hBG3">
+            <source src="https://p.scdn.co/mp3-preview/f13669b4fd0b012b29883eeffc38de8818c6bbda?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:6AcR8k0DgiLnei1nX7hBG3');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:6AcR8k0DgiLnei1nX7hBG3'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:6AcR8k0DgiLnei1nX7hBG3'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="true" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap">For MAGA Shane</span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:6AcR8k0DgiLnei1nX7hBG3">
+                    </div>
+                    
+                    <div id="song-6" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:7idNvuHvSnLCNUuK6L0wpJ'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e02a5f6592d8e30ab732004c55d" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">It Is So Nice To Get Stoned</h6>
+        <span class="d-block text-truncate">Ted Lucas</span>
+        <span class="text-body-secondary">Ted Lucas</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:7idNvuHvSnLCNUuK6L0wpJ">
+            <source src="https://p.scdn.co/mp3-preview/15baf09faa9aca022a71e9f824b24c450d115ccd?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:7idNvuHvSnLCNUuK6L0wpJ');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:7idNvuHvSnLCNUuK6L0wpJ'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:7idNvuHvSnLCNUuK6L0wpJ'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:7idNvuHvSnLCNUuK6L0wpJ">
+                    </div>
+                    
+                    <div id="song-7" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:7kxMwCdLI8SOXjLA9tWVyF'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e023f536daffcfd8defdfcfb4d0" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">The Clapping Song (Clap Pat Clap Slap) - Single Version</h6>
+        <span class="d-block text-truncate">Shirley Ellis</span>
+        <span class="text-body-secondary">The Clapping Song... And More</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <button class="btn btn-lg btn-link p-0 disabled" type="button">
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:7kxMwCdLI8SOXjLA9tWVyF'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:7kxMwCdLI8SOXjLA9tWVyF'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:7kxMwCdLI8SOXjLA9tWVyF">
+                    </div>
+                    
+                    <div id="song-8" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:7shiQ7egWBwnPPHaX1UT83'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e021b323c11529ed7b6cff2f940" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Dawn of the Dead</h6>
+        <span class="d-block text-truncate">Does It Offend You, Yeah?</span>
+        <span class="text-body-secondary">You Have No Idea What You&#39;re Getting Yourself Into</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:7shiQ7egWBwnPPHaX1UT83">
+            <source src="https://p.scdn.co/mp3-preview/827224dfb61b72157bdbd35583848700674375f6?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:7shiQ7egWBwnPPHaX1UT83');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:7shiQ7egWBwnPPHaX1UT83'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:7shiQ7egWBwnPPHaX1UT83'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:7shiQ7egWBwnPPHaX1UT83">
+                    </div>
+                    
+                    <div id="song-9" class="song"
+                        x-data="{
+                            mine: false,
+                            showSong: false,
+                            comment: $el.dataset.comment || '',
+                            weight: parseInt($el.dataset.weight || '0', 10)
+                        }"
+                        x-init="weights['spotify:track:7xlIAUgqSkc9sX8WoPXcd4'] = weight;">
+                        <div class="card mb-3">
+                            <div class="card-header bg-body" x-show="mine">
+                                <b class="d-flex align-items-center m-0 text-turquoise">
+                                    <i class="bi bi-person-raised-hand flex-shrink-0 me-0 fs-5"></i>
+                                    <span class="ms-1">You submitted this song</span>
+                                </b>
+                            </div>
+                            <div class="card-body">
+                                <div class="row gx-3 align-items-center">
+                                    <div class="col text-truncate" x-data="{showControl: 'preview-start'}">
+                                        <div class="row gx-3 align-items-center">
+    <div class="col-auto order-2">
+        <img src="https://i.scdn.co/image/ab67616d00001e02df1884a7ebca0168bdcaf69e" alt="Album art" style="width: 50px;">
+    </div>
+    <div class="col text-truncate order-3">
+        <h6 class="mb-0 text-truncate" style="color: #9E00C4;">Joe</h6>
+        <span class="d-block text-truncate">Alabama Shakes</span>
+        <span class="text-body-secondary">Sound &amp; Color (Deluxe Edition)</span>
+    </div>
+    <div class="col-auto" x-show="showControl === 'preview-end' || showControl === 'preview-start'" :class="{'order-1': showControl === 'preview-start', 'order-4': showControl === 'preview-end'}">
+        
+        <audio id="audio-spotify:track:7xlIAUgqSkc9sX8WoPXcd4">
+            <source src="https://p.scdn.co/mp3-preview/54a5298a073dc6a4b87049de4c76b3a131a4be46?cid=96b3fbe9ebad42559cd306ea482b3085" type="audio/mp3">
+            Not supported
+        </audio>
+        <button @click.stop.prevent="e => {
+                const audio = document.getElementById('audio-spotify:track:7xlIAUgqSkc9sX8WoPXcd4');
+                const isPlaying = audio.classList.contains('playing');
+                if (isPlaying) {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+
+                    return;
+                }
+
+                const audios = document.querySelectorAll('audio.playing');
+                audios.forEach(audio => {
+                    audio.pause();
+                    audio.classList.remove('playing');
+
+                    audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                        button.classList.remove('bi-pause-circle');
+                        button.classList.add('bi-play-circle');
+                    });
+                });
+
+                audio.classList.add('playing');
+
+                audio.parentElement.querySelectorAll('.bi').forEach(button => {
+                    button.classList.remove('bi-play-circle');
+                    button.classList.add('bi-pause-circle');
+                });
+
+                audio.play();
+            }" type="button" class="btn btn-lg btn-link p-0 text-body">
+
+            <i class="bi bi-play-circle flex-shrink-0 fs-2"></i>
+        </button>
+        
+    </div>
+    <div class="col-auto order-5" x-show="showControl === 'close-end'">
+        <button class="btn btn-lg btn-link p-0 text-body-secondary" type="button" @click.stop.prevent="showSong = false; $dispatch('song-unselected');">
+            <i class="bi bi-x-circle flex-shrink-0 fs-2"></i>
+        </button>
+    </div>
+</div>
+
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <h2 class="m-0" x-text="weight"></h2>
+                                    </div>
+                                    <div class="col-auto" x-show="!mine">
+                                        <button type="button" class="btn btn-lg p-0 btn-link" x-data="{get disabled() { return maxUpvotesPerSong !== 0 && weight === maxUpvotesPerSong }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight++; weights['spotify:track:7xlIAUgqSkc9sX8WoPXcd4'] = weight; $dispatch('pointChange');" title="Upvote song">
+                                            <i class="bi bi-hand-thumbs-up flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                        <br>
+                                        <button type="button" class="btn btn-lg p-0 mt-2 border-0 btn-link" x-data="{ get disabled() { return !(weight > 0 || (downvotesEnabled && maxDownvotesPerSong === 0) || (downvotesEnabled && Math.abs(weight) < maxDownvotesPerSong)) }}"
+                                                :disabled="disabled" :class="{disabled: disabled}"
+                                                @click="weight--; weights['spotify:track:7xlIAUgqSkc9sX8WoPXcd4'] = weight; $dispatch('pointChange');" title="Downvote song">
+                                            <i class="bi bi-hand-thumbs-down flex-shrink-0 fs-3" :class="{'text-body-secondary': disabled, 'text-purple': !disabled}"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p x-show="false" class="bg-body-tertiary my-3 p-2 border-1 rounded">
+                                    <i class="bi bi-quote flex-shrink-0 me-1 fs-5"></i>
+                                    <span class="text-break ws-pre-wrap"></span>
+                                    <b x-show="mine" class="ms-2">&#8212; You</b>
+                                </p>
+                                <div class="row mt-3 gx-3 align-items-start">
+                                    <div class="col-auto">
+                                        <img src="https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1&amp;height=300&amp;optimizer=image&amp;quality=70&amp;v=f4f347d7-49d5-4286-87cd-0e8288e87f08&amp;width=300" alt="" class="rounded-circle" height="36">
+                                    </div>
+                                    <div class="col">
+                                        <textarea name="comment" x-model="comment" id="comment" class="form-control"
+                                                :placeholder="`What did you think of ${mine ? 'your own' : 'this'} song?`"
+                                                @input="_ => {
+                                                        $dispatch('pointChange');
+                                                        event.target.style.height = 'auto';
+                                                        event.target.style.height = `${event.target.scrollHeight}px`;
+                                                    }"
+                                                autofocus maxlength="1000"></textarea>
+                                        <div class="row justify-content-end mt-1">
+                                            <div class="col-auto">
+                                                <span class="text-body-secondary" x-text="comment.length"></span> / 1000
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weight" :value="weight">
+                        <input type="hidden" name="uri" value="spotify:track:7xlIAUgqSkc9sX8WoPXcd4">
+                    </div>
+                    
+                </div>
+
+                <div class="row pt-2 pb-5 mb-5 bg-body-tertiary">
+                    <div class="col">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-outline-secondary" hx-post="./?draft=1" hx-swap="none" hx-indicator="#saving-indicator" hx-include="body" hx-disabled-elt="this">Save</button>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-primary bg-purple border-purple"
+                                :class="{ disabled: totalUpvotes != upvoteBankSize || totalDownvotes !== downvoteBankSize }"
+                                hx-post="" hx-include="body" hx-swap="none" hx-disabled--elt="this"
+                                hx-confirm="Are you sure you want to submit your votes for this round? Once you do, they cannot be changed."
+                        >Submit</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-end" :class="{show: (new URLSearchParams(window.location.search)).get('chat') === '1'}" data-bs-scroll="true" tabindex="-1" id="offcanvas-chat" aria-labelledby="offcanvas-chat-label" hx-boost="false" hx-history="false">
+    <div class="offcanvas-header border-bottom" @click="document.getElementById('top-of-chat').scrollIntoView(false);">
+        <h5 class="offcanvas-title" id="offcanvas-chat-label"><i class="bi bi-chat flex-shrink-0 me-2"></i>Chat</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body safe-bottom" x-data="{members: [{&#34;created&#34;:&#34;2026-07-11T22:33:01.003753Z&#34;,&#34;isAdmin&#34;:true,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;2f0b5460e6ad4c9a9203f605c3ca0ad5&#34;,&#34;name&#34;:&#34;Mashew&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=f4f347d7-49d5-4286-87cd-0e8288e87f08\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-11T23:20:49.639402Z&#34;,&#34;isAdmin&#34;:true,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;02b8d5a0363f474bae7230a9d12cd34e&#34;,&#34;name&#34;:&#34;Jonathan Black&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/02b8d5a0363f474bae7230a9d12cd34e/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=9d2053b8-7d57-4acb-a2f2-7ef2a5a11b42\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-11T23:24:00.532782Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;4a21ed3e261643088654ff2f906c3b7a&#34;,&#34;name&#34;:&#34;Shane Farkas&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/4a21ed3e261643088654ff2f906c3b7a/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=494a231f-c568-4e46-949c-c8b26bbe26d4\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-12T01:20:27.246381Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;cceba45dc2fe404693d8f58bb496882b&#34;,&#34;name&#34;:&#34;Clements&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/cceba45dc2fe404693d8f58bb496882b/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=bdcbe324-298e-4c48-adb5-b60fce2e97c7\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T01:29:06.346146Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;abf2c22836f14f1f887f753839331c49&#34;,&#34;name&#34;:&#34;djensen37&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/abf2c22836f14f1f887f753839331c49/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=4e92f5e1-e021-4137-80f8-be6177855a86\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T01:49:14.704464Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;52f8833c8da44d93b3476a9937f1ea4a&#34;,&#34;name&#34;:&#34;CJ Wookie&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/52f8833c8da44d93b3476a9937f1ea4a/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=d2b77382-c5f1-42ee-a39e-0b3856a6ec6f\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T04:42:06.115612Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;460d237b12ff453f95f8d6c11e56d7c4&#34;,&#34;name&#34;:&#34;Grant Koziol&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/460d237b12ff453f95f8d6c11e56d7c4/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=78b7ba23-5de7-474f-b684-7095a5a04162\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-15T04:02:48.7401Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;583049ce3b11466f94d937e933c49ae0&#34;,&#34;name&#34;:&#34;Steiny&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/583049ce3b11466f94d937e933c49ae0/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=8862cbc0-c1b4-4586-83b5-138cc427efb8\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-20T05:13:16.054524Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;7007caa2a0f24181a8024948c387ee8f&#34;,&#34;name&#34;:&#34;Darren Paletz&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/7007caa2a0f24181a8024948c387ee8f/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=024837e1-c7a9-4ffd-a243-03bb5ecfa37e\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-26T02:45:40.209352Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;97d910dabc2d4bd09b42396581a722d2&#34;,&#34;name&#34;:&#34;Jimmy Troy&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/97d910dabc2d4bd09b42396581a722d2/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=35100bcb-e47a-4fc0-8575-e0f4f867b539\u0026width=300&#34;}}] }">
+        <div id="message-container"
+             hx-trigger="show.bs.offcanvas once from:#offcanvas-chat"
+             hx-get="/l/71598b6952064ca4afe4baf437495604/chat/-/messages"
+             hx-indicator="#chat-loading-indicator"
+             hx-target="#messages"
+             hx-swap="innerHTML">
+            <div id="top-of-chat"></div>
+            <div id="messages" hx-on::after-settle="{
+                    if (event.detail.requestConfig.triggeringEvent && event.detail.requestConfig.triggeringEvent.type === 'messageSent') {
+                        // If this settle resulted from this user sending a message, scroll to bottom
+                        document.getElementById('bottom-of-chat').scrollIntoView(false);
+                    } else if (event.detail.pathInfo.requestPath.endsWith('messages') && event.detail.pathInfo.requestPath.indexOf('?lastId=') === -1) {
+                        // If this is the first successful message load, scroll to bottom
+                        document.getElementById('bottom-of-chat').scrollIntoView(false);
+                    }
+                }">
+                <div id="chat-loading-indicator" class="text-center">
+                    <div class="spinner-grow" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div id="bottom-of-chat"></div>
+            <div id="message-poller" hx-get="/l/71598b6952064ca4afe4baf437495604/chat/-/messages" hx-target="#messages" hx-swap="beforeend" hx-trigger="every 5s [document.getElementById('offcanvas-chat').classList.contains('show')]"></div>
+        </div>
+    </div>
+    
+    <div id="send-controls" class="sticky-bottom border-top pb-5 pb-sm-0"
+         x-data="{
+            mentioning: false,
+            mentioningStart: 0,
+            mentions: [],
+            members: [{&#34;created&#34;:&#34;2026-07-11T22:33:01.003753Z&#34;,&#34;isAdmin&#34;:true,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;2f0b5460e6ad4c9a9203f605c3ca0ad5&#34;,&#34;name&#34;:&#34;Mashew&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/2f0b5460e6ad4c9a9203f605c3ca0ad5/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=f4f347d7-49d5-4286-87cd-0e8288e87f08\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-11T23:20:49.639402Z&#34;,&#34;isAdmin&#34;:true,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;02b8d5a0363f474bae7230a9d12cd34e&#34;,&#34;name&#34;:&#34;Jonathan Black&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/02b8d5a0363f474bae7230a9d12cd34e/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=9d2053b8-7d57-4acb-a2f2-7ef2a5a11b42\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-11T23:24:00.532782Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;4a21ed3e261643088654ff2f906c3b7a&#34;,&#34;name&#34;:&#34;Shane Farkas&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/4a21ed3e261643088654ff2f906c3b7a/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=494a231f-c568-4e46-949c-c8b26bbe26d4\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-12T01:20:27.246381Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;cceba45dc2fe404693d8f58bb496882b&#34;,&#34;name&#34;:&#34;Clements&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/cceba45dc2fe404693d8f58bb496882b/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=bdcbe324-298e-4c48-adb5-b60fce2e97c7\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T01:29:06.346146Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;abf2c22836f14f1f887f753839331c49&#34;,&#34;name&#34;:&#34;djensen37&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/abf2c22836f14f1f887f753839331c49/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=4e92f5e1-e021-4137-80f8-be6177855a86\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T01:49:14.704464Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;52f8833c8da44d93b3476a9937f1ea4a&#34;,&#34;name&#34;:&#34;CJ Wookie&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/52f8833c8da44d93b3476a9937f1ea4a/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=d2b77382-c5f1-42ee-a39e-0b3856a6ec6f\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-14T04:42:06.115612Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;460d237b12ff453f95f8d6c11e56d7c4&#34;,&#34;name&#34;:&#34;Grant Koziol&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/460d237b12ff453f95f8d6c11e56d7c4/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=78b7ba23-5de7-474f-b684-7095a5a04162\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-15T04:02:48.7401Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;583049ce3b11466f94d937e933c49ae0&#34;,&#34;name&#34;:&#34;Steiny&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/583049ce3b11466f94d937e933c49ae0/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=8862cbc0-c1b4-4586-83b5-138cc427efb8\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-20T05:13:16.054524Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;7007caa2a0f24181a8024948c387ee8f&#34;,&#34;name&#34;:&#34;Darren Paletz&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/7007caa2a0f24181a8024948c387ee8f/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=024837e1-c7a9-4ffd-a243-03bb5ecfa37e\u0026width=300&#34;}},{&#34;created&#34;:&#34;2026-07-26T02:45:40.209352Z&#34;,&#34;isAdmin&#34;:false,&#34;isPlayer&#34;:true,&#34;user&#34;:{&#34;id&#34;:&#34;97d910dabc2d4bd09b42396581a722d2&#34;,&#34;name&#34;:&#34;Jimmy Troy&#34;,&#34;profileImage&#34;:&#34;https://musicleague-user-assets.b-cdn.net/users/97d910dabc2d4bd09b42396581a722d2/images/profile?aspect_ratio=1%3A1\u0026height=300\u0026optimizer=image\u0026quality=70\u0026v=35100bcb-e47a-4fc0-8575-e0f4f867b539\u0026width=300&#34;}}],
+            message: '',
+            get filteredMembers() {
+                const match = this.message.substr(this.mentioningStart + 1).toLowerCase();
+                return this.members.filter(m => m.user.name.toLowerCase().includes(match)).slice(0, 10);
+            },
+         }">
+        <template x-if="mentioning">
+            <div id="mentions" class="p-2 px-3">
+                <button class="btn position-absolute top-0 end-0 btn-link mt-2 me-2" @click="mentioning = false">
+                    <i class="bi bi-x-circle-fill text-body-tertiary flex-shrink-0 fs-6"></i>
+                </button>
+                <template x-for="member in filteredMembers">
+                    <div class="row align-items-center mt-2 gx-3 pointer"
+                         @click="mentions.push(member.user.id); message = message.substr(0, mentioningStart+1) + member.user.name + ' '; mentioning = false; document.getElementById('new-message').focus();">
+                        <div class="col-auto">
+                            <img :src="member.user.profileImage" alt="User avatar" class="rounded-circle" height="28">
+                        </div>
+                        <div class="col fw-semibold text-truncate text-turquoise" x-text="member.user.name"></div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        <div class="row">
+            <div class="col-12">
+                <form hx-post="/l/71598b6952064ca4afe4baf437495604/chat/-/messages" hx-swap="none" hx-on:message-sent="this.reset(); mentioning = false; mentions = [];">
+                    <div class="input-group p-2 pb-0">
+                        <input type="hidden" :value="mentions.join(',')" name="mentions">
+                        <textarea
+                                name="new-message"
+                                id="new-message"
+                                type="text"
+                                class="form-control"
+                                placeholder="Type message... (use @ to mention)"
+                                maxlength="1000"
+                                rows="1"
+                                x-model="message"
+                                x-on:keydown.stop="_ => {
+                                    if (event.key === '@') {
+                                        mentioning = true;
+                                        mentioningStart = message.length;
+                                    }
+                                    else if (mentioning && event.key === 'Escape') {
+                                        mentioning = false;
+                                    } else if (mentioning && event.key === 'Backspace' && message.length <= mentioningStart + 1) {
+                                        mentioning = false;
+                                    } else if (mentioning && event.key === ' ') {
+                                        mentioning = false;
+                                    }
+                                }"
+                                @input="_ => {
+                                    event.target.style.height = 'auto';
+                                    event.target.style.height = `${event.target.scrollHeight}px`;
+                                    if (!mentioning && message.length > 0 && message[event.target.selectionStart - 1] === '@') {
+                                        mentioning = true;
+                                        mentioningStart = event.target.selectionStart - 1;
+                                    }
+                                }"></textarea>
+                        <button type="submit" class="btn btn-text text-purple fw-semibold" style="border: 1px solid #9E00C4;" :disabled="message.length === 0" :class="{disabled: message.length === 0}">Send</button>
+                    </div>
+                    <span class="text-secondary ms-2"><span x-text="message.length"></span> / 1000</span>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    
+    const chatOffcanvas = document.getElementById('offcanvas-chat');
+    const bottomNav = document.querySelector('.fixed-bottom');
+
+    const hideBottomElements = function() {
+      
+      if (bottomNav) {
+        bottomNav.style.display = 'none';
+      }
+
+      
+      const adSelectors = [
+        '#nitro-anchor',
+        '#nitro-rail-left',
+        '#nitro-rail-right',
+        '[id^="nitro-ad-"]'
+      ];
+
+      adSelectors.forEach(selector => {
+        const ads = document.querySelectorAll(selector);
+        ads.forEach(ad => {
+          ad.style.setProperty('z-index', '0', 'important');
+        });
+      });
+    };
+
+    const showBottomElements = function() {
+      
+      if (bottomNav) {
+        bottomNav.style.display = '';
+      }
+
+      
+      const adSelectors = [
+        '#nitro-anchor',
+        '#nitro-rail-left',
+        '#nitro-rail-right',
+        '[id^="nitro-ad-"]'
+      ];
+
+      adSelectors.forEach(selector => {
+        const ads = document.querySelectorAll(selector);
+        ads.forEach(ad => {
+          ad.style.removeProperty('z-index');
+        });
+      });
+    };
+
+    const checkAndHideIfOpen = function() {
+      if (chatOffcanvas && chatOffcanvas.classList.contains('show')) {
+        hideBottomElements();
+      }
+    };
+
+    if (chatOffcanvas) {
+      
+      checkAndHideIfOpen();
+
+      
+      chatOffcanvas.addEventListener('show.bs.offcanvas', hideBottomElements);
+      chatOffcanvas.addEventListener('hide.bs.offcanvas', showBottomElements);
+    }
+
+    
+    document.body.addEventListener('htmx:afterSettle', checkAndHideIfOpen);
+  });
+</script>
+
+</div>
+
+<script type="text/javascript">
+    window.onload = function() {
+        const body = document.querySelector('body');
+        new bootstrap.Tooltip(body, {selector: '[data-bs-toggle="tooltip"]'});
+        
+        mlInitContentAds("vote");
+
+        htmx.on("submitted", e => {
+            Swal.mixin({
+                grow: 'row',
+                toast: true,
+                position: 'top',
+                iconColor: 'white',
+                customClass: {popup: 'toast text-bg-success'},
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).fire({icon: 'success', title: e.detail.value});
+        });
+    }
+</script>
+<script type="text/javascript">!function(e,t,n){function a(){var e=t.getElementsByTagName("script")[0],n=t.createElement("script");n.type="text/javascript",n.async=!0,n.src="https://beacon-v2.helpscout.net",e.parentNode.insertBefore(n,e)}if(e.Beacon=n=function(t,n,a){e.Beacon.readyQueue.push({method:t,options:n,data:a})},n.readyQueue=[],"complete"===t.readyState)return a();e.attachEvent?e.attachEvent("onload",a):e.addEventListener("load",a,!1)}(window,document,window.Beacon||function(){});</script>
+<script type="text/javascript">
+    window.Beacon('init', 'c91a8d73-f05b-4f0c-8784-580657395c7e');
+    window.Beacon('config', {
+        display: {
+            zIndex: 9999999,
+            style: 'manual'
+        }
+    });
+</script>
+
+    </div>
+    
+</div>
+</div>
+</body>
+</html>
