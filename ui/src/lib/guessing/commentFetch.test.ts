@@ -62,6 +62,33 @@ describe('applyComments', () => {
     expect(res.unmatched).toEqual([]);
   });
 
+  // DISCRIMINATING: nothing else seeds guess_round_state before the call, so a
+  // "simplification" of ensureState to INSERT OR REPLACE would pass the rest of
+  // the suite while resetting a live round mid-sitting — lockGut leaves the
+  // round at phase='fetch' immediately before this runs.
+  it('preserves a pre-existing guess_round_state row on both branches', () => {
+    for (const payload of [
+      { ok: true, songs: [] } as const,
+      { ok: false, error: 'boom' } as const,
+    ]) {
+      const { db } = seedRound({ songCount: 2 });
+      db.prepare(
+        `INSERT INTO guess_round_state
+           (round_id, phase, mode, as_of, gut_locked_at, updated_at)
+         VALUES (1, 'ai', 'rehearsal', '2026-08-01T12:00:00Z', '2026-08-01T13:00:00Z',
+                 '2026-08-01T13:00:00Z')`,
+      ).run();
+      applyComments(db, 1, payload, NOW);
+      const s = db.prepare(
+        'SELECT phase, mode, as_of, gut_locked_at FROM guess_round_state WHERE round_id = 1',
+      ).get() as { phase: string; mode: string; as_of: string | null; gut_locked_at: string | null };
+      expect(s.phase).toBe('ai');
+      expect(s.mode).toBe('rehearsal');
+      expect(s.as_of).toBe('2026-08-01T12:00:00Z');
+      expect(s.gut_locked_at).toBe('2026-08-01T13:00:00Z');
+    }
+  });
+
   it('stamps comments_fetched_at and clears any prior error on success', () => {
     const { db, songs } = seedRound({ songCount: 2 });
     applyComments(db, 1, { ok: false, error: 'boom' }, NOW);
