@@ -114,6 +114,37 @@ the home page (`ui/src/routes/+page.svelte:215`) and the round page
 `voting_lab_ballot` and `voting_lab_budget` become the workspace's ballot
 storage, with all existing rows intact.
 
+### 4a. Amendment (2026-08-31, Matt's call) — which embeds actually go
+
+§4 above says both `VotingLab` embeds are removed. That is now **half right**, and the
+difference matters enough to record rather than leave the plan to rediscover.
+
+**The round-page embed goes.** It is currently mounted unconditionally above the tab strip on
+every round page regardless of phase, and Matt does not want it always present. It moves into
+the workspace tab as the vote phase (§7.6).
+
+**The home-page embed stays.** It is not a duplicate of the round-page one: it is an
+`{#each votingLeagues}` loop rendering one Voting Lab per currently-voting league, each in its
+own collapsible panel — a cross-league "vote everywhere from one screen" surface. The
+workspace tab is per-round on a round page and cannot replace it, and nothing else in the app
+offers that view. Removing it would delete a real workflow with no substitute.
+
+**`is_mine` is a hard blocker on the transplant.** `VotingLabSongRow`'s "mine / not mine"
+toggle is the **only** code path in the entire repo that can set `voting_lab_ballot.is_mine = 1`
+— verified by searching both `ui/` and the bot side. `startRehearsal` touches the same table
+but structurally cannot set it (`INSERT OR IGNORE`, always 0, by §14.4's design).
+
+Without a marked own-song, the gut slate is **unsatisfiable**: a round with no ballot rows
+excludes nothing, so there are more songs than eligible players and each player may be used at
+most once (§6). This is not theoretical — Boarz R148 has 10 songs and 9 eligible players today.
+
+So the round-page embed must not be removed until the toggle exists inside the tab. Matt
+confirmed: "yes we need is mine".
+
+**Also not built, and needed if §7.6 is taken literally:** the vote-comment lock ("lock
+separately from guess comments"). Nothing in the current component locks anything — that is
+new construction, not a transplant.
+
 ## 5. Anonymity is structural, not enforced
 
 During live voting there is nothing to leak: upcoming rounds have **zero**
