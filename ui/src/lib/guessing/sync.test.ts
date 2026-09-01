@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { seedRound } from './fixtures.js';
 import { verifyRoundSync } from './sync.js';
 import { getRoundState } from './state.js';
+import { startRehearsal, archiveRehearsal } from './rehearsal.js';
 
 const ME = 1;
 
@@ -61,5 +62,45 @@ describe('sync verification', () => {
     storeComment(db, songs[1], players[1], 'jensen');
     const r = verifyRoundSync(db, roundId, ME, '2026-01-03T00:00:00Z');
     expect(r.state).toBe('unverified');
+  });
+});
+
+describe('sync is suppressed during a rehearsal (spec §14.6)', () => {
+  it('returns unverified and inspects nothing while mode is rehearsal', () => {
+    const { db, roundId, songs, players } = seedRound({ songCount: 3, playerCount: 3 });
+    db.prepare('UPDATE competitors SET name = ? WHERE id = ?').run('Jensen', players[1]);
+    storeComment(db, songs[1], players[1], 'has to be jensen');
+    postedVote(db, songs[1], 'changed my mind, steiny');
+
+    startRehearsal(db, roundId, '2026-01-02T00:00:00Z');
+
+    const r = verifyRoundSync(db, roundId, ME, '2026-01-03T00:00:00Z');
+    expect(r.state).toBe('unverified');
+    expect(r.songs).toEqual([]);
+  });
+
+  it('does not overwrite a previously recorded sync_state', () => {
+    const { db, roundId, songs, players } = seedRound({ songCount: 3, playerCount: 3 });
+    db.prepare('UPDATE competitors SET name = ? WHERE id = ?').run('Jensen', players[1]);
+    storeComment(db, songs[1], players[1], 'close enough for me jensen');
+    postedVote(db, songs[1], 'close enough for me jensen');
+
+    expect(verifyRoundSync(db, roundId, ME, '2026-01-03T00:00:00Z').state).toBe('ok');
+
+    startRehearsal(db, roundId, '2026-01-02T00:00:00Z');
+    verifyRoundSync(db, roundId, ME, '2026-01-04T00:00:00Z');
+
+    expect(getRoundState(db, roundId).syncState).toBe('ok');
+  });
+
+  it('resumes normally once the rehearsal is archived', () => {
+    const { db, roundId, songs, players } = seedRound({ songCount: 3, playerCount: 3 });
+    db.prepare('UPDATE competitors SET name = ? WHERE id = ?').run('Jensen', players[1]);
+    startRehearsal(db, roundId, '2026-01-02T00:00:00Z');
+    archiveRehearsal(db, roundId);
+
+    storeComment(db, songs[1], players[1], 'close enough for me jensen');
+    postedVote(db, songs[1], 'close enough for me jensen');
+    expect(verifyRoundSync(db, roundId, ME, '2026-01-05T00:00:00Z').state).toBe('ok');
   });
 });

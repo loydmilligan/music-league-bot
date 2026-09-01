@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { buildGuessMatcher, type GuessCandidate } from '../digest/guessResolver.js';
 import { eligiblePlayers } from './assignment.js';
+import { getRoundState } from './state.js';
 
 export interface SyncSongReport {
   spotifyUri: string;
@@ -30,6 +31,14 @@ export function verifyRoundSync(
   mePlayerId: number,
   now: string,
 ): SyncReport {
+  // Spec §14.6: never sync a round being rehearsed. The posted comment names
+  // Matt's PRIOR conclusion — not the answer, but enough to contaminate the
+  // experiment. Return the neutral state and write nothing, so an existing
+  // sync_state from a real sitting survives the rehearsal untouched.
+  if (getRoundState(db, roundId).mode === 'rehearsal') {
+    return { state: 'unverified', songs: [] };
+  }
+
   const pool = eligiblePlayers(db, roundId, mePlayerId);
   const candidates: GuessCandidate[] =
     pool.length === 0
