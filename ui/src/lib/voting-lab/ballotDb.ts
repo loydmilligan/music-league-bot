@@ -87,10 +87,17 @@ export function getBallot(db: Database.Database, roundId: number): BallotEntry[]
 }
 
 /**
- * The narrow, exclusive `is_mine` writer — the guess workspace's mark-first
- * control (spec §6, §4a). Deliberately NOT `saveBallotEntry`: that upserts all
- * seven ballot columns, so using it here would zero any points/notes/comment
- * already on the row.
+ * The ONLY writer of `is_mine` — the guess workspace's mark-first control
+ * (spec §6, §4a). `saveBallotEntry` deliberately does not touch the column, so
+ * the ballot client's whole-row upsert can never carry a stale flag back in.
+ *
+ * Marking a song also zeroes its `up_points`/`down_points`. This is inherited
+ * from the semantics of the control this replaced: the old Voting Lab toggle
+ * cleared points when marking, because a song marked as yours renders without
+ * steppers, `validateBallot` permanently rejects any points on it, and
+ * `computeUsage` would keep charging them against the budget with no UI left to
+ * reclaim them. The clear path does NOT restore or zero anything — unmarking
+ * only lifts the flag.
  *
  * Exclusive by construction: exactly one song per round may be the owner's, and
  * `assignment.ts:eligibleSongs` excludes every `is_mine=1` song — two marked
@@ -114,31 +121,44 @@ export function setIsMine(
     if (spotifyUri === null) return;
 
     db.prepare(
-      `INSERT INTO voting_lab_ballot (round_id, spotify_uri, is_mine, updated_at)
-       VALUES (?, ?, 1, ?)
+      `INSERT INTO voting_lab_ballot (round_id, spotify_uri, is_mine, up_points, down_points, updated_at)
+       VALUES (?, ?, 1, 0, 0, ?)
        ON CONFLICT(round_id, spotify_uri) DO UPDATE SET
          is_mine = 1,
+         up_points = 0,
+         down_points = 0,
          updated_at = excluded.updated_at`,
     ).run(roundId, spotifyUri, now);
   })();
 }
 
+/**
+ * Whole-row ballot upsert — every column EXCEPT `is_mine`, which only
+ * `setIsMine` writes.
+ *
+ * `entry.isMine` is accepted and ignored on purpose. The Voting Lab loads its
+ * ballot snapshot once at mount and re-sends the whole entry on every edit, so
+ * a stale flag rides along with every notes/points/rating change; honouring it
+ * would silently unmark the owner's song (making the guess slate unsatisfiable)
+ * or leave two songs marked (silently shrinking it), and would bypass the
+ * gut-lock gate on /api/guess/[roundId]/mine. The schema default
+ * (`is_mine INTEGER NOT NULL DEFAULT 0`) covers the insert case.
+ */
 export function saveBallotEntry(db: Database.Database, roundId: number, entry: BallotEntry): void {
   db.prepare(
     `INSERT INTO voting_lab_ballot
-       (round_id, spotify_uri, up_points, down_points, rating, notes, draft_comment, is_mine, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (round_id, spotify_uri, up_points, down_points, rating, notes, draft_comment, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(round_id, spotify_uri) DO UPDATE SET
        up_points = excluded.up_points,
        down_points = excluded.down_points,
        rating = excluded.rating,
        notes = excluded.notes,
        draft_comment = excluded.draft_comment,
-       is_mine = excluded.is_mine,
        updated_at = excluded.updated_at`,
   ).run(
     roundId, entry.spotifyUri, entry.upPoints, entry.downPoints,
-    entry.rating, entry.notes, entry.draftComment, entry.isMine ? 1 : 0,
+    entry.rating, entry.notes, entry.draftComment,
     new Date().toISOString(),
   );
 }

@@ -125,9 +125,11 @@
     </div>
 
     <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-      <!-- Read-only. is_mine has exactly one writer — the guess tab's mark-first
-           control (setIsMine, spec §6, exclusive per round). A second writer here
-           could mark two songs and silently shrink the guess slate. -->
+      <!-- Read-only. `setIsMine` (spec §6, exclusive per round) is the only
+           writer of is_mine: saveBallotEntry ignores the flag this row sends
+           back, and the guess tab's mark-first control is the only way to set
+           it. A second writer here could mark two songs and silently shrink the
+           guess slate. -->
       {#if row.ballot.isMine}
         <span class="font-mono text-[10px] uppercase tracking-wide text-fg-dim">your song</span>
       {:else}

@@ -11,6 +11,10 @@ const BallotEntrySchema = z.object({
   rating: z.number().int().min(1).max(5).nullable(),
   notes: z.string(),
   draftComment: z.string(),
+  // Accepted for wire compatibility with the existing client, which re-sends
+  // its whole mount-time entry on every edit — and IGNORED: `saveBallotEntry`
+  // does not write is_mine. Only /api/guess/[roundId]/mine (setIsMine) may,
+  // and only before the gut slate locks.
   isMine: z.boolean(),
 });
 

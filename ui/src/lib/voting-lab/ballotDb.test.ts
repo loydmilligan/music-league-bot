@@ -114,8 +114,36 @@ it('updates in place rather than duplicating', () => {
 
 it('round-trips is_mine as a boolean', () => {
   const db = freshDb();
-  saveBallotEntry(db, 100, { ...ENTRY, isMine: true, upPoints: 0 });
+  // setIsMine is the only writer of is_mine; saveBallotEntry no longer touches
+  // the column, so the mark has to come from there for getBallot to read it.
+  saveBallotEntry(db, 100, { ...ENTRY, upPoints: 0 });
+  setIsMine(db, 100, ENTRY.spotifyUri);
   expect(getBallot(db, 100)[0].isMine).toBe(true);
+  db.close();
+});
+
+// DISCRIMINATING: the ballot client re-sends the WHOLE entry on every edit from
+// a snapshot loaded at mount, so a stale `isMine: false` rides along with a real
+// notes edit. If saveBallotEntry still wrote the column, the mark would be
+// silently dropped here — shrinking/unbalancing the guess slate. The changed
+// `notes` proves the write actually happened and was not simply a no-op.
+it('ignores isMine — it cannot unmark a song marked by setIsMine', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, ENTRY);
+  setIsMine(db, 100, ENTRY.spotifyUri);
+  saveBallotEntry(db, 100, { ...ENTRY, isMine: false, notes: 'edited after marking' });
+  const [row] = getBallot(db, 100);
+  expect(row.isMine).toBe(true);
+  expect(row.notes).toBe('edited after marking');
+  db.close();
+});
+
+// DISCRIMINATING: an unmarked row must not be marked by a stale `isMine: true`
+// either — the exclusivity invariant only holds if setIsMine owns both edges.
+it('ignores isMine — it cannot mark a song either', () => {
+  const db = freshDb();
+  saveBallotEntry(db, 100, { ...ENTRY, isMine: true });
+  expect(getBallot(db, 100)[0].isMine).toBe(false);
   db.close();
 });
 
@@ -137,7 +165,8 @@ describe('setIsMine', () => {
   });
 
   // DISCRIMINATING: the row already has real values. A naive implementation
-  // that reuses saveBallotEntry's whole-row upsert would zero these.
+  // that reuses saveBallotEntry's whole-row upsert would zero these. Points are
+  // the deliberate exception — see the points test below.
   it('does not clobber the other columns of an existing row', () => {
     const db = freshDb();
     saveBallotEntry(db, 1, {
@@ -148,9 +177,44 @@ describe('setIsMine', () => {
     setIsMine(db, 1, 'spotify:track:a');
     const row = getBallot(db, 1)[0];
     expect(row).toMatchObject({
-      upPoints: 3, downPoints: 1, rating: 4,
-      notes: 'kept', draftComment: 'also kept', isMine: true,
+      rating: 4, notes: 'kept', draftComment: 'also kept', isMine: true,
     });
+  });
+
+  // DISCRIMINATING: points allocated BEFORE the mark are unreachable after it —
+  // the row renders as "your song" with no steppers, validateBallot permanently
+  // rejects the ballot, and computeUsage keeps charging them against the budget.
+  // The `rating`/`notes`/`draftComment` assertions keep this widening honest:
+  // zeroing points must not turn setIsMine into a whole-row upsert.
+  it('zeroes points on the marked row without touching notes, comment or rating', () => {
+    const db = freshDb();
+    saveBallotEntry(db, 1, {
+      spotifyUri: 'spotify:track:a',
+      upPoints: 3, downPoints: 1, rating: 4,
+      notes: 'kept', draftComment: 'also kept', isMine: false,
+    });
+    setIsMine(db, 1, 'spotify:track:a');
+    const row = getBallot(db, 1)[0];
+    expect(row.upPoints).toBe(0);
+    expect(row.downPoints).toBe(0);
+    expect(row).toMatchObject({
+      rating: 4, notes: 'kept', draftComment: 'also kept', isMine: true,
+    });
+  });
+
+  // DISCRIMINATING: only the MARK path zeroes points. Unmarking must leave the
+  // row alone apart from the flag, so a mis-mark costs nothing beyond the mark.
+  it('does not zero points on the clear path', () => {
+    const db = freshDb();
+    setIsMine(db, 1, 'spotify:track:a');
+    saveBallotEntry(db, 1, {
+      spotifyUri: 'spotify:track:b',
+      upPoints: 2, downPoints: 0, rating: null,
+      notes: '', draftComment: '', isMine: false,
+    });
+    setIsMine(db, 1, null);
+    const byUri = new Map(getBallot(db, 1).map((r) => [r.spotifyUri, r]));
+    expect(byUri.get('spotify:track:b')!.upPoints).toBe(2);
   });
 
   // DISCRIMINATING: 'a' is already mine, so an implementation that only sets
