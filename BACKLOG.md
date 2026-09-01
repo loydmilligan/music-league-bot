@@ -376,3 +376,13 @@ ntfy + WhatsApp shipped, merged 53e27f4).
   the approve endpoint's background-completion `.catch` (today it only marks the job
   failed + logs); consider a dedicated callback secret instead of reusing
   `NTFY_TOKEN` as the approve/deny Bearer.
+
+## musicleague CLI source is unversioned (noted 2026-09-01)
+
+`cli-web-musicleague`'s source lives at `musicleague/agent-harness/cli_web/musicleague`,
+is installed **editable** (edits take effect immediately), is the **only copy on disk**,
+and the whole `musicleague/` tree is gitignored (`.gitignore:37`) — so it has no history
+and no backup here. `musicleague/MUSICLEAGUE.md`, which spec §7.2 says Project B must
+extend, is untracked for the same reason. A `git clean -fdx` or a disk loss takes it.
+Deferred at Matt's call 2026-09-01 (note it, keep moving). Fix = scan for secrets, then
+un-ignore and commit the source + MUSICLEAGUE.md.
