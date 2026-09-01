@@ -6,7 +6,6 @@
   import HeadToHeadCard from '$lib/components/HeadToHeadCard.svelte';
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import HistoryView from '$lib/chat/history/HistoryView.svelte';
-  import VotingLab from '$lib/components/VotingLab.svelte';
   import GuessWorkspace from '$lib/components/GuessWorkspace.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
   import { invalidateAll } from '$app/navigation';
@@ -395,8 +394,6 @@
     </div>
   </div>
 </div>
-
-<VotingLab roundId={data.round.id} />
 
 <!-- Tab strip -->
 <div class="border-b border-border-muted mb-6">

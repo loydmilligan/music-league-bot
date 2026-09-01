@@ -1,6 +1,7 @@
 <!-- ui/src/lib/components/GuessWorkspace.svelte -->
 <script lang="ts">
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
+  import VotingLab from './VotingLab.svelte';
 
   let { roundId }: { roundId: number } = $props();
 
@@ -209,6 +210,13 @@
       {/if}
     {/if}
   </div>
+
+  <!-- spec §7.6: the transplanted Voting Lab is this workspace's vote phase.
+       Conditional mounting matches the guess tab's own pattern; the "Get take"
+       result survives the remount via takeCache. -->
+  {#if data.phase === 'vote'}
+    <VotingLab {roundId} />
+  {/if}
 
   {#if gutError}
     <p class="mb-4 font-mono text-sm text-red-400">{gutError}</p>
