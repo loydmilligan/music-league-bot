@@ -166,6 +166,10 @@
   // Default from the phase so this keeps working once something actually
   // advances it; today nothing writes 'vote' or 'refine' (lockGut sets
   // 'fetch'), so this resolves to 'refine' on every real round.
+  // svelte-ignore state_referenced_locally -- deliberately non-reactive: seeded once
+  // at mount from data.phase; must NOT re-derive on every load() (setMine, lockGutSlate,
+  // rehearsal start/stop and RefineBoard edits all reassign `data`), or the user's manual
+  // toggle choice would be silently overwritten on the next reload.
   let surface = $state<'refine' | 'vote'>(data?.phase === 'vote' ? 'vote' : 'refine');
 
   let mineBusy = $state(false);
