@@ -28,31 +28,50 @@
     return data?.roster.find((p) => p.id === playerId)?.name ?? `#${playerId}`;
   }
 
-  async function setGutPick(song: WorkspaceSong, playerId: number | null) {
-    if (playerId === null) {
-      // The blank placeholder option is always selectable, even after a real
-      // pick — selecting it must not silently desync the select from the
-      // server. There is no clear-pick endpoint (spec §7.1 treats the gut
-      // slate as something you commit to, not curate), so snap the select
-      // back to the true stored value rather than leaving a stale blank.
-      await load();
+  // A <select> is uncontrolled once the user edits it: `value={...}` only
+  // re-renders when that EXPRESSION's value changes, so any path that does
+  // NOT end with a changed gutPickPlayerId — the blank placeholder, a 409,
+  // any other non-ok response — leaves the DOM showing what the user picked
+  // instead of what the server holds. There is no way to "not really
+  // happen"; every one of those paths must explicitly restore the element to
+  // the true value, read from freshly-reloaded data rather than the `song`
+  // closure (which is a snapshot from before this edit and would go stale on
+  // any change made through another path while this one was in flight).
+  async function onPickChange(song: WorkspaceSong, evt: Event & { currentTarget: HTMLSelectElement }) {
+    const el = evt.currentTarget;
+    const raw = el.value;
+    const restoreFromFreshData = () => {
+      const fresh = data?.songs.find((s) => s.spotifyUri === song.spotifyUri);
+      el.value = String(fresh?.gutPickPlayerId ?? '');
+    };
+
+    if (raw === '') {
+      // The blank placeholder is hidden once a song has a real pick (see the
+      // template), so this should be unreachable in practice — restore
+      // directly, no server round trip needed since nothing was sent.
+      restoreFromFreshData();
       return;
     }
+
     gutError = null;
     const res = await fetch(`/api/guess/${roundId}/gut`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ spotifyUri: song.spotifyUri, playerId }),
+      body: JSON.stringify({ spotifyUri: song.spotifyUri, playerId: Number(raw) }),
     });
     if (!res.ok) {
       // spec §7.1: a 409 means the gut slate locked underneath us — that is
-      // information, not an error to hide or a select to silently revert.
-      // Reload afterward so the UI reflects the true (locked) server state
-      // instead of the optimistic edit the select just made.
+      // information, not an error to hide. Surface it, then restore the DOM
+      // to the true (rejected-write) value rather than leaving the select
+      // showing a pick that was never actually saved.
       const body = await res.json().catch(() => null) as { message?: string } | null;
       gutError = body?.message ?? `Failed to save pick (${res.status})`;
     }
     await load();
+    // Runs after the reload regardless of success/failure: on success this
+    // is a harmless no-op (the fresh value already matches what the select
+    // shows); on failure it is the only thing that fixes the DOM.
+    restoreFromFreshData();
   }
 
   async function lockGutSlate() {
@@ -196,10 +215,12 @@
         <select
           value={song.gutPickPlayerId ?? ''}
           disabled={data.gutLockedAt !== null}
-          onchange={(e) => setGutPick(song, e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+          onchange={(e) => onPickChange(song, e)}
           class="bg-bg border border-border-muted rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <option value="">— pick a player —</option>
+          {#if song.gutPickPlayerId === null}
+            <option value="">— pick a player —</option>
+          {/if}
           {#each data.roster as p (p.id)}
             <option value={p.id}>{p.name}</option>
           {/each}
