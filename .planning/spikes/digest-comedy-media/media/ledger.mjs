@@ -27,5 +27,9 @@ export function totals() {
 		byTool[r.tool] ??= { cost: 0, n: 0 };
 		byTool[r.tool].cost += r.cost; byTool[r.tool].n++;
 	}
-	return { total: rows.reduce((a, r) => a + r.cost, 0), n: rows.length, byTool };
+	const last = rows.length ? rows[rows.length - 1] : null;
+	return {
+		total: rows.reduce((a, r) => a + r.cost, 0), n: rows.length, byTool,
+		last: last ? { cost: last.cost, tool: last.tool, ts: last.ts } : null,
+	};
 }

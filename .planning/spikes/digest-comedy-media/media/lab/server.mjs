@@ -24,6 +24,10 @@ import { totals } from '../ledger.mjs';
 // /say spends money, so only do that on a network you trust.
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = +(process.env.PORT || 7788);
+// Hard spend ceiling for the whole spike. Enforced here rather than by greying
+// the button, because a disabled button stops nobody — not another tab, not a
+// second phone, not curl.
+const CAP = +(process.env.CAP || 3);
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.dirname(HERE);
@@ -85,13 +89,24 @@ http.createServer(async (req, res) => {
 	// only what this tool has spent. The key's overall balance is deliberately
 	// not served — nothing renders it, and this listens on the LAN.
 	if (req.method === 'GET' && url.pathname === '/cost') {
+		const t = totals();
 		res.writeHead(200, { 'content-type': 'application/json' });
-		return res.end(JSON.stringify({ spike: { total: totals().total } }));
+		return res.end(JSON.stringify({
+			spike: { total: t.total, last: t.last?.cost ?? null },
+			cap: CAP, remaining: Math.max(0, CAP - t.total), capped: t.total >= CAP,
+		}));
 	}
 
 	// fresh TTS take, so you can audition new copy without leaving the lab
 	if (req.method === 'POST' && url.pathname === '/say') {
 		const b = json(await body(req));
+		const spent = totals().total;
+		if (spent >= CAP) {
+			res.writeHead(402, { 'content-type': 'application/json' });
+			return res.end(JSON.stringify({
+				error: `Spend cap reached — $${spent.toFixed(2)} of $${CAP.toFixed(2)}. ` +
+					`Raise it with CAP=<n> when starting the server.`, capped: true }));
+		}
 		const key = crypto.createHash('sha1')
 			.update(b.text + (b.voice || '') + (b.style || '')).digest('hex').slice(0, 12);
 		const out = path.join(CACHE, `say-${key}.mp3`);

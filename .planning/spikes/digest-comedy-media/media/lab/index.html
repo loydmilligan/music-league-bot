@@ -116,8 +116,9 @@
   <div class="panel">
     <div class="step"><div class="num">4</div><h2>New words</h2>
       <span class="tag pay">costs money</span></div>
-    <p class="stepsub">The only paid step. A take is ~$0.002–0.02 depending on length, and
-      it's cached by text+voice — re-rendering the same words is free after the first time.</p>
+    <p class="stepsub">The only paid step. <b>The new take comes back through your current
+      settings</b> — the dials on the left are applied to it automatically, and they also
+      steer how the model performs it in the first place. ~$0.002–0.02 a take, cached.</p>
     <label>Text</label>
     <textarea id="text">Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you think about it for longer than a minute.</textarea>
     <label style="margin-top:10px">Voice</label>
@@ -137,7 +138,9 @@
     <div class="step"><div class="num">$</div><h2>Lifetime cost</h2></div>
     <p class="stepsub">Refreshes after every paid call.</p>
     <div class="big" id="spikeTotal">—</div>
-    <div class="hint">spent by this tool, all time</div>
+    <div class="hint">spent by this tool, all time · cap <span id="capLbl">$3.00</span></div>
+    <div class="stat" id="lastCost" style="margin-top:9px"></div>
+    <div class="stat" id="capWarn" style="margin-top:6px"></div>
   </div>
 
 </div>
@@ -260,23 +263,50 @@ async function render(){
 document.getElementById('go').onclick=render;
 document.getElementById('src').onchange=()=>{curSrc=null;};
 
+const BASE_STYLE='A dumb-guy cartoon impression of a pompous man: heavy Butthead from Beavis and Butt-Head, crossed with Comic Book Guy from The Simpsons and a touch of Sheldon. Low, flat, nasal, adenoidal, congested. Very little pitch movement. Big vocabulary delivered by someone who sounds slow and very pleased with himself.';
+
+// The dials also steer the *raw* take. Every unit of correction applied
+// afterwards is a unit of artifact, so it's better for the model to arrive
+// close than to be dragged there by rubberband.
+function styleFor(){
+  const b=[BASE_STYLE];
+  if(state.artic<0.92) b.push('Speak slowly and deliberately, drawing each word out.');
+  else if(state.artic>1.08) b.push('Speak briskly, clipping the words short.');
+  if(state.pause>1.3) b.push('Leave long dead pauses between phrases.');
+  else if(state.pause<0.8) b.push('Run the phrases together with almost no pause.');
+  if(state.nasal>5) b.push('Extremely nasal and adenoidal, as though the nose is blocked.');
+  if(state.formant>1.05) b.push('Tight, small, cartoonish resonance.');
+  else if(state.formant<0.95) b.push('Deep, chesty, big-throated resonance.');
+  if(state.targethz&&state.targethz<110) b.push('Pitch the voice low.');
+  return b.join(' ');
+}
+
 document.getElementById('say').onclick=async()=>{
   const b=document.getElementById('say'); b.disabled=true;
   document.getElementById('saystat').textContent='synthesising… (this is the paid step)';
   const r=await fetch('/say',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({text:document.getElementById('text').value,
       voice:document.getElementById('voice').value,
-      style:"A dumb-guy cartoon impression of a pompous man: heavy Butthead from Beavis and Butt-Head, crossed with Comic Book Guy from The Simpsons and a touch of Sheldon. Low, flat, nasal, adenoidal, congested. Very little pitch movement. Big vocabulary delivered by someone who sounds slow and very pleased with himself."})});
+      style:styleFor()})});
   const j=await r.json(); b.disabled=false;
+  if(r.status===402){ document.getElementById('saystat').textContent=j.error; loadCost(); return; }
   if(j.error){document.getElementById('saystat').textContent=j.error.slice(0,200);return;}
   curSrc=j.src;
-  document.getElementById('saystat').textContent='loaded as source — now tune it in step 3, free';
+  document.getElementById('saystat').textContent='rendered with your current settings — keep tuning in step 3, free';
   loadCost(); render();
 };
 
 async function loadCost(){
   const c=await (await fetch('/cost')).json();
   document.getElementById('spikeTotal').textContent='$'+c.spike.total.toFixed(2);
+  document.getElementById('capLbl').textContent='$'+c.cap.toFixed(2);
+  document.getElementById('lastCost').innerHTML = c.spike.last!=null
+    ? `most recent call: <b>$${c.spike.last.toFixed(4)}</b>` : '';
+  const btn=document.getElementById('say');
+  btn.disabled = c.capped;
+  document.getElementById('capWarn').innerHTML = c.capped
+    ? `<span style="color:var(--pay)">Cap reached — synthesis is off.</span>`
+    : `<span style="color:var(--quote)">$${c.remaining.toFixed(2)} left</span> before the cap stops it`;
 }
 loadCost(); sync();
 </script>
