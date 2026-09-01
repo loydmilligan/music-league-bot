@@ -7,6 +7,7 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import HistoryView from '$lib/chat/history/HistoryView.svelte';
   import VotingLab from '$lib/components/VotingLab.svelte';
+  import GuessWorkspace from '$lib/components/GuessWorkspace.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
   import { invalidateAll } from '$app/navigation';
 
@@ -139,7 +140,7 @@
   }
   // --------------------------------------------------------------------------
 
-  let tab = $state<'ml' | 'chat' | 'history' | 'research' | 'h2h'>('ml');
+  let tab = $state<'ml' | 'chat' | 'history' | 'research' | 'h2h' | 'guess'>('ml');
   let ytmMode = $state(false);
 
   // h2h state — fetched lazily when the tab is first activated, and
@@ -322,13 +323,17 @@
     [...data.mlSubmissions].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))[0]
   );
 
-  const tabs: { key: 'ml' | 'chat' | 'history' | 'research' | 'h2h'; label: string; count: number }[] = $derived([
+  const tabs: { key: 'ml' | 'chat' | 'history' | 'research' | 'h2h' | 'guess'; label: string; count: number }[] = $derived([
     { key: 'ml',      label: 'ML Playlist',   count: data.mlSubmissions.length },
     { key: 'chat',    label: 'Chat Songs',     count: data.chatMentions.length },
     { key: 'history', label: 'Chat History',   count: data.roundMessageCount },
     { key: 'research', label: 'Research',      count: data.research.length },
     { key: 'h2h',    label: 'Head-to-Head',   count: h2hState?.candidates.length ?? 0 },
+    { key: 'guess',  label: 'Guess',          count: data.mlSubmissions.length },
   ]);
+
+  // spec §4: the Guess tab is disabled until the round's playlist exists.
+  const guessTabDisabled = $derived(data.mlSubmissions.length === 0);
 </script>
 
 <svelte:head><title>{data.round.name} · music-league-bot</title></svelte:head>
@@ -399,6 +404,7 @@
     {#each tabs as t}
       <button
         type="button"
+        disabled={t.key === 'guess' && guessTabDisabled}
         onclick={() => (tab = t.key)}
         class="font-mono text-sm uppercase tracking-wider py-3 -mb-px border-b-2 transition-colors flex items-center gap-2"
         class:border-accent={tab === t.key}
@@ -407,6 +413,8 @@
         class:border-transparent={tab !== t.key}
         class:text-fg-muted={tab !== t.key}
         class:hover:text-fg={tab !== t.key}
+        class:opacity-50={t.key === 'guess' && guessTabDisabled}
+        class:cursor-not-allowed={t.key === 'guess' && guessTabDisabled}
       >
         <span>{t.label}</span>
         {#if t.count > 0}
@@ -791,6 +799,10 @@
       {/if}
     {/if}
   {/if}
+{/if}
+
+{#if tab === 'guess'}
+  <GuessWorkspace roundId={data.round.id} />
 {/if}
 
 <svelte:window onkeydown={onKeydown} />
