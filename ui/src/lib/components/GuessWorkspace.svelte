@@ -2,6 +2,7 @@
 <script lang="ts">
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
   import VotingLab from './VotingLab.svelte';
+  import RefineBoard from './RefineBoard.svelte';
 
   let { roundId }: { roundId: number } = $props();
 
@@ -134,6 +135,15 @@
     }
   }
 
+  // spec §7.4a correction 1: the refine layer is gated on the gut LOCK as well
+  // as the phase, never on the phase alone — nothing in this repo ever writes
+  // phase = 'refine' (lockGut sets 'fetch'), so a phase-only gate would render
+  // on no real round at all. The same mistake shipped dead code on the vote
+  // layer above. Locking the gut slate is the reachable event that starts
+  // refine; the `phase === 'refine'` arm keeps working if a later project
+  // builds the intermediate phase machine.
+  const refining = $derived(data !== null && (data.gutLockedAt !== null || data.phase === 'refine'));
+
   let mineBusy = $state(false);
 
   /**
@@ -265,6 +275,13 @@
     {/if}
   </div>
 
+  <!-- spec §7.4a: refine REPLACES the gut slate rather than stacking beneath
+       it — once the slate is locked the <ol> and its lock button are inert, so
+       they come down and the board takes the space. The phase eyebrow, the
+       rehearsal banner and the marked-song banner stay. -->
+  {#if refining}
+    <RefineBoard {data} {roundId} onchanged={load} />
+  {:else}
   <button
     type="button"
     disabled={!data.validation.ok || data.gutLockedAt !== null || locking}
@@ -300,6 +317,7 @@
       </li>
     {/each}
   </ol>
+  {/if}
 {:else}
   <p class="font-mono text-sm text-fg-muted">Loading…</p>
 {/if}
