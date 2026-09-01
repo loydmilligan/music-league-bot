@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { sortCandidates, findConflicts, rollup, commitmentElsewhere, ledgerEntry } from './board.js';
+import {
+  sortCandidates,
+  findConflicts,
+  rollup,
+  commitmentElsewhere,
+  ledgerEntry,
+  changedAvailability,
+} from './board.js';
 import type { Candidate } from './candidates.js';
 
 const c = (playerId: number, status: Candidate['status'], certainty: number | null): Candidate =>
@@ -164,5 +171,48 @@ describe('ledgerEntry', () => {
   it('is free for a player with no candidate rows at all', () => {
     const data = mkA([{ uri: 'a', cands: [] }], {});
     expect(ledgerEntry(data, 7)).toEqual({ kind: 'free', at: null });
+  });
+});
+
+describe('changedAvailability', () => {
+  // DISCRIMINATING: player 1 moves free -> taken while player 2 stays 'dimmed'
+  // and player 3 stays 'free'. An implementation returning every id in `after`,
+  // or every id in either map, returns [1,2,3] and fails. Returning [] fails too.
+  it('reports only the ids whose availability genuinely changed', () => {
+    expect(
+      changedAvailability(
+        { 1: 'free', 2: 'dimmed', 3: 'free' },
+        { 1: 'taken', 2: 'dimmed', 3: 'free' },
+      ),
+    ).toEqual([1]);
+  });
+
+  // DISCRIMINATING both ways: a dimmed -> taken PROMOTION counts (the ledger
+  // row and the row tag both change), and an unchanged 'taken' does not — so
+  // "any non-free value" or "compare truthiness" both fail.
+  it('counts a promotion between two non-free states, and only that one', () => {
+    expect(
+      changedAvailability({ 4: 'dimmed', 5: 'taken' }, { 4: 'taken', 5: 'taken' }),
+    ).toEqual([4]);
+  });
+
+  it('is empty for identical maps', () => {
+    expect(changedAvailability({ 1: 'free', 2: 'taken' }, { 1: 'free', 2: 'taken' })).toEqual([]);
+  });
+
+  // Chosen behaviour for an id present in one map only: the missing side reads
+  // as 'free', matching `data.availability[id] ?? 'free'` everywhere else in
+  // this module. So 7 (absent -> free) is NOT a change, 8 (absent -> taken) IS,
+  // and 9 (dimmed -> absent) IS.
+  it('treats an id missing from either side as free', () => {
+    expect(changedAvailability({ 9: 'dimmed' }, { 7: 'free', 8: 'taken' })).toEqual([8, 9]);
+  });
+
+  it('returns ascending ids and mutates neither argument', () => {
+    const before = { 30: 'free', 4: 'free' } as const;
+    const after = { 30: 'taken', 4: 'taken' } as const;
+    expect(changedAvailability({ ...before }, { ...after })).toEqual([4, 30]);
+    expect(before).toEqual({ 30: 'free', 4: 'free' });
+    expect(after).toEqual({ 30: 'taken', 4: 'taken' });
   });
 });

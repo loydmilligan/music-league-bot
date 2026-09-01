@@ -17,8 +17,14 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
-  import type { Candidate, CandidateStatus, CandidatePatch } from '$lib/guessing/candidates.js';
-  import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
+  import type { Availability, Candidate, CandidateStatus, CandidatePatch } from '$lib/guessing/candidates.js';
+  import {
+    sortCandidates,
+    findConflicts,
+    rollup,
+    commitmentElsewhere,
+    changedAvailability,
+  } from '$lib/guessing/board.js';
   import CandidateRow from './CandidateRow.svelte';
   import RosterStrip from './RosterStrip.svelte';
   import AvailabilityLedger from './AvailabilityLedger.svelte';
@@ -320,6 +326,58 @@
     return sortCandidates(keys).map((k) => live.get(k.playerId) as Candidate);
   }
 
+  // ===== the propagation flash ==========================================
+  //
+  // "This moment is the point of the whole board — do not ship it as a silent
+  // swap" (README §"Availability propagation"). Availability is server-derived
+  // and re-read on every status write, and `load()` REPLACES the whole payload,
+  // so the only way to know what actually moved is to keep the previous verdict
+  // and diff it — hence changedAvailability(), which is pure and tested.
+
+  const FLASH_MS = 700;
+  /** A little past the animation so the node is gone once it has played. */
+  const FLASH_CLEAR_MS = FLASH_MS + 200;
+
+  let prevAvailability: Record<number, Availability> | null = null;
+  let prevRoundId: number | null = null;
+  let flashIds = $state<ReadonlySet<number>>(new Set());
+  /**
+   * Bumped on every flash. Rows key their tint element on it, so a SECOND lock
+   * of the same player builds a brand-new node: a CSS animation does not
+   * restart on a class that is already present, and re-adding the same class
+   * in the same frame is a no-op. A fresh element always plays.
+   */
+  let flashEpoch = $state(0);
+  let flashTimer: ReturnType<typeof setTimeout> | undefined;
+
+  $effect(() => {
+    const rid = roundId;
+    // Spread inside the tracked scope so every key is a dependency.
+    const snapshot: Record<number, Availability> = { ...data.availability };
+    untrack(() => {
+      // First payload, or a different round: nothing to compare against —
+      // otherwise every id would read as "changed" and the whole board would
+      // flash on arrival, which says nothing.
+      const before = prevRoundId === rid ? prevAvailability : null;
+      prevRoundId = rid;
+      prevAvailability = snapshot;
+      if (before === null) return;
+
+      const changed = changedAvailability(before, snapshot);
+      if (changed.length === 0) return;
+
+      flashIds = new Set(changed);
+      flashEpoch += 1;
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => (flashIds = new Set()), FLASH_CLEAR_MS);
+    });
+  });
+
+  $effect(() => () => clearTimeout(flashTimer));
+
+  /** 0 = no flash; otherwise the epoch, which is what the row keys on. */
+  const flashFor = (playerId: number) => (flashIds.has(playerId) ? flashEpoch : 0);
+
   const conflicts = $derived(findConflicts(data));
   const summary = $derived(rollup(data));
 
@@ -399,6 +457,7 @@
               candidate={c}
               name={nameFor(c.playerId)}
               availability={commitmentElsewhere(data, c.playerId, song.spotifyUri)}
+              flash={flashFor(c.playerId)}
               error={saveErrors[keyOf(song.spotifyUri, c.playerId)] ?? null}
               onedit={(patch) => queueEdit(song, c, patch)}
               oncycle={(next) => cycleStatus(song, c, next)}
@@ -422,5 +481,5 @@
   </div>
 
   <!-- ===== LEDGER ===== -->
-  <AvailabilityLedger {data} />
+  <AvailabilityLedger {data} {flashIds} {flashEpoch} />
 </div>

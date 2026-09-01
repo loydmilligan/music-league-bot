@@ -1,4 +1,4 @@
-import type { Candidate, CandidateStatus } from './candidates.js';
+import type { Availability, Candidate, CandidateStatus } from './candidates.js';
 import type { WorkspaceData } from './workspaceData.js';
 
 const STATUS_ORDER: Record<CandidateStatus, number> = {
@@ -156,4 +156,35 @@ export function rollup(data: WorkspaceData): { text: string; tone: 'progress' | 
     text: `${lockedCount} of ${total} locked${noCandidatePart}`,
     tone: 'progress',
   };
+}
+
+/**
+ * Which players' availability actually CHANGED between two server verdicts.
+ *
+ * The propagation flash (README §"Availability propagation") is only honest if
+ * it marks the rows that genuinely moved: a reload replaces the whole payload,
+ * so "every id in the new map" or "every id in either map" would flash the
+ * entire board on every write and say nothing.
+ *
+ * An id present in one map and absent from the other is compared as 'free' on
+ * the missing side — the same `?? 'free'` reading the rest of this module and
+ * the components already use for `data.availability`. So a player who appears
+ * in the payload for the first time as 'free' has not changed, while one who
+ * appears as 'taken' has.
+ *
+ * Returns ascending ids; pure, mutates neither argument.
+ */
+export function changedAvailability(
+  before: Record<number, Availability>,
+  after: Record<number, Availability>,
+): number[] {
+  const ids = new Set<number>();
+  for (const k of Object.keys(before)) ids.add(Number(k));
+  for (const k of Object.keys(after)) ids.add(Number(k));
+
+  const changed: number[] = [];
+  for (const id of ids) {
+    if ((before[id] ?? 'free') !== (after[id] ?? 'free')) changed.push(id);
+  }
+  return changed.sort((a, b) => a - b);
 }

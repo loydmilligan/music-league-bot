@@ -26,6 +26,7 @@
     candidate,
     name,
     availability,
+    flash = 0,
     error = null,
     onedit,
     oncycle,
@@ -38,6 +39,12 @@
     name: string;
     /** Where this player is committed on ANOTHER song, from `commitmentElsewhere`. */
     availability: { kind: 'dimmed' | 'taken'; at: number } | null;
+    /**
+     * The propagation flash. 0 = none; any other value is the board's flash
+     * epoch, and CHANGING it re-fires the tint. The parent owns the diff
+     * (changedAvailability) — this row only plays what it is told to play.
+     */
+    flash?: number;
     /** The rejected-write message for this row, or null. Owned by the parent. */
     error?: string | null;
     /** Debounced field edit (certainty / factors / notes). */
@@ -168,6 +175,11 @@
 </script>
 
 <div class="flex flex-col">
+  <!-- The resting row gets its own positioning context so the propagation
+       flash can sit OUTSIDE the row's `opacity-45`/`opacity-75` — a taken row
+       is exactly the row a lock just changed, and inheriting 45% would fade
+       the flash out on the one row that most needs to show it. -->
+  <div class="relative">
   <!-- ===== resting row ===== -->
   <div
     role="button"
@@ -244,6 +256,17 @@
       <span class="model-dash h-1 w-5 rounded-full"></span>
       <span class="font-mono text-[11px] text-border">—</span>
     </span>
+  </div>
+
+    <!-- Propagation flash. Keyed on the epoch so a repeated lock builds a NEW
+         element — a CSS animation does not restart on a class that is already
+         present, so re-applying it would silently do nothing the second time.
+         Purely decorative and inert: no pointer events, aria-hidden. -->
+    {#key flash}
+      {#if flash > 0}
+        <span class="prop-flash pointer-events-none absolute inset-0" aria-hidden="true"></span>
+      {/if}
+    {/key}
   </div>
 
   <!-- ===== expanded editor — in place, no modal, scroll kept (README §4) ===== -->
@@ -347,5 +370,29 @@
      the reserved model slot's placeholder bar. */
   .model-dash {
     background: repeating-linear-gradient(90deg, var(--color-border-muted) 0 3px, transparent 3px 6px);
+  }
+
+  /* One-shot ~700ms accent tint — README §"Availability propagation". A single
+     keyframe, no animation library (none exists in this repo). */
+  .prop-flash {
+    background: var(--color-accent);
+    opacity: 0;
+    animation: prop-flash 700ms ease-out;
+  }
+
+  @keyframes prop-flash {
+    0% { opacity: 0; }
+    16% { opacity: 0.32; }
+    100% { opacity: 0; }
+  }
+
+  /* Reduced motion still has to SHOW the consequence — degrading to nothing
+     defeats the point. No animation; a flat tint that the parent's clear timer
+     removes ~900ms later. */
+  @media (prefers-reduced-motion: reduce) {
+    .prop-flash {
+      animation: none;
+      opacity: 0.2;
+    }
   }
 </style>

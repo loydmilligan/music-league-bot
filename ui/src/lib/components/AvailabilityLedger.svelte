@@ -21,7 +21,17 @@
   import type { WorkspaceData } from '$lib/guessing/workspaceData.js';
   import { ledgerEntry } from '$lib/guessing/board.js';
 
-  let { data }: { data: WorkspaceData } = $props();
+  let {
+    data,
+    flashIds = new Set<number>(),
+    flashEpoch = 0,
+  }: {
+    data: WorkspaceData;
+    /** Players whose availability just changed — the propagation flash (Task 8). */
+    flashIds?: ReadonlySet<number>;
+    /** Bumped per flash; keying on it is what makes a repeat flash re-fire. */
+    flashEpoch?: number;
+  } = $props();
 
   const rows = $derived(
     data.roster
@@ -72,9 +82,18 @@
   <!-- one row per eligible player -->
   <div class="flex flex-col">
     {#each rows as r (r.id)}
+      {@const flash = flashIds.has(r.id) ? flashEpoch : 0}
       <div
-        class="flex items-center gap-2 border-l-2 {RAIL[r.entry.kind]} px-3 py-[7px]"
+        class="relative flex items-center gap-2 border-l-2 {RAIL[r.entry.kind]} px-3 py-[7px]"
       >
+        <!-- Propagation flash — same mechanic as CandidateRow: keyed on the
+             epoch so a repeat lock builds a new node and the animation
+             actually re-fires. -->
+        {#key flash}
+          {#if flash > 0}
+            <span class="prop-flash pointer-events-none absolute inset-0" aria-hidden="true"></span>
+          {/if}
+        {/key}
         <span
           class="min-w-0 flex-1 truncate text-[13px]
                  {r.entry.kind === 'taken'
@@ -99,3 +118,28 @@
     <span class="pt-1 opacity-70">model % · reserved · Project D</span>
   </div>
 </div>
+
+<style>
+  /* One-shot ~700ms accent tint — README §"Availability propagation". A single
+     keyframe, no animation library. Duplicated from CandidateRow.svelte rather
+     than shared: Svelte scopes component styles, and the alternative is a
+     global rule, which this codebase does not use for component visuals. */
+  .prop-flash {
+    background: var(--color-accent);
+    opacity: 0;
+    animation: prop-flash 700ms ease-out;
+  }
+
+  @keyframes prop-flash {
+    0% { opacity: 0; }
+    16% { opacity: 0.32; }
+    100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prop-flash {
+      animation: none;
+      opacity: 0.2;
+    }
+  }
+</style>
