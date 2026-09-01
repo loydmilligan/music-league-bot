@@ -523,6 +523,49 @@ git commit -m "feat(guessing): availability propagation flash — make the lock 
 
 ---
 
+### Task 9: The `refine · vote` toggle — resolve the gate collision
+
+**Why this exists (added 2026-09-01, Matt deferred to my recommendation):** C2b gated the Voting Lab on `gutLockedAt !== null || phase === 'vote'`, and this plan gave the refine board the same shape. Both conditions are true at once, so **after the gut slate locks, the Voting Lab and the refine board both render, stacked**. Task 8's browser pass confirmed the practical cost: the propagation moment — the point of the whole board — sits a long scroll below the vote UI.
+
+**Rejected alternatives, recorded so they aren't re-proposed.** *Stacking* (the status quo) buries the board. *Refine suppresses vote until refining is done* is conceptually right — the spec's order is refine then vote — but the only "done" signal is `slate_locked_at`, which **nothing writes**; gating on it would make the Voting Lab unreachable again, which is exactly the bug C2b's Task 8 existed to fix.
+
+**Files:**
+- Modify: `ui/src/lib/components/GuessWorkspace.svelte`
+
+**Interfaces:** consumes `data.phase` and `data.gutLockedAt`. Produces no new module.
+
+- [ ] **Step 1: Add the toggle**
+
+A small segmented control at the top of the workspace, inside the `refining` branch, above both surfaces. Two buttons, `refine` and `vote`, in the app's mono chrome idiom (`font-mono text-xs tracking-widest uppercase`), styled like the round page's tab strip: active gets `text-accent` with an accent bottom-border, inactive `text-fg-muted hover:text-fg`. Local `$state`, no persistence.
+
+**Default to `refine`**, and derive that default from the phase rather than hardcoding it, so it degrades correctly when a phase machine eventually lands:
+
+```ts
+  // Default from the phase so this keeps working once something actually
+  // advances it; today nothing writes 'vote' or 'refine' (lockGut sets
+  // 'fetch'), so this resolves to 'refine' on every real round.
+  let surface = $state<'refine' | 'vote'>(data?.phase === 'vote' ? 'vote' : 'refine');
+```
+
+- [ ] **Step 2: Gate both surfaces on it**
+
+`<RefineBoard>` renders when `refining && surface === 'refine'`; `<VotingLab>` when `refining && surface === 'vote'`. **Do not change either component**, and do not alter the `refining` condition itself — only which of the two it shows.
+
+⚠️ **`RefineBoard` unmounting must not drop queued edits.** It owns a 400ms debounce and exposes `flush()`. Switching to `vote` unmounts it — confirm its unmount `$effect` cleanup fires `flushPendingSaves()`, and if the switch is a plain `{#if}` swap, verify by typing in a notes field and switching within 400ms that the edit still lands.
+
+- [ ] **Step 3: Type-check and browser check**
+
+`npm run check` — delta 0 against 13/96/37. Then the production-build recipe against a **copy** of `data/league.db` with a locked gut slate; start the server with `run_in_background: true` so `TaskStop` works. Verify: the toggle renders above both; `refine` is the default; switching shows exactly one surface at a time; switching back to `refine` preserves the board's state (it re-reads from the server); and the debounce check in Step 2.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add ui/src/lib/components/GuessWorkspace.svelte
+git commit -m "feat(guessing): refine · vote toggle, so the two surfaces stop stacking"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:** §7.4a's six decisions map to Tasks 4 (board, roll-up), 5 (state chip, density, rejected write), 6 (roster strip), 7 (ledger), 8 (propagation); D3's three-signal availability appears in 5, 6 and 7 and must stay consistent across all three. The §13 resolutions — gut pick shown non-editable (Task 4), free-text factors (Task 5), no skip state (Task 4's empty line), refine replaces gut (Task 4 Step 2), row ordering (Task 3) — are each owned by a task. §5 anonymity is untouched: nothing here reads `competitor_id`. §6's "duplicates legal until submit" is honoured by Task 3's non-blocking rollup and Task 2's absent gut-lock gate.
