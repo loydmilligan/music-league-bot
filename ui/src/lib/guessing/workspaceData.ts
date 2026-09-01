@@ -12,6 +12,7 @@ export interface WorkspaceSong {
   gutPickPlayerId: number | null;
 }
 export interface WorkspacePlayer { id: number; name: string }
+export interface WorkspaceMine { spotifyUri: string; title: string; artists: string }
 export interface WorkspaceData {
   roundId: number;
   phase: GuessPhase;
@@ -21,6 +22,7 @@ export interface WorkspaceData {
   songs: WorkspaceSong[];
   roster: WorkspacePlayer[];
   validation: Validation;
+  mine: WorkspaceMine | null;
 }
 
 /**
@@ -64,6 +66,17 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
           )
           .all(...ids) as WorkspacePlayer[]);
 
+  // The marked song is excluded from `songs` by eligibleSongs, so it must be
+  // surfaced separately or there is no way to unmark it (spec §6).
+  const mine = (db.prepare(
+    `SELECT s.spotify_uri AS spotifyUri, s.title, s.artists
+       FROM voting_lab_ballot b
+       JOIN ml_submissions s
+         ON s.round_id = b.round_id AND s.spotify_uri = b.spotify_uri
+      WHERE b.round_id = ? AND b.is_mine = 1
+      LIMIT 1`,
+  ).get(roundId) ?? null) as WorkspaceMine | null;
+
   return {
     roundId,
     phase: state.phase,
@@ -73,5 +86,6 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
     songs,
     roster,
     validation: validateGutSlate(db, roundId, me),
+    mine,
   };
 }

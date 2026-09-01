@@ -64,3 +64,25 @@ describe('workspace payload', () => {
     expect(w.songs.find((s) => s.spotifyUri === songs[2])!.comment).toBeNull();
   });
 });
+
+describe('WorkspaceData.mine', () => {
+  it('is null when no song is marked', () => {
+    const { db } = seedRound({ songCount: 4, playerCount: 4, mineIndex: null });
+    setMeCompetitorId(db, 'boarz-ii-men', 1);
+    expect(buildWorkspaceData(db, 1)!.mine).toBeNull();
+  });
+
+  // DISCRIMINATING: asserts BOTH that the marked song is reported in `mine`
+  // AND that it is absent from `songs`. An implementation that just appends
+  // the marked song back into `songs` would fail the second assertion.
+  it('reports the marked song, and that song is not in the slate', () => {
+    const { db, songs } = seedRound({ songCount: 4, playerCount: 4, mineIndex: 2 });
+    setMeCompetitorId(db, 'boarz-ii-men', 1);
+    const data = buildWorkspaceData(db, 1)!;
+    expect(data.mine).toEqual({
+      spotifyUri: songs[2], title: 'Song 2', artists: 'Artist 2',
+    });
+    expect(data.songs.map((s) => s.spotifyUri)).not.toContain(songs[2]);
+    expect(data.songs).toHaveLength(3);
+  });
+});
