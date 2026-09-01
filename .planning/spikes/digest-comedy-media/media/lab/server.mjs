@@ -17,7 +17,13 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
 import { totals } from '../ledger.mjs';
+
+// HOST=0.0.0.0 puts it on the LAN — handy for listening on a phone. Note that
+// /say spends money, so only do that on a network you trust.
+const HOST = process.env.HOST || '127.0.0.1';
+const PORT = +(process.env.PORT || 7788);
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.dirname(HERE);
@@ -51,7 +57,18 @@ const json = s => { try { return JSON.parse(s); } catch { return {}; } };
 http.createServer(async (req, res) => {
 	const url = new URL(req.url, 'http://x');
 
+	// /m is the phone build; / stays the desktop one, untouched. Phones that hit
+	// / get redirected once so a bookmark keeps working.
+	if (req.method === 'GET' && (url.pathname === '/m' || url.pathname === '/mobile')) {
+		res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+		return res.end(fs.readFileSync(path.join(HERE, 'mobile.html')));
+	}
+
 	if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
+		const ua = req.headers['user-agent'] || '';
+		if (/Android|iPhone|iPod|Mobile/i.test(ua) && !url.searchParams.has('desktop')) {
+			res.writeHead(302, { location: '/m' }); return res.end();
+		}
 		res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
 		return res.end(fs.readFileSync(path.join(HERE, 'index.html')));
 	}
@@ -130,4 +147,13 @@ http.createServer(async (req, res) => {
 	}
 
 	res.writeHead(404); res.end('nope');
-}).listen(7788, () => console.log('voice lab → http://localhost:7788'));
+}).listen(PORT, HOST, () => {
+	console.log(`voice lab → http://localhost:${PORT}`);
+	if (HOST === '0.0.0.0') {
+		for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
+			for (const a of addrs || []) {
+				if (a.family === 'IPv4' && !a.internal) console.log(`         → http://${a.address}:${PORT}  (${name})`);
+			}
+		}
+	}
+});

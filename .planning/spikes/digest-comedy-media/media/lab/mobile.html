@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12100f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Voice Lab</title>
+<style>
+  :root{--bg:#12100f;--panel:#1b1817;--edge:#2e2a28;--ink:#ece6df;
+        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8;--pay:#d3706a;
+        --bar:112px}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:17px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+       padding:0 0 calc(var(--bar) + env(safe-area-inset-bottom));
+       -webkit-text-size-adjust:100%}
+  /* four sizes: .85 / 1 / 1.25 / 1.6rem */
+  h1{font-size:1.6rem;margin:0;letter-spacing:-.02em}
+  .sub,.hint,.help,.tag,.stat,.mono{font-size:.85rem}
+  header{padding:16px 16px 12px;border-bottom:1px solid var(--edge);
+         position:sticky;top:0;background:#12100fef;backdrop-filter:blur(8px);z-index:9}
+  .sub{color:var(--dim);margin-top:3px}
+  section{border-bottom:1px solid var(--edge)}
+  .head{display:flex;align-items:center;gap:11px;padding:15px 16px;cursor:pointer;
+        user-select:none}
+  .num{width:27px;height:27px;flex:0 0 27px;border-radius:50%;background:var(--hot);
+       color:#1a1512;font-weight:750;font-size:.85rem;display:grid;place-items:center}
+  .head h2{font-size:1.25rem;margin:0;flex:1;font-weight:650}
+  .tag{border:1px solid var(--edge);border-radius:999px;padding:2px 9px;color:var(--dim);
+       font-weight:600;white-space:nowrap}
+  .tag.free{border-color:#2e6b4f;color:var(--quote)}
+  .tag.pay{border-color:var(--pay);color:var(--pay)}
+  .chev{color:var(--dim);transition:transform .18s;font-size:1rem}
+  section.open .chev{transform:rotate(90deg)}
+  .body{display:none;padding:0 16px 18px}
+  section.open .body{display:block}
+  .hint{color:#6f6862;margin:10px 0 0}
+
+  select,textarea{width:100%;background:#100e0d;border:1px solid var(--edge);border-radius:9px;
+    color:var(--ink);padding:13px 11px;font:inherit;font-size:1rem;appearance:none}
+  textarea{min-height:96px;resize:vertical;font-size:.95rem}
+
+  .presets{display:flex;gap:9px;overflow-x:auto;padding:2px 16px 4px;margin:0 -16px;
+           scrollbar-width:none}
+  .presets::-webkit-scrollbar{display:none}
+  .presets button{flex:0 0 auto}
+
+  button{background:#211d1c;border:1px solid var(--edge);color:var(--ink);border-radius:10px;
+         padding:12px 16px;font:inherit;font-size:.95rem;cursor:pointer;min-height:46px}
+  button.on{background:var(--hot);border-color:var(--hot);color:#1a1512;font-weight:700}
+  button.money{background:#2a1a19;border-color:var(--pay);color:#f0b3ae;font-weight:650;width:100%}
+  button:disabled{opacity:.5}
+
+  .knob{padding:15px 0;border-top:1px solid #241f1e}
+  .knob:first-child{border-top:0}
+  .krow{display:flex;align-items:baseline;gap:9px;margin-bottom:9px}
+  .kname{font-weight:650;flex:1}
+  .val{color:var(--hot);font-weight:750;font-variant-numeric:tabular-nums;font-size:1.25rem}
+  .q{width:30px;height:30px;flex:0 0 30px;border-radius:50%;border:1px solid var(--edge);
+     color:var(--dim);display:grid;place-items:center;font-size:.85rem}
+  .q.on{border-color:var(--hot);color:var(--hot)}
+  /* chunky enough to drag with a thumb */
+  input[type=range]{width:100%;height:34px;background:transparent;appearance:none;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:7px;border-radius:4px;background:#332e2c}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:30px;height:30px;margin-top:-12px;
+    border-radius:50%;background:var(--hot);border:3px solid #12100f;box-shadow:0 2px 8px #0009}
+  input[type=range]::-moz-range-track{height:7px;border-radius:4px;background:#332e2c}
+  input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;
+    background:var(--hot);border:3px solid #12100f}
+  .help{display:none;color:var(--dim);background:#161312;border:1px solid var(--edge);
+        border-radius:9px;padding:11px 12px;margin-top:11px}
+  .help.on{display:block}
+  .help b{color:var(--ink)}
+  .help .when{color:var(--quote);display:block;margin-top:7px}
+
+  .costrow{display:flex;justify-content:space-between;padding:7px 0;
+           border-top:1px solid var(--edge);color:var(--dim)}
+  .costrow b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .big{font-size:1.6rem;font-weight:750;color:var(--hot);font-variant-numeric:tabular-nums}
+  .mono{color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.7}
+  .mono b{color:var(--quote)}
+
+  /* everything you need mid-tweak lives in thumb reach */
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#0d0b0af2;
+        border-top:1px solid var(--edge);backdrop-filter:blur(10px);z-index:10;
+        padding:9px 14px calc(9px + env(safe-area-inset-bottom))}
+  .dock audio{width:100%;height:38px;display:block}
+  .dock .r{display:flex;gap:9px;align-items:center;margin-top:8px}
+  .dock .r button{flex:1;background:var(--hot);border:0;color:#1a1512;font-weight:750}
+  .dock .r button.sec{flex:0 0 92px;background:#211d1c;border:1px solid var(--edge);
+                      color:var(--ink);font-weight:500}
+  #busy{color:var(--dim);font-size:.85rem;min-width:62px;text-align:right}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Voice Lab</h1>
+  <div class="sub">word speed and gap length are separate dials</div>
+</header>
+
+<section id="s1" class="open">
+  <div class="head"><div class="num">1</div><h2>Source</h2>
+    <span class="tag free">free</span><span class="chev">›</span></div>
+  <div class="body">
+    <select id="src"></select>
+    <div class="hint">The <b>ref-</b> clips are the real human impressions — load one to hear
+      the target you're aiming at.</div>
+  </div>
+</section>
+
+<section id="s2" class="open">
+  <div class="head"><div class="num">2</div><h2>Preset</h2>
+    <span class="tag free">free</span><span class="chev">›</span></div>
+  <div class="body"><div class="presets" id="presets"></div></div>
+</section>
+
+<section id="s3" class="open">
+  <div class="head"><div class="num">3</div><h2>Adjust</h2>
+    <span class="tag free">free</span><span class="chev">›</span></div>
+  <div class="body">
+    <div class="hint" style="margin:0 0 6px">Unlimited — these renders are local and cost
+      nothing. Tap <b>?</b> for what a dial does and when to reach for it.</div>
+    <div id="knobs"></div>
+    <div class="mono" id="stats" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<section id="s4">
+  <div class="head"><div class="num">4</div><h2>New words</h2>
+    <span class="tag pay">costs money</span><span class="chev">›</span></div>
+  <div class="body">
+    <div class="hint" style="margin:0 0 11px">The only paid step — about $0.002–0.02 a take,
+      cached by text + voice.</div>
+    <textarea id="text">Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you think about it for longer than a minute.</textarea>
+    <select id="voice" style="margin-top:11px">
+      <option>verse</option><option>ash</option><option>echo</option><option>ballad</option>
+      <option>alloy</option><option>coral</option><option>sage</option><option>shimmer</option>
+    </select>
+    <div style="margin-top:11px"><button class="money" id="say">$ Synthesise</button></div>
+    <div class="mono" id="saystat" style="margin-top:9px"></div>
+    <div class="hint"><b>verse</b> is the house voice — 119 Hz on a neutral read, closest to
+      the real impressions.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <div class="head"><div class="num">$</div><h2>Lifetime cost</h2><span class="chev">›</span></div>
+  <div class="body">
+    <div class="big" id="spikeTotal">—</div>
+    <div class="hint" style="margin:0 0 10px">spent by this spike, all time</div>
+    <div id="costRows"></div>
+    <div class="mono" id="acct" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<div class="dock">
+  <audio id="out" controls preload="none" playsinline></audio>
+  <div class="r">
+    <button id="go">Render</button>
+    <button class="sec" id="reset">Reset</button>
+    <span id="busy"></span>
+  </div>
+</div>
+
+<script>
+const KNOBS = [
+  ['artic','Word speed',0.5,1.6,0.01,1,
+   '<b>Retimes the words only.</b> The silence between them is untouched, so the rhythm survives.',
+   'Use if individual words sound sped up or slurred but the pacing between phrases is already right. Below 1 = slower and more laboured.'],
+  ['pause','Gap length',0,3,0.05,1,
+   '<b>Stretches or squeezes the silences.</b> The words are not retimed at all.',
+   'Use if the words sound right but the delivery feels rushed. Lower it if it drags.'],
+  ['gapmax','Gap cap (s)',0,2,0.05,0,
+   '<b>Ceiling on any single silence</b>, applied after Gap length. 0 = off.',
+   'Use if one pause has gone comically long while the rest are fine.'],
+  ['targethz','Target pitch (Hz)',0,200,1,108,
+   '<b>Solves the pitch shift for you</b> — measures what came out and moves it onto this note. Formants held, so no chipmunk.',
+   'Leave at 108 for this character. That sits between Matt at 117.6 and Conor at 121.8, and matches the take he liked.'],
+  ['pitch','Pitch ratio',0.6,1.6,0.01,1,
+   '<b>Manual multiplier</b>, ignored unless Target pitch is 0.',
+   'Use for a relative nudge — one line higher than the rest of a scene.'],
+  ['formant','Formant / head size',0.7,1.4,0.01,1,
+   '<b>Changes the size of the throat, not the note.</b> Pitch stays put; the resonance moves.',
+   'Use if the pitch is right but it sounds like the wrong body. Below 1 = bigger and chestier. Above 1 = smaller, tighter, more cartoonish.'],
+  ['nasal','Nasality (dB)',-8,14,0.5,0,
+   '<b>Boosts ~2.1 kHz, scoops ~480 Hz</b> — the signature of a blocked nose.',
+   'Use if it sounds too smooth or announcer-like and you want adenoidal. This is the main Butthead dial.'],
+  ['muffle','Muffle (Hz)',0,8000,100,0,
+   '<b>Lowpass filter.</b> 0 = off.',
+   'Use if it sounds too crisp for a cartoon dope. ~5000 reads congested; below 3000 sounds like a phone call.'],
+  ['drive','Compression',1,8,0.1,1,
+   '<b>Squashes the dynamic range.</b>',
+   'Use if the delivery sounds relaxed and you want strained and pressed. Also rescues lost word-endings.'],
+];
+const DEF = Object.fromEntries(KNOBS.map(k=>[k[0],k[5]]));
+const PRESETS = {
+  'Passthrough': {},
+  'Butthead-heavy': {artic:0.88,pause:1.35,targethz:104,formant:1.12,nasal:7,muffle:5200,drive:2.2},
+  'Comic Book Guy': {artic:0.95,pause:1.1,targethz:112,formant:0.94,nasal:3,drive:1.6},
+  'Sheldon-ish': {artic:1.12,pause:0.8,targethz:118,formant:1.06,nasal:5},
+  'Slow + deadpan': {artic:0.8,pause:1.9,gapmax:1.2,targethz:106,nasal:4},
+};
+let state={...DEF}, curSrc=null, curPreset=null;
+
+document.querySelectorAll('.head').forEach(h=>
+  h.onclick=()=>h.parentElement.classList.toggle('open'));
+
+document.getElementById('knobs').innerHTML = KNOBS.map(([id,lab,min,max,step,def,what,when])=>`
+  <div class="knob">
+    <div class="krow"><span class="kname">${lab}</span>
+      <span class="val" id="v-${id}">${def}</span>
+      <span class="q" data-h="${id}">?</span></div>
+    <input type="range" id="k-${id}" min="${min}" max="${max}" step="${step}" value="${def}">
+    <div class="help" id="h-${id}">${what}<span class="when">${when}</span></div>
+  </div>`).join('');
+
+document.getElementById('knobs').addEventListener('click',e=>{
+  const q=e.target.closest('.q'); if(!q) return;
+  document.getElementById('h-'+q.dataset.h).classList.toggle('on');
+  q.classList.toggle('on');
+});
+let debounce;
+for(const [id] of KNOBS){
+  const el=document.getElementById('k-'+id);
+  el.addEventListener('input',e=>{
+    state[id]=+e.target.value;
+    document.getElementById('v-'+id).textContent=e.target.value;
+  });
+  // re-render on release, not while dragging
+  el.addEventListener('change',()=>{clearTimeout(debounce);debounce=setTimeout(render,120);});
+}
+function sync(){
+  for(const [id] of KNOBS){
+    document.getElementById('k-'+id).value=state[id];
+    document.getElementById('v-'+id).textContent=state[id];
+  }
+}
+function payload(){
+  const p={};
+  for(const [id,,,,,def] of KNOBS) if(state[id]!==def) p[id]=state[id];
+  if(state.targethz>0) p.targethz=state.targethz;
+  return p;
+}
+
+document.getElementById('presets').innerHTML =
+  Object.keys(PRESETS).map(n=>`<button data-p="${n}">${n}</button>`).join('');
+document.getElementById('presets').onclick=e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  curPreset=b.dataset.p;
+  document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));
+  state={...DEF,...PRESETS[curPreset]}; sync(); render();
+};
+document.getElementById('reset').onclick=()=>{
+  state={...DEF}; curPreset=null;
+  document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));
+  sync(); render();
+};
+
+let SRC_WORDS={};
+fetch('/sources').then(r=>r.json()).then(map=>{
+  SRC_WORDS=Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v[1]]));
+  document.getElementById('src').innerHTML=Object.keys(map).map(s=>`<option>${s}</option>`).join('');
+});
+const words=()=> curSrc
+  ? document.getElementById('text').value.trim().split(/\s+/).length
+  : (SRC_WORDS[document.getElementById('src').value]||0);
+
+async function render(){
+  const btn=document.getElementById('go'); btn.disabled=true;
+  document.getElementById('busy').textContent='…';
+  try{
+    const r=await fetch('/render',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({src:curSrc||document.getElementById('src').value,
+        params:payload(),words:words()})});
+    if(!r.ok){document.getElementById('busy').textContent='err';
+      document.getElementById('stats').textContent=(await r.text()).slice(0,200);return;}
+    const st=JSON.parse(r.headers.get('x-stats')||'{}');
+    const a=document.getElementById('out');
+    a.src=URL.createObjectURL(await r.blob());
+    a.play().catch(()=>{});           // iOS may block until one manual tap
+    document.getElementById('stats').innerHTML=
+      `<b>${st.out_f0} Hz</b> · <b>${st.out_dur}s</b>`+(st.out_wps?` · <b>${st.out_wps} w/s</b>`:'')+
+      `<br>gaps ${st.gap_pct}% · words ×${st.artic} · gaps ×${st.pause} · pitch ×${st.pitch}`;
+    document.getElementById('busy').textContent='';
+  } finally{ btn.disabled=false; }
+}
+document.getElementById('go').onclick=render;
+document.getElementById('src').onchange=()=>{curSrc=null;render();};
+
+document.getElementById('say').onclick=async()=>{
+  const b=document.getElementById('say'); b.disabled=true;
+  document.getElementById('saystat').textContent='synthesising — this is the paid step…';
+  const r=await fetch('/say',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({text:document.getElementById('text').value,
+      voice:document.getElementById('voice').value,
+      style:"A dumb-guy cartoon impression of a pompous man: heavy Butthead from Beavis and Butt-Head, crossed with Comic Book Guy from The Simpsons and a touch of Sheldon. Low, flat, nasal, adenoidal, congested. Very little pitch movement. Big vocabulary delivered by someone who sounds slow and very pleased with himself."})});
+  const j=await r.json(); b.disabled=false;
+  if(j.error){document.getElementById('saystat').textContent=j.error.slice(0,160);return;}
+  curSrc=j.src;
+  document.getElementById('saystat').textContent='loaded — tune it in step 3, free';
+  loadCost(); render();
+};
+
+async function loadCost(){
+  const c=await (await fetch('/cost')).json();
+  document.getElementById('spikeTotal').textContent='$'+c.spike.total.toFixed(2);
+  const label={say:'voices (TTS)',draw:'images',film:'video'};
+  document.getElementById('costRows').innerHTML=Object.entries(c.spike.byTool)
+    .sort((a,b)=>b[1].cost-a[1].cost)
+    .map(([k,v])=>`<div class="costrow"><span>${label[k]||k} · ${v.n} calls</span>
+      <b>$${v.cost.toFixed(2)}</b></div>`).join('')
+    +`<div class="costrow"><span>local renders</span><b style="color:var(--quote)">$0.00</b></div>`;
+  if(c.account) document.getElementById('acct').innerHTML=
+    `whole key, all projects: <b>$${c.account.used.toFixed(2)}</b> of $${c.account.credits} —
+     <b>$${(c.account.credits-c.account.used).toFixed(2)}</b> left`;
+}
+loadCost(); sync();
+</script>
+</body></html>
