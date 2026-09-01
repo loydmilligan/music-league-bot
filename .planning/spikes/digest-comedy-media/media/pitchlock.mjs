@@ -12,8 +12,9 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
-const [inp, outp, tgt = '118'] = process.argv.slice(2);
-if (!inp || !outp) { console.error('usage: pitchlock.mjs <in> <out> [hz]'); process.exit(1); }
+const [inp, outp, tgt = '108'] = process.argv.slice(2);
+if (!inp || !outp) { console.error('usage: pitchlock.mjs <in> <out> [hz] [--wps N --words N]'); process.exit(1); }
+const a = (n,d)=>{const i=process.argv.indexOf('--'+n); return i<0?d:process.argv[i+1];};
 
 const tmp = '/tmp/_pl.wav';
 execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', inp, '-ar', '24000', '-ac', '1', tmp]);
@@ -37,8 +38,25 @@ if (!cur) { console.error('no pitch detected'); process.exit(1); }
 
 const r = +tgt / cur;
 const SR = 24000;
-execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', tmp, '-af',
-	`asetrate=${Math.round(SR * r)},aresample=${SR},atempo=${(1 / r).toFixed(4)}`,
+
+// Cadence is the other half. The model's pace swings between 1.6 and 3.5 words
+// per second on the same settings, so it gets measured and corrected too rather
+// than requested. asetrate changes pitch AND speed; the atempo after it pulls
+// speed back to wherever we actually want it, independent of pitch.
+const dur = +execFileSync('ffprobe', ['-v','error','-show_entries','format=duration',
+	'-of','default=nw=1:nk=1', tmp]).toString().trim();
+const words = +a('words', 0), wps = +a('wps', 0);
+let speed = 1;
+if (words && wps) {
+	speed = (words / dur) > 0 ? wps / (words / dur) : 1;
+	speed = Math.max(0.5, Math.min(2.0, speed));
+}
+const af = [`asetrate=${Math.round(SR * r)}`, `aresample=${SR}`,
+	`atempo=${(speed / r).toFixed(4)}`];
+execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', tmp, '-af', af.join(','),
 	...(outp.endsWith('.mp3') ? ['-c:a', 'libmp3lame', '-q:a', '5'] : []), outp]);
 fs.unlinkSync(tmp);
-console.log(`${outp}  ${cur.toFixed(1)}Hz → ${tgt}Hz  (x${r.toFixed(3)})`);
+const nd = +execFileSync('ffprobe', ['-v','error','-show_entries','format=duration',
+	'-of','default=nw=1:nk=1', outp]).toString().trim();
+console.log(`${outp}  ${cur.toFixed(1)}→${tgt}Hz (x${r.toFixed(3)})` +
+	(words&&wps ? `  ${(words/dur).toFixed(2)}→${(words/nd).toFixed(2)} w/s (x${speed.toFixed(3)})` : ''));
