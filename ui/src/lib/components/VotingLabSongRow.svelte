@@ -18,6 +18,9 @@
     flushSaves: () => Promise<void>;
   } = $props();
 
+  // svelte-ignore state_referenced_locally -- deliberately non-reactive: this row is
+  // destroyed and recreated whenever its `{#each ... (row.song.submissionId)}` key
+  // changes (VotingLab.svelte:254), so a fresh seed from the cache happens naturally.
   let take = $state<VotingTakeOutput | null>(getCachedTake(roundId, row.song.spotifyUri));
   let takeLoading = $state(false);
   let takeError = $state<string | null>(null);
