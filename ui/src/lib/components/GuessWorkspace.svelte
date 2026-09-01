@@ -10,6 +10,18 @@
   let configured = $state(true);
   let loadError = $state<string | null>(null);
 
+  /**
+   * The mounted refine board, for its flush handle (SearchBar.svelte's
+   * `export function` + `bind:this` idiom). The board debounces candidate
+   * edits by 400ms; the rehearsal controls below are reachable the entire time
+   * it is mounted, and BOTH of them must serialize behind that debounce.
+   * archiveRehearsal is the serious one — it deletes every guess for the
+   * round, and a PATCH still sitting behind the debounce would land after the
+   * delete and re-create the row via setCandidate's INSERT OR IGNORE. Same
+   * class of bug as commit ad6a37f's serialize-before-delete.
+   */
+  let refineBoard = $state<{ flush: () => Promise<void> } | null>(null);
+
   let gutError = $state<string | null>(null);
   let locking = $state(false);
   let rehearsalBusy = $state(false);
@@ -105,6 +117,9 @@
   async function startRehearsal() {
     rehearsalBusy = true;
     try {
+      // Before the request, not merely before the reload: this changes the
+      // round's mode underneath any queued candidate edit.
+      await refineBoard?.flush();
       const res = await fetch(`/api/guess/${roundId}/rehearsal`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -123,6 +138,10 @@
   async function archiveRehearsal() {
     rehearsalBusy = true;
     try {
+      // MUST be before the DELETE, not just before the reload: awaiting the
+      // flush is what guarantees the queued PATCH lands first and is then
+      // deleted, instead of landing afterwards and resurrecting the row.
+      await refineBoard?.flush();
       const res = await fetch(`/api/guess/${roundId}/rehearsal`, { method: 'DELETE' });
       if (!res.ok) {
         const body = await res.json().catch(() => null) as { message?: string } | null;
@@ -263,7 +282,7 @@
        they come down and the board takes the space. The phase eyebrow, the
        rehearsal banner and the marked-song banner stay. -->
   {#if refining}
-    <RefineBoard {data} {roundId} onchanged={load} />
+    <RefineBoard bind:this={refineBoard} {data} {roundId} onchanged={load} />
   {:else}
     <!-- Validation summary — belongs to the gut slate, so it hides with it.
          lockGutSlate is gated on validation.ok, so once the slate is locked

@@ -19,15 +19,8 @@
   a prop it never reads is the same lie as a button that does nothing.
 -->
 <script lang="ts">
-  import type { Candidate, CandidateStatus } from '$lib/guessing/candidates.js';
-
-  /** The subset of a candidate this row can edit — mirrors the route's schema. */
-  type CandidatePatch = {
-    status?: CandidateStatus;
-    certainty?: number | null;
-    factors?: string;
-    notes?: string;
-  };
+  import { tick } from 'svelte';
+  import type { Candidate, CandidateStatus, CandidatePatch } from '$lib/guessing/candidates.js';
 
   let {
     candidate,
@@ -38,6 +31,7 @@
     oncycle,
     onremove,
     onretry,
+    onsettle,
   }: {
     candidate: Candidate;
     /** Display name — the roster lookup lives in the parent. */
@@ -52,6 +46,8 @@
     oncycle: (next: CandidateStatus) => Promise<void>;
     onremove: () => Promise<void>;
     onretry: () => void;
+    /** Fired when the editor closes — the parent's cue to re-settle row order. */
+    onsettle: () => void;
   } = $props();
 
   const STATUS_CHIP: Record<
@@ -108,24 +104,52 @@
         : chip.rail,
   );
 
+  let chipEl = $state<HTMLButtonElement | null>(null);
+
   async function cycle(evt: MouseEvent) {
     // Cycling must never expand the row — the chip is inside the row's own
     // click target (README §3).
     evt.stopPropagation();
     if (cycling) return;
+    // `disabled` blurs a focused element, so a keyboard user cycling the chip
+    // is dumped on <body> after one press and has to tab all the way back for
+    // the next. Restore focus afterwards — but only if the chip actually held
+    // it, so a mouse cycle never steals focus from somewhere else.
+    const hadFocus = document.activeElement === chipEl;
     cycling = true;
     try {
       await oncycle(NEXT_STATUS[candidate.status]);
     } finally {
       cycling = false;
+      // tick() is load-bearing: `cycling = false` does not clear the DOM's
+      // `disabled` until Svelte flushes, and focus() on a still-disabled
+      // button is silently a no-op.
+      if (hadFocus) {
+        await tick();
+        chipEl?.focus();
+      }
     }
   }
 
   function toggle() {
     expanded = !expanded;
+    // Collapsing is the "done editing this row" signal: safe to let the board
+    // re-sort now, which it deliberately does not do while you drag certainty.
+    if (!expanded) onsettle();
   }
 
+  /**
+   * Enter/Space toggles the editor — but ONLY when the row itself has focus.
+   *
+   * The chip is a descendant of this handler's element, so a keyboard
+   * activation of the chip bubbles its keydown up here too. Without this
+   * guard, Space on the chip would be preventDefault()ed and swallowed into
+   * "expand the row" — the chip would be mouse-cyclable but not
+   * keyboard-cyclable, which no mouse-driven browser pass can see. The chip's
+   * own click handler still stops the CLICK; this stops the KEYDOWN.
+   */
   function onRowKey(evt: KeyboardEvent) {
+    if (evt.target !== evt.currentTarget) return;
     if (evt.key === 'Enter' || evt.key === ' ') {
       evt.preventDefault();
       toggle();
@@ -174,6 +198,7 @@
          Fires immediately (the one write on this surface that is not
          debounced): it has grid-wide consequences that must not lag. -->
     <button
+      bind:this={chipEl}
       type="button"
       disabled={cycling}
       onclick={cycle}

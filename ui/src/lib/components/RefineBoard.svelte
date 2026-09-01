@@ -15,8 +15,9 @@
   prototype's inline styles or its .dc.html runtime are ported.
 -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
-  import type { Candidate, CandidateStatus } from '$lib/guessing/candidates.js';
+  import type { Candidate, CandidateStatus, CandidatePatch } from '$lib/guessing/candidates.js';
   import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
   import CandidateRow from './CandidateRow.svelte';
 
@@ -42,12 +43,6 @@
   // because a row sends partial patches (`{notes}` then `{certainty}`) rather
   // than a whole ballot, and a naive replace would drop the earlier field.
 
-  type CandidatePatch = {
-    status?: CandidateStatus;
-    certainty?: number | null;
-    factors?: string;
-    notes?: string;
-  };
   type PendingSave = { timer: ReturnType<typeof setTimeout>; fire: () => Promise<void> };
 
   /** One timer per (song, player) — editing one row never resets another's. */
@@ -86,7 +81,13 @@
     patch: CandidatePatch,
   ): Promise<boolean> {
     const k = keyOf(spotifyUri, playerId);
-    retryFns.set(k, () => sendPatch(targetRoundId, spotifyUri, playerId, patch));
+    // Registered BEFORE the request so a failure always leaves a working
+    // `retry now`. A recovered STATUS write must still reload: availability
+    // and the ledger are server-derived, and the first-try path reloads too.
+    retryFns.set(k, async () => {
+      const ok = await sendPatch(targetRoundId, spotifyUri, playerId, patch);
+      if (ok && patch.status !== undefined) await onchanged?.();
+    });
     try {
       const res = await fetch(`/api/guess/${targetRoundId}/candidate`, {
         method: 'PATCH',
@@ -94,11 +95,11 @@
         body: JSON.stringify({ spotifyUri, playerId, patch }),
       });
       if (!res.ok) {
-        saveErrors = { ...saveErrors, [k]: `couldn't save (${res.status}) — retrying` };
+        saveErrors = { ...saveErrors, [k]: `couldn't save (${res.status})` };
         return false;
       }
     } catch {
-      saveErrors = { ...saveErrors, [k]: `couldn't save — retrying` };
+      saveErrors = { ...saveErrors, [k]: `couldn't save` };
       return false;
     }
     clearError(k);
@@ -159,6 +160,19 @@
   });
 
   /**
+   * The host's flush handle (SearchBar.svelte's `export function` + `bind:this`
+   * idiom). "Flush before any reload" is only enforceable inside this component
+   * for reloads this component triggers; the host has its own — the rehearsal
+   * controls, which are reachable the whole time the board is mounted. Without
+   * this, `archiveRehearsal` DELETEs every guess for the round and a PATCH
+   * queued under 400ms earlier lands afterwards, re-creating the row through
+   * setCandidate's INSERT OR IGNORE. Same class as commit ad6a37f.
+   */
+  export async function flush(): Promise<void> {
+    await flushPendingSaves();
+  }
+
+  /**
    * Status writes fire IMMEDIATELY — they have grid-wide consequences
    * (availability everywhere else) that must not lag behind a debounce — and
    * are followed by a reload so availability is re-read server-side rather
@@ -166,44 +180,111 @@
    * state stays visible under the ember rail, per the design.
    */
   async function cycleStatus(song: WorkspaceSong, c: Candidate, next: CandidateStatus) {
-    c.status = next; // optimistic; deliberately NOT rolled back on failure.
+    // Optimistic; deliberately NOT rolled back on failure. Known and accepted:
+    // a rejected status therefore feeds rollup()/findConflicts() until the next
+    // successful reload, so the roll-up line can briefly count a lock the
+    // server never took. The ember rail says the row did not save, and the
+    // alternative — snapping the chip back — is the desync bug this design
+    // exists to avoid. Behaviour intentionally unchanged.
+    c.status = next;
     await flushPendingSaves();
     const ok = await sendPatch(roundId, song.spotifyUri, c.playerId, { status: next });
     if (!ok) return;
     await onchanged?.();
   }
 
+  /**
+   * The DELETE. Like sendPatch, it registers ITSELF as the row's retry before
+   * firing — otherwise `retry now` on a failed remove would re-fire the last
+   * PATCH for that key, and that patch's success would `clearError` and wipe
+   * "couldn't remove" while the row is still sitting there: silent false
+   * reassurance on a destructive action.
+   */
+  async function sendDelete(
+    targetRoundId: number,
+    spotifyUri: string,
+    playerId: number,
+  ): Promise<boolean> {
+    const k = keyOf(spotifyUri, playerId);
+    retryFns.set(k, async () => {
+      if (await sendDelete(targetRoundId, spotifyUri, playerId)) await onchanged?.();
+    });
+    try {
+      const res = await fetch(`/api/guess/${targetRoundId}/candidate`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ spotifyUri, playerId }),
+      });
+      if (!res.ok) {
+        saveErrors = { ...saveErrors, [k]: `couldn't remove (${res.status})` };
+        return false;
+      }
+    } catch {
+      saveErrors = { ...saveErrors, [k]: `couldn't remove` };
+      return false;
+    }
+    clearError(k);
+    retryFns.delete(k);
+    return true;
+  }
+
   async function removeCandidate(song: WorkspaceSong, c: Candidate) {
     const k = keyOf(song.spotifyUri, c.playerId);
     // Drop any queued edit for a row that is about to cease to exist, then
-    // flush whatever else is pending before the reload.
+    // flush whatever else is pending BEFORE the delete — a PATCH that landed
+    // after it would re-create the row via setCandidate's INSERT OR IGNORE.
     const pending = saveTimers.get(k);
     if (pending) clearTimeout(pending.timer);
     saveTimers.delete(k);
     pendingPatch.delete(k);
     await flushPendingSaves();
 
-    try {
-      const res = await fetch(`/api/guess/${roundId}/candidate`, {
-        method: 'DELETE',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ spotifyUri: song.spotifyUri, playerId: c.playerId }),
-      });
-      if (!res.ok) {
-        saveErrors = { ...saveErrors, [k]: `couldn't remove (${res.status})` };
-        return;
-      }
-    } catch {
-      saveErrors = { ...saveErrors, [k]: `couldn't remove — retrying` };
-      return;
-    }
-    clearError(k);
-    await onchanged?.();
+    if (await sendDelete(roundId, song.spotifyUri, c.playerId)) await onchanged?.();
   }
 
   function retry(spotifyUri: string, playerId: number) {
     const fn = retryFns.get(keyOf(spotifyUri, playerId));
     if (fn) void fn();
+  }
+
+  // ===== row order ======================================================
+
+  /** Bumped when a row collapses, to re-settle order after a certainty edit. */
+  let orderEpoch = $state(0);
+
+  /**
+   * Row order for one song: sortCandidates, but with `certainty` read OUTSIDE
+   * the reactive graph.
+   *
+   * `sortCandidates(song.candidates)` in the {#each} expression made the
+   * comparator's `a.certainty` read a dependency, so the optimistic assign on
+   * every slider tick re-ran the sort and the keyed each moved the row's DOM
+   * node MID-DRAG. Verified in Chromium: the drag itself survives the move
+   * (pointer capture stays on the input), so this is not a correctness break —
+   * but the row and its open editor jump out from under the cursor, which is
+   * not a thing to ship.
+   *
+   * untrack() on certainty alone keeps the block reactive to what SHOULD
+   * reorder — the candidate set, and `status`, the primary key, whose chip
+   * fires immediately by design — while a certainty drag holds still. Order
+   * re-settles on the next reload, or when the row collapses (orderEpoch),
+   * which is the user's own "done here" signal and cannot fire mid-drag.
+   *
+   * The sort runs on cheap key objects but returns the LIVE candidate objects:
+   * the whole desync guarantee rests on the rows being the same references the
+   * bindings read, so this must never hand back clones.
+   */
+  function rowOrder(song: WorkspaceSong): Candidate[] {
+    void orderEpoch;
+    const live = new Map(song.candidates.map((c) => [c.playerId, c]));
+    const keys: Candidate[] = song.candidates.map((c) => ({
+      playerId: c.playerId,
+      status: c.status,
+      certainty: untrack(() => c.certainty),
+      factors: '',
+      notes: '',
+    }));
+    return sortCandidates(keys).map((k) => live.get(k.playerId) as Candidate);
   }
 
   const conflicts = $derived(findConflicts(data));
@@ -279,7 +360,7 @@
             class="border border-dashed border-border-muted border-l-2 border-l-border-muted bg-bg px-3 py-2 font-mono text-[11px] tracking-[0.04em] text-fg-faint"
           >no candidates yet — add a suspect below</div>
         {:else}
-          {#each sortCandidates(song.candidates) as c (c.playerId)}
+          {#each rowOrder(song) as c (c.playerId)}
             <CandidateRow
               candidate={c}
               name={nameFor(c.playerId)}
@@ -289,6 +370,7 @@
               oncycle={(next) => cycleStatus(song, c, next)}
               onremove={() => removeCandidate(song, c)}
               onretry={() => retry(song.spotifyUri, c.playerId)}
+              onsettle={() => (orderEpoch += 1)}
             />
           {/each}
         {/if}
