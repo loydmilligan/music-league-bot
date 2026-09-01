@@ -258,23 +258,6 @@
     {/if}
   </div>
 
-  <!-- Validation summary -->
-  <div class="mb-4 font-mono text-xs text-fg-muted">
-    {#if data.validation.ok}
-      <span class="text-accent">validation: clean — every song has a unique pick</span>
-    {:else}
-      <span>
-        {#if data.validation.missingSongs.length > 0}
-          {data.validation.missingSongs.length} song{data.validation.missingSongs.length === 1 ? '' : 's'} missing a pick
-        {/if}
-        {#if data.validation.missingSongs.length > 0 && data.validation.duplicatePlayerIds.length > 0} · {/if}
-        {#if data.validation.duplicatePlayerIds.length > 0}
-          duplicate: {data.validation.duplicatePlayerIds.map(nameFor).join(', ')}
-        {/if}
-      </span>
-    {/if}
-  </div>
-
   <!-- spec §7.4a: refine REPLACES the gut slate rather than stacking beneath
        it — once the slate is locked the <ol> and its lock button are inert, so
        they come down and the board takes the space. The phase eyebrow, the
@@ -282,6 +265,26 @@
   {#if refining}
     <RefineBoard {data} {roundId} onchanged={load} />
   {:else}
+    <!-- Validation summary — belongs to the gut slate, so it hides with it.
+         lockGutSlate is gated on validation.ok, so once the slate is locked
+         this line can only ever read "clean": a line that can never say
+         anything again, sitting above the refine roll-up that supersedes it. -->
+    <div class="mb-4 font-mono text-xs text-fg-muted">
+      {#if data.validation.ok}
+        <span class="text-accent">validation: clean — every song has a unique pick</span>
+      {:else}
+        <span>
+          {#if data.validation.missingSongs.length > 0}
+            {data.validation.missingSongs.length} song{data.validation.missingSongs.length === 1 ? '' : 's'} missing a pick
+          {/if}
+          {#if data.validation.missingSongs.length > 0 && data.validation.duplicatePlayerIds.length > 0} · {/if}
+          {#if data.validation.duplicatePlayerIds.length > 0}
+            duplicate: {data.validation.duplicatePlayerIds.map(nameFor).join(', ')}
+          {/if}
+        </span>
+      {/if}
+    </div>
+
   <button
     type="button"
     disabled={!data.validation.ok || data.gutLockedAt !== null || locking}

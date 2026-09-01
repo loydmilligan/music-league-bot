@@ -47,6 +47,46 @@ export function findConflicts(data: WorkspaceData): Map<number, string[]> {
   return conflicts;
 }
 
+/** 1-based playlist position — the `#n` every reference on the board uses. */
+function songNumber(data: WorkspaceData, spotifyUri: string): number {
+  return data.songs.findIndex((s) => s.spotifyUri === spotifyUri) + 1;
+}
+
+/**
+ * Where a player is committed OTHER than on the song being rendered, or null.
+ *
+ * Three interacting rules, which is why this is here and not in the component:
+ *  1. The rendered song is skipped, so a row is never reported as committed on
+ *     account of itself.
+ *  2. `locked` outranks `prime` regardless of scan order — a lock returns
+ *     immediately, a prime is only remembered and returned if no lock is found.
+ *  3. `data.availability` — the server's verdict from `playerAvailability` — is
+ *     the authority on WHETHER a player is committed. A player the server calls
+ *     'free' returns null without scanning; this function only ever LOCATES a
+ *     commitment the server has already asserted, it never recomputes one.
+ *
+ * Pure over the payload; needs no roster, so it does not reintroduce the name
+ * lookup that rollup() is deliberately kept free of.
+ */
+export function commitmentElsewhere(
+  data: WorkspaceData,
+  playerId: number,
+  spotifyUri: string,
+): { kind: 'dimmed' | 'taken'; at: number } | null {
+  if ((data.availability[playerId] ?? 'free') === 'free') return null;
+
+  let dimmed: number | null = null;
+  for (const song of data.songs) {
+    if (song.spotifyUri === spotifyUri) continue;
+    for (const c of song.candidates) {
+      if (c.playerId !== playerId) continue;
+      if (c.status === 'locked') return { kind: 'taken', at: songNumber(data, song.spotifyUri) };
+      if (c.status === 'prime' && dimmed === null) dimmed = songNumber(data, song.spotifyUri);
+    }
+  }
+  return dimmed === null ? null : { kind: 'dimmed', at: dimmed };
+}
+
 /** One-line status roll-up for the board header. */
 export function rollup(data: WorkspaceData): { text: string; tone: 'progress' | 'conflict' | 'settled' } {
   const total = data.songs.length;

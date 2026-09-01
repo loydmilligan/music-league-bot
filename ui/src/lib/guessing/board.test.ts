@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortCandidates, findConflicts, rollup } from './board.js';
+import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from './board.js';
 import type { Candidate } from './candidates.js';
 
 const c = (playerId: number, status: Candidate['status'], certainty: number | null): Candidate =>
@@ -29,6 +29,15 @@ describe('sortCandidates', () => {
 
 const mk = (songs: { uri: string; cands: Candidate[] }[]) =>
   ({ songs: songs.map((s) => ({ spotifyUri: s.uri, candidates: s.cands })) } as never);
+
+/** mk plus the server-derived availability map commitmentElsewhere gates on. */
+const mkA = (
+  songs: { uri: string; cands: Candidate[] }[],
+  availability: Record<number, 'free' | 'dimmed' | 'taken'>,
+) => ({
+  songs: songs.map((s) => ({ spotifyUri: s.uri, candidates: s.cands })),
+  availability,
+} as never);
 
 describe('findConflicts', () => {
   // DISCRIMINATING: player 1 is locked twice AND prime elsewhere; player 2 is
@@ -80,5 +89,41 @@ describe('rollup', () => {
     ]));
     expect(r.tone).toBe('settled');
     expect(r.text).toContain('ready to submit');
+  });
+});
+
+describe('commitmentElsewhere', () => {
+  // DISCRIMINATING: player 1 is locked ONLY on the song being rendered, and the
+  // server correctly calls them 'taken' grid-wide. The answer must still be
+  // null — dropping the `spotifyUri` skip returns {taken, at: 1} and every row
+  // on the board would strike itself out for its own commitment.
+  it('never reports a commitment on the song being rendered', () => {
+    const data = mkA([{ uri: 'a', cands: [c(1, 'locked', null)] }], { 1: 'taken' });
+    expect(commitmentElsewhere(data, 1, 'a')).toBeNull();
+  });
+
+  // DISCRIMINATING: the PRIME song is scanned first ('a' precedes 'b') and the
+  // LOCKED song second, so a first-match-wins scan returns {dimmed, at: 1}.
+  // Locked outranks prime regardless of order, so the only right answer is the
+  // later song: {taken, at: 2}.
+  it('lets locked outrank prime even when prime is scanned first', () => {
+    const data = mkA([
+      { uri: 'a', cands: [c(1, 'prime', null)] },
+      { uri: 'b', cands: [c(1, 'locked', null)] },
+      { uri: 'c', cands: [c(1, 'possible', null)] },
+    ], { 1: 'taken' });
+    expect(commitmentElsewhere(data, 1, 'c')).toEqual({ kind: 'taken', at: 2 });
+  });
+
+  // DISCRIMINATING: the payload deliberately CONTRADICTS itself — the songs
+  // hold a lock for player 1, but the server's availability says 'free'. The
+  // server is the authority, so the answer is null. An implementation that
+  // recomputes availability client-side from the songs returns {taken, at: 1}.
+  it('trusts the server when availability says free, and does not scan', () => {
+    const data = mkA([
+      { uri: 'a', cands: [c(1, 'locked', null)] },
+      { uri: 'b', cands: [] },
+    ], { 1: 'free' });
+    expect(commitmentElsewhere(data, 1, 'b')).toBeNull();
   });
 });

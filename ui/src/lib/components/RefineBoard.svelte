@@ -17,7 +17,7 @@
 <script lang="ts">
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
   import type { Candidate, CandidateStatus } from '$lib/guessing/candidates.js';
-  import { sortCandidates, findConflicts, rollup } from '$lib/guessing/board.js';
+  import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
 
   // `roundId` and `onchanged` are the write plumbing Task 5 consumes; they are
   // part of the agreed interface, so they are declared now and unused until
@@ -83,30 +83,6 @@
     return summary.text.replace('· locked on ', `· ${nameFor(first)} locked on `);
   });
 
-  /** 1-based playlist position, the `#n` every reference on this board uses. */
-  function songNumber(spotifyUri: string): number {
-    return data.songs.findIndex((s) => s.spotifyUri === spotifyUri) + 1;
-  }
-
-  /** The song this player is committed to OTHER than the one being rendered. */
-  type Elsewhere = { kind: 'dimmed' | 'taken'; at: number } | null;
-  function elsewhereFor(playerId: number, spotifyUri: string): Elsewhere {
-    // `data.availability` is the server's verdict (playerAvailability) and is
-    // the authority on whether a player is committed at all; it is grid-wide,
-    // so it cannot say WHERE. The location is read off the payload's songs.
-    if ((data.availability[playerId] ?? 'free') === 'free') return null;
-    let dimmed: number | null = null;
-    for (const song of data.songs) {
-      if (song.spotifyUri === spotifyUri) continue;
-      for (const c of song.candidates) {
-        if (c.playerId !== playerId) continue;
-        if (c.status === 'locked') return { kind: 'taken', at: songNumber(song.spotifyUri) };
-        if (c.status === 'prime' && dimmed === null) dimmed = songNumber(song.spotifyUri);
-      }
-    }
-    return dimmed === null ? null : { kind: 'dimmed', at: dimmed };
-  }
-
   /** The `⚠ <Name> locked twice` marker, when this song is half of a duplicate. */
   function conflictTag(song: WorkspaceSong): string | null {
     for (const c of song.candidates) {
@@ -162,7 +138,7 @@
         {:else}
           {#each sortCandidates(song.candidates) as c (c.playerId)}
             {@const chip = STATUS_CHIP[c.status]}
-            {@const away = elsewhereFor(c.playerId, song.spotifyUri)}
+            {@const away = commitmentElsewhere(data, c.playerId, song.spotifyUri)}
             <div
               class="flex items-center gap-2.5 bg-surface px-3 py-[7px] {chip.railWidth}
                      {away?.kind === 'dimmed' ? 'border-l-amber' : chip.rail}
