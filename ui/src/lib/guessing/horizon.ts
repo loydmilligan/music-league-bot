@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { priorRoundIds } from './rehearsal.js';
 
 export interface VisibleSubmission {
   spotifyUri: string;
@@ -30,4 +31,33 @@ export function visibleSubmissions(db: Database.Database, roundId: number): Visi
       WHERE round_id = ?
       ORDER BY id`,
   ).all(roundId) as VisibleSubmission[];
+}
+
+export interface PriorVote {
+  roundId: number;
+  voterId: number;
+  spotifyUri: string;
+  points: number;
+  comment: string | null;
+}
+
+/**
+ * Votes from rounds that had already closed before the round under study.
+ *
+ * SPEC §14.3 TRAP: the round's own votes are excluded **by round id, never by
+ * timestamp**. Every vote on a round is cast BEFORE that round's voting deadline,
+ * so a `created_at < asOf` clamp would leak the entire round — which is the answer
+ * in all but name. `priorRoundIds` already excludes the round itself, rounds that
+ * close later, and rounds with a NULL deadline.
+ */
+export function priorVotes(db: Database.Database, roundId: number): PriorVote[] {
+  const ids = priorRoundIds(db, roundId);
+  if (ids.length === 0) return [];
+  return db.prepare(
+    `SELECT round_id AS roundId, voter_id AS voterId, spotify_uri AS spotifyUri,
+            points, comment
+       FROM votes
+      WHERE round_id IN (${ids.map(() => '?').join(',')})
+      ORDER BY round_id, id`,
+  ).all(...ids) as PriorVote[];
 }
