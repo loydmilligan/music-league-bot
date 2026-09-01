@@ -20,6 +20,7 @@
   import type { Candidate, CandidateStatus, CandidatePatch } from '$lib/guessing/candidates.js';
   import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
   import CandidateRow from './CandidateRow.svelte';
+  import RosterStrip from './RosterStrip.svelte';
 
   let {
     data,
@@ -247,6 +248,37 @@
     if (fn) void fn();
   }
 
+  /**
+   * The roster strip's add. Reuses `sendPatch` rather than issuing its own
+   * fetch — same write path as every other candidate mutation on this board,
+   * so it gets the retry map and error state for free. Fires immediately
+   * (status writes are never debounced) and reloads on success so
+   * availability re-derives server-side, same as `cycleStatus`.
+   */
+  async function addCandidate(song: WorkspaceSong, playerId: number): Promise<void> {
+    const ok = await sendPatch(roundId, song.spotifyUri, playerId, { status: 'possible' });
+    if (ok) await onchanged?.();
+  }
+
+  /**
+   * The strip's rejected-add error, if any: a `saveErrors` entry for this song
+   * whose player is NOT among its candidates. That distinguishes an add
+   * failure from an existing row's edit/status failure (which CandidateRow
+   * already renders) — both share the same `saveErrors` map, keyed the same
+   * way, since `addCandidate` goes through the same `sendPatch`.
+   */
+  function addErrorFor(song: WorkspaceSong): { playerId: number; message: string } | null {
+    const present = new Set(song.candidates.map((c) => c.playerId));
+    for (const [k, message] of Object.entries(saveErrors)) {
+      const [uri, pidStr] = k.split('|');
+      if (uri !== song.spotifyUri) continue;
+      const playerId = Number(pidStr);
+      if (present.has(playerId)) continue;
+      return { playerId, message };
+    }
+    return null;
+  }
+
   // ===== row order ======================================================
 
   /** Bumped when a row collapses, to re-settle order after a certainty edit. */
@@ -335,6 +367,7 @@
   <div class="flex flex-col gap-4">
     {#each data.songs as song, i (song.spotifyUri)}
       {@const tag = conflictTag(song)}
+      {@const addErr = addErrorFor(song)}
       <div class="flex flex-col gap-[5px]">
         <!-- song header -->
         <div class="flex items-baseline gap-[9px] px-0.5 pb-0.5">
@@ -374,6 +407,15 @@
             />
           {/each}
         {/if}
+
+        <RosterStrip
+          {data}
+          spotifyUri={song.spotifyUri}
+          existing={song.candidates}
+          error={addErr?.message ?? null}
+          onadd={(playerId) => addCandidate(song, playerId)}
+          onretry={() => addErr && retry(song.spotifyUri, addErr.playerId)}
+        />
       </div>
     {/each}
   </div>
