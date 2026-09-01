@@ -66,3 +66,60 @@ export function reveal(db: Database.Database, assignments: Record<string, number
       .run(playerId, uri);
   }
 }
+
+/** Chat group name used by the fixtures. Real code resolves this per league. */
+export const CHAT_GROUP = 'Boarz Test Group';
+
+/**
+ * Add an earlier round to the same season. `seedRound` only creates round 1;
+ * horizon tests need neighbours to prove the strictly-prior rule.
+ */
+export function seedPriorRound(
+  db: Database.Database,
+  roundId: number,
+  votingDeadline: string | null,
+): void {
+  db.prepare(
+    `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, voting_deadline)
+     VALUES (?, 1, ?, ?, '2026-01-01T00:00:00Z', ?)`,
+  ).run(roundId, `ml-${roundId}`, `R${roundId}`, votingDeadline);
+}
+
+export function seedVote(
+  db: Database.Database,
+  roundId: number,
+  voterId: number,
+  spotifyUri: string,
+  comment: string,
+  createdAt: string,
+): void {
+  db.prepare(
+    `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+     VALUES (?, ?, ?, 1, ?, ?)`,
+  ).run(roundId, voterId, spotifyUri, comment, createdAt);
+}
+
+/**
+ * `chat_messages` lives in the live database but NOT in the UI's SCHEMA constant —
+ * the bot side (src/) owns it. Tests therefore create it themselves. The DDL below
+ * mirrors the live table's shape for the columns this project reads.
+ */
+export function seedChat(
+  db: Database.Database,
+  groupName: string,
+  sender: string,
+  text: string,
+  ts: string,
+): void {
+  db.exec(`CREATE TABLE IF NOT EXISTS chat_messages (
+    id TEXT PRIMARY KEY, platform TEXT NOT NULL, group_name TEXT NOT NULL,
+    group_key TEXT, sender TEXT NOT NULL, text TEXT NOT NULL, ts TEXT NOT NULL,
+    msg_hash TEXT NOT NULL, captured_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    sender_handle TEXT, source_path TEXT
+  )`);
+  const id = `${groupName}|${sender}|${ts}`;
+  db.prepare(
+    `INSERT OR IGNORE INTO chat_messages (id, platform, group_name, sender, text, ts, msg_hash, captured_at)
+     VALUES (?, 'whatsapp', ?, ?, ?, ?, ?, '2026-01-01T00:00:00Z')`,
+  ).run(id, groupName, sender, text, ts, id);
+}
