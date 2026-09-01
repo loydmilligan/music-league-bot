@@ -94,11 +94,6 @@
     onchange({ ...row.ballot, notes: value });
   }
 
-  function toggleMine() {
-    // Clearing points keeps the ballot valid the moment it is marked as yours.
-    onchange({ ...row.ballot, isMine: !row.ballot.isMine, upPoints: 0, downPoints: 0 });
-  }
-
   /** Clicking the active star clears the rating. */
   function setRating(value: number) {
     onchange({ ...row.ballot, rating: row.ballot.rating === value ? null : value });
@@ -160,9 +155,12 @@
         </div>
       {/if}
 
-      <button class="text-xs text-fg-muted underline" onclick={toggleMine}>
+      <!-- Read-only. is_mine has exactly one writer — the guess tab's mark-first
+           control (setIsMine, spec §6, exclusive per round). A second writer here
+           could mark two songs and silently shrink the guess slate. -->
+      <span class="font-mono text-xs tracking-widest uppercase text-fg-faint">
         {row.ballot.isMine ? 'not mine' : 'mine'}
-      </button>
+      </span>
     </div>
   </div>
 
