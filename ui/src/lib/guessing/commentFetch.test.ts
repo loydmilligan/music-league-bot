@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { seedRound } from './fixtures.js';
-import { applyComments } from './commentFetch.js';
+import { applyComments, type CommentPayload } from './commentFetch.js';
 
 const NOW = '2026-09-01T00:00:00Z';
 
@@ -67,10 +67,11 @@ describe('applyComments', () => {
   // the suite while resetting a live round mid-sitting — lockGut leaves the
   // round at phase='fetch' immediately before this runs.
   it('preserves a pre-existing guess_round_state row on both branches', () => {
-    for (const payload of [
-      { ok: true, songs: [] } as const,
-      { ok: false, error: 'boom' } as const,
-    ]) {
+    const payloads: CommentPayload[] = [
+      { ok: true, songs: [] },
+      { ok: false, error: 'boom' },
+    ];
+    for (const payload of payloads) {
       const { db } = seedRound({ songCount: 2 });
       db.prepare(
         `INSERT INTO guess_round_state
