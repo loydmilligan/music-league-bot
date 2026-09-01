@@ -27,6 +27,12 @@ export const load: PageServerLoad = async ({ params }) => {
   if (!round || round.seasonId !== season.id) throw error(404, 'Round not found');
 
   const mlSubmissions = getSubmissionsForRound(db, round.id);
+  // The regular playlist view joins competitors and therefore intentionally
+  // returns no rows while a live round is still anonymous. The Guess workspace
+  // must be gated on imported songs, not revealed submitter identities.
+  const guessSubmissionCount = (db.prepare(
+    'SELECT COUNT(*) AS count FROM ml_submissions WHERE round_id = ?',
+  ).get(round.id) as { count: number }).count;
 
   const allRounds = getRoundsForSeason(db, season.id);
   const idx = allRounds.findIndex(r => r.id === round.id);
@@ -77,6 +83,7 @@ export const load: PageServerLoad = async ({ params }) => {
     season,
     round,
     mlSubmissions,
+    guessSubmissionCount,
     chatMentions,
     research,
     settings,

@@ -328,11 +328,11 @@
     { key: 'history', label: 'Chat History',   count: data.roundMessageCount },
     { key: 'research', label: 'Research',      count: data.research.length },
     { key: 'h2h',    label: 'Head-to-Head',   count: h2hState?.candidates.length ?? 0 },
-    { key: 'guess',  label: 'Guess',          count: data.mlSubmissions.length },
+    { key: 'guess',  label: 'Guess',          count: data.guessSubmissionCount },
   ]);
 
   // spec §4: the Guess tab is disabled until the round's playlist exists.
-  const guessTabDisabled = $derived(data.mlSubmissions.length === 0);
+  const guessTabDisabled = $derived(data.guessSubmissionCount === 0);
 </script>
 
 <svelte:head><title>{data.round.name} · music-league-bot</title></svelte:head>
