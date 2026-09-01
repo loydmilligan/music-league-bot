@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Lab</title>
+<style>
+  :root{--bg:#12100f;--panel:#1b1817;--edge:#2e2a28;--ink:#ece6df;
+        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);padding:26px 18px 40px;
+       font:16px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 340px;gap:22px}
+  header{grid-column:1/-1}
+  /* four sizes: .8 / 1 / 1.3 / 1.8rem */
+  h1{font-size:1.8rem;margin:0 0 4px;letter-spacing:-.02em}
+  h2{font-size:1.3rem;color:var(--hot);margin:0 0 12px}
+  .sub,.hint,.stat,label,button,select,textarea,input{font-size:.8rem}
+  .sub{color:var(--dim)}
+  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:16px 18px}
+  .row{display:grid;grid-template-columns:1fr 62px;gap:10px;align-items:center;margin:0 0 13px}
+  label{color:var(--dim);display:block;margin-bottom:5px}
+  label b{color:var(--ink);font-weight:600;font-size:1rem}
+  input[type=range]{width:100%;accent-color:var(--hot)}
+  .val{font-variant-numeric:tabular-nums;text-align:right;color:var(--hot);font-size:1rem;font-weight:650}
+  .hint{color:#6f6862;margin:-9px 0 13px}
+  select,textarea,input[type=text]{width:100%;background:#100e0d;border:1px solid var(--edge);
+    border-radius:7px;color:var(--ink);padding:7px 9px;font:inherit;font-size:.8rem}
+  textarea{min-height:76px;resize:vertical}
+  button{background:var(--hot);border:0;color:#1a1512;font-weight:650;border-radius:7px;
+         padding:9px 15px;cursor:pointer}
+  button.ghost{background:#211d1c;border:1px solid var(--edge);color:var(--ink);font-weight:500}
+  button:disabled{opacity:.5;cursor:default}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  audio{width:100%;margin:12px 0 6px}
+  .stat{color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.75}
+  .stat b{color:var(--quote)}
+  .preset{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .preset button{padding:5px 10px;font-weight:500}
+  pre{background:#100e0d;border:1px solid var(--edge);border-radius:7px;padding:9px 11px;
+      font-size:.8rem;overflow-x:auto;margin:10px 0 0;color:var(--dim);white-space:pre-wrap}
+  @media(max-width:860px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body><div class="wrap">
+
+<header>
+  <h1>Voice Lab</h1>
+  <div class="sub">articulation and pausing are separate dials — that's the point of this thing</div>
+</header>
+
+<div class="panel">
+  <h2>Controls</h2>
+
+  <div class="preset" id="presets"></div>
+
+  <label>Source</label>
+  <select id="src"></select>
+  <div class="hint">v2 clips are already at 108 Hz / 3.0 w/s. References are the real impressions.</div>
+
+  <div id="knobs"></div>
+
+  <div class="bar">
+    <button id="go">Render</button>
+    <button class="ghost" id="reset">Reset</button>
+    <button class="ghost" id="copy">Copy params</button>
+    <span class="stat" id="busy"></span>
+  </div>
+
+  <audio id="out" controls preload="none"></audio>
+  <div class="stat" id="stats"></div>
+  <pre id="params"></pre>
+</div>
+
+<div class="panel">
+  <h2>New take</h2>
+  <label>Text</label>
+  <textarea id="text">Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you think about it for longer than a minute.</textarea>
+  <label style="margin-top:10px">Voice</label>
+  <select id="voice">
+    <option>verse</option><option>ash</option><option>echo</option><option>ballad</option>
+    <option>alloy</option><option>coral</option><option>sage</option><option>shimmer</option>
+  </select>
+  <div class="bar" style="margin-top:10px">
+    <button class="ghost" id="say">Synthesise → load as source</button>
+  </div>
+  <div class="hint" style="margin-top:8px">Costs a few cents per take. Cached by text+voice, so
+    re-rendering the same words is free.</div>
+  <div class="stat" id="saystat"></div>
+</div>
+
+</div>
+<script>
+const KNOBS = [
+  ['artic','Word speed',0.5,1.6,0.01,1,'How fast each word is spoken. Gaps untouched.'],
+  ['pause','Gap length',0,3,0.05,1,'Silence between words and phrases. Words untouched.'],
+  ['gapmax','Gap cap (s)',0,2,0.05,0,'Hard ceiling on any single silence. 0 = off.'],
+  ['targethz','Target pitch (Hz)',0,200,1,108,'Solves pitch to hit this median f0. 0 = use ratio below.'],
+  ['pitch','Pitch ratio',0.6,1.6,0.01,1,'Only used when target pitch is 0. Formants held.'],
+  ['formant','Formant / head size',0.7,1.4,0.01,1,'<1 bigger, darker head. >1 smaller, more nasal. Pitch unchanged.'],
+  ['nasal','Nasality (dB)',-8,14,0.5,0,'Boost ~2.1kHz, scoop ~480Hz. The adenoidal knob.'],
+  ['muffle','Muffle (Hz)',0,8000,100,0,'Lowpass. Congested / blocked-nose. 0 = off.'],
+  ['drive','Compression',1,8,0.1,1,'Strained, pressed delivery. 1 = off.'],
+];
+const DEF = Object.fromEntries(KNOBS.map(k=>[k[0],k[5]]));
+const PRESETS = {
+  'Passthrough': {},
+  'Butthead-heavy': {artic:0.88, pause:1.35, targethz:104, formant:1.12, nasal:7, muffle:5200, drive:2.2},
+  'Comic Book Guy': {artic:0.95, pause:1.1, targethz:112, formant:0.94, nasal:3, drive:1.6},
+  'Sheldon-ish':    {artic:1.12, pause:0.8, targethz:118, formant:1.06, nasal:5},
+  'Slow + deadpan': {artic:0.8, pause:1.9, gapmax:1.2, targethz:106, nasal:4},
+};
+
+let state = {...DEF}, curSrc = null;
+
+const kn = document.getElementById('knobs');
+kn.innerHTML = KNOBS.map(([id,lab,min,max,step,def,hint])=>`
+  <div class="row">
+    <div><label><b>${lab}</b></label>
+      <input type="range" id="k-${id}" min="${min}" max="${max}" step="${step}" value="${def}"></div>
+    <div class="val" id="v-${id}">${def}</div>
+  </div>
+  <div class="hint">${hint}</div>`).join('');
+
+for (const [id] of KNOBS.map(k=>[k[0]])) {
+  document.getElementById('k-'+id).addEventListener('input', e=>{
+    state[id] = +e.target.value;
+    document.getElementById('v-'+id).textContent = e.target.value;
+    showParams();
+  });
+}
+function sync(){
+  for (const [id] of KNOBS.map(k=>[k[0]])) {
+    document.getElementById('k-'+id).value = state[id];
+    document.getElementById('v-'+id).textContent = state[id];
+  }
+  showParams();
+}
+// only send what differs from passthrough
+function payload(){
+  const p={};
+  for (const [id,,,,,def] of KNOBS) if (state[id]!==def && !(id==='targethz'&&state[id]===0)) p[id]=state[id];
+  if (state.targethz>0) p.targethz=state.targethz;
+  return p;
+}
+const showParams=()=>document.getElementById('params').textContent=JSON.stringify(payload());
+
+document.getElementById('presets').innerHTML =
+  Object.keys(PRESETS).map(n=>`<button class="ghost" data-p="${n}">${n}</button>`).join('');
+document.getElementById('presets').onclick = e=>{
+  const n=e.target.dataset.p; if(!n) return;
+  state={...DEF,...PRESETS[n]}; sync(); render();
+};
+document.getElementById('reset').onclick = ()=>{ state={...DEF}; sync(); };
+document.getElementById('copy').onclick = ()=>
+  navigator.clipboard.writeText(JSON.stringify(payload()));
+
+let SRC_WORDS = {};
+fetch('/sources').then(r=>r.json()).then(map=>{
+  SRC_WORDS = Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v[1]]));
+  document.getElementById('src').innerHTML =
+    Object.keys(map).map(s=>`<option>${s}</option>`).join('');
+});
+
+// words/sec has to be measured against the script that is actually playing
+const words = ()=> curSrc
+  ? document.getElementById('text').value.trim().split(/\s+/).length
+  : (SRC_WORDS[document.getElementById('src').value] || 0);
+
+async function render(){
+  const btn=document.getElementById('go'); btn.disabled=true;
+  document.getElementById('busy').textContent='rendering…';
+  try{
+    const src = curSrc || document.getElementById('src').value;
+    const r = await fetch('/render',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({src, params:payload(), words:words()})});
+    if(!r.ok){ document.getElementById('busy').textContent='error';
+      document.getElementById('stats').textContent=(await r.text()).slice(0,300); return; }
+    const st = JSON.parse(r.headers.get('x-stats')||'{}');
+    const b = await r.blob();
+    const a = document.getElementById('out');
+    a.src = URL.createObjectURL(b); a.play().catch(()=>{});
+    document.getElementById('stats').innerHTML =
+      `pitch <b>${st.src_f0}</b> → <b>${st.out_f0} Hz</b> &nbsp;·&nbsp; ` +
+      `length <b>${st.src_dur}</b> → <b>${st.out_dur}s</b> &nbsp;·&nbsp; ` +
+      `speech <b>${st.speech_s}s</b>, gaps <b>${st.gap_pct}%</b>` +
+      (st.out_wps?` &nbsp;·&nbsp; <b>${st.out_wps} w/s</b>`:'') +
+      `<br>applied — pitch ×${st.pitch}, words ×${st.artic}, gaps ×${st.pause}`;
+    document.getElementById('busy').textContent='';
+  } finally { btn.disabled=false; }
+}
+document.getElementById('go').onclick = render;
+document.getElementById('src').onchange = ()=>{ curSrc=null; };
+
+document.getElementById('say').onclick = async ()=>{
+  const b=document.getElementById('say'); b.disabled=true;
+  document.getElementById('saystat').textContent='synthesising…';
+  const r = await fetch('/say',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({text:document.getElementById('text').value,
+      voice:document.getElementById('voice').value,
+      style:"A dumb-guy cartoon impression of a pompous man: heavy Butthead from Beavis and Butt-Head, crossed with Comic Book Guy from The Simpsons and a touch of Sheldon. Low, flat, nasal, adenoidal, congested. Very little pitch movement. Big vocabulary delivered by someone who sounds slow and very pleased with himself."})});
+  const j = await r.json(); b.disabled=false;
+  if(j.error){ document.getElementById('saystat').textContent=j.error.slice(0,200); return; }
+  curSrc = j.src;
+  document.getElementById('saystat').textContent='loaded as source — hit Render';
+  render();
+};
+
+sync();
+</script>
+</body></html>
