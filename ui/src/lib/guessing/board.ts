@@ -53,6 +53,34 @@ function songNumber(data: WorkspaceData, spotifyUri: string): number {
 }
 
 /**
+ * Where a player is committed anywhere on the board, for the ledger's
+ * roster-wide summary — no "current song" to skip, unlike
+ * `commitmentElsewhere`.
+ *
+ * `data.availability` is still the authority on WHETHER a player is
+ * committed (a 'free' verdict short-circuits without scanning, same as
+ * `commitmentElsewhere`); this only LOCATES the commitment the server has
+ * already asserted. Locked outranks prime regardless of scan order.
+ */
+export function ledgerEntry(
+  data: WorkspaceData,
+  playerId: number,
+): { kind: 'free' | 'dimmed' | 'taken'; at: number | null } {
+  const availability = data.availability[playerId] ?? 'free';
+  if (availability === 'free') return { kind: 'free', at: null };
+
+  let dimmed: number | null = null;
+  for (const song of data.songs) {
+    for (const c of song.candidates) {
+      if (c.playerId !== playerId) continue;
+      if (c.status === 'locked') return { kind: 'taken', at: songNumber(data, song.spotifyUri) };
+      if (c.status === 'prime' && dimmed === null) dimmed = songNumber(data, song.spotifyUri);
+    }
+  }
+  return dimmed === null ? { kind: 'free', at: null } : { kind: 'dimmed', at: dimmed };
+}
+
+/**
  * Where a player is committed OTHER than on the song being rendered, or null.
  *
  * Three interacting rules, which is why this is here and not in the component:

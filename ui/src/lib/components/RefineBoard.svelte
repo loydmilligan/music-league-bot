@@ -21,6 +21,7 @@
   import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
   import CandidateRow from './CandidateRow.svelte';
   import RosterStrip from './RosterStrip.svelte';
+  import AvailabilityLedger from './AvailabilityLedger.svelte';
 
   let {
     data,
@@ -420,6 +421,6 @@
     {/each}
   </div>
 
-  <!-- ===== LEDGER (Task 7 fills this) ===== -->
-  <div></div>
+  <!-- ===== LEDGER ===== -->
+  <AvailabilityLedger {data} />
 </div>
