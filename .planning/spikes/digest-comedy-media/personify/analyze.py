@@ -75,8 +75,15 @@ try:
 
     X = [t for p in docs for t in docs[p]]
     y = [p for p in docs for _ in docs[p]]
+    # lowercase=False matters: capitalisation is a real signal here (Jensen
+    # capitalises 99.2% of sentence starts, Matt frequently doesn't). Measured
+    # +1.3 points overall. Raw `char` instead of `char_wb` was tried to preserve
+    # double-spacing and made it WORSE (0.615) — the feature space explodes and
+    # it overfits to topic. Explicit orthographic features are the better route;
+    # see judge.py, which adds them for +1.5 more.
     pipe = make_pipeline(
-        TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=2, sublinear_tf=True),
+        TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=2,
+                        sublinear_tf=True, lowercase=False),
         LogisticRegression(max_iter=2000, C=5, class_weight="balanced"),
     )
     pred = cross_val_predict(pipe, X, y, cv=5)

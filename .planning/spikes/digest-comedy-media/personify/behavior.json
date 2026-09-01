@@ -1,0 +1,262 @@
+{
+ "Clements Johnson": {
+  "messages": 465,
+  "share_pct": 4.1,
+  "avg_burst": 1.29,
+  "median_reply_s": 85,
+  "ignored_pct": 12.5,
+  "killed_pct": 6.2,
+  "starts": 39,
+  "peak_hours_utc": [
+   0,
+   1,
+   19
+  ],
+  "addressed_by": {
+   "Matt Mariani": 48,
+   "Jon Black": 24,
+   "Conor Johnston": 13,
+   "Grant Koziol": 8
+  },
+  "addresses": {
+   "Darren Paletz": 12,
+   "Conor Johnston": 12,
+   "Jon Black": 8,
+   "Matt Mariani": 8
+  }
+ },
+ "Matt Mariani": {
+  "messages": 4272,
+  "share_pct": 37.5,
+  "avg_burst": 1.85,
+  "median_reply_s": 87,
+  "ignored_pct": 10.0,
+  "killed_pct": 2.3,
+  "starts": 39,
+  "peak_hours_utc": [
+   1,
+   0,
+   19
+  ],
+  "addressed_by": {
+   "Jon Black": 64,
+   "Conor Johnston": 46,
+   "Grant Koziol": 34,
+   "Dave Jensen": 18
+  },
+  "addresses": {
+   "Conor Johnston": 135,
+   "Jon Black": 120,
+   "Dave Jensen": 73,
+   "Grant Koziol": 57
+  }
+ },
+ "Jon Black": {
+  "messages": 1777,
+  "share_pct": 15.6,
+  "avg_burst": 1.39,
+  "median_reply_s": 89,
+  "ignored_pct": 10.3,
+  "killed_pct": 3.1,
+  "starts": 37,
+  "peak_hours_utc": [
+   0,
+   16,
+   1
+  ],
+  "addressed_by": {
+   "Matt Mariani": 120,
+   "Conor Johnston": 49,
+   "Grant Koziol": 43,
+   "Dave Jensen": 21
+  },
+  "addresses": {
+   "Conor Johnston": 120,
+   "Matt Mariani": 64,
+   "Grant Koziol": 50,
+   "Dave Jensen": 46
+  }
+ },
+ "Dave Jensen": {
+  "messages": 1021,
+  "share_pct": 9.0,
+  "avg_burst": 1.17,
+  "median_reply_s": 66,
+  "ignored_pct": 5.7,
+  "killed_pct": 2.5,
+  "starts": 10,
+  "peak_hours_utc": [
+   5,
+   21,
+   0
+  ],
+  "addressed_by": {
+   "Matt Mariani": 73,
+   "Jon Black": 46,
+   "Conor Johnston": 36,
+   "Grant Koziol": 16
+  },
+  "addresses": {
+   "Conor Johnston": 25,
+   "Jon Black": 21,
+   "Matt Mariani": 18,
+   "Grant Koziol": 14
+  }
+ },
+ "Conor Johnston": {
+  "messages": 1353,
+  "share_pct": 11.9,
+  "avg_burst": 1.31,
+  "median_reply_s": 82,
+  "ignored_pct": 12.9,
+  "killed_pct": 3.8,
+  "starts": 52,
+  "peak_hours_utc": [
+   5,
+   17,
+   19
+  ],
+  "addressed_by": {
+   "Matt Mariani": 135,
+   "Jon Black": 120,
+   "Grant Koziol": 37,
+   "Dave Jensen": 25
+  },
+  "addresses": {
+   "Jon Black": 49,
+   "Matt Mariani": 46,
+   "Grant Koziol": 37,
+   "Dave Jensen": 36
+  }
+ },
+ "Grant Koziol": {
+  "messages": 1321,
+  "share_pct": 11.6,
+  "avg_burst": 1.93,
+  "median_reply_s": 62,
+  "ignored_pct": 9.8,
+  "killed_pct": 1.7,
+  "starts": 23,
+  "peak_hours_utc": [
+   0,
+   19,
+   18
+  ],
+  "addressed_by": {
+   "Matt Mariani": 57,
+   "Jon Black": 50,
+   "Conor Johnston": 37,
+   "Dave Jensen": 14
+  },
+  "addresses": {
+   "Jon Black": 43,
+   "Conor Johnston": 37,
+   "Matt Mariani": 34,
+   "Darren Paletz": 27
+  }
+ },
+ "Shane Farkas": {
+  "messages": 522,
+  "share_pct": 4.6,
+  "avg_burst": 1.2,
+  "median_reply_s": 84,
+  "ignored_pct": 8.6,
+  "killed_pct": 3.1,
+  "starts": 18,
+  "peak_hours_utc": [
+   1,
+   19,
+   2
+  ],
+  "addressed_by": {
+   "Matt Mariani": 37,
+   "Conor Johnston": 28,
+   "Grant Koziol": 23,
+   "Jon Black": 19
+  },
+  "addresses": {
+   "Conor Johnston": 12,
+   "Jon Black": 5,
+   "Darren Paletz": 4,
+   "Clements Johnson": 4
+  }
+ },
+ "Darren Paletz": {
+  "messages": 70,
+  "share_pct": 0.6,
+  "avg_burst": 1.27,
+  "median_reply_s": 111,
+  "ignored_pct": 5.7,
+  "killed_pct": 0.0,
+  "starts": 1,
+  "peak_hours_utc": [
+   5,
+   7,
+   19
+  ],
+  "addressed_by": {
+   "Matt Mariani": 34,
+   "Grant Koziol": 27,
+   "Jon Black": 14,
+   "Clements Johnson": 12
+  },
+  "addresses": {
+   "Matt Mariani": 3,
+   "Grant Koziol": 1,
+   "Jimmy": 1,
+   "Jon Black": 1
+  }
+ },
+ "Dave Steingart": {
+  "messages": 250,
+  "share_pct": 2.2,
+  "avg_burst": 1.13,
+  "median_reply_s": 77,
+  "ignored_pct": 4.4,
+  "killed_pct": 1.6,
+  "starts": 4,
+  "peak_hours_utc": [
+   19,
+   23,
+   21
+  ],
+  "addressed_by": {
+   "Matt Mariani": 36,
+   "Conor Johnston": 14,
+   "Grant Koziol": 10,
+   "Jon Black": 9
+  },
+  "addresses": {
+   "Conor Johnston": 11,
+   "Jon Black": 10,
+   "Matt Mariani": 4,
+   "Dave Jensen": 3
+  }
+ },
+ "Jimmy": {
+  "messages": 347,
+  "share_pct": 3.0,
+  "avg_burst": 1.37,
+  "median_reply_s": 108,
+  "ignored_pct": 17.9,
+  "killed_pct": 5.5,
+  "starts": 21,
+  "peak_hours_utc": [
+   16,
+   18,
+   4
+  ],
+  "addressed_by": {
+   "Matt Mariani": 41,
+   "Grant Koziol": 21,
+   "Jon Black": 19,
+   "Conor Johnston": 17
+  },
+  "addresses": {
+   "Conor Johnston": 8,
+   "Grant Koziol": 5,
+   "Matt Mariani": 4,
+   "Jon Black": 4
+  }
+ }
+}
