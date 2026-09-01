@@ -4,6 +4,10 @@
   scripts/ml-vote-comments.py --league <lid> --round <rid>
   scripts/ml-vote-comments.py --round <rid>     # league auto-resolved
 
+Auto-resolution only searches the owner's CURRENT leagues (resolve_league_id
+iterates client.list_current_leagues()), so a round from a finished season
+cannot be auto-resolved — pass --league explicitly for a historical round.
+
 INTERPRETER: this needs BOTH `bs4` (for scripts/lib/ml_vote_parse.py) and the
 editable-installed `cli_web` package. As of 2026-09-01 the only interpreter on
 this machine with both is ~/Projects/ttstt/venv/bin/python3 (bs4 alone also
@@ -21,12 +25,18 @@ SAFETY — read before editing:
   * GET ONLY. /vote/ autosaves via hx-post on interaction. A POST here, or any
     browser that renders and clicks this page, writes a REAL DRAFT BALLOT to the
     owner's account in a live league.
+  * The CLI client may launch a headless browser of its own to re-mint an
+    expired Spotify login session. That is verified safe because it navigates
+    only the login and home URLs and never renders /vote/. It is NOT a licence
+    to point a browser at the ballot page.
   * Use /vote/ and never /-/results. Post-close, /-/results carries the same
     comments but ATTRIBUTES them to named submitters. /vote/ is anonymous by
     construction, and that anonymity is what the guessing game rests on (§5).
 
-Always exits 0. A failure is reported as {"ok": false, "error": ...} because a
-failed scrape must not block the sitting (§7.2).
+Always exits 0 once arguments parse (argparse itself still exits 2 on
+malformed args, before any of this runs). A failure is reported as
+{"ok": false, "error": ...} because a failed scrape must not block the
+sitting (§7.2).
 """
 
 import argparse
@@ -59,7 +69,11 @@ def resolve_league_id(client, round_id: str) -> str | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--round", required=True, help="32-char ML round id")
-    ap.add_argument("--league", help="32-char ML league id (auto-resolved if omitted)")
+    ap.add_argument(
+        "--league",
+        help="32-char ML league id. If omitted it is auto-resolved, but only among "
+        "the owner's CURRENT leagues — a round from a finished season must pass this.",
+    )
     args = ap.parse_args()
 
     # Imported here, not at module scope, so a missing dependency is reported as
@@ -70,7 +84,7 @@ def main() -> int:
 
         from scripts.lib.ml_vote_parse import parse_ballot
     except Exception as e:  # not just ImportError: a module can raise at import time
-        return _fail(f"cli-web-musicleague or bs4 is not importable: {type(e).__name__}: {e}")
+        return _fail(f"could not import cli-web-musicleague or bs4: {type(e).__name__}: {e}")
 
     try:
         # Inside the try on purpose: is_authenticated() reads auth.json and can
@@ -91,6 +105,16 @@ def main() -> int:
 
             songs = parse_ballot(str(soup))
             if not songs:
+                # Distinguish the two zero-song causes: no div.songs at all is
+                # almost always "this page is not an open ballot" (round not open
+                # for voting, or a login/error shell), while a div.songs holding
+                # no parsable song really does mean the markup moved. Reporting
+                # both as "markup may have changed" misleads a backfill operator.
+                if soup.select_one("div.songs") is None:
+                    return _fail(
+                        f"no ballot on {lid}/{args.round} — the page has no div.songs "
+                        "(round probably not open for voting)"
+                    )
                 return _fail("voting page parsed to zero songs — markup may have changed")
 
             json.dump(
