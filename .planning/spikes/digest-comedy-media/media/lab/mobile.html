@@ -11,13 +11,14 @@
         --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8;--pay:#d3706a;
         --bar:112px}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{font-size:17px}
   body{margin:0;background:var(--bg);color:var(--ink);
-       font:17px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+       font:1rem/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
        padding:0 0 calc(var(--bar) + env(safe-area-inset-bottom));
        -webkit-text-size-adjust:100%}
-  /* four sizes: .85 / 1 / 1.25 / 1.6rem */
+  /* exactly four steps: .8 / 1 / 1.25 / 1.6rem, each >=1.25x the one below */
   h1{font-size:1.6rem;margin:0;letter-spacing:-.02em}
-  .sub,.hint,.help,.tag,.stat,.mono{font-size:.85rem}
+  .sub,.hint,.help,.tag,.stat,.mono,.num,.q,#busy{font-size:.8rem}
   header{padding:16px 16px 12px;border-bottom:1px solid var(--edge);
          position:sticky;top:0;background:#12100fef;backdrop-filter:blur(8px);z-index:9}
   .sub{color:var(--dim);margin-top:3px}
@@ -25,7 +26,7 @@
   .head{display:flex;align-items:center;gap:11px;padding:15px 16px;cursor:pointer;
         user-select:none}
   .num{width:27px;height:27px;flex:0 0 27px;border-radius:50%;background:var(--hot);
-       color:#1a1512;font-weight:750;font-size:.85rem;display:grid;place-items:center}
+       color:#1a1512;font-weight:750;display:grid;place-items:center}
   .head h2{font-size:1.25rem;margin:0;flex:1;font-weight:650}
   .tag{border:1px solid var(--edge);border-radius:999px;padding:2px 9px;color:var(--dim);
        font-weight:600;white-space:nowrap}
@@ -38,8 +39,8 @@
   .hint{color:#6f6862;margin:10px 0 0}
 
   select,textarea{width:100%;background:#100e0d;border:1px solid var(--edge);border-radius:9px;
-    color:var(--ink);padding:13px 11px;font:inherit;font-size:1rem;appearance:none}
-  textarea{min-height:96px;resize:vertical;font-size:.95rem}
+    color:var(--ink);padding:13px 11px;font:inherit;appearance:none}
+  textarea{min-height:96px;resize:vertical}
 
   .presets{display:flex;gap:9px;overflow-x:auto;padding:2px 16px 4px;margin:0 -16px;
            scrollbar-width:none}
@@ -47,7 +48,7 @@
   .presets button{flex:0 0 auto}
 
   button{background:#211d1c;border:1px solid var(--edge);color:var(--ink);border-radius:10px;
-         padding:12px 16px;font:inherit;font-size:.95rem;cursor:pointer;min-height:46px}
+         padding:12px 16px;font:inherit;cursor:pointer;min-height:46px}
   button.on{background:var(--hot);border-color:var(--hot);color:#1a1512;font-weight:700}
   button.money{background:#2a1a19;border-color:var(--pay);color:#f0b3ae;font-weight:650;width:100%}
   button:disabled{opacity:.5}
@@ -58,7 +59,7 @@
   .kname{font-weight:650;flex:1}
   .val{color:var(--hot);font-weight:750;font-variant-numeric:tabular-nums;font-size:1.25rem}
   .q{width:30px;height:30px;flex:0 0 30px;border-radius:50%;border:1px solid var(--edge);
-     color:var(--dim);display:grid;place-items:center;font-size:.85rem}
+     color:var(--dim);display:grid;place-items:center}
   .q.on{border-color:var(--hot);color:var(--hot)}
   /* chunky enough to drag with a thumb */
   input[type=range]{width:100%;height:34px;background:transparent;appearance:none;margin:0}
@@ -90,7 +91,7 @@
   .dock .r button{flex:1;background:var(--hot);border:0;color:#1a1512;font-weight:750}
   .dock .r button.sec{flex:0 0 92px;background:#211d1c;border:1px solid var(--edge);
                       color:var(--ink);font-weight:500}
-  #busy{color:var(--dim);font-size:.85rem;min-width:62px;text-align:right}
+  #busy{color:var(--dim);min-width:62px;text-align:right}
 </style>
 </head>
 <body>
