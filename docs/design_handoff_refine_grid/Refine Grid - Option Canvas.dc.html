@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bricolage+Grotesque:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  .cv { -webkit-font-smoothing: antialiased; }
+  .cv input[type=range]{ accent-color:#ff5b2e; height:3px; }
+  .cv textarea, .cv input[type=text]{ font-family:'Inter Tight',sans-serif; }
+  .cv textarea:focus, .cv input:focus{ outline:none; border-color:#ff5b2e !important; }
+  .cv ::placeholder{ color:#5a6773; }
+  @keyframes flashland { 0%{ background:#221a14; } 100%{ background:#141921; } }
+  .cv a{ color:#ff5b2e; text-decoration:none; }
+  .cv a:hover{ color:#d94c23; }
+</style>
+</helmet>
+<div class="cv" style="min-height:100%; background:#07090c; padding:48px 56px 120px; font-family:'Inter Tight',sans-serif; color:#f1f4f7; display:flex; flex-direction:column; gap:72px; width:max-content;">
+
+  <!-- ============ HEADER ============ -->
+  <section style="max-width:1080px; display:flex; flex-direction:column; gap:20px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">C3 · refine grid · option canvas</div>
+    <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:42px; font-weight:700; line-height:1.05; letter-spacing:-0.02em;">The sudoku board — six decisions, in context</div>
+    <div style="font-size:16px; line-height:1.6; color:#c2cad3; max-width:820px;">Every option is shown on real Boarz R148 data (9 songs, 9 eligible players) at honest density — not on a flattering subset. Recommended options carry a <span style="color:#ff5b2e; font-weight:600;">★</span>. Pan freely; reference any option by its id (e.g. <a href="#d4a">d4a</a>) in chat.</div>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#8b97a4; background:#0d1116; border:1px solid #283039; border-radius:3px; padding:6px 10px;">settled: gut pick = quiet visible marker</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#8b97a4; background:#0d1116; border:1px solid #283039; border-radius:3px; padding:6px 10px;">factors = free text</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#8b97a4; background:#0d1116; border:1px solid #283039; border-radius:3px; padding:6px 10px;">order = status → certainty</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#8b97a4; background:#0d1116; border:1px solid #283039; border-radius:3px; padding:6px 10px;">refine replaces gut slate</div>
+    </div>
+    <!-- legend -->
+    <div style="display:flex; flex-wrap:wrap; gap:28px; margin-top:8px; padding:16px 20px; background:#0d1116; border:1px solid #283039; border-radius:6px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; align-self:center;">legend</div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-left:2px solid #283039; background:#141921; display:inline-block;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8b97a4;">○ possible</span></div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-left:2px solid #e8a83a; background:#141921; display:inline-block;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#e8a83a;">◐ prime suspect</span></div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-left:3px solid #ff5b2e; background:#141921; display:inline-block;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">● locked</span></div>
+      <div style="display:flex; align-items:center; gap:8px; opacity:0.62;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8b97a4;">dimmed · prime elsewhere (advisory)</span></div>
+      <div style="display:flex; align-items:center; gap:8px; opacity:0.4;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8b97a4; text-decoration:line-through;">taken · locked elsewhere (hard)</span></div>
+    </div>
+  </section>
+
+  <!-- ============ D1 — STATE CONTROL ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D1 · the state control</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">How the three states read at a glance</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;">The primary verb — cycles <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">possible → prime → locked → possible</span>, fires immediately. Every control below is live: click to cycle. Judge on scannability across a dense board, then on whether <em>locked</em> feels like a commitment.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d1a recommended -->
+      <div id="d1a" style="width:430px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D1a</span><span style="font-weight:600; font-size:14px;">State-carrying row + current-state chip</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ d1Dec }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding-left:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span><span style="font-size:12px; color:#8b97a4;">{{ s.artist }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:7px 12px;">
+                  <span style="flex:1; font-size:13px; font-weight:{{ c.weight }}; color:#f1f4f7;">{{ c.name }}</span>
+                  <button onClick="{{ c.onCycle }}" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:{{ c.chipBg }}; border:1px solid {{ c.chipBorder }}; color:{{ c.chipFg }}; border-radius:3px; padding:4px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600;"><span style="font-size:11px;">{{ c.dot }}</span>{{ c.statusLabel }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Chip shows the <em>current</em> state (you scan state, not a verb). Rail weight + glyph + label distinguish all three without color. Locked gets the accent + a thicker rail — reads as the terminal, consequential step.</div>
+        </div>
+      </div>
+
+      <!-- d1b -->
+      <div id="d1b" style="width:430px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D1b</span><span style="font-weight:600; font-size:14px;">Next-action cycling button</span></div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ d1Dec }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding-left:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:7px 12px;">
+                  <span style="flex:1; font-size:13px; font-weight:{{ c.weight }};">{{ c.name }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:{{ c.chipFg }}; letter-spacing:0.08em; text-transform:uppercase;">{{ c.statusLabel }}</span>
+                  <button onClick="{{ c.onCycle }}" style="cursor:pointer; background:#ff5b2e; color:#0d1116; border:none; border-radius:2px; padding:4px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600;">→ {{ c.statusNext }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">The <span style="font-family:'JetBrains Mono',monospace;">flipSeasonStatus</span> shape generalized to 3. Familiar, but the button reads the <em>next</em> verb while you're scanning for the <em>current</em> state — two things to parse per row.</div>
+        </div>
+      </div>
+
+      <!-- d1c -->
+      <div id="d1c" style="width:430px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D1c</span><span style="font-weight:600; font-size:14px;">Segmented 3-position control</span></div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ d1Dec }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding-left:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:7px 12px;">
+                  <span style="flex:1; font-size:13px; font-weight:{{ c.weight }};">{{ c.name }}</span>
+                  <button onClick="{{ c.onCycle }}" style="cursor:pointer; display:inline-flex; border:1px solid #3a4451; border-radius:3px; overflow:hidden; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; text-transform:uppercase;">
+                    <span style="padding:4px 7px; background:{{ c.segPos }}; color:{{ c.segPosFg }};">poss</span>
+                    <span style="padding:4px 7px; border-left:1px solid #3a4451; background:{{ c.segPri }}; color:{{ c.segPriFg }};">prime</span>
+                    <span style="padding:4px 7px; border-left:1px solid #3a4451; background:{{ c.segLoc }}; color:{{ c.segLocFg }};">lock</span>
+                  </button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">All three states always visible; current is filled. Most explicit, but widest — three segments × ~30 rows is a lot of chrome, and it invites direct-jump clicks that break the deliberate wrap.</div>
+        </div>
+      </div>
+
+      <!-- d1d -->
+      <div id="d1d" style="width:430px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D1d</span><span style="font-weight:600; font-size:14px;">Minimal glyph toggle</span></div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ d1Dec }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding-left:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:7px 12px;">
+                  <button onClick="{{ c.onCycle }}" style="cursor:pointer; width:24px; height:24px; border-radius:3px; border:1px solid {{ c.chipBorder }}; background:{{ c.chipBg }}; color:{{ c.chipFg }}; font-size:13px; display:flex; align-items:center; justify-content:center;">{{ c.dot }}</button>
+                  <span style="flex:1; font-size:13px; font-weight:{{ c.weight }};">{{ c.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Tightest footprint — a single cycling glyph. Fails the "without color / without a label" test: ○ ◐ ● are subtle at row height and force you to learn the code. Good density, poor legibility.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ D2 — CANDIDATE PICKER ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D2 · the candidate picker</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">Roster → rows, for a 9-name local list</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;">Spec says "typeahead pill input." My push-back: for 9–13 names already loaded client-side, a typeahead is a keystroke and a context-switch per add, and it hides availability until after you choose. Shown on song #4 (Hyperballad), which already has Nadia + Dave + Conor.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d2a typeahead -->
+      <div id="d2a" style="width:440px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D2a</span><span style="font-weight:600; font-size:14px;">Typeahead pill input (spec)</span></div>
+        <div style="padding:16px;">
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:12px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#4</span><span style="font-weight:700; font-size:14px;">Hyperballad</span><span style="font-size:12px; color:#8b97a4;">Björk</span></div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:#141921; border:1px solid #3a4451; border-radius:8px; padding:8px 10px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,91,46,0.14); border:1px solid #ff5b2e; color:#ff5b2e; border-radius:3px; padding:3px 8px; font-size:12px;">Nadia <span style="opacity:0.6;">×</span></span>
+            <span style="display:inline-flex; align-items:center; gap:6px; background:#1d2128; border:1px solid #3a4451; color:#c2cad3; border-radius:3px; padding:3px 8px; font-size:12px;">Dave <span style="opacity:0.6;">×</span></span>
+            <span style="display:inline-flex; align-items:center; gap:6px; background:#1d2128; border:1px solid #3a4451; color:#c2cad3; border-radius:3px; padding:3px 8px; font-size:12px;">Conor <span style="opacity:0.6;">×</span></span>
+            <input type="text" placeholder="add a name…" style="flex:1; min-width:90px; background:transparent; border:none; color:#f1f4f7; font-size:13px; padding:3px 2px;">
+          </div>
+          <div style="margin-top:6px; background:#141921; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+            <div style="padding:6px 12px; background:#1d2128; color:#f1f4f7; font-size:13px; border-left:2px solid #ff5b2e;">Priya</div>
+            <div style="padding:6px 12px; color:#c2cad3; font-size:13px;">Ruth <span style="color:#5a6773; font-size:11px; font-family:'JetBrains Mono',monospace;">· locked #1</span></div>
+            <div style="padding:6px 12px; color:#c2cad3; font-size:13px;">Sam <span style="color:#5a6773; font-size:11px; font-family:'JetBrains Mono',monospace;">· locked #3</span></div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px; margin-top:12px;">Built from nothing (no chip input exists in the repo). Availability only appears once you open the dropdown and start typing — invisible at rest.</div>
+        </div>
+      </div>
+
+      <!-- d2b popover -->
+      <div id="d2b" style="width:440px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D2b</span><span style="font-weight:600; font-size:14px;">Filter-and-toggle popover</span></div>
+        <div style="padding:16px;">
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:12px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#4</span><span style="font-weight:700; font-size:14px;">Hyperballad</span></div>
+          <button style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; background:#141921; color:#c2cad3; border:1px solid #3a4451; border-radius:3px; padding:6px 12px; cursor:pointer;">+ candidate</button>
+          <div style="margin-top:8px; width:230px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+            <input type="text" placeholder="filter…" style="width:100%; background:#141921; border:none; border-bottom:1px solid #283039; color:#f1f4f7; font-size:13px; padding:8px 12px;">
+            <div style="max-height:180px; overflow:auto;">
+              <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; color:#f1f4f7;"><span style="width:14px; color:#ff5b2e;">✓</span>Nadia</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; color:#f1f4f7;"><span style="width:14px; color:#ff5b2e;">✓</span>Dave</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; color:#f1f4f7;"><span style="width:14px; color:#ff5b2e;">✓</span>Conor</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; color:#c2cad3;"><span style="width:14px;"></span>Priya</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; color:#5a6773;"><span style="width:14px;"></span>Ruth <span style="font-size:10px; font-family:'JetBrains Mono',monospace;">locked #1</span></div>
+            </div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px; margin-top:12px;">The <span style="font-family:'JetBrains Mono',monospace;">AssignPopover</span> pattern (exists to borrow). Availability is legible inside the popover — but it's a click to open, then a click to add, and it hides after.</div>
+        </div>
+      </div>
+
+      <!-- d2c recommended -->
+      <div id="d2c" style="width:440px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D2c</span><span style="font-weight:600; font-size:14px;">Always-visible roster strip</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:16px;">
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:10px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#4</span><span style="font-weight:700; font-size:14px;">Hyperballad</span><span style="font-size:12px; color:#8b97a4;">Björk</span></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; margin-bottom:6px;">click a name to add · availability shown live</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <sc-for list="{{ roster9 }}" as="r" hint-placeholder-count="9">
+              <span style="display:inline-flex; align-items:center; gap:5px; border-radius:3px; padding:4px 9px; font-size:12px; cursor:{{ r.cursor }}; background:{{ r.stripBg }}; border:1px solid {{ r.stripBorder }}; color:{{ r.stripFg }}; opacity:{{ r.stripOpacity }}; text-decoration:{{ r.stripStrike }};">{{ r.name }}<span style="font-size:9px; font-family:'JetBrains Mono',monospace; color:#5a6773;">{{ r.stripTag }}</span></span>
+            </sc-for>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px; margin-top:14px;">The strip <em>is</em> the availability display (D3) — dimmed = advisory, struck = taken/inert. Added candidates read as the pulp chips; a second/third add is one click with no mode switch. Costs ~28px of vertical per song (folds to a "+ add" button once a song has candidates, if that space is dear).</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ D3 — AVAILABILITY ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D3 · cross-song availability — the sudoku effect</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">What "dimmed" and "taken" look like</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;"><span style="color:#e8a83a;">dimmed</span> = prime elsewhere, <em>advisory</em> (you might still be wrong). <span style="color:#8b97a4; text-decoration:line-through;">taken</span> = locked elsewhere, <em>hard</em>. The two must never read the same. Shown on existing candidate rows across the board; the live panel at the end shows the moment a lock propagates.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d3a opacity only -->
+      <div id="d3a" style="width:360px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D3a</span><span style="font-weight:600; font-size:14px;">Opacity ladder only</span></div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px; opacity:1;"><span style="flex:1; font-size:13px;">Dave</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8b97a4;">free</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px; opacity:0.6;"><span style="flex:1; font-size:13px;">Theo</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8b97a4;">dimmed</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px; opacity:0.3;"><span style="flex:1; font-size:13px;">Jon</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8b97a4;">taken</span></div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Per the <span style="font-family:'JetBrains Mono',monospace;">disabled:opacity-30</span> precedent. But advisory vs hard is only a difference of <em>degree</em> — a glance can't tell 60% from 30%. Fails the functional a11y bar.</div>
+        </div>
+      </div>
+
+      <!-- d3b recommended -->
+      <div id="d3b" style="width:390px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D3b</span><span style="font-weight:600; font-size:14px;">Opacity + typed tag + strike</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px;"><span style="flex:1; font-size:13px;">Dave</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#3ec27a;">free</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px dashed #e8a83a; padding:7px 12px; opacity:0.72;"><span style="flex:1; font-size:13px; color:#c2cad3;">Theo</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#e8a83a; letter-spacing:0.06em;">◐ prime · #2</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px; opacity:0.45;"><span style="flex:1; font-size:13px; color:#5a6773; text-decoration:line-through;">Jon</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8b97a4; letter-spacing:0.06em;">● locked · #5</span></div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Three independent signals carry advisory-vs-hard: <em>dashed amber rail + tag</em> for dimmed, <em>strikethrough + "locked · #n"</em> for taken. Opacity reinforces, never carries. The tag also says <em>where</em> — so you can jump to the song that settled it.</div>
+        </div>
+      </div>
+
+      <!-- d3c badge -->
+      <div id="d3c" style="width:360px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D3c</span><span style="font-weight:600; font-size:14px;">Where-committed badge, no dimming</span></div>
+        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px;"><span style="flex:1; font-size:13px;">Dave</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px;"><span style="flex:1; font-size:13px;">Theo</span><span style="background:rgba(232,168,58,0.12); border:1px solid #e8a83a; color:#e8a83a; border-radius:3px; padding:2px 7px; font-family:'JetBrains Mono',monospace; font-size:9px;">PRIME #2</span></div>
+          <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px;"><span style="flex:1; font-size:13px;">Jon</span><span style="background:rgba(255,91,46,0.14); border:1px solid #ff5b2e; color:#ff5b2e; border-radius:3px; padding:2px 7px; font-family:'JetBrains Mono',monospace; font-size:9px;">LOCKED #5</span></div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Naming beats dimming for precision, but with no visual demotion a taken player still looks fully active — the board reads busier, not more settled. Best folded into D3b, not used alone.</div>
+        </div>
+      </div>
+
+      <!-- before/after live -->
+      <div id="d3-prop" style="width:100%; max-width:1170px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden; margin-top:4px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#ff5b2e;">propagation · live</span><span style="font-size:13px; color:#c2cad3;">Lock Jon on #5 — watch him go taken on #2</span></div>
+          <button onClick="{{ toggleLock }}" style="cursor:pointer; background:#ff5b2e; color:#0d1116; border:none; border-radius:3px; padding:7px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600;">{{ lockBtnLabel }}</button>
+        </div>
+        <div style="padding:18px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ ba }}" as="s" hint-placeholder-count="2">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:14px;">{{ s.title }}</span><span style="font-size:12px; color:#8b97a4;">{{ s.artist }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773; margin-left:8px;">gut · {{ s.gutName }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:12px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:8px 14px; opacity:{{ c.opacity }}; animation:{{ c.anim }};">
+                  <span style="width:70px; font-size:13px; font-weight:{{ c.weight }}; color:{{ c.nameColor }}; text-decoration:{{ c.strikeCss }};">{{ c.name }}</span>
+                  <span style="display:inline-flex; align-items:center; gap:5px; background:{{ c.chipBg }}; border:1px solid {{ c.chipBorder }}; color:{{ c.chipFg }}; border-radius:3px; padding:3px 8px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase;">{{ c.dot }} {{ c.statusLabel }}</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8b97a4; letter-spacing:0.06em;">{{ c.tag }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#c2cad3; width:34px; text-align:right;">{{ c.certaintyStr }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4;">Availability is derived server-side and re-read after the write — the transition is a re-render with a brief <span style="color:#ff5b2e;">one-shot accent flash</span> on rows that changed, so the propagation is <em>felt</em> without an animation library.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ D4 — DENSITY ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D4 · board density — the central layout problem</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">How much of a row is visible at rest</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;">Three editable fields × ~30 rows vs. your hard requirement: the whole round reachable <em>without navigation</em>. All three options render the full 9-song R148 board at true scale so the vertical cost is honest. In D4a, click any row to expand its editor.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d4a recommended -->
+      <div id="d4a" style="width:560px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D4a</span><span style="font-weight:600; font-size:14px;">Summary at rest, expand on click</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:12px 14px; display:flex; flex-direction:column; gap:12px;">
+          <sc-for list="{{ board9 }}" as="s" hint-placeholder-count="9">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span><span style="font-size:11px; color:#8b97a4;">{{ s.artist }}</span><span style="flex:1;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5a6773; letter-spacing:0.08em;">gut · {{ s.gutName }}</span></div>
+              <sc-if value="{{ s.empty }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#0d1116; border-left:2px solid #283039; border:1px dashed #283039; padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773; letter-spacing:0.08em;">no candidates yet — click a name to add</div>
+              </sc-if>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div>
+                  <div onClick="{{ c.onExpand }}" style="cursor:pointer; display:flex; align-items:center; gap:10px; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:6px 12px; opacity:{{ c.opacity }};">
+                    <span style="width:64px; font-size:13px; font-weight:{{ c.weight }}; color:{{ c.nameColor }}; text-decoration:{{ c.strikeCss }};">{{ c.name }}</span>
+                    <span style="display:inline-flex; align-items:center; gap:4px; background:{{ c.chipBg }}; border:1px solid {{ c.chipBorder }}; color:{{ c.chipFg }}; border-radius:3px; padding:2px 7px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; text-transform:uppercase;">{{ c.dot }} {{ c.statusLabel }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#8b97a4;">{{ c.tag }}</span>
+                    <span style="flex:1;"></span>
+                    <span style="display:inline-flex; gap:2px; align-items:center;">
+                      <span title="factors" style="width:7px; height:7px; border-radius:1px; background:{{ c.facDot }};"></span>
+                      <span title="notes" style="width:7px; height:7px; border-radius:1px; background:{{ c.noteDot }};"></span>
+                    </span>
+                    <span style="width:44px; display:flex; align-items:center; gap:5px; justify-content:flex-end;"><span style="width:22px; height:4px; border-radius:2px; background:linear-gradient(to right,#ff5b2e {{ c.certPct }},#283039 {{ c.certPct }});"></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#c2cad3;">{{ c.certaintyStr }}</span></span>
+                  </div>
+                  <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:#0d1116; border-left:{{ c.railW }} solid {{ c.rail }}; padding:12px 14px; display:flex; flex-direction:column; gap:10px;">
+                      <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; width:56px;">certainty</span><input type="range" min="0" max="100" defaultValue="{{ c.certainty }}" style="flex:1;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff5b2e; width:30px; text-align:right;">{{ c.certaintyStr }}</span></div>
+                      <div style="display:flex; gap:10px;"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; width:56px; padding-top:8px;">factors</span><textarea rows="2" placeholder="why them…" defaultValue="{{ c.factors }}" style="flex:1; background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:13px; padding:7px 10px; resize:vertical;"></textarea></div>
+                      <div style="display:flex; gap:10px;"><span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; width:56px; padding-top:8px;">notes</span><textarea rows="2" placeholder="thinking…" defaultValue="{{ c.notes }}" style="flex:1; background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:13px; padding:7px 10px; resize:vertical;"></textarea></div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">At rest a row is one line: name, state, certainty bar+value, and two dots (filled = factors/notes present). All 9 songs fit without scrolling on a laptop. The editor opens in place — no modal, no navigation, scroll position kept.</div>
+        </div>
+      </div>
+
+      <!-- d4b columnar -->
+      <div id="d4b" style="width:620px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D4b</span><span style="font-weight:600; font-size:14px;">All fields always visible (columnar)</span></div>
+        <div style="padding:12px 14px; display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ board9short }}" as="s" hint-placeholder-count="5">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div style="display:flex; align-items:baseline; gap:8px; padding:2px;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:13px;">{{ s.title }}</span><span style="flex:1;"></span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5a6773;">gut · {{ s.gutName }}</span></div>
+              <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                <div style="display:grid; grid-template-columns:60px 76px 1fr 1fr; gap:8px; align-items:center; background:#141921; border-left:{{ c.railW }} solid {{ c.rail }}; padding:8px 12px; opacity:{{ c.opacity }};">
+                  <span style="font-size:13px; font-weight:{{ c.weight }}; color:{{ c.nameColor }}; text-decoration:{{ c.strikeCss }};">{{ c.name }}</span>
+                  <span style="display:inline-flex; align-items:center; gap:4px; background:{{ c.chipBg }}; border:1px solid {{ c.chipBorder }}; color:{{ c.chipFg }}; border-radius:3px; padding:2px 5px; font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.04em; text-transform:uppercase; justify-content:center;">{{ c.dot }} {{ c.statusShort }}</span>
+                  <input type="text" defaultValue="{{ c.factors }}" placeholder="factors…" style="background:#0d1116; border:1px solid #283039; border-radius:6px; color:#c2cad3; font-size:12px; padding:5px 8px;">
+                  <input type="text" defaultValue="{{ c.notes }}" placeholder="notes…" style="background:#0d1116; border:1px solid #283039; border-radius:6px; color:#c2cad3; font-size:12px; padding:5px 8px;">
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Nothing hidden — but every row is ~40px and the two text columns are cramped at board width. The certainty slider had to move to the chip. Honest, but the board runs tall fast and reads busy. <span style="color:#5a6773;">(5 of 9 songs shown — the pattern continues; at full length this option roughly doubles D4a's height.)</span></div>
+        </div>
+      </div>
+
+      <!-- d4c two-pane -->
+      <div id="d4c" style="width:640px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D4c</span><span style="font-weight:600; font-size:14px;">Two-pane — board left, editor right</span></div>
+        <div style="display:grid; grid-template-columns:1fr 240px; gap:0;">
+          <div style="padding:12px 14px; display:flex; flex-direction:column; gap:10px; border-right:1px solid #283039;">
+            <sc-for list="{{ board9short }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex; flex-direction:column; gap:3px;">
+                <div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#ff5b2e;">#{{ s.n }}</span><span style="font-weight:700; font-size:12px;">{{ s.title }}</span></div>
+                <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:8px; background:{{ c.paneBg }}; border-left:{{ c.railW }} solid {{ c.rail }}; padding:5px 10px; opacity:{{ c.opacity }};">
+                    <span style="flex:1; font-size:12px; font-weight:{{ c.weight }}; color:{{ c.nameColor }}; text-decoration:{{ c.strikeCss }};">{{ c.name }}</span>
+                    <span style="font-size:11px;">{{ c.dot }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#c2cad3;">{{ c.certaintyStr }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:14px; background:#0d1116; display:flex; flex-direction:column; gap:10px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773;">selected · #4 dave</div>
+            <div style="display:flex; align-items:center; gap:8px;"><input type="range" min="0" max="100" defaultValue="45" style="flex:1;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff5b2e;">45</span></div>
+            <textarea rows="3" placeholder="factors…" style="background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:12px; padding:7px 9px; resize:none;"></textarea>
+            <textarea rows="3" placeholder="notes…" style="background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:12px; padding:7px 9px; resize:none;"></textarea>
+          </div>
+        </div>
+        <div style="padding:12px 16px; font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039;">Densest board — every song visible, editing off to the side. But it splits attention (edit here, consequence there) and only one candidate is editable at a time; the panel is dead space until you select. Fights "reason across the whole board at once." <span style="color:#5a6773;">(5 of 9 songs shown.)</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ D5 — CONFLICTS ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D5 · conflict & completeness feedback</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">Surfacing problems without blocking the work</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;">Duplicates are <em>permitted while editing</em> and gated only at submit — so feedback must inform, not nag. All three shown on a deliberately messy board: Conor locked on #3 <em>and</em> #6, and songs #5 + #8 empty.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d5a single line -->
+      <div id="d5a" style="width:380px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D5a</span><span style="font-weight:600; font-size:14px;">Single mono status line (incumbent)</span></div>
+        <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#e8a83a; line-height:1.5;">{{ messyValidation }}</div>
+          <div style="display:flex; flex-direction:column; gap:5px; opacity:0.9;">
+            <div style="background:#141921; border-left:3px solid #ff5b2e; padding:6px 12px; font-size:12px;">#3 Such Great Heights · <span style="color:#ff5b2e;">Conor ●</span></div>
+            <div style="background:#141921; border-left:3px solid #ff5b2e; padding:6px 12px; font-size:12px;">#6 Gimme Shelter · <span style="color:#ff5b2e;">Conor ●</span></div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">Matches the gut phase exactly. But one rolled-up line makes you hunt for <em>which</em> two rows conflict across a 30-row board.</div>
+        </div>
+      </div>
+
+      <!-- d5b panel -->
+      <div id="d5b" style="width:380px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D5b</span><span style="font-weight:600; font-size:14px;">Persistent summary panel</span></div>
+        <div style="padding:16px; display:flex; flex-direction:column; gap:10px;">
+          <div style="background:#141921; border:1px solid #283039; border-radius:6px; overflow:hidden;">
+            <div style="padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; border-bottom:1px solid #283039;">board status</div>
+            <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:12px; color:#e6566c;"><span style="width:6px; height:6px; border-radius:50%; background:#e6566c;"></span>Conor locked twice · #3 &amp; #6</div>
+            <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:12px; color:#e8a83a; border-top:1px solid #283039;"><span style="width:6px; height:6px; border-radius:50%; background:#e8a83a;"></span>2 songs no candidate · #5, #8</div>
+            <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:12px; color:#8b97a4; border-top:1px solid #283039;"><span style="width:6px; height:6px; border-radius:50%; background:#3ec27a;"></span>3 of 9 songs locked</div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">A standing readout, richer than one line. But it's a second place to look, and it introduces a card-with-border pattern the flat app avoids. Good info, slightly foreign chrome.</div>
+        </div>
+      </div>
+
+      <!-- d5c recommended -->
+      <div id="d5c" style="width:400px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D5c</span><span style="font-weight:600; font-size:14px;">Inline markers + one roll-up line</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#e8a83a; line-height:1.5;">{{ messyValidation }}</div>
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <div style="display:flex; align-items:center; gap:8px; background:#141921; border-left:3px solid #e6566c; padding:6px 12px; font-size:12px;"><span style="flex:1;">#3 · <span style="color:#ff5b2e;">Conor ●</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#e6566c; letter-spacing:0.06em;">⚠ also #6</span></div>
+            <div style="display:flex; align-items:center; gap:8px; background:#141921; border-left:3px solid #e6566c; padding:6px 12px; font-size:12px;"><span style="flex:1;">#6 · <span style="color:#ff5b2e;">Conor ●</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#e6566c; letter-spacing:0.06em;">⚠ also #3</span></div>
+            <div style="display:flex; align-items:center; gap:8px; background:#0d1116; border-left:3px solid #e8a83a; border:1px dashed #283039; padding:6px 12px; font-size:12px; color:#8b97a4;"><span style="flex:1;">#5 Pyramid Song</span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#e8a83a;">no candidate</span></div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px;">The one-line roll-up keeps the gut-phase register; a quiet inline marker on <em>both</em> sides of a conflict means you never hunt. Ember for hard conflict, amber for incompleteness — informative, never blocking.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ D6 — LEDGER ============ -->
+  <section style="display:flex; flex-direction:column; gap:22px;">
+    <div style="display:flex; flex-direction:column; gap:8px; max-width:900px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e;">D6 · claimed slot — the availability ledger</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:26px; font-weight:600;">One place that answers "who's still free?"</div>
+      <div style="font-size:15px; line-height:1.55; color:#c2cad3;">Success criterion #1 is seeing which players are still available. Dimming answers it per-row; a standing ledger answers it for the whole roster at once — and doubles as the count of songs-vs-players remaining. Two placements shown.</div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;">
+
+      <!-- d6a sticky rail -->
+      <div id="d6a" style="width:300px; background:#0d1116; border:1px solid #3a4451; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;">
+          <div style="display:flex; align-items:center; gap:8px;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#221a14; color:#ff5b2e; border:1px solid #8a2d15; border-radius:3px; padding:3px 7px;">D6a</span><span style="font-weight:600; font-size:13px;">Sticky side rail</span></div>
+          <span style="color:#ff5b2e; font-size:15px;">★</span>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; margin-bottom:10px;">roster · 3 free · 3 dimmed · 3 taken</div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <sc-for list="{{ roster9 }}" as="r" hint-placeholder-count="9">
+              <div style="display:flex; align-items:center; gap:8px; padding:5px 8px; border-left:2px solid {{ r.ledgerRail }}; background:#141921; opacity:{{ r.stripOpacity }};">
+                <span style="flex:1; font-size:12px; color:{{ r.stripFg }}; text-decoration:{{ r.stripStrike }};">{{ r.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; color:{{ r.ledgerRail }};">{{ r.ledgerLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px; margin-top:12px;">Pins beside the board; the same rail treatment as candidate rows, so it reads as part of the app. Locked names sink to struck/taken; free names stay bright — the shrinking pool is the whole story.</div>
+        </div>
+      </div>
+
+      <!-- d6b top strip -->
+      <div id="d6b" style="width:520px; background:#0d1116; border:1px solid #283039; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #283039; background:#141921;"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; background:#141921; color:#8b97a4; border:1px solid #3a4451; border-radius:3px; padding:3px 7px;">D6b</span><span style="font-weight:600; font-size:13px;">Horizontal strip above the board</span></div>
+        <div style="padding:16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; margin-bottom:10px;">availability</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <sc-for list="{{ roster9 }}" as="r" hint-placeholder-count="9">
+              <span style="display:inline-flex; align-items:center; gap:6px; border-radius:3px; padding:4px 10px; font-size:12px; background:{{ r.stripBg }}; border:1px solid {{ r.stripBorder }}; color:{{ r.stripFg }}; opacity:{{ r.stripOpacity }}; text-decoration:{{ r.stripStrike }};">{{ r.name }}<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5a6773;">{{ r.stripTag }}</span></span>
+            </sc-for>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8b97a4; border-top:1px solid #283039; padding-top:10px; margin-top:14px;">Same data, horizontal. Cheaper vertically but scrolls off the top as you work the board — the ledger is most useful <em>while</em> reasoning, which argues for the pinned rail (D6a).</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <section style="max-width:900px; border-top:1px solid #283039; padding-top:24px; display:flex; flex-direction:column; gap:10px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773;">recommended set → the full board</div>
+    <div style="font-size:15px; line-height:1.6; color:#c2cad3;">My picks: <a href="#d1a">d1a</a> · <a href="#d2c">d2c</a> · <a href="#d3b">d3b</a> · <a href="#d4a">d4a</a> · <a href="#d5c">d5c</a> · <a href="#d6a">d6a</a>. Tell me which to keep or swap — then I'll build the comprehensive refine board (every state: empty, loading, error, rejected-write, conflict, unsatisfiable, fully-settled, rehearsal banner) and the handoff packet with a kickoff prompt for CC.</div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  PN = {1:'Matt',2:'Conor',3:'Jon',4:'Dave',5:'Priya',6:'Sam',7:'Nadia',8:'Theo',9:'Ruth',10:'Marcus'};
+  eligibleIds = [2,3,4,5,6,7,8,9,10];
+  STATUS = {
+    possible:{label:'possible',short:'poss',next:'prime',dot:'\u25cb',rail:'#283039',railW:'2px',chipBg:'transparent',chipBorder:'#3a4451',chipFg:'#8b97a4',weight:'400'},
+    prime:{label:'prime',short:'prime',next:'locked',dot:'\u25d0',rail:'#e8a83a',railW:'2px',chipBg:'rgba(232,168,58,0.12)',chipBorder:'#e8a83a',chipFg:'#e8a83a',weight:'600'},
+    locked:{label:'locked',short:'lock',next:'possible',dot:'\u25cf',rail:'#ff5b2e',railW:'3px',chipBg:'rgba(255,91,46,0.14)',chipBorder:'#ff5b2e',chipFg:'#ff5b2e',weight:'700'}
+  };
+  songsRaw = [
+    {n:1,title:'Video Games',artist:'Lana Del Rey',gut:5,candidates:[
+      {pid:9,status:'locked',certainty:88,factors:'weekend timing; late add fits her pattern',notes:'called a lana song two rounds back'},
+      {pid:5,status:'possible',certainty:42,factors:'',notes:''}]},
+    {n:2,title:'Teardrop',artist:'Massive Attack',gut:8,candidates:[
+      {pid:8,status:'prime',certainty:72,factors:'trip-hop is his lane',notes:''},
+      {pid:3,status:'possible',certainty:30,factors:'',notes:''}]},
+    {n:3,title:'Such Great Heights',artist:'The Postal Service',gut:6,candidates:[
+      {pid:6,status:'locked',certainty:91,factors:'indie-pop, his usual; dead giveaway',notes:''}]},
+    {n:4,title:'Hyperballad',artist:'Bj\u00f6rk',gut:7,candidates:[
+      {pid:7,status:'prime',certainty:68,factors:'championed bj\u00f6rk in chat',notes:'art-pop skew'},
+      {pid:4,status:'possible',certainty:45,factors:'quiet picks lately',notes:''},
+      {pid:2,status:'possible',certainty:33,factors:'',notes:''}]},
+    {n:5,title:'Pyramid Song',artist:'Radiohead',gut:3,candidates:[
+      {pid:3,status:'locked',certainty:84,factors:'radiohead superfan; flagged it weeks ago',notes:''},
+      {pid:8,status:'possible',certainty:40,factors:'',notes:''}]},
+    {n:6,title:'Gimme Shelter',artist:'The Rolling Stones',gut:10,candidates:[
+      {pid:10,status:'prime',certainty:60,factors:'skews older; classic rock',notes:''},
+      {pid:2,status:'possible',certainty:38,factors:'',notes:''}]},
+    {n:7,title:'A Case of You',artist:'Joni Mitchell',gut:9,candidates:[
+      {pid:4,status:'possible',certainty:55,factors:'singer-songwriter picks',notes:''},
+      {pid:9,status:'possible',certainty:25,factors:'',notes:''}]},
+    {n:8,title:'Midnight City',artist:'M83',gut:4,candidates:[
+      {pid:2,status:'possible',certainty:48,factors:'',notes:''},
+      {pid:10,status:'possible',certainty:36,factors:'',notes:''}]},
+    {n:9,title:'This Must Be the Place',artist:'Talking Heads',gut:2,candidates:[]}
+  ];
+  messyRaw = [
+    {n:3,title:'Such Great Heights',artist:'The Postal Service',gut:6,candidates:[{pid:2,status:'locked',certainty:80,factors:'',notes:''}]},
+    {n:6,title:'Gimme Shelter',artist:'The Rolling Stones',gut:10,candidates:[{pid:2,status:'locked',certainty:70,factors:'',notes:''}]},
+    {n:5,title:'Pyramid Song',artist:'Radiohead',gut:3,candidates:[]},
+    {n:8,title:'Midnight City',artist:'M83',gut:4,candidates:[]}
+  ];
+  state = {
+    d1:[
+      {n:1,title:'Video Games',artist:'Lana Del Rey',rows:[{pid:9,status:'locked'},{pid:5,status:'possible'}]},
+      {n:4,title:'Hyperballad',artist:'Bj\u00f6rk',rows:[{pid:7,status:'prime'},{pid:4,status:'possible'}]},
+      {n:6,title:'Gimme Shelter',artist:'Stones',rows:[{pid:10,status:'prime'},{pid:2,status:'possible'}]}
+    ],
+    revealed:{}, expanded:'4:4', jonLocked:false
+  };
+
+  buildCommit(raw){
+    const commit={locked:{},prime:{}};
+    for(const s of raw) for(const c of s.candidates){
+      if(c.status==='locked') commit.locked[c.pid]=s.n;
+      else if(c.status==='prime') commit.prime[c.pid]=s.n;
+    }
+    return commit;
+  }
+  rank(st){ return st==='locked'?0:(st==='prime'?1:2); }
+  decorate(c,songN,commit){
+    const sm=this.STATUS[c.status];
+    const elL = (commit.locked[c.pid]!=null && commit.locked[c.pid]!==songN) ? commit.locked[c.pid] : null;
+    const elP = (commit.prime[c.pid]!=null && commit.prime[c.pid]!==songN) ? commit.prime[c.pid] : null;
+    let opacity=1, tag='', strikeCss='none', nameColor='#f1f4f7';
+    if(elL!=null){ opacity=0.42; tag='\u25cf locked \u00b7 #'+elL; strikeCss='line-through'; nameColor='#5a6773'; }
+    else if(elP!=null){ opacity=0.72; tag='\u25d0 prime \u00b7 #'+elP; nameColor='#c2cad3'; }
+    return {
+      pid:c.pid, name:this.PN[c.pid], status:c.status,
+      statusLabel:sm.label, statusShort:sm.short, statusNext:this.STATUS[sm.next].label,
+      dot:sm.dot, rail:sm.rail, railW:sm.railW, chipBg:sm.chipBg, chipBorder:sm.chipBorder, chipFg:sm.chipFg, weight:sm.weight,
+      certainty:(c.certainty==null?0:c.certainty), certaintyStr:(c.certainty==null?'\u2014':String(c.certainty)),
+      certPct:(c.certainty==null?0:c.certainty)+'%',
+      factors:c.factors||'', notes:c.notes||'',
+      facDot:(c.factors?'#ff5b2e':'#283039'), noteDot:(c.notes?'#ff5b2e':'#283039'),
+      opacity, tag, strikeCss, nameColor, anim:'none', paneBg:'#141921'
+    };
+  }
+  buildBoard(raw){
+    const commit=this.buildCommit(raw);
+    const songs = raw.map(s=>{
+      const cands = s.candidates.map(c=>this.decorate(c,s.n,commit))
+        .sort((a,b)=> this.rank(a.status)-this.rank(b.status) || (b.certainty-a.certainty));
+      return {n:s.n, title:s.title, artist:s.artist, gutName:this.PN[s.gut], empty:cands.length===0, count:cands.length, cands};
+    });
+    return {songs, commit};
+  }
+  rosterAvail(commit){
+    return this.eligibleIds.map(id=>{
+      let kind='free', tag='', n=null;
+      if(commit.locked[id]!=null){ kind='taken'; n=commit.locked[id]; }
+      else if(commit.prime[id]!=null){ kind='dimmed'; n=commit.prime[id]; }
+      const map={
+        free:{bg:'#141921',border:'#3a4451',fg:'#c2cad3',op:1,strike:'none',cur:'pointer',tag:'',rail:'#283039',lbl:'free'},
+        dimmed:{bg:'#141921',border:'#e8a83a',fg:'#c2cad3',op:0.72,strike:'none',cur:'pointer',tag:' \u00b7 #'+n,rail:'#e8a83a',lbl:'prime #'+n},
+        taken:{bg:'#0d1116',border:'#283039',fg:'#5a6773',op:0.5,strike:'line-through',cur:'not-allowed',tag:' \u00b7 #'+n,rail:'#ff5b2e',lbl:'lock #'+n}
+      }[kind];
+      return {id, name:this.PN[id], kind,
+        stripBg:map.bg, stripBorder:map.border, stripFg:map.fg, stripOpacity:map.op, stripStrike:map.strike, cursor:map.cur, stripTag:map.tag,
+        ledgerRail:map.rail, ledgerLabel:map.lbl};
+    });
+  }
+  cycle(si,ri){
+    const order=['possible','prime','locked'];
+    this.setState(s=>{
+      const d1=s.d1.map(x=>({...x,rows:x.rows.map(y=>({...y}))}));
+      const cur=d1[si].rows[ri].status;
+      d1[si].rows[ri].status=order[(order.indexOf(cur)+1)%3];
+      return {d1};
+    });
+  }
+  toggleExpand(k){ this.setState(s=>({expanded: s.expanded===k?null:k})); }
+  toggleLock(){ this.setState(s=>({jonLocked:!s.jonLocked})); }
+
+  d1Decorated(){
+    const seg=(active,st)=>{
+      const on={poss:'#283039',prime:'rgba(232,168,58,0.9)',lock:'#ff5b2e'}[st];
+      const onFg={poss:'#f1f4f7',prime:'#0d1116',lock:'#0d1116'}[st];
+      return active?{bg:on,fg:onFg}:{bg:'#141921',fg:'#5a6773'};
+    };
+    return this.state.d1.map((s,si)=>({
+      n:s.n, title:s.title, artist:s.artist,
+      cands: s.rows.map((r,ri)=>{
+        const sm=this.STATUS[r.status];
+        const sp=seg(r.status==='possible','poss'), pr=seg(r.status==='prime','prime'), lo=seg(r.status==='locked','lock');
+        return {
+          name:this.PN[r.pid], status:r.status, statusLabel:sm.label, statusNext:this.STATUS[sm.next].label,
+          dot:sm.dot, rail:sm.rail, railW:sm.railW, chipBg:sm.chipBg, chipBorder:sm.chipBorder, chipFg:sm.chipFg, weight:sm.weight,
+          segPos:sp.bg, segPosFg:sp.fg, segPri:pr.bg, segPriFg:pr.fg, segLoc:lo.bg, segLocFg:lo.fg,
+          onCycle:()=>this.cycle(si,ri)
+        };
+      })
+    }));
+  }
+
+  beforeAfter(){
+    const jl=this.state.jonLocked;
+    const raw=[
+      {n:5,title:'Pyramid Song',artist:'Radiohead',gut:3,candidates:[
+        {pid:3,status:jl?'locked':'possible',certainty:84,factors:'',notes:''},
+        {pid:8,status:'possible',certainty:40,factors:'',notes:''}]},
+      {n:2,title:'Teardrop',artist:'Massive Attack',gut:8,candidates:[
+        {pid:8,status:'prime',certainty:72,factors:'',notes:''},
+        {pid:3,status:'possible',certainty:30,factors:'',notes:''}]}
+    ];
+    const b=this.buildBoard(raw);
+    // flash the rows that reflect Jon after a lock
+    b.songs.forEach(s=>s.cands.forEach(c=>{
+      if(jl && c.pid===3){ c.anim='flashland 700ms ease-out'; }
+    }));
+    return b.songs;
+  }
+
+  renderVals(){
+    const b9=this.buildBoard(this.songsRaw);
+    b9.songs.forEach(s=>s.cands.forEach(c=>{
+      const key=s.n+':'+c.pid;
+      c.expanded=(this.state.expanded===key);
+      c.onExpand=()=>this.toggleExpand(key);
+    }));
+    const roster9=this.rosterAvail(b9.commit);
+
+    // messy validation
+    const lockSongs={};
+    this.messyRaw.forEach(s=>s.candidates.forEach(c=>{ if(c.status==='locked'){ (lockSongs[c.pid]=lockSongs[c.pid]||[]).push(s.n); } }));
+    const dups=Object.entries(lockSongs).filter(([,a])=>a.length>1);
+    const empties=this.messyRaw.filter(s=>s.candidates.length===0).map(s=>s.n);
+    const dupTxt=dups.map(([pid,a])=>this.PN[pid]+' locked \u00b7 #'+a.join(' & #')).join(' \u00b7 ');
+    let messyValidation=(dups.length? dups.length+' conflict'+(dups.length>1?'s':'')+' \u00b7 '+dupTxt : 'no conflicts');
+    if(empties.length) messyValidation += ' \u00b7 '+empties.length+' songs no candidate (#'+empties.join(', #')+')';
+
+    return {
+      board9:b9.songs,
+      board9short:b9.songs.slice(0,5),
+      roster9,
+      d1Dec:this.d1Decorated(),
+      ba:this.beforeAfter(),
+      toggleLock:()=>this.toggleLock(),
+      lockBtnLabel: this.state.jonLocked ? 'unlock \u2190' : 'lock jon \u2192',
+      messyValidation
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bricolage+Grotesque:wght@600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  .rg { -webkit-font-smoothing: antialiased; }
+  .rg input[type=range]{ accent-color:#ff5b2e; height:3px; cursor:pointer; }
+  .rg textarea, .rg input[type=text]{ font-family:'Inter Tight',sans-serif; }
+  .rg textarea:focus, .rg input:focus{ outline:none; border-color:#ff5b2e !important; }
+  .rg ::placeholder{ color:#5a6773; }
+  .rg a{ color:#ff5b2e; text-decoration:none; }
+  .rg a:hover{ color:#d94c23; }
+  @keyframes rgflash { 0%{ background:#241a12; } 100%{ background:#141921; } }
+  @keyframes rgspin { to { transform:rotate(360deg); } }
+  .rg-spin{ width:13px;height:13px;border:2px solid #283039;border-top-color:#ff5b2e;border-radius:50%;display:inline-block;animation:rgspin 700ms linear infinite; }
+</style>
+</helmet>
+<div class="rg" style="min-height:100%; background:#0b0e13; font-family:'Inter Tight',sans-serif; color:#f1f4f7; padding:0;">
+
+  <!-- ===== workspace shell (existing, shown for context) ===== -->
+  <div style="max-width:1180px; margin:0 auto; padding:28px 32px 90px;">
+
+    <!-- tab strip (existing C2) -->
+    <div style="display:flex; gap:2px; border-bottom:1px solid #283039; margin-bottom:18px;">
+      <div style="padding:9px 14px; border-bottom:2px solid transparent; color:#8b97a4; font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.04em;">overview</div>
+      <div style="padding:9px 14px; border-bottom:2px solid #ff5b2e; color:#ff5b2e; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.04em;">workspace</div>
+      <div style="padding:9px 14px; border-bottom:2px solid transparent; color:#8b97a4; font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.04em;">digest</div>
+    </div>
+
+    <!-- rehearsal banner (existing) -->
+    <div style="display:flex; align-items:center; gap:10px; background:#241a12; border:1px solid #7a5a1f; border-radius:2px; padding:7px 12px; margin-bottom:16px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#e8a83a;">rehearsal · as of 2026-08-24</span>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8b97a4;">Boarz · R148 · reads are frozen to a snapshot</span>
+    </div>
+
+    <!-- gut phase (shipped, collapsed to show refine sits below it) -->
+    <div style="border:1px solid #283039; border-radius:2px; margin-bottom:14px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#0f141a; border-bottom:1px solid #283039;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#8b97a4;">phase: gut</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#5a6773;">first-instinct slate · complete</span>
+        <span style="flex:1;"></span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#5a6773;">9 songs · collapsed</span>
+      </div>
+    </div>
+
+    <!-- ===== PHASE: REFINE ===== -->
+    <div style="display:flex; align-items:baseline; gap:12px; margin:22px 2px 8px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#ff5b2e; font-weight:600;">phase: refine</span>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8b97a4;">build the case — name suspects, eliminate across the board</span>
+    </div>
+
+    <!-- validation roll-up line (D5c) -->
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:{{ valColor }}; margin:0 2px 14px; line-height:1.5;">{{ validation }}</div>
+
+    <!-- board + ledger -->
+    <div style="display:grid; grid-template-columns:1fr 244px; gap:18px; align-items:start;">
+
+      <!-- ===== BOARD ===== -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <sc-for list="{{ board }}" as="s" hint-placeholder-count="9">
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <!-- song header -->
+            <div style="display:flex; align-items:baseline; gap:9px; padding:0 2px 2px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff5b2e;">#{{ s.n }}</span>
+              <span style="font-weight:700; font-size:14px; color:#f1f4f7;">{{ s.title }}</span>
+              <span style="font-size:12px; color:#c2cad3;">{{ s.artist }}</span>
+              <span style="flex:1;"></span>
+              <span style="display:inline-flex; align-items:center; gap:5px;">
+                <sc-if value="{{ s.hasConflict }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#e6566c; letter-spacing:0.06em;">{{ s.conflictTag }}</span></sc-if>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773; letter-spacing:0.04em;">gut · {{ s.gutName }}</span>
+              </span>
+            </div>
+
+            <!-- empty state -->
+            <sc-if value="{{ s.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#0b0e13; border:1px dashed #283039; border-left:2px solid #283039; padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#5a6773; letter-spacing:0.04em;">no candidates yet — add a suspect below</div>
+            </sc-if>
+
+            <!-- candidate rows -->
+            <sc-for list="{{ s.cands }}" as="c" hint-placeholder-count="2">
+              <div>
+                <!-- resting row -->
+                <div onClick="{{ c.onExpand }}" style="cursor:pointer; display:flex; align-items:center; gap:10px; background:{{ c.rowBg }}; border-left:{{ c.railW }} solid {{ c.rail }}; padding:7px 12px; opacity:{{ c.opacity }}; animation:{{ c.anim }};">
+                  <span style="width:66px; font-size:13px; font-weight:{{ c.weight }}; color:{{ c.nameColor }}; text-decoration:{{ c.strikeCss }}; white-space:nowrap;">{{ c.name }}</span>
+                  <!-- state chip (D1a) -->
+                  <button onClick="{{ c.onCycle }}" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:{{ c.chipBg }}; border:1px solid {{ c.chipBorder }}; color:{{ c.chipFg }}; border-radius:2px; padding:3px 8px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; white-space:nowrap;"><span style="font-size:11px;">{{ c.dot }}</span>{{ c.statusLabel }}</button>
+                  <!-- availability tag (D3b) -->
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:{{ c.tagColor }}; letter-spacing:0.04em; white-space:nowrap;">{{ c.tag }}</span>
+                  <span style="flex:1;"></span>
+                  <!-- factors/notes presence dots -->
+                  <span style="display:inline-flex; gap:3px; align-items:center;" title="factors · notes">
+                    <span style="width:6px; height:6px; border-radius:1px; background:{{ c.facDot }};"></span>
+                    <span style="width:6px; height:6px; border-radius:1px; background:{{ c.noteDot }};"></span>
+                  </span>
+                  <!-- your certainty -->
+                  <span style="width:58px; display:flex; align-items:center; gap:6px; justify-content:flex-end;">
+                    <span style="width:26px; height:4px; border-radius:2px; background:linear-gradient(to right,#ff5b2e {{ c.certPct }},#283039 {{ c.certPct }});"></span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#c2cad3;">{{ c.certaintyStr }}</span>
+                  </span>
+                  <!-- reserved model column (Project D) -->
+                  <span style="width:52px; display:flex; align-items:center; gap:5px; justify-content:flex-end; border-left:1px solid #1d2128; padding-left:10px;" title="AI likelihood — reserved for Project D">
+                    <span style="width:20px; height:4px; border-radius:2px; background:repeating-linear-gradient(90deg,#283039 0 3px,transparent 3px 6px);"></span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#3a4451;">—</span>
+                  </span>
+                </div>
+
+                <!-- expanded editor -->
+                <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#0f141a; border-left:{{ c.railW }} solid {{ c.rail }}; padding:13px 14px; display:flex; flex-direction:column; gap:11px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; width:58px;">certainty</span>
+                      <input type="range" min="0" max="100" defaultValue="{{ c.certainty }}" style="flex:1;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff5b2e; width:28px; text-align:right;">{{ c.certaintyStr }}</span>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; width:58px; padding-top:8px;">factors</span>
+                      <textarea rows="2" placeholder="why them — the evidence" defaultValue="{{ c.factors }}" style="flex:1; background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:13px; padding:7px 10px; resize:vertical; line-height:1.45;"></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; width:58px; padding-top:8px;">notes</span>
+                      <textarea rows="2" placeholder="loose thinking" defaultValue="{{ c.notes }}" style="flex:1; background:#141921; border:1px solid #3a4451; border-radius:8px; color:#f1f4f7; font-size:13px; padding:7px 10px; resize:vertical; line-height:1.45;"></textarea>
+                    </div>
+                    <!-- reserved model reasoning (Project D) -->
+                    <div style="display:flex; gap:10px; align-items:center; opacity:0.55;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773; width:58px;">model</span>
+                      <div style="flex:1; border:1px dashed #283039; border-radius:8px; padding:7px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#3a4451; display:flex; align-items:center; gap:8px;">likelihood % + reasoning<span style="color:#5a6773;">· reserved · Project D</span></div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; padding-top:2px;">
+                      <span style="flex:1;"></span>
+                      <button onClick="{{ c.onRemove }}" style="cursor:pointer; background:transparent; border:none; color:#5a6773; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase;">remove</button>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+
+            <!-- candidate picker: roster strip (D2c) -->
+            <div style="display:flex; align-items:center; gap:8px; padding:3px 2px 0; flex-wrap:wrap;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#5a6773; margin-right:2px;">add</span>
+              <sc-for list="{{ s.roster }}" as="r" hint-placeholder-count="6">
+                <button onClick="{{ r.onAdd }}" style="cursor:{{ r.cursor }}; display:inline-flex; align-items:center; gap:5px; border-radius:2px; padding:3px 9px; font-size:12px; background:{{ r.stripBg }}; border:1px solid {{ r.stripBorder }}; color:{{ r.stripFg }}; opacity:{{ r.stripOpacity }}; text-decoration:{{ r.stripStrike }};" disabled="{{ r.disabled }}">{{ r.name }}<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#5a6773;">{{ r.stripTag }}</span></button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- ===== LEDGER (D6a) ===== -->
+      <div style="position:sticky; top:16px; background:#0f141a; border:1px solid #283039; border-radius:2px; overflow:hidden;">
+        <div style="padding:11px 13px; border-bottom:1px solid #283039;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#5a6773;">availability ledger</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#c2cad3; margin-top:5px;">{{ ledgerSummary }}</div>
+        </div>
+        <div style="padding:8px; display:flex; flex-direction:column; gap:3px;">
+          <sc-for list="{{ ledger }}" as="r" hint-placeholder-count="9">
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 9px; border-left:2px solid {{ r.ledgerRail }}; background:#141921; opacity:{{ r.stripOpacity }};">
+              <span style="flex:1; font-size:12px; color:{{ r.stripFg }}; text-decoration:{{ r.stripStrike }};">{{ r.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.04em; color:{{ r.ledgerColor }};">{{ r.ledgerLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:10px 13px; border-top:1px solid #283039; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773;"><span style="width:12px; border-top:2px solid #283039;"></span>free · pickable</div>
+          <div style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#e8a83a;"><span style="width:12px; border-top:2px dashed #e8a83a;"></span>dimmed · prime elsewhere</div>
+          <div style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773;"><span style="width:12px; border-top:2px solid #ff5b2e;"></span><span style="text-decoration:line-through;">taken</span> · locked elsewhere</div>
+          <div style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#3a4451; margin-top:4px;"><span style="width:20px; height:4px; border-radius:2px; background:repeating-linear-gradient(90deg,#283039 0 3px,transparent 3px 6px);"></span>model % · Project D</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== STATES GALLERY ===== -->
+    <div style="margin-top:64px; border-top:1px solid #283039; padding-top:26px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#ff5b2e; margin-bottom:4px;">reference · every state</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif; font-size:24px; font-weight:700; margin-bottom:20px;">The states a row and the board can be in</div>
+      <div style="display:flex; flex-wrap:wrap; gap:16px;">
+
+        <!-- saving -->
+        <div style="width:340px; background:#0f141a; border:1px solid #283039; border-radius:2px; overflow:hidden;">
+          <div style="padding:9px 13px; border-bottom:1px solid #283039; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#8b97a4;">saving · debounced 400ms</div>
+          <div style="padding:12px 13px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #283039; padding:7px 12px;"><span style="flex:1; font-size:13px;">Dave</span><span class="rg-spin"></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#5a6773;">saving…</span></div>
+            <div style="font-size:11px; color:#8b97a4; line-height:1.5;">Optimistic: local state updates on keystroke; PATCH fires after 400ms. A quiet spinner replaces the presence dots — never blocks typing.</div>
+          </div>
+        </div>
+
+        <!-- rejected write -->
+        <div style="width:340px; background:#0f141a; border:1px solid #283039; border-radius:2px; overflow:hidden;">
+          <div style="padding:9px 13px; border-bottom:1px solid #283039; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#e6566c;">write rejected</div>
+          <div style="padding:12px 13px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:2px solid #e6566c; padding:7px 12px;"><span style="flex:1; font-size:13px;">Dave</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#e6566c;">◐ prime</span></div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#e6566c; line-height:1.5;">couldn't save — retrying · <span style="color:#ff5b2e; text-decoration:underline; cursor:pointer;">retry now</span></div>
+            <div style="font-size:11px; color:#8b97a4; line-height:1.5;">Single inline mono string near the control (the app's only error idiom — no toasts). Row keeps the attempted value; the accent rail flags the unsynced row.</div>
+          </div>
+        </div>
+
+        <!-- unsatisfiable -->
+        <div style="width:340px; background:#0f141a; border:1px solid #283039; border-radius:2px; overflow:hidden;">
+          <div style="padding:9px 13px; border-bottom:1px solid #283039; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#e8a83a;">unsatisfiable end-state</div>
+          <div style="padding:12px 13px; display:flex; flex-direction:column; gap:8px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#e8a83a; line-height:1.5;">10 songs · 9 players — one song can't get a unique lock</div>
+            <div style="font-size:11px; color:#8b97a4; line-height:1.5;">Real for Boarz R148 (10 songs / 9 players before Matt marks his own). Stated as a fact, never blocked — the ledger shows 0 free while songs remain.</div>
+          </div>
+        </div>
+
+        <!-- fully settled -->
+        <div style="width:340px; background:#0f141a; border:1px solid #283039; border-radius:2px; overflow:hidden;">
+          <div style="padding:9px 13px; border-bottom:1px solid #283039; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#3ec27a;">fully settled</div>
+          <div style="padding:12px 13px; display:flex; flex-direction:column; gap:8px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#3ec27a; line-height:1.5;">9 of 9 locked · no conflicts · ready to submit</div>
+            <div style="display:flex; align-items:center; gap:10px; background:#141921; border-left:3px solid #ff5b2e; padding:7px 12px;"><span style="flex:1; font-size:13px; font-weight:700;">Ruth</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#ff5b2e;">● locked</span></div>
+            <div style="font-size:11px; color:#8b97a4; line-height:1.5;">The roll-up line turns moss (good). No celebratory chrome — the app states the fact and stops.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  PN = {1:'Matt',2:'Conor',3:'Jon',4:'Dave',5:'Priya',6:'Sam',7:'Nadia',8:'Theo',9:'Ruth',10:'Marcus'};
+  eligibleIds = [2,3,4,5,6,7,8,9,10]; // Matt (1) excluded — it's his own round
+  STATUS = {
+    possible:{label:'possible',next:'prime',dot:'\u25cb',rail:'#283039',railW:'2px',chipBg:'transparent',chipBorder:'#3a4451',chipFg:'#8b97a4',weight:'400'},
+    prime:{label:'prime',next:'locked',dot:'\u25d0',rail:'#e8a83a',railW:'2px',chipBg:'rgba(232,168,58,0.12)',chipBorder:'#e8a83a',chipFg:'#e8a83a',weight:'600'},
+    locked:{label:'locked',next:'possible',dot:'\u25cf',rail:'#ff5b2e',railW:'3px',chipBg:'rgba(255,91,46,0.14)',chipBorder:'#ff5b2e',chipFg:'#ff5b2e',weight:'700'}
+  };
+  order = ['possible','prime','locked'];
+
+  state = {
+    songs: [
+      {n:1,title:'Video Games',artist:'Lana Del Rey',gut:9,cands:[
+        {pid:9,status:'locked',certainty:88,factors:'weekend timing; late add fits her pattern',notes:'called a lana song two rounds back'},
+        {pid:5,status:'possible',certainty:42,factors:'',notes:''}]},
+      {n:2,title:'Teardrop',artist:'Massive Attack',gut:8,cands:[
+        {pid:8,status:'prime',certainty:72,factors:'trip-hop is squarely his lane',notes:''},
+        {pid:3,status:'possible',certainty:30,factors:'',notes:''}]},
+      {n:3,title:'Such Great Heights',artist:'The Postal Service',gut:6,cands:[
+        {pid:6,status:'locked',certainty:91,factors:'indie-pop, his usual — dead giveaway',notes:''}]},
+      {n:4,title:'Hyperballad',artist:'Bj\u00f6rk',gut:7,cands:[
+        {pid:7,status:'prime',certainty:68,factors:'championed bj\u00f6rk in chat all season',notes:'art-pop skew'},
+        {pid:4,status:'possible',certainty:45,factors:'quiet picks lately',notes:''},
+        {pid:2,status:'possible',certainty:33,factors:'',notes:''}]},
+      {n:5,title:'Pyramid Song',artist:'Radiohead',gut:3,cands:[
+        {pid:3,status:'locked',certainty:84,factors:'radiohead superfan; flagged it weeks ago',notes:''}]},
+      {n:6,title:'Gimme Shelter',artist:'The Rolling Stones',gut:10,cands:[
+        {pid:10,status:'prime',certainty:60,factors:'skews older; classic rock lane',notes:''},
+        {pid:2,status:'possible',certainty:38,factors:'',notes:''}]},
+      {n:7,title:'A Case of You',artist:'Joni Mitchell',gut:4,cands:[
+        {pid:4,status:'possible',certainty:55,factors:'singer-songwriter picks',notes:''}]},
+      {n:8,title:'Midnight City',artist:'M83',gut:2,cands:[
+        {pid:2,status:'possible',certainty:48,factors:'',notes:''},
+        {pid:10,status:'possible',certainty:36,factors:'',notes:''}]},
+      {n:9,title:'This Must Be the Place',artist:'Talking Heads',gut:5,cands:[]}
+    ],
+    expanded:'4:4',
+    flash:{}
+  };
+
+  buildCommit(){
+    const c={locked:{},prime:{}};
+    for(const s of this.state.songs) for(const cd of s.cands){
+      if(cd.status==='locked'){ (c.locked[cd.pid]=c.locked[cd.pid]||[]).push(s.n); }
+      else if(cd.status==='prime'){ (c.prime[cd.pid]=c.prime[cd.pid]||[]).push(s.n); }
+    }
+    return c;
+  }
+  availabilityFor(pid, songN, commit){
+    const lk=commit.locked[pid]||[], pr=commit.prime[pid]||[];
+    const lkElse=lk.filter(n=>n!==songN), prElse=pr.filter(n=>n!==songN);
+    if(lkElse.length) return {kind:'taken', at:lkElse[0]};
+    if(prElse.length) return {kind:'dimmed', at:prElse[0]};
+    return {kind:'free', at:null};
+  }
+  rank(st){ return st==='locked'?0:(st==='prime'?1:2); }
+
+  cycle(si,ci){
+    this.setState(s=>{
+      const songs=s.songs.map(x=>({...x,cands:x.cands.map(y=>({...y}))}));
+      const cur=songs[si].cands[ci].status;
+      songs[si].cands[ci].status=this.order[(this.order.indexOf(cur)+1)%3];
+      const flash={};
+      if(songs[si].cands[ci].status==='locked'){
+        const pid=songs[si].cands[ci].pid;
+        songs.forEach((sng,sj)=>sng.cands.forEach((cd,cj)=>{ if(cd.pid===pid && sj!==si) flash[sj+':'+cj]=Date.now(); }));
+      }
+      return {songs, flash};
+    });
+    setTimeout(()=>this.setState({flash:{}}),750);
+  }
+  toggleExpand(k){ this.setState(s=>({expanded: s.expanded===k?null:k})); }
+  addCandidate(si,pid){
+    this.setState(s=>{
+      const songs=s.songs.map((x,i)=> i===si ? {...x, cands:[...x.cands.map(y=>({...y})), {pid,status:'possible',certainty:null,factors:'',notes:''}]} : {...x,cands:x.cands.map(y=>({...y}))});
+      return {songs, expanded: songs[si].n+':'+pid};
+    });
+  }
+  removeCandidate(si,pid){
+    this.setState(s=>({songs: s.songs.map((x,i)=> i===si ? {...x, cands:x.cands.filter(y=>y.pid!==pid)} : x)}));
+  }
+
+  renderVals(){
+    const commit=this.buildCommit();
+    const songs=this.state.songs;
+
+    const board = songs.map((s,si)=>{
+      const cands = s.cands.map((cd,ci)=>({cd,ci}))
+        .sort((a,b)=> this.rank(a.cd.status)-this.rank(b.cd.status) || ((b.cd.certainty||0)-(a.cd.certainty||0)))
+        .map(({cd,ci})=>{
+          const sm=this.STATUS[cd.status];
+          const av=this.availabilityFor(cd.pid, s.n, commit);
+          let opacity=1, tag='', tagColor='#5a6773', strikeCss='none', nameColor='#f1f4f7', rowBg='#141921';
+          if(av.kind==='taken'){ opacity=0.44; tag='\u25cf locked · #'+av.at; tagColor='#8b97a4'; strikeCss='line-through'; nameColor='#5a6773'; }
+          else if(av.kind==='dimmed'){ opacity=0.74; tag='\u25d0 prime · #'+av.at; tagColor='#e8a83a'; nameColor='#c2cad3'; }
+          const key=s.n+':'+cd.pid;
+          const flashOn=Object.prototype.hasOwnProperty.call(this.state.flash, si+':'+ci);
+          return {
+            name:this.PN[cd.pid], status:cd.status, statusLabel:sm.label,
+            dot:sm.dot, rail: av.kind==='dimmed'?'#e8a83a':sm.rail, railW:sm.railW,
+            chipBg:sm.chipBg, chipBorder:sm.chipBorder, chipFg:sm.chipFg, weight:sm.weight,
+            certainty:(cd.certainty==null?0:cd.certainty), certaintyStr:(cd.certainty==null?'—':String(cd.certainty)), certPct:(cd.certainty==null?0:cd.certainty)+'%',
+            factors:cd.factors||'', notes:cd.notes||'',
+            facDot:(cd.factors?'#ff5b2e':'#283039'), noteDot:(cd.notes?'#ff5b2e':'#283039'),
+            opacity, tag, tagColor, strikeCss, nameColor, rowBg,
+            anim: flashOn?'rgflash 700ms ease-out':'none',
+            expanded:(this.state.expanded===key),
+            onExpand:()=>this.toggleExpand(key),
+            onCycle:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.cycle(si,ci); },
+            onRemove:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.removeCandidate(si,cd.pid); }
+          };
+        });
+
+      // per-song conflict: a locked player also locked elsewhere
+      let hasConflict=false, conflictTag='';
+      for(const cd of s.cands){ if(cd.status==='locked' && (commit.locked[cd.pid]||[]).length>1){ hasConflict=true; conflictTag='⚠ '+this.PN[cd.pid]+' locked twice'; break; } }
+
+      const present=new Set(s.cands.map(c=>c.pid));
+      const roster=this.eligibleIds.map(id=>{
+        const av=this.availabilityFor(id, s.n, commit);
+        const already=present.has(id);
+        let bg='#141921',border='#3a4451',fg='#c2cad3',op=1,strike='none',cur='pointer',tag='',dis=false;
+        if(already){ op=0.28; cur='not-allowed'; dis=true; tag=' ·on'; }
+        else if(av.kind==='taken'){ bg='#0b0e13'; border='#283039'; fg='#5a6773'; op=0.5; strike='line-through'; cur='not-allowed'; dis=true; tag=' #'+av.at; }
+        else if(av.kind==='dimmed'){ border='#e8a83a'; fg='#c2cad3'; op=0.74; tag=' #'+av.at; }
+        return {name:this.PN[id], stripBg:bg, stripBorder:border, stripFg:fg, stripOpacity:op, stripStrike:strike, cursor:cur, stripTag:tag, disabled:dis, onAdd:()=>{ if(!dis) this.addCandidate(si,id); }};
+      });
+
+      return {n:s.n, title:s.title, artist:s.artist, gutName:this.PN[s.gut], empty:s.cands.length===0, cands, roster, hasConflict, conflictTag};
+    });
+
+    // ledger
+    const ledger=this.eligibleIds.map(id=>{
+      const lk=commit.locked[id]||[], pr=commit.prime[id]||[];
+      let kind='free', at=null; if(lk.length){kind='taken';at=lk[0];} else if(pr.length){kind='dimmed';at=pr[0];}
+      const map={
+        free:{fg:'#c2cad3',op:1,strike:'none',rail:'#283039',lbl:'free',lc:'#5a6773'},
+        dimmed:{fg:'#c2cad3',op:0.74,strike:'none',rail:'#e8a83a',lbl:'prime #'+at,lc:'#e8a83a'},
+        taken:{fg:'#5a6773',op:0.5,strike:'line-through',rail:'#ff5b2e',lbl:'lock #'+at,lc:'#8b97a4'}
+      }[kind];
+      return {name:this.PN[id], stripFg:map.fg, stripOpacity:map.op, stripStrike:map.strike, ledgerRail:map.rail, ledgerLabel:map.lbl, ledgerColor:map.lc};
+    });
+    const free=ledger.filter(l=>l.ledgerLabel==='free').length;
+    const dim=ledger.filter(l=>l.ledgerLabel.startsWith('prime')).length;
+    const tak=ledger.filter(l=>l.ledgerLabel.startsWith('lock')).length;
+    const ledgerSummary=free+' free · '+dim+' dimmed · '+tak+' taken';
+
+    // validation roll-up
+    const dupPlayers=Object.entries(commit.locked).filter(([,a])=>a.length>1);
+    const emptySongs=songs.filter(s=>s.cands.length===0).map(s=>s.n);
+    const lockedSongs=songs.filter(s=>s.cands.some(c=>c.status==='locked')).length;
+    let validation, valColor;
+    if(dupPlayers.length){
+      valColor='#e6566c';
+      validation=dupPlayers.length+' conflict'+(dupPlayers.length>1?'s':'')+' · '+dupPlayers.map(([pid,a])=>this.PN[pid]+' locked #'+a.join(' & #')).join(' · ')+' — resolve before submit';
+    } else if(lockedSongs===songs.length){
+      valColor='#3ec27a'; validation=songs.length+' of '+songs.length+' locked · no conflicts · ready to submit';
+    } else {
+      valColor='#8b97a4';
+      validation=lockedSongs+' of '+songs.length+' locked'+(emptySongs.length?' · '+emptySongs.length+' song'+(emptySongs.length>1?'s':'')+' no candidate (#'+emptySongs.join(', #')+')':'');
+    }
+
+    return {board, ledger, ledgerSummary, validation, valColor};
+  }
+}
+</script>
+</body>
+</html>
