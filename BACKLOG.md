@@ -386,3 +386,17 @@ and no backup here. `musicleague/MUSICLEAGUE.md`, which spec §7.2 says Project 
 extend, is untracked for the same reason. A `git clean -fdx` or a disk loss takes it.
 Deferred at Matt's call 2026-09-01 (note it, keep moving). Fix = scan for secrets, then
 un-ignore and commit the source + MUSICLEAGUE.md.
+
+## Schema changes to existing tables can silently miss production (noted 2026-09-01)
+
+`ui/src/lib/db/client.ts` is the only migration mechanism: `openLeagueDb()` runs
+`db.exec(SCHEMA)` then a long block of idempotent `PRAGMA table_info` + `ALTER TABLE
+ADD COLUMN` guards. Editing a `CREATE TABLE` in `schema.ts` therefore reaches **new**
+databases (including every in-memory test DB) but **not** an existing production table —
+so a test can pass green while `data/league.db` lacks the column.
+
+Harmless today for `guess_round_state.comments_error`, because no `guess_*` table exists
+in the live DB yet, so `CREATE TABLE IF NOT EXISTS` will create it whole. The trap is the
+*next* column added to an already-live table by editing `schema.ts` alone. Worth either a
+guard-block convention note next to the SCHEMA definition, or a test that diffs SCHEMA's
+columns against the guard block.
