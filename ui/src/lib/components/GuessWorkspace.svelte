@@ -29,7 +29,15 @@
   }
 
   async function setGutPick(song: WorkspaceSong, playerId: number | null) {
-    if (playerId === null) return;
+    if (playerId === null) {
+      // The blank placeholder option is always selectable, even after a real
+      // pick — selecting it must not silently desync the select from the
+      // server. There is no clear-pick endpoint (spec §7.1 treats the gut
+      // slate as something you commit to, not curate), so snap the select
+      // back to the true stored value rather than leaving a stale blank.
+      await load();
+      return;
+    }
     gutError = null;
     const res = await fetch(`/api/guess/${roundId}/gut`, {
       method: 'PATCH',
