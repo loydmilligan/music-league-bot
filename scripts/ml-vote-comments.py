@@ -69,13 +69,17 @@ def main() -> int:
         from cli_web.musicleague.core.client import MusicleagueClient
 
         from scripts.lib.ml_vote_parse import parse_ballot
-    except ImportError as e:
-        return _fail(f"cli-web-musicleague or bs4 is not importable: {e}")
-
-    if not auth.is_authenticated():
-        return _fail("Music League session expired. Run: cli-web-musicleague auth login")
+    except Exception as e:  # not just ImportError: a module can raise at import time
+        return _fail(f"cli-web-musicleague or bs4 is not importable: {type(e).__name__}: {e}")
 
     try:
+        # Inside the try on purpose: is_authenticated() reads auth.json and can
+        # *raise* (not just return False) on a malformed payload — e.g. a cookie
+        # list whose entries have non-string fields escapes its internal
+        # AuthError handling. That must degrade to ok:false, not a traceback.
+        if not auth.is_authenticated():
+            return _fail("Music League session expired. Run: cli-web-musicleague auth login")
+
         with MusicleagueClient(cookies=auth.get_cookies()) as client:
             lid = args.league or resolve_league_id(client, args.round)
             if not lid:
