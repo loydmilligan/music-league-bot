@@ -87,6 +87,13 @@ describe('sync is suppressed during a rehearsal (spec §14.6)', () => {
 
     expect(verifyRoundSync(db, roundId, ME, '2026-01-03T00:00:00Z').state).toBe('ok');
 
+    // Change the posted comment so a NORMAL second run would compute 'mismatch'.
+    // If the rehearsal gate were ever moved below the sync_state write, that
+    // 'mismatch' would land in the row and this test would catch it.
+    db.prepare('UPDATE competitors SET name = ? WHERE id = ?').run('Steiny', players[2]);
+    db.prepare("UPDATE votes SET comment = 'changed my mind, steiny' WHERE round_id = ? AND spotify_uri = ?")
+      .run(roundId, songs[1]);
+
     startRehearsal(db, roundId, '2026-01-02T00:00:00Z');
     verifyRoundSync(db, roundId, ME, '2026-01-04T00:00:00Z');
 
