@@ -94,7 +94,13 @@
     // and the ledger are server-derived, and the first-try path reloads too.
     retryFns.set(k, async () => {
       const ok = await sendPatch(targetRoundId, spotifyUri, playerId, patch);
-      if (ok && patch.status !== undefined) await onchanged?.();
+      if (ok && patch.status !== undefined) {
+        // Same rule as every other reload site: flush first. A retry can be
+        // clicked while a debounced edit on another row is still armed, and
+        // the reload below would replace `data` out from under it.
+        await flushPendingSaves();
+        await onchanged?.();
+      }
     });
     try {
       const res = await fetch(`/api/guess/${targetRoundId}/candidate`, {
@@ -261,8 +267,16 @@
    * so it gets the retry map and error state for free. Fires immediately
    * (status writes are never debounced) and reloads on success so
    * availability re-derives server-side, same as `cycleStatus`.
+   *
+   * Flushes first, like every other path that reloads: without it, typing in a
+   * row's notes and clicking a roster pill inside the 400ms window reloads
+   * `data` while that PATCH is still queued, so the row's `candidate` prop
+   * becomes a fresh object holding the pre-edit values, the bound expression
+   * changes, and Svelte overwrites the textarea — the desync this board exists
+   * to prevent.
    */
   async function addCandidate(song: WorkspaceSong, playerId: number): Promise<void> {
+    await flushPendingSaves();
     const ok = await sendPatch(roundId, song.spotifyUri, playerId, { status: 'possible' });
     if (ok) await onchanged?.();
   }
@@ -394,12 +408,28 @@
    * Deliberate: board.ts stays roster-free (see task brief). If the sentence
    * ever changes shape the replace simply no-ops and the un-named text shows.
    */
+  /**
+   * True while at least one write is outstanding (rejected and not yet retried
+   * or reloaded away). A rejected status write deliberately leaves its
+   * optimistic `c.status` in `data` — rolling it back is the desync bug — but
+   * findConflicts/rollup/conflictTag all recompute from it, so the roll-up
+   * could otherwise read "ready to submit" for a lock the server refused.
+   */
+  const hasUnsaved = $derived(Object.keys(saveErrors).length > 0);
+
   const rollupText = $derived.by(() => {
-    if (summary.tone !== 'conflict') return summary.text;
-    const first = [...conflicts.keys()][0];
-    if (first === undefined) return summary.text;
-    return summary.text.replace('· locked on ', `· ${nameFor(first)} locked on `);
+    let text = summary.text;
+    if (summary.tone === 'conflict') {
+      const first = [...conflicts.keys()][0];
+      if (first !== undefined) {
+        text = text.replace('· locked on ', `· ${nameFor(first)} locked on `);
+      }
+    }
+    return hasUnsaved ? `${text} · unsaved change` : text;
   });
+
+  /** Never the settled/green register while a write is outstanding. */
+  const rollupTone = $derived(hasUnsaved ? ('progress' as const) : summary.tone);
 
   /** The `⚠ <Name> locked twice` marker, when this song is half of a duplicate. */
   function conflictTag(song: WorkspaceSong): string | null {
@@ -419,7 +449,7 @@
 </div>
 
 <!-- validation roll-up — one mono line, three registers (README §1 / D5) -->
-<div class="mb-3.5 px-0.5 font-mono text-xs leading-relaxed {ROLLUP_TONE[summary.tone]}">{rollupText}</div>
+<div class="mb-3.5 px-0.5 font-mono text-xs leading-relaxed {ROLLUP_TONE[rollupTone]}">{rollupText}</div>
 
 <div class="grid grid-cols-[1fr_244px] items-start gap-[18px]">
   <!-- ===== BOARD ===== -->

@@ -163,14 +163,15 @@
   // builds the intermediate phase machine.
   const refining = $derived(data !== null && (data.gutLockedAt !== null || data.phase === 'refine'));
 
-  // Default from the phase so this keeps working once something actually
-  // advances it; today nothing writes 'vote' or 'refine' (lockGut sets
-  // 'fetch'), so this resolves to 'refine' on every real round.
-  // svelte-ignore state_referenced_locally -- deliberately non-reactive: seeded once
-  // at mount from data.phase; must NOT re-derive on every load() (setMine, lockGutSlate,
-  // rehearsal start/stop and RefineBoard edits all reassign `data`), or the user's manual
-  // toggle choice would be silently overwritten on the next reload.
-  let surface = $state<'refine' | 'vote'>(data?.phase === 'vote' ? 'vote' : 'refine');
+  // Hardcoded 'refine', not derived from data.phase. Two reasons, both real:
+  // `data` is null at component init (only the async load() in the $effect
+  // above ever fills it), so a phase read here could only ever see undefined;
+  // and nothing in this repo writes phase = 'vote' or 'refine' anyway (lockGut
+  // sets 'fetch'), so a phase-derived default would be dead code twice over.
+  // It is a plain reassignable $state on purpose: the toggle below is the only
+  // writer, and load() (setMine, lockGutSlate, rehearsal start/stop and every
+  // RefineBoard edit) must never overwrite the user's manual choice.
+  let surface = $state<'refine' | 'vote'>('refine');
 
   let mineBusy = $state(false);
 
