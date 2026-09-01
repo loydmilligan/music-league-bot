@@ -120,6 +120,9 @@
     </div>
 
     <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <!-- Read-only. is_mine has exactly one writer — the guess tab's mark-first
+           control (setIsMine, spec §6, exclusive per round). A second writer here
+           could mark two songs and silently shrink the guess slate. -->
       {#if row.ballot.isMine}
         <span class="font-mono text-[10px] uppercase tracking-wide text-fg-dim">your song</span>
       {:else}
@@ -154,13 +157,6 @@
           >+</button>
         </div>
       {/if}
-
-      <!-- Read-only. is_mine has exactly one writer — the guess tab's mark-first
-           control (setIsMine, spec §6, exclusive per round). A second writer here
-           could mark two songs and silently shrink the guess slate. -->
-      <span class="font-mono text-xs tracking-widest uppercase text-fg-faint">
-        {row.ballot.isMine ? 'not mine' : 'mine'}
-      </span>
     </div>
   </div>
 
