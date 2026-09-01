@@ -2,26 +2,24 @@
 <!--
   spec §7.4 — the refine board ("the sudoku board").
 
-  Task 4 ships the RESTING surface only: song blocks, read-only candidate rows,
-  the empty state and the roll-up line. Every control on a row (state-chip
-  cycling, the expand-to-edit editor, the roster strip, remove) belongs to
-  Task 5 and is deliberately absent here rather than stubbed — a dead button is
-  worse than no button.
+  Task 4 shipped the resting surface (song blocks, the empty state, the roll-up
+  line). Task 5 makes the rows live and puts the write plumbing HERE: this
+  component owns the debounce timers, the fetches and the per-row error state,
+  and CandidateRow.svelte stays a controlled view — the same split as
+  VotingLab.svelte / VotingLabSongRow.svelte. The roster strip (add a suspect)
+  and the ledger still belong to later tasks and remain deliberately absent
+  rather than stubbed.
 
   Design source: docs/design_handoff_refine_grid/ (README §1–§3, TOKEN-MAP.md).
   Recreated with Tailwind utilities against app.css @theme tokens; none of the
-  prototype's inline styles or its .dc.html runtime are ported. The only inline
-  styles below are the two values that are genuinely dynamic or not expressible
-  as a utility (the certainty fill percentage, the reserved-slot dash pattern).
+  prototype's inline styles or its .dc.html runtime are ported.
 -->
 <script lang="ts">
   import type { WorkspaceData, WorkspaceSong } from '$lib/guessing/workspaceData.js';
   import type { Candidate, CandidateStatus } from '$lib/guessing/candidates.js';
   import { sortCandidates, findConflicts, rollup, commitmentElsewhere } from '$lib/guessing/board.js';
+  import CandidateRow from './CandidateRow.svelte';
 
-  // `roundId` and `onchanged` are the write plumbing Task 5 consumes; they are
-  // part of the agreed interface, so they are declared now and unused until
-  // rows become interactive.
   let {
     data,
     roundId,
@@ -29,36 +27,184 @@
   }: {
     data: WorkspaceData;
     roundId: number;
-    onchanged?: () => void;
+    /** The host's reload. Awaited, so availability is re-read server-side. */
+    onchanged?: () => void | Promise<void>;
   } = $props();
 
   function nameFor(playerId: number): string {
     return data.roster.find((p) => p.id === playerId)?.name ?? `#${playerId}`;
   }
 
-  const STATUS_CHIP: Record<CandidateStatus, { glyph: string; rail: string; railWidth: string; chip: string; weight: string }> = {
-    possible: {
-      glyph: '○',
-      rail: 'border-l-border-muted',
-      railWidth: 'border-l-2',
-      chip: 'border-border text-fg-dim',
-      weight: 'font-normal',
-    },
-    prime: {
-      glyph: '◐',
-      rail: 'border-l-amber',
-      railWidth: 'border-l-2',
-      chip: 'border-amber text-amber bg-amber/10',
-      weight: 'font-semibold',
-    },
-    locked: {
-      glyph: '●',
-      rail: 'border-l-accent',
-      railWidth: 'border-l-[3px]',
-      chip: 'border-accent text-accent bg-accent/15',
-      weight: 'font-bold',
-    },
+  // ===== writes =========================================================
+  //
+  // Shape copied from VotingLab.svelte:75-113 — the proven pattern in this
+  // codebase — with one addition: patches MERGE per key instead of replacing,
+  // because a row sends partial patches (`{notes}` then `{certainty}`) rather
+  // than a whole ballot, and a naive replace would drop the earlier field.
+
+  type CandidatePatch = {
+    status?: CandidateStatus;
+    certainty?: number | null;
+    factors?: string;
+    notes?: string;
   };
+  type PendingSave = { timer: ReturnType<typeof setTimeout>; fire: () => Promise<void> };
+
+  /** One timer per (song, player) — editing one row never resets another's. */
+  const saveTimers = new Map<string, PendingSave>();
+  const pendingPatch = new Map<string, CandidatePatch>();
+  /** Re-fire for the `retry now` affordance, per key. */
+  const retryFns = new Map<string, () => Promise<unknown>>();
+
+  let saveErrors = $state<Record<string, string>>({});
+
+  const keyOf = (uri: string, playerId: number) => `${uri}|${playerId}`;
+
+  function clearError(k: string) {
+    if (!(k in saveErrors)) return;
+    const next = { ...saveErrors };
+    delete next[k];
+    saveErrors = next;
+  }
+
+  /**
+   * The one write. Returns whether the server accepted it.
+   *
+   * On rejection nothing is rolled back: the attempted value stays on screen
+   * (README §"Rejected-write / desync") and the ember rail plus the row's
+   * inline line say it did not save. The DOM only reconciles to the server on
+   * the next successful reload — which is exactly why the optimistic edit is
+   * written into `data` before the request rather than held in the row: a
+   * Svelte 5 controlled input whose bound expression never changes will not
+   * re-render, so a value that lives only in the DOM goes stale forever
+   * (commits 13f99a6, 12680fb).
+   */
+  async function sendPatch(
+    targetRoundId: number,
+    spotifyUri: string,
+    playerId: number,
+    patch: CandidatePatch,
+  ): Promise<boolean> {
+    const k = keyOf(spotifyUri, playerId);
+    retryFns.set(k, () => sendPatch(targetRoundId, spotifyUri, playerId, patch));
+    try {
+      const res = await fetch(`/api/guess/${targetRoundId}/candidate`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ spotifyUri, playerId, patch }),
+      });
+      if (!res.ok) {
+        saveErrors = { ...saveErrors, [k]: `couldn't save (${res.status}) — retrying` };
+        return false;
+      }
+    } catch {
+      saveErrors = { ...saveErrors, [k]: `couldn't save — retrying` };
+      return false;
+    }
+    clearError(k);
+    retryFns.delete(k);
+    return true;
+  }
+
+  /** Optimistic local edit + per-(song, player) 400ms debounced PATCH. */
+  function queueEdit(song: WorkspaceSong, c: Candidate, patch: CandidatePatch) {
+    Object.assign(c, patch); // `data` is the host's deep $state proxy — reactive.
+
+    const k = keyOf(song.spotifyUri, c.playerId);
+    pendingPatch.set(k, { ...(pendingPatch.get(k) ?? {}), ...patch });
+
+    const targetRoundId = roundId; // capture now — the live prop may change before the timer fires
+    const { spotifyUri } = song;
+    const { playerId } = c;
+
+    const existing = saveTimers.get(k);
+    if (existing) clearTimeout(existing.timer);
+
+    const fire = async () => {
+      const merged = pendingPatch.get(k);
+      if (!merged) return;
+      pendingPatch.delete(k);
+      await sendPatch(targetRoundId, spotifyUri, playerId, merged);
+    };
+    saveTimers.set(k, {
+      timer: setTimeout(() => {
+        saveTimers.delete(k);
+        void fire();
+      }, 400),
+      fire,
+    });
+  }
+
+  /**
+   * Fire every pending debounced save immediately and await them. Must run
+   * before any reload (the reload replaces `data`, and a save still sitting
+   * behind the debounce would be silently discarded) and on unmount.
+   */
+  async function flushPendingSaves(): Promise<void> {
+    const fires: Promise<void>[] = [];
+    for (const [k, pending] of saveTimers) {
+      clearTimeout(pending.timer);
+      fires.push(pending.fire());
+      saveTimers.delete(k);
+    }
+    await Promise.all(fires);
+  }
+
+  // Flush (not drop) on round change and on destroy, same as VotingLab.
+  $effect(() => {
+    void roundId;
+    return () => {
+      void flushPendingSaves();
+    };
+  });
+
+  /**
+   * Status writes fire IMMEDIATELY — they have grid-wide consequences
+   * (availability everywhere else) that must not lag behind a debounce — and
+   * are followed by a reload so availability is re-read server-side rather
+   * than guessed here. A rejected status write does not reload: the attempted
+   * state stays visible under the ember rail, per the design.
+   */
+  async function cycleStatus(song: WorkspaceSong, c: Candidate, next: CandidateStatus) {
+    c.status = next; // optimistic; deliberately NOT rolled back on failure.
+    await flushPendingSaves();
+    const ok = await sendPatch(roundId, song.spotifyUri, c.playerId, { status: next });
+    if (!ok) return;
+    await onchanged?.();
+  }
+
+  async function removeCandidate(song: WorkspaceSong, c: Candidate) {
+    const k = keyOf(song.spotifyUri, c.playerId);
+    // Drop any queued edit for a row that is about to cease to exist, then
+    // flush whatever else is pending before the reload.
+    const pending = saveTimers.get(k);
+    if (pending) clearTimeout(pending.timer);
+    saveTimers.delete(k);
+    pendingPatch.delete(k);
+    await flushPendingSaves();
+
+    try {
+      const res = await fetch(`/api/guess/${roundId}/candidate`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ spotifyUri: song.spotifyUri, playerId: c.playerId }),
+      });
+      if (!res.ok) {
+        saveErrors = { ...saveErrors, [k]: `couldn't remove (${res.status})` };
+        return;
+      }
+    } catch {
+      saveErrors = { ...saveErrors, [k]: `couldn't remove — retrying` };
+      return;
+    }
+    clearError(k);
+    await onchanged?.();
+  }
+
+  function retry(spotifyUri: string, playerId: number) {
+    const fn = retryFns.get(keyOf(spotifyUri, playerId));
+    if (fn) void fn();
+  }
 
   const conflicts = $derived(findConflicts(data));
   const summary = $derived(rollup(data));
@@ -93,9 +239,6 @@
     return null;
   }
 
-  function certaintyPct(c: Candidate): number {
-    return c.certainty === null ? 0 : c.certainty;
-  }
 </script>
 
 <div class="mb-2 flex items-baseline gap-3">
@@ -137,64 +280,16 @@
           >no candidates yet — add a suspect below</div>
         {:else}
           {#each sortCandidates(song.candidates) as c (c.playerId)}
-            {@const chip = STATUS_CHIP[c.status]}
-            {@const away = commitmentElsewhere(data, c.playerId, song.spotifyUri)}
-            <div
-              class="flex items-center gap-2.5 bg-surface px-3 py-[7px] {chip.railWidth}
-                     {away?.kind === 'dimmed' ? 'border-l-amber' : chip.rail}
-                     {away?.kind === 'taken' ? 'opacity-45' : away?.kind === 'dimmed' ? 'opacity-75' : ''}"
-            >
-              <!-- The design's name column is 66px; that is a MINIMUM here, not
-                   a fixed width. The prototype's fixture names are short, the
-                   real Boarz roster is not ("Jonathan Black"), and a hard 66px
-                   clips the one thing the row exists to say. Column alignment
-                   is preserved by the right-hand cluster's fixed widths. -->
-              <span
-                class="min-w-[66px] shrink-0 whitespace-nowrap text-[13px] {chip.weight}
-                       {away?.kind === 'taken' ? 'text-fg-faint line-through' : away?.kind === 'dimmed' ? 'text-fg-muted' : 'text-fg'}"
-              >{nameFor(c.playerId)}</span>
-
-              <!-- state chip — read-only in Task 4; Task 5 makes it the cycle
-                   control. Glyph + label + rail carry the state without color. -->
-              <span
-                class="inline-flex items-center gap-[5px] rounded-sm border px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em] whitespace-nowrap {chip.chip}"
-              ><span class="text-[11px]">{chip.glyph}</span>{c.status}</span>
-
-              <!-- availability tag: names WHERE they are committed (D3) -->
-              {#if away}
-                <span
-                  class="font-mono text-[10px] tracking-[0.04em] whitespace-nowrap {away.kind === 'taken' ? 'text-fg-dim' : 'text-amber'}"
-                >{away.kind === 'taken' ? '●' : '◐'} {away.kind === 'taken' ? 'locked' : 'prime'} · #{away.at}</span>
-              {/if}
-
-              <span class="flex-1"></span>
-
-              <!-- factors / notes presence dots -->
-              <span class="inline-flex items-center gap-[3px]" title="factors · notes">
-                <span class="h-1.5 w-1.5 rounded-[1px] {c.factors ? 'bg-accent' : 'bg-border-muted'}"></span>
-                <span class="h-1.5 w-1.5 rounded-[1px] {c.notes ? 'bg-accent' : 'bg-border-muted'}"></span>
-              </span>
-
-              <!-- your certainty -->
-              <span class="flex w-[58px] items-center justify-end gap-1.5">
-                <span
-                  class="h-1 w-[26px] rounded-full"
-                  style="background: linear-gradient(to right, var(--color-accent) {certaintyPct(c)}%, var(--color-border-muted) {certaintyPct(c)}%)"
-                ></span>
-                <span class="font-mono text-[11px] text-fg-muted">{c.certainty === null ? '—' : c.certainty}</span>
-              </span>
-
-              <!-- RESERVED model slot (Project D). Inert by design and NOT dead
-                   weight: it holds the column so the AI likelihood drops in
-                   later without reflowing the row. Do not remove. -->
-              <span
-                class="flex w-[52px] items-center justify-end gap-[5px] border-l border-surface-hover pl-2.5"
-                title="AI likelihood — reserved for Project D"
-              >
-                <span class="model-dash h-1 w-5 rounded-full"></span>
-                <span class="font-mono text-[11px] text-border">—</span>
-              </span>
-            </div>
+            <CandidateRow
+              candidate={c}
+              name={nameFor(c.playerId)}
+              availability={commitmentElsewhere(data, c.playerId, song.spotifyUri)}
+              error={saveErrors[keyOf(song.spotifyUri, c.playerId)] ?? null}
+              onedit={(patch) => queueEdit(song, c, patch)}
+              oncycle={(next) => cycleStatus(song, c, next)}
+              onremove={() => removeCandidate(song, c)}
+              onretry={() => retry(song.spotifyUri, c.playerId)}
+            />
           {/each}
         {/if}
       </div>
@@ -204,15 +299,3 @@
   <!-- ===== LEDGER (Task 7 fills this) ===== -->
   <div></div>
 </div>
-
-<style>
-  /* A repeating dash pattern is not expressible as a Tailwind utility; it is
-     the reserved model slot's placeholder bar. */
-  .model-dash {
-    background: repeating-linear-gradient(
-      90deg,
-      var(--color-border-muted) 0 3px,
-      transparent 3px 6px
-    );
-  }
-</style>
