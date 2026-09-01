@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { seedRound } from './fixtures.js';
 import { getRoundState } from './state.js';
 import { startRehearsal, priorRoundIds, archiveRehearsal } from './rehearsal.js';
@@ -152,5 +155,54 @@ describe('archiveRehearsal', () => {
 
     const other = db.prepare('SELECT COUNT(*) AS n FROM guess_picks WHERE round_id = 2').get() as { n: number };
     expect(other.n).toBe(1);
+  });
+
+  // spec §14.7: serialize, THEN delete — a failed write must never lose data
+  // that is already gone. These two cases are made genuinely distinguishable
+  // by pointing persistTo at a real writable dir vs. one that cannot be
+  // written to, not by mocking fs — the same standard held all day.
+  describe('persistTo', () => {
+    it('writes the archive to disk before deleting, and the file matches what is returned', () => {
+      const { db, roundId } = seedRound();
+      startRehearsal(db, roundId, '2026-02-01T00:00:00Z');
+      db.prepare(
+        `INSERT INTO guess_picks (round_id, spotify_uri, gut_pick_player_id, updated_at)
+         VALUES (?, 'spotify:track:s1', 2, '2026-01-01T00:00:00Z')`,
+      ).run(roundId);
+
+      const dir = mkdtempSync(join(tmpdir(), 'guess-archive-'));
+      const path = join(dir, `${roundId}.json`);
+
+      const archive = archiveRehearsal(db, roundId, path);
+
+      const onDisk = JSON.parse(readFileSync(path, 'utf8')) as typeof archive;
+      expect(onDisk.roundId).toBe(roundId);
+      expect(onDisk.picks).toHaveLength(1);
+      expect(onDisk).toEqual(archive);
+
+      const row = db.prepare('SELECT COUNT(*) AS n FROM guess_picks WHERE round_id = ?').get(roundId) as { n: number };
+      expect(row.n).toBe(0);
+    });
+
+    it('leaves the rows in place when the write fails', () => {
+      const { db, roundId } = seedRound();
+      startRehearsal(db, roundId, '2026-02-01T00:00:00Z');
+      db.prepare(
+        `INSERT INTO guess_picks (round_id, spotify_uri, gut_pick_player_id, updated_at)
+         VALUES (?, 'spotify:track:s1', 2, '2026-01-01T00:00:00Z')`,
+      ).run(roundId);
+
+      // A parent directory that genuinely does not exist — writeFileSync
+      // does not create parents, so this throws ENOENT before the delete
+      // transaction ever runs.
+      const badPath = join(tmpdir(), 'guess-archive-does-not-exist', `${roundId}.json`);
+
+      expect(() => archiveRehearsal(db, roundId, badPath)).toThrow();
+
+      const row = db.prepare('SELECT COUNT(*) AS n FROM guess_picks WHERE round_id = ?').get(roundId) as { n: number };
+      expect(row.n).toBe(1);
+      const state = db.prepare('SELECT COUNT(*) AS n FROM guess_round_state WHERE round_id = ?').get(roundId) as { n: number };
+      expect(state.n).toBe(1);
+    });
   });
 });

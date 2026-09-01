@@ -20,7 +20,9 @@ export function getMeCompetitorId(db: Database.Database, leagueSlug: string): nu
     | undefined;
   if (!row) return null;
   const n = Number(row.value);
-  return Number.isInteger(n) ? n : null;
+  // Number('') === 0, and competitor PKs start at 1 — a non-positive result
+  // means the stored value wasn't a real id, so treat it the same as absent.
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
 export function setMeCompetitorId(

@@ -7,6 +7,7 @@
  * archiveRehearsal reads only guess_* tables and never touches ml_submissions.
  */
 import type Database from 'better-sqlite3';
+import { writeFileSync } from 'node:fs';
 
 export interface RehearsalArchive {
   roundId: number;
@@ -75,10 +76,19 @@ export function startRehearsal(db: Database.Database, roundId: number, asOf: str
  * Archive a rehearsal: serialize every guess_* row for the round plus its
  * guess_round_state row, then delete all five inside one transaction. The
  * round returns to having no guessing data at all — a rehearsal score can
- * never pool with a live score because the rows no longer exist. Writing the
- * returned archive to data/rehearsals/ is the caller's job.
+ * never pool with a live score because the rows no longer exist.
+ *
+ * `persistTo`, when given, is a full file path the serialized archive is
+ * written to SYNCHRONOUSLY BEFORE the delete transaction runs — spec §14.7
+ * requires the rows be serialized and THEN deleted; writing after deleting
+ * would mean a failed write loses data that is already gone. If the write
+ * throws, the delete never runs and the rows survive. Returning the archive
+ * in the result is unconditional either way — belt and braces alongside the
+ * persisted copy, or the only copy when `persistTo` is omitted.
  */
-export function archiveRehearsal(db: Database.Database, roundId: number): RehearsalArchive {
+export function archiveRehearsal(
+  db: Database.Database, roundId: number, persistTo?: string,
+): RehearsalArchive {
   const state = db.prepare('SELECT * FROM guess_round_state WHERE round_id = ?').get(roundId) as
     { as_of: string | null } | undefined;
   const picks = db.prepare('SELECT * FROM guess_picks WHERE round_id = ?').all(roundId);
@@ -96,6 +106,10 @@ export function archiveRehearsal(db: Database.Database, roundId: number): Rehear
     aiDistribution,
     aiSong,
   };
+
+  if (persistTo) {
+    writeFileSync(persistTo, JSON.stringify(archive, null, 2), 'utf8');
+  }
 
   db.transaction(() => {
     db.prepare('DELETE FROM guess_picks WHERE round_id = ?').run(roundId);
