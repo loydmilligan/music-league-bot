@@ -3,6 +3,7 @@ import { getRoundState, type GuessPhase, type RehearsalMode } from './state.js';
 import { eligibleSongs, eligiblePlayers, validateGutSlate, type Validation } from './assignment.js';
 import { visibleSubmissions } from './horizon.js';
 import { resolveMeForRound } from './meCompetitor.js';
+import { candidatesForSong, playerAvailability, type Candidate, type Availability } from './candidates.js';
 
 export interface WorkspaceSong {
   spotifyUri: string;
@@ -10,6 +11,7 @@ export interface WorkspaceSong {
   artists: string;
   comment: string | null;
   gutPickPlayerId: number | null;
+  candidates: Candidate[];
 }
 export interface WorkspacePlayer { id: number; name: string }
 export interface WorkspaceMine { spotifyUri: string; title: string; artists: string }
@@ -23,6 +25,7 @@ export interface WorkspaceData {
   roster: WorkspacePlayer[];
   validation: Validation;
   mine: WorkspaceMine | null;
+  availability: Record<number, Availability>;
 }
 
 /**
@@ -53,7 +56,11 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
 
   const songs: WorkspaceSong[] = visibleSubmissions(db, roundId)
     .filter((s) => uris.has(s.spotifyUri))
-    .map((s) => ({ ...s, gutPickPlayerId: picks.get(s.spotifyUri) ?? null }));
+    .map((s) => ({
+      ...s,
+      gutPickPlayerId: picks.get(s.spotifyUri) ?? null,
+      candidates: candidatesForSong(db, roundId, s.spotifyUri),
+    }));
 
   const ids = eligiblePlayers(db, roundId, me);
   const roster: WorkspacePlayer[] =
@@ -81,6 +88,11 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
       LIMIT 1`,
   ).get(roundId) ?? null) as WorkspaceMine | null;
 
+  // A plain object, not the Map playerAvailability returns — this payload is
+  // serialised to JSON for the client, and a Map becomes {}.
+  const availability: Record<number, Availability> =
+    Object.fromEntries(playerAvailability(db, roundId, me));
+
   return {
     roundId,
     phase: state.phase,
@@ -91,5 +103,6 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
     roster,
     validation: validateGutSlate(db, roundId, me),
     mine,
+    availability,
   };
 }

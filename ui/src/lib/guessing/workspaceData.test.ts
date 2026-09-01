@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { seedRound } from './fixtures.js';
 import { setMeCompetitorId } from './meCompetitor.js';
 import { setGutPick, lockGut } from './state.js';
+import { setCandidate } from './candidates.js';
 import { buildWorkspaceData } from './workspaceData.js';
 
 function setup(opts = {}) {
@@ -84,5 +85,43 @@ describe('WorkspaceData.mine', () => {
     });
     expect(data.songs.map((s) => s.spotifyUri)).not.toContain(songs[2]);
     expect(data.songs).toHaveLength(3);
+  });
+});
+
+describe('WorkspaceData candidates + availability', () => {
+  it('attaches each song its own candidates and no others', () => {
+    const { db, songs, players } = seedRound({ songCount: 3, playerCount: 4, mineIndex: null });
+    setMeCompetitorId(db, 'boarz-ii-men', players[0]);
+    setCandidate(db, 1, songs[1], players[1], { status: 'prime', certainty: 70 });
+    setCandidate(db, 1, songs[2], players[2], { status: 'possible' });
+
+    const data = buildWorkspaceData(db, 1)!;
+    const bySong = new Map(data.songs.map((s) => [s.spotifyUri, s.candidates]));
+    expect(bySong.get(songs[0])).toEqual([]);
+    expect(bySong.get(songs[1])!.map((c) => c.playerId)).toEqual([players[1]]);
+    expect(bySong.get(songs[2])!.map((c) => c.playerId)).toEqual([players[2]]);
+    expect(bySong.get(songs[1])![0]).toMatchObject({ status: 'prime', certainty: 70 });
+  });
+
+  // DISCRIMINATING: locked outranks prime. An implementation that returns raw
+  // per-song status instead of playerAvailability's grid-wide answer would
+  // report this player as 'dimmed' (their status on song 1) and fail.
+  it('exposes grid-wide availability, where locked outranks prime', () => {
+    const { db, songs, players } = seedRound({ songCount: 3, playerCount: 4, mineIndex: null });
+    setMeCompetitorId(db, 'boarz-ii-men', players[0]);
+    setCandidate(db, 1, songs[1], players[1], { status: 'prime' });
+    setCandidate(db, 1, songs[2], players[1], { status: 'locked' });
+
+    const data = buildWorkspaceData(db, 1)!;
+    expect(data.availability[players[1]]).toBe('taken');
+    expect(data.availability[players[2]]).toBe('free');
+  });
+
+  it('serialises availability as a plain object, not a Map', () => {
+    const { db, players } = seedRound({ songCount: 2, playerCount: 3, mineIndex: null });
+    setMeCompetitorId(db, 'boarz-ii-men', players[0]);
+    const data = buildWorkspaceData(db, 1)!;
+    expect(data.availability).not.toBeInstanceOf(Map);
+    expect(JSON.parse(JSON.stringify(data.availability))).toEqual(data.availability);
   });
 });
