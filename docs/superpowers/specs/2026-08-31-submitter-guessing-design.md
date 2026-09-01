@@ -270,6 +270,66 @@ elimination across the grid resolves assignments that no single song resolves
 alone. Candidate state therefore lives in `guess_candidates` and is queried, not
 held client-side — the grid survives a refresh or a closed laptop mid-round.
 
+### 7.4a Amendment (2026-09-01) — the settled design
+
+§7.4 above describes the *intent*. A Claude Design pass settled the actual surface
+with Matt on 2026-09-01. Handoff packet: `docs/design_handoff_refine_grid/`
+(`README.md` is the build target, `DECISIONS.md` the D1–D6 log, `TOKEN-MAP.md`
+the element→token map). Where this amendment and §7.4 differ, this wins.
+
+**The six settled decisions:**
+
+- **State control** — a mono chip that shows the **current** state and is itself the
+  click target. Glyph + label + rail weight carry it without color (`○ possible`,
+  `◐ prime`, `● locked`; locked thickens the rail to 3px). Cycles and **wraps**.
+- **Candidate picker** — an **always-visible roster strip** of click-to-add pills,
+  **overriding §7.4's "typeahead pill input"**. Nine local names don't warrant a
+  keystroke and a context switch per add, and a typeahead hides availability until
+  after you choose. The strip *is* the availability display. Above ~12 names, add a
+  filter box; never remote search.
+- **Availability** — `dimmed` and `taken` are separated by **three independent
+  signals** (rail style, a typed tag naming *where* the player is committed, and
+  strike-through), with opacity only reinforcing. Advisory and hard must never read
+  the same.
+- **Density** — summary at rest (one line), editor **expands in place** on click.
+  No modal, no navigation, scroll kept.
+- **Conflicts** — one mono roll-up line in the gut phase's register, plus a quiet
+  inline marker on **both** sides of a duplicate. Informative, never blocking:
+  duplicates stay legal while editing and are gated only at submit (§6).
+- **Ledger** — a sticky 244px side rail listing every player's availability, which
+  also makes the songs-vs-players supply count legible.
+
+**The §13 unknowns, resolved:** the gut pick **is** shown, as a non-editable mono
+marker (Matt weighed the anchoring risk and chose it); `factors` stays **free text**;
+there is **no** distinct "skip" state (empty means not-yet); refine **replaces** the
+gut slate in the tab rather than appearing below it; rows sort by status
+(locked → prime → possible) then certainty descending.
+
+**Project D reserves space now.** Each resting row carries an inert, hairline-
+separated slot and the editor a labelled reserved box, so §7.3's likelihood lands
+as a second mono value without a reflow. Matt asked for the space to be held.
+
+**Corrections to the handoff packet, found against the code before planning:**
+
+1. **`phase === 'refine'` is unreachable.** Nothing in the repo writes that phase —
+   `lockGut` sets `'fetch'` and there is no other writer, exactly as with the vote
+   layer. The refine board is therefore gated on
+   **`gutLockedAt !== null || phase === 'refine'`**: locking the gut slate is a real,
+   reachable event and is precisely when refining should begin, and the phase arm
+   keeps working once the intermediate machine exists. Same shape as §7.6's gate.
+2. **The packet misstates `Candidate`.** It documents `{ songId, playerId, … }`.
+   There is no `songId`: the shipped type is
+   `{ playerId, status, certainty, factors, notes }` and rows are keyed
+   `(round_id, spotify_uri, player_id)`. Songs are identified by Spotify URI
+   throughout this feature.
+3. **`WorkspaceData` carries neither candidates nor availability.** The underlying
+   functions are shipped and tested, but the payload the component receives does not
+   expose them — extending it is real work the packet does not account for.
+4. `--dur-fast` / `--dur-base` do **not** exist in `app.css`, despite TOKEN-MAP's
+   "no new token is required". The ~700ms propagation flash is a bespoke keyframe
+   and any duration constants are local to the component.
+5. `--font-body` does not exist; the token is `--font-sans`.
+
 ### 7.5 Comment
 
 Opens per song once that song has a locked pick.
