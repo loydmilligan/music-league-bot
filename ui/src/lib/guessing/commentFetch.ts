@@ -9,9 +9,29 @@ export interface ApplyResult { updated: number; unmatched: string[] }
  *
  * A failed scrape is recorded, never thrown: the AI proceeds with a note that
  * comments were unavailable, because a stale or failed scrape must not block
- * the sitting. Only songs actually present in the payload are written — a song
- * whose submitter left no visible comment is absent from it, and must not have
- * an existing comment erased.
+ * the sitting.
+ *
+ * The write is COALESCE(?, comment) — a scrape can only ever ADD a comment,
+ * never clear one. Two separate reasons:
+ *
+ *  * The producer (scripts/lib/ml_vote_parse.py) emits EVERY song on the
+ *    ballot, with `comment: null` for the ones showing no comment. A null
+ *    therefore means "no visible comment on the ballot", which is not evidence
+ *    that no comment exists.
+ *  * ml_submissions.comment is also populated by the zip import
+ *    (lib/import/importer.ts), and that export includes comments the submitter
+ *    HID from voters — the very case lib/guessing/horizon.ts gates on with
+ *    visible_to_voters. A hidden comment is invisible on the ballot but real in
+ *    the column, and it is read with attribution by the digest
+ *    (lib/digest/earlyLedes.ts, lib/digest/llm.ts) and by
+ *    lib/dashboard/tasteData.ts. Writing the ballot's null over it — on a
+ *    backfill, or a rehearsal replay of an already-imported round — would
+ *    silently destroy real data.
+ *
+ * Songs not mentioned in the payload at all are untouched, as before.
+ * COALESCE does not weaken the loud-failure property: SQLite counts a matched
+ * row as changed even when the value is unchanged, so `unmatched` still flags
+ * any uri that hit no row.
  */
 export function applyComments(
   db: Database.Database,
@@ -41,7 +61,7 @@ export function applyComments(
   db.transaction(() => {
     ensureState.run(roundId, now);
     const write = db.prepare(
-      `UPDATE ml_submissions SET comment = ?
+      `UPDATE ml_submissions SET comment = COALESCE(?, comment)
         WHERE round_id = ? AND spotify_uri = ?`,
     );
     for (const s of songs) {

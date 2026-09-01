@@ -32,6 +32,36 @@ describe('applyComments', () => {
     expect(row.comment).toBe('pre-existing');
   });
 
+  // DISCRIMINATING: the producer's REAL payload shape. ml_vote_parse.py emits
+  // every song on the ballot, with comment: null for the ones with no visible
+  // comment (its own fixture: 10 songs, 2 comments). A plain
+  // `SET comment = ?` writes those nulls over comments the zip import already
+  // stored — including ones the submitter hid from voters — on any backfill or
+  // rehearsal replay. Only COALESCE(?, comment) passes this.
+  it('never clears an existing comment when the ballot shows none', () => {
+    const { db, songs } = seedRound({ songCount: 3 });
+    db.prepare('UPDATE ml_submissions SET comment = ? WHERE round_id = 1 AND spotify_uri = ?')
+      .run('hidden from voters, kept in the export', songs[0]);
+    // Producer shape: every song present, null where the ballot showed nothing.
+    const res = applyComments(db, 1, {
+      ok: true,
+      songs: [
+        { spotifyUri: songs[0], comment: null },
+        { spotifyUri: songs[1], comment: null },
+        { spotifyUri: songs[2], comment: 'a visible one' },
+      ],
+    }, NOW);
+    const rows = db.prepare(
+      'SELECT spotify_uri, comment FROM ml_submissions WHERE round_id = 1 ORDER BY spotify_uri',
+    ).all() as { spotify_uri: string; comment: string | null }[];
+    expect(rows.find((r) => r.spotify_uri === songs[0])!.comment)
+      .toBe('hidden from voters, kept in the export');
+    expect(rows.find((r) => r.spotify_uri === songs[1])!.comment).toBeNull();
+    expect(rows.find((r) => r.spotify_uri === songs[2])!.comment).toBe('a visible one');
+    // Loud-failure property survives COALESCE: matched rows still count.
+    expect(res.unmatched).toEqual([]);
+  });
+
   it('stamps comments_fetched_at and clears any prior error on success', () => {
     const { db, songs } = seedRound({ songCount: 2 });
     applyComments(db, 1, { ok: false, error: 'boom' }, NOW);
