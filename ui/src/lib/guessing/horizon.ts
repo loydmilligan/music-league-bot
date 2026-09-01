@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { priorRoundIds } from './rehearsal.js';
+import { getRoundState, type RehearsalMode } from './state.js';
 
 export interface VisibleSubmission {
   spotifyUri: string;
@@ -94,4 +95,44 @@ export function chatBefore(
       WHERE group_name = ? AND ts < ?
       ORDER BY ts`,
   ).all(groupName, cutoff) as ChatLine[];
+}
+
+export interface RoundEvidence {
+  roundId: number;
+  mode: RehearsalMode;
+  /** The effective "now": as_of for a rehearsal, wall clock for a live round. */
+  cutoff: string;
+  submissions: VisibleSubmission[];
+  priorVotes: PriorVote[];
+  chat: ChatLine[];
+  priorRoundIds: number[];
+}
+
+/**
+ * Everything the guessing workspace is allowed to see for one round (spec §14.3).
+ *
+ * The rules below are IDENTICAL for a live round and a rehearsed one — comments
+ * filtered to what voters saw, the round's own votes excluded by id, only
+ * strictly-prior rounds, chat clamped to a cutoff. Rehearsal changes exactly one
+ * thing: what "now" means. Do not add a `mode === 'rehearsal'` branch here; if a
+ * rule needs one, the rule is wrong.
+ */
+export function roundEvidence(
+  db: Database.Database,
+  roundId: number,
+  opts: { chatGroup?: string; now?: string } = {},
+): RoundEvidence {
+  const state = getRoundState(db, roundId);
+  const wallClock = opts.now ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const cutoff = state.asOf ?? wallClock;
+
+  return {
+    roundId,
+    mode: state.mode,
+    cutoff,
+    submissions: visibleSubmissions(db, roundId),
+    priorVotes: priorVotes(db, roundId),
+    chat: opts.chatGroup ? chatBefore(db, opts.chatGroup, cutoff) : [],
+    priorRoundIds: priorRoundIds(db, roundId),
+  };
 }

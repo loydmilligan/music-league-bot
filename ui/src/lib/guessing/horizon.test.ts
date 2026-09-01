@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { seedRound, seedPriorRound, seedVote, seedChat, CHAT_GROUP } from './fixtures.js';
-import { visibleSubmissions, priorVotes, chatBefore } from './horizon.js';
+import { visibleSubmissions, priorVotes, chatBefore, roundEvidence } from './horizon.js';
+import { startRehearsal } from './rehearsal.js';
 
 describe('visible submissions (spec §14.3, §14.5)', () => {
   it('returns only comments that were visible to voters', () => {
@@ -75,6 +76,13 @@ describe('prior votes (spec §14.3 — the trap)', () => {
     seedVote(db, 4, 2, songs[0], 'undated', '2025-11-01T00:00:00Z');
     expect(priorVotes(db, 1).map((v) => v.roundId)).not.toContain(4);
   });
+
+  // Deliberately does NOT use setup() above, which seeds two prior rounds —
+  // the whole point is a season's first round, which has none at all.
+  it('returns nothing when the round has no priors at all', () => {
+    const { db } = seedRound({ songCount: 3, playerCount: 4, mineIndex: null });
+    expect(priorVotes(db, 1)).toEqual([]);
+  });
 });
 
 describe('chat horizon (spec §14.3)', () => {
@@ -98,5 +106,50 @@ describe('chat horizon (spec §14.3)', () => {
   it('returns empty when chat_messages does not exist at all', () => {
     const { db } = seedRound({ mineIndex: null });
     expect(chatBefore(db, CHAT_GROUP, '2026-02-01T00:00:00Z')).toEqual([]);
+  });
+});
+
+describe('roundEvidence assembly', () => {
+  function setup() {
+    const s = seedRound({ songCount: 3, playerCount: 4, mineIndex: null });
+    s.db.prepare("UPDATE rounds SET voting_deadline = '2026-02-01T00:00:00Z' WHERE id = 1").run();
+    seedPriorRound(s.db, 2, '2026-01-01T00:00:00Z');
+    seedVote(s.db, 2, 2, s.songs[0], 'earlier', '2025-12-15T00:00:00Z');
+    seedChat(s.db, CHAT_GROUP, 'A', 'old chatter', '2025-12-01T00:00:00Z');
+    seedChat(s.db, CHAT_GROUP, 'B', 'new chatter', '2026-06-01T00:00:00Z');
+    return s;
+  }
+
+  it('a live round uses wall-clock now, so all chat is in scope', () => {
+    const { db } = setup();
+    const ev = roundEvidence(db, 1, { chatGroup: CHAT_GROUP, now: '2026-09-01T00:00:00Z' });
+    expect(ev.mode).toBe('live');
+    expect(ev.cutoff).toBe('2026-09-01T00:00:00Z');
+    expect(ev.chat.map((c) => c.text)).toEqual(['old chatter', 'new chatter']);
+  });
+
+  it('a rehearsed round uses as_of, cutting later chat', () => {
+    const { db } = setup();
+    startRehearsal(db, 1, '2026-02-01T00:00:00Z');
+    const ev = roundEvidence(db, 1, { chatGroup: CHAT_GROUP, now: '2026-09-01T00:00:00Z' });
+    expect(ev.mode).toBe('rehearsal');
+    expect(ev.cutoff).toBe('2026-02-01T00:00:00Z');
+    expect(ev.chat.map((c) => c.text)).toEqual(['old chatter']);
+  });
+
+  it('applies the same submission and vote rules in both modes', () => {
+    const { db } = setup();
+    const live = roundEvidence(db, 1, { chatGroup: CHAT_GROUP, now: '2026-09-01T00:00:00Z' });
+    startRehearsal(db, 1, '2026-02-01T00:00:00Z');
+    const reh = roundEvidence(db, 1, { chatGroup: CHAT_GROUP, now: '2026-09-01T00:00:00Z' });
+    expect(reh.submissions).toEqual(live.submissions);
+    expect(reh.priorVotes).toEqual(live.priorVotes);
+    expect(reh.priorRoundIds).toEqual(live.priorRoundIds);
+  });
+
+  it('omits chat entirely when no group is given', () => {
+    const { db } = setup();
+    const ev = roundEvidence(db, 1, { now: '2026-09-01T00:00:00Z' });
+    expect(ev.chat).toEqual([]);
   });
 });
