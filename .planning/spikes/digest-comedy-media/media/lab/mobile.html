@@ -89,7 +89,7 @@
   .dock audio{width:100%;height:38px;display:block}
   .dock .r{display:flex;gap:9px;align-items:center;margin-top:8px}
   .dock .r button{flex:1;background:var(--hot);border:0;color:#1a1512;font-weight:750}
-  .dock .r button.sec{flex:0 0 92px;background:#211d1c;border:1px solid var(--edge);
+  .dock .r button.sec{flex:0 0 74px;background:#211d1c;border:1px solid var(--edge);
                       color:var(--ink);font-weight:500}
   #busy{color:var(--dim);min-width:62px;text-align:right}
 </style>
@@ -125,6 +125,7 @@
       nothing. Tap <b>?</b> for what a dial does and when to reach for it.</div>
     <div id="knobs"></div>
     <div class="mono" id="stats" style="margin-top:14px"></div>
+    <div style="margin-top:12px"><button id="loadBtn" style="width:100%">Load saved settings…</button></div>
   </div>
 </section>
 
@@ -161,7 +162,9 @@
   <audio id="out" controls preload="none" playsinline></audio>
   <div class="r">
     <button id="go">Render</button>
+    <button class="sec" id="save">Save</button>
     <button class="sec" id="reset">Reset</button>
+    <input type="file" id="loadFile" accept="application/json,.json" hidden>
     <span id="busy"></span>
   </div>
 </div>
@@ -254,6 +257,17 @@ document.getElementById('presets').onclick=e=>{
   document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));
   state={...DEF,...PRESETS[curPreset]}; sync(); render();
 };
+document.getElementById('loadBtn').onclick=()=>document.getElementById('loadFile').click();
+document.getElementById('save').onclick=async()=>{
+  const n=await saveSettings();
+  if(n) document.getElementById('busy').textContent='saved';
+};
+document.getElementById('loadFile').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ await loadSettings(f); document.getElementById('busy').textContent='loaded'; }
+  catch{ document.getElementById('busy').textContent='bad file'; }
+  e.target.value='';
+};
 document.getElementById('reset').onclick=()=>{
   state={...DEF}; curPreset=null;
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));
@@ -269,6 +283,53 @@ const words=()=> curSrc
   ? document.getElementById('text').value.trim().split(/\s+/).length
   : (SRC_WORDS[document.getElementById('src').value]||0);
 
+
+// Save the dial positions as a real file on whatever device the browser is on.
+// showSaveFilePicker gives a proper save dialog on desktop Chrome/Edge; Safari
+// and Android don't have it, so those fall back to a normal download (which on
+// iOS lands in Files).
+let lastStats = null;
+function settingsBlob(){
+  return {
+    saved: new Date().toISOString(),
+    preset: curPreset || null,
+    source: curSrc || document.getElementById('src').value,
+    params: payload(),
+    measured: lastStats,     // what this actually sounded like, for reference
+  };
+}
+function settingsName(){
+  const tag = (curPreset || (curSrc ? 'take' : document.getElementById('src').value))
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  const t = new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+  return `voicelab-${tag}-${t}.json`;
+}
+async function saveSettings(){
+  const text = JSON.stringify(settingsBlob(), null, 2);
+  const name = settingsName();
+  try {
+    if (window.showSaveFilePicker) {
+      const h = await showSaveFilePicker({ suggestedName: name,
+        types: [{ description: 'Voice Lab settings', accept: { 'application/json': ['.json'] } }] });
+      const w = await h.createWritable(); await w.write(text); await w.close();
+      return name;
+    }
+  } catch (e) { if (e?.name === 'AbortError') return null; }
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([text], { type: 'application/json' })), download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  return name;
+}
+async function loadSettings(file){
+  const j = JSON.parse(await file.text());
+  state = { ...DEF, ...(j.params || {}) };
+  curPreset = j.preset || null;
+  document.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('on', x.dataset.p===curPreset));
+  sync(); render();
+  return j;
+}
+
 async function render(){
   const btn=document.getElementById('go'); btn.disabled=true;
   document.getElementById('busy').textContent='…';
@@ -278,7 +339,7 @@ async function render(){
         params:payload(),words:words()})});
     if(!r.ok){document.getElementById('busy').textContent='err';
       document.getElementById('stats').textContent=(await r.text()).slice(0,200);return;}
-    const st=JSON.parse(r.headers.get('x-stats')||'{}');
+    const st=JSON.parse(r.headers.get('x-stats')||'{}'); lastStats=st;
     const a=document.getElementById('out');
     a.src=URL.createObjectURL(await r.blob());
     a.play().catch(()=>{});           // iOS may block until one manual tap

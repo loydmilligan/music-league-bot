@@ -101,7 +101,9 @@
     <div class="bar">
       <button id="go">Render</button>
       <button class="ghost" id="reset">Reset</button>
-      <button class="ghost" id="copy">Copy params</button>
+      <button class="ghost" id="save">Save settings</button>
+      <button class="ghost" id="load">Load…</button>
+      <input type="file" id="loadFile" accept="application/json,.json" hidden>
       <span class="stat" id="busy"></span>
     </div>
     <audio id="out" controls preload="none"></audio>
@@ -185,7 +187,7 @@ const PRESETS = {
   'Slow + deadpan': {artic:0.8, pause:1.9, gapmax:1.2, targethz:106, nasal:4},
 };
 
-let state = {...DEF}, curSrc = null;
+let state = {...DEF}, curSrc = null, curPreset = null;
 
 document.getElementById('knobs').innerHTML = KNOBS.map(([id,lab,min,max,step,def,what,when])=>`
   <div class="knob">
@@ -225,10 +227,21 @@ document.getElementById('presets').innerHTML =
   Object.keys(PRESETS).map(n=>`<button class="ghost" data-p="${n}">${n}</button>`).join('');
 document.getElementById('presets').onclick=e=>{
   const n=e.target.dataset.p; if(!n) return;
+  curPreset=n;
   state={...DEF,...PRESETS[n]}; sync(); render();
 };
-document.getElementById('reset').onclick=()=>{state={...DEF};sync();};
-document.getElementById('copy').onclick=()=>navigator.clipboard.writeText(JSON.stringify(payload()));
+document.getElementById('reset').onclick=()=>{state={...DEF};curPreset=null;sync();};
+document.getElementById('save').onclick=async()=>{
+  const n=await saveSettings();
+  if(n) document.getElementById('busy').textContent='saved '+n;
+};
+document.getElementById('load').onclick=()=>document.getElementById('loadFile').click();
+document.getElementById('loadFile').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ await loadSettings(f); document.getElementById('busy').textContent='loaded '+f.name; }
+  catch{ document.getElementById('busy').textContent='not a settings file'; }
+  e.target.value='';
+};
 
 let SRC_WORDS={};
 fetch('/sources').then(r=>r.json()).then(map=>{
@@ -240,6 +253,53 @@ const words=()=> curSrc
   ? document.getElementById('text').value.trim().split(/\s+/).length
   : (SRC_WORDS[document.getElementById('src').value]||0);
 
+
+// Save the dial positions as a real file on whatever device the browser is on.
+// showSaveFilePicker gives a proper save dialog on desktop Chrome/Edge; Safari
+// and Android don't have it, so those fall back to a normal download (which on
+// iOS lands in Files).
+let lastStats = null;
+function settingsBlob(){
+  return {
+    saved: new Date().toISOString(),
+    preset: curPreset || null,
+    source: curSrc || document.getElementById('src').value,
+    params: payload(),
+    measured: lastStats,     // what this actually sounded like, for reference
+  };
+}
+function settingsName(){
+  const tag = (curPreset || (curSrc ? 'take' : document.getElementById('src').value))
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  const t = new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+  return `voicelab-${tag}-${t}.json`;
+}
+async function saveSettings(){
+  const text = JSON.stringify(settingsBlob(), null, 2);
+  const name = settingsName();
+  try {
+    if (window.showSaveFilePicker) {
+      const h = await showSaveFilePicker({ suggestedName: name,
+        types: [{ description: 'Voice Lab settings', accept: { 'application/json': ['.json'] } }] });
+      const w = await h.createWritable(); await w.write(text); await w.close();
+      return name;
+    }
+  } catch (e) { if (e?.name === 'AbortError') return null; }
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([text], { type: 'application/json' })), download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  return name;
+}
+async function loadSettings(file){
+  const j = JSON.parse(await file.text());
+  state = { ...DEF, ...(j.params || {}) };
+  curPreset = j.preset || null;
+  document.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('on', x.dataset.p===curPreset));
+  sync(); render();
+  return j;
+}
+
 async function render(){
   const btn=document.getElementById('go'); btn.disabled=true;
   document.getElementById('busy').textContent='rendering…';
@@ -249,7 +309,7 @@ async function render(){
         params:payload(), words:words()})});
     if(!r.ok){document.getElementById('busy').textContent='error';
       document.getElementById('stats').textContent=(await r.text()).slice(0,300);return;}
-    const st=JSON.parse(r.headers.get('x-stats')||'{}');
+    const st=JSON.parse(r.headers.get('x-stats')||'{}'); lastStats=st;
     const a=document.getElementById('out');
     a.src=URL.createObjectURL(await r.blob()); a.play().catch(()=>{});
     document.getElementById('stats').innerHTML=
