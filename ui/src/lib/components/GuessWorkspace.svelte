@@ -163,6 +163,11 @@
   // builds the intermediate phase machine.
   const refining = $derived(data !== null && (data.gutLockedAt !== null || data.phase === 'refine'));
 
+  // Default from the phase so this keeps working once something actually
+  // advances it; today nothing writes 'vote' or 'refine' (lockGut sets
+  // 'fetch'), so this resolves to 'refine' on every real round.
+  let surface = $state<'refine' | 'vote'>(data?.phase === 'vote' ? 'vote' : 'refine');
+
   let mineBusy = $state(false);
 
   /**
@@ -243,17 +248,35 @@
     {/if}
   </div>
 
+  <!-- Task 9: refine and the transplanted Voting Lab share the same
+       `refining` gate, so once the gut slate locks both would render at
+       once, stacked, burying the refine board's propagation moment below
+       the vote UI. This toggle picks exactly one. -->
+  {#if refining}
+    <div class="mb-6 border-b border-border-muted flex gap-6">
+      {#each [['refine', 'Refine'], ['vote', 'Vote']] as [key, label] (key)}
+        <button
+          type="button"
+          onclick={() => (surface = key as 'refine' | 'vote')}
+          class="font-mono text-xs tracking-widest uppercase py-2 -mb-px border-b-2 transition-colors"
+          class:border-accent={surface === key}
+          class:text-accent={surface === key}
+          class:border-transparent={surface !== key}
+          class:text-fg-muted={surface !== key}
+          class:hover:text-fg={surface !== key}
+        >{label}</button>
+      {/each}
+    </div>
+  {/if}
+
   <!-- spec §7.6: the transplanted Voting Lab is this workspace's vote phase.
        Conditional mounting matches the guess tab's own pattern; the "Get take"
        result survives the remount via takeCache.
 
-       Gated on the gut lock, not on the phase alone: nothing in this repo
-       writes phase = 'vote' yet (lockGut sets 'fetch'), so a phase-only test
-       would never fire. Locking the gut slate IS a reachable event and is the
-       point at which the vote phase begins, so this makes the lab reachable
-       today; the `phase === 'vote'` arm keeps working once a later project
-       builds the intermediate phase machine. -->
-  {#if data.gutLockedAt !== null || data.phase === 'vote'}
+       Gated on `refining && surface === 'vote'` (Task 9): the refine board
+       and the lab share the same `refining` gate, and the toggle above picks
+       which of the two actually renders. -->
+  {#if refining && surface === 'vote'}
     <VotingLab {roundId} />
   {/if}
 
@@ -280,10 +303,14 @@
   <!-- spec §7.4a: refine REPLACES the gut slate rather than stacking beneath
        it — once the slate is locked the <ol> and its lock button are inert, so
        they come down and the board takes the space. The phase eyebrow, the
-       rehearsal banner and the marked-song banner stay. -->
-  {#if refining}
+       rehearsal banner and the marked-song banner stay.
+
+       Gated on `refining && surface === 'refine'` (Task 9): when refining is
+       true but the toggle above is set to 'vote', neither surface here
+       renders — the Voting Lab above already occupies the space. -->
+  {#if refining && surface === 'refine'}
     <RefineBoard bind:this={refineBoard} {data} {roundId} onchanged={load} />
-  {:else}
+  {:else if !refining}
     <!-- Validation summary — belongs to the gut slate, so it hides with it.
          lockGutSlate is gated on validation.ok, so once the slate is locked
          this line can only ever read "clean": a line that can never say
