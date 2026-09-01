@@ -18,6 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { record } from './ledger.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i < 0 ? d : argv[i + 1]; };
@@ -84,4 +85,5 @@ if (!url) { console.error('timed out'); process.exit(1); }
 const vid = await fetch(url, { headers: { Authorization: `Bearer ${KEY}` } });
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, Buffer.from(await vid.arrayBuffer()));
+record('film', body.model, cost, prompt.slice(0,80));
 console.log(`${out}  ${(fs.statSync(out).size / 1024 / 1024).toFixed(1)}MB  $${(cost ?? 0).toFixed(2)}`);

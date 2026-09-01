@@ -1,0 +1,9 @@
+{"ts":"2026-09-01T00:42:39.490Z","tool":"say","model":"openai/gpt-audio-mini","cost":0.0002004,"note":"Cost test three."}
+{"ts": "2026-08-31T08:37Z", "tool": "film", "model": "kwaivgi/kling-v3.0-std", "cost": 0.63, "note": "witness sketch -> video (usable)", "backfilled": true}
+{"ts": "2026-08-31T08:44Z", "tool": "film", "model": "kwaivgi/kling-v3.0-std", "cost": 0.63, "note": "JB sketch -> video (FAILED, morphed)", "backfilled": true}
+{"ts": "2026-08-31T01:26Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "courtroom sketch test", "backfilled": true}
+{"ts": "2026-08-31T01:19Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-witness", "backfilled": true}
+{"ts": "2026-08-31T01:19Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-counsel", "backfilled": true}
+{"ts": "2026-08-31T01:19Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-judge", "backfilled": true}
+{"ts": "2026-08-31T01:44Z", "tool": "draw", "model": "google/gemini-2.5-flash-image", "cost": 0.039, "note": "sk-jb-counsel (from photo)", "backfilled": true}
+{"ts": "2026-08-31T00:30Z", "tool": "say", "model": "openai/gpt-audio*", "cost": 0.42, "note": "~60 TTS takes across 6 bits + persona tests (estimated)", "backfilled": true}

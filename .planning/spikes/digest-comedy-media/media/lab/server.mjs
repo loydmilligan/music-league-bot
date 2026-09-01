@@ -17,11 +17,20 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { totals } from '../ledger.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.dirname(HERE);
 const CACHE = path.join(HERE, '.cache');
 fs.mkdirSync(CACHE, { recursive: true });
+
+// the key is needed for /cost and for fresh takes
+if (!process.env.OPENROUTER_API_KEY) {
+	for (const line of fs.readFileSync(path.join(MEDIA, '../../../../.env'), 'utf8').split('\n')) {
+		const m = line.match(/^OPENROUTER_API_KEY=(.*)$/);
+		if (m) process.env.OPENROUTER_API_KEY = m[1].trim().replace(/^["']|["']$/g, '');
+	}
+}
 
 // word counts travel with the clip — words/sec is meaningless against the
 // wrong script, and the text box is for *new* takes, not the loaded one
@@ -54,6 +63,21 @@ http.createServer(async (req, res) => {
 
 	if (req.method === 'GET' && url.pathname === '/favicon.ico') {
 		res.writeHead(204); return res.end();
+	}
+
+	// two different numbers: what this spike has spent, and what the whole
+	// OpenRouter key has ever spent (everything, not just this project)
+	if (req.method === 'GET' && url.pathname === '/cost') {
+		const spike = totals();
+		let account = null;
+		try {
+			const r = await fetch('https://openrouter.ai/api/v1/credits', {
+				headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` } });
+			const j = await r.json();
+			account = { used: j?.data?.total_usage, credits: j?.data?.total_credits };
+		} catch { /* offline is fine, spike total still works */ }
+		res.writeHead(200, { 'content-type': 'application/json' });
+		return res.end(JSON.stringify({ spike, account }));
 	}
 
 	// fresh TTS take, so you can audition new copy without leaving the lab

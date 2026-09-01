@@ -6,101 +6,174 @@
 <title>Voice Lab</title>
 <style>
   :root{--bg:#12100f;--panel:#1b1817;--edge:#2e2a28;--ink:#ece6df;
-        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8}
+        --dim:#9b918a;--hot:#e8b04b;--quote:#7fd1a8;--pay:#d3706a}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);padding:26px 18px 40px;
        font:16px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 340px;gap:22px}
+  .wrap{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr 360px;gap:22px}
   header{grid-column:1/-1}
-  /* four sizes: .8 / 1 / 1.3 / 1.8rem */
+  /* four sizes only: .8 / 1 / 1.3 / 1.8rem */
   h1{font-size:1.8rem;margin:0 0 4px;letter-spacing:-.02em}
-  h2{font-size:1.3rem;color:var(--hot);margin:0 0 12px}
-  .sub,.hint,.stat,label,button,select,textarea,input{font-size:.8rem}
+  h2{font-size:1.3rem;color:var(--hot);margin:0}
+  .sub,.hint,.stat,label,button,select,textarea,input,.help,.tag,table{font-size:.8rem}
   .sub{color:var(--dim)}
-  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:16px 18px}
-  .row{display:grid;grid-template-columns:1fr 62px;gap:10px;align-items:center;margin:0 0 13px}
-  label{color:var(--dim);display:block;margin-bottom:5px}
-  label b{color:var(--ink);font-weight:600;font-size:1rem}
+  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+         padding:16px 18px;margin-bottom:18px}
+  .step{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .num{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:var(--hot);
+       color:#1a1512;font-weight:750;font-size:.8rem;display:grid;place-items:center}
+  .stepsub{color:var(--dim);margin:0 0 14px 36px}
+  .tag{border:1px solid var(--edge);border-radius:999px;padding:1px 9px;color:var(--dim);
+       white-space:nowrap;font-weight:600}
+  .tag.free{border-color:#2e6b4f;color:var(--quote)}
+  .tag.pay{border-color:var(--pay);color:var(--pay)}
+  .row{display:grid;grid-template-columns:1fr 60px;gap:10px;align-items:center}
+  label{color:var(--dim);display:block;margin-bottom:4px}
+  .knob{margin:0 0 6px;padding:9px 0 4px;border-top:1px solid #241f1e}
+  .knob:first-child{border-top:0}
+  .kname{color:var(--ink);font-weight:600;font-size:1rem}
+  .q{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;
+     border:1px solid var(--edge);color:var(--dim);font-size:.8rem;cursor:pointer;
+     margin-left:6px;user-select:none;line-height:1}
+  .q:hover{border-color:var(--hot);color:var(--hot)}
   input[type=range]{width:100%;accent-color:var(--hot)}
-  .val{font-variant-numeric:tabular-nums;text-align:right;color:var(--hot);font-size:1rem;font-weight:650}
-  .hint{color:#6f6862;margin:-9px 0 13px}
-  select,textarea,input[type=text]{width:100%;background:#100e0d;border:1px solid var(--edge);
+  .val{font-variant-numeric:tabular-nums;text-align:right;color:var(--hot);
+       font-size:1rem;font-weight:650}
+  .help{display:none;color:var(--dim);background:#161312;border:1px solid var(--edge);
+        border-radius:7px;padding:9px 11px;margin:8px 0 2px}
+  .help.on{display:block}
+  .help b{color:var(--ink)}
+  .help .when{color:var(--quote);display:block;margin-top:5px}
+  select,textarea{width:100%;background:#100e0d;border:1px solid var(--edge);
     border-radius:7px;color:var(--ink);padding:7px 9px;font:inherit;font-size:.8rem}
-  textarea{min-height:76px;resize:vertical}
+  textarea{min-height:70px;resize:vertical}
   button{background:var(--hot);border:0;color:#1a1512;font-weight:650;border-radius:7px;
          padding:9px 15px;cursor:pointer}
   button.ghost{background:#211d1c;border:1px solid var(--edge);color:var(--ink);font-weight:500}
+  button.money{background:#2a1a19;border:1px solid var(--pay);color:#f0b3ae;font-weight:600}
   button:disabled{opacity:.5;cursor:default}
-  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
   audio{width:100%;margin:12px 0 6px}
   .stat{color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.75}
   .stat b{color:var(--quote)}
-  .preset{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .preset{display:flex;gap:6px;flex-wrap:wrap}
   .preset button{padding:5px 10px;font-weight:500}
   pre{background:#100e0d;border:1px solid var(--edge);border-radius:7px;padding:9px 11px;
       font-size:.8rem;overflow-x:auto;margin:10px 0 0;color:var(--dim);white-space:pre-wrap}
-  @media(max-width:860px){.wrap{grid-template-columns:1fr}}
+  table{border-collapse:collapse;width:100%;margin-top:8px}
+  td{border-top:1px solid var(--edge);padding:4px 0;color:var(--dim)}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .big{font-size:1.3rem;font-weight:700;color:var(--hot);font-variant-numeric:tabular-nums}
+  @media(max-width:880px){.wrap{grid-template-columns:1fr}}
 </style>
 </head>
 <body><div class="wrap">
 
 <header>
   <h1>Voice Lab</h1>
-  <div class="sub">articulation and pausing are separate dials — that's the point of this thing</div>
+  <div class="sub">dial in the impression · word speed and gap length are separate controls</div>
 </header>
 
-<div class="panel">
-  <h2>Controls</h2>
+<div>
 
-  <div class="preset" id="presets"></div>
-
-  <label>Source</label>
-  <select id="src"></select>
-  <div class="hint">v2 clips are already at 108 Hz / 3.0 w/s. References are the real impressions.</div>
-
-  <div id="knobs"></div>
-
-  <div class="bar">
-    <button id="go">Render</button>
-    <button class="ghost" id="reset">Reset</button>
-    <button class="ghost" id="copy">Copy params</button>
-    <span class="stat" id="busy"></span>
+  <div class="panel">
+    <div class="step"><div class="num">1</div><h2>Pick something to work on</h2>
+      <span class="tag free">free</span></div>
+    <p class="stepsub">Start from an existing take. Only step 4 spends money.</p>
+    <select id="src"></select>
+    <div class="hint" style="margin-top:8px">The <code>ref-</code> clips are the real human
+      impressions — load one to hear the target you're aiming at.</div>
   </div>
 
-  <audio id="out" controls preload="none"></audio>
-  <div class="stat" id="stats"></div>
-  <pre id="params"></pre>
+  <div class="panel">
+    <div class="step"><div class="num">2</div><h2>Start from a preset</h2>
+      <span class="tag free">free</span></div>
+    <p class="stepsub">Gets you in the neighbourhood, then adjust in step 3.</p>
+    <div class="preset" id="presets"></div>
+  </div>
+
+  <div class="panel">
+    <div class="step"><div class="num">3</div><h2>Adjust and re-render</h2>
+      <span class="tag free">free</span></div>
+    <p class="stepsub">Every render here is local ffmpeg — unlimited, instant, costs nothing.
+      Tap <span class="q">?</span> on any control to see what it does and when to reach for it.</p>
+    <div id="knobs"></div>
+    <div class="bar">
+      <button id="go">Render</button>
+      <button class="ghost" id="reset">Reset</button>
+      <button class="ghost" id="copy">Copy params</button>
+      <span class="stat" id="busy"></span>
+    </div>
+    <audio id="out" controls preload="none"></audio>
+    <div class="stat" id="stats"></div>
+    <pre id="params"></pre>
+  </div>
+
 </div>
 
-<div class="panel">
-  <h2>New take</h2>
-  <label>Text</label>
-  <textarea id="text">Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you think about it for longer than a minute.</textarea>
-  <label style="margin-top:10px">Voice</label>
-  <select id="voice">
-    <option>verse</option><option>ash</option><option>echo</option><option>ballad</option>
-    <option>alloy</option><option>coral</option><option>sage</option><option>shimmer</option>
-  </select>
-  <div class="bar" style="margin-top:10px">
-    <button class="ghost" id="say">Synthesise → load as source</button>
+<div>
+
+  <div class="panel">
+    <div class="step"><div class="num">4</div><h2>New words</h2>
+      <span class="tag pay">costs money</span></div>
+    <p class="stepsub">The only paid step. A take is ~$0.002–0.02 depending on length, and
+      it's cached by text+voice — re-rendering the same words is free after the first time.</p>
+    <label>Text</label>
+    <textarea id="text">Uh. Good idea, Mashew. I would only add that the whole thing falls apart if you think about it for longer than a minute.</textarea>
+    <label style="margin-top:10px">Voice</label>
+    <select id="voice">
+      <option>verse</option><option>ash</option><option>echo</option><option>ballad</option>
+      <option>alloy</option><option>coral</option><option>sage</option><option>shimmer</option>
+    </select>
+    <div class="bar">
+      <button class="money" id="say">$ Synthesise → load as source</button>
+    </div>
+    <div class="stat" id="saystat"></div>
+    <div class="hint" style="margin-top:8px"><b>verse</b> is the house voice — it measured
+      119 Hz on a neutral read, closest to the real impressions.</div>
   </div>
-  <div class="hint" style="margin-top:8px">Costs a few cents per take. Cached by text+voice, so
-    re-rendering the same words is free.</div>
-  <div class="stat" id="saystat"></div>
+
+  <div class="panel">
+    <div class="step"><div class="num">$</div><h2>Lifetime cost</h2></div>
+    <p class="stepsub">Refreshes after every paid call.</p>
+    <div class="big" id="spikeTotal">—</div>
+    <div class="hint">spent by this spike, all time</div>
+    <table id="costTable"></table>
+    <div class="stat" id="acct" style="margin-top:12px"></div>
+  </div>
+
 </div>
 
 </div>
 <script>
 const KNOBS = [
-  ['artic','Word speed',0.5,1.6,0.01,1,'How fast each word is spoken. Gaps untouched.'],
-  ['pause','Gap length',0,3,0.05,1,'Silence between words and phrases. Words untouched.'],
-  ['gapmax','Gap cap (s)',0,2,0.05,0,'Hard ceiling on any single silence. 0 = off.'],
-  ['targethz','Target pitch (Hz)',0,200,1,108,'Solves pitch to hit this median f0. 0 = use ratio below.'],
-  ['pitch','Pitch ratio',0.6,1.6,0.01,1,'Only used when target pitch is 0. Formants held.'],
-  ['formant','Formant / head size',0.7,1.4,0.01,1,'<1 bigger, darker head. >1 smaller, more nasal. Pitch unchanged.'],
-  ['nasal','Nasality (dB)',-8,14,0.5,0,'Boost ~2.1kHz, scoop ~480Hz. The adenoidal knob.'],
-  ['muffle','Muffle (Hz)',0,8000,100,0,'Lowpass. Congested / blocked-nose. 0 = off.'],
-  ['drive','Compression',1,8,0.1,1,'Strained, pressed delivery. 1 = off.'],
+  ['artic','Word speed',0.5,1.6,0.01,1,
+   '<b>Retimes the words only.</b> Silence between them is untouched, so the rhythm of the delivery survives — this is the control <code>atempo</code> could never give you.',
+   'Use this if individual words sound sped up or slurred, but the pacing between phrases already feels right. Below 1 = slower, more laboured. Above 1 = crisper, more clipped.'],
+  ['pause','Gap length',0,3,0.05,1,
+   '<b>Stretches or squeezes the silences.</b> The words themselves are not retimed at all.',
+   'Use this if the words sound right but the delivery feels rushed or breathless — or, going down, if it drags and feels like it is waiting for something.'],
+  ['gapmax','Gap cap (s)',0,2,0.05,0,
+   '<b>Hard ceiling on any single silence.</b> Applied after Gap length. 0 = off.',
+   'Use this if one particular pause has gone comically long while the rest are fine. Cheaper than re-recording.'],
+  ['targethz','Target pitch (Hz)',0,200,1,108,
+   '<b>Solves the pitch shift for you</b> — measures what came out of the model and moves it to land on this note. Formants are held, so it does not go chipmunk.',
+   'Leave at 108 for this character — that is the register of the take Matt liked, and it sits between his 117.6 Hz and Conor’s 121.8 Hz. Set to 0 to drive pitch manually below.'],
+  ['pitch','Pitch ratio',0.6,1.6,0.01,1,
+   '<b>Manual pitch multiplier</b>, ignored unless Target pitch is 0. 1.1 = ~10% higher.',
+   'Use this when you want a relative nudge rather than an absolute note — e.g. making one line in a scene higher than the rest.'],
+  ['formant','Formant / head size',0.7,1.4,0.01,1,
+   '<b>Changes the size of the throat, not the note.</b> Pitch stays exactly where it is; what moves is the resonance — the perceived size of the person speaking.',
+   'Use this if the pitch is right but the voice sounds like the wrong body. Below 1 = bigger, darker, chestier. Above 1 = smaller, tighter, more nasal and cartoonish.'],
+  ['nasal','Nasality (dB)',-8,14,0.5,0,
+   '<b>Boosts ~2.1 kHz and scoops ~480 Hz</b> — the frequency signature of talking through a blocked nose.',
+   'Use this if the voice sounds too smooth, warm or announcer-like and you want adenoidal. This is the main Butthead dial. Negative values make it rounder and more resonant.'],
+  ['muffle','Muffle (Hz)',0,8000,100,0,
+   '<b>Lowpass filter</b> — removes everything above the cutoff. 0 = off.',
+   'Use this if it sounds too crisp and studio-clean for a cartoon dope. Around 5000 reads as congested; below 3000 starts sounding like a phone call.'],
+  ['drive','Compression',1,8,0.1,1,
+   '<b>Squashes the dynamic range</b>, so quiet syllables come up to meet loud ones.',
+   'Use this if the delivery sounds relaxed and you want strained, pressed, adenoidal effort. Also useful when quiet word-endings are getting lost.'],
 ];
 const DEF = Object.fromEntries(KNOBS.map(k=>[k[0],k[5]]));
 const PRESETS = {
@@ -113,33 +186,35 @@ const PRESETS = {
 
 let state = {...DEF}, curSrc = null;
 
-const kn = document.getElementById('knobs');
-kn.innerHTML = KNOBS.map(([id,lab,min,max,step,def,hint])=>`
-  <div class="row">
-    <div><label><b>${lab}</b></label>
-      <input type="range" id="k-${id}" min="${min}" max="${max}" step="${step}" value="${def}"></div>
-    <div class="val" id="v-${id}">${def}</div>
-  </div>
-  <div class="hint">${hint}</div>`).join('');
+document.getElementById('knobs').innerHTML = KNOBS.map(([id,lab,min,max,step,def,what,when])=>`
+  <div class="knob">
+    <label><span class="kname">${lab}</span><span class="q" data-h="${id}">?</span></label>
+    <div class="row">
+      <input type="range" id="k-${id}" min="${min}" max="${max}" step="${step}" value="${def}">
+      <div class="val" id="v-${id}">${def}</div>
+    </div>
+    <div class="help" id="h-${id}">${what}<span class="when">${when}</span></div>
+  </div>`).join('');
 
-for (const [id] of KNOBS.map(k=>[k[0]])) {
+document.getElementById('knobs').addEventListener('click', e=>{
+  const q=e.target.closest('.q'); if(!q) return;
+  document.getElementById('h-'+q.dataset.h).classList.toggle('on');
+});
+for (const [id] of KNOBS) {
   document.getElementById('k-'+id).addEventListener('input', e=>{
-    state[id] = +e.target.value;
-    document.getElementById('v-'+id).textContent = e.target.value;
-    showParams();
+    state[id]=+e.target.value;
+    document.getElementById('v-'+id).textContent=e.target.value; showParams();
   });
 }
 function sync(){
-  for (const [id] of KNOBS.map(k=>[k[0]])) {
-    document.getElementById('k-'+id).value = state[id];
-    document.getElementById('v-'+id).textContent = state[id];
-  }
-  showParams();
+  for (const [id] of KNOBS){
+    document.getElementById('k-'+id).value=state[id];
+    document.getElementById('v-'+id).textContent=state[id];
+  } showParams();
 }
-// only send what differs from passthrough
 function payload(){
   const p={};
-  for (const [id,,,,,def] of KNOBS) if (state[id]!==def && !(id==='targethz'&&state[id]===0)) p[id]=state[id];
+  for (const [id,,,,,def] of KNOBS) if (state[id]!==def) p[id]=state[id];
   if (state.targethz>0) p.targethz=state.targethz;
   return p;
 }
@@ -147,65 +222,73 @@ const showParams=()=>document.getElementById('params').textContent=JSON.stringif
 
 document.getElementById('presets').innerHTML =
   Object.keys(PRESETS).map(n=>`<button class="ghost" data-p="${n}">${n}</button>`).join('');
-document.getElementById('presets').onclick = e=>{
+document.getElementById('presets').onclick=e=>{
   const n=e.target.dataset.p; if(!n) return;
   state={...DEF,...PRESETS[n]}; sync(); render();
 };
-document.getElementById('reset').onclick = ()=>{ state={...DEF}; sync(); };
-document.getElementById('copy').onclick = ()=>
-  navigator.clipboard.writeText(JSON.stringify(payload()));
+document.getElementById('reset').onclick=()=>{state={...DEF};sync();};
+document.getElementById('copy').onclick=()=>navigator.clipboard.writeText(JSON.stringify(payload()));
 
-let SRC_WORDS = {};
+let SRC_WORDS={};
 fetch('/sources').then(r=>r.json()).then(map=>{
-  SRC_WORDS = Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v[1]]));
-  document.getElementById('src').innerHTML =
-    Object.keys(map).map(s=>`<option>${s}</option>`).join('');
+  SRC_WORDS=Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v[1]]));
+  document.getElementById('src').innerHTML=Object.keys(map).map(s=>`<option>${s}</option>`).join('');
 });
-
-// words/sec has to be measured against the script that is actually playing
-const words = ()=> curSrc
+// words/sec must be measured against the script actually playing
+const words=()=> curSrc
   ? document.getElementById('text').value.trim().split(/\s+/).length
-  : (SRC_WORDS[document.getElementById('src').value] || 0);
+  : (SRC_WORDS[document.getElementById('src').value]||0);
 
 async function render(){
   const btn=document.getElementById('go'); btn.disabled=true;
   document.getElementById('busy').textContent='rendering…';
   try{
-    const src = curSrc || document.getElementById('src').value;
-    const r = await fetch('/render',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({src, params:payload(), words:words()})});
-    if(!r.ok){ document.getElementById('busy').textContent='error';
-      document.getElementById('stats').textContent=(await r.text()).slice(0,300); return; }
-    const st = JSON.parse(r.headers.get('x-stats')||'{}');
-    const b = await r.blob();
-    const a = document.getElementById('out');
-    a.src = URL.createObjectURL(b); a.play().catch(()=>{});
-    document.getElementById('stats').innerHTML =
-      `pitch <b>${st.src_f0}</b> → <b>${st.out_f0} Hz</b> &nbsp;·&nbsp; ` +
-      `length <b>${st.src_dur}</b> → <b>${st.out_dur}s</b> &nbsp;·&nbsp; ` +
-      `speech <b>${st.speech_s}s</b>, gaps <b>${st.gap_pct}%</b>` +
-      (st.out_wps?` &nbsp;·&nbsp; <b>${st.out_wps} w/s</b>`:'') +
+    const r=await fetch('/render',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({src:curSrc||document.getElementById('src').value,
+        params:payload(), words:words()})});
+    if(!r.ok){document.getElementById('busy').textContent='error';
+      document.getElementById('stats').textContent=(await r.text()).slice(0,300);return;}
+    const st=JSON.parse(r.headers.get('x-stats')||'{}');
+    const a=document.getElementById('out');
+    a.src=URL.createObjectURL(await r.blob()); a.play().catch(()=>{});
+    document.getElementById('stats').innerHTML=
+      `pitch <b>${st.src_f0}</b> → <b>${st.out_f0} Hz</b> · length <b>${st.src_dur}</b> → <b>${st.out_dur}s</b>`+
+      ` · speech <b>${st.speech_s}s</b>, gaps <b>${st.gap_pct}%</b>`+
+      (st.out_wps?` · <b>${st.out_wps} w/s</b>`:'')+
       `<br>applied — pitch ×${st.pitch}, words ×${st.artic}, gaps ×${st.pause}`;
     document.getElementById('busy').textContent='';
   } finally { btn.disabled=false; }
 }
-document.getElementById('go').onclick = render;
-document.getElementById('src').onchange = ()=>{ curSrc=null; };
+document.getElementById('go').onclick=render;
+document.getElementById('src').onchange=()=>{curSrc=null;};
 
-document.getElementById('say').onclick = async ()=>{
+document.getElementById('say').onclick=async()=>{
   const b=document.getElementById('say'); b.disabled=true;
-  document.getElementById('saystat').textContent='synthesising…';
-  const r = await fetch('/say',{method:'POST',headers:{'content-type':'application/json'},
+  document.getElementById('saystat').textContent='synthesising… (this is the paid step)';
+  const r=await fetch('/say',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({text:document.getElementById('text').value,
       voice:document.getElementById('voice').value,
       style:"A dumb-guy cartoon impression of a pompous man: heavy Butthead from Beavis and Butt-Head, crossed with Comic Book Guy from The Simpsons and a touch of Sheldon. Low, flat, nasal, adenoidal, congested. Very little pitch movement. Big vocabulary delivered by someone who sounds slow and very pleased with himself."})});
-  const j = await r.json(); b.disabled=false;
-  if(j.error){ document.getElementById('saystat').textContent=j.error.slice(0,200); return; }
-  curSrc = j.src;
-  document.getElementById('saystat').textContent='loaded as source — hit Render';
-  render();
+  const j=await r.json(); b.disabled=false;
+  if(j.error){document.getElementById('saystat').textContent=j.error.slice(0,200);return;}
+  curSrc=j.src;
+  document.getElementById('saystat').textContent='loaded as source — now tune it in step 3, free';
+  loadCost(); render();
 };
 
-sync();
+async function loadCost(){
+  const c=await (await fetch('/cost')).json();
+  document.getElementById('spikeTotal').textContent='$'+c.spike.total.toFixed(2);
+  const label={say:'voices (TTS)',draw:'images',film:'video'};
+  document.getElementById('costTable').innerHTML=Object.entries(c.spike.byTool)
+    .sort((a,b)=>b[1].cost-a[1].cost)
+    .map(([k,v])=>`<tr><td>${label[k]||k} <span style="color:#6f6862">· ${v.n} calls</span></td>
+      <td class="n">$${v.cost.toFixed(2)}</td></tr>`).join('')
+    + `<tr><td>local ffmpeg renders</td><td class="n" style="color:var(--quote)">$0.00</td></tr>`;
+  if(c.account) document.getElementById('acct').innerHTML =
+    `whole OpenRouter key, all projects: <b>$${c.account.used.toFixed(2)}</b> used of
+     $${c.account.credits} — <b>$${(c.account.credits-c.account.used).toFixed(2)}</b> left`;
+}
+loadCost(); sync();
 </script>
 </body></html>

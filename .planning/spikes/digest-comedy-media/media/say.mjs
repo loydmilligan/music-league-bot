@@ -16,6 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { record } from './ledger.mjs';
 
 // Streaming audio only ever comes back as raw PCM — the API rejects wav/mp3 with
 // stream:true — so we always ask for pcm16 and let ffmpeg wrap it at the end.
@@ -46,7 +47,7 @@ if (!process.env.OPENROUTER_API_KEY) {
 // Refusals are stochastic — the same line can be read cleanly on one attempt and
 // refused on the next — so a failed verbatim check is retried before giving up.
 const retries = +arg('retries', 3);
-let chunks = [], transcript = '', overlap = 0;
+let chunks = [], transcript = '', overlap = 0, cost = 0, spend = 0;
 
 const norm = s => s.toLowerCase()
 	.replace(/\[[^\]]*\]/g, ' ')            // stage directions are performed, not read
@@ -54,7 +55,8 @@ const norm = s => s.toLowerCase()
 	.replace(/\s+/g, ' ').trim();
 
 for (let attempt = 1; attempt <= retries; attempt++) {
-	({ chunks, transcript, overlap } = await speak());
+	({ chunks, transcript, cost, overlap } = await speak());
+	spend += cost || 0;
 	if (overlap >= 0.6 || !transcript) break;
 	if (attempt < retries) console.error(`  retry ${attempt}/${retries - 1} — model refused or improvised`);
 }
@@ -69,6 +71,7 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 	body: JSON.stringify({
 		model,
 		stream: true,
+		stream_options: { include_usage: true },
 		modalities: ['text', 'audio'],
 		audio: { voice, format },
 		// The model will happily *respond* to the script instead of performing it
@@ -95,6 +98,7 @@ if (!res.ok) { console.error(res.status, await res.text()); process.exit(1); }
 
 const chunks = [];
 let transcript = '';
+let callCost = 0;
 let buf = '';
 const dec = new TextDecoder();
 
@@ -108,6 +112,8 @@ for await (const part of res.body) {
 		if (payload === '[DONE]') continue;
 		let json;
 		try { json = JSON.parse(payload); } catch { continue; }
+		// arrives on the final chunk, thanks to stream_options.include_usage
+		if (json.usage?.cost) callCost += json.usage.cost;
 		const audio = json.choices?.[0]?.delta?.audio;
 		if (audio?.data) chunks.push(Buffer.from(audio.data, 'base64'));
 		if (audio?.transcript) transcript += audio.transcript;
@@ -122,7 +128,7 @@ if (!chunks.length) { console.error('no audio returned'); process.exit(1); }
 // catch that, so compare what it said against what it was given.
 const want = new Set(norm(text).split(' '));
 const got = norm(transcript).split(' ');
-return { chunks, transcript, overlap: got.length ? got.filter(w => want.has(w)).length / got.length : 0 };
+return { chunks, transcript, cost: callCost, overlap: got.length ? got.filter(w => want.has(w)).length / got.length : 0 };
 }
 
 // ── verbatim check ───────────────────────────────────────────────────────────
@@ -153,5 +159,6 @@ fs.unlinkSync(raw);
 
 const dur = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration',
 	'-of', 'default=nw=1:nk=1', out]).toString().trim();
-console.log(`${out}  ${(fs.statSync(out).size / 1024).toFixed(0)}KB  ${(+dur).toFixed(1)}s  voice=${voice}`);
+record('say', model, spend, text.slice(0, 80));
+console.log(`${out}  ${(fs.statSync(out).size / 1024).toFixed(0)}KB  ${(+dur).toFixed(1)}s  voice=${voice}  $${spend.toFixed(4)}`);
 if (transcript) console.log('transcript:', transcript.slice(0, 200));

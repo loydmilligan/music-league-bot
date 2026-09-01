@@ -19,6 +19,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { record } from './ledger.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i < 0 ? d : argv[i + 1]; };
@@ -70,4 +71,5 @@ if (!img) {
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, Buffer.from(img.split(',', 2)[1], 'base64'));
+record('draw', arg('model','google/gemini-2.5-flash-image'), data.usage?.cost, prompt.slice(0,80));
 console.log(`${out}  ${(fs.statSync(out).size / 1024).toFixed(0)}KB  $${(data.usage?.cost ?? 0).toFixed(3)}`);
