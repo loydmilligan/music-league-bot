@@ -61,3 +61,37 @@ export function priorVotes(db: Database.Database, roundId: number): PriorVote[] 
       ORDER BY round_id, id`,
   ).all(...ids) as PriorVote[];
 }
+
+export interface ChatLine {
+  sender: string;
+  text: string;
+  ts: string;
+}
+
+/**
+ * Group chat strictly before `cutoff`, oldest first.
+ *
+ * Chat IS clamped by timestamp — unlike votes, a message's own timestamp is
+ * exactly when it became knowable, so the naive comparison is the correct one here.
+ *
+ * `chat_messages` is created by the bot side (src/) and is absent from the UI's
+ * SCHEMA constant, so it may legitimately not exist in a test database. Returning
+ * empty is correct in that case: no chat evidence, not an error.
+ */
+export function chatBefore(
+  db: Database.Database,
+  groupName: string,
+  cutoff: string,
+): ChatLine[] {
+  const exists = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_messages'")
+    .get();
+  if (!exists) return [];
+
+  return db.prepare(
+    `SELECT sender, text, ts
+       FROM chat_messages
+      WHERE group_name = ? AND ts < ?
+      ORDER BY ts`,
+  ).all(groupName, cutoff) as ChatLine[];
+}

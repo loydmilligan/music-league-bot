@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { seedRound, seedPriorRound, seedVote } from './fixtures.js';
-import { visibleSubmissions, priorVotes } from './horizon.js';
+import { seedRound, seedPriorRound, seedVote, seedChat, CHAT_GROUP } from './fixtures.js';
+import { visibleSubmissions, priorVotes, chatBefore } from './horizon.js';
 
 describe('visible submissions (spec §14.3, §14.5)', () => {
   it('returns only comments that were visible to voters', () => {
@@ -74,5 +74,29 @@ describe('prior votes (spec §14.3 — the trap)', () => {
     seedPriorRound(db, 4, null);
     seedVote(db, 4, 2, songs[0], 'undated', '2025-11-01T00:00:00Z');
     expect(priorVotes(db, 1).map((v) => v.roundId)).not.toContain(4);
+  });
+});
+
+describe('chat horizon (spec §14.3)', () => {
+  it('returns only messages strictly before the cutoff, oldest first', () => {
+    const { db } = seedRound({ mineIndex: null });
+    seedChat(db, CHAT_GROUP, 'A', 'before', '2026-01-01T00:00:00Z');
+    seedChat(db, CHAT_GROUP, 'B', 'on the boundary', '2026-02-01T00:00:00Z');
+    seedChat(db, CHAT_GROUP, 'C', 'after', '2026-03-01T00:00:00Z');
+
+    const out = chatBefore(db, CHAT_GROUP, '2026-02-01T00:00:00Z');
+    expect(out.map((m) => m.text)).toEqual(['before']);
+  });
+
+  it('ignores other groups', () => {
+    const { db } = seedRound({ mineIndex: null });
+    seedChat(db, CHAT_GROUP, 'A', 'ours', '2026-01-01T00:00:00Z');
+    seedChat(db, 'Some Other Group', 'B', 'theirs', '2026-01-01T00:00:00Z');
+    expect(chatBefore(db, CHAT_GROUP, '2026-02-01T00:00:00Z').map((m) => m.text)).toEqual(['ours']);
+  });
+
+  it('returns empty when chat_messages does not exist at all', () => {
+    const { db } = seedRound({ mineIndex: null });
+    expect(chatBefore(db, CHAT_GROUP, '2026-02-01T00:00:00Z')).toEqual([]);
   });
 });
