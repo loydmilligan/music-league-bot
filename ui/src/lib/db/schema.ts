@@ -654,6 +654,10 @@ export const SCHEMA = `
     votes_locked_at TEXT,
     submitted_at TEXT,
     comments_fetched_at TEXT,
+    -- §7.2: a failed or stale scrape must not block the sitting, so the failure
+    -- is recorded rather than thrown. NULL alongside a NULL comments_fetched_at
+    -- means "never attempted"; NULL alongside a set fetched_at means "succeeded".
+    comments_error TEXT,
     sync_state TEXT NOT NULL DEFAULT 'unverified'
       CHECK (sync_state IN ('unverified','ok','mismatch')),
     updated_at TEXT NOT NULL

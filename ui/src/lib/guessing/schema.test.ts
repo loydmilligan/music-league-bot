@@ -74,4 +74,14 @@ describe('guess spine schema', () => {
       ).run(),
     ).toThrow();
   });
+
+  it('guess_round_state can record why a comment fetch failed', () => {
+    db.prepare(
+      `INSERT INTO guess_round_state (round_id, updated_at, comments_error)
+       VALUES (1, '2026-01-01T00:00:00Z', 'session expired')`,
+    ).run();
+    const row = db.prepare('SELECT comments_error FROM guess_round_state WHERE round_id = 1').get() as
+      { comments_error: string | null };
+    expect(row.comments_error).toBe('session expired');
+  });
 });
