@@ -146,6 +146,11 @@
   const eludes = $derived((g?.eludesHim ?? []).filter((r) => r.rate === 0));
   const littermates = $derived(g?.littermates ?? null);
   const roster = $derived(g?.roster ?? []);
+  // Full per-person history as native tooltip text — no JS, no CSS popover, and
+  // it degrades to nothing in print rather than to a broken control.
+  const rosterTitle = (r: { name: string; songs: { roundLabel: string; title: string; correct: boolean }[] }) =>
+    `${r.name}\n` +
+    r.songs.map((sg) => `${sg.correct ? '✓' : '✗'} R${sg.roundLabel} · ${sg.title || 'untitled'}`).join('\n');
 
   // Difficulty is HAND-ANNOTATED, never inferred: it lives in the section's
   // editable content_json keyed by spotify uri. A detector for "did the
@@ -305,9 +310,20 @@
       <div class="gsl-blocklbl">the roster · season hit-rate, and this round</div>
       <div class="gsl-roster">
         {#each roster as r, i (i)}
-          <div class="gsl-rr">
+          <div class="gsl-rr" title={rosterTitle(r)}>
             <span class="nm">{r.name}</span>
-            <span class="bar"><i style="width:{Math.round(r.rate * 100)}%"></i></span>
+            <!-- One segment per attempt rather than a single filled bar: the bar
+                 IS the breakdown, so it survives the export where a hover
+                 tooltip would not. The title adds the song name on top. -->
+            <span class="bar">
+              {#each r.songs as sg, si (si)}
+                <i
+                  class:hit={sg.correct}
+                  style="width:{100 / r.songs.length}%"
+                  title={`R${sg.roundLabel} · ${sg.title || 'untitled'} — ${sg.correct ? 'got it' : 'missed'}`}
+                ></i>
+              {/each}
+            </span>
             <span class="pc">{Math.round(r.rate * 100)}%</span>
             <span class="n">{r.correct}/{r.attempts}</span>
             <span class="tr" class:hit={r.thisRound === true} class:miss={r.thisRound === false}
@@ -476,8 +492,10 @@
   .gsl-roster { display: grid; gap: 3px; margin: 2px 0 6px; }
   .gsl-rr { display: grid; grid-template-columns: 8.5em 1fr 2.6em 2.8em 1em; gap: 8px; align-items: center; font-size: 12px; }
   .gsl-rr .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .gsl-rr .bar { background: rgba(0,0,0,.08); border-radius: 3px; height: 8px; overflow: hidden; }
-  .gsl-rr .bar i { display: block; height: 100%; background: currentColor; opacity: .55; }
+  .gsl-rr .bar { display: flex; gap: 1px; background: rgba(0,0,0,.06); border-radius: 3px; height: 9px; overflow: hidden; }
+  /* miss = ember, hit = moss; both muted so the strip reads as one object */
+  .gsl-rr .bar i { display: block; height: 100%; background: rgb(190, 90, 70); opacity: .75; }
+  .gsl-rr .bar i.hit { background: rgb(90, 140, 95); opacity: .9; }
   .gsl-rr .pc, .gsl-rr .n { text-align: right; font-variant-numeric: tabular-nums; opacity: .7; }
   .gsl-rr .tr { text-align: center; opacity: .35; }
   .gsl-rr .tr.hit { opacity: 1; }

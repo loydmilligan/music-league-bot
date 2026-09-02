@@ -154,6 +154,8 @@ export interface GuesserRosterRow {
   rate: number;
   /** true = caught this round, false = missed, null = no attempt this round. */
   thisRound: boolean | null;
+  /** Every attempt against this person, oldest first — what the bar is made of. */
+  songs: { roundId: number; roundLabel: string; title: string; correct: boolean }[];
 }
 
 export interface GuesserDescent {
@@ -249,6 +251,10 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allo
     { match: 'Paletz', asName: 'Darren Paletz' },
     { match: 'Palletz', asName: 'Darren Paletz' },
     { match: 'Pallet', asName: 'Darren Paletz' },
+    // Spelled out because "pallets" is an ordinary English word: the resolver
+    // refuses to FUZZY-match real words to names (that is how "rant" became
+    // "Grant"), so any word-shaped nickname has to be listed exactly.
+    { match: 'Pallets', asName: 'Darren Paletz' },
     { match: 'Pellet', asName: 'Darren Paletz' },
   ],
 };
@@ -301,6 +307,7 @@ interface SeasonGuessRow {
   round_id: number;
   round_number: number | null;
   spotify_uri: string;
+  title: string | null;
   actual_player_id: number | null;
   actual_name: string;
   guess_comment: string | null;
@@ -516,7 +523,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const seasonRows = db
     .prepare(
       `SELECT s.round_id, r.round_number,
-              s.spotify_uri,
+              s.spotify_uri, s.title,
               COALESCE(s.player_id, c.player_id) AS actual_player_id,
               COALESCE(p.name, c.name) AS actual_name,
               v.comment AS guess_comment
@@ -544,6 +551,8 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   // attempt appear.
   const perRound = new Map<number, { label: string; attempts: number; correct: number }>();
 
+  const songsBySubmitter = new Map<number, { roundId: number; roundLabel: string; title: string; correct: boolean }[]>();
+
   for (const row of seasonRows) {
     const key = `${row.round_id}:${row.spotify_uri}`;
     if (seenKeys.has(key)) continue;
@@ -556,6 +565,16 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     const guessedPlayerId = row.guess_comment !== null ? matcher(row.guess_comment) : null;
     // A comment with no roster-name match is not an attempt.
     if (guessedPlayerId === null) continue;
+
+    const roundLabel = row.round_number != null ? String(row.round_number) : String(row.round_id);
+    const songList = songsBySubmitter.get(row.actual_player_id) ?? [];
+    songList.push({
+      roundId: row.round_id,
+      roundLabel,
+      title: row.title ?? '',
+      correct: guessedPlayerId === row.actual_player_id,
+    });
+    songsBySubmitter.set(row.actual_player_id, songList);
 
     // Season arc: bucket this attempt into its round.
     const roundBucket =
@@ -601,13 +620,14 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
       correct: v.correct,
       rate: rate(v.correct, v.attempts),
       thisRound: weeklyByPlayer.has(playerId) ? (weeklyByPlayer.get(playerId) as boolean) : null,
+      songs: [...(songsBySubmitter.get(playerId) ?? [])].sort((a, b) => a.roundId - b.roundId),
     }))
     .sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
   const eludesHim = [...leaderRows].sort((a, b) => a.rate - b.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
   const alwaysNails = [...leaderRows].sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
-  const allRoundPoints: GuesserSeasonPoint[] = [...perRound.entries()]
+  const everyRoundPoint: GuesserSeasonPoint[] = [...perRound.entries()]
     .map(([roundId, v]) => ({
       roundId,
       label: v.label,
@@ -615,21 +635,21 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
       attempts: v.attempts,
       rate: rate(v.correct, v.attempts),
     }))
-    // A round where exactly one comment happened to name somebody is not a
-    // round he played. Boarz 145-147 each resolve a single incidental mention
-    // ("well done sir, unless it's Conor") and scored 0/1, which rendered as
-    // three 0% bars and dragged the season average from 48% to 43% — a record
-    // of rounds he wasn't guessing in. SSSC is unaffected: its guesser comments
-    // on every song, so every round clears this by an order of magnitude.
-    .filter((p) => p.attempts >= MIN_ROUND_ATTEMPTS);
-  // The average is a SEASON average — take totals before capping the arc, so
-  // trimming the strip never silently changes the headline number.
-  const seasonTotals = allRoundPoints.reduce(
+    ;
+
+  // Bars only: a rate drawn from one attempt is noise, not a trend.
+  const allRoundPoints = everyRoundPoint.filter((p) => p.attempts >= MIN_ROUND_ATTEMPTS);
+  // The average is a SEASON average over every real guess, INCLUDING rounds too
+  // thin to draw a bar for. A lone guess is still a guess — "¿Esto fue de Juan
+  // Negro?" names a submitter and was wrong — so it belongs in the record even
+  // though a one-sample hit-rate makes a meaningless bar. Hence: totals from
+  // everything, bars from the rounds that can carry one.
+  const seasonTotals = everyRoundPoint.reduce(
     (acc, p) => ({ correct: acc.correct + p.correct, attempts: acc.attempts + p.attempts }),
     { correct: 0, attempts: 0 },
   );
   const seasonRate = rate(seasonTotals.correct, seasonTotals.attempts);
-  const seasonRoundCount = allRoundPoints.length;
+  const seasonRoundCount = everyRoundPoint.length;
   const seasonHitRates = allRoundPoints.slice(-SEASON_ARC_ROUNDS);
 
   let littermates: GuesserLittermates | null = null;

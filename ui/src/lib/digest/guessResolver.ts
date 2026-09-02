@@ -1,3 +1,5 @@
+import { COMMON_WORDS_RAW, LONG_WORDS_RAW } from './wordLists.js';
+
 export interface GuessCandidate {
   playerId: number;
   label: string;
@@ -45,6 +47,39 @@ function editDistance(a: string, b: string): number {
 
 const MAX_RUN_TOKENS = 4;
 
+/**
+ * Ordinary English words are never fuzzy-matched to a name.
+ *
+ * The edit-distance-1 rule exists to survive typos in a nickname, but it also
+ * turns any real word one letter away from a roster name INTO that name. Real
+ * case: "See Kevin and bean rant from chat" — plain vote commentary, no guess in
+ * it — scored as a guess of Grant, because "rant" is one insertion from "Grant".
+ * It then counted as a wrong guess against Jensen and dragged his rate down.
+ *
+ * Same failure the chat resolver's BLOCKED_TOKENS was built from ("have" -> Dave
+ * 173 times), so the same remedy: a word that exists in English has to match a
+ * candidate EXACTLY to count. Exact matches are unaffected, so a nickname that
+ * happens to be a word ("Cozy", "Clem") still resolves when actually written.
+ *
+ * The word list alone is not enough — it holds the 10k most common words and
+ * "rant" is not among them — so fuzzy also requires the TYPED run to be 5+
+ * characters. Previously only the candidate had to be; a 4-letter word could
+ * reach a 5-letter name, which is exactly how "rant" became "Grant" and how
+ * "have" would become "Dave".
+ */
+let COMMON: Set<string> | null = null;
+function isEnglishWord(w: string): boolean {
+  if (COMMON === null) {
+    COMMON = new Set(
+      (COMMON_WORDS_RAW + '\n' + LONG_WORDS_RAW)
+        .split('\n')
+        .map((x) => x.trim().toLowerCase())
+        .filter((x) => x.length > 0),
+    );
+  }
+  return COMMON.has(w);
+}
+
 export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: string) => number | null {
   // Precompute despaced/de-punctuated keys, preserving original candidate order for tie-breaks.
   const entries = candidates
@@ -73,6 +108,8 @@ export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: strin
         const fuzzy =
           !exact &&
           key.length >= 5 &&
+          runKey.length >= 5 &&
+          !isEnglishWord(runKey) &&
           Math.abs(runKey.length - key.length) <= 1 &&
           editDistance(runKey, key) <= 1;
         if (!exact && !fuzzy) continue;
