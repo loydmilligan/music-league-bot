@@ -46,3 +46,28 @@ export function setGuesserSectionEnabled(
 		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
 	).run(GUESSER_SETTINGS_KEY, JSON.stringify(saved));
 }
+
+// ── who the guesser is ────────────────────────────────────────────────────────
+
+export const GUESSER_PLAYER_SETTINGS_KEY = 'guesser_player_by_league';
+
+/**
+ * Explicit guesser for a league, or null to fall back to "most vote comments".
+ *
+ * The fallback picks the chattiest voter, which is not the same person as the
+ * one playing the guess-the-submitter game — in Boarz it picks Jon Black, who
+ * comments most, over Matt, who actually names a submitter on every song.
+ */
+export function guesserPlayerOverrideFor(db: Database.Database, leagueSlug: string): number | null {
+	try {
+		const row = db
+			.prepare('SELECT value FROM settings WHERE key = ?')
+			.get(GUESSER_PLAYER_SETTINGS_KEY) as { value?: string } | undefined;
+		const saved = row?.value ? (JSON.parse(row.value) as Record<string, number>) : {};
+		const id = saved[leagueSlug];
+		return typeof id === 'number' && Number.isInteger(id) ? id : null;
+	} catch {
+		// A malformed setting must not break the digest; fall back to detection.
+		return null;
+	}
+}

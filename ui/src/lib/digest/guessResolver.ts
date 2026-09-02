@@ -1,4 +1,18 @@
-export interface GuessCandidate { playerId: number; label: string }
+export interface GuessCandidate {
+  playerId: number;
+  label: string;
+  /**
+   * Allow a label shorter than the 3-character floor (min 2).
+   *
+   * Auto-derived candidates — competitor names, identity handles — never opt in:
+   * a 2-character key off a name we didn't choose collides with ordinary words.
+   * A hand-curated league alias is different, because someone decided it means a
+   * person here. "JB" is the case that forced this: it is how Jon Black is
+   * referred to in Boarz, and dropping it silently cost two resolutions across
+   * three rounds, one of them a correct guess.
+   */
+  allowShort?: boolean;
+}
 
 /** Lowercase, strip everything but letters/digits — fully despaced/de-punctuated. */
 function lettersOnly(s: string): string {
@@ -34,8 +48,8 @@ const MAX_RUN_TOKENS = 4;
 export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: string) => number | null {
   // Precompute despaced/de-punctuated keys, preserving original candidate order for tie-breaks.
   const entries = candidates
-    .map((c, idx) => ({ playerId: c.playerId, key: lettersOnly(c.label), idx }))
-    .filter((e) => e.key.length >= 3);
+    .map((c, idx) => ({ playerId: c.playerId, key: lettersOnly(c.label), idx, min: c.allowShort ? 2 : 3 }))
+    .filter((e) => e.key.length >= e.min);
 
   return (comment: string): number | null => {
     const tokens = comment.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);

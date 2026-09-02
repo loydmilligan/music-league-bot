@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { buildGuessMatcher, type GuessCandidate } from '../digest/guessResolver.js';
+import { guesserPlayerOverrideFor } from '../digest/guesserSection.js';
 
 /**
  * "The Guesser" — deterministic scoring of one player's habit of guessing who
@@ -80,20 +81,89 @@ export interface GuesserData {
 /** Minimum season attempts against a given submitter to qualify for a leaderboard. */
 const MIN_ATTEMPTS = 3;
 
+/**
+ * Minimum resolved guesses in a round before it counts as a round he played.
+ *
+ * Set to 2, not higher, on purpose: it is the smallest value that drops a round
+ * carrying a single incidental name-drop, and existing tests establish that a
+ * genuine 2-attempt round belongs in the arc.
+ */
+const MIN_ROUND_ATTEMPTS = 2;
+
 /** How many of the most recent rounds the season-arc sparkbars show (CD §5.1). */
 const SEASON_ARC_ROUNDS = 10;
 
 /**
- * SSSC-specific guess aliases from the design doc Appendix A (guessed text ->
- * canonical roster label). Applied in addition to competitor names and
- * player_identities identifiers. Most SSSC aliases are already covered by the
- * seeded discord identifiers; these two are the exceptions.
+ * Per-league guess aliases (guessed text -> canonical roster label), applied on
+ * top of competitor names and player_identities identifiers.
+ *
+ * These exist because people guess in nicknames, not roster names. Without them
+ * the Boarz matcher resolved 1 of 9 comments in a round — only "Steiny", and
+ * only because that happens to be his competitor name.
+ *
+ * `asName` must be the COMPETITOR name, which is what `nameToPlayerId` is keyed
+ * on — not the player's display name.
+ *
+ * Deliberately generous and meant to grow: every round surfaces new coinages, and
+ * an alias that never fires costs nothing while a missing one silently scores a
+ * zero. Two rules keep that from backfiring —
+ *   1. No bare "Dave". Two Daves play Boarz (Jensen and Steingart), so it can
+ *      never resolve to one person.
+ *   2. No bare "Black". The chat resolver's BLOCKED_TOKENS was built from exactly
+ *      this collision ("back" -> Black, 26 times), and in a music league a bare
+ *      colour word appears in band and song names constantly.
+ * Keys of 5+ characters also match at edit-distance 1, so near-misses like
+ * "pallets"/"palletz" are covered without listing every spelling.
  */
-const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string }>> = {
+const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allowShort?: boolean }>> = {
   sssc: [
     { match: 'Generous Giragge', asName: 'jirafa' },
     { match: 'Cherrycola', asName: 'Cherry' },
     { match: 'Mara', asName: 'missmara' },
+  ],
+  // Verified against every commented Boarz vote (7 rounds) plus the chat corpus
+  // the personify spike built its own alias map from.
+  'boarz-ii-men': [
+    { match: 'Mashew', asName: 'Mashew' },
+    { match: 'Mariani', asName: 'Mashew' },
+    { match: 'Matty', asName: 'Mashew' },
+    // "JB" is his everyday name in this room; "Juan Negro" is from the
+    // Spanish-themed round 145 and is exactly the kind of one-off that a
+    // name-only matcher can never catch.
+    { match: 'JB', asName: 'Jonathan Black', allowShort: true },
+    { match: 'Jon', asName: 'Jonathan Black' },
+    { match: 'Jonathan', asName: 'Jonathan Black' },
+    { match: 'Juan Negro', asName: 'Jonathan Black' },
+    { match: 'Conor', asName: 'CJ Wookie' },
+    { match: 'Connor', asName: 'CJ Wookie' },
+    { match: 'Johnston', asName: 'CJ Wookie' },
+    { match: 'Wookie', asName: 'CJ Wookie' },
+    { match: 'Grant', asName: 'Grant Koziol' },
+    { match: 'Koziol', asName: 'Grant Koziol' },
+    { match: 'Kozh', asName: 'Grant Koziol' },
+    { match: 'Kozhleaze', asName: 'Grant Koziol' },
+    { match: 'Cozy', asName: 'Grant Koziol' },
+    { match: 'Cozy oil', asName: 'Grant Koziol' },
+    { match: 'Jensen', asName: 'djensen37' },
+    { match: 'djensen', asName: 'djensen37' },
+    { match: 'Shane', asName: 'Shane Farkas' },
+    { match: 'Farkas', asName: 'Shane Farkas' },
+    { match: 'Farkle', asName: 'Shane Farkas' },
+    { match: 'Jimmy', asName: 'Jimmy Troy' },
+    { match: 'Jimbo', asName: 'Jimmy Troy' },
+    { match: 'Troy', asName: 'Jimmy Troy' },
+    { match: 'Clements', asName: 'Clements' },
+    { match: 'Clem', asName: 'Clements' },
+    { match: 'Clammy', asName: 'Clements' },
+    { match: 'Clamia', asName: 'Clements' },
+    { match: 'Clemydia', asName: 'Clements' },
+    { match: 'Steiny', asName: 'Steiny' },
+    { match: 'Steingart', asName: 'Steiny' },
+    { match: 'Darren', asName: 'Darren Paletz' },
+    { match: 'Paletz', asName: 'Darren Paletz' },
+    { match: 'Palletz', asName: 'Darren Paletz' },
+    { match: 'Pallet', asName: 'Darren Paletz' },
+    { match: 'Pellet', asName: 'Darren Paletz' },
   ],
 };
 
@@ -160,10 +230,18 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   if (!roundRow) return emptyGuesserData();
   const { season_id: seasonId, created_at: roundCreatedAt, league_id: leagueId, slug } = roundRow;
 
-  // 2. Detect the guesser: the player with the most non-empty vote comments
-  // in this league. Merge on player_id so duplicate competitor rows for the
-  // same person (e.g. two KarBen accounts) don't split his comment count.
-  const guesserRow = db
+  // 2. Pick the guesser. An explicit per-league setting wins; otherwise fall
+  // back to whoever leaves the most vote comments.
+  //
+  // The fallback is a proxy for "the person playing the guessing game", and it
+  // is wrong as soon as a chattier voter exists: in Boarz the top commenter is
+  // Jon Black (64) while the person actually naming a submitter on every song is
+  // Matt (49). Commenting a lot and guessing are different habits.
+  const overridePlayerId = guesserPlayerOverrideFor(db, slug);
+
+  const guesserRow = overridePlayerId !== null
+    ? { pid: overridePlayerId, cnt: 0 }
+    : db
     .prepare(
       `SELECT COALESCE(v.player_id, c.player_id) AS pid, COUNT(*) AS cnt
        FROM votes v
@@ -242,7 +320,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
 
   for (const alias of LEAGUE_ALIASES[slug] ?? []) {
     const playerId = nameToPlayerId.get(alias.asName);
-    if (playerId !== undefined) candidates.push({ playerId, label: alias.match });
+    if (playerId !== undefined) candidates.push({ playerId, label: alias.match, allowShort: alias.allowShort });
   }
 
   // 4. Deterministic comment -> guessed-player resolver.
@@ -423,13 +501,21 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const eludesHim = [...leaderRows].sort((a, b) => a.rate - b.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
   const alwaysNails = [...leaderRows].sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
-  const allRoundPoints: GuesserSeasonPoint[] = [...perRound.entries()].map(([roundId, v]) => ({
-    roundId,
-    label: v.label,
-    correct: v.correct,
-    attempts: v.attempts,
-    rate: rate(v.correct, v.attempts),
-  }));
+  const allRoundPoints: GuesserSeasonPoint[] = [...perRound.entries()]
+    .map(([roundId, v]) => ({
+      roundId,
+      label: v.label,
+      correct: v.correct,
+      attempts: v.attempts,
+      rate: rate(v.correct, v.attempts),
+    }))
+    // A round where exactly one comment happened to name somebody is not a
+    // round he played. Boarz 145-147 each resolve a single incidental mention
+    // ("well done sir, unless it's Conor") and scored 0/1, which rendered as
+    // three 0% bars and dragged the season average from 48% to 43% — a record
+    // of rounds he wasn't guessing in. SSSC is unaffected: its guesser comments
+    // on every song, so every round clears this by an order of magnitude.
+    .filter((p) => p.attempts >= MIN_ROUND_ATTEMPTS);
   // The average is a SEASON average — take totals before capping the arc, so
   // trimming the strip never silently changes the headline number.
   const seasonTotals = allRoundPoints.reduce(
