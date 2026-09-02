@@ -7,7 +7,7 @@
   //
   // Renders (top → bottom), all inside the existing DigestSection shell:
   //   1. shared "◆ back of the zine" stamp (shared identity with The Regulars)
-  //   2. a static, dog-focused legend epigraph
+  //   2. a legend epigraph, supplied per-league by getGuesserData
   //   3. subhead — this round's record + season average
   //   4. season hit-rate sparkbars + a dashed season-average line (arc-first)
   //   5. the "descent" — a play-order timeline over a sober→red-zone gradient,
@@ -27,9 +27,11 @@
   import type { VisualComponentProps } from './variants.js';
   import type { GuesserData, GuesserGuess } from '../db/guesserInsights.js';
 
-  // Static legend (D2 · 2b). Credits only the ritual and the dog — never who
-  // first noticed it. Always present so it survives the exported PNG.
-  const LEGEND =
+  // Legend (D2 · 2b). Credits only the ritual — never who first noticed it.
+  // Always present so it survives the exported PNG. Supplied per-league by
+  // getGuesserData: the original copy describes a drink-deeper descent that is
+  // true of SSSC's guesser and of no one else, so it cannot be hardcoded here.
+  const FALLBACK_LEGEND =
     'He guesses the submitter of every song, every round — one drink deeper ' +
     'down the list. Nobody assigned him this. He will not be stopped.';
 
@@ -206,7 +208,7 @@
   {:else}
     <span class="gsl-stamp"><span class="s">◆</span>back of the zine · about the people</span>
 
-    <p class="gsl-epigraph">{LEGEND}</p>
+    <p class="gsl-epigraph">{data?.legend ?? FALLBACK_LEGEND}</p>
 
     <p class="gsl-subhead">
       {guesserName.toLowerCase()} · <b>{weekly.correct}/{weekly.attempts}</b> this round · season average

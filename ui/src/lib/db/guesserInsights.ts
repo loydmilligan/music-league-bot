@@ -52,6 +52,14 @@ export interface GuesserLittermates {
 
 export interface GuesserData {
   guesserName: string | null;
+  /**
+   * One-line legend rendered above the ledger.
+   *
+   * Per-league because the SSSC copy describes a specific ritual (a drink-deeper
+   * descent down the playlist) that is true of Dogsweat and of nobody else. Shown
+   * verbatim in the exported PNG, so a wrong one is wrong in print.
+   */
+  legend: string;
   weekly: { attempts: number; correct: number; rate: number; guesses: GuesserGuess[] };
   drunkByThird: { first: number; middle: number; last: number };
   /**
@@ -77,6 +85,16 @@ export interface GuesserData {
   alwaysNails: GuesserLeaderRow[];
   littermates: GuesserLittermates | null;
 }
+
+/** Per-league legend for the guesser ledger; `default` is the original SSSC copy. */
+const LEGENDS: Record<string, string> = {
+  default:
+    'He guesses the submitter of every song, every round — one drink deeper ' +
+    'down the list. Nobody assigned him this. He will not be stopped.',
+  'boarz-ii-men':
+    'He names a submitter on every song, in the ballot comments, and then ' +
+    'publishes his own scorecard. Nobody assigned him this either.',
+};
 
 /** Minimum season attempts against a given submitter to qualify for a leaderboard. */
 const MIN_ATTEMPTS = 3;
@@ -184,6 +202,7 @@ function third(pos: number, n: number): 'first' | 'middle' | 'last' {
 function emptyGuesserData(): GuesserData {
   return {
     guesserName: null,
+    legend: LEGENDS.default,
     weekly: { attempts: 0, correct: 0, rate: 0, guesses: [] },
     drunkByThird: { first: 0, middle: 0, last: 0 },
     seasonHitRates: [],
@@ -537,6 +556,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
 
   return {
     guesserName,
+    legend: LEGENDS[slug] ?? LEGENDS.default,
     weekly: { attempts: weeklyAttempts, correct: weeklyCorrect, rate: rate(weeklyCorrect, weeklyAttempts), guesses: weeklyGuesses },
     drunkByThird,
     seasonHitRates,
