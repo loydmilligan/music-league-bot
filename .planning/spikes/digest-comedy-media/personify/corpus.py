@@ -37,6 +37,15 @@ DB = Path(__file__).resolve().parents[4] / "data" / "league.db"
 BOARZ_LEAGUE_ID = 5
 BOARZ_GROUP = "Boarz II Men - Music Leagueing https way"
 
+# A room is one league plus the WhatsApp group it talks in. Rooms are kept apart
+# because the same person writes differently in different company: Matt comments
+# on 85% of his Boarz ballots and 33% of his Second Best ones. Treating those as
+# one corpus would average away a real behavioural difference.
+ROOMS = {
+    "boarz": {"league_id": 5, "group": "Boarz II Men - Music Leagueing https way"},
+    "second_best": {"league_id": 3, "group": "Music League chat for Second Best and Friends"},
+}
+
 PLACEHOLDER = "Waiting for this message"
 # "~" then any run of space-ish or replacement characters
 _PREFIX = re.compile(r"^~[\s � ]*")
@@ -56,6 +65,17 @@ class Message:
     text: str
     round_id: int | None = None
     points: int | None = None
+    room: str = "boarz"
+
+    @property
+    def content_type(self) -> str:
+        """The real unit of analysis: room AND kind, e.g. 'boarz:chat'.
+
+        Four types exist rather than two. Only Matt and Jon appear in more than
+        one room, and for them the other room is supporting evidence rather than
+        primary — see WEIGHTS.
+        """
+        return f"{self.room}:{self.kind}"
 
 
 def _alias_map(db: sqlite3.Connection) -> dict[str, str]:
@@ -74,14 +94,16 @@ def _alias_map(db: sqlite3.Connection) -> dict[str, str]:
     return m
 
 
-def load(db_path: Path | str = DB) -> list[Message]:
+def load(db_path: Path | str = DB, room: str = "boarz") -> list[Message]:
+    """One room's messages. Defaults to boarz so existing callers are unchanged."""
+    spec = ROOMS[room]
     db = sqlite3.connect(str(db_path))
     alias = _alias_map(db)
     out: list[Message] = []
 
     rows = db.execute(
         "SELECT sender, ts, text FROM chat_messages WHERE group_name = ? ORDER BY ts",
-        (BOARZ_GROUP,),
+        (spec["group"],),
     ).fetchall()
 
     for sender, ts, text in rows:
@@ -96,17 +118,17 @@ def load(db_path: Path | str = DB) -> list[Message]:
                 text = m.group(2)
         if who is None:
             continue
-        out.append(Message(player=who, kind="chat", ts=ts, text=text))
+        out.append(Message(player=who, kind="chat", ts=ts, text=text, room=room))
 
     for player, ts, text, rid, pts in db.execute(
         "SELECT p.name, v.created_at, v.comment, v.round_id, v.points FROM votes v "
         "JOIN competitors c ON c.id = v.voter_id JOIN players p ON p.id = c.player_id "
         "JOIN rounds r ON r.id = v.round_id JOIN seasons s ON s.id = r.season_id "
         "WHERE s.league_id = ? AND v.comment IS NOT NULL AND v.comment <> '' ORDER BY v.created_at",
-        (BOARZ_LEAGUE_ID,),
+        (spec["league_id"],),
     ):
         out.append(Message(player=player, kind="ballot", ts=ts, text=text,
-                           round_id=rid, points=pts))
+                           round_id=rid, points=pts, room=room))
 
     db.close()
     return _drop_edit_pairs(out)
@@ -114,10 +136,10 @@ def load(db_path: Path | str = DB) -> list[Message]:
 
 def _drop_edit_pairs(msgs: list[Message]) -> list[Message]:
     """A WhatsApp edit lands as a second row at the same timestamp. Keep the last."""
-    seen: dict[tuple[str, str, str], int] = {}
+    seen: dict[tuple[str, str, str, str], int] = {}
     keep: list[Message] = []
     for m in msgs:
-        key = (m.player, m.kind, m.ts)
+        key = (m.player, m.kind, m.ts, m.room)
         if m.kind == "chat" and key in seen:
             keep[seen[key]] = m            # later row supersedes
             continue
@@ -126,13 +148,42 @@ def _drop_edit_pairs(msgs: list[Message]) -> list[Message]:
     return keep
 
 
+def load_rooms(rooms: list[str] | None = None, db_path: Path | str = DB) -> list[Message]:
+    """Every room, concatenated. Messages carry `room`, so nothing is conflated."""
+    out: list[Message] = []
+    for r in (rooms or list(ROOMS)):
+        out.extend(load(db_path, room=r))
+    return out
+
+
 def by_player(msgs: list[Message] | None = None) -> dict[str, dict[str, list[Message]]]:
-    """{player: {'chat': [...], 'ballot': [...]}}"""
+    """{player: {'chat': [...], 'ballot': [...]}} — one room only (back-compatible)."""
     msgs = msgs if msgs is not None else load()
     out: dict[str, dict[str, list[Message]]] = {}
     for m in msgs:
         out.setdefault(m.player, {"chat": [], "ballot": []})[m.kind].append(m)
     return out
+
+
+def by_content_type(msgs: list[Message]) -> dict[str, dict[str, list[Message]]]:
+    """{player: {'boarz:chat': [...], 'second_best:ballot': [...], ...}}"""
+    out: dict[str, dict[str, list[Message]]] = {}
+    for m in msgs:
+        out.setdefault(m.player, {}).setdefault(m.content_type, []).append(m)
+    return out
+
+
+def home_room(msgs: list[Message]) -> dict[str, str]:
+    """Each player's primary room, by character volume. For the two people in both
+    leagues this decides which room is authoritative and which is supporting."""
+    tot: dict[tuple[str, str], int] = {}
+    for m in msgs:
+        tot[(m.player, m.room)] = tot.get((m.player, m.room), 0) + len(m.text)
+    best: dict[str, tuple[int, str]] = {}
+    for (p, r), c in tot.items():
+        if c > best.get(p, (0, ""))[0]:
+            best[p] = (c, r)
+    return {p: r for p, (_, r) in best.items()}
 
 
 FOCUS = ["Matt Mariani", "Jon Black", "Conor Johnston", "Grant Koziol", "Dave Jensen"]
