@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-judge_outputs.py — score every translation with the 5-way style judge.
+judge_outputs.py — score every translation with the N-way style judge.
 
 The judge is the char n-gram + logistic regression classifier from analyze.py,
 trained on the real Boarz corpus. For each generated translation it reports the
@@ -32,6 +32,7 @@ from sklearn.model_selection import cross_val_predict
 from sklearn.metrics import accuracy_score
 
 import corpus
+import levels
 
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "matrix_results.json"
@@ -40,9 +41,15 @@ MIN_CHARS = 40
 
 def train():
     data = corpus.by_player()
-    focus = [p for p in corpus.FOCUS if p in data]
+    # Every persona with a profile, not just the focus five. A 10-way judge is a
+    # harder problem — chance falls 0.20 -> 0.10 and the spike measured ~8% of
+    # accuracy lost — but a 5-way judge cannot score a translation aimed at Jimmy
+    # at all, and scoring half the matrix is worse than scoring all of it slightly
+    # less sharply. Absolute probabilities were never comparable across judges
+    # anyway; rescoring every run together keeps the arms comparable to each other.
+    people = [p for p in levels.FILESTEM if p in data]
     docs = {p: [m.text for k in ("chat", "ballot") for m in data[p][k]
-                if len(m.text) >= MIN_CHARS] for p in focus}
+                if len(m.text) >= MIN_CHARS] for p in people}
     docs = {p: t for p, t in docs.items() if len(t) >= 12}
     X = [t for p in docs for t in docs[p]]
     y = [p for p in docs for _ in docs[p]]
@@ -63,8 +70,11 @@ def main():
     d = json.loads(RESULTS.read_text())
     pipe, holdout, n = train()
     classes = list(pipe.classes_)
-    print(f"judge trained on {n} real messages; 5-way cross-val accuracy {holdout:.3f} "
-          f"(chance ~{1/len(classes):.2f})")
+    print(f"judge trained on {n} real messages; {len(classes)}-way cross-val accuracy "
+          f"{holdout:.3f} (chance ~{1/len(classes):.2f})")
+    thin = [p for p in levels.FILESTEM if p not in classes]
+    if thin:
+        print(f"  !! no classifier class (too few messages): {', '.join(thin)}")
 
     scored = 0
     for r in d["runs"]:
@@ -73,6 +83,7 @@ def main():
             r["judge"] = None
             continue
         proba = pipe.predict_proba([text])[0]
+        by_class = dict(zip(classes, proba))
         ranked = sorted(zip(classes, proba), key=lambda kv: -kv[1])
         if r["type"] == "to_person":
             subject = r["target"]
@@ -80,8 +91,13 @@ def main():
         else:
             subject = r["source_author"]
             direction = "lower_better"
+        if subject not in by_class:
+            # A target the judge has no class for: score nothing rather than
+            # something wrong. The human rating pass still covers these rows.
+            r["judge"] = None
+            continue
         r["judge"] = {
-            "p_subject": float(dict(zip(classes, proba))[subject]),
+            "p_subject": float(by_class[subject]),
             "subject": subject,
             "direction": direction,
             "top_label": ranked[0][0],
@@ -90,7 +106,8 @@ def main():
         }
         scored += 1
 
-    d["judge_meta"] = {"holdout_accuracy": holdout, "train_n": n, "classes": classes}
+    d["judge_meta"] = {"holdout_accuracy": holdout, "train_n": n, "classes": classes,
+                       "n_classes": len(classes), "chance": 1.0 / len(classes)}
     json.dump(d, RESULTS.open("w"), indent=1)
     print(f"scored {scored} of {len(d['runs'])} runs -> {RESULTS.name}")
 

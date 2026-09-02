@@ -26,14 +26,12 @@ import corpus
 
 PROFILES = Path(__file__).resolve().parent / "profiles"
 
-# canonical name -> profile filename stem
-FILESTEM = {
-    "Matt Mariani": "Matt_Mariani",
-    "Jon Black": "Jon_Black",
-    "Conor Johnston": "Conor_Johnston",
-    "Grant Koziol": "Grant_Koziol",
-    "Dave Jensen": "Dave_Jensen",
-}
+# canonical name -> profile filename stem. Derived from the directory rather than
+# hand-listed: a profile is usable the moment it is written, and the five later
+# dossiers (Shane, Jimmy, Clements, Steingart, Darren) needed no code change.
+# Stems are the corpus name with spaces as underscores, which is how they are
+# written; anything that does not round-trip would be a silent miss, so assert.
+FILESTEM = {f.stem.replace("_", " "): f.stem for f in sorted(PROFILES.glob("*.md"))}
 
 LEVELS = ["L1_fingerprint", "L2_kit", "L3_situational", "L4_full", "L5_retrieved"]
 

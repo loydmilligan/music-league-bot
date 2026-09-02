@@ -412,6 +412,15 @@ function renderRate(){
   blindQueue=D.runs.filter(r=>r.type==="to_person"&&(r.text||"").length>10)
     .filter(r=>!onlyUn||!RATINGS[rid(r)]||!RATINGS[rid(r)].funny);
   blindQueue.sort((a,b)=>(hash(rid(a))%997)-(hash(rid(b))%997)); // stable shuffle
+  /* Then deal round-robin by source, so consecutive cards are never the same
+     source text. A plain shuffle happily deals the same message three times in a
+     row, and re-reading a message you have just judged is what makes a rating
+     pass feel long and blunts the judgement it depends on. */
+  const bySrc=new Map();
+  blindQueue.forEach(r=>{const k=r.source_i;(bySrc.get(k)||bySrc.set(k,[]).get(k)).push(r)});
+  const lanes=[...bySrc.values()], inter=[];
+  for(let i=0;lanes.some(l=>i<l.length);i++)lanes.forEach(l=>{if(i<l.length)inter.push(l[i])});
+  blindQueue=inter;
   if(blindPos>=blindQueue.length)blindPos=0;
   const r=blindQueue[blindPos];
   $("#r_progress").textContent=blindQueue.length?`${blindPos+1} / ${blindQueue.length}`:"nothing to rate";
@@ -554,15 +563,19 @@ def build(d: dict) -> str:
     spent = sum(r.get("cost_usd", 0) for r in d["runs"])
     models = sorted({r["model_label"] for r in d["runs"]})
     judged = sum(1 for r in d["runs"] if r.get("judge"))
-    acc = (d.get("judge_meta") or {}).get("holdout_accuracy")
+    jm = d.get("judge_meta") or {}
+    acc = jm.get("holdout_accuracy")
+    nclass = jm.get("n_classes") or len(jm.get("classes") or []) or 5
+    chance = jm.get("chance") or (1.0 / nclass)
+    targets = sorted({r["target"] for r in d["runs"] if r["type"] == "to_person"})
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Context depth — #trans2 spike</title><style>{CSS}</style></head><body>
 <header>
 <h1>How much dossier does a translation need?</h1>
 <p class="sub">{n} generations across {len(models)} models &times; 5 context depths &times; 2 command
-types, for ${spent:.2f}. The judge is the 5-way style classifier trained on the real Boarz
-corpus ({acc:.3f} cross-val accuracy against ~0.20 chance); it measures whether an output is
+types, for ${spent:.2f}, across {len(targets)} target personas. The judge is the {nclass}-way style classifier trained on the real Boarz
+corpus ({acc:.3f} cross-val accuracy against ~{chance:.2f} chance across {nclass} people); it measures whether an output is
 <em>recognisably</em> the target. It cannot measure funny — that is what the Rate tab is for.</p>
 </header>
 <main>
