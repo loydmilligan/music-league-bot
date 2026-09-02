@@ -2,17 +2,18 @@
   // ── guesser-render · Guesser/Storylines redesign (CD handoff §4.1) ─────────
   // Visual form of the frontend-only synthetic 'guesser' section: "The
   // Guesser" — a deterministic ledger of one player's habit of guessing who
-  // submitted each song from their vote comments, as one drink-deeper descent
-  // down the playlist.
+  // submitted each song from their vote comments, walked in play order.
   //
   // Renders (top → bottom), all inside the existing DigestSection shell:
   //   1. shared "◆ back of the zine" stamp (shared identity with The Regulars)
   //   2. a legend epigraph, supplied per-league by getGuesserData
   //   3. subhead — this round's record + season average
   //   4. season hit-rate sparkbars + a dashed season-average line (arc-first)
-  //   5. the "descent" — a play-order timeline over a sober→red-zone gradient,
-  //      with landmark annotations mined from his real vote comments and a
-  //      declared-joke 🐾 "no-driving line" (NOT a measurement — a fixed marker)
+  //   5. the play-order strip — a timeline over a warm→cool gradient, with
+  //      landmark annotations mined from his real vote comments. Its labels and
+  //      its optional joke marker come from `data.descent`, per league: the
+  //      original copy is a drink-deeper descent that is true of SSSC's guesser
+  //      and of nobody else.
   //   6. "eludes him" + "littermates" cards, each with a plain-English blurb
   //
   // Deterministic and hover-free: renders IDENTICALLY in web and ?export=1
@@ -35,15 +36,26 @@
     'He guesses the submitter of every song, every round — one drink deeper ' +
     'down the list. Nobody assigned him this. He will not be stopped.';
 
-  // Landmark keyword → icon map (CD §4.1). An annotation fires ONLY when the
-  // phrase is present in that round's comment — keeps it honest and varying.
-  const LANDMARKS: { icon: string; re: RegExp }[] = [
-    { icon: '💧', re: /drink\s+.*water|some water/i },
-    { icon: '🚽', re: /bathroom|go (?:use|to) the (?:bathroom|toilet)|\bpee\b/i },
-    { icon: '🧠', re: /lost .*coherence|no.*coherence/i },
-    { icon: '😴', re: /fell asleep|took over/i },
-    { icon: '🍸', re: /another (?:glass|drink)|refill|absinthe/i },
-  ];
+  // Landmark keyword → icon map (CD §4.1), per league. An annotation fires ONLY
+  // when the phrase is present in that round's comment — keeps it honest and
+  // varying. Keyed by league because SSSC's landmarks track a drinking descent
+  // and would never fire, and never should, on anyone else's ledger.
+  const LANDMARK_SETS: Record<string, { icon: string; re: RegExp }[]> = {
+    default: [
+      { icon: '💧', re: /drink\s+.*water|some water/i },
+      { icon: '🚽', re: /bathroom|go (?:use|to) the (?:bathroom|toilet)|\bpee\b/i },
+      { icon: '🧠', re: /lost .*coherence|no.*coherence/i },
+      { icon: '😴', re: /fell asleep|took over/i },
+      { icon: '🍸', re: /another (?:glass|drink)|refill|absinthe/i },
+    ],
+    // Effort tells, not impairment: the phrases he reaches for when he has
+    // stopped working a guess and is just filing something.
+    'boarz-ii-men': [
+      { icon: '🤷', re: /blind ass guess|blind guess|no idea|wild guess/i },
+      { icon: '🔎', re: /process of elimination/i },
+      { icon: '🪫', re: /that.?s all i got|not too confident|best i can do/i },
+    ],
+  };
 
   /**
    * Caption above the season arc.
@@ -64,9 +76,9 @@
     return `the season so far · hit-rate over ${totalRounds} rounds`;
   }
 
-  // The 🐾 no-driving line is a declared joke, not a measurement: the data has
-  // play-ORDER, not clock-TIME. It sits at a fixed fraction down the list.
-  const NO_DRIVE_FRAC = 0.56;
+  // The marker (where present) is a declared joke, not a measurement: the data
+  // has play-ORDER, not clock-TIME. Supplied per league via `data.descent`;
+  // null for leagues that get the plain strip.
 
   type Annotation = { leftPct: number; icon: string; quote: string; pos: number; hit: boolean; place: 'up' | 'dn' };
 
@@ -113,6 +125,12 @@
   let { content, data }: VisualComponentProps = $props();
 
   const g = $derived((data ?? null) as GuesserData | null);
+  // Instance-scoped: LANDMARK_SETS is a plain module const, but choosing between
+  // them depends on `data`, so the selection has to live here.
+  const LANDMARKS = $derived(LANDMARK_SETS[g?.leagueSlug ?? ''] ?? LANDMARK_SETS.default);
+  const descent = $derived(g?.descent ?? null);
+  const marker = $derived(descent?.marker ?? null);
+  const fillFrac = $derived(marker?.atFraction ?? 1);
   const caption = $derived((content ?? {}) as { title?: string; body?: string });
 
   const guesserName = $derived(g?.guesserName ?? null);
@@ -127,6 +145,20 @@
   // "Eludes him" (D3): players he's guessed the most and NEVER once gotten right.
   const eludes = $derived((g?.eludesHim ?? []).filter((r) => r.rate === 0));
   const littermates = $derived(g?.littermates ?? null);
+  const roster = $derived(g?.roster ?? []);
+
+  // Difficulty is HAND-ANNOTATED, never inferred: it lives in the section's
+  // editable content_json keyed by spotify uri. A detector for "did the
+  // submitter give it away in chat" would misfire constantly, and most rounds
+  // have no gimmes at all — so the honest default is an unmarked guess.
+  const difficulty = $derived(
+    ((content ?? {}) as { difficulty?: Record<string, { level?: string; why?: string }> }).difficulty ?? {},
+  );
+  const marked = $derived(
+    (g?.weekly.guesses ?? [])
+      .map((gs) => ({ gs, d: difficulty[gs.spotifyUri] }))
+      .filter((x) => !!x.d?.level),
+  );
 
   const hasWeekly = $derived(weekly.attempts > 0);
   const playCount = $derived(guesses[0]?.playCount ?? guesses.length);
@@ -208,7 +240,7 @@
   {:else}
     <span class="gsl-stamp"><span class="s">◆</span>back of the zine · about the people</span>
 
-    <p class="gsl-epigraph">{data?.legend ?? FALLBACK_LEGEND}</p>
+    <p class="gsl-epigraph">{g?.legend ?? FALLBACK_LEGEND}</p>
 
     <p class="gsl-subhead">
       {guesserName.toLowerCase()} · <b>{weekly.correct}/{weekly.attempts}</b> this round · season average
@@ -234,11 +266,14 @@
       </div>
     {/if}
 
-    <!-- ── the descent (D1 · 2a) ── -->
+    <!-- ── play-order strip (D1 · 2a) ── -->
     {#if hasWeekly && nodes.length}
-      <div class="gsl-blocklbl">this round · the descent down the playlist</div>
+      <div class="gsl-blocklbl">{descent?.label ?? 'this round · by play order'}</div>
       <div class="gsl-dz">
-        <div class="gsl-dz-lbl"><span>sober · song 1</span><span class="r">blitzed · song {playCount}</span></div>
+        <div class="gsl-dz-lbl">
+          <span>{descent?.startLabel ?? 'song 1'}</span>
+          <span class="r">{(descent?.endLabel ?? 'song {n}').replace('{n}', String(playCount))}</span>
+        </div>
         <div class="gsl-tl">
           {#each annotations as a, i (i)}
             <div class="gsl-ann {a.place} {edgeClass(a.leftPct)}" style="left:{a.leftPct}%">
@@ -247,25 +282,51 @@
             </div>
           {/each}
           <div class="gsl-track">
-            <div class="gsl-fill" style="right:{Math.round((1 - NO_DRIVE_FRAC) * 100)}%"></div>
-            <div class="gsl-nodrive" style="left:{Math.round(NO_DRIVE_FRAC * 100)}%">
-              <span class="lab">🐾 no-driving line</span>
-            </div>
+            <div class="gsl-fill" style="right:{Math.round((1 - fillFrac) * 100)}%"></div>
+            {#if marker}
+              <div class="gsl-nodrive" style="left:{Math.round(marker.atFraction * 100)}%">
+                <span class="lab">{marker.label}</span>
+              </div>
+            {/if}
             {#each nodes as n, i (i)}
               <div class="gsl-node" class:hit={n.hit} class:miss={!n.hit} style="left:{n.left}%"></div>
             {/each}
           </div>
         </div>
-        <p class="gsl-descap">
-          the 🐾 no-driving line marks where a dog of his approximate build would, on average, stop being
-          trusted with the family sedan.
-        </p>
-        <p class="gsl-caveat">
-          <b>Impairment extrapolated from the mean bodyweight of comparably-sized dogs; not admissible in
-          any court, doghouse tribunal, or Music League vote dispute.</b> Past this point Doggie walks — or
-          asks Mrs. Doggie to drive.
-        </p>
+        {#if marker}
+          <p class="gsl-descap">{marker.caption}</p>
+          <p class="gsl-caveat"><b>{marker.caveat}</b></p>
+        {/if}
       </div>
+    {/if}
+
+    <!-- ── roster strip: who he actually catches ── -->
+    {#if roster.length}
+      <div class="gsl-blocklbl">the roster · season hit-rate, and this round</div>
+      <div class="gsl-roster">
+        {#each roster as r, i (i)}
+          <div class="gsl-rr">
+            <span class="nm">{r.name}</span>
+            <span class="bar"><i style="width:{Math.round(r.rate * 100)}%"></i></span>
+            <span class="pc">{Math.round(r.rate * 100)}%</span>
+            <span class="n">{r.correct}/{r.attempts}</span>
+            <span class="tr" class:hit={r.thisRound === true} class:miss={r.thisRound === false}
+              title={r.thisRound === null ? 'no attempt this round' : r.thisRound ? 'caught this round' : 'missed this round'}
+            >{r.thisRound === null ? '·' : r.thisRound ? '●' : '○'}</span>
+          </div>
+        {/each}
+      </div>
+      <p class="gsl-miniexp">
+        bar is his season hit-rate against that person; the dot is this round — filled if he got them,
+        hollow if he missed, a dash if they weren't in the round.
+      </p>
+    {/if}
+
+    {#if marked.length}
+      <p class="gsl-miniexp gsl-gimmes">
+        marked this round:
+        {#each marked as m, i (i)}<span class="gm">{m.gs.actualName} — {m.d?.level}{m.d?.why ? ` (${m.d.why})` : ''}</span>{/each}
+      </p>
     {/if}
 
     <!-- ── eludes + littermates (D3) ── -->
@@ -412,13 +473,24 @@
   }
   .gsl-spark-x span { flex: 1; text-align: center; }
 
-  /* descent timeline on a sober→red-zone gradient */
+  .gsl-roster { display: grid; gap: 3px; margin: 2px 0 6px; }
+  .gsl-rr { display: grid; grid-template-columns: 8.5em 1fr 2.6em 2.8em 1em; gap: 8px; align-items: center; font-size: 12px; }
+  .gsl-rr .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gsl-rr .bar { background: rgba(0,0,0,.08); border-radius: 3px; height: 8px; overflow: hidden; }
+  .gsl-rr .bar i { display: block; height: 100%; background: currentColor; opacity: .55; }
+  .gsl-rr .pc, .gsl-rr .n { text-align: right; font-variant-numeric: tabular-nums; opacity: .7; }
+  .gsl-rr .tr { text-align: center; opacity: .35; }
+  .gsl-rr .tr.hit { opacity: 1; }
+  .gsl-rr .tr.miss { opacity: .75; }
+  .gsl-gimmes .gm { display: inline-block; margin-right: 10px; }
+
+  /* play-order timeline; the gradient is decorative and carries no unit */
   .gsl-dz {
     position: relative;
     padding: 30px 22px 16px;
     border: 1px solid var(--line);
     border-radius: 8px;
-    /* sober → red-zone: moss-tint → pulp-tint → ember-tint, mixed from the
+    /* moss-tint → pulp-tint → ember-tint, mixed from the
        shipping tokens rather than the mock's raw hexes. */
     background:
       linear-gradient(

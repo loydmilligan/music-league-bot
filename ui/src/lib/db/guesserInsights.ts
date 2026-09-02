@@ -60,8 +60,20 @@ export interface GuesserData {
    * verbatim in the exported PNG, so a wrong one is wrong in print.
    */
   legend: string;
+  /** Which league this was built for — the component keys its copy off it. */
+  leagueSlug: string;
+  /** Play-order strip labels and optional joke marker. */
+  descent: GuesserDescent;
   weekly: { attempts: number; correct: number; rate: number; guesses: GuesserGuess[] };
-  drunkByThird: { first: number; middle: number; last: number };
+  /**
+   * Correct guesses split by where the song sits in play order.
+   *
+   * Position only, and deliberately not labelled as fatigue. He does start at
+   * the top, so play order is roughly the order he works in — but not strictly,
+   * since anything that grabs him late gets done out of turn. So a low
+   * last-third number records where the misses land, not reliably why.
+   */
+  byThird: { first: number; middle: number; last: number };
   /**
    * Per-round hit-rate for the season arc, chronological (oldest → newest),
    * capped to the most recent `SEASON_ARC_ROUNDS` rounds so the strip stays
@@ -81,10 +93,48 @@ export interface GuesserData {
    * average with the (smaller) on-screen bar count.
    */
   seasonRoundCount: number;
+  /**
+   * Every submitter he has attempted this season, unfiltered and ordered by
+   * season hit-rate. `eludesHim`/`alwaysNails` are the same data behind a
+   * 3-attempt floor; the roster strip wants everyone, including the people he
+   * has only tried once, because "who does he actually catch" is a roster
+   * question and a leaderboard that hides half the league cannot answer it.
+   * Each row also carries whether he got them THIS round.
+   */
+  roster: GuesserRosterRow[];
   eludesHim: GuesserLeaderRow[];
   alwaysNails: GuesserLeaderRow[];
   littermates: GuesserLittermates | null;
 }
+
+/**
+ * Play-order strip config per league.
+ *
+ * SSSC's version is a drink-deeper "descent" with a joke marker; that framing is
+ * true of one person and is actively wrong about anybody else, so it is data
+ * rather than hardcoded markup. `marker` is null for leagues with no joke line.
+ */
+const DESCENTS: Record<string, GuesserDescent> = {
+  default: {
+    label: 'this round · the descent down the playlist',
+    startLabel: 'sober · song 1',
+    endLabel: 'blitzed · song {n}',
+    marker: {
+      atFraction: 0.56,
+      label: '🐾 no-driving line',
+      caption:
+        'the 🐾 no-driving line marks where a dog of his approximate build would, on average, stop being trusted with the family sedan.',
+      caveat:
+        'Impairment extrapolated from the mean bodyweight of comparably-sized dogs; not admissible in any court, doghouse tribunal, or Music League vote dispute. Past this point Doggie walks — or asks Mrs. Doggie to drive.',
+    },
+  },
+  'boarz-ii-men': {
+    label: 'this round · by play order',
+    startLabel: 'song 1',
+    endLabel: 'song {n}',
+    marker: null,
+  },
+};
 
 /** Per-league legend for the guesser ledger; `default` is the original SSSC copy. */
 const LEGENDS: Record<string, string> = {
@@ -95,6 +145,24 @@ const LEGENDS: Record<string, string> = {
     'He names a submitter on every song, in the ballot comments, and then ' +
     'publishes his own scorecard. Nobody assigned him this either.',
 };
+
+export interface GuesserRosterRow {
+  playerId: number;
+  name: string;
+  attempts: number;
+  correct: number;
+  rate: number;
+  /** true = caught this round, false = missed, null = no attempt this round. */
+  thisRound: boolean | null;
+}
+
+export interface GuesserDescent {
+  label: string;
+  startLabel: string;
+  /** May contain `{n}`, replaced with the round's song count. */
+  endLabel: string;
+  marker: { atFraction: number; label: string; caption: string; caveat: string } | null;
+}
 
 /** Minimum season attempts against a given submitter to qualify for a leaderboard. */
 const MIN_ATTEMPTS = 3;
@@ -203,11 +271,14 @@ function emptyGuesserData(): GuesserData {
   return {
     guesserName: null,
     legend: LEGENDS.default,
+    leagueSlug: '',
+    descent: DESCENTS.default,
     weekly: { attempts: 0, correct: 0, rate: 0, guesses: [] },
-    drunkByThird: { first: 0, middle: 0, last: 0 },
+    byThird: { first: 0, middle: 0, last: 0 },
     seasonHitRates: [],
     seasonRate: 0,
     seasonRoundCount: 0,
+    roster: [],
     eludesHim: [],
     alwaysNails: [],
     littermates: null,
@@ -433,7 +504,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const weeklyAttempts = weeklyGuesses.filter((g) => g.guessedPlayerId !== null).length;
   const weeklyCorrect = weeklyGuesses.filter((g) => g.correct).length;
 
-  const drunkByThird = {
+  const byThird = {
     first: rate(thirdBuckets.first.correct, thirdBuckets.first.attempts),
     middle: rate(thirdBuckets.middle.correct, thirdBuckets.middle.attempts),
     last: rate(thirdBuckets.last.correct, thirdBuckets.last.attempts),
@@ -517,6 +588,22 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     .filter(([, v]) => v.attempts >= MIN_ATTEMPTS)
     .map(([playerId, v]) => ({ playerId, name: v.name, attempts: v.attempts, correct: v.correct, rate: rate(v.correct, v.attempts) }));
 
+  // Unfiltered roster + this round's result per person.
+  const weeklyByPlayer = new Map<number, boolean>();
+  for (const wg of weeklyGuesses) {
+    if (wg.actualPlayerId != null) weeklyByPlayer.set(wg.actualPlayerId, !!wg.correct);
+  }
+  const roster: GuesserRosterRow[] = [...perSubmitter.entries()]
+    .map(([playerId, v]) => ({
+      playerId,
+      name: v.name,
+      attempts: v.attempts,
+      correct: v.correct,
+      rate: rate(v.correct, v.attempts),
+      thisRound: weeklyByPlayer.has(playerId) ? (weeklyByPlayer.get(playerId) as boolean) : null,
+    }))
+    .sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
+
   const eludesHim = [...leaderRows].sort((a, b) => a.rate - b.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
   const alwaysNails = [...leaderRows].sort((a, b) => b.rate - a.rate || b.attempts - a.attempts || a.name.localeCompare(b.name));
 
@@ -557,11 +644,14 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   return {
     guesserName,
     legend: LEGENDS[slug] ?? LEGENDS.default,
+    leagueSlug: slug,
+    descent: DESCENTS[slug] ?? DESCENTS.default,
     weekly: { attempts: weeklyAttempts, correct: weeklyCorrect, rate: rate(weeklyCorrect, weeklyAttempts), guesses: weeklyGuesses },
-    drunkByThird,
+    byThird,
     seasonHitRates,
     seasonRate,
     seasonRoundCount,
+    roster,
     eludesHim,
     alwaysNails,
     littermates,
