@@ -87,7 +87,16 @@ export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: strin
     .filter((e) => e.key.length >= e.min);
 
   return (comment: string): number | null => {
-    const tokens = comment.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    // Drop a possessive 's BEFORE despacing, because despacing destroys the
+    // only signal that separates the two. In Second Best "Sarah S" is Sarah
+    // Black's roster name and "Sarah's" is Sarah Zucker's possessive, and both
+    // despace to "sarahs" — so an unstripped possessive credits the guess to
+    // the wrong Sarah.
+    const tokens = comment
+      .toLowerCase()
+      .replace(/([a-z0-9])['’]s\b/g, '$1')
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
 
     // Build all consecutive word-run keys (1..4 tokens), preserving word boundaries.
     const runKeys: string[] = [];

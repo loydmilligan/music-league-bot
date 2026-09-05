@@ -82,4 +82,18 @@ describe('buildGuessMatcher: real production cases (round 163)', () => {
       expect(m('cherry on top of the sundae')).toBe(8);
     });
   });
+  describe('possessives — Second Best\'s two Sarahs', () => {
+    // "Sarah S" is Sarah Black's roster name; "Sarah" is Sarah Zucker's.
+    const m = buildGuessMatcher([
+      { playerId: 10, label: 'Sarah' },
+      { playerId: 9, label: 'Sarah S' },
+    ]);
+    it("credits Sarah's (possessive) to Sarah Zucker, not Sarah S", () => {
+      expect(m("Sarah's, obviously")).toBe(10);
+      expect(m('Sarah\u2019s, obviously')).toBe(10);
+    });
+    it('still credits a literal "Sarah S" to Sarah Black', () => {
+      expect(m('Gotta be Sarah S')).toBe(9);
+    });
+  });
 });

@@ -134,6 +134,12 @@ const DESCENTS: Record<string, GuesserDescent> = {
     endLabel: 'song {n}',
     marker: null,
   },
+  'second-best': {
+    label: 'this round · by play order',
+    startLabel: 'song 1',
+    endLabel: 'song {n}',
+    marker: null,
+  },
 };
 
 /** Per-league legend for the guesser ledger; `default` is the original SSSC copy. */
@@ -142,6 +148,9 @@ const LEGENDS: Record<string, string> = {
     'He guesses the submitter of every song, every round — one drink deeper ' +
     'down the list. Nobody assigned him this. He will not be stopped.',
   'boarz-ii-men':
+    'He names a submitter on every song, in the ballot comments, and then ' +
+    'publishes his own scorecard. Nobody assigned him this either.',
+  'second-best':
     'He names a submitter on every song, in the ballot comments, and then ' +
     'publishes his own scorecard. Nobody assigned him this either.',
 };
@@ -256,6 +265,57 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allo
     // "Grant"), so any word-shaped nickname has to be listed exactly.
     { match: 'Pallets', asName: 'Darren Paletz' },
     { match: 'Pellet', asName: 'Darren Paletz' },
+  ],
+  // Second Best is a family league, so it collides on surnames the way Boarz
+  // collides on "Dave". Four names are deliberately absent:
+  //   - "Black": Jon, Sarah, Susan and Michael Black all play, and the word is
+  //     everywhere in music anyway (Frank Black, Black Sabbath).
+  //   - "Chapin": Phil, Jac and Tommy all play.
+  //   - "Mariani": Matt and Mara both play.
+  //   - bare "Michael"/"Mike": Michael Layous and Michael Black both play.
+  // "Sarah" is left to the competitor roster, where it is Sarah Zucker's own
+  // name; Sarah Black is "Sarah S", so write "Sarah Z"/"Zucker" when the
+  // possessive would otherwise be ambiguous.
+  'second-best': [
+    { match: 'Matt', asName: 'Mashew' },
+    { match: 'Matty', asName: 'Mashew' },
+    { match: 'JB', asName: 'Jonathan Black', allowShort: true },
+    { match: 'Jon', asName: 'Jonathan Black' },
+    { match: 'Jonathan', asName: 'Jonathan Black' },
+    { match: 'Layous', asName: 'Michael Layous' },
+    { match: 'Mikey', asName: 'Michael Layous' },
+    { match: 'Mike Layous', asName: 'Michael Layous' },
+    { match: 'Michael Black', asName: 'monicac1217' },
+    { match: 'Mike Black', asName: 'monicac1217' },
+    { match: 'Monica', asName: 'monicac1217' },
+    { match: 'Zucker', asName: 'Sarah' },
+    { match: 'Sarah Z', asName: 'Sarah' },
+    { match: 'SZ', asName: 'Sarah', allowShort: true },
+    { match: 'Sarah Black', asName: 'Sarah S' },
+    { match: 'Susan', asName: 'SusieQ' },
+    { match: 'Susie', asName: 'SusieQ' },
+    { match: 'Suz', asName: 'SusieQ' },
+    { match: 'Suzy', asName: 'SusieQ' },
+    { match: 'TJ', asName: 'Tj', allowShort: true },
+    { match: 'TJ Cook', asName: 'Tj' },
+    { match: 'Cook', asName: 'Tj' },
+    { match: 'BP', asName: 'Voltron’s YoungLion', allowShort: true },
+    { match: 'Brian', asName: 'Voltron’s YoungLion' },
+    { match: 'Pascoe', asName: 'Voltron’s YoungLion' },
+    { match: 'Voltron', asName: 'Voltron’s YoungLion' },
+    { match: 'YoungLion', asName: 'Voltron’s YoungLion' },
+    { match: 'Jac Chapin', asName: 'jac' },
+    { match: 'Phil', asName: 'Philip Chapin' },
+    { match: 'Philip', asName: 'Philip Chapin' },
+    { match: 'Tommy Chapin', asName: 'Tommy' },
+    // "Tom" alone is Tom Petty in this league far more often than it is Tommy.
+    { match: 'Joe', asName: 'Joe Quinto' },
+    { match: 'Quinto', asName: 'Joe Quinto' },
+    { match: 'Mara', asName: 'missmara' },
+    { match: 'Molly', asName: 'Mollyjohnson' },
+    { match: 'Molly Johnson', asName: 'Mollyjohnson' },
+    { match: 'Hanh', asName: 'hanhquach' },
+    { match: 'Hanh Quach', asName: 'hanhquach' },
   ],
 };
 
