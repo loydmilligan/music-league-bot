@@ -221,7 +221,7 @@ export function startRolloutAppExecutor(): void {
       const { notify } = await import('$lib/notifications/dispatch.js');
       const { captureRoundData } = await import('$lib/digest/capture.js');
       const base = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
-      const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb37.mattmariani.com';
+      const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb13.mattmariani.com';
       const post = async (roundId: number, path: string) => {
         const res = await fetch(`${base}/api/digest/${roundId}/${path}`, { method: 'POST' });
         if (!res.ok) throw new Error(`${path} ${res.status}`);

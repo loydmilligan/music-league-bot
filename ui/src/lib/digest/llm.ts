@@ -429,7 +429,7 @@ export async function callOpenRouter(
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.PUBLIC_APP_BASE_URL || 'https://mlb37.mattmariani.com',
+      'HTTP-Referer': process.env.PUBLIC_APP_BASE_URL || 'https://mlb13.mattmariani.com',
       'X-Title': 'Music League Bot - Digest',
     },
     body: JSON.stringify(body),

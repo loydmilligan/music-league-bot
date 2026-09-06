@@ -19,7 +19,7 @@ import { notify } from '$lib/notifications/dispatch.js';
 import type { AlertPayload } from '$lib/notifications/channels/types.js';
 
 const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
-const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb37.mattmariani.com';
+const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb13.mattmariani.com';
 const botControlUrl = process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
 const dispatchDeps = { botControlUrl };
 

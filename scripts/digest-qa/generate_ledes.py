@@ -280,7 +280,7 @@ def notify(m: dict, send: bool) -> None:
     env = {**load_env(REPO / ".env")}
     url, topic, token = env.get("NTFY_URL"), env.get("NTFY_TOPIC"), env.get("NTFY_TOKEN")
     body = f"Digest HiL ready — round {m['round_name']}"
-    click = f"https://mlb37.mattmariani.com/digest/{m['round_id']}/hil"
+    click = f"https://mlb13.mattmariani.com/digest/{m['round_id']}/hil"
     if not (url and topic):
         print("ntfy: NTFY_URL/NTFY_TOPIC not configured; skipping", file=sys.stderr)
         return
