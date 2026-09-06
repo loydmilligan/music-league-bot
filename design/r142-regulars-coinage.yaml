@@ -1,0 +1,123 @@
+# R142 "Favorite Non-Lexical Vocables" (second-best, S2) — hand-authored
+# content for The Regulars + The Coinage.
+#
+# Written straight into digest_sections.content_json (draft-142-1e2d7d0a-storylines)
+# and digest_drafts.stats_content_json. Generation SKIPS storylines for this
+# league (settings.storylines_section_leagues = {"sssc":true}), so a full regen
+# drops it — re-apply from this file. Same shape as design/r148-regulars-coinage.yaml.
+#
+# EVERY quote below is verbatim from chat_messages in group "Music League chat
+# for Second Best and Friends" over the round window 2026-08-30 → 2026-09-06.
+# Counts were computed against data/league.db, not estimated.
+#
+# DEDUPE RULE APPLIED: nothing here repeats a quote already used by the podium,
+# villain, flow, consensus, quotes or chat sections of this draft. Specifically
+# avoided, because chat already owns them: Tj's "shark wearing glasses" downvote
+# line and "It makes them look friendly."; Matt's dadman riff; Brian Pascoe's
+# xylophone/cats jab; Sarah Black's "League trip?!"; Tj's Dion conversion.
+
+title: The Regulars
+cast:
+  # ── The Alternate Take ─────────────────────────────────────────────────────
+  # 15 distinct music.youtube.com posts across the league's history (verified:
+  # count(distinct ts) where sender='Mara Mariani' and text like '%music.youtube%').
+  # In this round the mirror carried the songs she DIDN'T submit.
+  - name: The Alternate Take
+    player: Mara Mariani
+    type: catchphrase-holder
+    style: quote-led
+    motif: the song she almost picked
+    note: >
+      Mara mirrors everything to YouTube Music for the non-Spotify half of the
+      league — fifteen drops and counting. This round the mirror carried the
+      songs she left at home: the near-misses, posted with her reasoning
+      attached, four days before she took bronze and stayed top of the season
+      table. Nobody else shows their working.
+    evidence:
+      - "Almost submitted this but wasn't sure the non lexical was heavily featured enough"
+      - "Or this one"
+    highlight:
+      - Almost submitted this
+      - Or this one
+
+  # ── The Cat Lobby ──────────────────────────────────────────────────────────
+  # Established regular (see the relationship context: "ignored by humans AND
+  # the AI"). This round the complaint finally got filed against the digest
+  # itself, four days before she downvoted the round's most divisive song.
+  - name: The Cat Lobby
+    player: Sarah Black
+    type: catchphrase-holder
+    style: spotlight
+    motif: single-issue, permanently unsatisfied
+    note: >
+      The Cat Lobby has spent a season being ignored by the humans. This round
+      it opened a second front and came for the digest.
+    spotlight:
+      text: Though mine makes no mention of cats so I think the context needs an update
+      caption: filing a complaint against her own dossier · aug 30
+    evidence:
+      - "That’s right Phil, you better delete any message that bedowngrades cat related content"
+    highlight:
+      - no mention of cats
+      - cat related content
+
+  # ── The Vote Regretter ─────────────────────────────────────────────────────
+  # All five lines land inside 15 minutes on 2026-09-02 (18:02–18:21 PDT), after
+  # his ballot was already filed, plus one next-day apology. He was the round's
+  # single biggest voter on Sweat (5 pts) and whoa (5 pts).
+  - name: The Vote Regretter
+    player: Tj Cook
+    type: catchphrase-holder
+    style: quote-led
+    motif: files fast, revises forever
+    note: >
+      Tj votes at speed and then spends the rest of the week relitigating it in
+      public — not with the commissioner, who could actually change something,
+      but with the room. Every line below arrived after his ballot was locked.
+      He apologised to the wrong person about a song he had not downvoted.
+    evidence:
+      - "I sling votes around like monopoly money."
+      - "If I could go back."
+      - "I may need my votes back. This sounds like force inner circle."
+      - "And I didn't downvote."
+      - "Sorry. Thought you posted Runaround Sue. I may have voted for ya."
+    highlight:
+      - monopoly money
+      - go back
+      - need my votes back
+
+note: >
+  a regular only turns up here when this round's chat backs the bit with a real
+  quote — no quote that round, they sit it out. every line above is verbatim.
+
+stats:
+  phrase:
+    style: dictionary
+    term: all JB about it
+    pronunciation: /ɔːl dʒeɪ ˈbiː əˌbaʊt ɪt/
+    part_of_speech: adjectival phrase · league-internal
+    definition: >
+      To be pedantic about whether a submission satisfies the literal terms of
+      the round. Formed from the initials of a sitting member, which is the
+      highest honour this league confers and the only one it cannot revoke.
+
+
+      This is a first sighting, not an established word: one speaker, one use,
+      caught four days before the man himself filed a 0-point ballot objecting
+      to a song's geographical references. The construction is sound and the
+      need is permanent, so I expect to be recording it again.
+    coined:
+      by: Sarah Black
+      context: >
+        posted to the group four days into voting, immediately after conceding
+        the playlist was good — the disclaimer arriving, as it must, in the same
+        breath as the pedantry it disclaims
+      date: '2026-09-02'
+    stats:
+      uses: 1
+      speakers: 1
+      prior_rounds: 0
+    usages:
+      - label: the first recorded use
+        speaker: Sarah Black
+        text: Good playlist but I’m wondering if we are all on the same page about what a non-lexical vocable actually is. Not to be all JB about the theme.
