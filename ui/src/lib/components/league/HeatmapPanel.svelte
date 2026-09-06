@@ -7,7 +7,10 @@
   let { roster, matrix, maxPoints }: { roster: string[]; matrix: Matrix; maxPoints: number } = $props();
 
   const callouts = $derived(buildCallouts(matrix, roster));
-  const cols = $derived(`minmax(72px, 1.3fr) repeat(${roster.length}, minmax(34px, 1fr))`);
+  // Every column is minmax(18px, 1fr) so the grid divides the container instead of
+  // sizing to its content: a 28-player roster fits 926px without horizontal scroll.
+  // The 18px floor only bites below ~600px, where the wrapper's scroll takes over.
+  const cols = $derived(`minmax(56px, 4.5fr) repeat(${roster.length}, minmax(18px, 1fr))`);
   const tip = (v: string, s: string, pts: number, count: number) =>
     `${v} → ${s}: ${pts} pts across ${count} vote${count === 1 ? '' : 's'}`;
 </script>
@@ -20,7 +23,7 @@
       <div class="lr-mx-grid" style={`grid-template-columns:${cols}`}>
         <div class="dgA-mx-cell lr-corner" title="rows = voter · columns = submitter">▦</div>
         {#each roster as sName}
-          <div class="dgA-mx-cell dgA-mx-head lr-clip" title={sName}><span>{sName}</span></div>
+          <div class="dgA-mx-cell dgA-mx-head lr-vhead" title={sName}><span>{sName}</span></div>
         {/each}
 
         {#each roster as vName, r}
@@ -59,17 +62,35 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  /* .dgA-matrix ships overflow:hidden (rounded-corner clip) which would clip the
-     wide grid instead of letting the wrapper scroll. Let it grow to content width
-     so .lr-mx-scroll gets real horizontal overflow to scroll on mobile. */
+  /* width:100% (not max-content) is what makes the grid DIVIDE the container
+     instead of sizing every 1fr column to its header text. min-width:min-content
+     is the escape hatch: it resolves to the sum of the track minimums, so on a
+     phone — where 28 columns can't fit at 18px — the grid outgrows the wrapper
+     and .lr-mx-scroll scrolls it rather than .dgA-matrix clipping it away. */
   .lr-mx-scroll :global(.dgA-matrix) {
-    width: max-content;
-    max-width: none;
+    width: 100%;
+    min-width: min-content;
   }
   .lr-mx-grid {
     display: grid;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: min-content;
+  }
+  /* Column headers run bottom-to-top so a full name fits above a ~30px column.
+     Horizontal headers were what forced the grid to content width — a roster of
+     28 made it 4011px wide inside a 926px panel. */
+  .lr-vhead {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  /* The cap is on the span, not the cell, so the header row sizes to the longest
+     name a roster actually has instead of always reserving the maximum. */
+  .lr-vhead span {
+    display: block;
+    max-height: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* Compact the shared .dgA-mx-cell for a wide roster (scoped → wins specificity). */
   .lr-mx-grid :global(.dgA-mx-cell) {
