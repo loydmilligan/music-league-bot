@@ -42,24 +42,39 @@ cast:
 
   # ── The Cat Lobby ──────────────────────────────────────────────────────────
   # Established regular (see the relationship context: "ignored by humans AND
-  # the AI"). This round the complaint finally got filed against the digest
-  # itself, four days before she downvoted the round's most divisive song.
+  # the AI"). VERIFIED, because it is the whole joke: Phil Chapin posted nothing
+  # cat-related in the entire round window (his only "cat" hit is "cater to your
+  # lack of an idea"), and nothing was deleted — the relay was live and captured
+  # a Boarz message at 04:10:36Z inside the 35-minute silence between his last
+  # message (03:35:15Z) and her warning (04:10:53Z). He apologised at 04:41:38Z
+  # regardless. The cat-violence material in the archive is JAC Chapin's, from
+  # 2026-08-16, and she named him for it at the time.
   - name: The Cat Lobby
     player: Sarah Black
     type: catchphrase-holder
     style: spotlight
     motif: single-issue, permanently unsatisfied
     note: >
-      The Cat Lobby has spent a season being ignored by the humans. This round
-      it opened a second front and came for the digest.
+      A season of being ignored by the humans, and now by the digest as well. So
+      the Lobby served a takedown notice on Phil Chapin, who had not mentioned
+      cats — not this round, not once. Nothing was deleted. The group had simply
+      gone quiet for thirty-five minutes. Phil apologised anyway, half an hour
+      later, to everyone, for nothing. The cat-violence confession she was
+      actually after is still sitting in the archive under the other Chapin's
+      name, three weeks old and never taken down.
     spotlight:
-      text: Though mine makes no mention of cats so I think the context needs an update
-      caption: filing a complaint against her own dossier · aug 30
+      text: That’s right Phil, you better delete any message that bedowngrades cat related content
+      caption: a takedown order served on the wrong Chapin · sep 3
     evidence:
-      - "That’s right Phil, you better delete any message that bedowngrades cat related content"
+      - "Though mine makes no mention of cats so I think the context needs an update"
+      - "Before Jac began his cat violence ranting and raving"
+      - "Jac Chapin, undeleted, aug 16: When they stop bringing back shit they killed for canned food, shoot them and get another group of cats."
+      - "Philip Chapin, thirty-one minutes later: Apologies… all around."
     highlight:
       - no mention of cats
-      - cat related content
+      - cat violence
+      - undeleted
+      - Apologies
 
   # ── The Vote Regretter ─────────────────────────────────────────────────────
   # All five lines land inside 15 minutes on 2026-09-02 (18:02–18:21 PDT), after
@@ -105,7 +120,11 @@ stats:
       To be all JB about it is to concede that the playlist is good and then raise the
       point of order anyway; to accept the spirit of a theme while filing a written
       objection to the letter of it; to award zero points with a paragraph attached,
-      disqualifying a song on a technicality of your own devising.
+      disqualifying a song on a technicality of your own devising. Above all it is to
+      argue every song out of the theme it was submitted under — seven of his twelve
+      ballots this round returned a finding on whether the song qualified at all —
+      either to remind the room that he is a lawyer, or because he simply enjoys
+      making an annoying argument. The league has never settled which.
 
 
       And who better to coin it than JB's (much) better half.
