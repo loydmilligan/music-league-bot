@@ -16,6 +16,10 @@ export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes'
 export type SectionKind = (typeof SECTION_KINDS)[number];
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+/** Header for the already-written-sections block carried between pipeline EPs. */
+export const PRIOR_EP_HEADER =
+  '# Already written in this digest (context only — do not repeat, contradict, or re-output these sections)';
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5';
 
 export interface DigestDraftRow {
@@ -926,9 +930,14 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
     // Build prior-EP context as a synthetic assistant message, injected when
     // this is not the first EP and prior sections have been accumulated.
     // OQ-1 resolution: assistant-turn injection (cleaner for JSON-mode calls).
-    const priorContextMsg: { role: 'assistant'; content: string } | null =
+    // Carried as a trailing block on the USER turn, not as an assistant
+    // prefill: OpenRouter routes anthropic/* to Bedrock, which rejects a
+    // conversation ending in an assistant message ("does not support assistant
+    // message prefill"). Prefill worked only against Anthropic-direct, so the
+    // pipeline 502'd the first time it ran for real (R142).
+    const priorContext: string | null =
       epIdx > 0 && Object.keys(accumulatedSections).length > 0
-        ? { role: 'assistant', content: JSON.stringify({ sections: accumulatedSections }) }
+        ? JSON.stringify({ sections: accumulatedSections })
         : null;
 
     // Run each model group in this EP.
@@ -948,9 +957,12 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
 
       const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
         { role: 'system', content: buildSystemPrompt(groupSections) },
-        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, groupSections, notes) },
+        {
+          role: 'user',
+          content: buildUserPrompt(data, undefined, genParams, season, groupSections, notes)
+            + (priorContext ? `\n\n${PRIOR_EP_HEADER}\n${priorContext}` : ''),
+        },
       ];
-      if (priorContextMsg) messages.push(priorContextMsg);
 
       const { content: raw, costUsd } = await callOpenRouter(messages, {
         jsonMode: true,
@@ -986,15 +998,15 @@ export async function generateDraft(data: RoundData, genParams?: GenParams, seas
       } : undefined;
 
       // Cover prompt: the single section only, with full accumulated-so-far context.
-      const coverContextMsg: { role: 'assistant'; content: string } = {
-        role: 'assistant',
-        content: JSON.stringify({ sections: accumulatedSections }),
-      };
+      const coverContext = JSON.stringify({ sections: accumulatedSections });
       const coverSectionKind = cover.of as SectionKind;
       const coverMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
         { role: 'system', content: buildSystemPrompt([coverSectionKind]) },
-        { role: 'user', content: buildUserPrompt(data, undefined, genParams, season, [coverSectionKind], notes) },
-        coverContextMsg,
+        {
+          role: 'user',
+          content: buildUserPrompt(data, undefined, genParams, season, [coverSectionKind], notes)
+            + `\n\n${PRIOR_EP_HEADER}\n${coverContext}`,
+        },
       ];
 
       const { content: coverRaw, costUsd: coverCost } = await callOpenRouter(coverMessages, {

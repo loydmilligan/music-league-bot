@@ -11,7 +11,7 @@
 
 import { it, expect, describe, vi, beforeEach } from 'vitest';
 import type Database from 'better-sqlite3';
-import { generateDraft, type RoundData, type RoundBundleEntry } from './llm.js';
+import { generateDraft, PRIOR_EP_HEADER, type RoundData, type RoundBundleEntry } from './llm.js';
 import { DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
 
 // Helper to build a minimal RoundData.
@@ -159,22 +159,27 @@ describe('generateDraft — one-skip pipeline (DEFAULT_PIPELINE)', () => {
     expect(ep0AfterHeader).not.toMatch(/^- villain:/m);
     expect(ep0AfterHeader).not.toMatch(/^- flow:/m);
 
-    // EP1 call: must include prior-EP context as assistant message.
+    // EP1 call: prior-EP context rides on the USER turn. It must never be an
+    // assistant prefill -- Bedrock rejects a conversation ending in one -- and
+    // the conversation must end with a user message.
     const ep1Body = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
-    const ep1AssistantMsg = ep1Body.messages.find((m: { role: string }) => m.role === 'assistant');
-    expect(ep1AssistantMsg).toBeDefined();
-    // The assistant context must contain the EP0 sections output.
-    const ep1Context = JSON.parse(ep1AssistantMsg?.content ?? '{}');
-    expect(ep1Context.sections).toBeDefined();
+    expect(ep1Body.messages.some((m: { role: string }) => m.role === 'assistant')).toBe(false);
+    expect(ep1Body.messages.at(-1).role).toBe('user');
 
-    // EP1 user message requests villain and flow.
+    // EP1 user message requests villain and flow, and carries EP0's output.
     const ep1UserMsg = ep1Body.messages.find((m: { role: string }) => m.role === 'user');
     expect(ep1UserMsg?.content).toMatch(/Write 2 sections/);
+    const ep1Carried = ep1UserMsg!.content.split(PRIOR_EP_HEADER)[1];
+    expect(ep1Carried).toBeDefined();
+    // Discriminating: the carried block must be EP0's real sections payload,
+    // not merely the header. A stub that forgets to append it fails here.
+    expect(JSON.parse(ep1Carried.trim()).sections.quotes).toBeDefined();
 
-    // EP2 (flow cover): assistant context message must be present.
+    // EP2 (flow cover): same shape -- context on the user turn, no prefill.
     const ep2Body = JSON.parse(fetchSpy.mock.calls[2][1]!.body as string);
-    const ep2AssistantMsg = ep2Body.messages.find((m: { role: string }) => m.role === 'assistant');
-    expect(ep2AssistantMsg).toBeDefined();
+    expect(ep2Body.messages.some((m: { role: string }) => m.role === 'assistant')).toBe(false);
+    expect(ep2Body.messages.at(-1).role).toBe('user');
+    expect(ep2Body.messages.at(-1).content).toContain(PRIOR_EP_HEADER);
 
     // Total cost is sum of all 3 EP calls.
     expect(result.costUsd).toBeCloseTo(0.03);

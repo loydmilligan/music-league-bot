@@ -84,7 +84,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const season = effectiveGenParams?.recap?.enabled ? gatherSeasonData(db, roundId) : undefined;
   let output;
   try {
-    output = await generateDraft(data, effectiveGenParams ?? undefined, season);
+    // db is required for round notes + settings.pipeline_config: generateDraft
+    // reads both off it and silently falls back to no-notes/DEFAULT_PIPELINE
+    // when it is omitted. Only the tests were passing it, so durable editor
+    // notes never reached a full draft generation (R142).
+    output = await generateDraft(data, effectiveGenParams ?? undefined, season, db);
   } catch (e) {
     throw error(502, `LLM draft failed: ${(e as Error).message}`);
   }
