@@ -54,3 +54,42 @@ describe('intervals', () => {
     expect(recoveredVoters(intervals(ballots, [0, 1, 3]))).toEqual(['B']);
   });
 });
+
+import { candidatePools } from './deduce.js';
+import type { ReplaySong } from './replayTypes.js';
+
+const song = (uri: string, submitter: string): ReplaySong =>
+  ({ uri, title: uri, artist: 'x', submitter, submitterComment: null });
+
+describe('candidatePools', () => {
+  const songs = [song('s1', 'A'), song('s2', 'B'), song('s3', 'C')];
+
+  it('a known ballot eliminates its voter from every song it scored', () => {
+    const ballots = [b('A', ['s2', 3], ['s3', -1])];
+    expect(candidatePools(songs, ballots, ['A'], [])['s2']).not.toContain('A');
+    expect(candidatePools(songs, ballots, ['A'], [])['s3']).not.toContain('A');
+  });
+
+  it('a 0-point row eliminates nobody — it is a submitter comment, not a vote', () => {
+    const ballots = [b('A', ['s1', 0])];
+    expect(candidatePools(songs, ballots, ['A'], [])['s1']).toContain('A');
+  });
+
+  it('an observer knows their own song exactly', () => {
+    expect(candidatePools(songs, [], [], ['B'])['s2']).toEqual(['B']);
+  });
+
+  // The Quinto case: a submitter who never voted must survive in his own pool.
+  it('keeps a submitter who cast no ballot at all', () => {
+    const ballots = [b('A', ['s2', 1], ['s3', 1]), b('B', ['s1', 1], ['s3', 1])];
+    expect(candidatePools(songs, ballots, ['A', 'B'], [])['s3']).toContain('C');
+  });
+
+  // The two-fer case: pinning a player to one song must not evict them from another.
+  it('respects a per-round quota above one song per player', () => {
+    const twofer = [song('s1', 'A'), song('s2', 'A'), song('s3', 'B')];
+    const pools = candidatePools(twofer, [], [], ['A']);
+    expect(pools['s1']).toEqual(['A']);
+    expect(pools['s2']).toEqual(['A']);
+  });
+});
