@@ -16,6 +16,8 @@
   import ReplayFullView from './ReplayFullView.svelte';
   import ReplayPublicView from './ReplayPublicView.svelte';
   import ReplayDeducibleView from './ReplayDeducibleView.svelte';
+  import ReplayLedgerView from './ReplayLedgerView.svelte';
+  import { ledgerRows, churnScale } from '$lib/league-research/ledger.js';
 
 
   interface RoundRow {
@@ -28,6 +30,7 @@
   let { leagueId, season }: { leagueId: number; season: number | null } = $props();
 
   const PRESETS: { label: string; count: number; gs: GlanceSeverity }[] = [
+    { label: 'Watch', count: 0, gs: 1 },
     { label: 'Individual', count: 1, gs: 1 },
     { label: 'Partner', count: 2, gs: 1 },
     { label: 'Partner plus', count: 2, gs: 3 },
@@ -48,6 +51,12 @@
   let idx = $state(0);
 
   let roundToken = 0;
+  let drawerOpen = $state(false);
+
+  // Three slots is the most any preset needs (Partner double plus). Colours are
+  // assigned by selection order and stay put while scrubbing, so a person keeps
+  // the same colour for the whole session.
+  const OBSERVER_COLOURS = ['#f5a524', '#3b82f6', '#8b5cf6'];
 
   const scenario = $derived<Scenario>({ observers, gs, hunches });
   const analysis = $derived(payload ? analyse(payload, scenario) : null);
@@ -56,6 +65,17 @@
     Object.fromEntries((payload?.songs ?? []).map((s) => [s.uri, s.title])),
   );
   const lastIdx = $derived(Math.max(0, (payload?.ballots.length ?? 1) - 1));
+
+  /** Empty in Watch mode — the absence of colour is how you can see which mode you are in. */
+  const observerColour = $derived(
+    Object.fromEntries(observers.map((o, i) => [o, OBSERVER_COLOURS[i % OBSERVER_COLOURS.length]])),
+  );
+  const rows = $derived(payload ? ledgerRows(payload, idx, observers) : []);
+  // Tick heights for the scrubber: how many songs each ballot reordered. 99% of
+  // ballots move something, so a binary marker would light up everywhere and say
+  // nothing; the magnitude is what discriminates.
+  const churn = $derived(payload ? churnScale(payload) : { scaleMax: 0, values: [] });
+  const presetCount = $derived(observers.length);
   const marks = $derived(
     Object.values(analysis?.observerPositions ?? {}).sort((a, b) => a - b),
   );
@@ -176,40 +196,50 @@
   {:else if analysis && step}
     {@const a = analysis}
 
-    <!-- Scenario controls -->
+    <!-- Scenario funnel: the preset decides how many observers you need, so it
+         is asked first; the glance default follows from it and can be overridden. -->
     <div class="rp-bar">
-      <span class="rp-lbl">preset</span>
+      <span class="rp-lbl">1 · preset</span>
       {#each PRESETS as p, i (i)}
         <button
           type="button"
           class="rp-pill"
-          class:is-active={observers.length === p.count && gs === p.gs}
+          class:is-active={observers.length === p.count && (p.count === 0 || gs === p.gs)}
           onclick={() => applyPreset(p.count, p.gs)}>{p.label}</button
-        >
-      {/each}
-      <span class="rp-div"></span>
-      <span class="rp-lbl">glance</span>
-      {#each [1, 2, 3, 4] as g, i (i)}
-        <button
-          type="button"
-          class="rp-pill"
-          class:is-active={gs === g}
-          onclick={() => (gs = g as GlanceSeverity)}>{g}GS</button
         >
       {/each}
     </div>
 
-    <div class="rp-bar">
-      <span class="rp-lbl">observers</span>
-      {#each payload.ballots as b, i (i)}
-        <button
-          type="button"
-          class="rp-pill"
-          class:is-active={observers.includes(b.voter)}
-          onclick={() => toggleObserver(b.voter)}>{b.voter}</button
-        >
-      {/each}
-    </div>
+    {#if presetCount > 0}
+      <div class="rp-bar">
+        <span class="rp-lbl">2 · glance</span>
+        {#each [1, 2, 3, 4] as g, i (i)}
+          <button
+            type="button"
+            class="rp-pill"
+            class:is-active={gs === g}
+            onclick={() => (gs = g as GlanceSeverity)}>{g}GS</button
+          >
+        {/each}
+      </div>
+
+      <div class="rp-bar">
+        <span class="rp-lbl">3 · observers</span>
+        {#each payload.ballots as b, i (i)}
+          <button
+            type="button"
+            class="rp-pill"
+            class:is-active={observers.includes(b.voter)}
+            style:border-color={observers.includes(b.voter) ? observerColour[b.voter] : undefined}
+            onclick={() => toggleObserver(b.voter)}>{b.voter}</button
+          >
+        {/each}
+      </div>
+    {:else}
+      <p class="rp-note">
+        Watching the round with nobody selected. Pick a preset above to key in on someone.
+      </p>
+    {/if}
 
     <!-- Window readout: N caps everything, so it is said plainly. -->
     <div class="rp-window">
@@ -234,6 +264,15 @@
             style={`left:${pct(marks[0])}%;width:${pct(marks.at(-1)!) - pct(marks[0])}%`}
           ></div>
         {/if}
+        {#each churn.values as c, i (i)}
+          <!-- Opening ballot excluded from the scale: it reorders everything by
+               definition, because it breaks an all-zero tie. -->
+          <div
+            class="rp-churn"
+            style={`left:${pct(i)}%;height:${i === 0 || churn.scaleMax === 0 ? 8 : 8 + (c / churn.scaleMax) * 22}px`}
+            title={`${c} songs changed position`}
+          ></div>
+        {/each}
         {#each marks as m, i (i)}
           <div class="rp-mark" style={`left:${pct(m)}%`}></div>
         {/each}
@@ -257,6 +296,29 @@
         </span>
       </div>
     </div>
+
+    <div class="rp-bar">
+      <button type="button" class="rp-pill rp-drawer-btn" onclick={() => (drawerOpen = true)}
+        >open ledger →</button
+      >
+    </div>
+
+    <!-- Ledger drawer, slides in from the right -->
+    <div class="rp-drawer" class:is-open={drawerOpen} aria-hidden={!drawerOpen}>
+      <div class="rp-drawer-head">
+        <strong>Ledger</strong>
+        <button type="button" class="rp-pill" onclick={() => (drawerOpen = false)}>close</button>
+      </div>
+      <ReplayLedgerView
+        {rows}
+        currentVoter={step.ballot.voter}
+        stepLabel={`ballot ${idx + 1} of ${payload.ballots.length}`}
+        {observerColour}
+      />
+    </div>
+    {#if drawerOpen}
+      <button type="button" class="rp-scrim" aria-label="close ledger" onclick={() => (drawerOpen = false)}></button>
+    {/if}
 
     <!-- The three views -->
     <div class="rp-views">
@@ -382,13 +444,75 @@
     width: 100%;
     accent-color: var(--accent);
   }
+  .rp-churn {
+    position: absolute;
+    bottom: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: color-mix(in oklch, var(--fg-quiet) 45%, transparent);
+    pointer-events: auto;
+  }
+  .rp-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 40;
+    width: min(46rem, 94vw);
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--bg, #0b0d10);
+    border-left: 1px solid var(--line-strong);
+    transform: translateX(100%);
+    transition: transform 180ms ease;
+  }
+  .rp-drawer.is-open { transform: translateX(0); }
+  .rp-drawer-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.8rem; }
+  .rp-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    border: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
   .rp-views {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
   @media (max-width: 1100px) {
-    .rp-views {
+    .rp-churn {
+    position: absolute;
+    bottom: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: color-mix(in oklch, var(--fg-quiet) 45%, transparent);
+    pointer-events: auto;
+  }
+  .rp-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 40;
+    width: min(46rem, 94vw);
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--bg, #0b0d10);
+    border-left: 1px solid var(--line-strong);
+    transform: translateX(100%);
+    transition: transform 180ms ease;
+  }
+  .rp-drawer.is-open { transform: translateX(0); }
+  .rp-drawer-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.8rem; }
+  .rp-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    border: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .rp-views {
       grid-template-columns: minmax(0, 1fr);
     }
   }
