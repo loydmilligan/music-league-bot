@@ -105,3 +105,64 @@ describe.skipIf(!existsSync(DB))('named regressions', () => {
 		db.close();
 	});
 });
+
+describe.skipIf(!existsSync(DB))('partition and recovery rates', () => {
+	it('a single observer schedule produces disjoint intervals', () => {
+		const db = new Database(DB, { readonly: true });
+		let roundsChecked = 0;
+		for (const roundId of rounds(db).slice(0, 10)) {
+			const p = getVotingReplay(db, roundId);
+			if (!p || p.ballots.length < 4) continue;
+			const ivs = intervals(p.ballots, checkpoints(0, p.ballots.length - 1, 3));
+			expect(ivs.length, 'a 3GS schedule should cut the round into several intervals').toBeGreaterThan(1);
+			const seen = new Set<string>();
+			for (const iv of ivs)
+				for (const v of iv.voters) {
+					expect(seen.has(v), `${v} appears in two intervals`).toBe(false);
+					seen.add(v);
+				}
+			roundsChecked++;
+		}
+		expect(roundsChecked, 'no round was large enough to partition').toBeGreaterThan(0);
+		db.close();
+	});
+
+	it('recovery rises monotonically with glance severity and reaches 100% at 4GS', () => {
+		const db = new Database(DB, { readonly: true });
+		// Measured over EVERY observer pair with a window of at least one ballot,
+		// weighted by window size: recovered in-window ballots / window ballots.
+		// Restricting to the widest pair (first voter vs last) makes 1GS and 2GS
+		// both flatly 0 — the window is too wide for a coarse glance to isolate
+		// anybody — so monotonicity is only meaningful across the pair space.
+		//
+		// This denominator is not the one behind the spec's headline 18/39/69/100,
+		// which is a per-scenario mean and so leans on narrow windows; weighted by
+		// ballots the same engine measures 3.9% / 13.6% / 40.3% / 100%.
+		const ids = rounds(db);
+		const payloads = ids
+			.map((id) => getVotingReplay(db, id))
+			.filter((p): p is NonNullable<typeof p> => !!p && p.ballots.length >= 4);
+		expect(payloads.length, 'no usable rounds in the database').toBeGreaterThan(20);
+
+		const rate = (gs: 1 | 2 | 3 | 4) => {
+			let got = 0;
+			let tot = 0;
+			for (const p of payloads) {
+				for (let a = 0; a < p.ballots.length; a++) {
+					for (let z = a + 2; z < p.ballots.length; z++) {
+						got += recoveredVoters(intervals(p.ballots, checkpoints(a, z, gs))).length;
+						tot += z - a - 1; // ballots strictly between the two observers
+					}
+				}
+			}
+			return got / tot;
+		};
+		const [r1, r2, r3, r4] = [rate(1), rate(2), rate(3), rate(4)];
+		expect(r1).toBeGreaterThan(0); // a coarse glance still catches lone ballots
+		expect(r1).toBeLessThan(r2);
+		expect(r2).toBeLessThan(r3);
+		expect(r3).toBeLessThan(r4);
+		expect(r4).toBeCloseTo(1, 5); // 4GS recovers every ballot in the window
+		db.close();
+	}, 60_000);
+});
