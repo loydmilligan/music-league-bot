@@ -65,3 +65,43 @@ describe.skipIf(!existsSync(DB))('soundness against every real round', () => {
 		expect(failures).toEqual([]);
 	}, 120_000);
 });
+
+// Both of these were real modelling bugs, found by the soundness invariant
+// above before any engine existed. They get named tests so a future refactor
+// that reintroduces either one fails with the reason attached.
+describe.skipIf(!existsSync(DB))('named regressions', () => {
+	it('R139 — a submitter who never voted stays in his own pool (the Quinto case)', () => {
+		const db = new Database(DB, { readonly: true });
+		const p = getVotingReplay(db, 139)!;
+		const voters = new Set(p.ballots.map((b) => b.voter));
+		const ghost = p.songs.find((s) => !voters.has(s.submitter));
+		expect(ghost, 'R139 should contain a submitter who cast no ballot').toBeDefined();
+		const pools = candidatePools(
+			p.songs,
+			p.ballots,
+			p.ballots.map((b) => b.voter),
+			[]
+		);
+		expect(pools[ghost!.uri]).toContain(ghost!.submitter);
+		db.close();
+	});
+
+	it('R97 — a two-songs-each round does not evict a player from their second song', () => {
+		const db = new Database(DB, { readonly: true });
+		const p = getVotingReplay(db, 97)!;
+		const counts = new Map<string, number>();
+		for (const s of p.songs) counts.set(s.submitter, (counts.get(s.submitter) ?? 0) + 1);
+		expect(
+			[...counts.values()].some((n) => n > 1),
+			'R97 should be a two-fer round'
+		).toBe(true);
+		const pools = candidatePools(
+			p.songs,
+			p.ballots,
+			p.ballots.map((b) => b.voter),
+			[]
+		);
+		for (const s of p.songs) expect(pools[s.uri]).toContain(s.submitter);
+		db.close();
+	});
+});
