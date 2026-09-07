@@ -1,0 +1,35 @@
+# Fields identical across all seven LLM digest sections. Each section file lists
+# only its own deltas plus a `inherits: _shared` marker.
+_shared:
+  surface: digest
+  generation: llm
+  engine: openrouter          # engine A; every digest since 2026-08-06 actually ran engine B
+  input:
+    sources:
+      - { id: round_meta,      kind: db,       note: "round name/description, league, N-of-M" }
+      - { id: round_bundle,    kind: db,       note: "cross-round record — ONLY sanctioned source of cross-round facts" }
+      - { id: rel_context,     kind: artifact, from: relationship_contexts, note: "personality/tone only, explicitly NOT facts" }
+      - { id: submissions,     kind: db,       note: "all songs, points, submitter comments" }
+      - { id: votes,           kind: db,       note: "every vote + comment, ungrouped" }
+      - { id: editor_notes,    kind: artifact, from: round_notes, contract: true-but-not-quotable }
+    player_scope: all
+  llm:
+    prompt:
+      system: llm.ts#buildSystemPrompt
+      user: llm.ts#buildUserPrompt
+      version: digest-v1
+      constraints:
+        - no self-votes exist
+        - one downvote per voter per round is the maximum, not a scarcity
+        - multi-artist songs referred to by first artist only
+        - cross-round claims only from the round bundle
+    params:
+      temperature: null
+      top_p: null
+      max_tokens: null
+      seed: null
+      response_format: json_object
+  output:
+    storage: digest_sections.content_json
+    summary_for_next_gen: null
+    players: null               # never captured for any section

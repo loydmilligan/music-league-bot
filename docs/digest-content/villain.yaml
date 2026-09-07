@@ -1,0 +1,24 @@
+villain:
+  inherits: _shared
+  label: "B-side · the downvote"
+  status: active
+  input:
+    evidence_bound: false
+  llm:
+    section_intent: >
+      The lowest-scoring or most-divisive submission. One paragraph of playful roasting
+      using the actual numbers.
+    model: google/gemini-3.5-flash   # observed 2026-08-05
+    batching: { ep: 1, merged_with: [flow], cover: null }
+    context_note: "EP1 — reads the whole EP0 output as prior context."
+  output:
+    schema: "{title, body}"
+    cost_usd: 0.087
+    tokens: { prompt: 44800, completion: 2151 }
+    observed:
+      words: 151
+      variant: textual
+      visual: null               # VISUAL_CAPABLE.villain === false
+      notes:
+        - "Nothing in the shape forces a number to appear; R153's paragraph happens to carry six."
+        - "The facts it used (−9 total, two −2s, seven of nine downvoters, zero upvotes) are all deterministic — recomputable without the model."

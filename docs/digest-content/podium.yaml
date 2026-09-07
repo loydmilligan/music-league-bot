@@ -1,0 +1,24 @@
+podium:
+  inherits: _shared
+  label: "A-side · final ranking"
+  status: active
+  input:
+    evidence_bound: false
+  llm:
+    section_intent: >
+      Top 3 songs by vote_total — winner + runners-up. Include artist, title, submitter,
+      vote_total, and one line of editorial color per song.
+    model: minimax/minimax-m3        # observed 2026-08-05
+    batching: { ep: 0, merged_with: [quotes, consensus, storylines, chat], cover: null }
+  output:
+    schema: "{title, items[{rank, artist, title, submitter, points, color, fact, coverUrl}], body}"
+    cost_usd: 0.010
+    tokens: { prompt: 38647, completion: 334 }
+    observed:
+      words: 473
+      variant: both              # only section shipping `both` today
+      visual: AlbumPodium.svelte
+      notes:
+        - "`color` and `fact` are byte-identical duplicates in every R153 item — one of them is dead weight."
+        - "`body` is a prose blob sitting under an already-structured items[]; the visual ignores it."
+        - "coverUrl enriched post-hoc by enrichPodiumArt(), not by the model."

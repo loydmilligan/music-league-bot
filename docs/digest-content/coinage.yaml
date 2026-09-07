@@ -1,0 +1,27 @@
+coinage:
+  label: "The Coinage"
+  surface: digest
+  status: active
+  generation: human               # authored in-session, edited as YAML in the inline editor
+  engine: none
+  input:
+    sources:
+      - { id: chat_window, kind: db,      note: "the coinage is spotted by hand while reading the round's chat" }
+      - { id: operator,    kind: human,   note: "term, definition, etymology and the call on whether it earned a card" }
+    evidence_bound: true          # by convention: every quote is verified before it ships
+    player_scope: whoever_coined_it
+  llm: null
+  output:
+    schema: "{phrase: {style, term, pronunciation, part_of_speech, definition, quotes[{speaker,text}], media{src,poster,alt,caption}}}"
+    storage: digest_drafts.stats_content_json
+    summary_for_next_gen: null
+    players: null
+    cost_usd: 0
+    observed:
+      words: 297
+      style: dictionary
+      r153_term: "dork list"
+      notes:
+        - "Rides inside the `stats` data section (DigestInsights) rather than owning a section row."
+        - "YAML_FIRST_KINDS already routes `stats` through the YAML editor — this item is the proof the YAML idiom works."
+        - "Media follows the Coinage rules: served from /_media/, poster required for PNG/PDF export."

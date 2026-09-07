@@ -1,0 +1,31 @@
+chat:
+  inherits: _shared
+  label: "Back cover · chat notes"
+  status: active
+  input:
+    evidence_bound: false
+    sources_extra:
+      - { id: chat_window, kind: db, query: "chat_messages within (prev voting_deadline, this voting_deadline]", scope: league }
+      - { id: pasted_chat, kind: operator, note: "manual override; beats auto-capture when present" }
+      - { id: chat_mentions, kind: db, note: "legacy auto-captured mentions; used only if no window/paste" }
+    precedence: [pasted_chat, chat_window, chat_mentions]
+  llm:
+    section_intent: >
+      Highlights from the WhatsApp chat tied to this round. Find the genuinely funny /
+      notable exchanges and keep the dry, slightly-funny editorial voice. 3-6 moments.
+    model: anthropic/claude-opus-4.8  # observed 2026-08-02 — the premium pin
+    batching: { ep: 0, merged_with: [quotes, consensus, podium, storylines], cover: null }
+  output:
+    schema: "{title, summary, moments[{label, detail}]}"
+    storage: digest_sections.content_json
+    cost_usd: 0.234
+    tokens: { prompt: 37513, completion: 1866 }
+    observed:
+      words: 1245
+      share_of_digest: 0.36
+      variant: textual
+      visual: ChatMoments.svelte    # capable, not currently selected
+      notes:
+        - "Largest section by a factor of 2.6 and the most expensive call in the digest."
+        - "label + detail is already the right entity split — this is the shape to copy, not to cut."
+        - "Chat media (per docs/research/2026-09-02-chat-media-plan.md) attaches here."

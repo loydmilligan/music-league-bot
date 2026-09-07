@@ -1,0 +1,28 @@
+flow:
+  inherits: _shared
+  label: "Credits · notable votes"
+  status: active
+  input:
+    evidence_bound: false
+  llm:
+    section_intent: >
+      A 1-2 paragraph narrative arc of how the round played out — what the theme produced,
+      surprises, the shape of voting.
+    model: deepseek/deepseek-v4-pro  # observed 2026-08-06
+    batching:
+      ep: 1
+      merged_with: [villain]
+      cover: { model: anthropic/claude-sonnet-4-5, ep: 2, note: "fires on every fresh digest; A/B offered in UI" }
+  output:
+    schema: "{title, body}"
+    cost_usd: 0.014
+    tokens: { prompt: 26629, completion: 2693 }
+    summary_for_next_gen: archive_context.roundDynamics
+    observed:
+      words: 276
+      variant: textual
+      visual: null
+      notes:
+        - "The ONLY section whose output feeds forward automatically — and only as `firstSentence(body)`."
+        - "Most free-form shape in the digest; highest hallucination surface."
+        - "Costs double: original + mandatory sonnet-4.5 cover."

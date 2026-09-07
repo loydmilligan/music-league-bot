@@ -1,0 +1,30 @@
+storylines:
+  inherits: _shared
+  label: "The Regulars"
+  status: active
+  input:
+    evidence_bound: true          # THE ONLY ONE
+    sources_extra:
+      - { id: storyline_seeds,    kind: config,  from: storylineSeeds.ts, note: "per-league cast: player + motif + regex + which sources count" }
+      - { id: storyline_evidence, kind: derived, from: storylineEvidence.ts, note: "deterministic gather over chat window + that player's vote comments" }
+    player_scope: seeded_cast
+  llm:
+    section_intent: >
+      Recurring-character bits for this round's cast, written ONLY from the Storylines
+      evidence block — do not invent threads, quotes, or characters not present there.
+      Cite 1-3 of their actual quotes as evidence.
+    model: null                   # never observed in llm_calls; no digest:storylines row exists
+    batching: { ep: 0, merged_with: [quotes, consensus, podium, chat], cover: null }
+    activation: "excluded entirely when storylineEvidence is empty; no season-recap variant exists"
+  output:
+    schema: "{title, cast[{name, headline, evidence[]}], note?}"
+    cost_usd: null
+    tokens: null
+    observed:
+      words: 727
+      share_of_digest: 0.21
+      variant: textual
+      visual: StorylinesCast.svelte
+      notes:
+        - "Zero fabrication incidents to date — the evidence contract is why."
+        - "Second-largest section; growth is bounded by the seed list, not by the model."

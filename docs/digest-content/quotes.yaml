@@ -1,0 +1,26 @@
+quotes:
+  inherits: _shared
+  label: "Liner quotes"
+  status: active
+  input:
+    evidence_bound: false
+    note: "Reads the entire ungrouped vote dump; nothing constrains it to verified spans."
+  llm:
+    section_intent: >
+      3-6 punchy direct quotes from vote comments — voter name + quote. Pick the ones with
+      the most personality.
+    model: deepseek/deepseek-v4-pro  # observed 2026-08-05
+    batching: { ep: 0, merged_with: [consensus, podium, storylines, chat], cover: null }
+  output:
+    schema: "{title, items[{voter, quote}]}"
+    cost_usd: 0.020
+    tokens: { prompt: 39528, completion: 3666 }
+    observed:
+      words: 93
+      variant: textual
+      visual: null
+      count: 6
+      notes:
+        - "Smallest section in the digest — 93 words, 2.7% of content."
+        - "Source of the R153 fabricated-Clements-quote incident; unbound quoting is the mechanism."
+        - "Voter names arrive in four different formats (Jimmy / Jonathan Black / CJ Wookie / djensen37 / Steiny) — display names, not roster ids."
