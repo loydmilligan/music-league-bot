@@ -11,6 +11,7 @@ import { wrapNotes } from './noteEnvelope.js';
 // Type-only: roundNotes imports SECTION_KINDS from this module at eval time,
 // so a static value import here is a TDZ crash. Load notesForPrompt lazily.
 import type { PromptNotes } from './roundNotes.js';
+import { appBaseUrl } from '$lib/config/urls.js';
 
 export const SECTION_KINDS = ['podium', 'villain', 'flow', 'consensus', 'quotes', 'chat', 'storylines'] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
@@ -429,7 +430,7 @@ export async function callOpenRouter(
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.PUBLIC_APP_BASE_URL || 'https://mlb13.mattmariani.com',
+      'HTTP-Referer': appBaseUrl(),
       'X-Title': 'Music League Bot - Digest',
     },
     body: JSON.stringify(body),

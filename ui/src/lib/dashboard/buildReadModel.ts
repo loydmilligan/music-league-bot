@@ -36,6 +36,7 @@ import {
 	resolvePipeline,
 } from '../digest/pipeline.js';
 import type { Pipeline } from '../digest/pipeline.js';
+import { digestBaseUrl } from '$lib/config/urls.js';
 
 // ── Zod schemas (mirror ml-dashboard-data.jsx fixture shape) ───────────────────
 
@@ -296,9 +297,7 @@ function buildArchive(
 	db: Database.Database,
 	leagueId: number,
 ): z.infer<typeof ArchiveEntrySchema>[] {
-	const PUBLIC_DIGEST_BASE = (
-		process.env.PUBLIC_DIGEST_BASE_URL || 'https://digest.mattmariani.com'
-	).replace(/\/+$/, '');
+	const PUBLIC_DIGEST_BASE = digestBaseUrl();
 
 	// Per-round winner: submission with highest total points
 	const winnerRows = db

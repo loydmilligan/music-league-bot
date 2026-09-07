@@ -109,6 +109,23 @@ instead of erasing it.
    missing → the layer cache served stale; rebuild once with `--no-cache` as the *exception*.
 4. Smoke `mlb13.mattmariani.com` (→ `192.168.4.217:3002`).
 
+### Moving the app to a new hostname
+
+The app resolves every public URL through `ui/src/lib/config/urls.ts`, so the
+move is one line plus a sync:
+
+1. `PUBLIC_APP_BASE_URL=` in `.env` (and `PUBLIC_DIGEST_BASE_URL=` for the
+   published-digest host — a different service on its own tunnel).
+2. `node scripts/sync-hosts.mjs` — rewrites the two surfaces that cannot read
+   `.env` at runtime: the Chrome extension (`host_permissions` + defaults) and
+   the my-agent CMA prompt/build sheet.
+3. `docker compose build bot-ui && docker compose up -d bot-ui` — `.env` is read
+   at container start, so a recreate is required; `restart` is not enough.
+4. Reload the unpacked extension in Chrome so the new `host_permissions` apply.
+
+`ui/src/lib/config/hostLiterals.test.ts` fails if a hostname gets hardcoded
+somewhere new, or if step 2 is skipped.
+
 With orc-tower retired there is no central gate: coordinate the single deploy lane directly
 with other active lanes, or simply be the only one deploying. Merging to `master` first is
 what makes a missed hand-off non-fatal — concurrent deploys then integrate rather than clobber.

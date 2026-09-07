@@ -16,6 +16,7 @@ import { advance, applyCutResult, claimable } from './engine.js';
 import { parkAtHold, type HoldDeps } from './holds.js';
 import { modelForCut } from './modelForCut.js';
 import type { Rollout, RunState } from './types.js';
+import { appBaseUrl } from '$lib/config/urls.js';
 
 /**
  * Resolve each agent cut's model into the run snapshot (I9), so the host
@@ -221,7 +222,7 @@ export function startRolloutAppExecutor(): void {
       const { notify } = await import('$lib/notifications/dispatch.js');
       const { captureRoundData } = await import('$lib/digest/capture.js');
       const base = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
-      const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb13.mattmariani.com';
+      const appBase = appBaseUrl();
       const post = async (roundId: number, path: string) => {
         const res = await fetch(`${base}/api/digest/${roundId}/${path}`, { method: 'POST' });
         if (!res.ok) throw new Error(`${path} ${res.status}`);

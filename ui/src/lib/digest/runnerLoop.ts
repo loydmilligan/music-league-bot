@@ -17,9 +17,10 @@ import { structuralReviewReason } from './structuralReview.js';
 import { generateApprovalToken, setAwaitingApproval, setAwaitingReview } from './approvals.js';
 import { notify } from '$lib/notifications/dispatch.js';
 import type { AlertPayload } from '$lib/notifications/channels/types.js';
+import { appBaseUrl } from '$lib/config/urls.js';
 
 const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://localhost:3002';
-const appBase = process.env.PUBLIC_APP_BASE_URL ?? 'https://mlb13.mattmariani.com';
+const appBase = appBaseUrl();
 const botControlUrl = process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
 const dispatchDeps = { botControlUrl };
 

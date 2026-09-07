@@ -2,8 +2,9 @@ import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import type { ReadModel } from '$lib/dashboard/buildReadModel.js';
+import { digestBaseUrl } from '$lib/config/urls.js';
 
-const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(/\/+$/, '');
+const B_SIDE_BASE = digestBaseUrl();
 const VALID_MODES = new Set(['card', 'link', 'silent']);
 
 // POST /api/content/:leagueId/reshare

@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { logLlmCall } from '$lib/digest/llm.js';
+import { appBaseUrl } from '$lib/config/urls.js';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // A real OpenRouter image-output model (verified present in /api/v1/models).
@@ -44,7 +45,7 @@ export async function callOpenRouterImage(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.PUBLIC_APP_BASE_URL || 'https://mlb13.mattmariani.com',
+      'HTTP-Referer': appBaseUrl(),
       'X-Title': 'Music League Bot - Avatar',
     },
     body: JSON.stringify(body),

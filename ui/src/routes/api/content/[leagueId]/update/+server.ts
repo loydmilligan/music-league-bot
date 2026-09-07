@@ -28,12 +28,13 @@ import { computeSeasonSignalsForLeague } from '$lib/dashboard/seasonSignals.js';
 import { buildTasteData } from '$lib/dashboard/tasteData.js';
 import { getTasteSettings } from '$lib/db/settings.js';
 import { z } from 'zod';
+import { digestBaseUrl } from '$lib/config/urls.js';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
 const VALID_DECISIONS = new Set<string>(['refresh', 'hold', 'lock']);
 const VALID_ANNOUNCE = new Set<string>(['card', 'link', 'silent']);
 
-const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(/\/+$/, '');
+const B_SIDE_BASE = digestBaseUrl();
 const PUBLIC_DIGEST_BASE = B_SIDE_BASE;
 
 interface SiteRow {
@@ -705,7 +706,7 @@ function buildArchiveEntry(
 	seasonNumber: number,
 	n: number,
 ): z.infer<typeof ArchiveEntrySchema> {
-	const PUBLIC_DIGEST_BASE_URL = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(/\/+$/, '');
+	const PUBLIC_DIGEST_BASE_URL = digestBaseUrl();
 
 	const winnerRow = db
 		.prepare(

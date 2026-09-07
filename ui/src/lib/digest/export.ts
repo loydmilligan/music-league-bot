@@ -3,6 +3,7 @@ import { join, basename, extname, dirname } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { getDb } from '$lib/db/client.js';
+import { digestBaseUrl } from '$lib/config/urls.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
@@ -12,7 +13,7 @@ const EXPORTS_DIR = join(process.env.DATA_DIR || '/app/data', 'exports');
 // (shared volume; digest-static serves it read-only). Public base is the
 // separate no-Access Cloudflare tunnel.
 const DIGESTS_DIR = process.env.DIGESTS_DIR || '/app/digests';
-const PUBLIC_DIGEST_BASE = (process.env.PUBLIC_DIGEST_BASE_URL || 'https://digest.mattmariani.com').replace(/\/+$/, '');
+const PUBLIC_DIGEST_BASE = digestBaseUrl();
 
 // WIDE = desktop broadsheet (800px). MOBILE = phone-portrait card (430px via the
 // dg-export--mobile class the page applies when ?format=mobile). The viewport is

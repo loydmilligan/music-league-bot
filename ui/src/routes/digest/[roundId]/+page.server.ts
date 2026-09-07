@@ -18,12 +18,10 @@ import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
 import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
 import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
 import { gatherPrepMaterial, type MaterialRow } from '$lib/digest/prepMaterial.js';
+import { digestBaseUrl } from '$lib/config/urls.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
-const B_SIDE_BASE = (process.env.PUBLIC_DIGEST_BASE_URL ?? 'https://digest.mattmariani.com').replace(
-  /\/+$/,
-  '',
-);
+const B_SIDE_BASE = digestBaseUrl();
 
 /**
  * Absolute URL of a league's published b-side archive, or null when it has none.
