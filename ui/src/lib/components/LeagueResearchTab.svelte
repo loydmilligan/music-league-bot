@@ -10,13 +10,15 @@
   import HeatmapPanel from './league/HeatmapPanel.svelte';
   import DriftPanel from './league/DriftPanel.svelte';
   import GenrePanel from './league/GenrePanel.svelte';
+  import ReplayPanel from './league/ReplayPanel.svelte';
   import type { LeagueResearch } from '$lib/db/leagueResearch';
 
-  type View = 'heatmap' | 'drift' | 'genre';
+  type View = 'heatmap' | 'drift' | 'genre' | 'replay';
   const VIEWS: { key: View; label: string }[] = [
     { key: 'heatmap', label: 'Heatmap' },
     { key: 'drift', label: 'Drift' },
     { key: 'genre', label: 'Genre' },
+    { key: 'replay', label: 'Replay' },
   ];
 
   let leagues = $state<{ id: number; slug: string; name: string }[]>([]);
@@ -147,13 +149,15 @@
         <HeatmapPanel roster={d.roster} matrix={d.matrix} maxPoints={d.maxPoints} />
       {:else if view === 'drift'}
         <DriftPanel drift={d.drift} />
-      {:else}
+      {:else if view === 'genre'}
         <GenrePanel
           roster={d.roster}
           genreByPlayer={d.genreByPlayer}
           player={genrePlayer}
           onselectplayer={(p) => (genrePlayer = p)}
         />
+      {:else}
+        <ReplayPanel leagueId={d.leagueId} season={d.season} />
       {/if}
     </div>
   {/if}
