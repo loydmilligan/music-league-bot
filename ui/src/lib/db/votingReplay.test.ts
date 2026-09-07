@@ -17,12 +17,12 @@ function competitor(mlId: string, name: string, playerId: number | null = null):
       .get(mlId, name, playerId) as { id: number }
   ).id;
 }
-function newRound(): number {
+function newRound(mlRoundId = 'r-replay'): number {
   seedLeagues(db);
   const leagueId = (db.prepare("SELECT id FROM leagues WHERE slug='hip-jammers'").get() as { id: number }).id;
   const seasonId = upsertSeason(db, leagueId, 1, 'active');
   return upsertRound(db, seasonId, {
-    mlRoundId: 'r-replay', name: 'Replay Round', description: 'A theme.',
+    mlRoundId, name: 'Replay Round', description: 'A theme.',
     spotifyPlaylistUrl: '', createdAt: '2026-09-01T00:00:00Z',
   });
 }
@@ -83,4 +83,24 @@ it('windowOpensAfter is the last submission time', () => {
 
 it('returns null for an unknown round', () => {
   expect(getVotingReplay(db, 999999)).toBeNull();
+});
+
+// Two competitor rows can resolve to the same display name -- one through a
+// linked player, one through the raw competitor name. They are still two
+// people filing two ballots, and keying the grouping on the name would silently
+// fuse them into one, which intervals() would then slice into wrong deltas.
+it('does not merge two voters who resolve to the same display name', () => {
+  const sz = player('Sarah Black');
+  const viaPlayer = competitor('dup-a', 'sarahb1', sz);
+  const viaName = competitor('dup-b', 'Sarah Black');
+  const r2 = newRound('r-replay-dup');
+  submit(r2, viaPlayer, 'spotify:track:d1', 'Dup One', '2026-09-03T02:00:00Z');
+  submit(r2, viaName, 'spotify:track:d2', 'Dup Two', '2026-09-03T02:10:00Z');
+  vote(r2, viaPlayer, 'spotify:track:d2', 4, '2026-09-03T10:00:00Z');
+  vote(r2, viaName, 'spotify:track:d1', 5, '2026-09-03T11:00:00Z');
+
+  const payload = getVotingReplay(db, r2)!;
+  expect(payload.ballots).toHaveLength(2);
+  expect(payload.ballots.map((b) => b.voter)).toEqual(['Sarah Black', 'Sarah Black']);
+  expect(payload.ballots.map((b) => b.votes.length)).toEqual([1, 1]);
 });

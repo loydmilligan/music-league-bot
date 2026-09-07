@@ -19,23 +19,26 @@ export function getVotingReplay(db: Database.Database, roundId: number): ReplayP
   ).all(roundId) as ReplaySong[];
 
   const rows = db.prepare(
-    `SELECT COALESCE(p.name, c.name) AS voter, v.created_at AS castAt,
+    `SELECT v.voter_id AS voterId, COALESCE(p.name, c.name) AS voter, v.created_at AS castAt,
             v.spotify_uri AS uri, v.points, v.comment
        FROM votes v
        JOIN competitors c ON c.id = v.voter_id
        LEFT JOIN players p ON p.id = c.player_id
       WHERE v.round_id = ?
       ORDER BY v.created_at, v.id`,
-  ).all(roundId) as Array<{ voter: string; castAt: string; uri: string; points: number; comment: string | null }>;
+  ).all(roundId) as Array<{ voterId: number; voter: string; castAt: string; uri: string; points: number; comment: string | null }>;
 
-  const byVoter = new Map<string, ReplayBallot>();
+  // Keyed on voter_id, never on the resolved name: two competitor rows can
+  // resolve to the same display name, and fusing their ballots would hand the
+  // engine a merged delta it would slice up as though it were one person's.
+  const byVoter = new Map<number, ReplayBallot>();
   for (const r of rows) {
-    const existing = byVoter.get(r.voter);
+    const existing = byVoter.get(r.voterId);
     if (existing) {
       existing.votes.push({ uri: r.uri, points: r.points, comment: r.comment });
       if (r.castAt > existing.castAt) existing.castAt = r.castAt;
     } else {
-      byVoter.set(r.voter, { voter: r.voter, castAt: r.castAt, votes: [{ uri: r.uri, points: r.points, comment: r.comment }] });
+      byVoter.set(r.voterId, { voter: r.voter, castAt: r.castAt, votes: [{ uri: r.uri, points: r.points, comment: r.comment }] });
     }
   }
   const ballots = [...byVoter.values()].sort((a, b) => a.castAt.localeCompare(b.castAt));
