@@ -26,7 +26,6 @@ const require = createRequire(path.join(ROOT, 'ui/package.json'));
 const Database = require('better-sqlite3');
 const puppeteer = require('puppeteer');
 
-const LEAGUE_ID = 5; // Boarz II Men
 const FONTS_CSS = path.join(ROOT, 'digests/d/boarz-chat-superlatives/_app/fonts.css');
 
 // ── args ──────────────────────────────────────────────────────────────────────
@@ -55,7 +54,15 @@ for (const line of fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split('\n'))
 }
 
 const db = new Database(path.join(ROOT, 'data/league.db'), { readonly: true });
-const round = db.prepare('SELECT name, description FROM rounds WHERE id = ?').get(ROUND_ID);
+// The league comes from the round, not a constant: this generator used to be
+// pinned to Boarz II Men, which numbered every other league's rounds against
+// the Boarz calendar.
+const round = db
+	.prepare(
+		`SELECT r.name, r.description, se.league_id AS leagueId
+		   FROM rounds r JOIN seasons se ON se.id = r.season_id WHERE r.id = ?`,
+	)
+	.get(ROUND_ID);
 if (!round) throw new Error(`round ${ROUND_ID} not found`);
 // Round number = chronological position by voting deadline (same rule as the Tape).
 const eras = db
@@ -63,7 +70,7 @@ const eras = db
 		`SELECT r.id FROM rounds r JOIN seasons se ON r.season_id = se.id
 		  WHERE se.league_id = ? AND r.voting_deadline IS NOT NULL ORDER BY r.voting_deadline`,
 	)
-	.all(LEAGUE_ID);
+	.all(round.leagueId);
 const roundNum = eras.findIndex((e) => e.id === ROUND_ID) + 1 || ROUND_ID;
 let songs = PLAYLIST_URL
 	? []

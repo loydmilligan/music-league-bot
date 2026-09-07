@@ -15,7 +15,7 @@ home directory, and need a logged-in session (or lingering) to fire.
 | `mlb-auth-probe` | every 5 min | Music League auth heartbeat → `data/ml-auth.json` (`scripts/ml-auth-probe.mjs`). |
 | `mlb-auth-trigger` | on demand | Host-side ML auth login (`scripts/ml-auth-trigger.mjs`). No timer — started by hand when auth expires. |
 | `mlb-hil-ledes` | every 15 min | Round-end automation: generates story ledes for fresh HiL drafts and notifies (`scripts/digest-qa/hil_autorun.py`). **This is what owns round-end today.** |
-| `mlb-ytm-drop` | every 15 min | On `voting_started`, mirrors the round's playlist into YouTube Music, generates the cover, and posts to the group (`scripts/ytm-drop/run.mjs`). Boarz-only scope; target from `.env` `YTM_DROP_TARGET`. |
+| `mlb-ytm-drop` | every 15 min | On `voting_started`, mirrors the round's playlist into YouTube Music, generates the cover, and posts to the group (`scripts/ytm-drop/run.mjs`). Scope is the `LEAGUES` list in that script, one entry per league: **Boarz II Men** (target `.env` `YTM_DROP_TARGET`, posts automatically) and **Second Best** (target `.env` `YTM_DROP_TARGET_SECOND_BEST`, also builds a second playlist of the music videos named in submission comments, and **holds for approval** rather than posting — release it with `node scripts/ytm-drop/run.mjs --round N --approve`). |
 | `mlb-rollout-host` | every 5 min | Rollout host executor for script + agent cuts (`scripts/rollout/host_executor.py --once`). **Installed but not enabled** — see below. |
 
 ## The rollout host is deliberately off
