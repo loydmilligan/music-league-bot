@@ -153,3 +153,25 @@ export function analyse(payload: ReplayPayload, scenario: Scenario): ReplayAnaly
 
   return { steps, windowSize, observerPositions: pos, hunchesApplied: scenario.hunches.length, songsResolvedByHunches };
 }
+
+/**
+ * Outcome pattern, NOT a deduction: songs finishing 1-2 points below the
+ * target's own song. Kept out of analyse() because an observer cannot know it
+ * during voting -- it only exists once the round is closed.
+ */
+export function justEnough(
+  payload: ReplayPayload,
+  target: string,
+): Array<{ uri: string; submitter: string; margin: number }> {
+  const totals: Record<string, number> = {};
+  for (const b of payload.ballots) {
+    for (const v of b.votes) totals[v.uri] = (totals[v.uri] ?? 0) + v.points;
+  }
+  const mine = payload.songs.filter((s) => s.submitter === target).map((s) => totals[s.uri] ?? 0);
+  if (!mine.length) return [];
+  const top = Math.max(...mine);
+  return payload.songs
+    .filter((s) => s.submitter !== target)
+    .map((s) => ({ uri: s.uri, submitter: s.submitter, margin: top - (totals[s.uri] ?? 0) }))
+    .filter((f) => f.margin >= 1 && f.margin <= 2);
+}

@@ -131,3 +131,18 @@ describe('analyse', () => {
     expect(r.songsResolvedByHunches).toBeGreaterThanOrEqual(0);
   });
 });
+
+import { justEnough } from './deduce.js';
+
+describe('justEnough', () => {
+  it('flags songs landing just under the target player', () => {
+    const p = payload();                       // A's song s1 finishes on 2
+    const flags = justEnough(p, 'A');
+    expect(flags.map((f) => f.uri)).toContain('s2');
+    expect(flags.find((f) => f.uri === 's2')!.margin).toBeLessThanOrEqual(2);
+  });
+
+  it('ignores songs that beat the target', () => {
+    expect(justEnough(payload(), 'C').some((f) => f.margin < 0)).toBe(false);
+  });
+});
