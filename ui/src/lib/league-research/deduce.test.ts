@@ -24,3 +24,33 @@ describe('checkpoints', () => {
     expect(checkpoints(3, 4, 4)).toEqual([3]);
   });
 });
+
+import { intervals, recoveredVoters } from './deduce.js';
+import type { ReplayBallot } from './replayTypes.js';
+
+const b = (voter: string, ...pairs: Array<[string, number]>): ReplayBallot => ({
+  voter, castAt: `2026-09-0${voter.length}T00:00:00Z`,
+  votes: pairs.map(([uri, points]) => ({ uri, points, comment: null })),
+});
+
+describe('intervals', () => {
+  const ballots = [b('A', ['s1', 2]), b('B', ['s1', 1]), b('C', ['s2', 3]), b('D', ['s1', 1])];
+
+  it('an interval containing one ballot is exact', () => {
+    const ivs = intervals(ballots, [0, 1, 2]);
+    expect(ivs.map((i) => i.voters)).toEqual([['B'], ['C']]);
+    expect(ivs.every((i) => i.exact)).toBe(true);
+  });
+
+  it('an interval containing two ballots is not exact but keeps the summed delta', () => {
+    const ivs = intervals(ballots, [0, 2]);
+    expect(ivs).toHaveLength(1);
+    expect(ivs[0].voters).toEqual(['B', 'C']);
+    expect(ivs[0].exact).toBe(false);
+    expect(ivs[0].delta).toEqual({ s1: 1, s2: 3 });
+  });
+
+  it('recoveredVoters returns only the exactly-known ballots', () => {
+    expect(recoveredVoters(intervals(ballots, [0, 1, 3]))).toEqual(['B']);
+  });
+});
