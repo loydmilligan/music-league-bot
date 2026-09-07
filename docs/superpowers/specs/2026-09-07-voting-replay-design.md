@@ -41,12 +41,25 @@ Glance severity (GS) is ballot-indexed, not clock-indexed, because the app shows
 who has voted. With `N` ballots between the observer and their partner, a
 checkpoint at fraction `f` lands after ballot `myPos + ceil(f × N)`.
 
-| GS | checkpoints | ballots recovered |
-| --- | --- | --- |
-| 1GS | 0, 100 | 18% |
-| 2GS | 0, 50, 100 | 39% |
-| 3GS | 0, 25, 50, 75, 100 | 69% |
-| 4GS | after every voter | 100% |
+| GS | checkpoints | recovered, pooled | recovered, windows > 2 ballots |
+| --- | --- | --- | --- |
+| 1GS | 0, 100 | 3.8% | **0.0%** |
+| 2GS | 0, 50, 100 | 13.6% | 7.0% |
+| 3GS | 0, 25, 50, 75, 100 | 40.3% | 52.8% |
+| 4GS | after every voter | 100% | 100% |
+
+**Read the denominator.** "Pooled" is total ballots recovered over total ballots
+in-window, across every observer pair with a window of at least one ballot. An
+earlier draft of this document published 18 / 39 / 69 / 100, which was an
+unweighted mean of per-scenario ratios — 34% of observer pairs have a window of
+two ballots or fewer, and those score 53–100% at every severity because a
+one-ballot window is trivially recoverable, so they dominated the average. That
+table overstated what an observer learns across a window that matters. Corrected
+2026-09-07 after Workstream D could not reproduce it.
+
+The rightmost column is the one to reason from: over a window wider than two
+ballots, a 1GS observer recovers **nothing**. It bears directly on the case this
+feature exists to examine — Sarah Black and Jon Black have a window of N = 11.
 
 ### Submitter identification does not work
 
