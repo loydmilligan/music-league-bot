@@ -43,6 +43,11 @@
 	# OUTSIDE /d/<slug>/ so a re-render of that round can't wipe them.
 	handle /_media/* {
 		header Cache-Control "public, max-age=86400"
+		# CORS: the digest's share/save-card feature rasterizes a card to PNG with
+		# html-to-image, which inlines every image via fetch. Without this the
+		# canvas taints and the capture fails wherever the page isn't served from
+		# this same origin (e.g. the bot-ui admin view on :3002).
+		header Access-Control-Allow-Origin "*"
 		file_server
 	}
 

@@ -28,11 +28,20 @@
     coverUrl?: string | null;
     albumArtUrl?: string | null;
     album_art_url?: string | null;
+    // Optional detail-card payload (season-recap podiums). When either is
+    // present the entry becomes clickable and opens the full card instead of a
+    // bare artwork lightbox; absent → the podium behaves exactly as before.
+    fact?: string;
+    song?: { title?: string; artist?: string; art?: string | null; url?: string };
   };
 </script>
 
 <script lang="ts">
   import { page } from '$app/state';
+  // Static, NOT a dynamic import: the html-share exporter only captures assets
+  // the headless browser actually fetches, so a lazily-imported chunk never
+  // lands in the published artifact and 404s when someone taps Share.
+  import { toPng } from 'html-to-image';
   import type { VisualComponentProps } from './variants.js';
 
   let { content }: VisualComponentProps = $props();
@@ -71,8 +80,102 @@
   // detected the same way ChatMoments does it, from the URL the export path sets.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
-  // Lightbox for the small list-row thumbs. null = closed.
-  let zoom = $state<{ src: string; label: string } | null>(null);
+  // Detail card. Any entry carrying a `fact` or `song` opens the full card;
+  // otherwise it degrades to a plain artwork lightbox. null = closed.
+  let zoom = $state<PodiumSong | null>(null);
+  const openable = (s: PodiumSong) => !!(s.fact || s.song || s.coverUrl);
+
+  const safeName = (s: PodiumSong) =>
+    (s.title ?? 'card').trim().toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'card';
+
+  // The detail card node, rasterized for share/save. Same approach as
+  // bside/src/lib/shareImage.ts (Read The Room): render the CARD, not just its
+  // artwork, so what lands in the chat carries the name, the fact and the song.
+  let cardEl = $state<HTMLElement | undefined>(undefined);
+
+  // Nodes tagged data-noshot are dropped from the capture (the close button and
+  // the action row itself — chrome that shouldn't appear in a shared image).
+  const shotFilter = (n: HTMLElement) =>
+    !(n instanceof HTMLElement) || n.dataset?.noshot !== '1';
+
+  async function renderCardPng(s: PodiumSong): Promise<{ dataUrl: string; file: File } | null> {
+    if (!cardEl) return null;
+    const dataUrl = await toPng(cardEl, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: '#0d1116',
+      height: cardEl.scrollHeight,
+      filter: shotFilter,
+    });
+    const blob = await (await fetch(dataUrl)).blob();
+    return { dataUrl, file: new File([blob], `${safeName(s)}.png`, { type: 'image/png' }) };
+  }
+
+  // Share the rendered card. Native file-share where supported (mobile: the OS
+  // sheet, straight into WhatsApp), then URL share, then clipboard. Every step
+  // is best-effort — a refusal or a tainted canvas must never throw.
+  let shareState = $state<'idle' | 'busy' | 'copied' | 'error'>('idle');
+  async function shareCard(s: PodiumSong) {
+    if (shareState === 'busy') return;
+    const nav = navigator as Navigator & {
+      canShare?: (d: { files?: File[]; url?: string }) => boolean;
+      share?: (d: { files?: File[]; title?: string; text?: string; url?: string }) => Promise<void>;
+    };
+    shareState = 'busy';
+    try {
+      const shot = await renderCardPng(s);
+      if (shot && nav.canShare?.({ files: [shot.file] })) {
+        await nav.share({ files: [shot.file], title: s.title ?? '' });
+        shareState = 'idle';
+        return;
+      }
+      if (shot && !nav.share) {
+        // Desktop without the Share API: hand them the PNG instead.
+        const a = document.createElement('a');
+        a.href = shot.dataUrl;
+        a.download = shot.file.name;
+        a.click();
+        shareState = 'idle';
+        return;
+      }
+    } catch {
+      /* render failed (tainted canvas / cross-origin) — fall through */
+    }
+    try {
+      if (nav.share) {
+        await nav.share({ title: s.title ?? '', url: location.href });
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        shareState = 'copied';
+        setTimeout(() => (shareState = 'idle'), 1600);
+        return;
+      }
+    } catch {
+      /* user dismissed the sheet */
+    }
+    shareState = 'idle';
+  }
+
+  // Save the rendered card as a PNG.
+  let saveState = $state<'idle' | 'busy'>('idle');
+  async function saveCard(s: PodiumSong) {
+    if (saveState === 'busy') return;
+    saveState = 'busy';
+    try {
+      const shot = await renderCardPng(s);
+      if (shot) {
+        const a = document.createElement('a');
+        a.href = shot.dataUrl;
+        a.download = shot.file.name;
+        a.click();
+      }
+    } catch {
+      /* fall back to the raw artwork below */
+      const url = coverOf(s);
+      if (url) window.open(url, '_blank', 'noopener');
+    }
+    saveState = 'idle';
+  }
 </script>
 
 <div class="apod" data-component="album-podium">
@@ -83,14 +186,23 @@
         {@const pts = ptsOf(s)}
         <article class="apod-card {medalClass(rank)}">
           <span class="apod-medal">{medalWord(rank)}</span>
-          <div class="apod-art">
+          <svelte:element
+            this={openable(s) && !isExport ? 'button' : 'div'}
+            class="apod-art"
+            class:is-openable={openable(s) && !isExport}
+            type={openable(s) && !isExport ? 'button' : undefined}
+            aria-label={openable(s) && !isExport
+              ? `Open details for ${s.title ?? 'this entry'}`
+              : undefined}
+            onclick={openable(s) && !isExport ? () => (zoom = s) : undefined}
+          >
             {#if s._cover}
               <img src={s._cover} alt={`${s.title ?? ''} cover`} loading="lazy" />
             {:else}
               <span class="apod-art-fallback" aria-hidden="true">{initial(s)}</span>
             {/if}
             <span class="apod-rank-badge">{rank}</span>
-          </div>
+          </svelte:element>
           <div class="apod-cap">
             <span class="apod-title" title={s.title ?? ''}>{s.title ?? ''}</span>
             <span class="apod-artist" title={s.artist ?? ''}>{s.artist ?? ''}</span>
@@ -118,17 +230,21 @@
         {@const pts = ptsOf(s)}
         <li class="apod-row">
           <span class="apod-row-rank">{String(s._rank).padStart(2, '0')}</span>
-          {#if s._cover && !isExport}
-            <!-- click-to-enlarge: the row thumb is small by design, so the
-                 artwork gets a lightbox. Suppressed in export (a PNG can't
-                 open a dialog) — see isExport. -->
+          {#if openable(s) && !isExport}
+            <!-- click-to-open: the row thumb is small by design, so the entry
+                 gets a detail card (artwork + fact + signature song). Suppressed
+                 in export (a PNG can't open a dialog) — see isExport. -->
             <button
               type="button"
               class="apod-row-art is-zoomable"
-              aria-label={`Enlarge artwork for ${s.title ?? 'this entry'}`}
-              onclick={() => (zoom = { src: s._cover!, label: s.title ?? '' })}
+              aria-label={`Open details for ${s.title ?? 'this entry'}`}
+              onclick={() => (zoom = s)}
             >
-              <img src={s._cover} alt="" loading="lazy" />
+              {#if s._cover}
+                <img src={s._cover} alt="" loading="lazy" />
+              {:else}
+                <span class="apod-art-fallback sm" aria-hidden="true">{initial(s)}</span>
+              {/if}
             </button>
           {:else}
             <div class="apod-row-art">
@@ -167,12 +283,54 @@
     class="apod-lightbox"
     role="dialog"
     aria-modal="true"
-    aria-label={zoom.label ? `Artwork: ${zoom.label}` : 'Artwork'}
+    aria-label={zoom.title ? `Details: ${zoom.title}` : 'Details'}
     tabindex="-1"
     onclick={() => (zoom = null)}
   >
-    <img src={zoom.src} alt={zoom.label ?? ''} />
-    {#if zoom.label}<p class="apod-lightbox-cap">{zoom.label}</p>{/if}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="apod-detail" bind:this={cardEl} onclick={(e) => e.stopPropagation()}>
+      <button class="apod-detail-x" data-noshot="1" type="button" aria-label="Close" onclick={() => (zoom = null)}
+        >✕</button
+      >
+      {#if coverOf(zoom)}
+        <img class="apod-detail-art" src={coverOf(zoom)} alt={`${zoom.title ?? ''} artwork`} />
+      {/if}
+      <div class="apod-detail-body">
+        <p class="apod-detail-eyebrow">
+          {#if zoom.rank ?? zoom.position}#{zoom.rank ?? zoom.position} ·{/if}
+          {ptsOf(zoom)}<span class="apod-pts-unit">pt</span>
+        </p>
+        <h3 class="apod-detail-title">{zoom.title ?? ''}</h3>
+        {#if zoom.artist}<p class="apod-detail-sub">{zoom.artist}</p>{/if}
+        {#if zoom.fact}<p class="apod-detail-fact">{zoom.fact}</p>{/if}
+        {#if zoom.song}
+          <a
+            class="apod-detail-song"
+            href={zoom.song.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {#if zoom.song.art}<img src={zoom.song.art} alt="" loading="lazy" />{/if}
+            <span class="apod-detail-song-cap">
+              <span class="apod-detail-song-label">signature song</span>
+              <span class="apod-detail-song-title">{zoom.song.title}</span>
+              <span class="apod-detail-song-artist">{zoom.song.artist}</span>
+            </span>
+            <span class="apod-detail-song-go" aria-hidden="true">↗</span>
+          </a>
+        {/if}
+        {#if coverOf(zoom)}
+          <div class="apod-detail-acts" data-noshot="1">
+            <button type="button" class="apod-act" onclick={() => shareCard(zoom!)}>
+              {shareState === 'busy' ? '…' : shareState === 'copied' ? '✓ link copied' : '↗ Share card'}
+            </button>
+            <button type="button" class="apod-act" onclick={() => saveCard(zoom!)}>
+              {saveState === 'busy' ? '…' : '⤓ Save card'}
+            </button>
+          </div>
+        {/if}
+      </div>
+    </div>
   </div>
 {/if}
 
@@ -418,19 +576,168 @@
     backdrop-filter: blur(2px);
     cursor: zoom-out;
   }
-  .apod-lightbox img {
-    max-width: min(560px, 88vw);
-    max-height: 78vh;
-    width: auto;
-    height: auto;
-    border-radius: var(--r-2);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  .apod-detail {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    width: min(720px, 92vw);
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--ink-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3, 12px);
+    box-shadow: 0 28px 72px rgba(0, 0, 0, 0.6);
+    cursor: default;
+    text-align: left;
   }
-  .apod-lightbox-cap {
-    margin: 0;
-    font: 600 13px/1.3 var(--font-mono);
+  @media (max-width: 560px) {
+    .apod-detail {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+      padding: 16px;
+    }
+  }
+  .apod-detail-x {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(7, 9, 12, 0.7);
     color: var(--fg-muted);
-    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .apod-detail-x:hover {
+    color: var(--fg);
+  }
+  .apod-detail-art {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--r-2);
+    border: 1px solid var(--line);
+    display: block;
+  }
+  .apod-detail-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .apod-detail-eyebrow {
+    margin: 0;
+    font: 700 11px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .apod-detail-title {
+    margin: 0;
+    font: 700 24px/1.15 var(--font-body);
+    color: var(--fg-bright, var(--ink-9));
+  }
+  .apod-detail-sub {
+    margin: 0;
+    font: 600 13px/1.35 var(--font-mono);
+    color: var(--mash-pulp);
+  }
+  .apod-detail-fact {
+    margin: 6px 0 0;
+    font: 400 14px/1.55 var(--font-body);
+    color: var(--fg, var(--ink-8));
+  }
+  .apod-detail-song {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    background: var(--ink-2);
+    text-decoration: none;
+    color: inherit;
+  }
+  .apod-detail-song:hover {
+    border-color: var(--mash-pulp);
+  }
+  .apod-detail-song img {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--r-1);
+    object-fit: cover;
+    display: block;
+  }
+  .apod-detail-song-cap {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .apod-detail-song-label {
+    font: 700 9.5px/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .apod-detail-song-title {
+    font: 600 13px/1.25 var(--font-body);
+    color: var(--fg-bright, var(--ink-9));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .apod-detail-song-artist {
+    font: 400 12px/1.25 var(--font-body);
+    color: var(--fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .apod-detail-song-go {
+    color: var(--fg-quiet);
+    font-size: 14px;
+  }
+  .apod-detail-acts {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .apod-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--ink-2);
+    color: var(--fg, var(--ink-8));
+    font: 600 12px/1 var(--font-mono);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .apod-act:hover {
+    border-color: var(--mash-pulp);
+    color: var(--fg-bright, var(--ink-9));
+  }
+  .apod-art.is-openable {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    display: block;
+    width: 100%;
   }
   .apod-row-art {
     width: 64px;
