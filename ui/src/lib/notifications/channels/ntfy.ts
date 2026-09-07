@@ -1,5 +1,5 @@
 import {
-  publish, buildApprovalNotification, buildReviewNotification,
+  publish, buildApprovalNotification, buildReviewNotification, buildVideoReviewNotification,
   type NtfyConfig, type Notification,
 } from '$lib/digest/ntfy.js';
 import type { NtfyChannelConfig } from '$lib/notifications/config.js';
@@ -26,6 +26,14 @@ export const ntfyChannel: Channel = {
         league: p.title, round: p.message, reviewUrl: p.link ?? '',
         approveUrl: p.approval.approveUrl ?? '', denyUrl: p.approval.denyUrl, editUrl: p.approval.editUrl,
         token: p.approval.token, bearer: c.token,
+      });
+    } else if (p.approval?.kind === 'video_review') {
+      notif = buildVideoReviewNotification({
+        league: p.title, round: p.message, reviewUrl: p.link ?? '',
+        approveUrl: p.approval.approveUrl ?? '', denyUrl: p.approval.denyUrl,
+        snoozeUrl: p.approval.snoozeUrl ?? '', token: p.approval.token,
+        needsDecision: p.approval.needsDecision ?? 0, ready: p.approval.ready ?? 0,
+        bearer: c.token,
       });
     } else if (p.approval?.kind === 'review') {
       notif = buildReviewNotification({

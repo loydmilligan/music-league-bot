@@ -27,11 +27,33 @@ export interface VideoPlaylistConfig {
   /** Search YouTube for submissions with no usable link. */
   useSearch: boolean;
   /**
-   * Confidence (0-100) at or above which a SEARCH result is accepted without
-   * review. Below it the pick is excluded from the playlist and listed in the
-   * approval report instead. Ignored when useSearch is false.
+   * Confidence (0-100) at or above which a SEARCH result goes in without being
+   * asked about. Ignored when useSearch is false.
    */
   searchAutoAcceptPct: number;
+  /**
+   * Lower bound of the human-in-the-loop band. A search result scoring at or
+   * above this but BELOW searchAutoAcceptPct is a real question — good enough
+   * to be plausible, not good enough to trust — so it blocks approval until a
+   * human answers it. Below this, results are long shots: offered as
+   * suggestions, excluded by default, and never blocking.
+   *
+   * Always <= searchAutoAcceptPct; normalizing clamps it if a caller inverts
+   * the pair, because a HiL floor above the auto-accept ceiling would make the
+   * review band empty and silently swallow every borderline pick.
+   */
+  hilPct: number;
+}
+
+/** Which bucket a resolved pick falls in — see `hilPct`. */
+export type VideoPickBand = 'certain' | 'auto' | 'review' | 'suggestion';
+
+/** Classify a pick. `fromComment` is the submitter's own link and outranks any score. */
+export function bandForScore(score: number, cfg: VideoPlaylistConfig, fromComment = false): VideoPickBand {
+  if (fromComment) return 'certain';
+  if (score >= cfg.searchAutoAcceptPct) return 'auto';
+  if (score >= cfg.hilPct) return 'review';
+  return 'suggestion';
 }
 
 /**
@@ -49,9 +71,17 @@ export const DEFAULT_VIDEO_PLAYLIST_CONFIG: VideoPlaylistConfig = {
   useComments: true,
   useSearch: true,
   searchAutoAcceptPct: 70,
+  hilPct: 40,
 };
 
 export const RECOMMENDED_AUTO_ACCEPT_PCT = 70;
+/**
+ * 40 is the recommended HiL floor, from the live SB R141 run: the borderline
+ * picks there scored 55 (an artist's own channel whose title didn't match, and
+ * a correctly-titled video on someone else's channel) and both deserved a
+ * human; everything at 30 and below was a cover, a fan upload or unrelated.
+ */
+export const RECOMMENDED_HIL_PCT = 40;
 export const VIDEO_PLAYLIST_DEFAULTS_KEY = 'video_playlist_defaults';
 
 const asBool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
@@ -73,11 +103,17 @@ export function normalizeVideoPlaylistConfig(
   base: VideoPlaylistConfig = DEFAULT_VIDEO_PLAYLIST_CONFIG,
 ): VideoPlaylistConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const searchAutoAcceptPct = asPct(r.searchAutoAcceptPct, base.searchAutoAcceptPct);
   return {
     enabled: asBool(r.enabled, base.enabled),
     useComments: asBool(r.useComments, base.useComments),
     useSearch: asBool(r.useSearch, base.useSearch),
-    searchAutoAcceptPct: asPct(r.searchAutoAcceptPct, base.searchAutoAcceptPct),
+    searchAutoAcceptPct,
+    // Clamped, not rejected: these arrive as two independent field saves from
+    // the UI, so the pair is transiently inverted every time the auto-accept
+    // value is dragged below the HiL one. Throwing there would block a legal
+    // edit halfway through.
+    hilPct: Math.min(asPct(r.hilPct, base.hilPct), searchAutoAcceptPct),
   };
 }
 

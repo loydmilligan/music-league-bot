@@ -13,12 +13,14 @@
   let {
     config,
     recommendedPct = 70,
+    recommendedHilPct = 40,
     disabled = false,
     idPrefix = 'vp',
     onchange,
   }: {
     config: VideoPlaylistConfig;
     recommendedPct?: number;
+    recommendedHilPct?: number;
     disabled?: boolean;
     idPrefix?: string;
     onchange: (patch: Partial<VideoPlaylistConfig>) => void;
@@ -32,15 +34,27 @@
     config.searchAutoAcceptPct < 0 ||
     config.searchAutoAcceptPct > 100,
   );
+  // Saved as two independent fields, so the pair is transiently inverted while
+  // the auto-accept box is being edited downward. Clamped on save; explained
+  // here rather than blocked, so the edit can be finished.
+  const pairInverted = $derived(config.hilPct > config.searchAutoAcceptPct);
+
+  const scoring =
+    'Scoring: artist channel +45, "official video" in the title +25, track name in the title +20, top result +10.';
 
   const thresholdHint =
-    `Confidence at or above which a searched video is added without you reviewing it. ` +
+    `At or above this, a searched video goes straight in without asking you. ` +
     `${recommendedPct} is recommended: high enough to reject the covers and fan uploads search ` +
     `returns for songs that have no real music video, low enough to keep an upload on the ` +
-    `artist's own or VEVO channel that isn't explicitly titled "official video". ` +
-    `Scoring: artist channel +45, "official video" in the title +25, track name in the title +20, ` +
-    `top result +10. Anything below the threshold is still found and reported — it just isn't ` +
-    `added to the playlist automatically.`;
+    `artist's own or VEVO channel that isn't explicitly titled "official video". ${scoring}`;
+
+  const hilHint =
+    `The floor of the "ask me" band. A video scoring between this and the auto-accept level ` +
+    `is plausible but not certain, so it waits for you on the review page and blocks posting ` +
+    `until you answer it. Below this, videos are long shots: offered as suggestions, left out ` +
+    `unless you pick one, and never blocking. ${recommendedHilPct} is recommended — in the ` +
+    `real R141 round the two 55s genuinely needed a human, and everything at 30 or below was ` +
+    `a cover or a fan upload. ${scoring}`;
 </script>
 
 <div class="space-y-3">
@@ -105,8 +119,35 @@
       </span>
     </div>
 
+    <div class="flex items-center gap-3" class:opacity-40={!config.useSearch}>
+      <label class="text-sm text-fg-muted" for="{idPrefix}-hil">Ask me from</label>
+      <input
+        id="{idPrefix}-hil"
+        type="number"
+        min="0"
+        max="100"
+        step="5"
+        value={config.hilPct}
+        disabled={disabled || !config.enabled || !config.useSearch}
+        onchange={(e) => onchange({ hilPct: Number(e.currentTarget.value) })}
+        title={hilHint}
+        class="w-20 bg-bg-elevated border border-border-muted rounded-md px-2 py-1 text-sm font-mono text-fg"
+      />
+      <span class="text-xs text-fg-dim" title={hilHint}>
+        % · {recommendedHilPct} recommended
+      </span>
+    </div>
+
     {#if config.enabled && config.useSearch}
-      <p class="text-xs text-fg-dim pl-0 max-w-prose">{thresholdHint}</p>
+      <div class="text-xs text-fg-dim max-w-prose space-y-1">
+        <p>
+          <span class="text-fg-muted">{config.searchAutoAcceptPct}% and up</span> — added automatically.
+          <span class="text-fg-muted">{config.hilPct}–{Math.max(config.hilPct, config.searchAutoAcceptPct - 1)}%</span> —
+          waits for your call and blocks posting.
+          <span class="text-fg-muted">Under {config.hilPct}%</span> — offered as a suggestion, left out unless you pick it.
+        </p>
+        <p>{scoring}</p>
+      </div>
     {/if}
   </div>
 
@@ -117,5 +158,11 @@
   {/if}
   {#if pctInvalid}
     <p class="text-xs text-ember">Auto-accept must be a whole number from 0 to 100.</p>
+  {/if}
+  {#if pairInverted}
+    <p class="text-xs text-amber">
+      "Ask me from" is above auto-accept, so nothing would ever be asked about — it will be
+      saved as {config.searchAutoAcceptPct}%.
+    </p>
   {/if}
 </div>

@@ -949,6 +949,7 @@
                           <VideoPlaylistFields
                             config={videoConfigFor(round)}
                             recommendedPct={70}
+                            recommendedHilPct={40}
                             disabled={!!videoSaving[round.id]}
                             idPrefix="vp-round-{round.id}"
                             onchange={(patch) => saveVideoConfig(round.id, patch)}
@@ -1057,6 +1058,7 @@
                         <VideoPlaylistFields
                           config={videoConfigFor(round)}
                           recommendedPct={70}
+                            recommendedHilPct={40}
                           disabled={!!videoSaving[round.id]}
                           idPrefix="vp-mround-{round.id}"
                           onchange={(patch) => saveVideoConfig(round.id, patch)}

@@ -57,6 +57,7 @@
   // them (per-round editing lives on the round panel and the round modal).
   let vpDefaults = $state<VideoPlaylistConfig>({ ...DEFAULT_VIDEO_PLAYLIST_CONFIG });
   let vpRecommended = $state(70);
+  let vpRecommendedHil = $state(40);
   let vpSaving = $state(false);
   let vpSaved = $state(false);
   let vpError = $state('');
@@ -65,9 +66,10 @@
     try {
       const r = await fetch('/api/settings/video-playlist');
       if (r.ok) {
-        const body = await r.json() as { config: VideoPlaylistConfig; recommendedPct: number };
+        const body = await r.json() as { config: VideoPlaylistConfig; recommendedPct: number; recommendedHilPct: number };
         vpDefaults = { ...body.config };
         vpRecommended = body.recommendedPct;
+        vpRecommendedHil = body.recommendedHilPct ?? 40;
       }
     } catch { /* silently ignore — stays at shipped defaults */ }
   }
@@ -1316,6 +1318,7 @@
   <VideoPlaylistFields
     config={vpDefaults}
     recommendedPct={vpRecommended}
+    recommendedHilPct={vpRecommendedHil}
     disabled={vpSaving}
     idPrefix="vp-default"
     onchange={saveVideoPlaylistDefaults}

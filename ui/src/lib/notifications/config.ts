@@ -1,9 +1,9 @@
 import type Database from 'better-sqlite3';
 
-export type AlertType = 'pipeline_failure' | 'ml_auth_expired' | 'digest_ready' | 'digest_sent';
+export type AlertType = 'pipeline_failure' | 'ml_auth_expired' | 'digest_ready' | 'digest_sent' | 'video_review';
 export type ChannelId = 'ntfy' | 'whatsapp';
 
-export const ALERT_TYPES: AlertType[] = ['pipeline_failure', 'ml_auth_expired', 'digest_ready', 'digest_sent'];
+export const ALERT_TYPES: AlertType[] = ['pipeline_failure', 'ml_auth_expired', 'digest_ready', 'digest_sent', 'video_review'];
 export const CHANNEL_IDS: ChannelId[] = ['ntfy', 'whatsapp'];
 
 export interface NtfyChannelConfig { url: string; topic: string; token: string }

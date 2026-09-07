@@ -26,6 +26,7 @@
     ml_auth_expired: 'Music League auth expired',
     digest_ready: 'Digest ready',
     digest_sent: 'Digest sent',
+    video_review: 'Music-video playlist needs review',
   };
 
   function isConfigured(ch: ChannelId): boolean {

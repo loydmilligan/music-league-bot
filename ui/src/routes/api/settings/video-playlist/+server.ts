@@ -5,13 +5,14 @@ import {
   getVideoPlaylistDefaults,
   updateVideoPlaylistDefaults,
   RECOMMENDED_AUTO_ACCEPT_PCT,
+  RECOMMENDED_HIL_PCT,
   type VideoPlaylistConfig,
 } from '$lib/db/videoPlaylist.js';
 
 // GET /api/settings/video-playlist → { config, recommendedPct }
 // These are the DEFAULTS every round inherits until it overrides them.
 export const GET: RequestHandler = () => {
-  return json({ config: getVideoPlaylistDefaults(getDb()), recommendedPct: RECOMMENDED_AUTO_ACCEPT_PCT });
+  return json({ config: getVideoPlaylistDefaults(getDb()), recommendedPct: RECOMMENDED_AUTO_ACCEPT_PCT, recommendedHilPct: RECOMMENDED_HIL_PCT });
 };
 
 // PUT /api/settings/video-playlist  body: { config: Partial<VideoPlaylistConfig> }
@@ -23,5 +24,5 @@ export const PUT: RequestHandler = async ({ request }) => {
     throw error(400, 'body.config must be an object');
   }
   const saved = updateVideoPlaylistDefaults(getDb(), body.config as Partial<VideoPlaylistConfig>);
-  return json({ config: saved, recommendedPct: RECOMMENDED_AUTO_ACCEPT_PCT });
+  return json({ config: saved, recommendedPct: RECOMMENDED_AUTO_ACCEPT_PCT, recommendedHilPct: RECOMMENDED_HIL_PCT });
 };

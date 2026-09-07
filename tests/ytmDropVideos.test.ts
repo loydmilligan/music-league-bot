@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error — plain .mjs module, no types
-import { extractVideoIds, channelMatchesArtist, resolveVideoPicks, scoreSearchHit } from '../scripts/ytm-drop/videos.mjs';
+import { extractVideoIds, channelMatchesArtist, resolveVideoPicks, scoreSearchHit, undecidedPicks } from '../scripts/ytm-drop/videos.mjs';
 
 describe('extractVideoIds', () => {
   it('reads the three link shapes people actually paste', () => {
@@ -68,74 +68,109 @@ describe('scoreSearchHit', () => {
 
 describe('resolveVideoPicks', () => {
   const subs = [
-    { title: 'Au Pays du Cocaine', artists: 'Geese', comment: 'https://youtu.be/RGE-JRsJ2uo\n\nthe baby one' },
-    { title: 'Smooth Sailin', artists: 'Leon Bridges', comment: 'no link here' },
-    { title: "Barrett's Privateers", artists: 'Stan Rogers', comment: null },
+    { title: 'Au Pays du Cocaine', artists: 'Geese', spotifyUri: 'u:1', comment: 'https://youtu.be/RGE-JRsJ2uo\n\nthe baby one' },
+    { title: 'Smooth Sailin', artists: 'Leon Bridges', spotifyUri: 'u:2', comment: 'no link here' },
+    { title: "Barrett's Privateers", artists: 'Stan Rogers', spotifyUri: 'u:3', comment: null },
   ];
-  // Every song has a search result available, so a pick that comes from the
-  // comment is distinguishable only by NOT being the search id. And the two
-  // searched songs land on OPPOSITE sides of the default threshold.
+  // Every song has search results, so a comment pick is distinguishable only by
+  // NOT being the search id. The two searched songs land on opposite sides of
+  // the default auto-accept line, and the third band is reachable too.
   const ytSearch = vi.fn(async (q: string) => {
     if (q.startsWith('Au Pays')) return [{ videoId: 'SEARCHHIT01', title: 'Au Pays', channel: 'Some Rando' }];
-    if (q.startsWith('Smooth')) return [{ videoId: 'HYplnRjMVhM', title: "Leon Bridges - Smooth Sailin", channel: 'LeonBridgesVEVO' }];
-    return [{ videoId: '1WDX4PAH1L0', title: "Barrett's Privateers", channel: 'The Wellermen' }];
+    if (q.startsWith('Smooth')) return [
+      { videoId: 'HYplnRjMVhM', title: 'Leon Bridges - Smooth Sailin', channel: 'LeonBridgesVEVO' },
+      { videoId: 'ALT2', title: 'Smooth Sailin live', channel: 'Bootlegs' },
+    ];
+    return [
+      { videoId: '1WDX4PAH1L0', title: "Barrett's Privateers", channel: 'The Wellermen' },
+      { videoId: 'ALT3', title: 'Barrett Privateers sea shanty', channel: 'Shanty Hub' },
+    ];
   });
 
   it('prefers the submitter link and never searches for that song', async () => {
     ytSearch.mockClear();
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0 });
-    expect(picks[0]).toMatchObject({ videoId: 'RGE-JRsJ2uo', source: 'comment', score: 100, accepted: true });
+    expect(picks[0]).toMatchObject({ band: 'certain', source: 'comment', chosen: 'RGE-JRsJ2uo', included: true, decided: true });
     expect(ytSearch).toHaveBeenCalledTimes(2);
     expect(ytSearch.mock.calls.some((c) => String(c[0]).startsWith('Au Pays'))).toBe(false);
   });
 
-  it('accepts above the threshold and holds back below it', async () => {
-    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 70 });
-    expect(picks[1]).toMatchObject({ videoId: 'HYplnRjMVhM', source: 'search', accepted: true });
-    expect(picks[2]).toMatchObject({ videoId: '1WDX4PAH1L0', source: 'search', accepted: false });
-    expect(picks[2].reason).toContain('below the 70');
+  it('bands a strong hit auto (included) and a weak one suggestion (excluded)', async () => {
+    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 70, hilPct: 40 });
+    expect(picks[1]).toMatchObject({ band: 'auto', chosen: 'HYplnRjMVhM', included: true, decided: true });
+    // 30 < hilPct 40 → a long shot: nothing preselected, nothing included.
+    expect(picks[2]).toMatchObject({ band: 'suggestion', chosen: null, included: false, decided: true });
   });
 
-  it('moves the line when the threshold moves', async () => {
-    const loose = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 25 });
-    expect(loose[2].accepted).toBe(true);
-    const strict = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 90 });
-    expect(strict[1].accepted).toBe(false);
+  it('bands the middle as review — preselected but NOT decided, and not included', async () => {
+    // hil 25 / auto 70 puts the 30-scoring Wellermen hit in the review band.
+    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 70, hilPct: 25 });
+    expect(picks[2]).toMatchObject({ band: 'review', chosen: '1WDX4PAH1L0', included: false, decided: false });
+    expect(undecidedPicks(picks)).toHaveLength(1);
+  });
+
+  it('offers alternatives, best first, capped', async () => {
+    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0 });
+    const c = picks[2].candidates;
+    expect(c.length).toBeGreaterThan(1);
+    expect(c[0].score).toBeGreaterThanOrEqual(c[1].score);
+    expect(c.map((x: { videoId: string }) => x.videoId)).toContain('ALT3');
+    const capped = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, candidateLimit: 1 });
+    expect(capped[2].candidates).toHaveLength(1);
+  });
+
+  it('a comment pick carries a single candidate so the UI has something to show', async () => {
+    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0 });
+    expect(picks[0].candidates).toEqual([{ videoId: 'RGE-JRsJ2uo', title: 'Au Pays du Cocaine', channel: null, score: 100 }]);
   });
 
   it('useComments:false ignores the submitter link and searches instead', async () => {
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, useComments: false });
-    expect(picks[0]).toMatchObject({ videoId: 'SEARCHHIT01', source: 'search' });
+    // The submitter's link is gone; what search found takes its place. That hit
+    // scores 10 (nothing but the rank bonus), so it lands as an unselected long
+    // shot rather than quietly replacing the link the submitter chose.
+    expect(picks[0].source).toBe('search');
+    expect(picks[0].band).toBe('suggestion');
+    expect(picks[0].chosen).toBeNull();
+    expect(picks[0].candidates.map((c: { videoId: string }) => c.videoId)).toEqual(['SEARCHHIT01']);
+    expect(picks[0].candidates.map((c: { videoId: string }) => c.videoId)).not.toContain('RGE-JRsJ2uo');
   });
 
   it('useSearch:false leaves the gaps empty and never calls search', async () => {
     const spy = vi.fn(async () => [{ videoId: 'X', title: 't', channel: 'c' }]);
     const picks = await resolveVideoPicks(subs, spy, { pacingMs: 0, useSearch: false });
-    expect(picks[0].videoId).toBe('RGE-JRsJ2uo');
-    expect(picks[1]).toMatchObject({ videoId: null, accepted: false });
+    expect(picks[0].chosen).toBe('RGE-JRsJ2uo');
+    expect(picks[1]).toMatchObject({ chosen: null, included: false, decided: true });
     expect(picks[1].reason).toContain('search is off');
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('reports a hole rather than dropping the song when search finds nothing', async () => {
+  it('never leaves a hole undecided — an empty result must not block approval', async () => {
     const picks = await resolveVideoPicks([subs[2]], async () => [], { pacingMs: 0 });
-    expect(picks).toHaveLength(1);
-    expect(picks[0]).toMatchObject({ videoId: null, source: null, accepted: false, reason: 'search found nothing' });
+    expect(picks[0]).toMatchObject({ chosen: null, included: false, decided: true, reason: 'search found nothing' });
+    expect(undecidedPicks(picks)).toHaveLength(0);
   });
 
-  it('keeps going when one search throws', async () => {
+  it('keeps going when one search throws, and that hole does not block either', async () => {
     const boom = vi.fn(async (q: string) => {
       if (q.startsWith('Smooth')) throw new Error('search HTTP 429');
       return [{ videoId: 'OK1', title: "Barrett's Privateers (Official Video)", channel: 'Stan Rogers' }];
     });
     const picks = await resolveVideoPicks(subs, boom, { pacingMs: 0 });
-    expect(picks[1].videoId).toBeNull();
+    expect(picks[1]).toMatchObject({ chosen: null, decided: true });
     expect(picks[1].reason).toContain('429');
-    expect(picks[2].videoId).toBe('OK1');
+    expect(picks[2].chosen).toBe('OK1');
+    expect(undecidedPicks(picks)).toHaveLength(0);
   });
 
   it('returns one entry per submission even when everything fails', async () => {
     const picks = await resolveVideoPicks(subs, async () => { throw new Error('down'); }, { pacingMs: 0 });
     expect(picks).toHaveLength(subs.length);
+  });
+
+  it('an inverted threshold pair cannot create an empty review band', async () => {
+    // hilPct above autoAcceptPct is clamped, so nothing falls through the gap.
+    const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 50, hilPct: 90 });
+    for (const p of picks) expect(['certain', 'auto', 'suggestion']).toContain(p.band);
   });
 });

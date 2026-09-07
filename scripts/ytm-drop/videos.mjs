@@ -16,6 +16,7 @@
  * is the fetcher. See that script's SAFETY block — the ballot is GET-only.
  */
 import { execFileSync } from 'node:child_process';
+import { bandForScore } from './videoConfig.mjs';
 
 /** Every YouTube video id in a blob of text, in order, de-duplicated. */
 export function extractVideoIds(text) {
@@ -79,6 +80,19 @@ export function fetchBallotComments(db, round, opts = {}) {
 const squash = (x) => String(x ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 /**
+ * Does this channel plausibly belong to the artist? Covers the artist's own
+ * channel and the VEVO/label/Topic variants ("LeonBridgesVEVO",
+ * "PixiesOfficial"), all of which drop the spaces.
+ */
+export function channelMatchesArtist(channel, artists) {
+	const primary = (artists ?? '').split(',')[0].trim().toLowerCase();
+	if (!primary || !channel) return false;
+	const c = squash(channel);
+	const a = squash(primary);
+	return a.length >= 3 && (c.includes(a) || channel.toLowerCase().includes(primary));
+}
+
+/**
  * Confidence 0-100 that a search result really is this track's music video.
  *
  * Deliberately a small, legible sum rather than a black box, because the number
@@ -112,57 +126,52 @@ export function scoreSearchHit(hit, track, rank = 0) {
 }
 
 /**
- * One search for an official music video, returning the best-scoring result.
+ * Search for a track's music video and return the plausible candidates, best
+ * first, each with its score.
+ *
+ * Returns a LIST rather than a winner because the review UI offers alternatives
+ * for anything it isn't sure about: search's second result is often the right
+ * one when the first is a cover, and re-running the search later to find that
+ * out would cost another 100 quota units per song.
  *
  * Deliberately NOT the audio-first search resolveVideo() in run.mjs uses: that
  * one prefers "- Topic" channels, which are auto-generated audio uploads with a
  * still image — the exact opposite of what a music-video playlist wants.
  */
-async function searchOfficialVideo(ytSearch, track) {
+async function searchVideoCandidates(ytSearch, track, limit = 3) {
 	const items = await ytSearch(`${track.title} ${track.artists} official music video`);
-	if (!items?.length) return null;
+	if (!items?.length) return [];
 	const notTopic = items.filter((i) => !/ - Topic$/.test(i.channel ?? ''));
 	const pool = notTopic.length ? notTopic : items;
-	let best = null;
-	for (let i = 0; i < pool.length; i++) {
-		const score = scoreSearchHit(pool[i], track, i);
-		if (!best || score > best.score) best = { ...pool[i], score };
-	}
-	return best;
+	return pool
+		.map((it, i) => ({ videoId: it.videoId, title: it.title ?? '', channel: it.channel ?? '', score: scoreSearchHit(it, track, i) }))
+		.sort((a, b) => b.score - a.score)
+		.slice(0, limit);
 }
 
 /**
- * Does this channel plausibly belong to the artist? Covers the artist's own
- * channel and the VEVO/label variants ("LeonBridgesVEVO", "PixiesOfficial"),
- * both of which drop the spaces.
- */
-export function channelMatchesArtist(channel, artists) {
-	const primary = (artists ?? '').split(',')[0].trim().toLowerCase();
-	if (!primary || !channel) return false;
-	const squash = (x) => x.toLowerCase().replace(/[^a-z0-9]+/g, '');
-	const c = squash(channel);
-	const a = squash(primary);
-	return a.length >= 3 && (c.includes(a) || channel.toLowerCase().includes(primary));
-}
-
-/**
- * Resolve one pick per submission, under the round's video config.
+ * Resolve the video candidates for each submission, under the round's config.
  *
- * Returns a manifest in submission order. Every submission produces exactly one
- * entry — a pick that was searched and scored below the auto-accept threshold
- * comes back with `accepted: false` rather than vanishing, so the approval
- * report can show what was found and rejected.
+ * Returns one entry per submission, in submission order. Nothing is discarded:
+ * a song search got wrong still comes back with its candidates so the review
+ * page can offer them, and a song with no candidates at all comes back empty
+ * rather than vanishing.
  *
- *   source     'comment' | 'search' | null
- *   score      0-100; a submitter's own link is 100 by definition
- *   accepted   whether it belongs in the playlist
- *   reason     why not, when accepted is false
+ *   source      'comment' | 'search' | null
+ *   candidates  [{ videoId, title, channel, score }], best first
+ *   chosen      videoId currently selected, or null
+ *   band        'certain' | 'auto' | 'review' | 'suggestion' (see videoConfig)
+ *   included    whether it goes in the playlist as things stand
+ *   decided     false only for 'review', which blocks approval until answered
  */
 export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 	const pacingMs = opts.pacingMs ?? 1500;
 	const useComments = opts.useComments !== false;
 	const useSearch = opts.useSearch !== false;
-	const autoAcceptPct = opts.autoAcceptPct ?? 70;
+	const cfg = {
+		searchAutoAcceptPct: opts.autoAcceptPct ?? 70,
+		hilPct: Math.min(opts.hilPct ?? 40, opts.autoAcceptPct ?? 70),
+	};
 	const picks = [];
 	let searched = 0;
 	for (const sub of submissions) {
@@ -170,40 +179,59 @@ export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 		if (fromComment) {
 			// The submitter's own link. Not scored and not thresholded — they
 			// chose it, and second-guessing that is not the fallback's job.
-			picks.push({ ...sub, videoId: fromComment, source: 'comment', channel: null, score: 100, accepted: true, reason: null });
+			picks.push({
+				...sub, source: 'comment', score: 100, band: 'certain',
+				candidates: [{ videoId: fromComment, title: sub.title, channel: null, score: 100 }],
+				chosen: fromComment, included: true, decided: true, reason: null,
+			});
 			continue;
 		}
 		if (!useSearch) {
-			picks.push({ ...sub, videoId: null, source: null, channel: null, score: 0, accepted: false,
-				reason: useComments ? 'no link in comment, and search is off for this round' : 'no video source enabled' });
+			picks.push({
+				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
+				chosen: null, included: false, decided: true,
+				reason: useComments ? 'no link in comment, and search is off for this round' : 'no video source enabled',
+			});
 			continue;
 		}
 		// Pace the searches for the same reason run.mjs does: ten unpaced
 		// search.list calls got the whole account 429'd for hours on 2026-09-06.
 		if (searched++ > 0) await new Promise((r) => setTimeout(r, pacingMs));
-		let hit = null;
+		let candidates = [];
 		try {
-			hit = await searchOfficialVideo(ytSearch, sub);
+			candidates = await searchVideoCandidates(ytSearch, sub, opts.candidateLimit ?? 3);
 		} catch (e) {
-			picks.push({ ...sub, videoId: null, source: null, channel: null, score: 0, accepted: false,
-				reason: `search failed: ${e.message?.slice(0, 100)}`, error: e.message?.slice(0, 120) });
+			picks.push({
+				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
+				chosen: null, included: false, decided: true,
+				reason: `search failed: ${e.message?.slice(0, 100)}`, error: e.message?.slice(0, 120),
+			});
 			continue;
 		}
-		if (!hit) {
-			picks.push({ ...sub, videoId: null, source: null, channel: null, score: 0, accepted: false, reason: 'search found nothing' });
+		if (!candidates.length) {
+			picks.push({
+				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
+				chosen: null, included: false, decided: true, reason: 'search found nothing',
+			});
 			continue;
 		}
-		const accepted = hit.score >= autoAcceptPct;
+		const best = candidates[0];
+		const band = bandForScore(best.score, cfg);
 		picks.push({
-			...sub,
-			videoId: hit.videoId,
-			source: 'search',
-			channel: hit.channel ?? null,
-			searchTitle: hit.title ?? null,
-			score: hit.score,
-			accepted,
-			reason: accepted ? null : `scored ${hit.score}, below the ${autoAcceptPct} threshold`,
+			...sub, source: 'search', score: best.score, band, candidates,
+			// A 'suggestion' starts with nothing selected, so an unattended
+			// approval can never quietly ship a long shot; 'review' preselects
+			// the best candidate but is not counted as decided.
+			chosen: band === 'suggestion' ? null : best.videoId,
+			included: band === 'auto',
+			decided: band !== 'review',
+			reason: band === 'auto' ? null : `scored ${best.score}`,
 		});
 	}
 	return picks;
+}
+
+/** Picks that must be answered before the playlist can be approved. */
+export function undecidedPicks(picks) {
+	return (picks ?? []).filter((p) => p.band === 'review' && !p.decided);
 }

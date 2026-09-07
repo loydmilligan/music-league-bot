@@ -15,6 +15,7 @@ export const DEFAULT_VIDEO_PLAYLIST_CONFIG = {
 	useComments: true,
 	useSearch: true,
 	searchAutoAcceptPct: 70,
+	hilPct: 40,
 };
 
 export const VIDEO_PLAYLIST_DEFAULTS_KEY = 'video_playlist_defaults';
@@ -29,12 +30,22 @@ function asPct(v, fallback) {
 
 export function normalizeVideoPlaylistConfig(raw, base = DEFAULT_VIDEO_PLAYLIST_CONFIG) {
 	const r = raw && typeof raw === 'object' ? raw : {};
+	const searchAutoAcceptPct = asPct(r.searchAutoAcceptPct, base.searchAutoAcceptPct);
 	return {
 		enabled: asBool(r.enabled, base.enabled),
 		useComments: asBool(r.useComments, base.useComments),
 		useSearch: asBool(r.useSearch, base.useSearch),
-		searchAutoAcceptPct: asPct(r.searchAutoAcceptPct, base.searchAutoAcceptPct),
+		searchAutoAcceptPct,
+		hilPct: Math.min(asPct(r.hilPct, base.hilPct), searchAutoAcceptPct),
 	};
+}
+
+/** Which bucket a pick falls in. Mirrors bandForScore in the TypeScript twin. */
+export function bandForScore(score, cfg, fromComment = false) {
+	if (fromComment) return 'certain';
+	if (score >= cfg.searchAutoAcceptPct) return 'auto';
+	if (score >= cfg.hilPct) return 'review';
+	return 'suggestion';
 }
 
 export function parseConfigJson(json) {

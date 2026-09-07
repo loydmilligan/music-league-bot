@@ -72,6 +72,36 @@ export function buildReviewNotification(o: {
   };
 }
 
+/**
+ * The music-video playlist is waiting on a human.
+ *
+ * Approve is deliberately NOT offered as a one-tap action when anything still
+ * needs deciding — the whole point of the review band is that those cannot be
+ * answered from a notification, so the primary action is to open the page.
+ */
+export function buildVideoReviewNotification(o: {
+  league: string; round: string; reviewUrl: string;
+  approveUrl: string; denyUrl: string; snoozeUrl: string;
+  token: string; needsDecision: number; ready: number; bearer?: string;
+}): Notification {
+  const message = o.needsDecision
+    ? `Found ${o.ready} video${o.ready === 1 ? '' : 's'}, but ${o.needsDecision} need${o.needsDecision === 1 ? 's' : ''} your call before it can post. Tap to review.`
+    : `${o.ready} video${o.ready === 1 ? '' : 's'} ready to post. Tap to look them over, or approve from here.`;
+  return {
+    title: `${o.league} — ${o.round}: video playlist`,
+    message,
+    click: o.reviewUrl,
+    priority: 4,
+    tags: ['clapper'],
+    actions: [
+      { action: 'view', label: 'Review', url: o.reviewUrl, clear: false },
+      ...(o.needsDecision ? [] : [{ ...authedPost(o.approveUrl, o.token, o.bearer), label: 'Approve' }]),
+      { ...authedPost(o.snoozeUrl, o.token, o.bearer), label: 'Snooze 4h' },
+      { ...authedPost(o.denyUrl, o.token, o.bearer), label: 'Deny' },
+    ],
+  };
+}
+
 export function buildFailureNotification(o: { stage: string; reason: string; roundId?: number }): Notification {
   return {
     title: '⚠ digest pipeline',

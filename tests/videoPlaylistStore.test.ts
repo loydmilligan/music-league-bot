@@ -30,8 +30,16 @@ describe('defaults', () => {
     updateVideoPlaylistDefaults(db, { enabled: true, searchAutoAcceptPct: 55 });
     updateVideoPlaylistDefaults(db, { useSearch: false });
     expect(getVideoPlaylistDefaults(db)).toEqual({
-      enabled: true, useComments: true, useSearch: false, searchAutoAcceptPct: 55,
+      enabled: true, useComments: true, useSearch: false, searchAutoAcceptPct: 55, hilPct: 40,
     });
+  });
+
+  it('clamps a HiL floor stored above the auto-accept ceiling', () => {
+    updateVideoPlaylistDefaults(db, { searchAutoAcceptPct: 90, hilPct: 80 });
+    updateVideoPlaylistDefaults(db, { searchAutoAcceptPct: 50 });
+    const cfg = getVideoPlaylistDefaults(db);
+    expect(cfg.searchAutoAcceptPct).toBe(50);
+    expect(cfg.hilPct).toBe(50);
   });
 
   it('survives a corrupted stored value rather than throwing', () => {

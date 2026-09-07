@@ -897,6 +897,7 @@
             <VideoPlaylistFields
               config={videoShown}
               recommendedPct={data.videoPlaylistRecommendedPct}
+              recommendedHilPct={data.videoPlaylistRecommendedHilPct}
               idPrefix="vp-modal"
               onchange={(patch) => (videoEdit = { ...videoShown, ...patch })}
             />

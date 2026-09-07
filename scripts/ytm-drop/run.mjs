@@ -12,7 +12,10 @@
  *   node scripts/ytm-drop/run.mjs                 # process pending rounds
  *   node scripts/ytm-drop/run.mjs --round 153     # force one round
  *   node scripts/ytm-drop/run.mjs --dry-run       # resolve + cover only
- *   node scripts/ytm-drop/run.mjs --round 142 --approve   # send an approval-gated drop
+ *   node scripts/ytm-drop/run.mjs --round 141 --videos-only
+ *                                                 # re-resolve and re-park the
+ *                                                 # video review WITHOUT
+ *                                                 # touching the audio playlist
  *
  * Leagues are configured in LEAGUES below; a league not listed is never
  * touched. Each names its own .env key for the WhatsApp target.
@@ -38,18 +41,19 @@ const Database = require('better-sqlite3');
  *   targetEnv — .env key holding the WhatsApp chat id for this league. Boarz
  *               keeps the original YTM_DROP_TARGET key, so the live job that
  *               has been running since 2026-09-06 is behaviourally unchanged.
- *   approval  — resolve and build everything, then report to the owner and
- *               STOP, instead of posting to the group. `--approve` sends.
- *
- * Whether a round also gets a SECOND playlist of its music videos is NOT a
- * league property — it is per-round, with a global default, configured in the
- * UI and read here via videoConfig.mjs. Most rounds have nothing to do with
- * video; the ones that do ("I Want My MTV") are the exception a human opts in.
+ * The AUDIO playlist posts on its own, for every configured league. Whether a
+ * round ALSO gets a music-video playlist is per-round with a global default
+ * (videoConfig.mjs) — and that one never posts unreviewed: its candidates are
+ * parked for a human at /ytm/<roundId>/videos and posted only on approval.
  */
 const LEAGUES = [
-	{ id: 5, slug: 'boarz-ii-men', title: 'Boarz II Men', targetEnv: 'YTM_DROP_TARGET',             approval: false },
-	{ id: 3, slug: 'second-best',  title: 'Second Best',  targetEnv: 'YTM_DROP_TARGET_SECOND_BEST', approval: true  },
+	{ id: 5, slug: 'boarz-ii-men', title: 'Boarz II Men', targetEnv: 'YTM_DROP_TARGET' },
+	{ id: 3, slug: 'second-best',  title: 'Second Best',  targetEnv: 'YTM_DROP_TARGET_SECOND_BEST' },
 ];
+// bot-ui owns the review lifecycle (schema, tokens, notifications); this script
+// only hands it resolved candidates. host.docker.internal is not usable here —
+// this runs ON the host, so the published port is the address.
+const UI_BASE = process.env.BOT_UI_URL || 'http://localhost:3002';
 const TEST_GROUP = '120363428945055429@g.us';
 const BOT_CONTAINER = 'music-league-bot-bot-1';
 const WINDOW_DAYS = 7; // never backfill older transitions
@@ -62,7 +66,10 @@ const argvVal = (f) => {
 	return i >= 0 ? process.argv[i + 1] : undefined;
 };
 const DRY = argvHas('--dry-run');
-const APPROVE = argvHas('--approve');
+// Recovery path for "audio posted but parking the review failed", and the only
+// safe way to re-park a round: a bare --round on an already-sent round would
+// rebuild and RE-SEND the audio playlist to the group.
+const VIDEOS_ONLY = argvHas('--videos-only');
 const FORCE_ROUND = argvVal('--round') ? Number(argvVal('--round')) : null;
 
 const env = {};
@@ -95,6 +102,9 @@ const roundCols = new Set(db.prepare('PRAGMA table_info(rounds)').all().map((c) 
 if (!roundCols.has('video_playlist_config')) db.exec('ALTER TABLE rounds ADD COLUMN video_playlist_config TEXT');
 
 // Guarded ALTERs: the table predates the video playlist and the league column.
+// video_playlist_id / video_url / video_manifest are SUPERSEDED by
+// ytm_video_reviews (bot-ui owns the video side now) — kept, and preserved by
+// COALESCE on write, only so the rows written before 2026-09-07 stay readable.
 const dropCols = new Set(db.prepare('PRAGMA table_info(ytm_drops)').all().map((c) => c.name));
 for (const [col, decl] of [['league_id', 'INTEGER'], ['video_playlist_id', 'TEXT'], ['video_url', 'TEXT'], ['video_manifest', 'TEXT']]) {
 	if (!dropCols.has(col)) db.exec(`ALTER TABLE ytm_drops ADD COLUMN ${col} ${decl}`);
@@ -133,6 +143,8 @@ for (const lg of LEAGUES) {
 
 if (!candidates.length) {
 	console.log('[ok] no pending voting_started rounds');
+	// Still sweep: no new rounds is exactly when a snooze comes back due.
+	await sweepPendingReviews();
 	db.close();
 	process.exit(0);
 }
@@ -310,6 +322,40 @@ async function createPlaylist(token, title, description, videoIds) {
 	return pl.id;
 }
 
+/** Hand a resolved candidate set to bot-ui, which owns the review lifecycle. */
+async function parkVideoReview(payload) {
+	const res = await fetch(`${UI_BASE}/api/ytm/video-review/park`, {
+		method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+	});
+	if (!res.ok) throw new Error(`park HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
+	// Notifying is a SEPARATE call so a notification failure cannot lose the
+	// parked picks — the sweep below re-notifies anything still pending.
+	const n = await fetch(`${UI_BASE}/api/ytm/video-review/notify`, {
+		method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ roundId: payload.roundId }),
+	});
+	if (!n.ok) console.error(`[warn] review parked but notify failed: HTTP ${n.status}`);
+	return res.json();
+}
+
+/**
+ * Nudge anything still waiting on a human — a snooze that has expired, or a
+ * review whose notification never went out because ntfy was down. Runs on every
+ * tick of the existing 15-minute timer, so a snooze needs no scheduler of its
+ * own. Never throws: this is a courtesy, not part of the drop.
+ */
+async function sweepPendingReviews() {
+	try {
+		const res = await fetch(`${UI_BASE}/api/ytm/video-review/notify`, {
+			method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+		});
+		if (!res.ok) { console.error(`[warn] review re-notify sweep: HTTP ${res.status}`); return; }
+		const body = await res.json();
+		if (body.notified?.length) console.log(`[info] re-notified ${body.notified.length} pending video review(s)`);
+	} catch (e) {
+		console.error(`[warn] review re-notify sweep failed: ${e.message}`);
+	}
+}
+
 // ── per-round pipeline ────────────────────────────────────────────────────────
 const record = db.prepare(
 	`INSERT INTO ytm_drops (round_id, league_id, ytm_playlist_id, ytm_url, target, status, error,
@@ -336,33 +382,13 @@ for (const round of candidates) {
 	const TARGET = targetFor(lg);
 	console.log(`\n── ${lg.slug} round ${round.id} "${round.name}" → ${TARGET} ──`);
 	try {
-		// ── approving an already-built drop ──────────────────────────────────
-		// Short-circuit BEFORE any resolution: the playlists this round is
-		// waiting on already exist on the account, and rebuilding them would
-		// burn a few hundred quota units to orphan the originals and hand the
-		// group a different link from the one that was approved.
-		const held = APPROVE
-			? db.prepare("SELECT ytm_url, video_url FROM ytm_drops WHERE round_id = ? AND status = 'pending-approval'").get(round.id)
-			: null;
-		if (held) {
-			const coverHost = path.join(ROOT, `data/tmp/r${round.id}-drop-cover.png`);
-			if (!fs.existsSync(coverHost)) {
-				execFileSync('node', [path.join(ROOT, 'scripts/ytm-cover/generate.mjs'), String(round.id), COVER_VARIANT,
-				                      '--playlist-url', round.playlistUrl, '--out', coverHost], { stdio: 'inherit', timeout: 120_000 });
-			}
-			const lines = [`🎧 *${round.name}* — this week's playlist, now for the YouTube Music crowd:`, held.ytm_url];
-			if (held.video_url) lines.push('', '📺 …and the music videos:', held.video_url);
-			const sendOut = sendMedia(TARGET, `/app/data/tmp/r${round.id}-drop-cover.png`, lines.join('\n'));
-			console.log(`[info] approved + sent to ${TARGET}: ${sendOut}`);
-			db.prepare("UPDATE ytm_drops SET status='sent', target=?, error=NULL WHERE round_id=?").run(TARGET, round.id);
-			continue;
+		const token = await ytToken();
+		const tracks = VIDEOS_ONLY ? [] : await spotifyPlaylistTracks(round.playlistUrl);
+		if (!VIDEOS_ONLY) {
+			console.log(`[info] ${tracks.length} tracks from Spotify playlist`);
+			if (!tracks.length) throw new Error('playlist has no tracks yet');
 		}
 
-		const tracks = await spotifyPlaylistTracks(round.playlistUrl);
-		console.log(`[info] ${tracks.length} tracks from Spotify playlist`);
-		if (!tracks.length) throw new Error('playlist has no tracks yet');
-
-		const token = await ytToken();
 		const resolved = [];
 		let first = true;
 		for (const t of tracks) {
@@ -375,17 +401,17 @@ for (const round of candidates) {
 			console.log(`  ${v ? '✓' : '✗'} ${t.title} — ${t.artists}${v ? ` → ${v.videoId} (${v.channel})` : ''}`);
 			if (v) resolved.push(v.videoId);
 		}
-		if (resolved.length < Math.ceil(tracks.length * 0.8)) {
+		if (!VIDEOS_ONLY && resolved.length < Math.ceil(tracks.length * 0.8)) {
 			throw new Error(`only ${resolved.length}/${tracks.length} tracks resolved — refusing to ship a gutted playlist`);
 		}
 
-		// ── video playlist (per-round setting, global default) ──────────────
-		// Separate from the audio mirror on purpose: these are the real music
-		// videos the submitters picked, with their own runtimes and edits, and
-		// mixing a 13-minute Thriller into a listening playlist ruins both.
+		// ── video candidates (per-round setting, global default) ────────────
+		// Resolved here because this script owns the YouTube search; NOT built
+		// here, because the whole point of the review is that the contents
+		// change. Building first would mean either editing a live playlist
+		// afterwards or handing the group a different link from the reviewed one.
 		let picks = null;
 		let videoStatus = null;
-		let videoRejects = [];
 		const vcfg = readRoundVideoConfig(db, round.id);
 		if (!vcfg.enabled) {
 			console.log('[info] video playlist off for this round');
@@ -420,25 +446,34 @@ for (const round of candidates) {
 					useComments: vcfg.useComments,
 					useSearch: vcfg.useSearch,
 					autoAcceptPct: vcfg.searchAutoAcceptPct,
+					hilPct: vcfg.hilPct,
 				});
-				const fromComment = picks.filter((x) => x.source === 'comment').length;
-				const searchOk = picks.filter((x) => x.source === 'search' && x.accepted).length;
-				videoRejects = picks.filter((x) => !x.accepted);
-				const mark = (x) => (x.source === 'comment' ? '💬' : !x.accepted ? '⚠️' : '🔎');
+				const n = (b) => picks.filter((x) => x.band === b).length;
+				const mark = { certain: '💬', auto: '🔎', review: '❓', suggestion: '·' };
 				for (const x of picks) {
-					const tail = x.videoId ? ` → ${x.videoId}${x.channel ? ` (${x.channel})` : ''} [${x.score}]` : ` — ${x.reason}`;
-					console.log(`  ${mark(x)} ${x.title} — ${x.artists}${tail}`);
+					const c = x.candidates[0];
+					console.log(`  ${mark[x.band]} ${x.title} — ${x.artists}${c ? ` → ${c.videoId} (${c.channel || 'comment'}) [${x.score}]` : ` — ${x.reason}`}`);
 				}
-				const src = [vcfg.useComments && 'comments', vcfg.useSearch && `search≥${vcfg.searchAutoAcceptPct}%`].filter(Boolean).join(' + ');
-				videoStatus = `${src}: ${fromComment} from comments, ${searchOk} auto-accepted, ${videoRejects.length} held back`;
+				videoStatus = `${n('certain')} from comments, ${n('auto')} auto, ${n('review')} need a call, ${n('suggestion')} long shots`;
 				console.log(`[info] videos: ${videoStatus}`);
 			}
 		}
 
+		// ── videos-only: park what we just resolved against the EXISTING audio
+		// send and stop. No playlist is rebuilt, nothing is posted.
+		if (VIDEOS_ONLY) {
+			const prior = db.prepare('SELECT ytm_url, status FROM ytm_drops WHERE round_id = ?').get(round.id);
+			if (!picks?.length) { console.log('[ok] nothing to park (video playlist off, or no candidates)'); continue; }
+			const parked = await parkVideoReview({
+				roundId: round.id, leagueId: lg.id, picks, config: vcfg, target: TARGET,
+				audioUrl: prior?.ytm_url ?? null, audioSent: prior?.status === 'sent',
+			});
+			console.log(`[ok] parked review for round ${round.id}: ${JSON.stringify(parked)}`);
+			continue;
+		}
+
 		let ytmUrl = null;
 		let playlistId = null;
-		let videoPlaylistId = null;
-		let videoUrl = null;
 		if (!DRY) {
 			playlistId = await createPlaylist(
 				token,
@@ -448,19 +483,6 @@ for (const round of candidates) {
 			);
 			ytmUrl = `https://music.youtube.com/playlist?list=${playlistId}`;
 			console.log(`[info] playlist created: ${ytmUrl}`);
-
-			const videoIds = (picks ?? []).filter((x) => x.accepted && x.videoId).map((x) => x.videoId);
-			if (videoIds.length) {
-				videoPlaylistId = await createPlaylist(
-					token,
-					`${lg.title} · ${round.name} — the videos`,
-					'Music League — the music videos for this round. Auto-built from submission comments.',
-					videoIds,
-				);
-				// Plain YouTube, not music.youtube: these are videos to watch.
-				videoUrl = `https://www.youtube.com/playlist?list=${videoPlaylistId}`;
-				console.log(`[info] video playlist created: ${videoUrl}`);
-			}
 		}
 
 		const coverHost = path.join(ROOT, `data/tmp/r${round.id}-drop-cover.png`);
@@ -471,49 +493,39 @@ for (const round of candidates) {
 			{ stdio: 'inherit', timeout: 120_000 },
 		);
 
-		const manifest = picks
-			? JSON.stringify({ config: vcfg, picks: picks.map((x) => ({ title: x.title, artists: x.artists, videoId: x.videoId, source: x.source, channel: x.channel, score: x.score, accepted: x.accepted, reason: x.reason })) })
-			: null;
-		const base = { ...blank, round_id: round.id, league_id: lg.id, target: TARGET, video_manifest: manifest };
+		const base = { ...blank, round_id: round.id, league_id: lg.id, target: TARGET };
 
 		if (DRY) {
 			record.run({ ...base, status: 'dry-run' });
-			console.log(`[dry-run] cover at ${coverHost}; no playlist, no send`);
+			console.log(`[dry-run] cover at ${coverHost}; ${picks ? `${picks.length} video candidates resolved; ` : ''}no playlist, no send, no review parked`);
 			continue;
 		}
 
-		const lines = [`🎧 *${round.name}* — this week's playlist, now for the YouTube Music crowd:`, ytmUrl];
-		if (videoUrl) lines.push('', '📺 …and the music videos:', videoUrl);
-		const caption = lines.join('\n');
-
-		// ── approval gate ────────────────────────────────────────────────────
-		// Everything above is built and durable; the only thing withheld is the
-		// group post. `--approve` on a later run does the send using the
-		// playlists this run already made.
-		if (lg.approval && !APPROVE) {
-			record.run({ ...base, ytm_playlist_id: playlistId, ytm_url: ytmUrl, video_playlist_id: videoPlaylistId, video_url: videoUrl, status: 'pending-approval' });
-			const report = [
-				`🕵️ ytm-drop is holding round ${round.id} "${round.name}" (${lg.title}) for approval.`,
-				`Songs: ${ytmUrl}`,
-				videoUrl ? `Videos: ${videoUrl}\n  ${videoStatus}` : `Videos: none (${videoStatus ?? 'disabled'})`,
-				// Name the weak picks outright. "12 from search" reads like a
-				// success; it is the ones on an unrelated channel that need eyes.
-				...(videoRejects.length
-					? ['Held back — not in the playlist:',
-					   ...videoRejects.map((x) => `  • ${x.title} — ${x.artists}: ${x.reason}` + (x.videoId ? `\n    youtu.be/${x.videoId} (${x.channel})` : ''))]
-					: []),
-				`Cover: ${coverHost}`,
-				`Send with: node scripts/ytm-drop/run.mjs --round ${round.id} --approve`,
-			].join('\n');
-			console.log(`\n${report}\n`);
-			try { controlPost('notify', { text: report }, 30_000); } catch { /* owner notify is best-effort */ }
-			continue;
-		}
-
+		const caption = `🎧 *${round.name}* — this week's playlist, now for the YouTube Music crowd:\n${ytmUrl}`;
 		const sendOut = sendMedia(TARGET, `/app/data/tmp/r${round.id}-drop-cover.png`, caption);
 		console.log(`[info] sent to ${TARGET}: ${sendOut}`);
+		record.run({ ...base, ytm_playlist_id: playlistId, ytm_url: ytmUrl, status: 'sent' });
 
-		record.run({ ...base, ytm_playlist_id: playlistId, ytm_url: ytmUrl, video_playlist_id: videoPlaylistId, video_url: videoUrl, status: 'sent' });
+		// ── park the video candidates for review ─────────────────────────────
+		// Deliberately AFTER the audio send is recorded: the audio has already
+		// gone out, so a failure here must not roll the round back to `failed`
+		// and re-send it on the next tick. A parking failure is reported and
+		// left for a manual `--round N` re-run.
+		if (picks?.length) {
+			try {
+				await parkVideoReview({
+					roundId: round.id, leagueId: lg.id, picks, config: vcfg,
+					target: TARGET, audioUrl: ytmUrl, audioSent: true,
+				});
+				console.log(`[info] video review parked — ${videoStatus}`);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				console.error(`[warn] could not park the video review: ${msg}`);
+				try {
+					controlPost('notify', { text: `⚠️ round ${round.id} "${round.name}": audio playlist posted, but parking the video review failed (${msg.slice(0, 140)}). Re-run: node scripts/ytm-drop/run.mjs --round ${round.id}` }, 30_000);
+				} catch { /* owner notify is best-effort */ }
+			}
+		}
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		console.error(`[fail] round ${round.id}: ${msg}`);
@@ -523,4 +535,6 @@ for (const round of candidates) {
 		} catch { /* owner notify is best-effort */ }
 	}
 }
+
+await sweepPendingReviews();
 db.close();
