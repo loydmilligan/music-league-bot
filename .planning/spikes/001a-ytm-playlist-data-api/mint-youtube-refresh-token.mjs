@@ -138,6 +138,10 @@ async function main() {
     YOUTUBE_CLIENT_ID: clientId,
     YOUTUBE_CLIENT_SECRET: clientSecret,
     YOUTUBE_REFRESH_TOKEN: tokens.refresh_token,
+    // Stamped so scripts/ytm-token-watchdog.mjs can count down to the 7-day
+    // expiry Google enforces while the project is in "Testing" status. Writing
+    // it here also resets the watchdog's alert ladder for the new token.
+    YOUTUBE_TOKEN_MINTED_AT: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
   });
 
   console.log("\n=== SUCCESS — YOUTUBE_* written to .env (backup at .env.bak-ytm-mint) ===");

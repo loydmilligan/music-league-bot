@@ -1,0 +1,16 @@
+[Unit]
+Description=Music League YouTube token one-click refresh endpoint (loopback only)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.22.2/bin/node %h/Projects/music-league-bot/scripts/ytm-refresh-endpoint.mjs
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

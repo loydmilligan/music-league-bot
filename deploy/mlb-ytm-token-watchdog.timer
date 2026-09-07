@@ -1,0 +1,15 @@
+[Unit]
+Description=Probe the YouTube token and run the expiry alert ladder
+Requires=mlb-ytm-token-watchdog.service
+
+[Timer]
+# 14:00 carries the day-5 and day-6 warnings; 09:00 and 11:00 exist for the
+# escalating final-day ladder. The script decides what (if anything) is due.
+OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 11:00:00
+OnCalendar=*-*-* 14:00:00
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
