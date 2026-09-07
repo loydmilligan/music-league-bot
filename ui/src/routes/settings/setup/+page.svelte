@@ -6,6 +6,8 @@
   import SectionLabel from '$lib/components/SectionLabel.svelte';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
+  import VideoPlaylistFields from '$lib/components/VideoPlaylistFields.svelte';
+  import type { VideoPlaylistConfig } from '$lib/db/videoPlaylist.js';
   import {
     AVATAR_GENDERS,
     AVATAR_RACES,
@@ -398,6 +400,42 @@
     if (!res.ok) { showBanner('Error updating competitor link', 'warn'); return; }
     showBanner(playerId ? 'Competitor linked' : 'Competitor unlinked');
     await invalidateAll();
+  }
+
+  // ---- per-round video playlist -------------------------------------------
+  // Shown as a disclosure row under each round rather than more table columns:
+  // four controls per round would make an already dense table unusable.
+  let videoOpen = $state<Record<number, boolean>>({});
+  let videoSaving = $state<Record<number, boolean>>({});
+  let videoLocal = $state<Record<number, VideoPlaylistConfig>>({});
+
+  function videoConfigFor(round: { id: number; videoPlaylist: VideoPlaylistConfig }): VideoPlaylistConfig {
+    return videoLocal[round.id] ?? round.videoPlaylist;
+  }
+
+  async function saveVideoConfig(roundId: number, patch: Partial<VideoPlaylistConfig> | null) {
+    const current = videoLocal[roundId] ?? data.videoPlaylistDefaults;
+    if (patch !== null) videoLocal = { ...videoLocal, [roundId]: { ...current, ...patch } };
+    videoSaving = { ...videoSaving, [roundId]: true };
+    const res = await apiCall(`/api/rounds/${roundId}`, 'PATCH', { video_playlist_config: patch });
+    videoSaving = { ...videoSaving, [roundId]: false };
+    if (!res.ok) {
+      // Drop the optimistic value so the row falls back to the server's truth.
+      const { [roundId]: _drop, ...rest } = videoLocal;
+      videoLocal = rest;
+      showBanner('Error saving video playlist settings', 'warn');
+      return;
+    }
+    const { [roundId]: _clear, ...rest } = videoLocal;
+    videoLocal = rest;
+    await invalidateAll();
+  }
+
+  function videoSummary(round: { videoPlaylist: VideoPlaylistConfig; videoPlaylistInherited: boolean }): string {
+    const c = round.videoPlaylist;
+    if (!c.enabled) return round.videoPlaylistInherited ? 'off (inherited)' : 'off';
+    const src = [c.useComments && 'comments', c.useSearch && `search ≥${c.searchAutoAcceptPct}%`].filter(Boolean).join(' + ');
+    return `${src || 'no source'}${round.videoPlaylistInherited ? ' (inherited)' : ''}`;
   }
 
   // ---- rounds section ------------------------------------------------------
@@ -816,6 +854,7 @@
                     <th class="text-left px-4 py-2 font-bold w-20">Status</th>
                     <th class="text-left px-4 py-2 font-bold w-28">Tag</th>
                     <th class="text-left px-4 py-2 font-bold w-36">Submitted by</th>
+                    <th class="text-left px-4 py-2 font-bold w-44">Video playlist</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -893,7 +932,43 @@
                           <span class="font-mono text-[9px] text-fg-faint">saving…</span>
                         {/if}
                       </td>
+                      <td class="px-4 py-1.5">
+                        <button
+                          type="button"
+                          onclick={() => (videoOpen = { ...videoOpen, [round.id]: !videoOpen[round.id] })}
+                          class="font-mono text-[10px] text-fg-muted hover:text-accent transition-colors text-left"
+                          aria-expanded={!!videoOpen[round.id]}
+                        >
+                          {videoSummary(round)} {videoOpen[round.id] ? '▲' : '▼'}
+                        </button>
+                      </td>
                     </tr>
+                    {#if videoOpen[round.id]}
+                      <tr class="border-t border-border-muted bg-bg-elevated/40">
+                        <td colspan="7" class="px-8 py-4">
+                          <VideoPlaylistFields
+                            config={videoConfigFor(round)}
+                            recommendedPct={70}
+                            disabled={!!videoSaving[round.id]}
+                            idPrefix="vp-round-{round.id}"
+                            onchange={(patch) => saveVideoConfig(round.id, patch)}
+                          />
+                          {#if !round.videoPlaylistInherited}
+                            <button
+                              type="button"
+                              onclick={() => saveVideoConfig(round.id, null)}
+                              class="mt-3 font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors"
+                            >
+                              Reset to global default
+                            </button>
+                          {:else}
+                            <p class="mt-3 font-mono text-[10px] text-fg-faint">
+                              Inheriting the global default — changing anything here overrides it for this round only.
+                            </p>
+                          {/if}
+                        </td>
+                      </tr>
+                    {/if}
                   {/each}
                 </tbody>
               </table>
@@ -967,6 +1042,36 @@
                         <option value={p.id}>{p.name}</option>
                       {/each}
                     </select>
+                  </div>
+                  <div class="pt-2 border-t border-border-muted">
+                    <button
+                      type="button"
+                      onclick={() => (videoOpen = { ...videoOpen, [round.id]: !videoOpen[round.id] })}
+                      class="font-mono text-[10px] tracking-widest uppercase text-fg-muted hover:text-accent transition-colors"
+                      aria-expanded={!!videoOpen[round.id]}
+                    >
+                      Video playlist: {videoSummary(round)} {videoOpen[round.id] ? '▲' : '▼'}
+                    </button>
+                    {#if videoOpen[round.id]}
+                      <div class="pt-3">
+                        <VideoPlaylistFields
+                          config={videoConfigFor(round)}
+                          recommendedPct={70}
+                          disabled={!!videoSaving[round.id]}
+                          idPrefix="vp-mround-{round.id}"
+                          onchange={(patch) => saveVideoConfig(round.id, patch)}
+                        />
+                        {#if !round.videoPlaylistInherited}
+                          <button
+                            type="button"
+                            onclick={() => saveVideoConfig(round.id, null)}
+                            class="mt-3 font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors"
+                          >
+                            Reset to global default
+                          </button>
+                        {/if}
+                      </div>
+                    {/if}
                   </div>
                 </div>
               {/each}

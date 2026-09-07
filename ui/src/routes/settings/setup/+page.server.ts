@@ -2,6 +2,11 @@ import type { PageServerLoad, Actions } from './$types.js';
 import { getDb } from '$lib/db/client.js';
 import { getAllLeagues, getSeasonsForLeague, getActiveSeasonsWithLeague } from '$lib/db/leagues.js';
 import { getRoundsForSeason, updateDeadlines } from '$lib/db/rounds.js';
+import {
+  getVideoPlaylistDefaults,
+  resolveVideoPlaylistConfig,
+  type VideoPlaylistConfig,
+} from '$lib/db/videoPlaylist.js';
 import { getActiveLeaguesActiveRounds } from '$lib/db/activeRound.js';
 import { getAllPlayers } from '$lib/db/players.js';
 import type { Round } from '$lib/types.js';
@@ -112,13 +117,36 @@ export const load: PageServerLoad = async () => {
     leagueSlug: l.slug,
   })));
 
-  const leagueRounds: Record<number, Array<Round & { seasonNumber: number }>> = {};
+  // Video-playlist config per round: the EFFECTIVE value (defaults merged with
+  // the round's overrides) plus whether it is still inheriting, so the UI can
+  // show "inherited" without a round-trip per row.
+  const videoDefaults = getVideoPlaylistDefaults(db);
+  const videoDefaultsJson = JSON.stringify(videoDefaults);
+  const videoOverrides = new Map(
+    (db.prepare('SELECT id, video_playlist_config AS c FROM rounds WHERE video_playlist_config IS NOT NULL')
+      .all() as Array<{ id: number; c: string }>).map((r) => [r.id, r.c]),
+  );
+
+  type RoundWithVideo = Round & {
+    seasonNumber: number;
+    videoPlaylist: VideoPlaylistConfig;
+    videoPlaylistInherited: boolean;
+  };
+  const leagueRounds: Record<number, RoundWithVideo[]> = {};
   for (const league of allLeagues) {
     const seasons = getSeasonsForLeague(db, league.id);
-    const rounds: Array<Round & { seasonNumber: number }> = [];
+    const rounds: RoundWithVideo[] = [];
     for (const s of seasons) {
       const sr = getRoundsForSeason(db, s.id);
-      for (const r of sr) rounds.push({ ...r, seasonNumber: s.seasonNumber });
+      for (const r of sr) {
+        const override = videoOverrides.get(r.id) ?? null;
+        rounds.push({
+          ...r,
+          seasonNumber: s.seasonNumber,
+          videoPlaylist: resolveVideoPlaylistConfig(override, videoDefaultsJson),
+          videoPlaylistInherited: override === null,
+        });
+      }
     }
     leagueRounds[league.id] = rounds;
   }
@@ -145,7 +173,7 @@ export const load: PageServerLoad = async () => {
     return rounds.map(r => ({ ...r, leagueName: s.league.name, seasonNumber: s.seasonNumber }));
   });
 
-  return { leagues, players, allSeasons, leagueRounds, competitors, allLeagues, activeRounds };
+  return { leagues, players, allSeasons, leagueRounds, competitors, allLeagues, activeRounds, videoPlaylistDefaults: videoDefaults };
 };
 
 export const actions: Actions = {

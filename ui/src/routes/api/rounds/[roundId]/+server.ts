@@ -4,6 +4,12 @@ import { getDb } from '$lib/db/client.js';
 import { getRoundById, patchRound, updateRound, type RoundPatch } from '$lib/db/rounds.js';
 import { getRoundPhase } from '$lib/lifecycle.js';
 import { ingestPlaylist } from '$lib/import/playlistIngest.js';
+import {
+  setRoundVideoPlaylistConfig,
+  getRoundVideoPlaylistConfig,
+  getRoundVideoPlaylistOverride,
+  type VideoPlaylistConfig,
+} from '$lib/db/videoPlaylist.js';
 
 interface PatchBody {
   name?: string;
@@ -15,6 +21,13 @@ interface PatchBody {
   tag?: string | null;
   theme_submitted_by?: number | null;
   round_number?: number | null;
+  /**
+   * Video-playlist overrides for this round. An object stores overrides; an
+   * explicit null RESETS the round to inheriting the global default, which is
+   * not the same as storing a copy of today's default — an inheriting round
+   * follows future changes to it.
+   */
+  video_playlist_config?: Partial<VideoPlaylistConfig> | null;
 }
 
 const SPOTIFY_PLAYLIST_RE = /^https:\/\/open\.spotify\.com\/playlist\/[A-Za-z0-9]+(?:\?.*)?$/;
@@ -98,9 +111,24 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     mgmtPatch.round_number = body.round_number;
   }
 
+  const touchesVideoConfig = body.video_playlist_config !== undefined;
+  if (touchesVideoConfig) {
+    const v = body.video_playlist_config;
+    if (v !== null && (typeof v !== 'object' || Array.isArray(v))) {
+      throw error(400, 'video_playlist_config must be an object or null');
+    }
+    setRoundVideoPlaylistConfig(db, roundId, v as Partial<VideoPlaylistConfig> | null);
+  }
+
   if (Object.keys(patch).length === 0 && Object.keys(mgmtPatch).length === 0) {
-    // No-op patch: return the unchanged row.
-    return json({ round: existing, phase: existing.phase });
+    // No-op patch: return the unchanged row (plus the video config, which may
+    // be the only thing this request changed).
+    return json({
+      round: existing,
+      phase: existing.phase,
+      videoPlaylist: getRoundVideoPlaylistConfig(db, roundId),
+      videoPlaylistInherited: getRoundVideoPlaylistOverride(db, roundId) === null,
+    });
   }
 
   if (Object.keys(mgmtPatch).length > 0) updateRound(db, roundId, mgmtPatch);
@@ -120,5 +148,10 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     );
   }
 
-  return json({ round: updated, phase: newPhase });
+  return json({
+    round: updated,
+    phase: newPhase,
+    videoPlaylist: getRoundVideoPlaylistConfig(db, roundId),
+    videoPlaylistInherited: getRoundVideoPlaylistOverride(db, roundId) === null,
+  });
 };

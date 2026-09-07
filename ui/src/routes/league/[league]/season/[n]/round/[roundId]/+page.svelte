@@ -9,8 +9,18 @@
   import GuessWorkspace from '$lib/components/GuessWorkspace.svelte';
   import type { H2HState, H2HCandidate } from '$lib/types.js';
   import { invalidateAll } from '$app/navigation';
+  import VideoPlaylistFields from '$lib/components/VideoPlaylistFields.svelte';
+  import type { VideoPlaylistConfig } from '$lib/db/videoPlaylist.js';
 
   let { data }: { data: PageData } = $props();
+
+  // Video playlist edits are staged like every other field in this modal —
+  // nothing is written until Save, and Cancel discards. `videoEdit` is null
+  // until the user actually touches a control, which is what keeps a round
+  // that is merely INHERITING the global default from being frozen into an
+  // override just by opening the dialog.
+  let videoEdit = $state<VideoPlaylistConfig | null>(null);
+  const videoShown = $derived(videoEdit ?? data.videoPlaylist);
 
   // --- Edit round modal -----------------------------------------------------
   let showEdit = $state(false);
@@ -57,12 +67,14 @@
       voting_deadline: isoToLocalInput(data.round.votingDeadline),
       playlist_url: data.round.spotifyPlaylistUrl ?? '',
     };
+    videoEdit = null;
     showEdit = true;
   }
 
   function closeEdit() {
     showEdit = false;
     editError = null;
+    videoEdit = null;
   }
 
   async function saveEdit(e?: SubmitEvent) {
@@ -82,6 +94,7 @@
     if (editForm.playlist_url !== (data.round.spotifyPlaylistUrl ?? '')) {
       diff.playlist_url = editForm.playlist_url || null;
     }
+    if (videoEdit) diff.video_playlist_config = videoEdit;
     if (Object.keys(diff).length === 0) {
       closeEdit();
       return;
@@ -877,6 +890,31 @@
             class="mt-1 w-full bg-bg border border-border-muted focus:border-accent rounded px-3 py-1.5 text-sm text-fg placeholder-fg-faint outline-none transition-colors"
           />
         </label>
+
+        <div class="pt-2 border-t border-border-muted">
+          <span class="font-mono text-[10px] tracking-widest uppercase text-fg-dim">Music-video playlist</span>
+          <div class="mt-3">
+            <VideoPlaylistFields
+              config={videoShown}
+              recommendedPct={data.videoPlaylistRecommendedPct}
+              idPrefix="vp-modal"
+              onchange={(patch) => (videoEdit = { ...videoShown, ...patch })}
+            />
+          </div>
+          {#if data.videoPlaylistInherited && !videoEdit}
+            <p class="mt-2 font-mono text-[10px] text-fg-faint">
+              Inheriting the global default. Changing anything here overrides it for this round only.
+            </p>
+          {:else if videoEdit}
+            <button
+              type="button"
+              onclick={() => { videoEdit = null; }}
+              class="mt-2 font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors"
+            >
+              Discard video changes
+            </button>
+          {/if}
+        </div>
       </div>
 
       {#if editError}

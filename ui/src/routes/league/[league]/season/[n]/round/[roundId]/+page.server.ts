@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getLeagueBySlug, getSeasonsForLeague } from '$lib/db/leagues.js';
 import { getRoundById, getRoundsForSeason } from '$lib/db/rounds.js';
+import { getRoundVideoPlaylistConfig, getRoundVideoPlaylistOverride, RECOMMENDED_AUTO_ACCEPT_PCT } from '$lib/db/videoPlaylist.js';
 import { getSubmissionsForRound } from '$lib/db/submissions.js';
 import { getResearchSongs } from '$lib/db/research.js';
 import { getSettings } from '$lib/db/settings.js';
@@ -82,6 +83,9 @@ export const load: PageServerLoad = async ({ params }) => {
     league,
     season,
     round,
+    videoPlaylist: getRoundVideoPlaylistConfig(db, round.id),
+    videoPlaylistInherited: getRoundVideoPlaylistOverride(db, round.id) === null,
+    videoPlaylistRecommendedPct: RECOMMENDED_AUTO_ACCEPT_PCT,
     mlSubmissions,
     guessSubmissionCount,
     chatMentions,

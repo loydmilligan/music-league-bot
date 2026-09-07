@@ -4,6 +4,8 @@
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
   import CollapsiblePanel from '$lib/components/CollapsiblePanel.svelte';
+  import VideoPlaylistFields from '$lib/components/VideoPlaylistFields.svelte';
+  import { DEFAULT_VIDEO_PLAYLIST_CONFIG, type VideoPlaylistConfig } from '$lib/db/videoPlaylist.js';
   import EmailPollerPanel from '$lib/email/EmailPollerPanel.svelte';
   import MetricTiles from '$lib/metadata-queue/MetricTiles.svelte';
   import JobTypeRollups from '$lib/metadata-queue/JobTypeRollups.svelte';
@@ -48,6 +50,55 @@
       autoAnalyzeEnabled = !autoAnalyzeEnabled;
     } finally {
       autoAnalyzeLoading = false;
+    }
+  }
+
+  // Video-playlist defaults — what every round inherits until it overrides
+  // them (per-round editing lives on the round panel and the round modal).
+  let vpDefaults = $state<VideoPlaylistConfig>({ ...DEFAULT_VIDEO_PLAYLIST_CONFIG });
+  let vpRecommended = $state(70);
+  let vpSaving = $state(false);
+  let vpSaved = $state(false);
+  let vpError = $state('');
+
+  async function loadVideoPlaylistDefaults() {
+    try {
+      const r = await fetch('/api/settings/video-playlist');
+      if (r.ok) {
+        const body = await r.json() as { config: VideoPlaylistConfig; recommendedPct: number };
+        vpDefaults = { ...body.config };
+        vpRecommended = body.recommendedPct;
+      }
+    } catch { /* silently ignore — stays at shipped defaults */ }
+  }
+
+  async function saveVideoPlaylistDefaults(patch: Partial<VideoPlaylistConfig>) {
+    // Optimistic: the checkbox has already moved visually, so reflect it and
+    // roll back only if the write fails.
+    const previous = { ...vpDefaults };
+    vpDefaults = { ...vpDefaults, ...patch };
+    vpSaving = true;
+    vpSaved = false;
+    vpError = '';
+    try {
+      const r = await fetch('/api/settings/video-playlist', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: patch }),
+      });
+      if (r.ok) {
+        const body = await r.json() as { config: VideoPlaylistConfig };
+        vpDefaults = { ...body.config };
+        vpSaved = true;
+      } else {
+        vpDefaults = previous;
+        vpError = 'Failed to save';
+      }
+    } catch {
+      vpDefaults = previous;
+      vpError = 'Failed to save';
+    } finally {
+      vpSaving = false;
     }
   }
 
@@ -483,6 +534,7 @@
     loadDebugMode();
     loadAutoAnalyze();
     loadBucketBoundaries();
+    loadVideoPlaylistDefaults();
   });
 
   // ---------------------------------------------------------------------------
@@ -1249,6 +1301,32 @@
         {bucketsLoading ? 'Saving…' : 'Save boundaries'}
       </button>
     </div>
+  </div>
+</CollapsiblePanel>
+
+<!-- Video-playlist defaults: inherited by every round that doesn't override them -->
+<CollapsiblePanel id="app-video-playlist-defaults" title="Music-video playlist defaults">
+  <p class="text-xs text-fg-dim mb-5">
+    Defaults for the second, music-video playlist the YTM drop can build alongside the audio
+    mirror. Every round inherits these until you change that round specifically — so editing them
+    here also changes rounds you have never touched. Most rounds want this off; a "post the video"
+    theme is the exception.
+  </p>
+
+  <VideoPlaylistFields
+    config={vpDefaults}
+    recommendedPct={vpRecommended}
+    disabled={vpSaving}
+    idPrefix="vp-default"
+    onchange={saveVideoPlaylistDefaults}
+  />
+
+  <div class="flex items-center gap-4 pt-4">
+    {#if vpError}
+      <p class="text-xs text-ember">{vpError}</p>
+    {:else if vpSaved}
+      <StatusChip label="SAVED" tone="accent" />
+    {/if}
   </div>
 </CollapsiblePanel>
 

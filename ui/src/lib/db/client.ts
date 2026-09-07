@@ -23,6 +23,11 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (!roundsCols.some(c => c.name === 'theme_chooser_id')) {
 		db.exec("ALTER TABLE rounds ADD COLUMN theme_chooser_id INTEGER REFERENCES competitors(id)");
 	}
+	// Per-round video-playlist config (lib/db/videoPlaylist.ts). NULL is
+	// meaningful: it means "inherit the global default", not "off".
+	if (!roundsCols.some(c => c.name === 'video_playlist_config')) {
+		db.exec("ALTER TABLE rounds ADD COLUMN video_playlist_config TEXT");
+	}
 	// digest auto-pipeline (task 4): per-league mode + default gen params.
 	const leaguesCols = db.prepare("PRAGMA table_info(leagues)").all() as { name: string }[];
 	for (const col of ['digest_mode', 'digest_gen_params']) {

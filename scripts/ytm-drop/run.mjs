@@ -25,6 +25,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { extractVideoIds, fetchBallotComments, resolveVideoPicks } from './videos.mjs';
+import { readRoundVideoConfig, hasNoVideoSource } from './videoConfig.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(path.join(ROOT, 'ui/package.json'));
@@ -37,16 +38,17 @@ const Database = require('better-sqlite3');
  *   targetEnv — .env key holding the WhatsApp chat id for this league. Boarz
  *               keeps the original YTM_DROP_TARGET key, so the live job that
  *               has been running since 2026-09-06 is behaviourally unchanged.
- *   videos    — also build a SECOND playlist of the music videos named in the
- *               submission comments. Second Best's "I Want My MTV" round puts
- *               the video link in the comment; Boarz rounds carry none, so
- *               searching for one there would invent links nobody chose.
  *   approval  — resolve and build everything, then report to the owner and
  *               STOP, instead of posting to the group. `--approve` sends.
+ *
+ * Whether a round also gets a SECOND playlist of its music videos is NOT a
+ * league property — it is per-round, with a global default, configured in the
+ * UI and read here via videoConfig.mjs. Most rounds have nothing to do with
+ * video; the ones that do ("I Want My MTV") are the exception a human opts in.
  */
 const LEAGUES = [
-	{ id: 5, slug: 'boarz-ii-men', title: 'Boarz II Men', targetEnv: 'YTM_DROP_TARGET',             videos: false, approval: false },
-	{ id: 3, slug: 'second-best',  title: 'Second Best',  targetEnv: 'YTM_DROP_TARGET_SECOND_BEST', videos: true,  approval: true  },
+	{ id: 5, slug: 'boarz-ii-men', title: 'Boarz II Men', targetEnv: 'YTM_DROP_TARGET',             approval: false },
+	{ id: 3, slug: 'second-best',  title: 'Second Best',  targetEnv: 'YTM_DROP_TARGET_SECOND_BEST', approval: true  },
 ];
 const TEST_GROUP = '120363428945055429@g.us';
 const BOT_CONTAINER = 'music-league-bot-bot-1';
@@ -85,6 +87,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS ytm_drops (
 	error           TEXT,
 	created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 )`);
+// rounds.video_playlist_config is normally created by the UI's migration
+// (ui/src/lib/db/client.ts), but this script runs on the host and must not
+// depend on bot-ui having been started since the column was added — a missing
+// column here would throw for EVERY league, not just a configured one.
+const roundCols = new Set(db.prepare('PRAGMA table_info(rounds)').all().map((c) => c.name));
+if (!roundCols.has('video_playlist_config')) db.exec('ALTER TABLE rounds ADD COLUMN video_playlist_config TEXT');
+
 // Guarded ALTERs: the table predates the video playlist and the league column.
 const dropCols = new Set(db.prepare('PRAGMA table_info(ytm_drops)').all().map((c) => c.name));
 for (const [col, decl] of [['league_id', 'INTEGER'], ['video_playlist_id', 'TEXT'], ['video_url', 'TEXT'], ['video_manifest', 'TEXT']]) {
@@ -370,21 +379,29 @@ for (const round of candidates) {
 			throw new Error(`only ${resolved.length}/${tracks.length} tracks resolved — refusing to ship a gutted playlist`);
 		}
 
-		// ── video playlist (opt-in per league) ───────────────────────────────
+		// ── video playlist (per-round setting, global default) ──────────────
 		// Separate from the audio mirror on purpose: these are the real music
 		// videos the submitters picked, with their own runtimes and edits, and
 		// mixing a 13-minute Thriller into a listening playlist ruins both.
 		let picks = null;
 		let videoStatus = null;
-		let videoWeak = [];
-		if (lg.videos) {
+		let videoRejects = [];
+		const vcfg = readRoundVideoConfig(db, round.id);
+		if (!vcfg.enabled) {
+			console.log('[info] video playlist off for this round');
+		} else if (hasNoVideoSource(vcfg)) {
+			// Valid but inert. Say so rather than quietly building nothing.
+			videoStatus = 'video playlist is on but BOTH sources are off — nothing to build';
+			console.log(`[warn] ${videoStatus}`);
+		} else {
 			const subs = db
 				.prepare('SELECT title, artists, comment, spotify_uri AS spotifyUri FROM ml_submissions WHERE round_id = ? ORDER BY spotify_uri')
 				.all(round.id);
 			if (!subs.length) {
 				videoStatus = 'no submissions imported for this round yet';
+				console.log(`[warn] ${videoStatus}`);
 			} else {
-				if (!subs.some((x) => extractVideoIds(x.comment).length)) {
+				if (vcfg.useComments && !subs.some((x) => extractVideoIds(x.comment).length)) {
 					// Nothing usable in the column — the comments are probably still
 					// only on the open ballot. Best-effort; never fatal.
 					const fetched = fetchBallotComments(db, round, {
@@ -393,25 +410,28 @@ for (const round of candidates) {
 					});
 					console.log(`[info] ballot comments: ${fetched.ok ? `${fetched.updated} applied` : fetched.error}`);
 					if (fetched.ok && fetched.updated) {
-						for (const x of subs) {
-							x.comment = db.prepare('SELECT comment FROM ml_submissions WHERE round_id=? AND spotify_uri=?')
-								.get(round.id, x.spotifyUri)?.comment ?? x.comment;
-						}
+						const reread = db.prepare('SELECT comment FROM ml_submissions WHERE round_id=? AND spotify_uri=?');
+						for (const x of subs) x.comment = reread.get(round.id, x.spotifyUri)?.comment ?? x.comment;
 					}
 				}
 				await new Promise((r) => setTimeout(r, SEARCH_PACING_MS));
-				picks = await resolveVideoPicks(subs, (q) => ytSearch(token, q, { maxResults: 5 }), { pacingMs: SEARCH_PACING_MS });
+				picks = await resolveVideoPicks(subs, (q) => ytSearch(token, q, { maxResults: 5 }), {
+					pacingMs: SEARCH_PACING_MS,
+					useComments: vcfg.useComments,
+					useSearch: vcfg.useSearch,
+					autoAcceptPct: vcfg.searchAutoAcceptPct,
+				});
 				const fromComment = picks.filter((x) => x.source === 'comment').length;
-				const weak = picks.filter((x) => x.confidence === 'weak');
-				const strong = picks.filter((x) => x.confidence === 'likely').length;
-				const holes = picks.filter((x) => !x.videoId);
-				const mark = (x) => (!x.videoId ? '✗' : x.source === 'comment' ? '💬' : x.confidence === 'weak' ? '⚠️' : '🔎');
+				const searchOk = picks.filter((x) => x.source === 'search' && x.accepted).length;
+				videoRejects = picks.filter((x) => !x.accepted);
+				const mark = (x) => (x.source === 'comment' ? '💬' : !x.accepted ? '⚠️' : '🔎');
 				for (const x of picks) {
-					console.log(`  ${mark(x)} ${x.title} — ${x.artists}${x.videoId ? ` → ${x.videoId}${x.channel ? ` (${x.channel})` : ''}` : ''}`);
+					const tail = x.videoId ? ` → ${x.videoId}${x.channel ? ` (${x.channel})` : ''} [${x.score}]` : ` — ${x.reason}`;
+					console.log(`  ${mark(x)} ${x.title} — ${x.artists}${tail}`);
 				}
-				videoStatus = `${fromComment} from comments, ${strong} searched (artist channel), ${weak.length} searched (⚠️ unrelated channel), ${holes.length} unresolved`;
+				const src = [vcfg.useComments && 'comments', vcfg.useSearch && `search≥${vcfg.searchAutoAcceptPct}%`].filter(Boolean).join(' + ');
+				videoStatus = `${src}: ${fromComment} from comments, ${searchOk} auto-accepted, ${videoRejects.length} held back`;
 				console.log(`[info] videos: ${videoStatus}`);
-				videoWeak = weak;
 			}
 		}
 
@@ -429,7 +449,7 @@ for (const round of candidates) {
 			ytmUrl = `https://music.youtube.com/playlist?list=${playlistId}`;
 			console.log(`[info] playlist created: ${ytmUrl}`);
 
-			const videoIds = (picks ?? []).map((x) => x.videoId).filter(Boolean);
+			const videoIds = (picks ?? []).filter((x) => x.accepted && x.videoId).map((x) => x.videoId);
 			if (videoIds.length) {
 				videoPlaylistId = await createPlaylist(
 					token,
@@ -452,7 +472,7 @@ for (const round of candidates) {
 		);
 
 		const manifest = picks
-			? JSON.stringify(picks.map((x) => ({ title: x.title, artists: x.artists, videoId: x.videoId, source: x.source, channel: x.channel, confidence: x.confidence })))
+			? JSON.stringify({ config: vcfg, picks: picks.map((x) => ({ title: x.title, artists: x.artists, videoId: x.videoId, source: x.source, channel: x.channel, score: x.score, accepted: x.accepted, reason: x.reason })) })
 			: null;
 		const base = { ...blank, round_id: round.id, league_id: lg.id, target: TARGET, video_manifest: manifest };
 
@@ -478,9 +498,9 @@ for (const round of candidates) {
 				videoUrl ? `Videos: ${videoUrl}\n  ${videoStatus}` : `Videos: none (${videoStatus ?? 'disabled'})`,
 				// Name the weak picks outright. "12 from search" reads like a
 				// success; it is the ones on an unrelated channel that need eyes.
-				...(videoWeak.length
-					? ['Check these — searched, channel is not the artist:',
-					   ...videoWeak.map((x) => `  • ${x.title} — ${x.artists} → youtu.be/${x.videoId} (${x.channel})`)]
+				...(videoRejects.length
+					? ['Held back — not in the playlist:',
+					   ...videoRejects.map((x) => `  • ${x.title} — ${x.artists}: ${x.reason}` + (x.videoId ? `\n    youtu.be/${x.videoId} (${x.channel})` : ''))]
 					: []),
 				`Cover: ${coverHost}`,
 				`Send with: node scripts/ytm-drop/run.mjs --round ${round.id} --approve`,
