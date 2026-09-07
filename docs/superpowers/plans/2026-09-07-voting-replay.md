@@ -898,8 +898,24 @@ Follow the existing pattern at lines 131–151: add a `replay` entry to the `lr-
 
 - [ ] **Step 2: Verify the tab renders in production**
 
-Run: `docker compose build bot-ui && docker compose up -d bot-ui && curl -s 'localhost:3002/history?tab=league' | grep -c 'Replay'`
-Expected: `≥1`
+**Do NOT use a curl grep here.** The switcher sits behind `{#if loading && !data}`
+and `data` arrives only from a client-side fetch of `/api/history/leagues`, so SSR
+emits no switcher at all. `curl … | grep -c Replay` returns 0 — and so does
+`grep -c Heatmap`, `Drift` and `Genre`, which have shipped for months. The check
+cannot distinguish a working panel from a missing one. Verified 2026-09-07: all
+four terms return 0 against a healthy deployment.
+
+Use headless Chromium inside the container instead, the same pattern the digest
+QA scripts use:
+
+```bash
+docker compose build bot-ui && docker compose up -d bot-ui
+# then, in-container Puppeteer: load /history?tab=league, wait for the switcher,
+# read its button labels, and assert no pageerror/console errors fired.
+```
+Expected: switcher reads `["Heatmap","Drift","Genre","Replay"]`, zero page errors
+(an `each_key_duplicate` here takes the whole page down), and clicking Replay
+renders the picker, presets, scrubber and all three views against real data.
 
 - [ ] **Step 3: Commit**
 
