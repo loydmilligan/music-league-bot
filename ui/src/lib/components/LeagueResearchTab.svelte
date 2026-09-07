@@ -146,7 +146,7 @@
     <!-- Active panel -->
     <div class="lr-panel">
       {#if view === 'heatmap'}
-        <HeatmapPanel roster={d.roster} matrix={d.matrix} maxPoints={d.maxPoints} />
+        <HeatmapPanel roster={d.roster} matrix={d.matrix} maxPoints={d.maxPoints} pct={d.pct} rankImpact={d.rankImpact} />
       {:else if view === 'drift'}
         <DriftPanel drift={d.drift} />
       {:else if view === 'genre'}

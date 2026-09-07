@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { normalizeGenre, type Matrix, type MatrixCell } from '../league-research/viz.js';
+import { pctMatrix, rankImpactMatrix, type NumMatrix, type RoundVotes } from '../league-research/matrices.js';
 
 // League Research service (sprint-26) — powers the /history "League research" tab.
 // Scoped to ONE league at a time (optionally one season). Produces the three
@@ -34,6 +35,10 @@ export interface LeagueResearch {
   roster: string[];
   maxPoints: number;
   matrix: Matrix;
+  /** Share of each recipient's net total that came from each voter, as a percentage. */
+  pct: NumMatrix;
+  /** Positions each submitter would drop if that voter's ballot vanished, summed over rounds. */
+  rankImpact: NumMatrix;
   drift: DriftRoundData[];
   genreByPlayer: Record<string, PlayerGenre>;
 }
@@ -82,15 +87,19 @@ export function getLeagueResearch(
   const roster = (
     db
       .prepare(
-        `SELECT c.name AS name, COALESCE(SUM(v.points), 0) AS pts
+        // COALESCE through players.name: the ML handles collide in a way that
+        // makes the matrix unreadable -- "Sarah" is Sarah Zucker and "Sarah S" is
+        // Sarah Black, and monicac1217 is Michael Black.
+        `SELECT COALESCE(p.name, c.name) AS name, COALESCE(SUM(v.points), 0) AS pts
          FROM ml_submissions m
          JOIN rounds r ON r.id = m.round_id
          JOIN seasons s ON s.id = r.season_id
          JOIN competitors c ON c.id = m.competitor_id
+         LEFT JOIN players p ON p.id = c.player_id
          LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
          WHERE ${scope}
-         GROUP BY c.name
-         ORDER BY pts DESC, c.name`,
+         GROUP BY COALESCE(p.name, c.name)
+         ORDER BY pts DESC, COALESCE(p.name, c.name)`,
       )
       .all(...scopeArgs) as { name: string; pts: number }[]
   ).map((r) => r.name);
@@ -99,7 +108,7 @@ export function getLeagueResearch(
   // ── Matrix (voter → submitter) ──
   const edges = db
     .prepare(
-      `SELECT vc.name AS voter, sc.name AS submitter,
+      `SELECT COALESCE(vp.name, vc.name) AS voter, COALESCE(sp2.name, sc.name) AS submitter,
               SUM(v.points) AS points, COUNT(*) AS cnt,
               AVG(CASE WHEN sp.popularity_proxy IS NOT NULL THEN 100 - sp.popularity_proxy END) AS obscurity,
               AVG(af.energy) AS energy
@@ -109,10 +118,12 @@ export function getLeagueResearch(
        JOIN ml_submissions m ON m.round_id = v.round_id AND m.spotify_uri = v.spotify_uri
        JOIN competitors vc ON vc.id = v.voter_id
        JOIN competitors sc ON sc.id = m.competitor_id
+       LEFT JOIN players vp ON vp.id = vc.player_id
+       LEFT JOIN players sp2 ON sp2.id = sc.player_id
        LEFT JOIN song_popularity sp ON sp.spotify_uri = v.spotify_uri
        LEFT JOIN song_audio_features af ON af.spotify_uri = v.spotify_uri
        WHERE ${scope}
-       GROUP BY vc.name, sc.name`,
+       GROUP BY COALESCE(vp.name, vc.name), COALESCE(sp2.name, sc.name)`,
     )
     .all(...scopeArgs) as {
     voter: string;
@@ -122,6 +133,33 @@ export function getLeagueResearch(
     obscurity: number | null;
     energy: number | null;
   }[];
+
+  // Per-round cross-votes for the rank-impact lens. Whole-ballot removal needs
+  // every round's votes, not the season aggregate.
+  const roundVoteRows = db
+    .prepare(
+      `SELECT v.round_id AS roundId,
+              COALESCE(vp.name, vc.name) AS voter,
+              COALESCE(sp2.name, sc.name) AS submitter,
+              v.points AS points
+       FROM votes v
+       JOIN rounds r ON r.id = v.round_id
+       JOIN seasons s ON s.id = r.season_id
+       JOIN ml_submissions m ON m.round_id = v.round_id AND m.spotify_uri = v.spotify_uri
+       JOIN competitors vc ON vc.id = v.voter_id
+       JOIN competitors sc ON sc.id = m.competitor_id
+       LEFT JOIN players vp ON vp.id = vc.player_id
+       LEFT JOIN players sp2 ON sp2.id = sc.player_id
+       WHERE ${scope}`,
+    )
+    .all(...scopeArgs) as { roundId: number; voter: string; submitter: string; points: number }[];
+  const byRound = new Map<number, RoundVotes>();
+  for (const row of roundVoteRows) {
+    if (!byRound.has(row.roundId)) byRound.set(row.roundId, { roundId: row.roundId, votes: [] });
+    byRound.get(row.roundId)!.votes.push({ voter: row.voter, submitter: row.submitter, points: row.points });
+  }
+  const pct = pctMatrix(roster, edges.map((e) => ({ voter: e.voter, submitter: e.submitter, points: Number(e.points) })));
+  const rankImpact = rankImpactMatrix(roster, [...byRound.values()]);
 
   const n = roster.length;
   const matrix: Matrix = Array.from({ length: n }, (_, r) =>
@@ -251,6 +289,8 @@ export function getLeagueResearch(
     seasons,
     season,
     roster,
+    pct,
+    rankImpact,
     maxPoints,
     matrix,
     drift,
