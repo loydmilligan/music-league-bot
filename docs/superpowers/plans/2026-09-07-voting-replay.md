@@ -737,6 +737,60 @@ git add "ui/src/routes/api/history/round/[roundId]/replay/+server.ts"
 git commit -m "feat(replay): GET /api/history/round/:roundId/replay"
 ```
 
+### Task B3: Round list endpoint for the picker
+
+**Files:**
+- Create: `ui/src/routes/api/history/league/[leagueId]/rounds/+server.ts`
+
+**Interfaces:**
+- Produces: `GET /api/history/league/:leagueId/rounds` → `[{ id, name, season, ballots }]`,
+  ordered season ascending then round id ascending.
+
+Added mid-sprint. The plan assumed a browser-callable round list existed; it does
+not. `/api/rounds/list` and `/api/rounds/resolve` are both `requireBearerToken`,
+and `/api/leagues/:leagueId/rounds` is POST-only (it creates rounds). Workstream
+C's round picker has no source without this.
+
+`ballots` is the distinct voter count, so the picker can disable rounds with
+nothing to replay.
+
+- [ ] **Step 1: Implement**
+
+```ts
+import type { RequestHandler } from './$types.js';
+import { json, error } from '@sveltejs/kit';
+import { getDb } from '$lib/db/client.js';
+
+// GET /api/history/league/:leagueId/rounds — round picker source for the Voting
+// Replay panel. Unauthenticated, like the sibling League Research endpoint.
+export const GET: RequestHandler = async ({ params }) => {
+  const leagueId = Number(params.leagueId);
+  if (!Number.isInteger(leagueId) || leagueId <= 0) throw error(400, 'invalid league id');
+
+  const rows = getDb().prepare(
+    `SELECT r.id, r.name, s.season_number AS season,
+            (SELECT COUNT(DISTINCT v.voter_id) FROM votes v WHERE v.round_id = r.id) AS ballots
+       FROM rounds r
+       JOIN seasons s ON s.id = r.season_id
+      WHERE s.league_id = ?
+      ORDER BY s.season_number, r.id`,
+  ).all(leagueId);
+  return json(rows);
+};
+```
+
+- [ ] **Step 2: Verify against the real database**
+
+Run: `curl -s localhost:3002/api/history/league/3/rounds | python3 -m json.tool | head -20`
+Expected: 16 rounds across two seasons; round 142 shows `"ballots": 13`.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add "ui/src/routes/api/history/league/[leagueId]/rounds/+server.ts"
+git commit -m "feat(replay): round list endpoint for the replay picker"
+```
+
 ---
 
 ## Workstream C — VIEWS  🟣  Svelte panels
@@ -1122,7 +1176,7 @@ Task 0 unblocks everything. Then:
 | Pane | Workstream | Depends on |
 | --- | --- | --- |
 | 🔵 %6 | A — engine | Task 0 |
-| 🟢 %7 | B — data + API | Task 0 |
+| 🟢 %7 | B — data + API (B1, B2, B3) | Task 0 |
 | 🟣 %8 | C — views | Task 0 (stubs `analyse` until A4 lands) |
 | 🟠 %9 | D — tests | Task 0; D1–D3 fail until A3/A4, which is correct TDD |
 
