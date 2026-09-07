@@ -38,6 +38,25 @@ export function ensureEmailSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_email_type  ON email_messages(parsed_type);
     CREATE INDEX IF NOT EXISTS idx_email_round ON email_messages(round_id);
 
+    -- One row per "User Submitted" email. Deliberately NOT round_events, which
+    -- is UNIQUE(round_id, event_type) and so can hold only one row per round --
+    -- the whole point here is the repeats. A second row for the same person in
+    -- the same round IS the mid-round pick change.
+    --
+    -- The email names the person and the round but never the song, so this
+    -- table cannot reveal who submitted what. That is what makes it safe to
+    -- read during a live round, while guessing is still open.
+    CREATE TABLE IF NOT EXISTS submission_events (
+      message_id     TEXT PRIMARY KEY REFERENCES email_messages(message_id),
+      round_id       INTEGER REFERENCES rounds(id),
+      submitter_name TEXT NOT NULL,
+      league_label   TEXT,
+      round_name     TEXT,
+      occurred_at    TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_submission_events_round
+      ON submission_events(round_id, submitter_name, occurred_at);
+
     CREATE TABLE IF NOT EXISTS round_events (
       id                INTEGER PRIMARY KEY,
       round_id          INTEGER NOT NULL REFERENCES rounds(id),
@@ -65,6 +84,46 @@ export function ensureEmailSchema(db: Database.Database): void {
   }
 }
 
+/** Lowercase and drop everything but a-z0-9, so punctuation/spacing can't matter. */
+function normalizeLabel(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * Map an email's league label ("Second Second Best", "Fam Jam IV: Uncharted
+ * Tracks") to a `leagues.id`, or null when it is unknown or ambiguous.
+ *
+ * This used to be a bare `label LIKE l.name || '%'` prefix test, which silently
+ * dropped two of the four live leagues for the whole of 2026: the ML season
+ * names "Second Second Best" and "Fam Jam IV: Uncharted Tracks" do not START
+ * with the mlbot league names "Second Best" and "Fam-Jam", so every
+ * new_playlist email for those leagues logged "playlist NOT captured" and no
+ * voting_started event was ever written for them.
+ *
+ * Containment on the normalized forms handles both ("secondsecondbest"
+ * contains "secondbest"; "famjamivunchartedtracks" contains "famjam").
+ * scripts/ml-rebuild.mjs rightly warns that substring matching is unsafe — but
+ * the danger it describes is picking the wrong SEASON of one league, and this
+ * resolves only the LEAGUE. To keep it honest anyway, an ambiguous label that
+ * hits more than one league returns null rather than guessing; that is the same
+ * "unmapped" outcome as before, so a future league name that collides degrades
+ * to today's behaviour instead of writing to the wrong round.
+ */
+export function resolveLeagueIdFromLabel(
+  db: Database.Database,
+  label: string | null,
+): number | null {
+  if (!label) return null;
+  const needle = normalizeLabel(label);
+  if (!needle) return null;
+  const leagues = db.prepare('SELECT id, name FROM leagues').all() as Array<{ id: number; name: string }>;
+  const hits = leagues.filter((l) => {
+    const n = normalizeLabel(l.name);
+    return n.length > 0 && needle.includes(n);
+  });
+  return hits.length === 1 ? hits[0].id : null;
+}
+
 /** Resolve a parsed email to an mlbot round id, or null if unknown. */
 function resolveRoundId(db: Database.Database, p: ParsedEmail): number | null {
   // round_starting / votes_are_in carry the exact ML round id.
@@ -74,19 +133,22 @@ function resolveRoundId(db: Database.Database, p: ParsedEmail): number | null {
       | undefined;
     return row?.id ?? null;
   }
-  // new_playlist has no round id → match round name within the league. The
-  // leagueLabel ("Hip Jammers 3: its all hippening") begins with the league name.
+  // new_playlist has no round id → match round name within the league.
   if (p.type === 'new_playlist' && p.roundName) {
+    const leagueId = resolveLeagueIdFromLabel(db, p.leagueLabel);
+    // A label we could not place is not a licence to match the round name
+    // league-wide — that is how one league's round name would capture another
+    // league's playlist. Only a genuinely absent label stays unscoped.
+    if (p.leagueLabel && leagueId == null) return null;
     const row = db
       .prepare(
         `SELECT r.id FROM rounds r
          JOIN seasons s ON s.id = r.season_id
-         JOIN leagues l ON l.id = s.league_id
-         WHERE r.name = ? AND (? IS NULL OR ? LIKE l.name || '%')
+         WHERE r.name = ? AND (? IS NULL OR s.league_id = ?)
          ORDER BY r.created_at DESC
          LIMIT 1`,
       )
-      .get(p.roundName, p.leagueLabel, p.leagueLabel) as { id: number } | undefined;
+      .get(p.roundName, leagueId, leagueId) as { id: number } | undefined;
     return row?.id ?? null;
   }
   return null;
@@ -121,6 +183,10 @@ function computeOutcome(
           ? 'no matching round — playlist NOT captured'
           : 'no matching round (round not imported yet?)',
     };
+  }
+  if (p.type === 'user_submitted') {
+    const who = p.submitterName ?? 'someone';
+    return { status: 'recorded', detail: `recorded submission by ${who}` };
   }
   const event = EVENT_FOR_TYPE[p.type]?.event ?? 'event';
   const roundName =
@@ -197,6 +263,19 @@ export function ingestParsedEmail(
     action_detail: outcome.detail,
     raw: meta.raw ?? '',
   });
+
+  // Submission churn. Keyed on message_id so a replayed backfill is a no-op,
+  // while genuinely distinct emails from the same person in the same round each
+  // keep their own row -- those repeats are the pick-change signal.
+  if (p.type === 'user_submitted' && p.submitterName) {
+    db.prepare(
+      `INSERT INTO submission_events
+         (message_id, round_id, submitter_name, league_label, round_name, occurred_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(message_id) DO UPDATE SET
+         round_id = COALESCE(excluded.round_id, submission_events.round_id)`,
+    ).run(p.messageId, roundId, p.submitterName, p.leagueLabel, p.roundName, p.sentAt);
+  }
 
   let eventType: string | null = null;
   const map = EVENT_FOR_TYPE[p.type];

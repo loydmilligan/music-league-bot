@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
-import { ensureEmailSchema, ingestParsedEmail, recordIngestFailure } from '../src/email/emailIngest.js';
+import { ensureEmailSchema, ingestParsedEmail, recordIngestFailure, resolveLeagueIdFromLabel } from '../src/email/emailIngest.js';
 import type { ParsedEmail } from '../src/email/emailParser.js';
 
 function seedDb(): Database.Database {
@@ -12,12 +12,21 @@ function seedDb(): Database.Database {
       id INTEGER PRIMARY KEY, season_id INTEGER, ml_round_id TEXT UNIQUE,
       name TEXT, created_at TEXT, spotify_playlist_url TEXT
     );
-    INSERT INTO leagues (id, slug, name) VALUES (1, 'hip-jammers', 'Hip Jammers');
-    INSERT INTO seasons (id, league_id, season_number) VALUES (1, 1, 3);
+    INSERT INTO leagues (id, slug, name) VALUES
+      (1, 'hip-jammers', 'Hip Jammers'),
+      (3, 'second-best', 'Second Best'),
+      (2, 'fam-jam', 'Fam-Jam');
+    INSERT INTO seasons (id, league_id, season_number) VALUES (1, 1, 3), (3, 3, 2), (2, 2, 4);
     INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES
       (10, 1, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Plots so thicc', '2026-06-23T00:00:00Z'),
       (11, 1, '12c30e07f33d4acd92ca489696788036', 'EDM ''em', '2026-06-23T00:00:00Z'),
-      (12, 1, '1d4a94046a67405e9d855f5c0fd9136e', 'Pick Me Up', '2026-06-23T00:00:00Z');
+      (12, 1, '1d4a94046a67405e9d855f5c0fd9136e', 'Pick Me Up', '2026-06-23T00:00:00Z'),
+      -- Same round NAME in two leagues, and the decoy is the NEWER row, so a
+      -- league-blind match (or one that falls back to league-wide on an
+      -- unresolved label) picks 21 and the assertions below fail.
+      (20, 3, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'I Want My MTV', '2026-06-23T00:00:00Z'),
+      (21, 1, 'cccccccccccccccccccccccccccccccc', 'I Want My MTV', '2026-08-01T00:00:00Z'),
+      (22, 2, 'dddddddddddddddddddddddddddddddd', 'More Cowbell', '2026-06-23T00:00:00Z');
   `);
   ensureEmailSchema(db);
   return db;
@@ -31,6 +40,7 @@ function mkEmail(over: Partial<ParsedEmail>): ParsedEmail {
     toAddr: 'mattmariani@gmail.com',
     sentAt: '2026-05-10T12:00:00.000Z',
     type: 'other',
+      submitterName: null,
     mlRoundId: null,
     leagueLabel: null,
     roundName: null,
@@ -99,6 +109,53 @@ describe('ingestParsedEmail — new_playlist mapping by round name + league', ()
     const r = db.prepare('SELECT voting_started_at, spotify_playlist_url FROM rounds WHERE id=10').get() as any;
     expect(r.voting_started_at).toBe('2026-05-31T07:00:00.000Z');
     expect(r.spotify_playlist_url).toContain('02J0ICSMkywokNYRhFxWCp');
+  });
+});
+
+describe('resolveLeagueIdFromLabel — ML season labels that are not name prefixes', () => {
+  it('places "Second Second Best" on the Second Best league', () => {
+    expect(resolveLeagueIdFromLabel(db, 'Second Second Best')).toBe(3);
+  });
+
+  it('places "Fam Jam IV: Uncharted Tracks" on Fam-Jam across the hyphen', () => {
+    expect(resolveLeagueIdFromLabel(db, 'Fam Jam IV: Uncharted Tracks')).toBe(2);
+  });
+
+  it('still places the plain-prefix case', () => {
+    expect(resolveLeagueIdFromLabel(db, 'Hip Jammers 3: its all hippening')).toBe(1);
+  });
+
+  it('returns null for a label that matches no league', () => {
+    expect(resolveLeagueIdFromLabel(db, 'Nostalgia Pit')).toBeNull();
+  });
+
+  it('returns null rather than guessing when a label matches two leagues', () => {
+    db.prepare("INSERT INTO leagues (id, slug, name) VALUES (9, 'jammers', 'Jammers')").run();
+    expect(resolveLeagueIdFromLabel(db, 'Hip Jammers 3: its all hippening')).toBeNull();
+  });
+});
+
+describe('ingestParsedEmail — new_playlist league scoping', () => {
+  it('maps a Second Best playlist to the Second Best round, not the same-named Hip Jammers one', () => {
+    const res = ingestParsedEmail(db, mkEmail({
+      type: 'new_playlist',
+      roundName: 'I Want My MTV',
+      leagueLabel: 'Second Second Best',
+      playlistUrl: 'https://open.spotify.com/playlist/sbsbsbsbsbsbsbsbsbsbsb',
+    }));
+    expect(res.roundId).toBe(20);
+    expect((db.prepare('SELECT spotify_playlist_url u FROM rounds WHERE id=21').get() as any).u).toBeNull();
+  });
+
+  it('leaves the round unmapped when the league label places nowhere', () => {
+    const res = ingestParsedEmail(db, mkEmail({
+      type: 'new_playlist',
+      roundName: 'I Want My MTV',
+      leagueLabel: 'Some Other League',
+      playlistUrl: 'https://open.spotify.com/playlist/nope',
+    }));
+    expect(res.roundId).toBeNull();
+    expect(res.actionStatus).toBe('unmapped');
   });
 });
 
