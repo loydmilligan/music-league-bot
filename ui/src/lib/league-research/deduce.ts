@@ -93,3 +93,63 @@ export function candidatePools(
   }
   return Object.fromEntries([...pools].map(([uri, c]) => [uri, [...c].sort()]));
 }
+
+import type { ReplayAnalysis, ReplayPayload, ReplayStep, Scenario, SongBoard, SongKnowledge } from './replayTypes.js';
+
+export function analyse(payload: ReplayPayload, scenario: Scenario): ReplayAnalysis {
+  const { ballots, songs } = payload;
+  const pos: Record<string, number> = {};
+  ballots.forEach((bal, i) => { if (scenario.observers.includes(bal.voter)) pos[bal.voter] = i; });
+  const idxs = Object.values(pos).sort((a, b) => a - b);
+  const windowSize = idxs.length >= 2 ? idxs.at(-1)! - idxs[0] - 1 : 0;
+
+  // Union of every observer's schedule: two people refreshing at different
+  // moments partition the timeline more finely than either alone. That, not
+  // shared secrets, is the mechanical benefit of a partnership.
+  const cps = idxs.length >= 2
+    ? [...new Set(idxs.flatMap((s, i) => (i < idxs.length - 1 ? checkpoints(s, idxs[i + 1], scenario.gs) : [s])))]
+        .sort((a, b) => a - b)
+    : idxs;
+
+  const running: Record<string, number> = {};
+  const voterCount: Record<string, number> = {};
+  const steps: ReplayStep[] = [];
+
+  ballots.forEach((ballot, index) => {
+    for (const v of ballot.votes) {
+      running[v.uri] = (running[v.uri] ?? 0) + v.points;
+      if (v.points !== 0) voterCount[v.uri] = (voterCount[v.uri] ?? 0) + 1;
+    }
+    const seen = cps.filter((c) => c <= index);
+    const ivs = intervals(ballots.slice(0, index + 1), seen);
+    const known = [...new Set([...recoveredVoters(ivs), ...scenario.observers])];
+    const mech = candidatePools(songs, ballots.slice(0, index + 1), known, scenario.observers);
+
+    const knowledge: SongKnowledge[] = songs.map((s) => {
+      const mechanical = mech[s.uri] ?? [];
+      const cut = scenario.hunches.filter((h) => h.uri === s.uri).map((h) => h.player);
+      const after = mechanical.filter((p) => !cut.includes(p));
+      // A hunch that contradicts sound deduction is discarded, not obeyed.
+      const usable = after.length ? after : mechanical;
+      return {
+        uri: s.uri, mechanical, afterHunches: usable,
+        ruledOutByYou: after.length ? mechanical.filter((p) => cut.includes(p)) : [],
+      };
+    });
+
+    const board: SongBoard[] = songs
+      .map((s) => ({ uri: s.uri, points: running[s.uri] ?? 0, voterCount: voterCount[s.uri] ?? 0 }))
+      .sort((a, b) => b.points - a.points);
+
+    steps.push({ index, ballot, board, knownBallots: known, partialIntervals: ivs.filter((i) => !i.exact), knowledge });
+  });
+
+  // Count at the LAST step, not an average across steps: the view renders this
+  // as "N songs resolved", so it must be a count of songs, not a rate.
+  const final = steps.at(-1);
+  const songsResolvedByHunches = final
+    ? final.knowledge.filter((k) => k.mechanical.length > 1 && k.afterHunches.length === 1).length
+    : 0;
+
+  return { steps, windowSize, observerPositions: pos, hunchesApplied: scenario.hunches.length, songsResolvedByHunches };
+}

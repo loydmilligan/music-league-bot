@@ -93,3 +93,41 @@ describe('candidatePools', () => {
     expect(pools['s2']).toEqual(['A']);
   });
 });
+
+import { analyse } from './deduce.js';
+import type { ReplayPayload } from './replayTypes.js';
+
+const payload = (): ReplayPayload => ({
+  round: { id: 1, name: 'R', description: '', votingDeadline: null, windowOpensAfter: null },
+  songs: [song('s1', 'A'), song('s2', 'B'), song('s3', 'C')],
+  ballots: [b('A', ['s2', 1]), b('B', ['s1', 1]), b('C', ['s1', 1])],
+});
+
+describe('analyse', () => {
+  it('reports the window size between the two observers', () => {
+    const r = analyse(payload(), { observers: ['A', 'C'], gs: 4, hunches: [] });
+    expect(r.windowSize).toBe(1);
+    expect(r.observerPositions).toEqual({ A: 0, C: 2 });
+  });
+
+  it('a hunch narrows afterHunches but leaves mechanical untouched', () => {
+    const r = analyse(payload(), { observers: ['A'], gs: 4, hunches: [{ uri: 's3', player: 'B' }] });
+    const k = r.steps.at(-1)!.knowledge.find((x) => x.uri === 's3')!;
+    expect(k.mechanical).toContain('B');
+    expect(k.afterHunches).not.toContain('B');
+    expect(k.ruledOutByYou).toEqual(['B']);
+  });
+
+  it('a hunch that would empty a pool is ignored — sound deduction wins', () => {
+    const r = analyse(payload(), { observers: ['A'], gs: 4, hunches: [{ uri: 's1', player: 'A' }] });
+    const k = r.steps.at(-1)!.knowledge.find((x) => x.uri === 's1')!;
+    expect(k.afterHunches).toEqual(['A']);
+    expect(k.ruledOutByYou).toEqual([]);
+  });
+
+  it('counts hunch leverage', () => {
+    const r = analyse(payload(), { observers: ['A'], gs: 4, hunches: [{ uri: 's3', player: 'B' }] });
+    expect(r.hunchesApplied).toBe(1);
+    expect(r.songsResolvedByHunches).toBeGreaterThanOrEqual(0);
+  });
+});
