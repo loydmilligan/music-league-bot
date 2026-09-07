@@ -32,6 +32,7 @@ const TEST_GROUP = '120363428945055429@g.us';
 const BOT_CONTAINER = 'music-league-bot-bot-1';
 const WINDOW_DAYS = 7; // never backfill older transitions
 const COVER_VARIANT = '1d'; // Matt's pick, 2026-08-29
+const SEARCH_PACING_MS = 1500; // gap between per-track search.list calls (burst limiter)
 
 const argvHas = (f) => process.argv.includes(f);
 const argvVal = (f) => {
@@ -175,8 +176,16 @@ async function resolveVideo(token, track) {
 	url.searchParams.set('type', 'video');
 	url.searchParams.set('videoCategoryId', '10');
 	url.searchParams.set('maxResults', '3');
-	const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-	if (!res.ok) throw new Error(`search HTTP ${res.status}`);
+	// search.list is the call that trips YouTube's burst limiter: ten unpaced
+	// searches in ~1s got the whole account 429'd for hours on 2026-09-06, and a
+	// bare throw here turned that into a 15-minute retry storm that made it worse.
+	let res;
+	for (let i = 0; ; i++) {
+		res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+		if (res.ok) break;
+		if (![429, 500, 503].includes(res.status) || i >= 4) throw new Error(`search HTTP ${res.status}`);
+		await new Promise((r) => setTimeout(r, 2000 * 2 ** i));
+	}
 	const items = ((await res.json()).items ?? []).filter((i) => i.id?.videoId);
 	if (!items.length) return null;
 	const ids = items.map((i) => i.id.videoId).join(',');
@@ -254,7 +263,13 @@ for (const round of candidates) {
 
 		const token = await ytToken();
 		const resolved = [];
+		let first = true;
 		for (const t of tracks) {
+			// Same reason as the retry above: space the searches out rather than
+			// bursting them. 1.5s x ~10 tracks costs ~15s and is invisible on a
+			// 15-minute timer.
+			if (!first) await new Promise((r) => setTimeout(r, SEARCH_PACING_MS));
+			first = false;
 			const v = await resolveVideo(token, t);
 			console.log(`  ${v ? '✓' : '✗'} ${t.title} — ${t.artists}${v ? ` → ${v.videoId} (${v.channel})` : ''}`);
 			if (v) resolved.push(v.videoId);
