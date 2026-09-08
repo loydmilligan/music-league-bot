@@ -54,6 +54,8 @@ export interface CompleteDeps {
   now?: () => string;
   roundName: string;
   leagueTitle: string;
+  /** Round number within the league — stamped on the cover as "· R143". */
+  roundNumber?: number | null;
 }
 
 /**
@@ -124,8 +126,9 @@ export async function completeApproval(
       cover = await renderVideoCover(roundId, {
         roundName: deps.roundName,
         leagueTitle: deps.leagueTitle,
+        roundNumber: deps.roundNumber ?? null,
         picks: review.picks.filter((p) => p.included && p.chosen.length),
-      }, { fetchFn });
+      });
     } catch (e) {
       console.error(`[ytm-video-send] cover render failed for round ${roundId}, sending text only:`, e instanceof Error ? e.message : e);
     }
