@@ -93,36 +93,63 @@ export function channelMatchesArtist(channel, artists) {
 }
 
 /**
+ * A lyric video: the right song by the right artist, but not the video. Worth
+ * demoting out of auto-accept, not worth burying.
+ */
+const LYRIC_RE = /\blyrics?\b/i;
+
+/**
+ * Not this song's music video at all — somebody else performing it, or talking
+ * over it. Matched on annotative phrasings ("cover by", "(cover)") rather than
+ * a bare /cover/, so a song actually called "Cover Me" is not punished for its
+ * own title.
+ */
+const NOT_THE_VIDEO_RE =
+	/\b(?:reaction|reacts|reacting|commentary|explained|breakdown|karaoke|instrumental|tribute|8d\s*audio|sped\s*up|slowed(?:\s*\+?\s*reverb)?)\b|\bcover(?:ed)?\s+by\b|\(\s*cover\s*\)|\bcover\s+version\b|\b(?:acoustic|piano|guitar|metal|punk)\s+cover\b/i;
+
+/**
  * Confidence 0-100 that a search result really is this track's music video.
  *
  * Deliberately a small, legible sum rather than a black box, because the number
- * is user-facing: it is compared against the round's auto-accept threshold and
- * printed in the approval report, so a human has to be able to see why a pick
- * scored what it did.
+ * is user-facing: it is compared against the round's thresholds and printed on
+ * the review page, so a human has to be able to see why a pick scored what it
+ * did.
  *
  *   +45  the channel is the artist's (incl. the VEVO/Official variants). The
  *        single strongest signal, and on its own not quite enough to auto-accept
  *        at the recommended 70.
- *   +25  the title says "official video" / "official music video".
+ *   +25  the title says "official video" / "official music video". Note this
+ *        does NOT fire on "Official Lyric Video" — the words are not adjacent.
  *   +20  the title actually contains the track name — catches the case where
  *        search drifted to a different song on the right artist's channel.
  *   +10/+5 for the first and second result; rank is weak evidence, so it only
  *        ever breaks ties.
+ *   -25  a lyric video. Enough to keep it out of auto-accept — it is the right
+ *        song but the wrong artefact, so it belongs in the review band — while
+ *        leaving it comfortably ahead of a cover or a reaction video, which is
+ *        what you want offered first when the real video cannot be found.
+ *   -40  a cover, karaoke, reaction or commentary. Actively the wrong video,
+ *        and large enough that no combination of the bonuses rescues it into
+ *        auto-accept.
  *
  * Worked examples from the real SB R141 run: an artist-channel upload titled
- * "… (Official Video)" scores 100; "Leon Bridges - Smooth Sailin'" on
- * LeonBridgesVEVO scores 75; the Wellermen's cover of "Barrett's Privateers"
- * scores 30, as does a fan upload of "Another New World".
+ * "… (Official Video)" scores 100; the same channel's "(Official Lyric Video)"
+ * scores 50, ahead of the Wellermen's cover of "Barrett's Privateers" at 0.
  */
 export function scoreSearchHit(hit, track, rank = 0) {
 	if (!hit) return 0;
+	const title = hit.title ?? '';
 	let score = 0;
 	if (channelMatchesArtist(hit.channel, track.artists)) score += 45;
-	if (/official\s*(music\s*)?video/i.test(hit.title ?? '')) score += 25;
+	if (/official\s*(music\s*)?video/i.test(title)) score += 25;
 	const t = squash(track.title);
-	if (t.length >= 3 && squash(hit.title).includes(t)) score += 20;
+	if (t.length >= 3 && squash(title).includes(t)) score += 20;
 	score += rank === 0 ? 10 : rank === 1 ? 5 : 0;
-	return Math.min(100, score);
+	if (LYRIC_RE.test(title)) score -= 25;
+	if (NOT_THE_VIDEO_RE.test(title)) score -= 40;
+	// Clamped at both ends: a negative score would sort below "nothing found"
+	// and read as nonsense next to a percentage sign.
+	return Math.max(0, Math.min(100, score));
 }
 
 /**

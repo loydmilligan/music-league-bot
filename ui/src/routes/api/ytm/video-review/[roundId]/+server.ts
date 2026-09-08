@@ -3,7 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import {
   ensureVideoReviewSchema, getReview, applyDecisions, undecidedPicks, includedVideoIds,
-  claimApproval, denyReview, snoozeReview, type PickDecision,
+  claimApproval, denyReview, snoozeReview, reopenFailed, type PickDecision,
 } from '$lib/ytm/videoReview.js';
 import { completeApproval } from '$lib/ytm/send.js';
 import { reviewContext } from '$lib/ytm/reviewContext.js';
@@ -48,14 +48,26 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const roundId = Number(params.roundId);
   const body = (await request.json().catch(() => ({}))) as { action?: unknown };
   const action = body.action;
-  if (action !== 'approve' && action !== 'deny' && action !== 'snooze') {
-    throw error(400, "action must be 'approve', 'deny' or 'snooze'");
+  if (action !== 'approve' && action !== 'deny' && action !== 'snooze' && action !== 'retry') {
+    throw error(400, "action must be 'approve', 'deny', 'snooze' or 'retry'");
   }
 
   const db = getDb();
   ensureVideoReviewSchema(db);
   const review = getReview(db, roundId);
   if (!review) throw error(404, 'no video review for this round');
+
+  // Retrying a failure needs no token: claimApproval already consumed it, and
+  // the decision it authorised still stands — only the delivery is being redone.
+  if (action === 'retry') {
+    if (!reopenFailed(db, roundId, now())) {
+      return json({ ok: false, reason: `round ${roundId} is not in a failed state (status=${review.status})` }, { status: 400 });
+    }
+    void completeApproval(db, roundId, { ...reviewContext(db, roundId), now })
+      .catch((e) => console.error(`[ytm-video-retry] round ${roundId} failed:`, e instanceof Error ? e.message : e));
+    return json({ ok: true, roundId });
+  }
+
   if (!review.token) return json({ ok: false, reason: `already ${review.status}` }, { status: 400 });
 
   if (action === 'snooze') {

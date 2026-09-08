@@ -99,7 +99,7 @@
   const addHit = (p: VideoPick, h: Hit) =>
     patch([{ spotifyUri: p.spotifyUri, addVideo: h.videoId, addVideoTitle: h.title, addVideoChannel: h.channel }]);
 
-  async function post(action: 'approve' | 'deny' | 'snooze') {
+  async function post(action: 'approve' | 'deny' | 'snooze' | 'retry') {
     if (action === 'approve' && undecided.length) return;
     busy = true; err = null;
     try {
@@ -113,8 +113,8 @@
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.ok === false) throw new Error(body.reason ?? `${action} failed (${res.status})`);
-      done = action === 'approve'
-        ? 'Approved — building the playlist and posting it now.'
+      done = action === 'approve' || action === 'retry'
+        ? 'Building the playlist and posting it now.'
         : action === 'deny' ? 'Denied. No video playlist will be posted for this round.'
         : 'Snoozed. You will be nudged again in four hours.';
       await invalidateAll();
@@ -150,6 +150,24 @@
   {/if}
   {#if err}
     <p class="bg-surface border border-ember rounded-lg px-4 py-3 text-sm text-ember">{err}</p>
+  {/if}
+
+  {#if data.review.status === 'failed'}
+    <!-- The token is gone by now, so the page IS the only way back in. -->
+    <div class="bg-surface border border-ember rounded-lg px-4 py-3 space-y-2">
+      <p class="text-sm text-ember">Posting failed: {data.review.error}</p>
+      <p class="text-xs text-fg-dim">
+        Your choices are saved. Rate limits and dropped sessions are usually over in a minute or two.
+      </p>
+      <button
+        type="button"
+        onclick={() => post('retry')}
+        disabled={busy}
+        class="bg-accent hover:bg-accent-strong disabled:opacity-40 text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-4 py-2 rounded-md transition-colors"
+      >
+        {busy ? 'Working…' : 'Try again'}
+      </button>
+    </div>
   {/if}
 
   {#if data.review.status === 'sent' && data.review.videoUrl}

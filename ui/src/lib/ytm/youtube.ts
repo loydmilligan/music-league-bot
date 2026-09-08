@@ -49,11 +49,16 @@ async function api(
     });
     const body = await res.json();
     if (res.ok) return body;
-    // playlistItems.insert intermittently 409s on rapid inserts (spike 003).
-    if (![409, 500, 503].includes(res.status) || i >= tries - 1) {
+    // 409: playlistItems.insert intermittently conflicts on rapid inserts
+    // (spike 003). 429: playlists.insert has a SHORT-WINDOW burst limit that is
+    // separate from the daily quota — it fired for real on 2026-09-07 and, not
+    // being retried, failed the whole approval. It is the one status here that
+    // backing off actually fixes, so it gets a longer wait.
+    const retryable = [409, 429, 500, 503].includes(res.status);
+    if (!retryable || i >= tries - 1) {
       throw new Error(`${path.split('?')[0]} HTTP ${res.status}: ${JSON.stringify(body?.error?.errors ?? body).slice(0, 250)}`);
     }
-    await sleep(1000 * 2 ** i);
+    await sleep((res.status === 429 ? 5000 : 1000) * 2 ** i);
   }
 }
 

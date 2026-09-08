@@ -354,9 +354,38 @@ export function snoozeReview(db: Database.Database, token: string, now: () => Da
   return { ok: true, roundId: review.roundId };
 }
 
+/**
+ * Record the built playlist BEFORE anything is sent.
+ *
+ * Creating the playlist and posting it are two failure domains, and the send is
+ * the flakier one (a wedged WhatsApp client, a restarting bot). Without this the
+ * URL of a successfully-built playlist was lost on a send failure, and the retry
+ * built a second one — orphaning the first and burning quota each time round.
+ */
+export function markPlaylistBuilt(db: Database.Database, roundId: number, videoUrl: string, nowIso: string): void {
+  db.prepare('UPDATE ytm_video_reviews SET video_url=?, updated_at=? WHERE round_id=?')
+    .run(videoUrl, nowIso, roundId);
+}
+
 export function markSent(db: Database.Database, roundId: number, videoUrl: string, nowIso: string): void {
   db.prepare(`UPDATE ytm_video_reviews SET status='sent', video_url=?, error=NULL, updated_at=? WHERE round_id=?`)
     .run(videoUrl, nowIso, roundId);
+}
+
+/**
+ * Put a failed review back in play.
+ *
+ * A failure after claimApproval has already burned the single-use token used to
+ * strand the round for good: status `failed`, no token, no button. But the
+ * failures that land here are transient by nature — a YouTube rate limit, a
+ * wedged WhatsApp session — so re-running is exactly the right answer. The
+ * decisions are untouched; only the outcome is retried.
+ */
+export function reopenFailed(db: Database.Database, roundId: number, nowIso: string): boolean {
+  const info = db.prepare(
+    `UPDATE ytm_video_reviews SET status='approved', error=NULL, updated_at=? WHERE round_id=? AND status='failed'`,
+  ).run(nowIso, roundId);
+  return info.changes > 0;
 }
 
 export function markFailed(db: Database.Database, roundId: number, error: string, nowIso: string): void {

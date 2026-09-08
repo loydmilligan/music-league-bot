@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import {
+  reopenFailed,
   parseYoutubeVideoId,
   ensureVideoReviewSchema, upsertReview, getReview, getReviewByToken,
   applyDecisions, claimApproval, denyReview, snoozeReview, markSent, markFailed,
@@ -341,5 +342,44 @@ describe('rows parked before `chosen` became a list', () => {
     expect(picks[0].chosen).toEqual(['OLD1']);
     expect(picks[1].chosen).toEqual([]);
     expect(includedVideoIds(picks)).toEqual(['OLD1']);
+  });
+});
+
+describe('recovering from a failed send', () => {
+  function approveAndFail() {
+    applyDecisions(db, 143, [{ spotifyUri: 'u:review', chosen: [] }], T0);
+    claimApproval(db, getReview(db, 143)!.token!, () => T0);
+    markFailed(db, 143, 'playlists HTTP 429: RATE_LIMIT_EXCEEDED', T0);
+  }
+
+  it('a failure strands the review with no token, so reopening cannot need one', () => {
+    approveAndFail();
+    const r = getReview(db, 143)!;
+    expect(r.status).toBe('failed');
+    expect(r.token).toBeNull();
+  });
+
+  it('reopens to approved, clears the error, and keeps every decision', () => {
+    approveAndFail();
+    expect(reopenFailed(db, 143, T0)).toBe(true);
+    const r = getReview(db, 143)!;
+    expect(r.status).toBe('approved');
+    expect(r.error).toBeNull();
+    expect(includedVideoIds(r.picks)).toEqual(['COMMENT1', 'AUTO1']);
+  });
+
+  it('refuses to reopen anything that did not fail', () => {
+    expect(reopenFailed(db, 143, T0)).toBe(false); // pending
+    approveAndFail();
+    reopenFailed(db, 143, T0);
+    expect(reopenFailed(db, 143, T0)).toBe(false); // already approved again
+    markSent(db, 143, 'u', T0);
+    expect(reopenFailed(db, 143, T0)).toBe(false); // sent
+  });
+
+  it('a reopened review is still not re-notified', () => {
+    approveAndFail();
+    reopenFailed(db, 143, T0);
+    expect(reviewsDueForNotify(db, '2100-01-01T00:00:00.000Z')).toHaveLength(0);
   });
 });

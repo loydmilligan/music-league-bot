@@ -61,6 +61,57 @@ describe('scoreSearchHit', () => {
     expect(scoreSearchHit({ channel: 'PixiesOfficial', title: 'Pixies - Debaser' }, t('Where Is My Mind?', 'Pixies'), 0)).toBe(55);
   });
 
+  it('demotes a lyric video below the real one but keeps it above the also-rans', () => {
+    // The real R141 candidate list for "Where Is My Mind?", rank held constant.
+    // Before the penalty the lyric video scored 70 and was auto-accepted over
+    // the actual music video; the ordering below is the whole point of it.
+    const track = t('Where Is My Mind?', 'Pixies');
+    const real = scoreSearchHit({ channel: 'Moisés, Mara, Simão e', title: 'Pixies   Where Is My Mind Official Video' }, track, 0);
+    const lyric = scoreSearchHit({ channel: 'PixiesOfficial', title: 'Pixies - Where Is My Mind? (Official Lyric Video)' }, track, 0);
+    const fan = scoreSearchHit({ channel: "i'm cyborg but that's ok", title: 'Pixies - Where Is My Mind' }, track, 0);
+    expect(real).toBeGreaterThan(lyric);
+    expect(lyric).toBeGreaterThan(fan);
+    // And it must no longer clear the recommended auto-accept line on its own.
+    expect(lyric).toBeLessThan(70);
+  });
+
+  it('keeps a lyric video ahead of a cover, a reaction and karaoke', () => {
+    const track = t("Barrett's Privateers", 'Stan Rogers');
+    const lyric = scoreSearchHit({ channel: 'Stan Rogers', title: "Barrett's Privateers (Lyric Video)" }, track, 0);
+    for (const wrong of [
+      { channel: 'Shanty Folk', title: "Barrett's Privateers (cover)" },
+      { channel: 'Some Guy', title: "Barrett's Privateers cover by Some Guy" },
+      { channel: 'Reactions', title: "Barrett's Privateers REACTION" },
+      { channel: 'SingAlong', title: "Barrett's Privateers karaoke" },
+      { channel: 'Chat', title: "Barrett's Privateers - commentary and breakdown" },
+    ]) {
+      expect(lyric).toBeGreaterThan(scoreSearchHit(wrong, track, 0));
+    }
+  });
+
+  it('outranks a cover even when the cover is the better-labelled upload', () => {
+    // The discriminating case: this cover carries "Official Video" AND the track
+    // name, so on the bonuses alone it beats a lyric video on the artist's own
+    // channel. Only the wrong-artefact penalty puts it back where it belongs.
+    const track = t("Barrett's Privateers", 'Stan Rogers');
+    const lyric = scoreSearchHit({ channel: 'Stan Rogers', title: "Barrett's Privateers (Lyric Video)" }, track, 0);
+    const slickCover = scoreSearchHit(
+      { channel: 'Shanty Folk', title: "Barrett's Privateers (Official Video) - cover by Shanty Folk" }, track, 0);
+    expect(slickCover).toBeLessThan(lyric);
+  });
+
+  it('does not punish a song whose own title contains "cover"', () => {
+    // \bcover\b alone would gut this; the penalty needs an annotative phrasing.
+    const track = t('Cover Me', 'Bruce Springsteen');
+    const legit = scoreSearchHit({ channel: 'BruceSpringsteenVEVO', title: 'Bruce Springsteen - Cover Me (Official Video)' }, track, 0);
+    expect(legit).toBe(100);
+  });
+
+  it('never returns a negative score', () => {
+    const track = t('x', 'y');
+    expect(scoreSearchHit({ channel: 'nope', title: 'x karaoke lyrics reaction cover by someone' }, track, 5)).toBe(0);
+  });
+
   it('scores a missing hit as zero rather than throwing', () => {
     expect(scoreSearchHit(null, t('x', 'y'), 0)).toBe(0);
   });
