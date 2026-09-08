@@ -77,6 +77,8 @@ export interface VideoReview {
   audioSent: boolean;
   videoUrl: string | null;
   error: string | null;
+  /** Slug of this round's MLB playlist page, once one has been written. */
+  pageSlug: string | null;
   notifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -102,6 +104,11 @@ export function ensureVideoReviewSchema(db: Database.Database): void {
       updated_at   TEXT NOT NULL
     );
   `);
+  // Guarded ALTER: the table predates the MLB playlist page.
+  const cols = new Set(
+    (db.prepare('PRAGMA table_info(ytm_video_reviews)').all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  if (!cols.has('page_slug')) db.exec('ALTER TABLE ytm_video_reviews ADD COLUMN page_slug TEXT');
 }
 
 export function generateReviewToken(): string {
@@ -112,7 +119,8 @@ type Row = {
   round_id: number; league_id: number; status: string; token: string | null;
   snooze_until: string | null; picks: string; config: string; target: string;
   audio_url: string | null; audio_sent: number; video_url: string | null;
-  error: string | null; notified_at: string | null; created_at: string; updated_at: string;
+  error: string | null; page_slug: string | null; notified_at: string | null;
+  created_at: string; updated_at: string;
 };
 
 /**
@@ -141,6 +149,7 @@ function hydrate(r: Row): VideoReview {
     audioSent: r.audio_sent === 1,
     videoUrl: r.video_url,
     error: r.error,
+    pageSlug: r.page_slug,
     notifiedAt: r.notified_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -365,6 +374,15 @@ export function snoozeReview(db: Database.Database, token: string, now: () => Da
 export function markPlaylistBuilt(db: Database.Database, roundId: number, videoUrl: string, nowIso: string): void {
   db.prepare('UPDATE ytm_video_reviews SET video_url=?, updated_at=? WHERE round_id=?')
     .run(videoUrl, nowIso, roundId);
+}
+
+/** 16 bytes of entropy: unlisted, not secret — the link goes to a group chat. */
+export function mintPageSlug(): string {
+  return randomBytes(16).toString('base64url');
+}
+
+export function setPageSlug(db: Database.Database, roundId: number, slug: string, nowIso: string): void {
+  db.prepare('UPDATE ytm_video_reviews SET page_slug=?, updated_at=? WHERE round_id=?').run(slug, nowIso, roundId);
 }
 
 export function markSent(db: Database.Database, roundId: number, videoUrl: string, nowIso: string): void {

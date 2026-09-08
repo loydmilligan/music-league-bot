@@ -27,7 +27,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { extractVideoIds, fetchBallotComments, resolveVideoPicks } from './videos.mjs';
+import { extractVideoIds, fetchBallotComments, resolveVideoPicks, decodeEntities } from './videos.mjs';
 import { readRoundVideoConfig, hasNoVideoSource } from './videoConfig.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -264,7 +264,12 @@ async function ytSearch(token, q, { categoryId, maxResults = 3 } = {}) {
 	}
 	return ((await res.json()).items ?? [])
 		.filter((i) => i.id?.videoId)
-		.map((i) => ({ videoId: i.id.videoId, title: i.snippet?.title ?? '', channel: i.snippet?.channelTitle ?? '' }));
+		// Decoded here, at the single point every search result enters the system.
+		.map((i) => ({
+			videoId: i.id.videoId,
+			title: decodeEntities(i.snippet?.title ?? ''),
+			channel: decodeEntities(i.snippet?.channelTitle ?? ''),
+		}));
 }
 
 /**

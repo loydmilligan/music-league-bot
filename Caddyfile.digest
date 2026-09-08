@@ -3,6 +3,7 @@
 # Serves two namespaces on digest.mattmariani.com:
 #
 #   /d/<roundSlug>/          — sprint-20 round digest html-share artifacts
+#   /p/<slug>/               — MLB playlist pages (music videos for a round)
 #   /_bside/                 — shared b-side SPA bundle (bside.js / bside.css)
 #                              Built by `cd bside && npm run build`, output
 #                              copied to DIGESTS_DIR/_bside/ at deploy time.
@@ -48,6 +49,18 @@
 		# canvas taints and the capture fails wherever the page isn't served from
 		# this same origin (e.g. the bot-ui admin view on :3002).
 		header Access-Control-Allow-Origin "*"
+		file_server
+	}
+
+	# ── MLB playlist pages ─────────────────────────────────────────────────
+	# Standalone, self-contained video-playlist pages (one file per round),
+	# written by bot-ui at approval time. Slugs carry 16 bytes of entropy, so a
+	# page is unlisted rather than secret — the link goes into a WhatsApp group.
+	# Kept in its own namespace so a re-render of a round digest can never
+	# overwrite one, and so /<slug>/ keeps meaning "b-side league".
+	handle /p/* {
+		header X-Robots-Tag "noindex, nofollow"
+		header Cache-Control "public, max-age=60"
 		file_server
 	}
 

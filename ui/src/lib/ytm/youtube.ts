@@ -86,6 +86,23 @@ export async function createPlaylist(
   return pl.id as string;
 }
 
+/**
+ * YouTube encodes HTML entities in snippet titles. Decode on the way in so no
+ * renderer has to, and none of them double-encode it. Mirrors decodeEntities()
+ * in scripts/ytm-drop/videos.mjs.
+ */
+export function decodeHtmlEntities(text: string): string {
+  return String(text ?? '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    // &amp; last: decoding it first would let "&amp;quot;" become a quote.
+    .replace(/&amp;/gi, '&');
+}
+
 export interface SearchHit {
   videoId: string;
   title: string;
@@ -115,5 +132,9 @@ export async function searchVideos(
   const body = await res.json();
   return (body.items ?? [])
     .filter((i: any) => i.id?.videoId)
-    .map((i: any) => ({ videoId: i.id.videoId, title: i.snippet?.title ?? '', channel: i.snippet?.channelTitle ?? '' }));
+    .map((i: any) => ({
+      videoId: i.id.videoId,
+      title: decodeHtmlEntities(i.snippet?.title ?? ''),
+      channel: decodeHtmlEntities(i.snippet?.channelTitle ?? ''),
+    }));
 }

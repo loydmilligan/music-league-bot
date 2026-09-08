@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error — plain .mjs module, no types
-import { extractVideoIds, channelMatchesArtist, resolveVideoPicks, scoreSearchHit, undecidedPicks } from '../scripts/ytm-drop/videos.mjs';
+import { extractVideoIds, channelMatchesArtist, resolveVideoPicks, scoreSearchHit, undecidedPicks, decodeEntities } from '../scripts/ytm-drop/videos.mjs';
 
 describe('extractVideoIds', () => {
   it('reads the three link shapes people actually paste', () => {
@@ -223,5 +223,39 @@ describe('resolveVideoPicks', () => {
     // hilPct above autoAcceptPct is clamped, so nothing falls through the gap.
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 50, hilPct: 90 });
     for (const p of picks) expect(['certain', 'auto', 'suggestion']).toContain(p.band);
+  });
+});
+
+describe('decodeEntities', () => {
+  it('undoes what the YouTube API encodes', () => {
+    expect(decodeEntities('WEEN - &quot;The Mollusk&quot;')).toBe('WEEN - "The Mollusk"');
+    expect(decodeEntities('Gilligan&#39;s Island Theme')).toBe("Gilligan's Island Theme");
+    expect(decodeEntities('Sturm &amp; Drang')).toBe('Sturm & Drang');
+    expect(decodeEntities('&lt;tag&gt;')).toBe('<tag>');
+    expect(decodeEntities('&#x27;hex&#x27;')).toBe("'hex'");
+  });
+
+  it('decodes &amp; last, so an escaped entity stays escaped', () => {
+    // "&amp;quot;" is a literal "&quot;", not a quote mark. Decoding &amp;
+    // first would silently turn it into one.
+    expect(decodeEntities('&amp;quot;')).toBe('&quot;');
+  });
+
+  it('leaves ordinary text and empties alone', () => {
+    expect(decodeEntities('Where Is My Mind?')).toBe('Where Is My Mind?');
+    expect(decodeEntities('')).toBe('');
+    expect(decodeEntities(null)).toBe('');
+  });
+});
+
+describe('search candidates arrive decoded', () => {
+  it('so a renderer that escapes for HTML cannot double-encode them', async () => {
+    const picks = await resolveVideoPicks(
+      [{ title: 'The Mollusk', artists: 'Ween', spotifyUri: 'u:1', comment: null }],
+      async () => [{ videoId: 'V1', title: 'WEEN - &quot;The Mollusk&quot;', channel: 'Dean&#39;s Channel' }],
+      { pacingMs: 0 },
+    );
+    expect(picks[0].candidates[0].title).toBe('WEEN - "The Mollusk"');
+    expect(picks[0].candidates[0].channel).toBe("Dean's Channel");
   });
 });

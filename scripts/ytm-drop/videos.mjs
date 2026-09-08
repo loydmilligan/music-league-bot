@@ -80,6 +80,25 @@ export function fetchBallotComments(db, round, opts = {}) {
 const squash = (x) => String(x ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 /**
+ * YouTube's API hands back titles with HTML entities already encoded
+ * ("&quot;The Mollusk&quot;", "Gilligan&#39;s"). Decode once here, on the way
+ * in, so every consumer holds plain text — a renderer that escapes for HTML
+ * would otherwise double-encode it and show the entity to the reader, and the
+ * scorer's title matching would trip over the same thing.
+ */
+export function decodeEntities(text) {
+	return String(text ?? '')
+		.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+		.replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+		.replace(/&quot;/gi, '"')
+		.replace(/&apos;/gi, "'")
+		.replace(/&lt;/gi, '<')
+		.replace(/&gt;/gi, '>')
+		// &amp; last: decoding it first would let "&amp;quot;" become a quote.
+		.replace(/&amp;/gi, '&');
+}
+
+/**
  * Does this channel plausibly belong to the artist? Covers the artist's own
  * channel and the VEVO/label/Topic variants ("LeonBridgesVEVO",
  * "PixiesOfficial"), all of which drop the spaces.
@@ -171,7 +190,12 @@ async function searchVideoCandidates(ytSearch, track, limit = 3) {
 	const notTopic = items.filter((i) => !/ - Topic$/.test(i.channel ?? ''));
 	const pool = notTopic.length ? notTopic : items;
 	return pool
-		.map((it, i) => ({ videoId: it.videoId, title: it.title ?? '', channel: it.channel ?? '', score: scoreSearchHit(it, track, i) }))
+		.map((it, i) => ({
+			videoId: it.videoId,
+			title: decodeEntities(it.title),
+			channel: decodeEntities(it.channel),
+			score: scoreSearchHit(it, track, i),
+		}))
 		.sort((a, b) => b.score - a.score)
 		.slice(0, limit);
 }
