@@ -343,6 +343,28 @@
     class="mb-6 bg-accent hover:bg-accent-strong disabled:opacity-60 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-sm transition-colors"
   >Lock gut slate</button>
 
+  <!-- Submission churn (positive-only). Derived from the "User Submitted"
+       emails: a repeat for the same person in the same round is a mid-round
+       pick change. A player with no entry is UNKNOWN, not absent -- Music
+       League never emails Matt about his own activity, and it dropped Darren
+       Paletz on R148/R149/R153 despite him submitting each time. -->
+  {#if data.roster.some((p) => p.observedSubmissions > 1)}
+    <div class="mb-6 rounded-lg border border-border-muted bg-bg-elevated p-3">
+      <h4 class="font-mono text-xs tracking-widest uppercase text-fg-faint mb-2">Pick changes this round</h4>
+      <div class="flex flex-wrap gap-2">
+        {#each data.roster.filter((p) => p.observedSubmissions > 1).sort((a, b) => b.observedSubmissions - a.observedSubmissions) as p (p.id)}
+          <span class="font-mono text-xs rounded-full border border-border-muted px-2 py-0.5 text-fg">
+            {p.name} <span class="text-accent">{p.observedSubmissions}&times;</span>
+          </span>
+        {/each}
+      </div>
+      <p class="text-fg-faint text-xs mt-2 italic">
+        Resubmissions seen in the notification emails. Absence means no email was seen &mdash;
+        not that someone didn&rsquo;t submit.
+      </p>
+    </div>
+  {/if}
+
   <!-- The gut slate -->
   <ol class="flex flex-col gap-2">
     {#each data.songs as song (song.spotifyUri)}

@@ -715,8 +715,26 @@ export const SCHEMA = `
     PRIMARY KEY (round_id, spotify_uri)
   );
 
-`;
 
+CREATE TABLE IF NOT EXISTS round_submission_status (
+  round_id      INTEGER NOT NULL REFERENCES rounds(id),
+  competitor_id INTEGER NOT NULL REFERENCES competitors(id),
+  submitted     INTEGER NOT NULL,
+  checked_at    TEXT NOT NULL,
+  PRIMARY KEY (round_id, competitor_id)
+);
+
+CREATE TABLE IF NOT EXISTS submission_events (
+  message_id     TEXT PRIMARY KEY,
+  round_id       INTEGER REFERENCES rounds(id),
+  submitter_name TEXT NOT NULL,
+  league_label   TEXT,
+  round_name     TEXT,
+  occurred_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_submission_events_round
+  ON submission_events(round_id, submitter_name, occurred_at);
+`;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',
 	weight_theme_fit: '25',

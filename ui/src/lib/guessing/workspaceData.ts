@@ -13,7 +13,20 @@ export interface WorkspaceSong {
   gutPickPlayerId: number | null;
   candidates: Candidate[];
 }
-export interface WorkspacePlayer { id: number; name: string }
+export interface WorkspacePlayer {
+  id: number;
+  name: string;
+  /**
+   * How many "User Submitted" emails this person generated for this round --
+   * i.e. how many times they (re)submitted. Repeats mean a mid-round pick change.
+   *
+   * POSITIVE-ONLY SIGNAL. Zero means "no email seen", NOT "did not submit":
+   * Music League never emails Matt about his own activity, and it silently
+   * dropped Darren Paletz on R148/R149/R153 despite him submitting every time.
+   * The UI must therefore render 0 as unknown, never as absence.
+   */
+  observedSubmissions: number;
+}
 export interface WorkspaceMine { spotifyUri: string; title: string; artists: string }
 export interface WorkspaceData {
   roundId: number;
@@ -63,15 +76,22 @@ export function buildWorkspaceData(db: Database.Database, roundId: number): Work
     }));
 
   const ids = eligiblePlayers(db, roundId, me);
+  // submission_events stores the Music League display name, which is exactly
+  // competitors.name (NOT players.name -- those are canonical names like
+  // "Dave Steingart" where the email says "Steiny").
   const roster: WorkspacePlayer[] =
     ids.length === 0
       ? []
       : (db
           .prepare(
-            `SELECT id, name FROM competitors WHERE id IN (${ids.map(() => '?').join(',')})
-              ORDER BY id`,
+            `SELECT c.id, c.name,
+                    (SELECT COUNT(*) FROM submission_events se
+                      WHERE se.round_id = ? AND se.submitter_name = c.name) AS observedSubmissions
+               FROM competitors c
+              WHERE c.id IN (${ids.map(() => '?').join(',')})
+              ORDER BY c.id`,
           )
-          .all(...ids) as WorkspacePlayer[]);
+          .all(roundId, ...ids) as WorkspacePlayer[]);
 
   // The marked song is excluded from `songs` by eligibleSongs, so it must be
   // surfaced separately or there is no way to unmark it (spec §6).
