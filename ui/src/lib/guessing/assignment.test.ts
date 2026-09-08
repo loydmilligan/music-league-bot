@@ -49,3 +49,27 @@ describe('assignment rules', () => {
     expect(validateGutSlate(db, roundId, ME).ok).toBe(true);
   });
 });
+
+describe('confirmed non-submitters drop out of the round', () => {
+  it('excludes a player observed as submitted=0, and keeps unchecked players', () => {
+    const { db, players } = seedRound({ songCount: 4, playerCount: 4, mineIndex: 0 });
+    const before = eligiblePlayers(db, 1, players[0]);
+    expect(before).toEqual([players[1], players[2], players[3]]);
+
+    // players[1] skipped the round -- ground truth from the CLI.
+    db.prepare(
+      `INSERT INTO round_submission_status (round_id, competitor_id, submitted, checked_at)
+       VALUES (1, ?, 0, '2026-09-07T00:00:00Z')`,
+    ).run(players[1]);
+    // players[2] was CHECKED and did submit; players[3] was never checked at all.
+    db.prepare(
+      `INSERT INTO round_submission_status (round_id, competitor_id, submitted, checked_at)
+       VALUES (1, ?, 1, '2026-09-07T00:00:00Z')`,
+    ).run(players[2]);
+
+    const after = eligiblePlayers(db, 1, players[0]);
+    // Only the confirmed skipper goes. The unchecked player MUST stay -- absence
+    // of a row is not evidence of absence.
+    expect(after).toEqual([players[2], players[3]]);
+  });
+});

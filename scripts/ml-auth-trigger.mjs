@@ -136,6 +136,10 @@ const server = createServer((req, res) => {
 		return;
 	}
 
+	if (req.method === 'POST' && req.url === '/submission-status') {
+		return handleSubmissionStatus(req, res);
+	}
+
 	if (req.method === 'POST' && req.url === '/rounds-snapshot') {
 		void handleRoundsSnapshot(req, res);
 		return;
@@ -218,6 +222,70 @@ async function handleExportZip(req, res) {
 		mlLeagueId,
 		path: outPath,
 		durationMs: Date.now() - startedAt
+	});
+}
+
+/**
+ * POST /submission-status  { mlLeagueId, mlRoundId } -> { ok, done[], waiting[] }
+ *
+ * Who submitted, straight from Music League. Exists because the notification
+ * emails are lossy (Matt never gets one for himself, and Darren Paletz was
+ * dropped three rounds running), so "no email" can never prove "did not submit"
+ * -- and that distinction decides whether a player is in the round at all.
+ *
+ * Lives here rather than in the api container for the same reason /export-zip
+ * does: the CLI session is a host file, and the container has neither the CLI
+ * nor the cookies. This is the established bridge.
+ *
+ * Returns ONLY user ids, never song ownership, so it is safe to call while a
+ * guessing round is live.
+ */
+async function handleSubmissionStatus(req, res) {
+	let body = '';
+	for await (const chunk of req) body += chunk.toString();
+	let payload;
+	try {
+		payload = body ? JSON.parse(body) : {};
+	} catch {
+		return writeJson(res, 400, { ok: false, stage: 'other', reason: 'invalid JSON body' });
+	}
+	const mlLeagueId = typeof payload?.mlLeagueId === 'string' ? payload.mlLeagueId.trim() : '';
+	const mlRoundId = typeof payload?.mlRoundId === 'string' ? payload.mlRoundId.trim() : '';
+	if (!mlLeagueId || !mlRoundId) {
+		return writeJson(res, 400, { ok: false, stage: 'other', reason: 'mlLeagueId, mlRoundId required' });
+	}
+
+	const startedAt = Date.now();
+	const result = await runCli(['--json', 'rounds', 'status', mlLeagueId, mlRoundId], LEAGUES_LIST_TIMEOUT_MS);
+	// kind:'ok' only means the process RAN -- it still carries an exitCode, so a
+	// failed CLI call arrives here as 'ok' with a non-zero code. Checking kind
+	// alone would parse an error as a result.
+	if (result.kind === 'spawn-error') {
+		return writeJson(res, 500, { ok: false, stage: 'spawn', reason: result.message });
+	}
+	if (result.kind === 'timeout') {
+		return writeJson(res, 504, {
+			ok: false, stage: 'cli',
+			reason: `rounds status timed out after ${LEAGUES_LIST_TIMEOUT_MS}ms`,
+		});
+	}
+	if (result.exitCode !== 0) {
+		return writeJson(res, 500, {
+			ok: false, stage: 'cli',
+			reason: (result.stderr || 'rounds status failed').slice(0, 300),
+		});
+	}
+	let parsed;
+	try {
+		parsed = JSON.parse(result.stdout);
+	} catch {
+		return writeJson(res, 500, { ok: false, stage: 'cli', reason: 'rounds status returned non-JSON' });
+	}
+	return writeJson(res, 200, {
+		ok: true,
+		done: Array.isArray(parsed?.done) ? parsed.done : [],
+		waiting: Array.isArray(parsed?.waiting) ? parsed.waiting : [],
+		elapsedMs: Date.now() - startedAt,
 	});
 }
 

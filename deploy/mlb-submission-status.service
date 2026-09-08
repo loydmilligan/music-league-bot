@@ -1,0 +1,11 @@
+[Unit]
+Description=Music League submission-status reconciler (ground truth for who submitted)
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.22.2/bin/node %h/Projects/music-league-bot/scripts/ml-submission-status.mjs --quiet
+StandardOutput=journal
+StandardError=journal

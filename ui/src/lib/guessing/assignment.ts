@@ -46,8 +46,20 @@ export function eligiblePlayers(
          FROM season_standings ss
         WHERE ss.season_id = (SELECT season_id FROM rounds WHERE id = ?)
           AND ss.competitor_id <> ?
+          -- A player who skipped the round is out of it entirely, so they must
+          -- not be offerable as a guess. Only an explicit CLI observation of
+          -- submitted=0 excludes. That row comes from the CLI rounds-status
+          -- call, which is ground truth. A MISSING row means "not checked yet",
+          -- never "absent": inferring absence from silence is the mistake the
+          -- notification emails invite -- they dropped Darren Paletz three
+          -- rounds running while he submitted every time.
+          AND NOT EXISTS (
+            SELECT 1 FROM round_submission_status rss
+             WHERE rss.round_id = ? AND rss.competitor_id = ss.competitor_id
+               AND rss.submitted = 0
+          )
         ORDER BY ss.competitor_id`,
-    ).all(roundId, mePlayerId) as { id: number }[]
+    ).all(roundId, mePlayerId, roundId) as { id: number }[]
   ).map((r) => r.id);
 }
 

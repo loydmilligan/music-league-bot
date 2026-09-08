@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fetchMusicLeagueEmails, type ImapConfig } from './imapClient.js';
 import { parseEmail } from './emailParser.js';
 import { ensureEmailSchema, ingestParsedEmail, recordIngestFailure } from './emailIngest.js';
+import { maybeReconcileSubmissions } from './submissionReconcile.js';
 
 /**
  * Background poller that ingests Music League notification mail into league.db.
@@ -67,6 +68,26 @@ export async function runEmailIngestPass(): Promise<{ fetched: number; events: n
     try {
       const parsed = await parseEmail(e.raw);
       const res = ingestParsedEmail(db, parsed, { raw: e.raw, uid: e.uid, uidvalidity: e.uidValidity });
+
+      // A phase just moved. The notification emails are lossy, so confirm who
+      // actually submitted -- but only when the accounting says someone could be
+      // missing (see maybeReconcileSubmissions). Failures never break ingestion.
+      if (res.eventType && res.roundId) {
+        try {
+          const rc = await maybeReconcileSubmissions(db, res.roundId);
+          if (rc.checked) {
+            console.log(
+              `[email] round ${res.roundId} phase ${res.eventType}: reconciled — ` +
+              `${rc.submitted} submitted, ${rc.waiting} waiting` +
+              (rc.missedEmails?.length ? ` · MISSED EMAILS: ${rc.missedEmails.join(', ')}` : ''),
+            );
+          } else {
+            console.log(`[email] round ${res.roundId} phase ${res.eventType}: no reconcile — ${rc.reason}`);
+          }
+        } catch (err) {
+          console.error(`[email] reconcile failed for round ${res.roundId}:`, err);
+        }
+      }
       if (res.eventType) events++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

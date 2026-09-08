@@ -1,0 +1,14 @@
+[Unit]
+Description=Reconcile Music League submission status every 4 hours
+Requires=mlb-submission-status.service
+
+[Timer]
+# The notification emails are lossy, so this is the authoritative source for
+# whether a player submitted. 4h is well inside a submission window.
+OnBootSec=10min
+OnUnitActiveSec=4h
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

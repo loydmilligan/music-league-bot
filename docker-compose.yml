@@ -12,6 +12,13 @@ services:
     build: .
     command: npm run api
     env_file: .env
+    environment:
+      # The email poller lives here, so a phase change is detected in this
+      # container -- but the Music League CLI session is a host file. Reach the
+      # host trigger daemon the same way bot-ui does.
+      - ML_AUTH_TRIGGER_URL=http://host.docker.internal:7679
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3001:3001"
     volumes:
