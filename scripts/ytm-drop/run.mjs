@@ -132,7 +132,25 @@ const pendingStmt = db.prepare(
 	  WHERE re.event_type = 'voting_started'
 	    AND s.league_id = ?
 	    AND re.occurred_at >= datetime('now', '-${WINDOW_DAYS} days')
-	    AND (d.round_id IS NULL OR d.status IN ('failed','dry-run'))
+	    AND (
+	      d.round_id IS NULL
+	      OR d.status = 'dry-run'
+	      OR (
+	        d.status = 'failed'
+	        -- A round that failed on a YouTube rate limit must NOT come back on
+	        -- the next 15-minute tick. Each attempt spends ~1,300 quota units on
+	        -- track searches BEFORE it reaches the call that failed, so retrying
+	        -- four times an hour against a per-day creation cap would exhaust the
+	        -- 10,000-unit search quota and break everything else too. Rate-limit
+	        -- failures wait for the daily reset; every other failure retries as
+	        -- before, because those are the transient ones.
+	        AND (
+	          d.error IS NULL
+	          OR d.error NOT LIKE '%RATE_LIMIT_EXCEEDED%'
+	          OR d.created_at <= datetime('now', '-6 hours')
+	        )
+	      )
+	    )
 	  ORDER BY re.occurred_at`,
 );
 const candidates = [];
@@ -173,11 +191,16 @@ async function ytApi(token, method, pathQ, payload, tries = 5) {
 		});
 		const body = await res.json();
 		if (res.ok) return body;
-		// playlistItems.insert intermittently 409s on rapid inserts (spike 003).
-		if (![409, 500, 503].includes(res.status) || i >= tries - 1) {
+		// 409: playlistItems.insert intermittently conflicts on rapid inserts
+		// (spike 003). 429: playlists.insert has a per-day CREATION cap, separate
+		// from the 10,000-unit quota — 13 playlists on 2026-09-07 exhausted it
+		// while search kept working. Backing off rides out a burst; a genuine
+		// daily cap will still fail, which is correct, but it must not fail on
+		// the first 429 the way it did before.
+		if (![409, 429, 500, 503].includes(res.status) || i >= tries - 1) {
 			throw new Error(`${pathQ.split('?')[0]} HTTP ${res.status}: ${JSON.stringify(body.error?.errors ?? body).slice(0, 250)}`);
 		}
-		await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+		await new Promise((r) => setTimeout(r, (res.status === 429 ? 5000 : 1000) * 2 ** i));
 	}
 }
 const iso8601ToSec = (d) => {
