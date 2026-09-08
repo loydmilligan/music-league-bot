@@ -128,8 +128,9 @@ is what every round that *isn't* R143 will look like.
   it. `THEIR PICK` / `WE FOUND THIS` / `BEST GUESS` / `A GUESS` is honest without being
   clinical, keeps colour as reinforcement rather than the sole encoding, and keeps the numeric
   score for Matt.
-- **D3 settling the winner at a cutoff rather than live** avoids leaderboard whiplash and
-  removes a live-update requirement we have no infrastructure for.
+- **D3 settling the winner at a cutoff rather than live** avoided leaderboard whiplash and a
+  live-update requirement we have no infrastructure for. *(Superseded for the stamp by the
+  easter egg below — but the reasoning still applies to any real winner marker.)*
 - **D2's persistent identity chip** is the least intrusive of the three options and, unlike the
   gate, costs a passive reader nothing.
 - **The states panel** answers §7 of the brief directly — the TBD stamp, the `⏳ WITH MATT`
@@ -139,13 +140,14 @@ is what every round that *isn't* R143 will look like.
 
 ---
 
-## Change request — the Second Best stamp is progressive, not a single award
+## Change request — the Second Best stamp is a decorative easter egg
 
-*(Matt, 2026-09-08, after the packet was reviewed. This supersedes part of D3.)*
+*(Matt, 2026-09-08, after the packet was reviewed. This supersedes D3's stamp.)*
 
-The stamp is not one crown on the #1 video awarded at a cutoff. It appears on **any** video the
-moment a league member thumbs it up, and **builds** as more members do — the stamp itself is the
-vote count, rendered as ink quality rather than a number.
+The stamp is **not** a ranking device and **not** a winner marker. It is an easter egg that
+appears on any video a league member thumbs up, and grows more elaborate as more of them do —
+ink filling in as the stamp gets used. Matt: *"just kind of a fun easter egg — that doesn't
+really mean anything."*
 
 | Upvotes | Stamp |
 |---|---|
@@ -155,41 +157,32 @@ vote count, rendered as ink quality rather than a number.
 | 3 | **fully formed**, green and blue |
 | 4+ | **full colour** — more colours, more detail |
 
-Matt's words: *"after 1 its faint and barely visible - maybe some lines missing … after 3 its
-fully formed with green and blue and with all 4 it should be fully color stamp with more colors
-and detail."*
+**What this replaces.** CD locked D3 as *"winner settled at the cutoff, not live"*: one
+hand-circled pulp stamp on `#1`, with a dashed `SECOND BEST / TBD` placeholder until then. The
+easter egg is different on three counts — many stamps rather than one, live rather than settled,
+and no `TBD` state (a video with no upvotes simply has no stamp, which is cleaner than a
+placeholder).
 
-**This conflicts with the packet as delivered.** CD locked D3 as *"winner settled at the cutoff,
-not live (no leaderboard whiplash)"*, with one hand-circled pulp marker stamp on `#1` and a
-dashed `SECOND BEST / TBD` placeholder until the cutoff. The new direction is the opposite on
-three counts:
+**Because it is decorative, most of the hard questions don't apply:**
 
-1. **Many stamps, not one.** Every video with ≥1 up carries one; it is not a ranking device.
-2. **Live, not settled.** The stamp changes as votes arrive — which is exactly the
-   whiplash D3 was avoiding, but here it is the point: watching the ink fill in *is* the reward.
-3. **The `TBD` placeholder loses its job.** A video with no upvotes simply has no stamp. The
-   "nobody voted yet" state becomes "the page is just clean", which is arguably better.
+- It carries no information, so it needs **no text equivalent** and does not trip the
+  "no colour-only encoding" bar. The `▲ 34` count remains the actual, readable data.
+- The ladder capping at 4 is fine and arbitrary — it does not have to scale to the 13-player
+  roster.
+- A down-vote does nothing to it.
+- It is not a winner marker, so whether the round marks a `#1` at all becomes a **separate,
+  still-open question** — not part of this.
 
-Consequences worth deciding with it:
+**What still needs CD:**
 
-- **Does anything still mark #1?** If every liked video gets a stamp, the round has no single
-  winner. Either the top-voted video gets something *additional*, or the concept of a winner
-  goes away. *(Matt has not said — this needs an answer before build.)*
-- **What is the ceiling?** "All 4" reads as a 4-step ladder capping at 4 upvotes, but the league
-  has **13 players**. Is 4 the cap (a 5th vote adds nothing visible), or should the ladder
-  stretch across the roster? *(Ambiguous as stated — needs confirming.)*
-- **Colour has meaning here.** Green and blue arriving as the stamp matures is a departure from
-  the one-accent pulp palette, and `--moss` is already the up-vote colour. Worth CD reconciling
-  deliberately rather than picking new greens.
-- **It must survive the accessibility bar.** Ink-density-as-quantity is colour-and-texture-only
-  encoding of a number. It needs a text equivalent (the existing `▲ 34` count probably does the
-  job, but say so).
-- **The down-vote's role is now unclear.** If the stamp only ever grows with ups, what does a
-  down-vote do — nothing visible? subtract? *(Needs an answer.)*
-
-This is a genuinely better idea than a single crown: it turns the page's main interaction into
-something that visibly rewards participation, and it fits the product's existing rubber-stamp
-vocabulary. But it is a **new design**, not a tweak, and the five ink states have to be drawn.
+1. The five ink states drawn, as one stamp progressively inking in.
+2. Green and blue arriving as it matures departs from the one-accent pulp palette, and `--moss`
+   is already the up-vote colour. Worth reconciling deliberately rather than picking new greens
+   — it is an aesthetic call now, not a semantic one.
+3. One honest risk, worth a moment's thought rather than a redesign: a mark that appears from
+   votes and visibly escalates *looks* like it means something. If people read it as a score,
+   that is a small confusion sitting on top of the real counts. Probably fine — arguably the
+   joke — but CD should place it so it reads as flourish, not as verdict.
 
 ---
 
@@ -197,8 +190,8 @@ vocabulary. But it is a **new design**, not a tweak, and the five ink states hav
 
 One short CD follow-up, not a re-do. Ask for:
 
-1. **The progressive stamp** (change request above) — five ink states drawn, plus answers on
-   the ceiling, whether #1 still gets something, and what a down-vote does.
+1. **The progressive stamp** (change request above) — the five ink states drawn, and the
+   green/blue reconciled with the pulp palette.
 2. **F1 resolved** — a degradation rule and round-agnostic copy, or an explicit "R143 one-off"
    with the generic cover retained for other rounds.
 3. **F2** — how a song with two videos renders.
