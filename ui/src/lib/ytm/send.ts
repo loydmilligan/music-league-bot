@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import type { VideoReview } from './videoReview.js';
 import { getReview, includedVideoIds, markSent, markFailed } from './videoReview.js';
 import { credsFromEnv, createPlaylist } from './youtube.js';
+import { renderVideoCover } from './videoCover.js';
 
 const botControlUrl = () => process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
 
@@ -10,6 +11,21 @@ const botControlUrl = () => process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
  * one message loses one of them. Anything with more than one link goes out as
  * separate, sequential messages.
  */
+/**
+ * Send an image with a caption. The path must be the one the BOT container
+ * sees — both containers mount the same ./data volume, but at their own paths.
+ */
+export async function sendMedia(
+  target: string, file: string, caption: string, fetchFn: typeof fetch = fetch,
+): Promise<void> {
+  const res = await fetchFn(`${botControlUrl()}/media`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ target, file, caption }),
+  });
+  if (!res.ok) throw new Error(`whatsapp media ${res.status}: ${(await res.text()).slice(0, 160)}`);
+}
+
 export async function sendText(target: string, text: string, fetchFn: typeof fetch = fetch): Promise<void> {
   // /say is the plain-text route; /send is the digest sender and takes a
   // roundId, not a message.
@@ -64,7 +80,22 @@ export async function completeApproval(
     if (!review.audioSent && review.audioUrl) {
       await sendText(review.target, `🎧 *${deps.roundName}* — this week's playlist, now for the YouTube Music crowd:\n${review.audioUrl}`, fetchFn);
     }
-    await sendText(review.target, `📺 …and the music videos for *${deps.roundName}*:\n${videoUrl}`, fetchFn);
+
+    const caption = `📺 …and the music videos for *${deps.roundName}*:\n${videoUrl}`;
+    // The cover is a nicety, not the message. A render failure must not cost
+    // the group the link they are actually waiting on.
+    let cover: { botPath: string } | null = null;
+    try {
+      cover = await renderVideoCover(roundId, {
+        roundName: deps.roundName,
+        leagueTitle: deps.leagueTitle,
+        picks: review.picks.filter((p) => p.included && p.chosen),
+      }, { fetchFn });
+    } catch (e) {
+      console.error(`[ytm-video-send] cover render failed for round ${roundId}, sending text only:`, e instanceof Error ? e.message : e);
+    }
+    if (cover) await sendMedia(review.target, cover.botPath, caption, fetchFn);
+    else await sendText(review.target, caption, fetchFn);
 
     markSent(db, roundId, videoUrl, now());
     return { sent: true, videoUrl };
