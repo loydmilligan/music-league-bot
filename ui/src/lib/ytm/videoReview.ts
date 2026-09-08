@@ -53,9 +53,13 @@ export interface VideoPick {
   band: VideoPickBand;
   candidates: VideoCandidate[];
   /**
-   * Selected videos, in the order they should appear. A song can carry more
-   * than one — a round about videos sometimes has a song with an official cut
-   * AND the one everybody actually means. Empty = no video for this song.
+   * Selected videos, in order. The FIRST is the primary: it is the one that
+   * represents the song, and the only one that can be voted on. The rest are
+   * children — shown collapsed and indented under it, commentable, never
+   * votable. Empty = no video for this song.
+   *
+   * Ordering is therefore meaningful, not incidental. Use setPrimaryVideo() to
+   * change which one leads rather than reordering the array by hand.
    */
   chosen: string[];
   included: boolean;
@@ -216,10 +220,30 @@ export function undecidedPicks(picks: VideoPick[]): VideoPick[] {
   return picks.filter((p) => p.band === 'review' && !p.decided);
 }
 
+/** The one video that represents this song, and the only votable one. */
+export function primaryVideoId(pick: VideoPick): string | null {
+  return pick.chosen[0] ?? null;
+}
+
+/** The alternates hanging off the primary — collapsed, indented, unvotable. */
+export function childVideoIds(pick: VideoPick): string[] {
+  return pick.chosen.slice(1);
+}
+
+/**
+ * Promote one of a pick's selected videos to primary, keeping the others as
+ * children in their existing order. A no-op if the id isn't selected.
+ */
+export function withPrimary(pick: VideoPick, videoId: string): VideoPick {
+  if (!pick.chosen.includes(videoId)) return pick;
+  return { ...pick, chosen: [videoId, ...pick.chosen.filter((id) => id !== videoId)] };
+}
+
 /**
  * Videos that would go into the playlist right now, in submission order then
- * selection order. De-duplicated: two songs can legitimately land on the same
- * video, and YouTube would happily add it twice.
+ * selection order — children included, since they are still videos for the
+ * round even though they cannot be voted on. De-duplicated: two songs can
+ * legitimately land on the same video, and YouTube would happily add it twice.
  */
 export function includedVideoIds(picks: VideoPick[]): string[] {
   const out: string[] = [];
@@ -232,6 +256,8 @@ export function includedVideoIds(picks: VideoPick[]): string[] {
 
 export interface PickDecision {
   spotifyUri: string;
+  /** Promote an already-selected video to primary (the votable one). */
+  primary?: string;
   /** The full selected set for this song. [] = no video for this song. */
   chosen?: string[];
   included?: boolean;
@@ -288,6 +314,13 @@ export function applyDecisions(
       next.chosen = d.chosen.filter(
         (id, i, arr) => arr.indexOf(id) === i && next.candidates.some((c) => c.videoId === id),
       );
+    }
+    // Applied after `chosen` and `addVideo`, so a video added and promoted in
+    // the same request lands in front rather than being promoted before it
+    // exists.
+    if (d.primary) {
+      const promoted = withPrimary(next, d.primary);
+      next.chosen = promoted.chosen;
     }
     if (d.included !== undefined) next.included = d.included;
     // Selecting nothing AND including it is incoherent; treat it as excluded.

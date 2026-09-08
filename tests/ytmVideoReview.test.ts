@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import {
+  primaryVideoId,
+  childVideoIds,
+  withPrimary,
   reopenFailed,
   parseYoutubeVideoId,
   ensureVideoReviewSchema, upsertReview, getReview, getReviewByToken,
@@ -381,5 +384,56 @@ describe('recovering from a failed send', () => {
     approveAndFail();
     reopenFailed(db, 143, T0);
     expect(reviewsDueForNotify(db, '2100-01-01T00:00:00.000Z')).toHaveLength(0);
+  });
+});
+
+describe('primary and child videos', () => {
+  it('treats the first selected video as the primary and the rest as children', () => {
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', chosen: ['AUTO2', 'AUTO1'] }], T0);
+    const p = getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:auto')!;
+    expect(primaryVideoId(p)).toBe('AUTO2');
+    expect(childVideoIds(p)).toEqual(['AUTO1']);
+  });
+
+  it('has no primary when nothing is selected', () => {
+    const p = getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:sugg')!;
+    expect(primaryVideoId(p)).toBeNull();
+    expect(childVideoIds(p)).toEqual([]);
+  });
+
+  it('promotes a child to primary, keeping the others in order behind it', () => {
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', chosen: ['AUTO1', 'AUTO2'] }], T0);
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', primary: 'AUTO2' }], T0);
+    const p = getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:auto')!;
+    expect(p.chosen).toEqual(['AUTO2', 'AUTO1']);
+  });
+
+  it('ignores a promotion to a video that is not selected', () => {
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', primary: 'AUTO2' }], T0);
+    expect(getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:auto')!.chosen).toEqual(['AUTO1']);
+  });
+
+  it('promotes a video added and promoted in the same request', () => {
+    // Order matters: promoting before the add would silently do nothing.
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', addVideo: 'TZ827lkktYs', primary: 'TZ827lkktYs' }], T0);
+    const p = getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:auto')!;
+    expect(p.chosen).toEqual(['TZ827lkktYs', 'AUTO1']);
+    expect(primaryVideoId(p)).toBe('TZ827lkktYs');
+  });
+
+  it('keeps children in the playlist — they are unvotable, not excluded', () => {
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', chosen: ['AUTO1', 'AUTO2'] }], T0);
+    expect(includedVideoIds(getReview(db, 143)!.picks)).toEqual(['COMMENT1', 'AUTO1', 'AUTO2']);
+  });
+
+  it('withPrimary does not mutate the pick it is given', () => {
+    // Two videos, promoting the SECOND: with one video, or promoting the one
+    // already in front, a mutating implementation produces an identical array
+    // and the test cannot see the difference.
+    applyDecisions(db, 143, [{ spotifyUri: 'u:auto', chosen: ['AUTO1', 'AUTO2'] }], T0);
+    const p = getReview(db, 143)!.picks.find((x) => x.spotifyUri === 'u:auto')!;
+    const returned = withPrimary(p, 'AUTO2');
+    expect(returned.chosen).toEqual(['AUTO2', 'AUTO1']);
+    expect(p.chosen).toEqual(['AUTO1', 'AUTO2']);
   });
 });
