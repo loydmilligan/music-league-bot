@@ -80,3 +80,35 @@ export async function createPlaylist(
   }
   return pl.id as string;
 }
+
+export interface SearchHit {
+  videoId: string;
+  title: string;
+  channel: string;
+}
+
+/**
+ * A plain YouTube search, for the review page's "find it myself" box.
+ *
+ * Unlike the drop's resolver this applies no category filter and no scoring —
+ * a human is reading the results, and second-guessing their query would just
+ * hide the video they are looking for. One call costs 100 quota units, so it is
+ * only ever run when somebody types something.
+ */
+export async function searchVideos(
+  creds: YoutubeCreds, query: string, deps: { fetchFn?: typeof fetch; maxResults?: number } = {},
+): Promise<SearchHit[]> {
+  const fetchFn = deps.fetchFn ?? fetch;
+  const token = await accessToken(creds, fetchFn);
+  const url = new URL('https://www.googleapis.com/youtube/v3/search');
+  url.searchParams.set('part', 'snippet');
+  url.searchParams.set('q', query);
+  url.searchParams.set('type', 'video');
+  url.searchParams.set('maxResults', String(deps.maxResults ?? 8));
+  const res = await fetchFn(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`YouTube search HTTP ${res.status}`);
+  const body = await res.json();
+  return (body.items ?? [])
+    .filter((i: any) => i.id?.videoId)
+    .map((i: any) => ({ videoId: i.id.videoId, title: i.snippet?.title ?? '', channel: i.snippet?.channelTitle ?? '' }));
+}

@@ -23,6 +23,25 @@ export interface VideoCandidate {
   title: string;
   channel: string | null;
   score: number;
+  /** Added by a human on the review page rather than found by the drop. */
+  manual?: boolean;
+}
+
+/** A bare id, or any of the YouTube URL shapes people paste. Null if neither. */
+export function parseYoutubeVideoId(input: string): string | null {
+  const raw = (input ?? '').trim();
+  if (!raw) return null;
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  const patterns = [
+    /(?:youtube\.com|youtube-nocookie\.com)\/watch\?(?:[^\s]*&)?v=([A-Za-z0-9_-]{11})/i,
+    /youtu\.be\/([A-Za-z0-9_-]{11})/i,
+    /youtube\.com\/(?:shorts|embed|v|live)\/([A-Za-z0-9_-]{11})/i,
+  ];
+  for (const re of patterns) {
+    const m = raw.match(re);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 export interface VideoPick {
@@ -33,8 +52,12 @@ export interface VideoPick {
   score: number;
   band: VideoPickBand;
   candidates: VideoCandidate[];
-  /** Currently selected video, or null for "no video for this song". */
-  chosen: string | null;
+  /**
+   * Selected videos, in the order they should appear. A song can carry more
+   * than one — a round about videos sometimes has a song with an official cut
+   * AND the one everybody actually means. Empty = no video for this song.
+   */
+  chosen: string[];
   included: boolean;
   /** False only for an unanswered `review` pick — those block approval. */
   decided: boolean;
@@ -92,6 +115,18 @@ type Row = {
   error: string | null; notified_at: string | null; created_at: string; updated_at: string;
 };
 
+/**
+ * `chosen` was a single id (or null) before 2026-09-07. Rows parked then are
+ * still live, so widen on read rather than migrating the table — the shape is
+ * a JSON blob and a half-migrated blob is worse than a tolerant reader.
+ */
+function hydratePicks(raw: unknown): VideoPick[] {
+  return (raw as VideoPick[]).map((p) => ({
+    ...p,
+    chosen: Array.isArray(p.chosen) ? p.chosen : p.chosen ? [p.chosen as unknown as string] : [],
+  }));
+}
+
 function hydrate(r: Row): VideoReview {
   return {
     roundId: r.round_id,
@@ -99,7 +134,7 @@ function hydrate(r: Row): VideoReview {
     status: r.status as ReviewStatus,
     token: r.token,
     snoozeUntil: r.snooze_until,
-    picks: JSON.parse(r.picks) as VideoPick[],
+    picks: hydratePicks(JSON.parse(r.picks)),
     config: JSON.parse(r.config) as VideoPlaylistConfig,
     target: r.target,
     audioUrl: r.audio_url,
@@ -172,20 +207,34 @@ export function undecidedPicks(picks: VideoPick[]): VideoPick[] {
   return picks.filter((p) => p.band === 'review' && !p.decided);
 }
 
-/** Videos that would go into the playlist right now, in submission order. */
+/**
+ * Videos that would go into the playlist right now, in submission order then
+ * selection order. De-duplicated: two songs can legitimately land on the same
+ * video, and YouTube would happily add it twice.
+ */
 export function includedVideoIds(picks: VideoPick[]): string[] {
   const out: string[] = [];
   for (const p of picks) {
-    if (p.included && p.chosen && !out.includes(p.chosen)) out.push(p.chosen);
+    if (!p.included) continue;
+    for (const id of p.chosen) if (!out.includes(id)) out.push(id);
   }
   return out;
 }
 
 export interface PickDecision {
   spotifyUri: string;
-  /** Which candidate to use. null = no video for this song. */
-  chosen?: string | null;
+  /** The full selected set for this song. [] = no video for this song. */
+  chosen?: string[];
   included?: boolean;
+  /**
+   * A YouTube URL or bare id typed in by a human. Appended to this pick's
+   * candidates and selected. This is the ONE way a videoId that the drop never
+   * found can enter the playlist.
+   */
+  addVideo?: string;
+  /** Title/channel for an added video, when a search supplied them. */
+  addVideoTitle?: string;
+  addVideoChannel?: string;
 }
 
 /**
@@ -203,16 +252,39 @@ export function applyDecisions(
   const picks = review.picks.map((p) => {
     const d = byUri.get(p.spotifyUri);
     if (!d) return p;
-    const next = { ...p };
+    const next: VideoPick = { ...p, candidates: [...p.candidates], chosen: [...p.chosen] };
+
+    // A human-supplied link is the only route by which a video the drop never
+    // found can reach the playlist, so it is added to the candidate list first
+    // and then goes through exactly the same membership check as the rest.
+    if (d.addVideo) {
+      const id = parseYoutubeVideoId(d.addVideo);
+      if (id) {
+        if (!next.candidates.some((c) => c.videoId === id)) {
+          next.candidates.push({
+            videoId: id,
+            title: d.addVideoTitle ?? 'Added by hand',
+            channel: d.addVideoChannel ?? null,
+            score: 100,
+            manual: true,
+          });
+        }
+        if (!next.chosen.includes(id)) next.chosen.push(id);
+      }
+    }
+
     if (d.chosen !== undefined) {
-      // Only ever a videoId this pick actually offers — the page must not be
-      // able to inject an arbitrary video into the playlist.
-      const ok = d.chosen === null || p.candidates.some((c) => c.videoId === d.chosen);
-      if (ok) next.chosen = d.chosen;
+      // Only ids this pick actually offers — the page must not be able to
+      // inject an arbitrary video without going through addVideo.
+      next.chosen = d.chosen.filter(
+        (id, i, arr) => arr.indexOf(id) === i && next.candidates.some((c) => c.videoId === id),
+      );
     }
     if (d.included !== undefined) next.included = d.included;
     // Selecting nothing AND including it is incoherent; treat it as excluded.
-    if (!next.chosen) next.included = false;
+    // Selecting something after having none is a clear "yes, include this".
+    if (next.chosen.length === 0) next.included = false;
+    else if (p.chosen.length === 0 && d.included === undefined) next.included = true;
     if (p.band === 'review') next.decided = true;
     return next;
   });

@@ -2,7 +2,7 @@
   import type { PageData } from './$types.js';
   import { invalidateAll } from '$app/navigation';
   import StatusChip from '$lib/components/StatusChip.svelte';
-  import type { VideoPick } from '$lib/ytm/videoReview.js';
+  import type { VideoPick, PickDecision } from '$lib/ytm/videoReview.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -13,10 +13,11 @@
   const picks = $derived(data.review.picks);
   const byBand = (b: VideoPick['band']) => picks.filter((p) => p.band === b);
   const undecided = $derived(picks.filter((p) => p.band === 'review' && !p.decided));
-  const included = $derived(picks.filter((p) => p.included && p.chosen));
+  const included = $derived(picks.filter((p) => p.included && p.chosen.length));
+  const videoCount = $derived(picks.reduce((n, p) => n + (p.included ? p.chosen.length : 0), 0));
   const isOpen = $derived(data.review.status === 'pending');
 
-  async function patch(decisions: Array<{ spotifyUri: string; chosen?: string | null; included?: boolean }>) {
+  async function patch(decisions: PickDecision[]) {
     busy = true; err = null;
     try {
       const res = await fetch(`/api/ytm/video-review/${data.review.roundId}`, {
@@ -33,9 +34,70 @@
     }
   }
 
-  const choose = (p: VideoPick, videoId: string | null) =>
-    patch([{ spotifyUri: p.spotifyUri, chosen: videoId, included: videoId !== null }]);
+  /** Toggle one candidate in or out of this song's selection. */
+  function toggleVideo(p: VideoPick, videoId: string, on: boolean) {
+    const next = on ? [...p.chosen, videoId] : p.chosen.filter((id) => id !== videoId);
+    return patch([{ spotifyUri: p.spotifyUri, chosen: next }]);
+  }
+  /** Answer a review pick with "nothing" — a real answer, not an absence. */
+  const chooseNone = (p: VideoPick) => patch([{ spotifyUri: p.spotifyUri, chosen: [] }]);
   const setIncluded = (p: VideoPick, on: boolean) => patch([{ spotifyUri: p.spotifyUri, included: on }]);
+
+  // ---- adding a video by hand -------------------------------------------
+  let addUrl = $state<Record<string, string>>({});
+  let addError = $state<Record<string, string | null>>({});
+
+  async function addByUrl(p: VideoPick) {
+    const raw = (addUrl[p.spotifyUri] ?? '').trim();
+    if (!raw) return;
+    addError = { ...addError, [p.spotifyUri]: null };
+    const before = p.chosen.length;
+    await patch([{ spotifyUri: p.spotifyUri, addVideo: raw }]);
+    // The server is the only thing that can parse it, so "did it take?" is the
+    // honest test — a link it could not read leaves the selection unchanged.
+    const after = picks.find((x) => x.spotifyUri === p.spotifyUri)?.chosen.length ?? before;
+    if (after === before) addError = { ...addError, [p.spotifyUri]: "Couldn't read a YouTube video id from that." };
+    else addUrl = { ...addUrl, [p.spotifyUri]: '' };
+  }
+
+  // ---- searching youtube myself -----------------------------------------
+  type Hit = { videoId: string; title: string; channel: string };
+  let searchOpen = $state<Record<string, boolean>>({});
+  let searchQ = $state<Record<string, string>>({});
+  let searchHits = $state<Record<string, Hit[]>>({});
+  let searchBusy = $state<Record<string, boolean>>({});
+  let searchErr = $state<Record<string, string | null>>({});
+
+  function openSearch(p: VideoPick) {
+    searchOpen = { ...searchOpen, [p.spotifyUri]: !searchOpen[p.spotifyUri] };
+    if (searchQ[p.spotifyUri] === undefined) {
+      searchQ = { ...searchQ, [p.spotifyUri]: `${p.title} ${p.artists}` };
+    }
+  }
+
+  async function runSearch(p: VideoPick) {
+    const q = (searchQ[p.spotifyUri] ?? '').trim();
+    if (!q) return;
+    searchBusy = { ...searchBusy, [p.spotifyUri]: true };
+    searchErr = { ...searchErr, [p.spotifyUri]: null };
+    try {
+      const res = await fetch(`/api/ytm/video-review/${data.review.roundId}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.ok === false) throw new Error(body.reason ?? `search failed (${res.status})`);
+      searchHits = { ...searchHits, [p.spotifyUri]: body.results as Hit[] };
+    } catch (e) {
+      searchErr = { ...searchErr, [p.spotifyUri]: e instanceof Error ? e.message : 'Search failed' };
+    } finally {
+      searchBusy = { ...searchBusy, [p.spotifyUri]: false };
+    }
+  }
+
+  const addHit = (p: VideoPick, h: Hit) =>
+    patch([{ spotifyUri: p.spotifyUri, addVideo: h.videoId, addVideoTitle: h.title, addVideoChannel: h.channel }]);
 
   async function post(action: 'approve' | 'deny' | 'snooze') {
     if (action === 'approve' && undecided.length) return;
@@ -98,7 +160,7 @@
 
   <!-- Summary bar: the two numbers that decide whether OK is pressable. -->
   <div class="flex flex-wrap items-center gap-3 bg-surface border border-border-muted rounded-xl px-4 py-3">
-    <span class="font-mono text-xs text-fg-muted">{included.length} in the playlist</span>
+    <span class="font-mono text-xs text-fg-muted">{videoCount} video{videoCount === 1 ? '' : 's'} from {included.length} song{included.length === 1 ? '' : 's'}</span>
     {#if undecided.length}
       <StatusChip label="{undecided.length} NEED YOUR CALL" tone="warn" />
     {:else if isOpen}
@@ -118,18 +180,23 @@
           type="checkbox"
           class="mt-1 accent-accent"
           checked={p.included}
-          disabled={busy || !isOpen || !p.chosen}
+          disabled={busy || !isOpen || p.chosen.length === 0}
           onchange={(e) => setIncluded(p, e.currentTarget.checked)}
           aria-label="Include {p.title}"
         />
         <div class="min-w-0 flex-1">
-          <p class="text-sm text-fg truncate">{p.title}</p>
+          <p class="text-sm text-fg truncate">
+            {p.title}
+            {#if p.chosen.length > 1}
+              <span class="font-mono text-[10px] text-accent">· {p.chosen.length} videos</span>
+            {/if}
+          </p>
           <p class="font-mono text-[10px] text-fg-faint truncate">{p.artists}</p>
 
-          {#if p.candidates.length === 0}
+          {#if p.candidates.length === 0 && !opts.alternatives}
             <p class="text-xs text-fg-dim mt-1">{p.reason ?? 'No video found.'}</p>
           {:else if !opts.alternatives}
-            {@const c = p.candidates.find((x) => x.videoId === p.chosen) ?? p.candidates[0]}
+            {@const c = p.candidates.find((x) => p.chosen.includes(x.videoId)) ?? p.candidates[0]}
             <a href={yt(c.videoId)} target="_blank" rel="noreferrer" class="mt-1 flex items-center gap-2 group">
               <img src={thumb(c.videoId)} alt="" class="w-20 rounded" loading="lazy" />
               <span class="min-w-0">
@@ -140,38 +207,96 @@
               </span>
             </a>
           {:else}
-            <!-- Alternatives: search's second guess is often the right one when
-                 the first is a cover, so all three are offered rather than
-                 forcing a yes/no on the top hit. -->
+            <!-- Checkboxes, not radios: a song can carry more than one video.
+                 Search's second guess is also often the right one when the first
+                 is a cover, so all the candidates stay on offer. -->
             <div class="mt-2 space-y-1">
               {#each p.candidates as c (c.videoId)}
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input
-                    type="radio"
-                    name="pick-{p.spotifyUri}"
+                    type="checkbox"
                     class="accent-accent"
-                    checked={p.chosen === c.videoId}
+                    checked={p.chosen.includes(c.videoId)}
                     disabled={busy || !isOpen}
-                    onchange={() => choose(p, c.videoId)}
+                    onchange={(e) => toggleVideo(p, c.videoId, e.currentTarget.checked)}
                   />
                   <img src={thumb(c.videoId)} alt="" class="w-16 rounded" loading="lazy" />
                   <span class="min-w-0 flex-1">
                     <a href={yt(c.videoId)} target="_blank" rel="noreferrer" class="block text-xs text-fg-muted hover:text-accent truncate">{c.title}</a>
-                    <span class="block font-mono text-[10px] text-fg-faint truncate">{c.channel} · {c.score}%</span>
+                    <span class="block font-mono text-[10px] text-fg-faint truncate">
+                      {c.channel}{c.manual ? ' · added by you' : ` · ${c.score}%`}
+                    </span>
                   </span>
                 </label>
               {/each}
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="pick-{p.spotifyUri}"
-                  class="accent-accent"
-                  checked={p.chosen === null}
+
+              {#if p.band === 'review'}
+                <button
+                  type="button"
+                  onclick={() => chooseNone(p)}
                   disabled={busy || !isOpen}
-                  onchange={() => choose(p, null)}
-                />
-                <span class="text-xs text-fg-dim">No video for this one</span>
-              </label>
+                  class="font-mono text-[10px] tracking-widest uppercase {p.decided && p.chosen.length === 0 ? 'text-accent' : 'text-fg-dim hover:text-fg'} transition-colors"
+                >
+                  {p.decided && p.chosen.length === 0 ? '✓ no video for this one' : 'No video for this one'}
+                </button>
+              {/if}
+
+              {#if isOpen}
+                <div class="pt-1 flex flex-wrap items-center gap-2">
+                  <input
+                    type="url"
+                    placeholder="Paste a YouTube link…"
+                    value={addUrl[p.spotifyUri] ?? ''}
+                    oninput={(e) => (addUrl = { ...addUrl, [p.spotifyUri]: e.currentTarget.value })}
+                    onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addByUrl(p); } }}
+                    disabled={busy}
+                    class="flex-1 min-w-[180px] bg-bg-elevated border border-border-muted rounded px-2 py-1 text-xs text-fg placeholder-fg-faint outline-none focus:border-accent"
+                  />
+                  <button type="button" onclick={() => addByUrl(p)} disabled={busy}
+                    class="font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-accent transition-colors">Add</button>
+                  <button type="button" onclick={() => openSearch(p)} disabled={busy}
+                    class="font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-accent transition-colors">
+                    {searchOpen[p.spotifyUri] ? 'Close search' : 'Search YouTube'}
+                  </button>
+                </div>
+                {#if addError[p.spotifyUri]}
+                  <p class="text-[11px] text-ember">{addError[p.spotifyUri]}</p>
+                {/if}
+              {/if}
+
+              {#if searchOpen[p.spotifyUri]}
+                <div class="mt-1 border border-border-muted rounded p-2 space-y-2">
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      value={searchQ[p.spotifyUri] ?? ''}
+                      oninput={(e) => (searchQ = { ...searchQ, [p.spotifyUri]: e.currentTarget.value })}
+                      onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(p); } }}
+                      class="flex-1 bg-bg-elevated border border-border-muted rounded px-2 py-1 text-xs text-fg outline-none focus:border-accent"
+                    />
+                    <button type="button" onclick={() => runSearch(p)} disabled={searchBusy[p.spotifyUri]}
+                      class="font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-accent transition-colors">
+                      {searchBusy[p.spotifyUri] ? '…' : 'Go'}
+                    </button>
+                  </div>
+                  {#if searchErr[p.spotifyUri]}
+                    <p class="text-[11px] text-ember">{searchErr[p.spotifyUri]}</p>
+                  {/if}
+                  {#each searchHits[p.spotifyUri] ?? [] as h (h.videoId)}
+                    <div class="flex items-center gap-2">
+                      <img src={thumb(h.videoId)} alt="" class="w-16 rounded" loading="lazy" />
+                      <span class="min-w-0 flex-1">
+                        <a href={yt(h.videoId)} target="_blank" rel="noreferrer" class="block text-xs text-fg-muted hover:text-accent truncate">{h.title}</a>
+                        <span class="block font-mono text-[10px] text-fg-faint truncate">{h.channel}</span>
+                      </span>
+                      <button type="button" onclick={() => addHit(p, h)} disabled={busy || p.chosen.includes(h.videoId)}
+                        class="font-mono text-[10px] tracking-widest uppercase text-fg-dim hover:text-accent disabled:opacity-40 transition-colors">
+                        {p.chosen.includes(h.videoId) ? 'added' : 'use'}
+                      </button>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -194,7 +319,7 @@
     <section class="bg-surface border border-border-muted rounded-xl px-5 py-4">
       <h2 class="text-sm font-bold text-fg">From submission comments</h2>
       <p class="text-xs text-fg-dim mt-1 mb-2">The link the submitter posted themselves. Untick to leave one out.</p>
-      {#each byBand('certain') as p (p.spotifyUri)}{@render pickRow(p, { alternatives: false })}{/each}
+      {#each byBand('certain') as p (p.spotifyUri)}{@render pickRow(p, { alternatives: true })}{/each}
     </section>
   {/if}
 
@@ -228,7 +353,7 @@
         title={undecided.length ? `${undecided.length} still need an answer` : 'Build the playlist and post it'}
         class="bg-accent hover:bg-accent-strong disabled:opacity-40 disabled:cursor-not-allowed text-bg-elevated font-mono text-xs tracking-widest uppercase font-bold px-5 py-2 rounded-md transition-colors"
       >
-        {busy ? 'Working…' : `OK — post ${included.length} video${included.length === 1 ? '' : 's'}`}
+        {busy ? 'Working…' : `OK — post ${videoCount} video${videoCount === 1 ? '' : 's'}`}
       </button>
       <button type="button" onclick={() => post('snooze')} disabled={busy}
         class="font-mono text-[11px] tracking-widest uppercase text-fg-dim hover:text-fg transition-colors">Snooze 4h</button>

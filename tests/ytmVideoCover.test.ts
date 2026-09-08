@@ -5,7 +5,7 @@ import type { VideoPick } from '../ui/src/lib/ytm/videoReview.js';
 function pick(over: Partial<VideoPick>): VideoPick {
   return {
     title: 't', artists: 'a', spotifyUri: 'u', source: 'search', score: 80, band: 'auto',
-    candidates: [], chosen: 'VID', included: true, decided: true, reason: null, ...over,
+    candidates: [], chosen: ['VID'], included: true, decided: true, reason: null, ...over,
   };
 }
 const base = { roundName: 'I Want My MTV', leagueTitle: 'Second Best' };
@@ -39,6 +39,15 @@ describe('video cover', () => {
     const html = buildVideoCoverHtml({ ...base, picks: all }, T, '');
     expect(html).toContain('EVERY ONE HAND-PICKED');
     expect(html).not.toContain('BEST GUESS');
+  });
+
+  it('counts VIDEOS, not songs, when one song carries two', () => {
+    const html = buildVideoCoverHtml(
+      { ...base, picks: [pick({ source: 'comment', chosen: ['A', 'B'] }), pick({ source: 'search', chosen: ['C'] })] },
+      T, '',
+    );
+    expect(html).toContain('3 VIDEOS');
+    expect(html).toContain('2 HAND-PICKED · 1 BEST GUESS');
   });
 
   it('reads naturally for a single guessed video', () => {

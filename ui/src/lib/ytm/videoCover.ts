@@ -60,8 +60,12 @@ export interface RenderDeps {
 export function buildVideoCoverHtml(
   input: VideoCoverInput, thumbs: Array<string | null>, fontsCssHref: string,
 ): string {
-  const handPicked = input.picks.filter((p) => p.source === 'comment').length;
-  const guessed = input.picks.length - handPicked;
+  // Counted in VIDEOS, not songs: the footer number has to match the playlist.
+  const total = input.picks.reduce((n, p) => n + p.chosen.length, 0);
+  const handPicked = input.picks
+    .filter((p) => p.source === 'comment')
+    .reduce((n, p) => n + p.chosen.length, 0);
+  const guessed = total - handPicked;
 
   // Tile whatever we have to fill 16 cells so no cell is ever blank, exactly as
   // the audio cover's gridFill does for short rounds.
@@ -115,7 +119,7 @@ body{width:640px;height:640px;background:var(--ink-0);overflow:hidden;position:r
   <div style="position:absolute;left:0;right:0;bottom:0;padding:22px 24px 20px;background:linear-gradient(transparent,rgba(7,9,12,.92) 42%)">
     <h1 style="font-family:var(--font-display);font-weight:800;font-size:34px;line-height:1.03;letter-spacing:-.02em;color:var(--fg);text-wrap:balance">${esc(input.roundName)}</h1>
     <p style="font-family:var(--font-mono);font-weight:600;font-size:14px;letter-spacing:.10em;color:var(--fg-muted);margin-top:8px">
-      ${input.picks.length} VIDEO${input.picks.length === 1 ? '' : 'S'} · ${esc(provenance).toUpperCase()}
+      ${total} VIDEO${total === 1 ? '' : 'S'} · ${esc(provenance).toUpperCase()}
     </p>
   </div>
 </body>`;
@@ -133,9 +137,10 @@ export async function renderVideoCover(
   const out = deps.outPath ?? path.join(DATA_DIR, 'tmp', `r${roundId}-videos-cover.png`);
   const fontsCss = deps.fontsCss ?? FONTS_CSS;
 
-  const thumbs = await Promise.all(
-    input.picks.map((p) => (p.chosen ? thumbDataUri(p.chosen, fetchFn) : Promise.resolve(null))),
-  );
+  // One thumbnail per selected video, not per song — a song contributing two
+  // videos should show up twice in the grid, because it does in the playlist.
+  const ids = input.picks.flatMap((p) => p.chosen);
+  const thumbs = await Promise.all(ids.map((id) => thumbDataUri(id, fetchFn)));
   const fontsHref = fs.existsSync(fontsCss) ? pathToFileURL(fontsCss).href : '';
   const html = buildVideoCoverHtml(input, thumbs, fontsHref);
 

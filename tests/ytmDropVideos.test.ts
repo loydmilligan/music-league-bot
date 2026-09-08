@@ -90,22 +90,22 @@ describe('resolveVideoPicks', () => {
   it('prefers the submitter link and never searches for that song', async () => {
     ytSearch.mockClear();
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0 });
-    expect(picks[0]).toMatchObject({ band: 'certain', source: 'comment', chosen: 'RGE-JRsJ2uo', included: true, decided: true });
+    expect(picks[0]).toMatchObject({ band: 'certain', source: 'comment', chosen: ['RGE-JRsJ2uo'], included: true, decided: true });
     expect(ytSearch).toHaveBeenCalledTimes(2);
     expect(ytSearch.mock.calls.some((c) => String(c[0]).startsWith('Au Pays'))).toBe(false);
   });
 
   it('bands a strong hit auto (included) and a weak one suggestion (excluded)', async () => {
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 70, hilPct: 40 });
-    expect(picks[1]).toMatchObject({ band: 'auto', chosen: 'HYplnRjMVhM', included: true, decided: true });
+    expect(picks[1]).toMatchObject({ band: 'auto', chosen: ['HYplnRjMVhM'], included: true, decided: true });
     // 30 < hilPct 40 → a long shot: nothing preselected, nothing included.
-    expect(picks[2]).toMatchObject({ band: 'suggestion', chosen: null, included: false, decided: true });
+    expect(picks[2]).toMatchObject({ band: 'suggestion', chosen: [], included: false, decided: true });
   });
 
   it('bands the middle as review — preselected but NOT decided, and not included', async () => {
     // hil 25 / auto 70 puts the 30-scoring Wellermen hit in the review band.
     const picks = await resolveVideoPicks(subs, ytSearch, { pacingMs: 0, autoAcceptPct: 70, hilPct: 25 });
-    expect(picks[2]).toMatchObject({ band: 'review', chosen: '1WDX4PAH1L0', included: false, decided: false });
+    expect(picks[2]).toMatchObject({ band: 'review', chosen: ['1WDX4PAH1L0'], included: false, decided: false });
     expect(undecidedPicks(picks)).toHaveLength(1);
   });
 
@@ -131,7 +131,7 @@ describe('resolveVideoPicks', () => {
     // shot rather than quietly replacing the link the submitter chose.
     expect(picks[0].source).toBe('search');
     expect(picks[0].band).toBe('suggestion');
-    expect(picks[0].chosen).toBeNull();
+    expect(picks[0].chosen).toEqual([]);
     expect(picks[0].candidates.map((c: { videoId: string }) => c.videoId)).toEqual(['SEARCHHIT01']);
     expect(picks[0].candidates.map((c: { videoId: string }) => c.videoId)).not.toContain('RGE-JRsJ2uo');
   });
@@ -139,15 +139,15 @@ describe('resolveVideoPicks', () => {
   it('useSearch:false leaves the gaps empty and never calls search', async () => {
     const spy = vi.fn(async () => [{ videoId: 'X', title: 't', channel: 'c' }]);
     const picks = await resolveVideoPicks(subs, spy, { pacingMs: 0, useSearch: false });
-    expect(picks[0].chosen).toBe('RGE-JRsJ2uo');
-    expect(picks[1]).toMatchObject({ chosen: null, included: false, decided: true });
+    expect(picks[0].chosen).toEqual(['RGE-JRsJ2uo']);
+    expect(picks[1]).toMatchObject({ chosen: [], included: false, decided: true });
     expect(picks[1].reason).toContain('search is off');
     expect(spy).not.toHaveBeenCalled();
   });
 
   it('never leaves a hole undecided — an empty result must not block approval', async () => {
     const picks = await resolveVideoPicks([subs[2]], async () => [], { pacingMs: 0 });
-    expect(picks[0]).toMatchObject({ chosen: null, included: false, decided: true, reason: 'search found nothing' });
+    expect(picks[0]).toMatchObject({ chosen: [], included: false, decided: true, reason: 'search found nothing' });
     expect(undecidedPicks(picks)).toHaveLength(0);
   });
 
@@ -157,9 +157,9 @@ describe('resolveVideoPicks', () => {
       return [{ videoId: 'OK1', title: "Barrett's Privateers (Official Video)", channel: 'Stan Rogers' }];
     });
     const picks = await resolveVideoPicks(subs, boom, { pacingMs: 0 });
-    expect(picks[1]).toMatchObject({ chosen: null, decided: true });
+    expect(picks[1]).toMatchObject({ chosen: [], decided: true });
     expect(picks[1].reason).toContain('429');
-    expect(picks[2].chosen).toBe('OK1');
+    expect(picks[2].chosen).toEqual(['OK1']);
     expect(undecidedPicks(picks)).toHaveLength(0);
   });
 

@@ -159,7 +159,7 @@ async function searchVideoCandidates(ytSearch, track, limit = 3) {
  *
  *   source      'comment' | 'search' | null
  *   candidates  [{ videoId, title, channel, score }], best first
- *   chosen      videoId currently selected, or null
+ *   chosen      videoIds currently selected (a list; [] = none)
  *   band        'certain' | 'auto' | 'review' | 'suggestion' (see videoConfig)
  *   included    whether it goes in the playlist as things stand
  *   decided     false only for 'review', which blocks approval until answered
@@ -182,14 +182,14 @@ export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 			picks.push({
 				...sub, source: 'comment', score: 100, band: 'certain',
 				candidates: [{ videoId: fromComment, title: sub.title, channel: null, score: 100 }],
-				chosen: fromComment, included: true, decided: true, reason: null,
+				chosen: [fromComment], included: true, decided: true, reason: null,
 			});
 			continue;
 		}
 		if (!useSearch) {
 			picks.push({
 				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
-				chosen: null, included: false, decided: true,
+				chosen: [], included: false, decided: true,
 				reason: useComments ? 'no link in comment, and search is off for this round' : 'no video source enabled',
 			});
 			continue;
@@ -203,7 +203,7 @@ export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 		} catch (e) {
 			picks.push({
 				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
-				chosen: null, included: false, decided: true,
+				chosen: [], included: false, decided: true,
 				reason: `search failed: ${e.message?.slice(0, 100)}`, error: e.message?.slice(0, 120),
 			});
 			continue;
@@ -211,7 +211,7 @@ export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 		if (!candidates.length) {
 			picks.push({
 				...sub, source: null, score: 0, band: 'suggestion', candidates: [],
-				chosen: null, included: false, decided: true, reason: 'search found nothing',
+				chosen: [], included: false, decided: true, reason: 'search found nothing',
 			});
 			continue;
 		}
@@ -221,8 +221,9 @@ export async function resolveVideoPicks(submissions, ytSearch, opts = {}) {
 			...sub, source: 'search', score: best.score, band, candidates,
 			// A 'suggestion' starts with nothing selected, so an unattended
 			// approval can never quietly ship a long shot; 'review' preselects
-			// the best candidate but is not counted as decided.
-			chosen: band === 'suggestion' ? null : best.videoId,
+			// the best candidate but is not counted as decided. A list, because
+			// a song can end up carrying more than one video.
+			chosen: band === 'suggestion' ? [] : [best.videoId],
 			included: band === 'auto',
 			decided: band !== 'review',
 			reason: band === 'auto' ? null : `scored ${best.score}`,
