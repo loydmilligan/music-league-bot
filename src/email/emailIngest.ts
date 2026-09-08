@@ -133,8 +133,10 @@ function resolveRoundId(db: Database.Database, p: ParsedEmail): number | null {
       | undefined;
     return row?.id ?? null;
   }
-  // new_playlist has no round id → match round name within the league.
-  if (p.type === 'new_playlist' && p.roundName) {
+  // new_playlist and user_submitted carry no round id → match round name within
+  // the league. Same league-scoping discipline applies to both: an unplaceable
+  // league label must not fall back to a league-wide name match.
+  if ((p.type === 'new_playlist' || p.type === 'user_submitted') && p.roundName) {
     const leagueId = resolveLeagueIdFromLabel(db, p.leagueLabel);
     // A label we could not place is not a licence to match the round name
     // league-wide — that is how one league's round name would capture another

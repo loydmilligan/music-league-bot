@@ -56,6 +56,7 @@ describe('emailIngest wiring — voting_ended enqueues a digest job', () => {
       toAddr: 'mattmariani@gmail.com',
       sentAt: '2026-06-09T07:00:00.000Z',
       type: 'other',
+      submitterName: null,
       mlRoundId: null,
       leagueLabel: null,
       roundName: null,

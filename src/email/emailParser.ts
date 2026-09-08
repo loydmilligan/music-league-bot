@@ -22,7 +22,7 @@ import { simpleParser } from 'mailparser';
  *    playlist URL (no round id) → mapped by round name + league.
  */
 
-export type MlEmailType = 'round_starting' | 'new_playlist' | 'votes_are_in' | 'other';
+export type MlEmailType = 'round_starting' | 'new_playlist' | 'votes_are_in' | 'user_submitted' | 'other';
 
 export interface ParsedEmail {
   messageId: string;
@@ -35,6 +35,13 @@ export interface ParsedEmail {
   leagueLabel: string | null; // e.g. "Hip Jammers 3: its all hippening"
   roundName: string | null; // e.g. "Plots so thicc"
   playlistUrl: string | null; // Spotify playlist (new_playlist)
+  /**
+   * Who submitted (user_submitted only). The email names the PERSON and the
+   * ROUND but never the SONG, which is what makes it safe to surface during a
+   * live round: it cannot reveal who submitted what. Repeat emails for the same
+   * person in the same round are how a mid-round pick change shows up.
+   */
+  submitterName: string | null;
 }
 
 /** Subject suffix (after the last " - ") → lifecycle type. */
@@ -46,6 +53,7 @@ export function classifySubject(subject: string): MlEmailType {
   if (s === 'round starting') return 'round_starting';
   if (s === 'new playlist') return 'new_playlist';
   if (s === 'the votes are in') return 'votes_are_in';
+  if (s === 'user submitted') return 'user_submitted';
   return 'other';
 }
 
@@ -102,6 +110,10 @@ function extractRoundAndLeague(
       // "The {round} round of the {league} league is open …"
       m = text.match(/\bThe\s+(.+?)\s+round of the\s+(.+?)\s+league/i);
       return m ? { roundName: m[1].trim(), leagueLabel: m[2].trim() } : { roundName: null, leagueLabel: null };
+    case 'user_submitted':
+      // "{name} has submitted a song or songs for the {round} round in the {league} league."
+      m = text.match(/has submitted a song or songs for the\s+(.+?)\s+round in the\s+(.+?)\s+league/i);
+      return m ? { roundName: m[1].trim(), leagueLabel: m[2].trim() } : { roundName: null, leagueLabel: null };
     case 'votes_are_in':
       // "The votes are in for the round {round}!" — note the votes body ALSO
       // contains "…round of the…league", so we must not fall through to that.
@@ -112,6 +124,18 @@ function extractRoundAndLeague(
     default:
       return { roundName: null, leagueLabel: null };
   }
+}
+
+/**
+ * Submitter name from a user_submitted body.
+ *
+ * Anchored on the "Someone has Submitted" heading that precedes it, because the
+ * flattened HTML carries CSS before the prose and an unanchored match swallows
+ * it ("...!important } } Someone has Submitted Steiny has submitted...").
+ */
+function extractSubmitter(text: string): string | null {
+  const m = text.match(/Someone has Submitted\s+(.+?)\s+has submitted a song or songs/i);
+  return m ? m[1].trim() : null;
 }
 
 export async function parseEmail(raw: string | Buffer): Promise<ParsedEmail> {
@@ -153,6 +177,7 @@ export async function parseEmail(raw: string | Buffer): Promise<ParsedEmail> {
   // search both.
   const prose = `${text}\n${htmlToText(html)}`;
   const { roundName, leagueLabel } = extractRoundAndLeague(prose, type);
+  const submitterName = type === 'user_submitted' ? extractSubmitter(prose) : null;
 
   return {
     messageId,
@@ -162,6 +187,7 @@ export async function parseEmail(raw: string | Buffer): Promise<ParsedEmail> {
     sentAt,
     type,
     mlRoundId,
+    submitterName,
     leagueLabel,
     roundName,
     playlistUrl,
