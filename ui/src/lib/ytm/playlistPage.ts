@@ -36,10 +36,20 @@ export interface PlaylistPageInput {
 /**
  * A "play them all" link that needs no playlist to exist. YouTube builds a
  * temporary playlist from the ids in the query string; it tops out around 50.
+ *
+ * `title` is undocumented but real — verified against YouTube on 2026-09-07:
+ * without it the playlist panel reads "Untitled List", with it the panel shows
+ * the title. Worth passing, since this link is how most people will actually
+ * play the round.
  */
-export function watchAllUrl(videoIds: string[]): string | null {
+export function watchAllUrl(videoIds: string[], title?: string | null): string | null {
   const ids = videoIds.slice(0, 50);
-  return ids.length ? `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}` : null;
+  if (!ids.length) return null;
+  const q = new URLSearchParams({ video_ids: ids.join(',') });
+  if (title) q.set('title', title);
+  // URLSearchParams percent-encodes the commas between ids, which YouTube then
+  // fails to split on — put the ids back verbatim.
+  return `https://www.youtube.com/watch_videos?${q.toString().replace(/%2C/g, ',')}`;
 }
 
 interface Entry {
@@ -75,7 +85,7 @@ export function entriesFor(picks: VideoPick[]): Entry[] {
 
 export function buildPlaylistPageHtml(input: PlaylistPageInput): string {
   const entries = entriesFor(input.picks);
-  const watchAll = watchAllUrl(entries.map((e) => e.videoId));
+  const watchAll = watchAllUrl(entries.map((e) => e.videoId), `${input.leagueTitle} · ${input.roundName}`);
   const guessed = entries.filter((e) => !e.fromComment && !e.manual).length;
 
   const cards = entries

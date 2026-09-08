@@ -38,6 +38,19 @@ describe('watchAllUrl', () => {
   it('builds a temporary-playlist link needing no playlist to exist', () => {
     expect(watchAllUrl(['A', 'B'])).toBe('https://www.youtube.com/watch_videos?video_ids=A,B');
   });
+
+  it('titles the playlist, so it is not "Untitled List"', () => {
+    const url = watchAllUrl(['A', 'B'], 'Second Best · Captain Jack Sparrow')!;
+    expect(url).toContain('title=Second+Best+%C2%B7+Captain+Jack+Sparrow');
+  });
+
+  it('leaves the id separators as literal commas', () => {
+    // YouTube does not split on percent-encoded commas, so encoding them
+    // silently reduces the playlist to a single video.
+    const url = watchAllUrl(['AAA', 'BBB', 'CCC'], 'x')!;
+    expect(url).toContain('video_ids=AAA,BBB,CCC');
+    expect(url).not.toContain('%2C');
+  });
   it('caps at the 50 YouTube accepts', () => {
     const url = watchAllUrl(Array.from({ length: 80 }, (_, i) => `V${i}`))!;
     expect(url.split(',')).toHaveLength(50);
@@ -69,6 +82,12 @@ describe('page html', () => {
   it('offers the YouTube playlist only when one exists', () => {
     expect(buildPlaylistPageHtml({ ...base, picks: [pick({})] })).not.toContain('Save to YouTube');
     expect(buildPlaylistPageHtml({ ...base, picks: [pick({})], youtubeUrl: 'https://yt/x' })).toContain('Save to YouTube');
+  });
+
+  it('carries the round name into the play-all link', () => {
+    const html = buildPlaylistPageHtml({ ...base, picks: [pick({})] });
+    expect(html).toContain('title=Second+Best');
+    expect(html).toContain('I+Want+My+MTV');
   });
 
   it('escapes titles instead of letting them become markup', () => {
