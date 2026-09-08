@@ -55,6 +55,12 @@ export interface RosterPlayer {
  * rather than imported so the renderer depends on nothing but its own inputs —
  * the page is also built in tests and from scripts that never open the db.
  */
+export interface PlaylistMessage {
+  videoId: string;
+  playerName: string;
+  text: string;
+}
+
 export interface PlaylistTally {
   videoId: string;
   up: number;
@@ -75,6 +81,11 @@ export interface PlaylistPageInput {
   roster?: RosterPlayer[];
   /** Counts as of render time; the page reconciles nothing until a reload. */
   tallies?: PlaylistTally[];
+  /**
+   * Messages Matt has RELEASED. Never the pending queue — an unapproved message
+   * on a public page is the one thing this flow exists to prevent.
+   */
+  messages?: PlaylistMessage[];
   /** Identifies this page to the write API. */
   slug?: string | null;
   /** Where the write endpoints live, as proxied on the public host. */
@@ -187,6 +198,11 @@ export function buildPlaylistPageHtml(input: PlaylistPageInput): string {
   const apiBase = input.apiBase ?? '/api/p';
   const roster = input.roster ?? [];
   const tally = new Map((input.tallies ?? []).map((t) => [t.videoId, t]));
+  const saidAbout = new Map<string, PlaylistMessage[]>();
+  for (const m of input.messages ?? []) {
+    if (!saidAbout.has(m.videoId)) saidAbout.set(m.videoId, []);
+    saidAbout.get(m.videoId)!.push(m);
+  }
   // Children are still videos of the round, so they play with everything else.
   const playable = rows.flatMap((r) => (r.primary ? [r.primary, ...r.children] : r.children)).map((e) => e.videoId);
   const watchAll = watchAllUrl(playable, `${input.leagueTitle} · ${input.roundName}`);
@@ -228,6 +244,9 @@ export function buildPlaylistPageHtml(input: PlaylistPageInput): string {
           .join('\n')}
       </details>`
         : '';
+      const said = (r.primary ? saidAbout.get(r.primary.videoId) ?? [] : [])
+        .map((m) => `<li class="said"><b>${esc(m.playerName)}</b> ${esc(m.text)}</li>`)
+        .join('\n');
       return `<li class="row">
     ${lead}
     <div class="meta">
@@ -237,6 +256,7 @@ export function buildPlaylistPageHtml(input: PlaylistPageInput): string {
         <span class="prov" style="color:${PROV_INK[r.provenance]};border-color:${PROV_INK[r.provenance]}">${r.provenance}</span>
         ${controls}
       </div>
+      ${said ? `<ul class="saids">${said}</ul>` : ''}
       ${kids}
     </div>
     ${stamp ? `<div class="stamp" aria-hidden="true">${stamp}</div>` : ''}
@@ -341,6 +361,9 @@ ol{list-style:none;padding:0;margin:0}
 .kid .thumb{flex:0 0 64px;width:64px;height:42px}
 .vtitle{font-size:12px;color:var(--fg-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stamp{position:absolute;right:10px;top:10px;pointer-events:none}
+.saids{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:5px}
+.said{font-size:13px;line-height:1.4;color:var(--fg-2);border-left:2px solid var(--pulp);padding:2px 0 2px 9px}
+.said b{color:var(--fg);font-weight:600}
 .composer{display:flex;gap:8px;margin-top:8px}
 .composer textarea{flex:1;min-width:0;background:var(--ink-1);border:1px solid var(--line);border-radius:6px;
   color:var(--fg);font:inherit;font-size:13px;padding:8px;resize:vertical}

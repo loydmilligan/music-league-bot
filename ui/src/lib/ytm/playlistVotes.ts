@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { randomBytes } from 'node:crypto';
 import type { BandMember } from './bandStamp.js';
 import { getReview, primaryVideoId } from './videoReview.js';
 
@@ -92,6 +93,14 @@ export function ensurePlaylistSchema(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_playlist_messages_slug ON playlist_messages(slug, status);
   `);
+  // Single-use approval token per message, added after the table shipped. It is
+  // what makes the ntfy Approve/Deny buttons safe to expose: the callbacks are
+  // public and bearer-gated, and the token scopes each tap to one message.
+  const msgCols = new Set(
+    (db.prepare('PRAGMA table_info(playlist_messages)').all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  if (!msgCols.has('token')) db.exec('ALTER TABLE playlist_messages ADD COLUMN token TEXT');
+
 }
 
 export interface PlaylistPageRef {
@@ -274,17 +283,18 @@ export function submitMessage(
   playerId: string,
   text: string,
   nowIso: string,
-): { id: number } {
+): { id: number; token: string } {
   const body = (text ?? '').trim();
   if (!body) throw new MessageRejected('empty message');
   if (body.length > MAX_MESSAGE_CHARS) throw new MessageRejected(`message over ${MAX_MESSAGE_CHARS} characters`);
+  const token = randomBytes(18).toString('base64url');
   const info = db
     .prepare(
-      `INSERT INTO playlist_messages (slug, video_id, player_id, text, status, created_at)
-       VALUES (?, ?, ?, ?, 'pending', ?)`,
+      `INSERT INTO playlist_messages (slug, video_id, player_id, text, status, created_at, token)
+       VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
     )
-    .run(slug, videoId, playerId, body, nowIso);
-  return { id: Number(info.lastInsertRowid) };
+    .run(slug, videoId, playerId, body, nowIso, token);
+  return { id: Number(info.lastInsertRowid), token };
 }
 
 function messagesWithStatus(db: Database.Database, slug: string, status: MessageStatus): Message[] {
@@ -337,9 +347,40 @@ export function decideMessage(
   nowIso: string,
 ): boolean {
   const info = db
-    .prepare(`UPDATE playlist_messages SET status=?, decided_at=? WHERE id=? AND status='pending'`)
+    .prepare(`UPDATE playlist_messages SET status=?, decided_at=?, token=NULL WHERE id=? AND status='pending'`)
     .run(status, nowIso, id);
   return info.changes > 0;
+}
+
+/** Resolve a single-use approval token to its still-pending message. */
+export function messageByToken(db: Database.Database, token: string): Message | null {
+  if (!token) return null;
+  const row = db
+    .prepare(
+      `SELECT m.id, m.video_id AS videoId, m.player_id AS playerId,
+              COALESCE(p.name, m.player_id) AS playerName, m.text, m.status,
+              m.created_at AS createdAt, m.decided_at AS decidedAt, m.slug
+         FROM playlist_messages m
+         LEFT JOIN players p ON CAST(p.id AS TEXT) = m.player_id
+        WHERE m.token = ? AND m.status = 'pending'`,
+    )
+    .get(token) as (Message & { slug: string }) | undefined;
+  return row ?? null;
+}
+
+/**
+ * Claim the token and mark the message decided in ONE statement, before any
+ * side effect — so a double-tap on the notification cannot post twice.
+ */
+export function claimMessage(
+  db: Database.Database, token: string, status: 'approved' | 'denied', nowIso: string,
+): (Message & { slug: string }) | null {
+  const msg = messageByToken(db, token) as (Message & { slug: string }) | null;
+  if (!msg) return null;
+  const info = db
+    .prepare(`UPDATE playlist_messages SET status=?, decided_at=?, token=NULL WHERE id=? AND status='pending'`)
+    .run(status, nowIso, msg.id);
+  return info.changes > 0 ? { ...msg, status } : null;
 }
 
 /** Everything the page may read back, or null for an unknown slug. */

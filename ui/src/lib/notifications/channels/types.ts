@@ -1,7 +1,7 @@
 import type { AlertType, ChannelId } from '$lib/notifications/config.js';
 
 export interface ApprovalPayload {
-  kind: 'approve' | 'review' | 'video_review';
+  kind: 'approve' | 'review' | 'video_review' | 'playlist_message';
   token: string;
   approveUrl?: string;   // present when kind==='approve' or 'video_review'
   denyUrl: string;
@@ -11,6 +11,10 @@ export interface ApprovalPayload {
   /** video_review only: how many picks still need a human answer, and how many are ready. */
   needsDecision?: number;
   ready?: number;
+  /** playlist_message only. */
+  author?: string;
+  song?: string;
+  text?: string;
 }
 
 export interface AlertPayload {

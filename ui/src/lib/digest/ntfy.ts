@@ -102,6 +102,30 @@ export function buildVideoReviewNotification(o: {
   };
 }
 
+/**
+ * Someone said something on a playlist page and it is waiting on you.
+ *
+ * Both actions are one-tap: unlike the video review there is nothing to decide
+ * beyond yes or no, and the message itself fits in the notification body — so
+ * making someone open a page to read four words would be the wrong trade.
+ */
+export function buildPlaylistMessageNotification(o: {
+  league: string; round: string; author: string; song: string; text: string;
+  approveUrl: string; denyUrl: string; reviewUrl: string; token: string; bearer?: string;
+}): Notification {
+  return {
+    title: `${o.author} on ${o.song}`,
+    message: `“${o.text}”\n\n${o.league} — ${o.round}. Approve to post it to the group.`,
+    click: o.reviewUrl,
+    priority: 4,
+    tags: ['speech_balloon'],
+    actions: [
+      { ...authedPost(o.approveUrl, o.token, o.bearer), label: 'Approve' },
+      { ...authedPost(o.denyUrl, o.token, o.bearer), label: 'Deny' },
+    ],
+  };
+}
+
 export function buildFailureNotification(o: { stage: string; reason: string; roundId?: number }): Notification {
   return {
     title: '⚠ digest pipeline',

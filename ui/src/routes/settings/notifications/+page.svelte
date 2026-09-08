@@ -27,6 +27,7 @@
     digest_ready: 'Digest ready',
     digest_sent: 'Digest sent',
     video_review: 'Music-video playlist needs review',
+    playlist_message: 'Someone wrote a message on a playlist page',
   };
 
   function isConfigured(ch: ChannelId): boolean {
