@@ -140,41 +140,48 @@ is what every round that *isn't* R143 will look like.
 
 ---
 
-## Change request — the Second Best stamp is a per-player colour plate
+## Change request — the Second Best stamp is a band assembling
 
 *(Matt, 2026-09-08, after the packet was reviewed. This supersedes D3's stamp entirely.)*
 
-Not a ranking, not a winner marker, and not an intensity meter. It is an **easter egg built out
-of colour separation**: four named players each own one ink plate, and the stamp is however many
-of those plates happen to land on the same video.
+Not a ranking, not a winner marker, and not an intensity meter. It is an **easter egg**: four
+named players each own one member of a band — a colour *and* an instrument — and the stamp on a
+video is whichever of them happened to pick it first. One player alone is a lone musician. All
+four on the same video is the whole band.
 
 **The mechanic**
 
-- Four players have a plate. Everyone else's thumbs-up **just counts** — no stamp contribution.
+- Four players have a part. Everyone else's thumbs-up **just counts** — no stamp contribution.
 
-  | Player | Plate |
-  |---|---|
-  | Matt Mariani | blue |
-  | TJ Cook | green |
-  | Brian Pascoe | black |
-  | Jon Black | red |
+  | Player | Colour | Instrument |
+  |---|---|---|
+  | Matt Mariani | blue | guitar |
+  | Jon Black | red | mic |
+  | Brian Pascoe | black | bass |
+  | TJ Cook | green | drums |
 
-- Each of the four has **exactly one** stamp, and it is spent on the **first video they thumb
-  up**. Their later upvotes still count, but carry no plate.
-- **Plates apart:** four different first-picks means four different videos, each wearing a single
-  colour — thin, sparse, lines missing, the way one separation looks without the others.
-- **Plates together:** when two or more first-picks land on the same video, the plates
-  **overprint** and the stamp fills in — more colour, more detail, complete at all four.
+- Each of the four has **exactly one** stamp, spent on the **first video they thumb up**. Their
+  later upvotes still count, but carry no stamp.
+- **Apart:** four different first-picks means four videos each wearing a single player — one
+  instrument, one colour, sparse and deliberately incomplete.
+- **Together:** when first-picks coincide, the parts **assemble** — two is a duo, four is the
+  full band, with more colour and more detail.
 
 Matt: *"if separate is the one that gets a stamp — if they coincide they start to build."*
+*(He offered "or tambourine hahah" for the mic — recorded as a joke, not as spec.)*
 
-**This corrects my previous revision of this section**, which described a generic intensity
-ladder (1 up = faint, 4 = full colour). That was wrong: the colours are *player identities*, not
-stages, and the count that matters is how many of the four coincide — not how many people voted.
+**This corrects my earlier revisions of this section.** I first wrote it up as a generic
+intensity ladder (1 up = faint, 4 = full colour) — wrong, because the marks are *player
+identities*, not stages, and what matters is how many of the four coincide, not the vote count.
+I then framed it as pure colour separation — closer, but the instruments make it something
+better than registration marks lining up.
 
-**Why it is good, and worth telling CD:** the packet's share art already runs on misregistration
-— the pulp ghost offset behind the black type is a printing plate out of alignment. This mechanic
-is the same idea made interactive. The stamp and the flyer would rhyme without being told to.
+**Why it is good, and worth telling CD:** the payoff is legible without a legend. Four separate
+lone-instrument stamps across a round means the four of them agreed on nothing; a full band on
+one video means they all landed on the same thing first. That reads instantly, to the four
+people it is for, and to nobody else — which is the whole point of an easter egg. It also rhymes
+with the share art, which already runs on misregistration: the pulp ghost offset behind the
+black type is a printing plate out of alignment.
 
 **Because it is decorative, the hard questions don't apply:**
 
@@ -186,17 +193,21 @@ is the same idea made interactive. The stamp and the flyer would rhyme without b
 
 **What still needs CD:**
 
-1. The stamp drawn as **four separable plates** plus the overprinted combinations — at minimum
-   one plate alone, two, and all four. The single-plate state is the hard one: it has to read as
-   *deliberately unfinished*, not as a rendering bug.
-2. **Brian Pascoe's plate is black, and the page is `--ink-0` (#07090c).** A black plate on a
-   near-black card is close to invisible, and his solo stamp is the state most likely to look
-   broken. Needs a deliberate answer — a lighter "black" ink, an outline, a paper patch under the
-   stamp, or a different colour.
-3. Blue/green/red against the one-accent pulp palette: `--moss` is already the up-vote colour and
-   `--sky` and `--ember` are semantic. Reusing them for player plates borrows meaning that isn't
-   there. Worth CD picking ink colours that read as *ink* rather than as system state.
-4. One noted risk: a mark that appears from votes and visibly escalates *looks* like it means
+1. **Four instrument stamps that compose.** Each has to work alone *and* stack — a guitar, a
+   mic, a bass and a drum kit that assemble into one band without becoming a pile. Draw at
+   minimum: one alone, a pair, and all four. The solo state is the hard one; it has to read as
+   *one of something*, not as a broken or half-rendered mark.
+2. **Brian Pascoe's is black, and the page is `--ink-0` (#07090c).** A black bass on a near-black
+   card is close to invisible, and his solo stamp is the state most likely to look like a bug.
+   Needs a deliberate answer — a lighter "black" ink, an outline, a paper patch under the stamp,
+   or a different colour.
+3. **Blue/green/red collide with the semantic palette.** `--moss` is already the up-vote colour;
+   `--sky` and `--ember` mean info and error. Reusing them as player colours lends the easter egg
+   meaning it does not have. CD should pick inks that read as *ink*, not as system state.
+4. **Size.** Four instruments legible at a glance, inside a phone-width row that also carries a
+   thumbnail, title, artist, provenance chip, two vote controls and a SAY button. This is the
+   real constraint on how detailed the drawings can be.
+5. One noted risk: a mark that appears from votes and visibly escalates *looks* like it means
    something. Place it so it reads as flourish, not verdict.
 
 **Open, and Matt's to answer:** can a player move their stamp (change their first pick), and what
@@ -208,9 +219,9 @@ happens to it if they withdraw that upvote?
 
 One short CD follow-up, not a re-do. Ask for:
 
-1. **The colour-plate stamp** (change request above) — the four plates and their overprints
-   drawn, the black-on-near-black problem solved, and the ink colours reconciled with the
-   palette.
+1. **The band stamp** (change request above) — four instrument marks that work alone and
+   compose, the black-on-near-black problem solved, the ink colours reconciled with the semantic
+   palette, and all of it legible at phone-row size.
 2. **F1 resolved** — a degradation rule and round-agnostic copy, or an explicit "R143 one-off"
    with the generic cover retained for other rounds.
 3. **F2** — how a song with two videos renders.
