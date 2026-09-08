@@ -60,10 +60,14 @@ services:
       - sintel_venv:/app/sintel-venv
     restart: unless-stopped
 
-  # Static-only public file server for the shared digests/ volume (sprint-20).
-  # No app, no DB, no Cloudflare Access. Fronted by a SEPARATE public Cloudflare
-  # tunnel → digest.mattmariani.com (created by the user). Serves the
-  # folder-per-slug artifacts at /d/<slug>/ (index.html per the packaging-spike).
+  # Public file server for the shared digests/ volume (sprint-20). No DB, and no
+  # Cloudflare Access — so the ONE dynamic route it carries, /api/p/* proxied to
+  # bot-ui for playlist votes/messages, is deliberately the narrowest prefix that
+  # works. Never widen it here or in Caddyfile.digest: bot-ui IS behind
+  # Cloudflare Access on its own host, and this proxy is a hole through it —
+  # anything reachable via this prefix is reachable with no Access check at all. Fronted by a SEPARATE public Cloudflare tunnel →
+  # digest.mattmariani.com (created by the user). Serves the folder-per-slug
+  # artifacts at /d/<slug>/ (index.html per the packaging-spike).
   digest-static:
     image: caddy:2-alpine
     volumes:

@@ -13,11 +13,33 @@
 #   /<leagueSlug>/archive    → SPA fallback to /<leagueSlug>/index.html
 #   /<leagueSlug>/archive/<roundId> → SPA fallback (SPA redirects to /d/<digestSlug>)
 #
+#   /api/p/*                 — the ONLY dynamic route: playlist writes, proxied
+#                              to the bot-ui container (see below).
+#
 # Bad slug (no matching directory) → 404. No league enumeration: a slug that
 # has no on-disk directory returns 404 without revealing whether other slugs exist.
 #
 # No app, no DB, NO Cloudflare Access. Plain HTTP behind the public
 # digest.mattmariani.com Cloudflare tunnel.
+#
+# ── Why the proxied prefix is exactly `/api/p/` and nothing else ───────────
+#
+# There is no Cloudflare Access in front of this host. Whatever is proxied here
+# is on the open internet, unauthenticated. bot-ui is the admin app: the digest
+# approval queue, the WhatsApp send endpoints, the round curation screens, the
+# league database. Broadening this proxy — to `/api/*`, to `/*` with a
+# static-first try_files, or to a second "just this one more" prefix — publishes
+# those. That is the one property of this file that must never regress.
+#
+# `/api/p/` is the playlist write API and only that: a GET read model plus three
+# POSTs (vote, message, identity) at /api/p/<slug>/<action>, carrying a small
+# JSON body, per design/mlb-playlist-spec.md.
+# The playlist page's `apiBase` defaults to `/api/p` to match.
+#
+# MUST NEVER BE PROXIED from this host: `/api/*` at large, `/ytm/*`, `/digests/*`,
+# `/leagues/*`, `/chat/*`, anything under bot-ui's page routes, and any endpoint
+# that sends WhatsApp messages. Messages from the playlist page queue for Matt's
+# approval in the admin app; they never reach WhatsApp through this host.
 {
 	admin off
 	auto_https off
@@ -31,6 +53,40 @@
 
 	# Don't advertise the server software.
 	header -Server
+
+	# ── Playlist write API (the only non-static route) ─────────────────────
+	# Proxied to the bot-ui container by compose service name; 3002 is the port
+	# bot-ui's adapter-node listens on inside the network (docker-compose.yml),
+	# NOT the 3002 published to the host.
+	#
+	# Methods: both are live today. GET /api/p/<slug> is the page's read model
+	# (tallies, band stampers, approved messages); POST /api/p/<slug>/{vote,
+	# message,identity} are the three writes. Everything else is refused here
+	# rather than left to SvelteKit, which would happily route a DELETE at a
+	# handler that grows one later.
+	@notPlaylistMethod not method POST GET
+	handle /api/p/* {
+		header X-Robots-Tag "noindex, nofollow"
+		# `route` pins these to written order. Caddy's default directive order
+		# would in fact already put `respond` ahead of `reverse_proxy`, so this
+		# is belt-and-braces rather than load-bearing — but it makes the order
+		# local and readable instead of a fact about Caddy's internals.
+		route {
+			# A wrong method on the right path is a 405, not a 404 — falling
+			# through to the catch-all would read as "this API does not exist".
+			respond @notPlaylistMethod 405
+
+			# Bodies are a slug, a player id and at most a short message. The cap
+			# is the backstop that keeps an anonymous public POST from being a
+			# cheap way to make bot-ui buffer megabytes; bot-ui's own
+			# BODY_SIZE_LIMIT is 6M because of avatar uploads on the ADMIN host,
+			# which is far too generous for a route anyone can hit unauthenticated.
+			request_body {
+				max_size 16KB
+			}
+			reverse_proxy bot-ui:3002
+		}
+	}
 
 	# ── Round digest html-share artifacts (sprint-20) ──────────────────────
 	# Immutable-per-render; a re-export overwrites in place so links stay fresh.
