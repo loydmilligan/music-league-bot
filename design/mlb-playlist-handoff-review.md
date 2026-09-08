@@ -140,49 +140,67 @@ is what every round that *isn't* R143 will look like.
 
 ---
 
-## Change request — the Second Best stamp is a decorative easter egg
+## Change request — the Second Best stamp is a per-player colour plate
 
-*(Matt, 2026-09-08, after the packet was reviewed. This supersedes D3's stamp.)*
+*(Matt, 2026-09-08, after the packet was reviewed. This supersedes D3's stamp entirely.)*
 
-The stamp is **not** a ranking device and **not** a winner marker. It is an easter egg that
-appears on any video a league member thumbs up, and grows more elaborate as more of them do —
-ink filling in as the stamp gets used. Matt: *"just kind of a fun easter egg — that doesn't
-really mean anything."*
+Not a ranking, not a winner marker, and not an intensity meter. It is an **easter egg built out
+of colour separation**: four named players each own one ink plate, and the stamp is however many
+of those plates happen to land on the same video.
 
-| Upvotes | Stamp |
-|---|---|
-| 0 | no stamp |
-| 1 | faint, barely visible — **lines missing**, like a stamp running out of ink |
-| 2 | fairly visible, **starting to turn green** |
-| 3 | **fully formed**, green and blue |
-| 4+ | **full colour** — more colours, more detail |
+**The mechanic**
 
-**What this replaces.** CD locked D3 as *"winner settled at the cutoff, not live"*: one
-hand-circled pulp stamp on `#1`, with a dashed `SECOND BEST / TBD` placeholder until then. The
-easter egg is different on three counts — many stamps rather than one, live rather than settled,
-and no `TBD` state (a video with no upvotes simply has no stamp, which is cleaner than a
-placeholder).
+- Four players have a plate. Everyone else's thumbs-up **just counts** — no stamp contribution.
 
-**Because it is decorative, most of the hard questions don't apply:**
+  | Player | Plate |
+  |---|---|
+  | Matt Mariani | blue |
+  | TJ Cook | green |
+  | Brian Pascoe | black |
+  | Jon Black | red |
 
-- It carries no information, so it needs **no text equivalent** and does not trip the
-  "no colour-only encoding" bar. The `▲ 34` count remains the actual, readable data.
-- The ladder capping at 4 is fine and arbitrary — it does not have to scale to the 13-player
-  roster.
-- A down-vote does nothing to it.
-- It is not a winner marker, so whether the round marks a `#1` at all becomes a **separate,
-  still-open question** — not part of this.
+- Each of the four has **exactly one** stamp, and it is spent on the **first video they thumb
+  up**. Their later upvotes still count, but carry no plate.
+- **Plates apart:** four different first-picks means four different videos, each wearing a single
+  colour — thin, sparse, lines missing, the way one separation looks without the others.
+- **Plates together:** when two or more first-picks land on the same video, the plates
+  **overprint** and the stamp fills in — more colour, more detail, complete at all four.
+
+Matt: *"if separate is the one that gets a stamp — if they coincide they start to build."*
+
+**This corrects my previous revision of this section**, which described a generic intensity
+ladder (1 up = faint, 4 = full colour). That was wrong: the colours are *player identities*, not
+stages, and the count that matters is how many of the four coincide — not how many people voted.
+
+**Why it is good, and worth telling CD:** the packet's share art already runs on misregistration
+— the pulp ghost offset behind the black type is a printing plate out of alignment. This mechanic
+is the same idea made interactive. The stamp and the flyer would rhyme without being told to.
+
+**Because it is decorative, the hard questions don't apply:**
+
+- It encodes nothing, so it needs **no text equivalent** and does not trip the
+  no-colour-only-encoding bar. The `▲ 34` count remains the actual, readable data.
+- It is not a winner marker, so whether the round marks a `#1` is a **separate, still-open
+  question**.
+- Down-votes do nothing to it.
 
 **What still needs CD:**
 
-1. The five ink states drawn, as one stamp progressively inking in.
-2. Green and blue arriving as it matures departs from the one-accent pulp palette, and `--moss`
-   is already the up-vote colour. Worth reconciling deliberately rather than picking new greens
-   — it is an aesthetic call now, not a semantic one.
-3. One honest risk, worth a moment's thought rather than a redesign: a mark that appears from
-   votes and visibly escalates *looks* like it means something. If people read it as a score,
-   that is a small confusion sitting on top of the real counts. Probably fine — arguably the
-   joke — but CD should place it so it reads as flourish, not as verdict.
+1. The stamp drawn as **four separable plates** plus the overprinted combinations — at minimum
+   one plate alone, two, and all four. The single-plate state is the hard one: it has to read as
+   *deliberately unfinished*, not as a rendering bug.
+2. **Brian Pascoe's plate is black, and the page is `--ink-0` (#07090c).** A black plate on a
+   near-black card is close to invisible, and his solo stamp is the state most likely to look
+   broken. Needs a deliberate answer — a lighter "black" ink, an outline, a paper patch under the
+   stamp, or a different colour.
+3. Blue/green/red against the one-accent pulp palette: `--moss` is already the up-vote colour and
+   `--sky` and `--ember` are semantic. Reusing them for player plates borrows meaning that isn't
+   there. Worth CD picking ink colours that read as *ink* rather than as system state.
+4. One noted risk: a mark that appears from votes and visibly escalates *looks* like it means
+   something. Place it so it reads as flourish, not verdict.
+
+**Open, and Matt's to answer:** can a player move their stamp (change their first pick), and what
+happens to it if they withdraw that upvote?
 
 ---
 
@@ -190,8 +208,9 @@ placeholder).
 
 One short CD follow-up, not a re-do. Ask for:
 
-1. **The progressive stamp** (change request above) — the five ink states drawn, and the
-   green/blue reconciled with the pulp palette.
+1. **The colour-plate stamp** (change request above) — the four plates and their overprints
+   drawn, the black-on-near-black problem solved, and the ink colours reconciled with the
+   palette.
 2. **F1 resolved** — a degradation rule and round-agnostic copy, or an explicit "R143 one-off"
    with the generic cover retained for other rounds.
 3. **F2** — how a song with two videos renders.
