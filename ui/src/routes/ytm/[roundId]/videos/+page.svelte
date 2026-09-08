@@ -41,10 +41,13 @@
     if (action === 'approve' && undecided.length) return;
     busy = true; err = null;
     try {
-      const res = await fetch(`/api/ytm/video-review/${action}`, {
+      // The in-app route, NOT /api/ytm/video-review/<action> — those are the
+      // public ntfy callbacks and require the shared bearer the browser must
+      // never hold. This one authorizes like the rest of the app.
+      const res = await fetch(`/api/ytm/video-review/${data.review.roundId}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token: data.review.token }),
+        body: JSON.stringify({ action }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.ok === false) throw new Error(body.reason ?? `${action} failed (${res.status})`);
