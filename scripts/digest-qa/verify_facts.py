@@ -244,6 +244,17 @@ def same_person(a, b, aliases):
     return amap.get(na) == nb or amap.get(nb) == na
 
 
+def _pts(item):
+    """Podium points, under either key.
+
+    Drafts write `vote_total`; this checker only ever read `points`, so every
+    podium points comparison was None-vs-truth and reported FAIL regardless of
+    what the draft actually said. Read both, preferring the one drafts use.
+    """
+    v = item.get("vote_total")
+    return item.get("points") if v is None else v
+
+
 def check_podium(content, songs, ranking, rules, rpt):
     aliases = rules.get("aliases", {})
     items = content.get("items") or []
@@ -253,20 +264,20 @@ def check_podium(content, songs, ranking, rules, rpt):
             break
         truth = songs[top[i]]
         want = f"#{i+1} {truth['title']} ({truth['submitter']}, {truth['official']} pts)"
-        got = f"{item.get('title')} ({item.get('submitter')}, {item.get('points')} pts)"
+        got = f"{item.get('title')} ({item.get('submitter')}, {_pts(item)} pts)"
         t_title = norm_text(truth["title"]).lower()
         i_title = norm_text(item.get("title", "")).lower()
         if t_title not in i_title and i_title not in t_title:
             # Point-tied slots in a league without an encoded tiebreak are an
             # ordering coin flip, not a factual error.
-            draft_pts = item.get("points")
+            draft_pts = _pts(item)
             if draft_pts == truth["official"] and not rules.get("tiebreak"):
                 rpt.warn("podium tie order", f"slot {i+1}: draft has {got}, computed {want} -- "
                          "tied points, league tiebreak not encoded")
             else:
                 rpt.fail("podium order", f"slot {i+1}: draft has {got}, computed {want}")
-        elif item.get("points") != truth["official"]:
-            rpt.fail("podium points", f"{item.get('title')}: draft says {item.get('points')}, votes say {truth['official']}")
+        elif _pts(item) != truth["official"]:
+            rpt.fail("podium points", f"{item.get('title')}: draft says {_pts(item)}, votes say {truth['official']}")
         elif not same_person(item.get("submitter", ""), truth["submitter"], aliases):
             rpt.fail("podium submitter", f"{item.get('title')}: draft credits {item.get('submitter')}, actual {truth['submitter']}")
         else:
