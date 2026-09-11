@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { splitHeadline, buildVideoCoverHtml } from '../ui/src/lib/ytm/videoCover.js';
+import { parseIsoDuration, totalRuntimeMin } from '../ui/src/lib/ytm/youtube.js';
 
 describe('splitHeadline', () => {
   it('reproduces the designed poster for the round it was drawn for', () => {
@@ -66,5 +67,76 @@ describe('cover html', () => {
     // The grain is feTurbulence, not a fetched texture — the render must be
     // deterministic and offline.
     expect(html).toContain('feTurbulence');
+  });
+});
+
+describe('runtime stamp', () => {
+  const base = { leagueTitle: 'Second Best', picks: [], roundNumber: 143, roundName: 'I Want My MTV' };
+
+  it('prints the runtime it was given', () => {
+    expect(buildVideoCoverHtml({ ...base, runtimeMin: 60 }, '')).toContain('>60 MIN<');
+  });
+
+  // The bug this replaced was a hardcoded "120 MIN". A test that only checks
+  // one value cannot tell a real stamp from a constant, so two must differ.
+  it('tracks the value rather than printing a constant', () => {
+    expect(buildVideoCoverHtml({ ...base, runtimeMin: 37 }, '')).toContain('>37 MIN<');
+    expect(buildVideoCoverHtml({ ...base, runtimeMin: 37 }, '')).not.toContain('120 MIN');
+  });
+
+  it('omits the stamp entirely when the runtime is unknown', () => {
+    for (const runtimeMin of [null, undefined, 0, NaN]) {
+      const html = buildVideoCoverHtml({ ...base, runtimeMin }, '');
+      // Not just "no number" — no empty bordered box left behind either.
+      expect(html).not.toContain('MIN<');
+      expect(html).not.toMatch(/rotate\(6deg\)/);
+    }
+  });
+});
+
+describe('parseIsoDuration', () => {
+  it('reads the shapes the API actually returns', () => {
+    expect(parseIsoDuration('PT4M13S')).toBe(253);
+    expect(parseIsoDuration('PT1H2M3S')).toBe(3723);
+    expect(parseIsoDuration('PT45S')).toBe(45);
+    expect(parseIsoDuration('PT2M')).toBe(120);
+  });
+
+  it('is 0 for junk rather than NaN', () => {
+    expect(parseIsoDuration(undefined)).toBe(0);
+    expect(parseIsoDuration('')).toBe(0);
+    expect(parseIsoDuration('4:13')).toBe(0);
+  });
+});
+
+describe('totalRuntimeMin', () => {
+  const creds = { clientId: 'c', clientSecret: 's', refreshToken: 'r' };
+  const okToken = { ok: true, json: async () => ({ access_token: 't' }) };
+
+  it('sums a batch into whole minutes', async () => {
+    const fetchFn = (async (url: string) =>
+      String(url).includes('oauth2') ? okToken : {
+        ok: true,
+        json: async () => ({ items: [{ contentDetails: { duration: 'PT4M' } }, { contentDetails: { duration: 'PT2M30S' } }] }),
+      }) as unknown as typeof fetch;
+    // 4:00 + 2:30 = 390s = 6.5min → 7
+    expect(await totalRuntimeMin(creds, ['a', 'b'], fetchFn)).toBe(7);
+  });
+
+  it('returns null — not a number — when the API fails', async () => {
+    const fetchFn = (async (url: string) =>
+      String(url).includes('oauth2') ? okToken : { ok: false, json: async () => ({}) }) as unknown as typeof fetch;
+    expect(await totalRuntimeMin(creds, ['a'], fetchFn)).toBeNull();
+  });
+
+  it('returns null when every id is unresolvable, not 0', async () => {
+    const fetchFn = (async (url: string) =>
+      String(url).includes('oauth2') ? okToken : { ok: true, json: async () => ({ items: [] }) }) as unknown as typeof fetch;
+    expect(await totalRuntimeMin(creds, ['gone'], fetchFn)).toBeNull();
+  });
+
+  it('returns null for an empty playlist without calling the API', async () => {
+    const fetchFn = (async () => { throw new Error('must not be called'); }) as unknown as typeof fetch;
+    expect(await totalRuntimeMin(creds, [], fetchFn)).toBeNull();
   });
 });

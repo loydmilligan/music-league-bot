@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { VideoReview } from './videoReview.js';
 import { getReview, includedVideoIds, markSent, markFailed, markPlaylistBuilt } from './videoReview.js';
-import { credsFromEnv, createPlaylist } from './youtube.js';
+import { credsFromEnv, createPlaylist, totalRuntimeMin } from './youtube.js';
 import { renderVideoCover } from './videoCover.js';
 
 const botControlUrl = () => process.env.BOT_CONTROL_URL ?? 'http://bot:3003';
@@ -123,10 +123,16 @@ export async function completeApproval(
     // the group the link they are actually waiting on.
     let cover: { botPath: string } | null = null;
     try {
+      // Real runtime for the cover stamp. totalRuntimeMin swallows its own
+      // errors and returns null, which omits the stamp — the cover must never
+      // print a number it did not measure.
+      const coverCreds = credsFromEnv();
+      const runtimeMin = coverCreds ? await totalRuntimeMin(coverCreds, videoIds, fetchFn) : null;
       cover = await renderVideoCover(roundId, {
         roundName: deps.roundName,
         leagueTitle: deps.leagueTitle,
         roundNumber: deps.roundNumber ?? null,
+        runtimeMin,
         picks: review.picks.filter((p) => p.included && p.chosen.length),
       });
     } catch (e) {

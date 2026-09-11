@@ -64,6 +64,53 @@ async function api(
 
 const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** ISO-8601 duration ("PT4M13S") → seconds. 0 for anything unparseable. */
+export function parseIsoDuration(iso: string | undefined): number {
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso ?? '');
+  if (!m) return 0;
+  return Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+}
+
+/**
+ * Total runtime of a set of videos, in whole minutes, or null when it cannot be
+ * determined.
+ *
+ * Null is a real answer, not a failure to report: the cover omits the stamp
+ * rather than printing a guess. This replaced a hardcoded "120 MIN" that had
+ * been on every cover ever sent, so the one thing this must never do is invent
+ * a number — any error path returns null.
+ *
+ * videos.list costs 1 quota unit and accepts 50 ids, so a round is one call.
+ */
+export async function totalRuntimeMin(
+  creds: YoutubeCreds, videoIds: string[], fetchFn: typeof fetch = fetch,
+): Promise<number | null> {
+  if (!videoIds.length) return null;
+  try {
+    const token = await accessToken(creds, fetchFn);
+    let secs = 0;
+    let seen = 0;
+    for (let i = 0; i < videoIds.length; i += 50) {
+      const batch = videoIds.slice(i, i + 50);
+      const res = await fetchFn(
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${batch.join(',')}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) return null;
+      const body = (await res.json()) as { items?: Array<{ contentDetails?: { duration?: string } }> };
+      for (const it of body.items ?? []) {
+        secs += parseIsoDuration(it.contentDetails?.duration);
+        seen++;
+      }
+    }
+    // Every id unresolvable (all private/deleted) is not a 0-minute playlist.
+    if (!seen || secs <= 0) return null;
+    return Math.max(1, Math.round(secs / 60));
+  } catch {
+    return null;
+  }
+}
+
 /** Create an unlisted playlist and fill it in order. Returns the playlist id. */
 export async function createPlaylist(
   creds: YoutubeCreds,

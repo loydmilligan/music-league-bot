@@ -65,6 +65,12 @@ export interface VideoCoverInput {
   picks: VideoPick[];
   /** Round number within the league, when known — renders as "· R143". */
   roundNumber?: number | null;
+  /**
+   * Total playlist runtime in whole minutes, when known — renders as a stamp.
+   * Null/undefined omits the stamp entirely. This field replaced a hardcoded
+   * "120 MIN": an absent stamp is always better than a wrong one.
+   */
+  runtimeMin?: number | null;
 }
 
 export interface RenderDeps {
@@ -96,6 +102,12 @@ export function buildVideoCoverHtml(
   const stamp = [input.leagueTitle.toUpperCase(), input.roundNumber ? `R${input.roundNumber}` : null]
     .filter(Boolean)
     .join(' · ');
+
+  // Omitted rather than guessed when the runtime is unknown — see VideoCoverInput.
+  const runtimeStamp =
+    typeof input.runtimeMin === 'number' && Number.isFinite(input.runtimeMin) && input.runtimeMin > 0
+      ? `<div style="position:absolute;right:4cqw;top:10cqw;transform:rotate(6deg);border:.55cqw solid #121212;color:#121212;font-family:var(--font-mono);font-weight:700;font-size:4cqw;letter-spacing:.1em;padding:.8cqw 1.6cqw;filter:url(#xr2)">${esc(String(Math.round(input.runtimeMin)))} MIN</div>`
+      : '';
 
   // Two stacked copies of the same text: a pulp ghost offset behind black ink.
   // That is a misregistered colour plate, the flyer's core visual idea.
@@ -143,7 +155,7 @@ body{width:640px;height:640px;overflow:hidden}
 
     <svg id="scrawl" viewBox="0 0 100 30" preserveAspectRatio="none" style="position:absolute;left:4cqw;top:60cqw;width:78cqw;height:12cqw;overflow:visible"><path d="M2 14 C24 6 40 20 60 12 C78 5 92 18 98 10" fill="none" stroke="var(--mash-pulp)" stroke-width="3" stroke-linecap="round"/></svg>
 
-    <div style="position:absolute;right:4cqw;top:10cqw;transform:rotate(6deg);border:.55cqw solid #121212;color:#121212;font-family:var(--font-mono);font-weight:700;font-size:4cqw;letter-spacing:.1em;padding:.8cqw 1.6cqw;filter:url(#xr2)">120 MIN</div>
+    ${runtimeStamp}
     <div style="position:absolute;left:-4cqw;top:16cqw;width:26cqw;height:6.5cqw;background:rgba(206,200,178,.72);border-left:1px dashed rgba(0,0,0,.25);border-right:1px dashed rgba(0,0,0,.25);transform:rotate(-22deg)"></div>
     <div style="position:absolute;right:-3cqw;top:44cqw;width:24cqw;height:6.5cqw;background:rgba(206,200,178,.72);border-left:1px dashed rgba(0,0,0,.25);border-right:1px dashed rgba(0,0,0,.25);transform:rotate(-14deg)"></div>
 
@@ -182,9 +194,12 @@ const FIT_IN_PAGE = `(() => {
   //    ("THIS IS THE TALE OF CAPTAIN JACK") has to give way to the payoff.
   let kSize = 8;
   if (kicker) {
-    // The kicker's box stops short of the "120 MIN" stamp (right:4cqw), so a
-    // long setup shrinks to fit rather than running underneath it — which it
-    // did for "THIS IS THE TALE OF CAPTAIN JACK" and turned both to mush.
+    // The kicker's box stops short of the top-right corner (right:30cqw), so a
+    // long setup shrinks to fit rather than running into it — which it did for
+    // "THIS IS THE TALE OF CAPTAIN JACK" and turned both to mush. The runtime
+    // stamp that used to sit there was removed (it was the hardcoded string
+    // "120 MIN" — a false claim on every cover ever sent); the space stays
+    // reserved for the real runtime that replaces it.
     kicker.style.whiteSpace = 'nowrap';
     while (kSize > 2.6 && kicker.scrollWidth > kicker.clientWidth + 1) {
       kSize -= 0.2;
