@@ -1,0 +1,1605 @@
+{
+  "_readme": [
+    "Real data from the Music League Bot digest, for building Guess-the-Submitter mockups.",
+    "Source of truth: getGuesserData() in ui/src/lib/db/guesserInsights.ts. Do NOT invent numbers —",
+    "the sparsity here IS the design problem, and dummy data hides it.",
+    "Generated 2026-09-10 from the live database (round 150, Boarz II Men)."
+  ],
+  "_shape": {
+    "seasonGrid.rounds": "[{roundId, label}] chronological. `label` is a sequential 1..N string — NEVER show roundId to a reader.",
+    "seasonGrid.rows": "[{playerId, name, attempts, correct, cells[], guesses[]}] sorted by volume desc. Rows with attempts=0 are players who have NEVER guessed — keep them, that is a finding.",
+    "seasonGrid.rows[].cells": "One entry per round, aligned to `rounds` by index. null = that player made no resolvable guess that round.",
+    "seasonGrid.rows[].cells[].display": "Hand-authored override replacing the computed 'n/m'. Non-null only for the Jensen R149 cell ('1/∞').",
+    "seasonGrid.rows[].cells[].note": "Footnote belonging to that cell, same override source.",
+    "seasonGrid.rows[].guesses": "Every guess: {roundLabel, guessedName, actualName, correct}. Powers the per-row hover history.",
+    "weekly": "The single-player ledger ABOVE the grid — one round, one player. Out of scope for this brief but included for context.",
+    "roster / eludesHim / alwaysNails / littermates": "Also the single-player ledger. Context only."
+  },
+  "_states": {
+    "live_round150": "THE REAL, CURRENT STATE. 10 players, 8 rounds, 6 populated rows, 4 never-guessed. Design against this.",
+    "thin_earlySeason": "SYNTHETIC. The same real data truncated to the first 3 rounds, to exercise the early-season state where almost nobody has guessed yet. Derived, not observed."
+  },
+  "_knownIssue": "seasonGrid is computed over the WHOLE league regardless of which round is being viewed, so an older digest currently renders rounds that had not happened when it was published. Unfixed as of 2026-09-10. Design need not solve it, but do not assume the grid is era-scoped.",
+  "live_round150": {
+    "guesserName": "Matt Mariani",
+    "legend": "He names a submitter on every song, in the ballot comments, and then publishes his own scorecard. Nobody assigned him this either.",
+    "leagueSlug": "boarz-ii-men",
+    "descent": {
+      "label": "this round · by play order",
+      "startLabel": "song 1",
+      "endLabel": "song {n}",
+      "marker": null
+    },
+    "weekly": {
+      "attempts": 9,
+      "correct": 5,
+      "rate": 0.5555555555555556,
+      "guesses": [
+        {
+          "spotifyUri": "spotify:track:1pJS4rS12iA5MryQSAP2kQ",
+          "title": "Movement",
+          "playPosition": 1,
+          "playCount": 10,
+          "actualPlayerId": 4,
+          "actualName": "Jon Black",
+          "guessedPlayerId": 4,
+          "guessedName": "Jon Black",
+          "correct": true,
+          "comment": "Not for moshing - jb?"
+        },
+        {
+          "spotifyUri": "spotify:track:1ybhXkz4S8k9fdBZNBan7L",
+          "title": "Bro Hymn - 2005 Remaster",
+          "playPosition": 2,
+          "playCount": 10,
+          "actualPlayerId": 38,
+          "actualName": "Jimmy",
+          "guessedPlayerId": 38,
+          "guessedName": "Jimmy",
+          "correct": true,
+          "comment": "+1 for moshing +1 for quality -1 for originality - jimmy"
+        },
+        {
+          "spotifyUri": "spotify:track:5X5wkmwPA1rQwtBdh2SNTv",
+          "title": "Damage, Inc. (Remastered)",
+          "playPosition": 3,
+          "playCount": 10,
+          "actualPlayerId": 31,
+          "actualName": "Shane Farkas",
+          "guessedPlayerId": 35,
+          "guessedName": "Clements Johnson",
+          "correct": false,
+          "comment": "More headbangy than moshable, but close enough - clam"
+        },
+        {
+          "spotifyUri": "spotify:track:5c6gkexa2eWCCBmEb0zXCZ",
+          "title": "My Name Is Mud",
+          "playPosition": 4,
+          "playCount": 10,
+          "actualPlayerId": 30,
+          "actualName": "Grant Koziol",
+          "guessedPlayerId": 30,
+          "guessedName": "Grant Koziol",
+          "correct": true,
+          "comment": "Not really  for moshing, but good enough to overcome that, koshel"
+        },
+        {
+          "spotifyUri": "spotify:track:5tFzUj1jV09bo4wBQWSbDl",
+          "title": "Bad Habit",
+          "playPosition": 5,
+          "playCount": 10,
+          "actualPlayerId": 35,
+          "actualName": "Clements Johnson",
+          "guessedPlayerId": 33,
+          "guessedName": "Dave Steingart",
+          "correct": false,
+          "comment": "Moshy enough and new to me if new means I haven't heard in 12 years - stein"
+        },
+        {
+          "spotifyUri": "spotify:track:67UrEBiWaL69gR5xPbAS6V",
+          "title": "Little Paws, Big Heart",
+          "playPosition": 6,
+          "playCount": 10,
+          "actualPlayerId": 32,
+          "actualName": "Conor Johnston",
+          "guessedPlayerId": 32,
+          "guessedName": "Conor Johnston",
+          "correct": true,
+          "comment": "Conie no play right"
+        },
+        {
+          "spotifyUri": "spotify:track:6uEvFCaOqXyEidoO8BZbyh",
+          "title": "Du hast",
+          "playPosition": 7,
+          "playCount": 10,
+          "actualPlayerId": 36,
+          "actualName": "Darren Paletz",
+          "guessedPlayerId": 31,
+          "guessedName": "Shane Farkas",
+          "correct": false,
+          "comment": "Bad bad bad, shane"
+        },
+        {
+          "spotifyUri": "spotify:track:7D460Ka7PHJV8YDZiZxghM",
+          "title": "Close Your Eyes (And Count to Fuck)",
+          "playPosition": 8,
+          "playCount": 10,
+          "actualPlayerId": 33,
+          "actualName": "Dave Steingart",
+          "guessedPlayerId": 36,
+          "guessedName": "Darren Paletz",
+          "correct": false,
+          "comment": "No pallets"
+        },
+        {
+          "spotifyUri": "spotify:track:7a8JLhUwa7IWKEKsyJjk9X",
+          "title": "Green Corn",
+          "playPosition": 9,
+          "playCount": 10,
+          "actualPlayerId": 34,
+          "actualName": "Dave Jensen",
+          "guessedPlayerId": 34,
+          "guessedName": "Dave Jensen",
+          "correct": true,
+          "comment": "Jensen because he was in a band and hadn't heard this since 1989"
+        }
+      ]
+    },
+    "byThird": {
+      "first": 0.75,
+      "middle": 0.3333333333333333,
+      "last": 0.5
+    },
+    "seasonHitRates": [
+      {
+        "roundId": 148,
+        "label": "148",
+        "correct": 3,
+        "attempts": 9,
+        "rate": 0.3333333333333333
+      },
+      {
+        "roundId": 149,
+        "label": "149",
+        "correct": 3,
+        "attempts": 9,
+        "rate": 0.3333333333333333
+      },
+      {
+        "roundId": 153,
+        "label": "153",
+        "correct": 7,
+        "attempts": 9,
+        "rate": 0.7777777777777778
+      },
+      {
+        "roundId": 150,
+        "label": "150",
+        "correct": 5,
+        "attempts": 9,
+        "rate": 0.5555555555555556
+      }
+    ],
+    "seasonRate": 0.47368421052631576,
+    "seasonRoundCount": 6,
+    "roster": [
+      {
+        "playerId": 38,
+        "name": "Jimmy",
+        "attempts": 4,
+        "correct": 4,
+        "rate": 1,
+        "thisRound": true,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Dixieland Delight",
+            "correct": true
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Firecracker",
+            "correct": true
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Bro Hymn - 2005 Remaster",
+            "correct": true
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Once in a Lifetime",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 32,
+        "name": "Conor Johnston",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75,
+        "thisRound": true,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Rusty Cage",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Bring 'Em Home",
+            "correct": true
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Little Paws, Big Heart",
+            "correct": true
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Who's Gonna Build Your Wall?",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 4,
+        "name": "Jon Black",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75,
+        "thisRound": true,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Waiting Around To Die",
+            "correct": true
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "And The Band Played Waltzing Matilda",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Movement",
+            "correct": true
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Joe",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 34,
+        "name": "Dave Jensen",
+        "attempts": 5,
+        "correct": 3,
+        "rate": 0.6,
+        "thisRound": true,
+        "songs": [
+          {
+            "roundId": 146,
+            "roundLabel": "146",
+            "title": "Detachable Penis",
+            "correct": false
+          },
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "The Man Who Sold The World - Live",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Franco Un-American",
+            "correct": true
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Green Corn",
+            "correct": true
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Another Year",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 30,
+        "name": "Grant Koziol",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5,
+        "thisRound": true,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Drain You",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Masters of War",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "My Name Is Mud",
+            "correct": true
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Stony Gate",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 35,
+        "name": "Clements Johnson",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25,
+        "thisRound": false,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "All My Ex's Live In Texas",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "The 4th Branch",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Bad Habit",
+            "correct": false
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Dawn of the Dead",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 36,
+        "name": "Darren Paletz",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25,
+        "thisRound": false,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Posse On Broadway",
+            "correct": true
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Vietnam Blues",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Du hast",
+            "correct": false
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "The Clapping Song (Clap Pat Clap Slap) - Single Version",
+            "correct": false
+          }
+        ]
+      },
+      {
+        "playerId": 31,
+        "name": "Shane Farkas",
+        "attempts": 5,
+        "correct": 1,
+        "rate": 0.2,
+        "thisRound": false,
+        "songs": [
+          {
+            "roundId": 145,
+            "roundLabel": "145",
+            "title": "La Camisa Negra",
+            "correct": false
+          },
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Cousin Dupree",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "Fortunate Son",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Damage, Inc. (Remastered)",
+            "correct": false
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "Old Town Road (feat. Billy Ray Cyrus) - Remix",
+            "correct": true
+          }
+        ]
+      },
+      {
+        "playerId": 33,
+        "name": "Dave Steingart",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0,
+        "thisRound": false,
+        "songs": [
+          {
+            "roundId": 148,
+            "roundLabel": "148",
+            "title": "Pedestrian at Best",
+            "correct": false
+          },
+          {
+            "roundId": 149,
+            "roundLabel": "149",
+            "title": "B.Y.O.B.",
+            "correct": false
+          },
+          {
+            "roundId": 150,
+            "roundLabel": "150",
+            "title": "Close Your Eyes (And Count to Fuck)",
+            "correct": false
+          },
+          {
+            "roundId": 153,
+            "roundLabel": "153",
+            "title": "It Is So Nice To Get Stoned",
+            "correct": false
+          }
+        ]
+      }
+    ],
+    "eludesHim": [
+      {
+        "playerId": 33,
+        "name": "Dave Steingart",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      },
+      {
+        "playerId": 31,
+        "name": "Shane Farkas",
+        "attempts": 5,
+        "correct": 1,
+        "rate": 0.2
+      },
+      {
+        "playerId": 35,
+        "name": "Clements Johnson",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 36,
+        "name": "Darren Paletz",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 30,
+        "name": "Grant Koziol",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      },
+      {
+        "playerId": 34,
+        "name": "Dave Jensen",
+        "attempts": 5,
+        "correct": 3,
+        "rate": 0.6
+      },
+      {
+        "playerId": 32,
+        "name": "Conor Johnston",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75
+      },
+      {
+        "playerId": 4,
+        "name": "Jon Black",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75
+      },
+      {
+        "playerId": 38,
+        "name": "Jimmy",
+        "attempts": 4,
+        "correct": 4,
+        "rate": 1
+      }
+    ],
+    "alwaysNails": [
+      {
+        "playerId": 38,
+        "name": "Jimmy",
+        "attempts": 4,
+        "correct": 4,
+        "rate": 1
+      },
+      {
+        "playerId": 32,
+        "name": "Conor Johnston",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75
+      },
+      {
+        "playerId": 4,
+        "name": "Jon Black",
+        "attempts": 4,
+        "correct": 3,
+        "rate": 0.75
+      },
+      {
+        "playerId": 34,
+        "name": "Dave Jensen",
+        "attempts": 5,
+        "correct": 3,
+        "rate": 0.6
+      },
+      {
+        "playerId": 30,
+        "name": "Grant Koziol",
+        "attempts": 4,
+        "correct": 2,
+        "rate": 0.5
+      },
+      {
+        "playerId": 35,
+        "name": "Clements Johnson",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 36,
+        "name": "Darren Paletz",
+        "attempts": 4,
+        "correct": 1,
+        "rate": 0.25
+      },
+      {
+        "playerId": 31,
+        "name": "Shane Farkas",
+        "attempts": 5,
+        "correct": 1,
+        "rate": 0.2
+      },
+      {
+        "playerId": 33,
+        "name": "Dave Steingart",
+        "attempts": 4,
+        "correct": 0,
+        "rate": 0
+      }
+    ],
+    "littermates": {
+      "aName": "Dave Steingart",
+      "bName": "Darren Paletz",
+      "swaps": 3
+    },
+    "seasonGrid": {
+      "rounds": [
+        {
+          "roundId": 135,
+          "label": "1"
+        },
+        {
+          "roundId": 145,
+          "label": "2"
+        },
+        {
+          "roundId": 146,
+          "label": "3"
+        },
+        {
+          "roundId": 147,
+          "label": "4"
+        },
+        {
+          "roundId": 148,
+          "label": "5"
+        },
+        {
+          "roundId": 149,
+          "label": "6"
+        },
+        {
+          "roundId": 150,
+          "label": "7"
+        },
+        {
+          "roundId": 153,
+          "label": "8"
+        }
+      ],
+      "rows": [
+        {
+          "playerId": 1,
+          "name": "Matt Mariani",
+          "attempts": 38,
+          "correct": 18,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            null,
+            {
+              "roundId": 148,
+              "attempts": 9,
+              "correct": 3,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 149,
+              "attempts": 9,
+              "correct": 3,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 150,
+              "attempts": 9,
+              "correct": 5,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 153,
+              "attempts": 9,
+              "correct": 7,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Jon Black",
+              "actualName": "Shane Farkas",
+              "correct": false
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Conor Johnston",
+              "actualName": "Dave Jensen",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Jon Black",
+              "actualName": "Jon Black",
+              "correct": true
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Dave Steingart",
+              "actualName": "Shane Farkas",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Dave Jensen",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Grant Koziol",
+              "actualName": "Dave Jensen",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Shane Farkas",
+              "actualName": "Grant Koziol",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Clements Johnson",
+              "actualName": "Conor Johnston",
+              "correct": false
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Darren Paletz",
+              "actualName": "Darren Paletz",
+              "correct": true
+            },
+            {
+              "roundLabel": "5",
+              "guessedName": "Conor Johnston",
+              "actualName": "Clements Johnson",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Shane Farkas",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Dave Steingart",
+              "actualName": "Jon Black",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Dave Jensen",
+              "actualName": "Dave Jensen",
+              "correct": true
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Conor Johnston",
+              "actualName": "Conor Johnston",
+              "correct": true
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Grant Koziol",
+              "actualName": "Shane Farkas",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Darren Paletz",
+              "actualName": "Clements Johnson",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Clements Johnson",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Jon Black",
+              "actualName": "Grant Koziol",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Jon Black",
+              "actualName": "Jon Black",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Clements Johnson",
+              "actualName": "Shane Farkas",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Grant Koziol",
+              "actualName": "Grant Koziol",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Dave Steingart",
+              "actualName": "Clements Johnson",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Conor Johnston",
+              "actualName": "Conor Johnston",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Shane Farkas",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Darren Paletz",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Dave Jensen",
+              "actualName": "Dave Jensen",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Dave Jensen",
+              "actualName": "Dave Jensen",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Grant Koziol",
+              "actualName": "Grant Koziol",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Conor Johnston",
+              "actualName": "Conor Johnston",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Darren Paletz",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Dave Steingart",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Clements Johnson",
+              "actualName": "Clements Johnson",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Jon Black",
+              "actualName": "Jon Black",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "playerId": 32,
+          "name": "Conor Johnston",
+          "attempts": 10,
+          "correct": 6,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 2,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            null,
+            null,
+            {
+              "roundId": 149,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 150,
+              "attempts": 2,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 153,
+              "attempts": 4,
+              "correct": 2,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Shane Farkas",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Jon Black",
+              "actualName": "Jon Black",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Grant Koziol",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Darren Paletz",
+              "actualName": "Dave Jensen",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Grant Koziol",
+              "actualName": "Grant Koziol",
+              "correct": true
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Clements Johnson",
+              "actualName": "Darren Paletz",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 34,
+          "name": "Dave Jensen",
+          "attempts": 7,
+          "correct": 2,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "roundId": 149,
+              "attempts": 3,
+              "correct": 1,
+              "display": "1/∞",
+              "note": "Jensen guessed Conor on all nine songs in R149, spelling it differently every time — Conr? · Cooonerr? · Conner? · Conor? · Cnr? · Cccccooooooonnnnnnooooooorrrrr? · Not Conor · Cronar? · C. Conor submitted exactly one song, so the hit was guaranteed before a note played. He gave it −1."
+            },
+            {
+              "roundId": 150,
+              "attempts": 4,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            null
+          ],
+          "guesses": [
+            {
+              "roundLabel": "6",
+              "guessedName": "Conor Johnston",
+              "actualName": "Jimmy",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Conor Johnston",
+              "actualName": "Conor Johnston",
+              "correct": true
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Conor Johnston",
+              "actualName": "Matt Mariani",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Conor Johnston",
+              "actualName": "Conor Johnston",
+              "correct": true
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Clements Johnson",
+              "actualName": "Darren Paletz",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Darren Paletz",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "7",
+              "guessedName": "Jon Black",
+              "actualName": "Matt Mariani",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 4,
+          "name": "Jon Black",
+          "attempts": 5,
+          "correct": 0,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 147,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            null,
+            {
+              "roundId": 149,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            null,
+            {
+              "roundId": 153,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Conor Johnston",
+              "actualName": "Jimmy",
+              "correct": false
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Jimmy",
+              "actualName": "Dave Steingart",
+              "correct": false
+            },
+            {
+              "roundLabel": "4",
+              "guessedName": "Conor Johnston",
+              "actualName": "Dave Jensen",
+              "correct": false
+            },
+            {
+              "roundLabel": "6",
+              "guessedName": "Conor Johnston",
+              "actualName": "Jimmy",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Jimmy",
+              "actualName": "Dave Jensen",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 35,
+          "name": "Clements Johnson",
+          "attempts": 2,
+          "correct": 1,
+          "cells": [
+            {
+              "roundId": 135,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            null,
+            null,
+            {
+              "roundId": 147,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            null,
+            null,
+            null,
+            null
+          ],
+          "guesses": [
+            {
+              "roundLabel": "1",
+              "guessedName": "Darren Paletz",
+              "actualName": "Darren Paletz",
+              "correct": true
+            },
+            {
+              "roundLabel": "4",
+              "guessedName": "Conor Johnston",
+              "actualName": "Dave Jensen",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 33,
+          "name": "Dave Steingart",
+          "attempts": 2,
+          "correct": 1,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            {
+              "roundId": 148,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            null,
+            null,
+            {
+              "roundId": 153,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "5",
+              "guessedName": "Dave Steingart",
+              "actualName": "Grant Koziol",
+              "correct": false
+            },
+            {
+              "roundLabel": "8",
+              "guessedName": "Jimmy",
+              "actualName": "Jimmy",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "playerId": 36,
+          "name": "Darren Paletz",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 30,
+          "name": "Grant Koziol",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 38,
+          "name": "Jimmy",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 31,
+          "name": "Shane Farkas",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        }
+      ]
+    }
+  },
+  "thin_earlySeason": {
+    "seasonGrid": {
+      "rounds": [
+        {
+          "roundId": 135,
+          "label": "1"
+        },
+        {
+          "roundId": 145,
+          "label": "2"
+        },
+        {
+          "roundId": 146,
+          "label": "3"
+        }
+      ],
+      "rows": [
+        {
+          "playerId": 32,
+          "name": "Conor Johnston",
+          "attempts": 3,
+          "correct": 2,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 2,
+              "correct": 1,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Shane Farkas",
+              "actualName": "Shane Farkas",
+              "correct": true
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Shane Farkas",
+              "actualName": "Darren Paletz",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 4,
+          "name": "Jon Black",
+          "attempts": 2,
+          "correct": 0,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Conor Johnston",
+              "actualName": "Jimmy",
+              "correct": false
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Jimmy",
+              "actualName": "Dave Steingart",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 1,
+          "name": "Matt Mariani",
+          "attempts": 2,
+          "correct": 0,
+          "cells": [
+            null,
+            {
+              "roundId": 145,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            },
+            {
+              "roundId": 146,
+              "attempts": 1,
+              "correct": 0,
+              "display": null,
+              "note": null
+            }
+          ],
+          "guesses": [
+            {
+              "roundLabel": "2",
+              "guessedName": "Jon Black",
+              "actualName": "Shane Farkas",
+              "correct": false
+            },
+            {
+              "roundLabel": "3",
+              "guessedName": "Conor Johnston",
+              "actualName": "Dave Jensen",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "playerId": 35,
+          "name": "Clements Johnson",
+          "attempts": 1,
+          "correct": 1,
+          "cells": [
+            {
+              "roundId": 135,
+              "attempts": 1,
+              "correct": 1,
+              "display": null,
+              "note": null
+            },
+            null,
+            null
+          ],
+          "guesses": [
+            {
+              "roundLabel": "1",
+              "guessedName": "Darren Paletz",
+              "actualName": "Darren Paletz",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "playerId": 36,
+          "name": "Darren Paletz",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 34,
+          "name": "Dave Jensen",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 33,
+          "name": "Dave Steingart",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 30,
+          "name": "Grant Koziol",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 38,
+          "name": "Jimmy",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        },
+        {
+          "playerId": 31,
+          "name": "Shane Farkas",
+          "attempts": 0,
+          "correct": 0,
+          "cells": [
+            null,
+            null,
+            null
+          ],
+          "guesses": []
+        }
+      ]
+    }
+  }
+}

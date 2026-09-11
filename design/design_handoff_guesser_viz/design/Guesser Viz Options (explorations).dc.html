@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/music-league-current-system-29b5b2e4-906a-4e5b-ad92-8e2ccab617e1/colors_and_type.css">
+<link rel="stylesheet" href="_ds/music-league-current-system-29b5b2e4-906a-4e5b-ad92-8e2ccab617e1/dashboard-styles.css">
+<link rel="stylesheet" href="_ds/music-league-current-system-29b5b2e4-906a-4e5b-ad92-8e2ccab617e1/styles.css">
+<script src="_ds/music-league-current-system-29b5b2e4-906a-4e5b-ad92-8e2ccab617e1/_ds_bundle.js"></script>
+<style>
+  body { margin:0; background:#0a0d11; }
+  .col { width:400px; flex:0 0 auto; background:var(--bg); border:1px solid var(--line); border-radius:16px; overflow:hidden; font-family:var(--font-body); color:var(--fg-2); box-shadow:0 24px 60px -30px rgba(0,0,0,.8); }
+  .pad { padding:22px 20px 26px; }
+  .stamp { font-family:var(--font-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--fg-quiet); }
+  .eyebrow { display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--mash-pulp); margin-top:16px; }
+  .eyebrow i { width:6px; height:6px; border-radius:50%; background:var(--mash-pulp); display:inline-block; }
+  .title { font-family:var(--font-display); font-weight:700; font-size:23px; line-height:1.05; color:var(--fg); margin:9px 0 0; letter-spacing:-.01em; }
+  .epi { font-size:12.5px; font-style:italic; color:var(--fg-quiet); margin-top:8px; line-height:1.4; }
+  .stub { margin-top:16px; border:1px dashed var(--line-strong); border-radius:10px; padding:10px 12px; opacity:.42; }
+  .stub-l { font-family:var(--font-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--fg-muted); }
+  .divider { display:flex; align-items:center; gap:10px; margin:20px 0 4px; }
+  .divider .rule { flex:1; height:1px; background:var(--line); }
+  .divider .lab { font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted); }
+  .mono { font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  .cap { max-width:400px; margin-top:14px; font-size:12.5px; line-height:1.5; color:var(--fg-muted); }
+  .cap b { color:var(--fg-2); font-weight:600; }
+  .badge { position:absolute; top:-13px; left:14px; z-index:3; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--bone); background:var(--mash-pulp); border-radius:7px; padding:4px 9px; box-shadow:0 6px 14px -4px rgba(255,91,46,.5); }
+  .optname { font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--fg); }
+  a { color:var(--mash-pulp); }
+  a:hover { color:var(--mash-pulp-deep); }
+</style>
+</helmet>
+
+<div style="font-family:var(--font-body); color:var(--fg-2); padding:46px 46px 10px; max-width:1100px;">
+  <div class="mono" style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--mash-pulp);">Turn 1 · D1 — primary encoding</div>
+  <h1 style="font-family:var(--font-display); font-weight:800; font-size:34px; color:var(--fg); margin:10px 0 0; letter-spacing:-.02em;">Four ways to draw the room</h1>
+  <p style="font-size:14px; line-height:1.55; color:var(--fg-muted); max-width:640px; margin:12px 0 0;">Each option is the <b style="color:var(--fg-2);">last block of the Guesser section</b>, shown in place at ~400px on the real R150 numbers — 6 who've guessed, 4 who never have, and Jensen's hand-authored <span class="mono">1/∞</span>. Reference an option by its id in chat (<a href="#1a">1a</a>, <a href="#1b">1b</a>, <a href="#1c">1c</a>, <a href="#1d">1d</a>).</p>
+</div>
+
+<section style="padding:34px 46px 20px;">
+  <div class="mono" style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--mash-pulp); margin-bottom:6px;">Turn 3 · sharper tangle + the flip side</div>
+  <div style="font-family:var(--font-body); font-size:13px; color:var(--fg-muted); max-width:620px; margin-bottom:26px;">3a rebuilds the tangle so each finding reads at a glance; 3b turns the lens around — how easily each player gets identified.</div>
+  <div style="display:flex; flex-wrap:wrap; gap:52px; align-items:flex-start;">
+
+    <!-- ============ 3a — TANGLE, SHARPENED ============ -->
+    <article id="3a" style="position:relative; width:400px;">
+      <span class="badge">3a</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">who we mix up</span><span class="rule"></span></div>
+          <p style="font-family:var(--font-display); font-weight:700; font-size:17px; line-height:1.25; color:var(--fg); margin:8px 0 20px; letter-spacing:-.01em;">The room can't do two things: tell <span style="color:var(--mash-pulp);">three guys</span> apart, or resist guessing <span style="color:var(--mash-pulp);">Conor</span>.</p>
+
+          <!-- Motif A: the interchangeables -->
+          <div style="font-family:var(--font-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:2px;">1 · the interchangeables</div>
+          <svg viewBox="0 0 360 150" width="100%" style="display:block;" data-om-raster>
+            <path d="M110,118 Q170,40 200,44" fill="none" stroke="var(--mash-pulp)" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+            <path d="M250,44 Q200,40 250,118" fill="none" stroke="var(--mash-pulp)" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+            <circle cx="225" cy="40" r="9" fill="var(--mash-pulp)"/>
+            <circle cx="100" cy="122" r="8" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.4"/>
+            <circle cx="260" cy="122" r="8" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.4"/>
+            <text x="225" y="24" text-anchor="middle" font-family="var(--font-body)" font-size="12" font-weight="700" fill="var(--mash-pulp)">Paletz</text>
+            <text x="100" y="145" text-anchor="middle" font-family="var(--font-body)" font-size="12" font-weight="600" fill="var(--fg-2)">Steingart</text>
+            <text x="260" y="145" text-anchor="middle" font-family="var(--font-body)" font-size="12" font-weight="600" fill="var(--fg-2)">Clements</text>
+            <text x="150" y="78" text-anchor="middle" font-family="var(--font-mono)" font-size="13" font-weight="700" fill="var(--bone)">4×</text>
+            <text x="243" y="82" text-anchor="middle" font-family="var(--font-mono)" font-size="13" font-weight="700" fill="var(--bone)">4×</text>
+          </svg>
+          <div style="font-size:11px; color:var(--fg-quiet); margin:2px 0 20px; font-style:italic;">eight swaps between three men — nearly a quarter of the season's misses.</div>
+
+          <!-- Motif B: the default -->
+          <div style="font-family:var(--font-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:2px;">2 · the default guess</div>
+          <svg viewBox="0 0 360 170" width="100%" style="display:block;" data-om-raster>
+            <path d="M40,20 Q150,43 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,39 Q150,72 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,58 Q150,62 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,77 Q150,91 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,95 Q150,81 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,114 Q150,110 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,133 Q150,100 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            <path d="M40,152 Q150,129 286,86" fill="none" stroke="var(--mash-pulp)" stroke-width="1.4" opacity="0.42"/>
+            
+            <circle cx="300" cy="86" r="26" fill="var(--mash-pulp)"/>
+            <text x="300" y="84" text-anchor="middle" font-family="var(--font-body)" font-size="12" font-weight="700" fill="var(--bone)">Conor</text>
+            <text x="300" y="99" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--bone)">8×</text>
+            <text x="30" y="12" font-family="var(--font-body)" font-size="10.5" fill="var(--fg-muted)">every stumped guess →</text>
+          </svg>
+          <div style="font-size:11px; color:var(--fg-quiet); margin:2px 0 4px; font-style:italic;">named 8 times when the song wasn't his — the reflex when nobody knows.</div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Tangle, sharpened.</span> Same source data, but the two findings are now their own labeled pictures with the counts printed on them — the reader gets it without tracing a single thread. A plain headline states the point up top, and each motif carries one idea: the three-man knot, and the Conor reflex.</p>
+    </article>
+
+    <!-- ============ 3b — HOW IDENTIFIABLE ARE YOU ============ -->
+    <article id="3b" style="position:relative; width:400px;">
+      <span class="badge">3b</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">flip it — the targets</span><span class="rule"></span></div>
+          <p style="font-family:var(--font-display); font-weight:700; font-size:16px; line-height:1.25; color:var(--fg); margin:8px 0 6px; letter-spacing:-.01em;">When a song is yours, how often does the room name you right?</p>
+          <div style="font-size:11px; color:var(--fg-quiet); margin-bottom:16px;">every guess anyone aimed at you, all season · anonymous at top</div>
+
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Steingart</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:0%; height:100%; background:var(--ember);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Paletz</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--ember);">0%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">0/6 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Paletz</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:22%; height:100%; background:var(--ember);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Clements</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--ember);">22%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">2/9 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Clements</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:25%; height:100%; background:var(--ember);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Conor</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--ember);">25%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">1/4 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jensen</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:33%; height:100%; background:var(--ember);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Conor</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--ember);">33%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">3/9 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Shane</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:50%; height:100%; background:var(--amber);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Jon</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--amber);">50%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">4/8 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Grant</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:50%; height:100%; background:var(--amber);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Shane</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--amber);">50%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">3/6 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jimmy</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:67%; height:100%; background:var(--moss);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Conor</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--moss);">67%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">6/9 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jon</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:80%; height:100%; background:var(--moss);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Steingart</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--moss);">80%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">4/5 spotted</span></div>
+  </div>
+<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line);">
+    <div style="width:66px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Conor</div>
+    <div style="flex:1; min-width:0;">
+      <div style="height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden;"><div style="width:83%; height:100%; background:var(--moss);"></div></div>
+      <div style="font-size:9.5px; color:var(--fg-quiet); margin-top:3px;">mistaken for <span style="color:var(--fg-muted);">Clements</span></div>
+    </div>
+    <div style="width:58px; flex:0 0 auto; text-align:right;"><span class="mono" style="font-size:13px; color:var(--moss);">83%</span><br><span class="mono" style="font-size:9px; color:var(--fg-quiet);">5/6 spotted</span></div>
+  </div>
+
+          <div style="margin-top:12px; padding-top:11px; border-top:1px solid var(--line-strong); font-size:11.5px; color:var(--fg-muted); line-height:1.55;">
+            <b style="color:var(--fg-2);">Steingart is a ghost</b> — six songs, zero times pegged, read as Paletz half of them. <b style="color:var(--fg-2);">Conor is transparent:</b> spotted 5 of 6.
+          </div>
+          <div style="margin-top:8px; font-size:10.5px; color:var(--fg-quiet); font-style:italic;">Matt omitted — only 2 songs of his were ever guessed at.</div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">The targets (per person).</span> The inverse view you asked for: not who's a good guesser, but <b>how guessable each player is</b>. One meter each — how often the room correctly names you when a song is yours — plus who you get mistaken for. Sorted anonymous-first, so the ghosts rise to the top.</p>
+    </article>
+  </div>
+</section>
+
+<section style="padding:34px 46px 20px;">
+  <div class="mono" style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--mash-pulp); margin-bottom:6px;">Turn 2 · two fresh angles</div>
+  <div style="font-family:var(--font-body); font-size:13px; color:var(--fg-muted); max-width:620px; margin-bottom:26px;">Both pull meaning the earlier options left on the table — every individual guess, and the mix-ups hiding in the guessed-vs-actual data.</div>
+  <div style="display:flex; flex-wrap:wrap; gap:52px; align-items:flex-start;">
+
+    <!-- ============ 2a — CONFUSION TANGLE ============ -->
+    <article id="2a" style="position:relative; width:400px;">
+      <span class="badge">2a</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">who we mix up</span><span class="rule"></span></div>
+          <div style="font-size:11.5px; color:var(--fg-muted); margin:6px 0 8px; line-height:1.5;">every <span style="color:var(--ember);">wrong</span> guess, threaded to who it should've been. thicker = swapped more often.</div>
+
+          <svg viewBox="0 0 400 330" width="100%" style="display:block; overflow:visible;" data-om-raster>
+            <path d="M118,26 Q164,43 118,60" fill="none" stroke="var(--mash-pulp)" stroke-width="6.7" stroke-linecap="round" opacity="0.95"/>
+            <path d="M118,60 Q164,77 118,94" fill="none" stroke="var(--ember)" stroke-width="6.7" stroke-linecap="round" opacity="0.95"/>
+            <path d="M118,94 Q164,111 118,128" fill="none" stroke="var(--ember)" stroke-width="3.7" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,128 Q164,145 118,162" fill="none" stroke="var(--ember)" stroke-width="5.2" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,128 Q192,162 118,196" fill="none" stroke="var(--ember)" stroke-width="5.2" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,26 Q303,128 118,230" fill="none" stroke="var(--ember)" stroke-width="3.7" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,264 Q164,247 118,230" fill="none" stroke="var(--ember)" stroke-width="3.7" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,60 Q275,145 118,230" fill="none" stroke="var(--ember)" stroke-width="3.7" stroke-linecap="round" opacity="0.55"/>
+            <path d="M118,298 Q192,264 118,230" fill="none" stroke="var(--ember)" stroke-width="2.2" stroke-linecap="round" opacity="0.3"/>
+            <path d="M118,196 Q275,111 118,26" fill="none" stroke="var(--ember)" stroke-width="2.2" stroke-linecap="round" opacity="0.3"/>
+            <text x="106" y="30" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Steingart</text>
+            <circle cx="118" cy="26" r="5.5" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="64" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Paletz</text>
+            <circle cx="118" cy="60" r="5.5" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="98" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Clements</text>
+            <circle cx="118" cy="94" r="5.5" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="132" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="700" fill="var(--mash-pulp)">Conor</text>
+            <circle cx="118" cy="128" r="7.5" fill="var(--mash-pulp)" stroke="var(--mash-pulp)" stroke-width="1.2"/>
+            <text x="106" y="166" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Jimmy</text>
+            <circle cx="118" cy="162" r="3" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="200" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Jensen</text>
+            <circle cx="118" cy="196" r="3" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="234" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Shane</text>
+            <circle cx="118" cy="230" r="5" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="268" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Grant</text>
+            <circle cx="118" cy="264" r="3" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="106" y="302" text-anchor="end" font-family="var(--font-body)" font-size="11.5" font-weight="500" fill="var(--fg-2)">Jon</text>
+            <circle cx="118" cy="298" r="4.5" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.2"/>
+            <text x="236" y="122" font-family="var(--font-mono)" font-size="9" fill="var(--mash-pulp)">the reflexive</text>
+            <text x="236" y="134" font-family="var(--font-mono)" font-size="9" fill="var(--mash-pulp)">wrong answer →</text>
+          </svg>
+
+          <div style="margin-top:6px; border-top:1px solid var(--line); padding-top:10px; font-size:11.5px; color:var(--fg-muted); line-height:1.55;">
+            The room can't tell <b style="color:var(--fg-2);">Steingart, Paletz &amp; Clements</b> apart — that knot of fat threads is most of the season's misses. And when in doubt, everyone guesses <span style="color:var(--mash-pulp);">Conor</span>.
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Confusion tangle.</span> Uses the one field nothing else touches: <b>guessed-name vs actual-name</b>. Instead of ranking guessers, it draws the room's shared blind spots — the pairs everyone swaps, and the name people reach for when they're lost. A companion to the ranking, not a replacement: it answers "who do we confuse", not "who's best".</p>
+    </article>
+
+    <!-- ============ 2b — UNIT BEESWARM ============ -->
+    <article id="2b" style="position:relative; width:400px;">
+      <span class="badge">2b</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">the room</span><span class="rule"></span></div>
+          <div style="display:flex; align-items:center; gap:14px; font-size:11px; color:var(--fg-muted); margin:6px 0 14px;">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--moss);"></span>right</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--ember);opacity:.8;"></span>wrong</span>
+            <span style="color:var(--fg-quiet);">— one dot = one guess</span>
+          </div>
+
+          <div style="display:flex; gap:4px; align-items:flex-start;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--fg-2);white-space:nowrap;">Matt</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">18/38</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--moss);white-space:nowrap;">Conor</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">6/10</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--fg-2);white-space:nowrap;">Jensen <span style="color:var(--amber);">◆</span></div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">2/7</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--fg-2);white-space:nowrap;">Jon</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">0/5</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--fg-2);white-space:nowrap;">Clem</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">1/2</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--moss);flex:0 0 auto;"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--ember);opacity:.8;flex:0 0 auto;"></span></div>
+    <div style="font-size:9px;color:var(--fg-2);white-space:nowrap;">Stein</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-muted);">1/2</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-strong);"></span></div>
+    <div style="font-size:9px;color:var(--fg-quiet);white-space:nowrap;opacity:.55;">Paletz</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-quiet);">—</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-strong);"></span></div>
+    <div style="font-size:9px;color:var(--fg-quiet);white-space:nowrap;opacity:.55;">Grant</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-quiet);">—</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-strong);"></span></div>
+    <div style="font-size:9px;color:var(--fg-quiet);white-space:nowrap;opacity:.55;">Jimmy</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-quiet);">—</div>
+  </div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;">
+    <div style="height:300px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-strong);"></span></div>
+    <div style="font-size:9px;color:var(--fg-quiet);white-space:nowrap;opacity:.55;">Shane</div>
+    <div class="mono" style="font-size:8.5px;color:var(--fg-quiet);">—</div>
+  </div>
+          </div>
+
+          <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:10px; font-size:11.5px; color:var(--fg-muted); line-height:1.5;">
+            <b style="color:var(--fg-2);">64 guesses</b> all season. Matt threw <span class="mono">38</span> of them; Conor's <span class="mono">10</span> are the greenest stack in the room. Four columns never got off the ground.
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Unit beeswarm.</span> Every single guess is one pip — so <b>volume is literally height</b> and accuracy is how green the stack is, with nothing summarised away. A 1/2 is two dots; it can't pretend to be a season. Sparsity and absence are the same visual fact: short stacks and empty columns. Jensen's <span class="mono">◆</span> flags the hand-authored 1/∞ round.</p>
+    </article>
+  </div>
+</section>
+
+<section style="padding:34px 46px 80px;">
+  <div style="display:flex; flex-wrap:wrap; gap:52px; align-items:flex-start;">
+
+    <!-- ============ 1a — VOLUME × ACCURACY PLOT ============ -->
+    <article id="1a" style="position:relative; width:400px;">
+      <span class="badge">1a</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">the room</span><span class="rule"></span></div>
+          <div style="font-size:11.5px; color:var(--fg-muted); margin:6px 0 14px;">volume &rarr; · accuracy &uarr; · the more you play, the further right</div>
+
+          <div style="position:relative; height:290px; margin-left:30px; margin-bottom:22px;">
+            <!-- y ticks -->
+            <div style="position:absolute; left:-30px; top:-6px; font-size:9px; color:var(--fg-quiet);" class="mono">100%</div>
+            <div style="position:absolute; left:-30px; top:calc(50% - 6px); font-size:9px; color:var(--fg-quiet);" class="mono">50%</div>
+            <div style="position:absolute; left:-30px; bottom:-6px; font-size:9px; color:var(--fg-quiet);" class="mono">0%</div>
+            <!-- plot frame -->
+            <div style="position:absolute; inset:0; border-left:1px solid var(--line-strong); border-bottom:1px solid var(--line-strong);"></div>
+            <!-- 50% gridline -->
+            <div style="position:absolute; left:0; right:0; top:50%; border-top:1px dashed var(--line);"></div>
+            <!-- low-sample haze -->
+            <div style="position:absolute; left:0; top:0; bottom:0; width:18%; background:linear-gradient(90deg,rgba(230,86,108,.10),rgba(230,86,108,0)); border-right:1px dashed rgba(230,86,108,.4);"></div>
+            <div style="position:absolute; left:2%; bottom:6px; font-family:var(--font-mono); font-size:8px; letter-spacing:.05em; color:var(--ember); opacity:.8; writing-mode:vertical-rl; transform:rotate(180deg);">too few to call</div>
+
+            <!-- dots (left% = attempts/40, bottom% = rate) -->
+            <!-- Matt 38 / 47% -->
+            <div style="position:absolute; left:95%; bottom:47%; transform:translate(-50%,50%);">
+              <div style="width:14px; height:14px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 3px var(--amber-soft);"></div>
+              <div style="position:absolute; right:20px; top:-4px; text-align:right; white-space:nowrap;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Matt</span><br><span class="mono" style="font-size:9.5px; color:var(--fg-muted);">18/38 · 47%</span></div>
+            </div>
+            <!-- Conor 10 / 60% -->
+            <div style="position:absolute; left:25%; bottom:60%; transform:translate(-50%,50%);">
+              <div style="width:14px; height:14px; border-radius:50%; background:var(--moss); box-shadow:0 0 0 3px var(--moss-soft);"></div>
+              <div style="position:absolute; left:20px; top:-4px; white-space:nowrap;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Conor</span><br><span class="mono" style="font-size:9.5px; color:var(--moss);">6/10 · 60%</span></div>
+            </div>
+            <!-- Jensen 7 / 29% -->
+            <div style="position:absolute; left:17.5%; bottom:29%; transform:translate(-50%,50%);">
+              <div style="width:12px; height:12px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 3px var(--ember-soft);"></div>
+              <div style="position:absolute; left:17px; top:-3px; white-space:nowrap;"><span style="font-size:11px; color:var(--fg-2);">Jensen</span> <span class="mono" style="font-size:9px; color:var(--fg-quiet);">2/7</span></div>
+            </div>
+            <!-- Jon 5 / 0% -->
+            <div style="position:absolute; left:12.5%; bottom:0%; transform:translate(-50%,50%);">
+              <div style="width:12px; height:12px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 3px var(--ember-soft);"></div>
+              <div style="position:absolute; left:16px; top:-16px; white-space:nowrap;"><span style="font-size:11px; color:var(--fg-2);">Jon</span> <span class="mono" style="font-size:9px; color:var(--fg-quiet);">0/5</span></div>
+            </div>
+            <!-- Clements 2 / 50% (haze) -->
+            <div style="position:absolute; left:5%; bottom:50%; transform:translate(-50%,50%);">
+              <div style="width:10px; height:10px; border-radius:50%; background:var(--fg-quiet);"></div>
+            </div>
+            <!-- Steingart 2 / 50% (haze) -->
+            <div style="position:absolute; left:5%; bottom:50%; transform:translate(6px,50%);">
+              <div style="width:10px; height:10px; border-radius:50%; background:var(--fg-quiet);"></div>
+              <div style="position:absolute; left:-2px; top:16px; white-space:nowrap; font-size:9.5px; color:var(--fg-quiet);">Clements, Steingart <span class="mono">1/2</span></div>
+            </div>
+          </div>
+          <div style="text-align:center; font-family:var(--font-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--fg-quiet); margin-top:-8px;">guesses made &rarr;</div>
+
+          <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:10px; font-size:11px; color:var(--fg-quiet);">never stepped up: <span style="color:var(--fg-muted);">Paletz · Grant · Jimmy · Shane</span></div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Volume × accuracy plot.</span> The small-sample problem solves itself: Matt sits far right, Conor high and left — "better, on a quarter of the reps" is the shape. The <b>red haze</b> quarantines anyone with too few guesses, so a lone 50% never reads as a champion. Absence lives as a footer line.</p>
+    </article>
+
+    <!-- ============ 1b — VOLUME-AS-LENGTH BARS ============ -->
+    <article id="1b" style="position:relative; width:400px;">
+      <span class="badge">1b</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">the room</span><span class="rule"></span></div>
+          <div style="font-size:11.5px; color:var(--fg-muted); margin:6px 0 16px;">bar length = guesses made · filled = hits</div>
+
+          <!-- Matt -->
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Matt</span><span class="mono" style="font-size:11px; color:var(--fg-muted);">18/38 · 47%</span></div>
+            <div style="height:14px; width:100%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:47.4%; background:var(--moss);"></div></div>
+          </div>
+          <!-- Conor -->
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Conor</span><span class="mono" style="font-size:11px; color:var(--moss);">6/10 · 60%</span></div>
+            <div style="height:14px; width:26.3%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:60%; background:var(--moss);"></div></div>
+          </div>
+          <!-- Jensen -->
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jensen</span><span class="mono" style="font-size:11px; color:var(--fg-muted);">2/7 · 29%</span></div>
+            <div style="height:14px; width:18.4%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:29%; background:var(--amber);"></div></div>
+          </div>
+          <!-- Jon -->
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jon</span><span class="mono" style="font-size:11px; color:var(--ember);">0/5 · 0%</span></div>
+            <div style="height:14px; width:13.2%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:2px; background:var(--ember);"></div></div>
+          </div>
+          <!-- Clements -->
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Clements</span><span class="mono" style="font-size:11px; color:var(--fg-muted);">1/2 · 50%</span></div>
+            <div style="height:14px; width:5.3%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:50%; background:var(--moss);"></div></div>
+          </div>
+          <!-- Steingart -->
+          <div style="margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;"><span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Steingart</span><span class="mono" style="font-size:11px; color:var(--fg-muted);">1/2 · 50%</span></div>
+            <div style="height:14px; width:5.3%; border-radius:4px; background:var(--surface-2); overflow:hidden; display:flex;"><div style="width:50%; background:var(--moss);"></div></div>
+          </div>
+
+          <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; opacity:.45;"><span style="font-size:12px; color:var(--fg-muted);">Paletz · Grant · Jimmy · Shane</span><span class="mono" style="font-size:11px; color:var(--fg-quiet);">0/0</span></div>
+            <div style="font-size:10.5px; font-style:italic; color:var(--fg-quiet); margin-top:3px;">never guessed, all season</div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Volume-as-length bars.</span> Length is total attempts, fill is hits — so a <span class="mono">1/2</span> is a two-pixel sliver that physically cannot outrank Matt's full-width bar. Zero chart apparatus; reads in a glance. The never-guessed collapse into one ghost row so absence still lands without four empty bars.</p>
+    </article>
+
+    <!-- ============ 1c — SMALL MULTIPLES ============ -->
+    <article id="1c" style="position:relative; width:400px;">
+      <span class="badge">1c</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">the room</span><span class="rule"></span></div>
+          <div style="font-size:11.5px; color:var(--fg-muted); margin:6px 0 14px;">one card each · dots = the 8 rounds, left to right</div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:9px;">
+            <!-- Matt -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Matt</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">18/38</span><span class="mono" style="font-size:10px; color:var(--fg-muted);">47%</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--fg-quiet); margin-top:6px; font-style:italic;">3→3→5→7, climbing</div>
+            </div>
+            <!-- Conor -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Conor</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">6/10</span><span class="mono" style="font-size:10px; color:var(--moss);">60%</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--fg-quiet); margin-top:6px; font-style:italic;">best rate in the room</div>
+            </div>
+            <!-- Jensen -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jensen</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">2/7</span><span class="mono" style="font-size:10px; color:var(--fg-muted);">29%</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--amber); box-shadow:0 0 0 2px var(--amber-soft);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--amber); margin-top:6px; font-style:italic;">◆ the 1/∞ round</div>
+            </div>
+            <!-- Jon -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Jon</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">0/5</span><span class="mono" style="font-size:10px; color:var(--ember);">0%</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--fg-quiet); margin-top:6px; font-style:italic;">shows up, never lands</div>
+            </div>
+            <!-- Clements -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Clements</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">1/2</span><span class="mono" style="font-size:10px; color:var(--fg-quiet);">n/a</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--fg-quiet); margin-top:6px; font-style:italic;">too few to rate</div>
+            </div>
+            <!-- Steingart -->
+            <div style="background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 11px;">
+              <div style="font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--fg);">Steingart</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:2px;"><span class="mono" style="font-size:17px; color:var(--fg);">1/2</span><span class="mono" style="font-size:10px; color:var(--fg-quiet);">n/a</span></div>
+              <div style="display:flex; gap:3px; margin-top:9px;">
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ember);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--line-strong);"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--moss);"></span>
+              </div>
+              <div style="font-size:9px; color:var(--fg-quiet); margin-top:6px; font-style:italic;">too few to rate</div>
+            </div>
+          </div>
+
+          <!-- never-guessed cards -->
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-top:9px;">
+            <div style="border:1px dashed var(--line-strong); border-radius:8px; padding:9px 4px; text-align:center; opacity:.5;"><div style="font-size:10px; color:var(--fg-muted);">Paletz</div><div style="font-size:8.5px; font-style:italic; color:var(--fg-quiet);">never</div></div>
+            <div style="border:1px dashed var(--line-strong); border-radius:8px; padding:9px 4px; text-align:center; opacity:.5;"><div style="font-size:10px; color:var(--fg-muted);">Grant</div><div style="font-size:8.5px; font-style:italic; color:var(--fg-quiet);">never</div></div>
+            <div style="border:1px dashed var(--line-strong); border-radius:8px; padding:9px 4px; text-align:center; opacity:.5;"><div style="font-size:10px; color:var(--fg-muted);">Jimmy</div><div style="font-size:8.5px; font-style:italic; color:var(--fg-quiet);">never</div></div>
+            <div style="border:1px dashed var(--line-strong); border-radius:8px; padding:9px 4px; text-align:center; opacity:.5;"><div style="font-size:10px; color:var(--fg-muted);">Shane</div><div style="font-size:8.5px; font-style:italic; color:var(--fg-quiet);">never</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Small multiples.</span> One card per player, so an empty card is a <b>legitimate statement</b>, not a hole. The per-round dot strip carries the trend the plot and bars drop — Matt's climb, Jensen's lone <span class="mono">1/∞</span>. Low-volume players say "too few to rate" instead of flashing a misleading percent.</p>
+    </article>
+
+    <!-- ============ 1d — EDITORIAL SCOREBOARD ============ -->
+    <article id="1d" style="position:relative; width:400px;">
+      <span class="badge">1d</span>
+      <div class="col">
+        <div class="pad">
+          <div class="stamp">◆ back of the zine</div>
+          <div class="eyebrow"><i></i>The Guessers</div>
+          <div class="title">everyone who's ever guessed</div>
+          <div class="epi">who plays, how often, and how well — all season.</div>
+          <div class="stub"><div class="stub-l">↑ single-player ledger · unchanged</div></div>
+
+          <div class="divider"><span class="lab">the standings</span><span class="rule"></span></div>
+
+          <p style="font-family:var(--font-display); font-weight:700; font-size:17px; line-height:1.25; color:var(--fg); margin:8px 0 18px; letter-spacing:-.01em;">Conor is shooting <span style="color:var(--moss);">.600</span> on a tenth of the reps. The house Guesser is at <span style="color:var(--amber);">.474</span> — and doing all the work.</p>
+
+          <!-- rank rows -->
+          <div style="display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid var(--line);">
+            <span style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-quiet); width:22px;">1</span>
+            <div style="flex:1;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--fg);">Conor</span> <span style="font-size:10.5px; color:var(--fg-quiet);">— best eye</span></div>
+            <span class="mono" style="font-size:13px; color:var(--moss);">6/10</span>
+            <span class="mono" style="font-size:11px; color:var(--fg-muted); width:34px; text-align:right;">.600</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid var(--line);">
+            <span style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-quiet); width:22px;">2</span>
+            <div style="flex:1;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--fg);">Matt</span> <span style="font-size:10.5px; color:var(--mash-pulp);">— the Guesser · 38 tries</span></div>
+            <span class="mono" style="font-size:13px; color:var(--fg-2);">18/38</span>
+            <span class="mono" style="font-size:11px; color:var(--fg-muted); width:34px; text-align:right;">.474</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid var(--line);">
+            <span style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-quiet); width:22px;">3</span>
+            <div style="flex:1;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--fg);">Jensen</span> <span style="font-size:10.5px; color:var(--fg-quiet);">— 9 spellings of "Conor"</span></div>
+            <span class="mono" style="font-size:13px; color:var(--fg-2);">2/7</span>
+            <span class="mono" style="font-size:11px; color:var(--fg-muted); width:34px; text-align:right;">.286</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid var(--line);">
+            <span style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-quiet); width:22px;">4</span>
+            <div style="flex:1;"><span style="font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--fg);">Jon</span> <span style="font-size:10.5px; color:var(--fg-quiet);">— shows up, never lands</span></div>
+            <span class="mono" style="font-size:13px; color:var(--ember);">0/5</span>
+            <span class="mono" style="font-size:11px; color:var(--fg-muted); width:34px; text-align:right;">.000</span>
+          </div>
+
+          <div style="margin-top:12px; padding-top:11px; border-top:1px solid var(--line-strong);">
+            <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--fg-quiet); margin-bottom:6px;">a guess or two, not enough to rank</div>
+            <div style="font-size:12px; color:var(--fg-muted);">Clements <span class="mono" style="color:var(--fg-quiet);">1/2</span> · Steingart <span class="mono" style="color:var(--fg-quiet);">1/2</span></div>
+            <div style="font-size:12px; color:var(--fg-quiet); margin-top:8px; font-style:italic;">Paletz, Grant, Jimmy and Shane have never once guessed.</div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="optname">Editorial scoreboard.</span> Most native to the digest's voice — type does the ranking, the headline states the finding out loud. Volume rides beside every record (<span class="mono">38 tries</span>) and the low-sample players are dropped below a "not enough to rank" rule rather than mixed in. No chart apparatus at all.</p>
+    </article>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
