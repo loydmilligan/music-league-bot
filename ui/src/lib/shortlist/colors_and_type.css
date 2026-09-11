@@ -42,6 +42,8 @@
   --ember-soft: #3b1a22;   /* error surface */
   --sky:        #5aa3ff;   /* info */
   --sky-soft:   #16263f;   /* info surface */
+  --violet:     #a98bff;   /* sixth identity hue (charts needing >5 distinct people) */
+  --violet-soft:#251d3d;   /* violet surface */
 
   /* === METADATA-QUEUE chip surface aliases ==============================
      Mirror of the Tailwind @theme tokens above, for use in non-Tailwind

@@ -121,6 +121,7 @@
 
 <script lang="ts">
   import { page } from '$app/state';
+  import { buildSeasonPanel, MIN_RATE_SAMPLE } from './guesserSeason.js';
 
   let { content, data }: VisualComponentProps = $props();
 
@@ -148,37 +149,13 @@
   // The room's ledger. Rows with zero attempts are KEPT: four Boarz players have
   // never once named a submitter, and that is the finding, not missing data.
   const grid = $derived(g?.seasonGrid ?? { rounds: [], rows: [] });
-  const gridGuessers = $derived(grid.rows.filter((r) => r.attempts > 0));
   const gridSilent = $derived(grid.rows.filter((r) => r.attempts === 0));
-  // Volume is encoded as bar LENGTH, accuracy as the fill inside it, both scaled
-  // to the busiest guesser. That is the whole point of the bar: a 100% hit rate
-  // on one guess renders as a stub you can barely see, so the thin sample behind
-  // a good percentage is visible rather than something the reader has to be told.
-  const gridMax = $derived(Math.max(1, ...grid.rows.map((r) => r.attempts)));
+  const maxAttempts = $derived(Math.max(1, ...grid.rows.map((r) => r.attempts)));
   const gridNotes = $derived(
     grid.rows.flatMap((r) =>
       r.cells.filter((c) => !!c?.note).map((c) => ({ name: r.name, note: c!.note as string })),
     ),
   );
-  // NB the component already has a `pct(rate)`; this one takes the pair.
-  const gridPct = (correct: number, attempts: number) =>
-    attempts > 0 ? `${Math.round((correct / attempts) * 100)}%` : '—';
-  // Same native-tooltip idiom as rosterTitle above: no JS, no popover, and it
-  // degrades to nothing in the exported PNG rather than to a broken control.
-  const gridRowTitle = (row: {
-    name: string;
-    correct: number;
-    attempts: number;
-    guesses: { roundLabel: string; guessedName: string; actualName: string; correct: boolean }[];
-  }) =>
-    `${row.name} — ${row.correct}/${row.attempts}\n` +
-    row.guesses
-      .map(
-        (gg) =>
-          `${gg.correct ? '✓' : '✗'} R${gg.roundLabel} · said ${gg.guessedName}` +
-          (gg.correct ? '' : ` · was ${gg.actualName}`),
-      )
-      .join('\n');
   const roster = $derived(g?.roster ?? []);
   // Full per-person history as native tooltip text — no JS, no CSS popover, and
   // it degrades to nothing in print rather than to a broken control.
@@ -271,6 +248,84 @@
   // Static (PNG/PDF) export renders identically to web here — the flag is
   // threaded through only for parity with ChatMoments.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
+
+  // ── the season panel ──────────────────────────────────────────────────────
+  // Four tabs over one dataset, all of it derived in guesserSeason.ts so the
+  // numbers are unit-tested away from the markup.
+  const panel = $derived(buildSeasonPanel(grid, g?.leagueSlug ?? ''));
+  const TABS = ['By player', 'Field', 'Carrot box', 'Targets'];
+  let tab = $state(0);
+  // The exported PNG captures the DOM as it stands, so there is nothing to
+  // click: the four panels stack, each naming itself (handoff D5).
+  const showTab = (i: number) => isExport || tab === i;
+
+  // Identity hues for the ⊙ pips: the ring says WHO guessed you, the fill says
+  // whether they were right. Assigned by guessing volume, which is the order
+  // the grid rows already come in, so the busiest guessers get the strongest
+  // hues. Beyond six guessers the ring goes neutral rather than start repeating
+  // colours — a wrong identity reads worse than none.
+  const ID_PALETTE = [
+    'var(--mash-pulp)',
+    'var(--sky)',
+    'var(--amber)',
+    'var(--moss)',
+    'var(--ember)',
+    'var(--violet)',
+  ];
+  const idHues = $derived(
+    new Map(
+      grid.rows
+        .filter((r) => r.attempts > 0)
+        .map((r, i) => [r.name, ID_PALETTE[i] ?? 'var(--fg-muted)'] as const),
+    ),
+  );
+  const hueOf = (name: string) => idHues.get(name) ?? 'var(--fg-muted)';
+  const idLegend = $derived(
+    grid.rows
+      .filter((r) => r.attempts > 0)
+      .map((r) => ({
+        name: r.name,
+        short: panel.cards.find((c) => c.name === r.name)?.short ?? r.name,
+        hue: hueOf(r.name),
+      })),
+  );
+
+  // Field geometry. x is already 0–1 (root-scaled); 3–95% keeps the busiest
+  // guesser's dot and its label inside the frame.
+  const dotLeft = (d: { x: number }) => +(3 + d.x * 92).toFixed(1);
+  const dotBottom = (d: { y: number }) => +(d.y * 100).toFixed(1);
+  // The shaded column is the small-sample rule drawn where it falls on this
+  // axis — not a hand-placed "about here".
+  const thinWidthPct = $derived(dotLeft({ x: Math.sqrt(MIN_RATE_SAMPLE / maxAttempts) }));
+
+  // Carrot box: the awards and the bars are computed, but the decoy EVIDENCE is
+  // a judgement about one comment, so it only ever comes from the section's
+  // editable content — never from a hardcoded quote in here.
+  const carrot = $derived(
+    ((content ?? {}) as {
+      carrot?: {
+        ghostLine?: string;
+        decoyLine?: string;
+        quote?: string;
+        quoteEyebrow?: string;
+        quoteCaption?: string;
+      };
+    }).carrot ?? {},
+  );
+  const throwOffMax = $derived(Math.max(1, ...panel.throwOffs.map((t) => t.misses)));
+  const swapCount = $derived(
+    panel.interchangeables ? panel.interchangeables.spokes.reduce((n, s) => n + s.count, 0) : 0,
+  );
+  const swapShare = $derived(
+    panel.totalMisses ? `${Math.round((swapCount / panel.totalMisses) * 100)}%` : '—',
+  );
+  // One line per blurted guess, capped at eight: past that the fan stops being
+  // countable and the number beside the node carries the fact anyway.
+  const blurtLines = $derived.by<number[]>(() => {
+    const n = Math.min(panel.defaultGuess?.count ?? 0, 8);
+    if (n <= 1) return n === 1 ? [84] : [];
+    return Array.from({ length: n }, (_, i) => 20 + (i * 128) / (n - 1));
+  });
 </script>
 
 <div class="gsl" data-component="guesser-render" class:is-export={isExport}>
@@ -410,46 +465,258 @@
       </div>
     </div>
 
-    <!-- ── the room's ledger ── -->
-    {#if gridGuessers.length > 1}
-      <div class="gsl-grid">
-        <h5>everyone who has ever guessed</h5>
-        <p class="gsl-miniexp">
-          every ballot comment this season that <b>names a submitter</b> — not just his.
-          Read across: guesses landed over guesses made, round by round.
-        </p>
-        <table>
-          <thead>
-            <tr>
-              <th class="who">Round</th>
-              {#each grid.rounds as r (r.roundId)}<th>{r.label}</th>{/each}
-              <th class="tot">season</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each gridGuessers as row (row.playerId)}
-              <tr>
-                <th class="who">{row.name}</th>
-                {#each row.cells as cell, i (i)}
-                  <td
-                    class:hit={!!cell && cell.correct > 0}
-                    class:miss={!!cell && cell.attempts > 0 && cell.correct === 0}
-                    class:none={!cell}
-                  >
-                    {#if cell}{cell.display ?? `${cell.correct}/${cell.attempts}`}{:else}·{/if}
-                  </td>
-                {/each}
-                <td class="tot" title={gridRowTitle(row)}>
-                  <span class="gsl-bar" aria-hidden="true">
-                    <span class="hit" style="width:{(row.correct / gridMax) * 100}%"></span>
-                    <span class="miss" style="width:{((row.attempts - row.correct) / gridMax) * 100}%"></span>
-                  </span>
-                  <span class="num">{row.correct}/{row.attempts} <small>{gridPct(row.correct, row.attempts)}</small></span>
-                </td>
-              </tr>
+    <!-- ── the room's ledger · the season panel (CD handoff: guesser-viz) ── -->
+    {#if panel.cards.length > 1}
+      <div class="gsl-sp">
+        <h5>everyone who's ever guessed</h5>
+        <p class="gsl-miniexp">who plays, how often, and how well — all season.</p>
+
+        {#if !isExport}
+          <div class="gsl-sp-tabs" role="tablist">
+            {#each TABS as t, i (t)}
+              <button
+                type="button"
+                role="tab"
+                class="gsl-sp-tab"
+                class:on={tab === i}
+                aria-selected={tab === i}
+                onclick={() => (tab = i)}>{t}</button>
             {/each}
-          </tbody>
-        </table>
+          </div>
+        {/if}
+
+        <!-- ── 1 · by player ─────────────────────────────────────────────── -->
+        {#if showTab(0)}
+          <div class="gsl-sp-panel">
+            {#if isExport}<div class="gsl-sp-h">{TABS[0]}</div>{/if}
+            <p class="gsl-sp-lede">
+              each player, both directions — <b>▶ how they guess</b> and
+              <b>⊙ how they're guessed</b>. hover any dot for the round-by-round detail.
+            </p>
+            <div class="gsl-sp-key">
+              <span class="k"><i class="pip moss"></i>right</span>
+              <span class="k"><i class="pip ember"></i>wrong</span>
+              <span class="k"><i class="pip out"></i>sat out</span>
+              <span class="rule"></span>
+              <span class="note">⊙ guessed-at pips — <b>ring colour = who guessed you</b>, pale fill = right/wrong:</span>
+              {#each idLegend as l (l.name)}
+                <span class="k"><i class="pip ring" style="border-color:{l.hue}"></i>{l.short}</span>
+              {/each}
+            </div>
+            <div class="gsl-sp-cards">
+              {#each panel.cards as c (c.playerId)}
+                <div class="gsl-sp-card">
+                  <div class="hd">
+                    <span class="nm">{c.short}</span>
+                    <span class="fig {c.figureTone}">{c.figure}</span>
+                  </div>
+                  <div class="lbl">▶ guessing</div>
+                  {#if c.attempts === 0}
+                    <p class="gsl-sp-none">didn't play</p>
+                  {:else}
+                    <div class="pips">
+                      {#each c.cells as cell, i (i)}
+                        <i class="pip {cell.tone}" class:halo={cell.overridden} title={cell.title}></i>
+                      {/each}
+                    </div>
+                  {/if}
+                  <div class="lbl">⊙ guessed</div>
+                  {#if c.incoming.length === 0}
+                    <p class="gsl-sp-none">no one's guessed at you yet</p>
+                  {:else}
+                    <div class="pips wrap">
+                      {#each c.incoming as inc, i (i)}
+                        <i
+                          class="pip inc"
+                          class:right={inc.correct}
+                          style="border-color:{hueOf(inc.guesser)}"
+                          title={inc.title}></i>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+        <!-- ── 2 · the field ─────────────────────────────────────────────── -->
+        {#if showTab(1)}
+          <div class="gsl-sp-panel">
+            {#if isExport}<div class="gsl-sp-h">{TABS[1]}</div>{/if}
+            <p class="gsl-sp-lede">
+              <b>Guessing skill.</b> where every guesser lands — reps across, accuracy up.
+              the four corners name the kind of guesser you are.
+            </p>
+            <div class="gsl-sp-plot">
+              <span class="ax y top">100%</span>
+              <span class="ax y mid">50%</span>
+              <span class="ax y bot">0%</span>
+              <div class="frame"></div>
+              <div class="shade" style="width:{thinWidthPct}%"></div>
+              <div class="vmid" style="left:{thinWidthPct}%"></div>
+              <div class="hmid"></div>
+              <span class="corner tl">lucky?<br /><span>small sample</span></span>
+              <span class="corner tr">sharp eye</span>
+              <span class="corner bl">dabblers</span>
+              <span class="corner br">puts in reps</span>
+              {#each panel.field as d, i (i)}
+                <span
+                  class="dot {d.tone}"
+                  class:thin={d.thin}
+                  style="left:{dotLeft(d)}%; bottom:{dotBottom(d)}%"
+                  title={d.title}></span>
+                <span
+                  class="dlab"
+                  class:right={dotLeft(d) > 62}
+                  class:thin={d.thin}
+                  class:low={dotBottom(d) < 10}
+                  style="left:{dotLeft(d)}%; bottom:{dotBottom(d)}%">
+                  <b>{d.label}</b>
+                  <em>{d.correct}/{d.attempts}{d.thin ? '' : ` · ${pct(d.rate)}`}</em>
+                </span>
+              {/each}
+            </div>
+            <div class="gsl-sp-xax">guesses made →</div>
+            <p class="gsl-sp-take">
+              Above the dashed line is better than a coin flip. Left of it is
+              <span class="em">too little evidence to say</span> — under {MIN_RATE_SAMPLE} guesses
+              a percentage is a coin toss wearing a number.
+            </p>
+          </div>
+        {/if}
+
+        <!-- ── 3 · carrot box ────────────────────────────────────────────── -->
+        {#if showTab(2)}
+          <div class="gsl-sp-panel">
+            {#if isExport}<div class="gsl-sp-h">{TABS[2]}</div>{/if}
+            <p class="gsl-sp-lede">
+              <b class="pulp">Carrot boxing</b> — throwing the room off your scent in the comments
+              and the chat, so they peg your song as someone else's and vote it down for it.
+              Two ways to vanish: say nothing, or plant a decoy.
+            </p>
+            {#if panel.ghost && panel.transparent}
+              <div class="gsl-sp-awards">
+                <div class="aw ghost">
+                  <div class="eyebrow">◆ the ghost</div>
+                  <div class="who">{panel.ghost.short}</div>
+                  <p>
+                    {panel.ghost.attempts} guesses aimed at them, spotted
+                    <b class="ember">{panel.ghost.correct === 0 ? 'zero' : panel.ghost.correct}</b>
+                    {panel.ghost.correct === 1 ? 'time' : 'times'}.
+                    {carrot.ghostLine ?? 'Hardest man in the room to name.'}
+                  </p>
+                </div>
+                <div class="aw decoy">
+                  <div class="eyebrow">◆ the open book</div>
+                  <div class="who">{panel.transparent.short}</div>
+                  <p>
+                    Spotted {panel.transparent.correct} of {panel.transparent.attempts} —
+                    {carrot.decoyLine ?? "the room reads him on sight, unless he plants a fake."}
+                  </p>
+                </div>
+              </div>
+            {/if}
+
+            {#if carrot.quote}
+              <div class="gsl-sp-quote">
+                <div class="eyebrow">{carrot.quoteEyebrow ?? 'planted decoy · caught in the act'}</div>
+                <p class="q">“{carrot.quote}”</p>
+                {#if carrot.quoteCaption}<p class="cap">{carrot.quoteCaption}</p>{/if}
+                <p class="flag">flagged by hand · needs a comment-flag field in the feed</p>
+              </div>
+            {/if}
+
+            {#if panel.throwOffs.length}
+              <div class="gsl-sp-sub">threw the room off — times misidentified</div>
+              {#each panel.throwOffs as t (t.name)}
+                <div class="gsl-sp-torow">
+                  <span class="nm">{t.short}</span>
+                  <span class="track"><span class="fill" style="width:{(t.misses / throwOffMax) * 100}%"></span></span>
+                  <span class="n">{t.misses}×</span>
+                </div>
+              {/each}
+              <p class="gsl-sp-foot">
+                Whether a throw-off actually <b>cost</b> them votes needs each guess joined to that
+                guesser's ballot — not in the feed yet, so it isn't drawn.
+              </p>
+            {/if}
+
+            {#if panel.interchangeables || panel.defaultGuess}
+              <div class="gsl-sp-div"><span>why the throws land</span><i></i></div>
+            {/if}
+
+            {#if panel.interchangeables}
+              <div class="gsl-sp-sub">1 · the interchangeables</div>
+              <svg class="gsl-sp-svg" viewBox="0 0 360 152" width="100%" aria-hidden="true">
+                {#each panel.interchangeables.spokes as sp, i (sp.name)}
+                  <path
+                    d={i === 0 ? 'M70,118 Q120,52 183,40' : 'M300,118 Q250,52 187,40'}
+                    fill="none"
+                    stroke="var(--mash-pulp)"
+                    stroke-width="7"
+                    stroke-linecap="round"
+                    opacity="0.9" />
+                  <circle cx={i === 0 ? 70 : 300} cy="122" r="8" fill="var(--ember-soft)" stroke="var(--ember)" stroke-width="1.4" />
+                  <text x={i === 0 ? 70 : 300} y="145" text-anchor="middle" class="t-name">{sp.name}</text>
+                  <text x={i === 0 ? 120 : 252} y="70" text-anchor="middle" class="t-count">{sp.count}×</text>
+                {/each}
+                <circle cx="185" cy="38" r="9" fill="var(--mash-pulp)" />
+                <text x="185" y="22" text-anchor="middle" class="t-hub">{panel.interchangeables.hub}</text>
+              </svg>
+              <p class="gsl-sp-cap">
+                {swapCount} swaps between {panel.interchangeables.spokes.length + 1} men — {swapShare} of
+                the season's misses.
+              </p>
+            {/if}
+
+            {#if panel.defaultGuess}
+              <div class="gsl-sp-sub">2 · the default guess</div>
+              <svg class="gsl-sp-svg" viewBox="0 0 360 168" width="100%" aria-hidden="true">
+                {#each blurtLines as y, i (i)}
+                  <line x1="46" y1={y} x2="278" y2="84" stroke="var(--mash-pulp)" stroke-width="1.6" opacity="0.4" />
+                {/each}
+                <circle cx="304" cy="84" r="26" fill="var(--mash-pulp)" />
+                <text x="304" y="82" text-anchor="middle" class="t-node">{panel.defaultGuess.short}</text>
+                <text x="304" y="96" text-anchor="middle" class="t-nodenum">{panel.defaultGuess.count}×</text>
+                <text x="8" y="12" class="t-axis">every stumped guess →</text>
+              </svg>
+              <p class="gsl-sp-cap">
+                “{panel.defaultGuess.short}” is the name people blurt on <b>others'</b> songs when
+                stumped — {panel.defaultGuess.count}× wrong. (Different from the Targets tab, which
+                is how often <b>his own</b> songs get pegged.)
+              </p>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- ── 4 · targets ───────────────────────────────────────────────── -->
+        {#if showTab(3)}
+          <div class="gsl-sp-panel">
+            {#if isExport}<div class="gsl-sp-h">{TABS[3]}</div>{/if}
+            <p class="gsl-sp-q">When a song is yours, how often does the room name you right?</p>
+            <p class="gsl-sp-sublede">
+              <b>Being guessed.</b> every guess anyone aimed at you, all season · anonymous at top
+            </p>
+            {#each panel.targets as t (t.name)}
+              <div class="gsl-sp-trow">
+                <span class="nm">{t.short}</span>
+                <span class="mid">
+                  <span class="track"><span class="fill {t.tone}" style="width:{t.rate * 100}%"></span></span>
+                  {#if t.mistakenFor}<span class="mis">mistaken for <b>{t.mistakenFor}</b></span>{/if}
+                </span>
+                <span class="num"><b class={t.tone}>{pct(t.rate)}</b> <em>{t.correct}/{t.attempts}</em></span>
+              </div>
+            {/each}
+            {#if panel.targetsHeldBack.length}
+              <p class="gsl-sp-foot">
+                Left out: {panel.targetsHeldBack.map((h) => `${h.short} (${h.attempts})`).join(', ')} —
+                too few songs of theirs have ever been guessed at to give a rate.
+              </p>
+            {/if}
+          </div>
+        {/if}
+
         {#if gridSilent.length}
           <p class="gsl-silent">
             never once guessed, all season: <b>{gridSilent.map((r) => r.name).join(', ')}</b>
@@ -464,92 +731,631 @@
 </div>
 
 <style>
-  .gsl-grid {
+  /* ── the season panel ──────────────────────────────────────────────────
+     Four tabs over one dataset, read as the section widening from one player
+     to the whole room. Two directions are kept visually separate everywhere:
+     GUESSING is bright/solid, being GUESSED is a pale fill inside a ring
+     coloured by whoever did the guessing. Colour is never the only channel —
+     every pip carries the same fact in its title, and every rate is printed
+     next to its raw count. */
+  .gsl-sp {
     margin-top: 18px;
     padding-top: 16px;
     border-top: 1px solid var(--rule, rgba(255, 255, 255, 0.12));
   }
-  .gsl-grid h5 {
+  .gsl-sp h5 {
     margin: 0 0 4px;
-    font: 600 11px/1.2 var(--font-body);
-    letter-spacing: 0.08em;
+    font: 700 15px/1.2 var(--font-display);
+    color: var(--fg);
+    letter-spacing: -0.01em;
+  }
+  .gsl-sp-tabs {
+    display: flex;
+    gap: 2px;
+    margin-top: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .gsl-sp-tab {
+    flex: 1;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 10px 2px;
+    font: 400 9px/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color 120ms, border-color 120ms;
+  }
+  .gsl-sp-tab:hover {
+    color: var(--fg-2);
+  }
+  .gsl-sp-tab.on {
+    color: var(--mash-pulp);
+    border-bottom-color: var(--mash-pulp);
+  }
+  .gsl-sp-panel {
+    padding-top: 12px;
+  }
+  /* In the exported PNG there are no tabs to click, so the four panels stack
+     and each one names itself. */
+  .gsl-sp-h {
+    margin: 18px 0 8px;
+    font: 400 9px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mash-pulp);
+  }
+  .gsl-sp-lede {
+    margin: 2px 0 10px;
+    font: 400 11.5px/1.5 var(--font-body);
+    color: var(--fg-muted);
+  }
+  .gsl-sp-lede b {
+    color: var(--fg-2);
+  }
+  .gsl-sp-lede b.pulp {
+    color: var(--mash-pulp);
+  }
+  .gsl-sp-none {
+    margin: 5px 0 0;
+    font: italic 400 9px/1.4 var(--font-body);
+    color: var(--fg-quiet);
+  }
+
+  /* ── pips (shared by the legend and the cards) ── */
+  .gsl-sp .pip {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .gsl-sp .pip.moss {
+    background: var(--moss);
+  }
+  .gsl-sp .pip.amber {
+    background: var(--amber);
+  }
+  .gsl-sp .pip.ember {
+    background: var(--ember);
+  }
+  .gsl-sp .pip.out {
+    border: 1px solid var(--line-strong);
+  }
+  .gsl-sp .pip.halo {
+    box-shadow: 0 0 0 2px var(--amber-soft);
+  }
+  .gsl-sp .pip.ring,
+  .gsl-sp .pip.inc {
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--fg-muted);
+    background: var(--ember-soft);
+  }
+  .gsl-sp .pip.inc.right {
+    background: var(--moss-soft);
+  }
+
+  .gsl-sp-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-bottom: 14px;
+    padding: 9px 11px;
+    background: var(--ink-1);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font: 400 9px/1 var(--font-body);
+    color: var(--fg-muted);
+  }
+  .gsl-sp-key .k {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .gsl-sp-key .rule {
+    width: 100%;
+    height: 1px;
+    background: var(--line);
+    margin: 1px 0;
+  }
+  .gsl-sp-key .note {
+    width: 100%;
+    color: var(--fg-quiet);
+    line-height: 1.4;
+  }
+  .gsl-sp-key .note b {
+    color: var(--fg-muted);
+  }
+
+  /* ── tab 1 · by player ── */
+  .gsl-sp-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .gsl-sp-card {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-4, 10px);
+    padding: 11px 12px;
+  }
+  .gsl-sp-card .hd {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .gsl-sp-card .nm {
+    font: 700 14px/1.1 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-card .fig {
+    font: 400 10px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .gsl-sp-card .fig.moss {
+    color: var(--moss);
+  }
+  .gsl-sp-card .fig.amber {
+    color: var(--amber);
+  }
+  .gsl-sp-card .fig.ember {
+    color: var(--ember);
+  }
+  .gsl-sp-card .fig.quiet {
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-card .lbl {
+    margin-top: 9px;
+    font: 400 7.5px/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .gsl-sp-card .pips {
+    display: flex;
+    gap: 3px;
+    margin-top: 5px;
+  }
+  .gsl-sp-card .pips.wrap {
+    flex-wrap: wrap;
+  }
+
+  /* ── tab 2 · the field ── */
+  .gsl-sp-plot {
+    position: relative;
+    height: 290px;
+    margin: 4px 0 20px 26px;
+  }
+  .gsl-sp-plot .frame {
+    position: absolute;
+    inset: 0;
+    border-left: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .gsl-sp-plot .ax {
+    position: absolute;
+    left: -26px;
+    font: 400 9px/1 var(--font-mono);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-plot .ax.top {
+    top: -4px;
+  }
+  .gsl-sp-plot .ax.mid {
+    top: calc(50% - 4px);
+  }
+  .gsl-sp-plot .ax.bot {
+    bottom: -4px;
+  }
+  /* The shaded column is not decoration: it is exactly the small-sample rule
+     the rest of the section obeys, drawn where it falls on this axis. */
+  .gsl-sp-plot .shade {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--ember);
+    opacity: 0.06;
+  }
+  .gsl-sp-plot .vmid {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px dashed var(--line);
+  }
+  .gsl-sp-plot .hmid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px dashed var(--line);
+  }
+  .gsl-sp-plot .corner {
+    position: absolute;
+    font: 400 8px/1.35 var(--font-mono);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--fg-quiet);
   }
-  .gsl-grid table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font: 400 12px/1.4 var(--font-body);
+  .gsl-sp-plot .corner.tl {
+    left: 4px;
+    top: 6px;
+    color: var(--ember);
+    opacity: 0.85;
+  }
+  .gsl-sp-plot .corner.tl span {
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-plot .corner.tr {
+    right: 6px;
+    top: 6px;
+    text-align: right;
+    color: var(--moss);
+  }
+  .gsl-sp-plot .corner.bl {
+    left: 4px;
+    bottom: 22px;
+  }
+  .gsl-sp-plot .corner.br {
+    right: 6px;
+    bottom: 22px;
+    text-align: right;
+    color: var(--fg-muted);
+  }
+  .gsl-sp-plot .dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transform: translate(-50%, 50%);
+  }
+  .gsl-sp-plot .dot.moss {
+    background: var(--moss);
+    box-shadow: 0 0 0 3px var(--moss-soft);
+  }
+  .gsl-sp-plot .dot.amber {
+    background: var(--amber);
+    box-shadow: 0 0 0 3px var(--amber-soft);
+  }
+  .gsl-sp-plot .dot.ember {
+    background: var(--ember);
+    box-shadow: 0 0 0 3px var(--ember-soft);
+  }
+  .gsl-sp-plot .dot.quiet {
+    background: var(--fg-quiet);
+    opacity: 0.6;
+  }
+  .gsl-sp-plot .dot.thin {
+    width: 10px;
+    height: 10px;
+  }
+  .gsl-sp-plot .dlab {
+    position: absolute;
+    transform: translate(0, 50%);
+    margin-left: 13px;
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+  .gsl-sp-plot .dlab.right {
+    transform: translate(-100%, 50%);
+    margin-left: -13px;
+    text-align: right;
+  }
+  .gsl-sp-plot .dlab b {
+    display: block;
+    font: 700 12px/1.2 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-plot .dlab em {
+    font: 400 9px/1 var(--font-mono);
+    font-style: normal;
+    color: var(--fg-muted);
+  }
+  .gsl-sp-plot .dlab.thin b {
+    font: 400 10px/1.2 var(--font-body);
+    color: var(--fg-2);
+  }
+  /* A merged small-sample dot sits mid-plot, where a label beside it lands on
+     the 50% line; under the dot is the only clear space. */
+  .gsl-sp-plot .dlab.thin {
+    transform: translate(-50%, 120%);
+    margin-left: 0;
+    text-align: center;
+  }
+  /* A player at 0% sits ON the axis, where the label would print over the
+     x-axis caption. */
+  .gsl-sp-plot .dlab.low {
+    transform: translate(0, -15%);
+  }
+  .gsl-sp-plot .dlab.low.right {
+    transform: translate(-100%, -15%);
+  }
+  .gsl-sp-xax {
+    margin-top: -6px;
+    text-align: center;
+    font: 400 9px/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-take {
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font: 400 11.5px/1.5 var(--font-body);
+    color: var(--fg-muted);
+  }
+  .gsl-sp-take .em {
+    color: var(--ember);
+  }
+
+  /* ── tab 3 · carrot box ── */
+  .gsl-sp-awards {
+    display: flex;
+    gap: 9px;
+    margin-bottom: 18px;
+  }
+  .gsl-sp-awards .aw {
+    flex: 1;
+    border-radius: 12px;
+    padding: 12px 13px;
+  }
+  .gsl-sp-awards .aw.ghost {
+    background: linear-gradient(180deg, var(--amber-soft), transparent);
+    border: 1px solid var(--amber);
+  }
+  .gsl-sp-awards .aw.decoy {
+    background: linear-gradient(180deg, var(--sky-soft), transparent);
+    border: 1px solid var(--sky);
+  }
+  .gsl-sp-awards .eyebrow {
+    margin-bottom: 4px;
+    font: 400 8px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .gsl-sp-awards .aw.ghost .eyebrow {
+    color: var(--amber);
+  }
+  .gsl-sp-awards .aw.decoy .eyebrow {
+    color: var(--sky);
+  }
+  .gsl-sp-awards .who {
+    font: 800 17px/1 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-awards p {
+    margin: 5px 0 0;
+    font: 400 10.5px/1.45 var(--font-body);
+    color: var(--fg-2);
+  }
+  .gsl-sp-awards .ember {
+    color: var(--ember);
+  }
+  .gsl-sp-quote {
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--sky);
+    border-radius: 0 10px 10px 0;
+    background: var(--ink-1);
+  }
+  .gsl-sp-quote .eyebrow {
+    margin-bottom: 6px;
+    font: 400 8px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sky);
+  }
+  .gsl-sp-quote .q {
+    margin: 0;
+    font: italic 400 14px/1.4 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-quote .cap {
+    margin: 8px 0 0;
+    font: 400 10px/1.5 var(--font-body);
+    color: var(--fg-muted);
+  }
+  .gsl-sp-quote .flag {
+    margin: 6px 0 0;
+    font: italic 400 9px/1.4 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-sub {
+    margin: 0 0 8px;
+    font: 400 9.5px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .gsl-sp-torow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 7px;
+  }
+  .gsl-sp-torow .nm {
+    width: 58px;
+    flex: 0 0 auto;
+    font: 700 12px/1.2 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-torow .track {
+    flex: 1;
+    min-width: 0;
+    height: 13px;
+    border-radius: 4px;
+    background: var(--mash-pulp-soft);
+    border: 1px solid var(--mash-pulp-edge);
+    overflow: hidden;
+  }
+  .gsl-sp-torow .fill {
+    display: block;
+    height: 100%;
+    background: var(--mash-pulp);
+  }
+  .gsl-sp-torow .n {
+    width: 26px;
+    flex: 0 0 auto;
+    text-align: right;
+    font: 400 12px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--mash-pulp);
+  }
+  .gsl-sp-div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 8px;
+  }
+  .gsl-sp-div span {
+    font: 400 9px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-div i {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .gsl-sp-svg {
+    display: block;
+  }
+  .gsl-sp-svg .t-hub {
+    font: 700 12px var(--font-body);
+    fill: var(--mash-pulp);
+  }
+  .gsl-sp-svg .t-name {
+    font: 600 12px var(--font-body);
+    fill: var(--fg-2);
+  }
+  .gsl-sp-svg .t-count {
+    font: 700 13px var(--font-mono);
+    fill: var(--bone);
+  }
+  .gsl-sp-svg .t-node {
+    font: 700 12px var(--font-body);
+    fill: var(--bone);
+  }
+  .gsl-sp-svg .t-nodenum {
+    font: 400 10px var(--font-mono);
+    fill: var(--bone);
+  }
+  .gsl-sp-svg .t-axis {
+    font: 400 10.5px var(--font-body);
+    fill: var(--fg-muted);
+  }
+  .gsl-sp-cap {
+    margin: 2px 0 18px;
+    font: italic 400 11px/1.5 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-cap b {
+    color: var(--fg-muted);
+  }
+  .gsl-sp-foot {
+    margin: 12px 0 0;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+    font: 400 11px/1.55 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-foot b {
+    color: var(--fg-muted);
+  }
+
+  /* ── tab 4 · targets ── */
+  .gsl-sp-q {
+    margin: 2px 0 6px;
+    font: 700 16px/1.25 var(--font-display);
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .gsl-sp-sublede {
+    margin: 0 0 14px;
+    font: 400 11px/1.5 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-sublede b {
+    color: var(--fg-muted);
+  }
+  .gsl-sp-trow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .gsl-sp-trow .nm {
+    width: 66px;
+    flex: 0 0 auto;
+    font: 700 13px/1.2 var(--font-display);
+    color: var(--fg);
+  }
+  .gsl-sp-trow .mid {
+    flex: 1;
+    min-width: 0;
+  }
+  .gsl-sp-trow .track {
+    display: block;
+    height: 9px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .gsl-sp-trow .fill {
+    display: block;
+    height: 100%;
+  }
+  .gsl-sp-trow .fill.moss {
+    background: var(--moss);
+  }
+  .gsl-sp-trow .fill.amber {
+    background: var(--amber);
+  }
+  .gsl-sp-trow .fill.ember {
+    background: var(--ember);
+  }
+  .gsl-sp-trow .mis {
+    display: block;
+    margin-top: 3px;
+    font: 400 9.5px/1.3 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-sp-trow .mis b {
+    color: var(--fg-muted);
+  }
+  .gsl-sp-trow .num {
+    width: 70px;
+    flex: 0 0 auto;
+    text-align: right;
+  }
+  .gsl-sp-trow .num b {
+    font: 400 13px/1 var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
-  .gsl-grid th,
-  .gsl-grid td {
-    padding: 4px 2px;
-    text-align: center;
+  .gsl-sp-trow .num b.moss {
+    color: var(--moss);
+  }
+  .gsl-sp-trow .num b.amber {
+    color: var(--amber);
+  }
+  .gsl-sp-trow .num b.ember {
+    color: var(--ember);
+  }
+  .gsl-sp-trow .num em {
+    font: 400 9px/1 var(--font-mono);
+    font-style: normal;
     color: var(--fg-quiet);
   }
-  .gsl-grid thead th {
-    font: 600 10px/1 var(--font-body);
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--rule, rgba(255, 255, 255, 0.12));
-  }
-  .gsl-grid th.who {
-    width: 27%;
-    text-align: left;
-    font: 400 12px/1.4 var(--font-body);
-    color: var(--fg);
-    white-space: nowrap;
-  }
-  /* A round with hits reads as normal body text; a round that went 0-for is the
-     thing worth marking, so red is spent on the failure rather than the score. */
-  .gsl-grid td.hit {
-    color: var(--fg);
-    font-weight: 600;
-  }
-  .gsl-grid td.miss {
-    color: var(--ember, #c0503a);
-    font-weight: 600;
-  }
-  .gsl-grid td.none {
-    color: var(--fg-faint, rgba(255, 255, 255, 0.25));
-  }
-  .gsl-grid td.tot,
-  .gsl-grid th.tot {
-    text-align: right;
-    white-space: nowrap;
-    color: var(--fg);
-  }
-  .gsl-grid td.tot {
-    width: 27%;
-  }
-  .gsl-bar {
-    display: flex;
-    height: 6px;
-    margin-bottom: 3px;
-    overflow: hidden;
-    border-radius: 2px;
-    background: var(--fg-faint, rgba(255, 255, 255, 0.08));
-  }
-  .gsl-bar .hit {
-    background: var(--moss, #6f8f5a);
-  }
-  .gsl-bar .miss {
-    background: var(--fg-faint, rgba(255, 255, 255, 0.22));
-  }
-  .gsl-grid .num {
-    display: block;
-    line-height: 1.2;
-  }
-  /* Signals the hover history without inventing a control that print can't show. */
-  .gsl-grid td.tot {
-    cursor: help;
-    border-bottom: 1px dotted var(--fg-faint, rgba(255, 255, 255, 0.28));
-  }
-  .gsl-grid td.tot small {
-    color: var(--fg-quiet);
-    font-size: 10px;
-  }
+
   .gsl-silent {
     margin: 10px 0 0;
     font: 400 12px/1.5 var(--font-body);
@@ -566,17 +1372,19 @@
   .gsl-gridnote b {
     color: var(--fg);
   }
-  /* Phone: the round columns are the first thing to go illegible. */
-  @media (max-width: 520px) {
-    .gsl-grid table {
+  /* Phone: two columns of cards still fit at ~400px, but the award pair and the
+     plot labels are the first things to crowd. */
+  @media (max-width: 340px) {
+    .gsl-sp-awards {
+      flex-direction: column;
+    }
+  }
+  @media (max-width: 420px) {
+    .gsl-sp-plot .dlab b {
       font-size: 11px;
     }
-    .gsl-grid th.who {
-      width: 32%;
-      font-size: 11px;
-    }
-    .gsl-grid td.tot small {
-      display: none;
+    .gsl-sp-tab {
+      font-size: 8px;
     }
   }
 
