@@ -4,7 +4,7 @@ import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
 import { modelFor, modelForSection } from './modelFor.js';
 import { resolvePipeline, DEFAULT_PIPELINE, type Pipeline } from './pipeline.js';
-import { roundChatWindow, getRoundMessages } from '../chat/historyQuery.js';
+import { roundChatWindow, getRoundMessages, dedupeRelayEdits } from '../chat/historyQuery.js';
 import type { TopSectionVariant, TopSectionVisual } from './topSectionVariants.js';
 import { gatherStorylineEvidence, type StorylineEvidence } from './storylineEvidence.js';
 import { wrapNotes } from './noteEnvelope.js';
@@ -258,7 +258,7 @@ export function gatherRoundData(
   const win = roundChatWindow(db, roundId);
   let chatHistory: string | undefined;
   if (win.groupName) {
-    const msgs = getRoundMessages(db, win.groupName, win.fromIso, win.toIso);
+    const msgs = dedupeRelayEdits(getRoundMessages(db, win.groupName, win.fromIso, win.toIso));
     if (msgs.length) {
       chatHistory = msgs
         .map((m) => `[${m.ts}] ${m.sender}: ${m.text.replace(/\s+/g, ' ').trim()}`)
