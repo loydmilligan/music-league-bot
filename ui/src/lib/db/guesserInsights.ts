@@ -50,6 +50,58 @@ export interface GuesserLittermates {
   swaps: number;
 }
 
+/**
+ * One player's guessing in one round. `attempts` counts comments that resolved
+ * to a roster player; a round where they commented and named nobody is not a
+ * cell, it is absent.
+ */
+export interface GuesserGridCell {
+  roundId: number;
+  attempts: number;
+  correct: number;
+  /**
+   * Hand-authored replacement for the "n/m" the cell would otherwise print, from
+   * `guesser_content_json.gridNotes`. Boarz R149 is the case that needs it:
+   * Jensen guessed "Conor" on all nine songs in nine different spellings, six of
+   * which resolve to nobody, so the computed 1/3 is both wrong and not the joke.
+   */
+  display: string | null;
+  /** Optional footnote rendered under the grid, same source as `display`. */
+  note: string | null;
+}
+
+/** One resolved guess, for the row's hover history. */
+export interface GuesserGridGuess {
+  roundLabel: string;
+  guessedName: string;
+  actualName: string;
+  correct: boolean;
+}
+
+export interface GuesserGridRow {
+  playerId: number;
+  name: string;
+  attempts: number;
+  correct: number;
+  /** One entry per round in `rounds`, null where they guessed nothing. */
+  cells: (GuesserGridCell | null)[];
+  /** Every guess they made, chronological — the row's tooltip text. */
+  guesses: GuesserGridGuess[];
+}
+
+/**
+ * Every player's guessing across the season — the ledger widened from one
+ * player to the whole room.
+ *
+ * Rows are sorted by volume, and players who have NEVER guessed are kept with
+ * an empty row on purpose: four Boarz players have never once named a submitter,
+ * and an absent row would read as missing data rather than as the finding.
+ */
+export interface GuesserGrid {
+  rounds: { roundId: number; label: string }[];
+  rows: GuesserGridRow[];
+}
+
 export interface GuesserData {
   guesserName: string | null;
   /**
@@ -105,6 +157,8 @@ export interface GuesserData {
   eludesHim: GuesserLeaderRow[];
   alwaysNails: GuesserLeaderRow[];
   littermates: GuesserLittermates | null;
+  /** The whole room's guessing, round by round. */
+  seasonGrid: GuesserGrid;
 }
 
 /**
@@ -212,7 +266,10 @@ const SEASON_ARC_ROUNDS = 10;
  * Keys of 5+ characters also match at edit-distance 1, so near-misses like
  * "pallets"/"palletz" are covered without listing every spelling.
  */
-const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allowShort?: boolean }>> = {
+const LEAGUE_ALIASES: Record<
+  string,
+  Array<{ match: string; asName: string; allowShort?: boolean; exactOnly?: boolean }>
+> = {
   sssc: [
     { match: 'Generous Giragge', asName: 'jirafa' },
     { match: 'Cherrycola', asName: 'Cherry' },
@@ -223,7 +280,9 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allo
   'boarz-ii-men': [
     { match: 'Mashew', asName: 'Mashew' },
     { match: 'Mariani', asName: 'Mashew' },
-    { match: 'Matty', asName: 'Mashew' },
+    // "patty cakes" (Jimmy, R153) is one edit from "Matty" and is not in the
+    // common-word list, so it resolved as a guess of Matt until this flag.
+    { match: 'Matty', asName: 'Mashew', exactOnly: true },
     // "JB" is his everyday name in this room; "Juan Negro" is from the
     // Spanish-themed round 145 and is exactly the kind of one-off that a
     // name-only matcher can never catch.
@@ -233,11 +292,17 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allo
     { match: 'Juan Negro', asName: 'Jonathan Black' },
     { match: 'Conor', asName: 'CJ Wookie' },
     { match: 'Connor', asName: 'CJ Wookie' },
+    // R150 "Conie no play right" — two substitutions from "Conor", so exact-only.
+    { match: 'Conie', asName: 'CJ Wookie', exactOnly: true },
     { match: 'Johnston', asName: 'CJ Wookie' },
     { match: 'Wookie', asName: 'CJ Wookie' },
     { match: 'Grant', asName: 'Grant Koziol' },
     { match: 'Koziol', asName: 'Grant Koziol' },
     { match: 'Kozh', asName: 'Grant Koziol' },
+    // R150: "koshel" is 3 edits from "Koziol" and 2 from "Kozh", so no amount of
+    // fuzz reaches it — a correct guess scored as a zero until it was listed.
+    { match: 'Koshel', asName: 'Grant Koziol', exactOnly: true },
+    { match: 'Koz', asName: 'Grant Koziol' },
     { match: 'Kozhleaze', asName: 'Grant Koziol' },
     { match: 'Cozy', asName: 'Grant Koziol' },
     { match: 'Cozy oil', asName: 'Grant Koziol' },
@@ -251,11 +316,17 @@ const LEAGUE_ALIASES: Record<string, Array<{ match: string; asName: string; allo
     { match: 'Troy', asName: 'Jimmy Troy' },
     { match: 'Clements', asName: 'Clements' },
     { match: 'Clem', asName: 'Clements' },
+    // Four characters, so fuzzy can never reach it from "Clammy"/"Clamia" (the
+    // typed run has to be 5+ to fuzz at all). R150 lost a resolution to this.
+    { match: 'Clam', asName: 'Clements' },
     { match: 'Clammy', asName: 'Clements' },
     { match: 'Clamia', asName: 'Clements' },
     { match: 'Clemydia', asName: 'Clements' },
     { match: 'Steiny', asName: 'Steiny' },
     { match: 'Steingart', asName: 'Steiny' },
+    // Resolves today only by edit-distance-1 off "Steiny"; listed exactly so it
+    // cannot be lost if "stein" ever lands in the English word list.
+    { match: 'Stein', asName: 'Steiny', exactOnly: true },
     { match: 'Darren', asName: 'Darren Paletz' },
     { match: 'Paletz', asName: 'Darren Paletz' },
     { match: 'Palletz', asName: 'Darren Paletz' },
@@ -348,6 +419,7 @@ function emptyGuesserData(): GuesserData {
     eludesHim: [],
     alwaysNails: [],
     littermates: null,
+    seasonGrid: { rounds: [], rows: [] },
   };
 }
 
@@ -371,6 +443,150 @@ interface SeasonGuessRow {
   actual_player_id: number | null;
   actual_name: string;
   guess_comment: string | null;
+}
+
+
+
+/**
+ * Hand-authored per-cell overrides, from the draft's `guesser_content_json`.
+ *
+ * Keyed "<playerId>:<roundId>". Exists because the matcher cannot see a joke
+ * ballot: in Boarz R149 Jensen wrote "Conor" on all nine songs in nine different
+ * spellings ("Conr?", "Cnr?", "Cronar?", "C"), six of which resolve to nobody.
+ * The computed 1/3 is not what happened and not the joke, so the cell can be
+ * overwritten by hand. A malformed blob degrades to no overrides.
+ */
+function gridNotesFor(
+  db: Database.Database,
+  roundId: number,
+): Record<string, { display?: string; note?: string }> {
+  try {
+    const row = db
+      .prepare('SELECT guesser_content_json FROM digest_drafts WHERE round_id = ? ORDER BY generated_at DESC LIMIT 1')
+      .get(roundId) as { guesser_content_json?: string } | undefined;
+    if (!row?.guesser_content_json) return {};
+    const parsed = JSON.parse(row.guesser_content_json) as {
+      gridNotes?: Record<string, { display?: string; note?: string }>;
+    };
+    return parsed?.gridNotes && typeof parsed.gridNotes === 'object' ? parsed.gridNotes : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Every player's guesses across the league, round by round.
+ *
+ * Uses the same matcher and the same candidate roster as the single-guesser
+ * ledger, so a cell here can never disagree with the weekly record above it.
+ * A voter's comment on their OWN song is skipped — naming yourself is not a
+ * guess — matching `weekly`'s self-submission rule.
+ */
+function buildSeasonGrid(
+  db: Database.Database,
+  leagueId: number,
+  matcher: (comment: string) => number | null,
+  playerNames: Map<number, string>,
+  gridNotes: Record<string, { display?: string; note?: string }>,
+): GuesserGrid {
+  const roundRows = db
+    .prepare(
+      `SELECT r.id AS roundId
+       FROM rounds r JOIN seasons s ON s.id = r.season_id
+       WHERE s.league_id = ?
+         AND EXISTS (SELECT 1 FROM votes v WHERE v.round_id = r.id AND TRIM(COALESCE(v.comment,'')) <> '')
+       ORDER BY r.id ASC`,
+    )
+    .all(leagueId) as { roundId: number }[];
+  if (roundRows.length === 0) return { rounds: [], rows: [] };
+
+  const voteRows = db
+    .prepare(
+      `SELECT v.round_id AS roundId,
+              COALESCE(v.player_id, c.player_id) AS voterPlayerId,
+              COALESCE(s.player_id, sc.player_id) AS actualPlayerId,
+              v.comment AS comment
+       FROM votes v
+       JOIN rounds r ON r.id = v.round_id
+       JOIN seasons se ON se.id = r.season_id
+       JOIN competitors c ON c.id = v.voter_id
+       LEFT JOIN ml_submissions s ON s.round_id = v.round_id AND s.spotify_uri = v.spotify_uri
+       LEFT JOIN competitors sc ON sc.id = s.competitor_id
+       WHERE se.league_id = ? AND TRIM(COALESCE(v.comment,'')) <> ''
+       ORDER BY v.round_id ASC, voterPlayerId ASC, v.spotify_uri ASC`,
+    )
+    .all(leagueId) as {
+      roundId: number;
+      voterPlayerId: number | null;
+      actualPlayerId: number | null;
+      comment: string;
+    }[];
+
+  const labelOf = new Map(roundRows.map((r, i) => [r.roundId, String(i + 1)]));
+
+  // Every player who has ever voted in this league, so the never-guessed rows survive.
+  const seen = new Map<number, Map<number, { attempts: number; correct: number }>>();
+  const detail = new Map<number, GuesserGridGuess[]>();
+  for (const row of voteRows) {
+    if (row.voterPlayerId === null) continue;
+    if (!seen.has(row.voterPlayerId)) seen.set(row.voterPlayerId, new Map());
+    if (!detail.has(row.voterPlayerId)) detail.set(row.voterPlayerId, []);
+    if (row.actualPlayerId !== null && row.actualPlayerId === row.voterPlayerId) continue;
+    const guessed = matcher(row.comment);
+    if (guessed === null) continue;
+    const perRound = seen.get(row.voterPlayerId)!;
+    const cell = perRound.get(row.roundId) ?? { attempts: 0, correct: 0 };
+    cell.attempts += 1;
+    const hit = row.actualPlayerId !== null && guessed === row.actualPlayerId;
+    if (hit) cell.correct += 1;
+    perRound.set(row.roundId, cell);
+    detail.get(row.voterPlayerId)!.push({
+      roundLabel: labelOf.get(row.roundId) ?? String(row.roundId),
+      guessedName: playerNames.get(guessed) ?? String(guessed),
+      actualName:
+        row.actualPlayerId !== null ? (playerNames.get(row.actualPlayerId) ?? '—') : '—',
+      correct: hit,
+    });
+  }
+
+  const rows: GuesserGridRow[] = [];
+  for (const [playerId, perRound] of seen) {
+    const cells = roundRows.map(({ roundId }) => {
+      const hit = perRound.get(roundId);
+      const override = gridNotes[`${playerId}:${roundId}`];
+      if (!hit && !override) return null;
+      return {
+        roundId,
+        attempts: hit?.attempts ?? 0,
+        correct: hit?.correct ?? 0,
+        display: override?.display ?? null,
+        note: override?.note ?? null,
+      };
+    });
+    rows.push({
+      playerId,
+      name: playerNames.get(playerId) ?? String(playerId),
+      attempts: cells.reduce((n, c) => n + (c?.attempts ?? 0), 0),
+      correct: cells.reduce((n, c) => n + (c?.correct ?? 0), 0),
+      cells,
+      guesses: detail.get(playerId) ?? [],
+    });
+  }
+
+  // Most prolific first; the never-guessed tail keeps a stable alphabetical order
+  // so the empty rows read as a deliberate block rather than leftovers.
+  rows.sort((a, b) =>
+    b.attempts - a.attempts || b.correct - a.correct || a.name.localeCompare(b.name),
+  );
+
+  // Columns are numbered 1..N in chronological order, NOT by round id or
+  // round_number: every Boarz round_number is NULL so the id leaked through, and
+  // a column headed "135" means nothing to a reader. The header cell above the
+  // names carries the word "Round" so the numbers are legible without a key.
+  return {
+    rounds: roundRows.map((r, i) => ({ roundId: r.roundId, label: String(i + 1) })),
+    rows,
+  };
 }
 
 export function getGuesserData(db: Database.Database, roundId: number): GuesserData {
@@ -477,7 +693,8 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
 
   for (const alias of LEAGUE_ALIASES[slug] ?? []) {
     const playerId = nameToPlayerId.get(alias.asName);
-    if (playerId !== undefined) candidates.push({ playerId, label: alias.match, allowShort: alias.allowShort });
+    if (playerId !== undefined)
+      candidates.push({ playerId, label: alias.match, allowShort: alias.allowShort, exactOnly: alias.exactOnly });
   }
 
   // 4. Deterministic comment -> guessed-player resolver.
@@ -735,5 +952,6 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     eludesHim,
     alwaysNails,
     littermates,
+    seasonGrid: buildSeasonGrid(db, leagueId, matcher, playerNames, gridNotesFor(db, roundId)),
   };
 }

@@ -145,6 +145,40 @@
   // "Eludes him" (D3): players he's guessed the most and NEVER once gotten right.
   const eludes = $derived((g?.eludesHim ?? []).filter((r) => r.rate === 0));
   const littermates = $derived(g?.littermates ?? null);
+  // The room's ledger. Rows with zero attempts are KEPT: four Boarz players have
+  // never once named a submitter, and that is the finding, not missing data.
+  const grid = $derived(g?.seasonGrid ?? { rounds: [], rows: [] });
+  const gridGuessers = $derived(grid.rows.filter((r) => r.attempts > 0));
+  const gridSilent = $derived(grid.rows.filter((r) => r.attempts === 0));
+  // Volume is encoded as bar LENGTH, accuracy as the fill inside it, both scaled
+  // to the busiest guesser. That is the whole point of the bar: a 100% hit rate
+  // on one guess renders as a stub you can barely see, so the thin sample behind
+  // a good percentage is visible rather than something the reader has to be told.
+  const gridMax = $derived(Math.max(1, ...grid.rows.map((r) => r.attempts)));
+  const gridNotes = $derived(
+    grid.rows.flatMap((r) =>
+      r.cells.filter((c) => !!c?.note).map((c) => ({ name: r.name, note: c!.note as string })),
+    ),
+  );
+  // NB the component already has a `pct(rate)`; this one takes the pair.
+  const gridPct = (correct: number, attempts: number) =>
+    attempts > 0 ? `${Math.round((correct / attempts) * 100)}%` : '—';
+  // Same native-tooltip idiom as rosterTitle above: no JS, no popover, and it
+  // degrades to nothing in the exported PNG rather than to a broken control.
+  const gridRowTitle = (row: {
+    name: string;
+    correct: number;
+    attempts: number;
+    guesses: { roundLabel: string; guessedName: string; actualName: string; correct: boolean }[];
+  }) =>
+    `${row.name} — ${row.correct}/${row.attempts}\n` +
+    row.guesses
+      .map(
+        (gg) =>
+          `${gg.correct ? '✓' : '✗'} R${gg.roundLabel} · said ${gg.guessedName}` +
+          (gg.correct ? '' : ` · was ${gg.actualName}`),
+      )
+      .join('\n');
   const roster = $derived(g?.roster ?? []);
   // Full per-person history as native tooltip text — no JS, no CSS popover, and
   // it degrades to nothing in print rather than to a broken control.
@@ -375,10 +409,177 @@
         {/if}
       </div>
     </div>
+
+    <!-- ── the room's ledger ── -->
+    {#if gridGuessers.length > 1}
+      <div class="gsl-grid">
+        <h5>everyone who has ever guessed</h5>
+        <p class="gsl-miniexp">
+          every ballot comment this season that <b>names a submitter</b> — not just his.
+          Read across: guesses landed over guesses made, round by round.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th class="who">Round</th>
+              {#each grid.rounds as r (r.roundId)}<th>{r.label}</th>{/each}
+              <th class="tot">season</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each gridGuessers as row (row.playerId)}
+              <tr>
+                <th class="who">{row.name}</th>
+                {#each row.cells as cell, i (i)}
+                  <td
+                    class:hit={!!cell && cell.correct > 0}
+                    class:miss={!!cell && cell.attempts > 0 && cell.correct === 0}
+                    class:none={!cell}
+                  >
+                    {#if cell}{cell.display ?? `${cell.correct}/${cell.attempts}`}{:else}·{/if}
+                  </td>
+                {/each}
+                <td class="tot" title={gridRowTitle(row)}>
+                  <span class="gsl-bar" aria-hidden="true">
+                    <span class="hit" style="width:{(row.correct / gridMax) * 100}%"></span>
+                    <span class="miss" style="width:{((row.attempts - row.correct) / gridMax) * 100}%"></span>
+                  </span>
+                  <span class="num">{row.correct}/{row.attempts} <small>{gridPct(row.correct, row.attempts)}</small></span>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+        {#if gridSilent.length}
+          <p class="gsl-silent">
+            never once guessed, all season: <b>{gridSilent.map((r) => r.name).join(', ')}</b>
+          </p>
+        {/if}
+        {#each gridNotes as n, i (i)}
+          <p class="gsl-gridnote"><b>{n.name}</b> {n.note}</p>
+        {/each}
+      </div>
+    {/if}
   {/if}
 </div>
 
 <style>
+  .gsl-grid {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule, rgba(255, 255, 255, 0.12));
+  }
+  .gsl-grid h5 {
+    margin: 0 0 4px;
+    font: 600 11px/1.2 var(--font-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-quiet);
+  }
+  .gsl-grid table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font: 400 12px/1.4 var(--font-body);
+    font-variant-numeric: tabular-nums;
+  }
+  .gsl-grid th,
+  .gsl-grid td {
+    padding: 4px 2px;
+    text-align: center;
+    color: var(--fg-quiet);
+  }
+  .gsl-grid thead th {
+    font: 600 10px/1 var(--font-body);
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--rule, rgba(255, 255, 255, 0.12));
+  }
+  .gsl-grid th.who {
+    width: 27%;
+    text-align: left;
+    font: 400 12px/1.4 var(--font-body);
+    color: var(--fg);
+    white-space: nowrap;
+  }
+  /* A round with hits reads as normal body text; a round that went 0-for is the
+     thing worth marking, so red is spent on the failure rather than the score. */
+  .gsl-grid td.hit {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .gsl-grid td.miss {
+    color: var(--ember, #c0503a);
+    font-weight: 600;
+  }
+  .gsl-grid td.none {
+    color: var(--fg-faint, rgba(255, 255, 255, 0.25));
+  }
+  .gsl-grid td.tot,
+  .gsl-grid th.tot {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--fg);
+  }
+  .gsl-grid td.tot {
+    width: 27%;
+  }
+  .gsl-bar {
+    display: flex;
+    height: 6px;
+    margin-bottom: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--fg-faint, rgba(255, 255, 255, 0.08));
+  }
+  .gsl-bar .hit {
+    background: var(--moss, #6f8f5a);
+  }
+  .gsl-bar .miss {
+    background: var(--fg-faint, rgba(255, 255, 255, 0.22));
+  }
+  .gsl-grid .num {
+    display: block;
+    line-height: 1.2;
+  }
+  /* Signals the hover history without inventing a control that print can't show. */
+  .gsl-grid td.tot {
+    cursor: help;
+    border-bottom: 1px dotted var(--fg-faint, rgba(255, 255, 255, 0.28));
+  }
+  .gsl-grid td.tot small {
+    color: var(--fg-quiet);
+    font-size: 10px;
+  }
+  .gsl-silent {
+    margin: 10px 0 0;
+    font: 400 12px/1.5 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-silent b {
+    color: var(--fg);
+  }
+  .gsl-gridnote {
+    margin: 8px 0 0;
+    font: 400 11px/1.55 var(--font-body);
+    color: var(--fg-quiet);
+  }
+  .gsl-gridnote b {
+    color: var(--fg);
+  }
+  /* Phone: the round columns are the first thing to go illegible. */
+  @media (max-width: 520px) {
+    .gsl-grid table {
+      font-size: 11px;
+    }
+    .gsl-grid th.who {
+      width: 32%;
+      font-size: 11px;
+    }
+    .gsl-grid td.tot small {
+      display: none;
+    }
+  }
+
   .gsl {
     display: flex;
     flex-direction: column;

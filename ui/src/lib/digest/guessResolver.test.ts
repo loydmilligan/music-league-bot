@@ -97,3 +97,36 @@ describe('buildGuessMatcher: real production cases (round 163)', () => {
     });
   });
 });
+
+// ── exactOnly ─────────────────────────────────────────────────────────────────
+//
+// Fuzzy matching refuses to turn an English WORD into a name, but the list it
+// checks holds only the 10k most common words — so a coined nickname can still
+// fuzz into something that is obviously not a guess. All three cases below were
+// live in the Boarz corpus the day the aliases were added.
+describe('exactOnly candidates', () => {
+  const match = buildGuessMatcher([
+    { playerId: 30, label: 'Koshel', exactOnly: true },
+    { playerId: 32, label: 'Conie', exactOnly: true },
+    { playerId: 33, label: 'Stein', exactOnly: true },
+  ]);
+
+  it('still resolves the nickname as written', () => {
+    expect(match('good enough to overcome that, koshel')).toBe(30);
+    expect(match('Conie no play right')).toBe(32);
+    expect(match('new to me - stein')).toBe(33);
+  });
+
+  it('does not reach a real word one edit away', () => {
+    // "kosher" -> Koshel, and it is not in the common-word list.
+    expect(match('a kosher deli')).toBeNull();
+    // JB wrote "Con Te Partirò" in R145; despaced, "Con Te" -> "conte" -> Conie.
+    expect(match('The one submission known to me besides Tequila and Con Te Partito')).toBeNull();
+    expect(match('stain')).toBeNull();
+  });
+
+  it('leaves fuzzy matching on for candidates that did not opt in', () => {
+    const fuzzy = buildGuessMatcher([{ playerId: 30, label: 'Koshel' }]);
+    expect(fuzzy('a kosher deli')).toBe(30);
+  });
+});

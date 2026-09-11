@@ -292,3 +292,71 @@ describe('getGuesserData', () => {
     expect(g.littermates).toBeNull();
   });
 });
+
+// ── Boarz nickname aliases ────────────────────────────────────────────────────
+//
+// R150 scored 3/6 instead of 5/9 because four of Matt's coinages reached no
+// candidate: "clam" and "koz" are too short to fuzzy-match at all, "koshel" is
+// three edits from "Koziol", and "Conie" is two from "Conor". Each assertion
+// here fails if its alias is dropped from LEAGUE_ALIASES['boarz-ii-men'] — except
+// "stein", which also resolves by edit-distance-1 off "Steiny"; its alias is belt
+// and braces against "stein" entering the English word list, so that one row
+// asserts the behaviour without protecting the alias.
+describe('boarz-ii-men guess aliases', () => {
+  const nicknames: [comment: string, roster: string][] = [
+    ['close enough - clam', 'Clements'],
+    ['good enough to overcome that, koshel', 'Grant Koziol'],
+    ['Koz.', 'Grant Koziol'],
+    ['Conie no play right', 'CJ Wookie'],
+    ['new to me - stein', 'Steiny'],
+  ];
+
+  // One song per nickname, submitted by the person that nickname names, so a
+  // resolved guess is a CORRECT guess and an unresolved one is not an attempt.
+  function boarzDb(): Database.Database {
+    const b = openLeagueDb(':memory:');
+    b.prepare("INSERT INTO leagues (id, slug, name) VALUES (1, 'boarz-ii-men', 'Boarz II Men')").run();
+    b.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 1, 'active')").run();
+    b.prepare('INSERT INTO players (id, name) VALUES (1, ?)').run('Matt Mariani');
+    b.prepare("INSERT INTO competitors (id, ml_competitor_id, name, player_id) VALUES (1, 'ml-matt', 'Mashew', 1)").run();
+    b.prepare("INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (1, 1, 'r-1', 'R', '2026-01-01T00:00:00Z')").run();
+
+    const insertPlayer = b.prepare('INSERT INTO players (id, name) VALUES (?, ?)');
+    const insertCompetitor = b.prepare(
+      'INSERT INTO competitors (id, ml_competitor_id, name, player_id) VALUES (?, ?, ?, ?)',
+    );
+    const insertSub = b.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (1, ?, ?, ?, 'Artist', '2026-01-01T01:00:00Z')`,
+    );
+    const insertVote = b.prepare(
+      `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+       VALUES (1, 1, ?, 1, ?, '2026-01-01T12:00:00Z')`,
+    );
+
+    // One competitor per distinct roster name — two rows sharing a name would
+    // make the alias resolve to the first of them and score the second wrong.
+    const idOf = new Map<string, number>();
+    nicknames.forEach(([comment, roster], i) => {
+      let id = idOf.get(roster);
+      if (id === undefined) {
+        id = idOf.size + 2; // 1 is the guesser
+        idOf.set(roster, id);
+        insertPlayer.run(id, roster);
+        insertCompetitor.run(id, `ml-${id}`, roster, id);
+      }
+      insertSub.run(id, `uri-${i}`, `Song ${i}`);
+      insertVote.run(`uri-${i}`, comment);
+    });
+    return b;
+  }
+
+  it('resolves every R150 nickname to the right player', () => {
+    const data = getGuesserData(boarzDb(), 1);
+    expect(data.weekly.guesses.map((g) => [g.comment, g.guessedName])).toEqual(
+      nicknames.map(([comment, roster]) => [comment, roster]),
+    );
+    expect(data.weekly.attempts).toBe(nicknames.length);
+    expect(data.weekly.correct).toBe(nicknames.length);
+  });
+});

@@ -14,6 +14,18 @@ export interface GuessCandidate {
    * three rounds, one of them a correct guess.
    */
   allowShort?: boolean;
+  /**
+   * Match this label verbatim only — never at edit-distance 1.
+   *
+   * The fuzzy rule exists so a typo'd nickname still resolves, and it refuses to
+   * fuzz a run that is a real English word. But the word list holds the 10k most
+   * common words, and a coined nickname is usually one edit from something that
+   * is a word to a human and absent from that list. Every case so far is a
+   * hand-curated alias: "Koshel" reaches "kosher", "Conie" reaches the "Con Te"
+   * of Con Te Partirò, "Stein" reaches "stain". A nickname someone chose should
+   * resolve when it is written, not when something else is.
+   */
+  exactOnly?: boolean;
 }
 
 /** Lowercase, strip everything but letters/digits — fully despaced/de-punctuated. */
@@ -83,7 +95,13 @@ function isEnglishWord(w: string): boolean {
 export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: string) => number | null {
   // Precompute despaced/de-punctuated keys, preserving original candidate order for tie-breaks.
   const entries = candidates
-    .map((c, idx) => ({ playerId: c.playerId, key: lettersOnly(c.label), idx, min: c.allowShort ? 2 : 3 }))
+    .map((c, idx) => ({
+      playerId: c.playerId,
+      key: lettersOnly(c.label),
+      idx,
+      min: c.allowShort ? 2 : 3,
+      exactOnly: !!c.exactOnly,
+    }))
     .filter((e) => e.key.length >= e.min);
 
   return (comment: string): number | null => {
@@ -116,6 +134,7 @@ export function buildGuessMatcher(candidates: GuessCandidate[]): (comment: strin
         const exact = runKey === key;
         const fuzzy =
           !exact &&
+          !entry.exactOnly &&
           key.length >= 5 &&
           runKey.length >= 5 &&
           !isEnglishWord(runKey) &&
