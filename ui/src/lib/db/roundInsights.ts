@@ -67,6 +67,12 @@ export interface RoundArtistLandscape {
  * `quotes`/`metrics`) still renders: the live R147 payload predates this schema
  * and must not break.
  */
+/** One numbered sense, optionally with its own illustrating clip. */
+export interface PhraseSense {
+  text: string;
+  media?: { src?: string; poster?: string; alt?: string; caption?: string };
+}
+
 export interface PhraseOfRound {
   /**
    * Forward-compatible layout knob. Today the only layout is `dictionary`, and
@@ -82,6 +88,18 @@ export interface PhraseOfRound {
   /** the numbered entry; `gloss` is the older name for the same field */
   definition?: string;
   gloss?: string;
+  /**
+   * Multiple numbered senses, when one gloss will not hold the word. Falls back
+   * to `definition`/`gloss` as sense 1 when absent, so every payload written
+   * before this existed still renders.
+   *
+   * A sense may be a bare string, or an object carrying its own clip — R150
+   * needs the second: sense 1 is the four vehicles the league actually welded
+   * together (photographs) and sense 2 is the same four words read by someone
+   * who has never seen a car (paintings). One shared clip under both senses
+   * would collapse that distinction, which is the whole point of the split.
+   */
+  definitions?: (string | PhraseSense)[];
   /**
    * Who coined it, on whom, when, and why — rendered as the origin line.
    * `date` is a display string, never parsed: CD's `on:` was unusable because

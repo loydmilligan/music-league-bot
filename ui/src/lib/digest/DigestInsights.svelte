@@ -40,6 +40,26 @@
   // export path prints the poster still instead.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
   const phraseDefinition = $derived(phrase?.definition?.trim() || phrase?.gloss?.trim() || '');
+  // A dictionary entry can carry more than one sense. `definitions[]` wins when
+  // present; otherwise the single legacy `definition` becomes sense 1, so older
+  // payloads render exactly as they did.
+  const phraseDefinitions = $derived.by(() => {
+    const raw = phrase?.definitions ?? [];
+    const senses = raw
+      .map((d) => (typeof d === 'string' ? { text: d.trim() } : { text: (d?.text ?? '').trim(), media: d?.media }))
+      .filter((d) => !!d.text);
+    if (senses.length) return senses;
+    return phraseDefinition ? [{ text: phraseDefinition, media: undefined }] : [];
+  });
+  // Export screenshots a still, so a sense clip prints its poster; without a
+  // poster there is nothing safe to print and the slot is dropped entirely.
+  const senseMedia = (m?: { src?: string; poster?: string; alt?: string; caption?: string }) => {
+    if (!m) return null;
+    const src = safeUrl(m.src);
+    const poster = safeUrl(m.poster);
+    if (isExport ? !poster : !src && !poster) return null;
+    return { src, poster, alt: m.alt ?? '', caption: m.caption ?? '' };
+  };
   // New `usages[]`, else the pre-redesign `quotes[]` the live R147 draft carries.
   const phraseUsages = $derived(
     (phrase?.usages?.length
@@ -260,7 +280,21 @@
               {#if phraseMedia.caption}<figcaption>{phraseMedia.caption}</figcaption>{/if}
             </figure>
           {/if}
-          {#if phraseDefinition}<p class="di-def"><span class="di-def-num">1.</span>{phraseDefinition}</p>{/if}
+          {#each phraseDefinitions as def, i (i)}
+            <p class="di-def"><span class="di-def-num">{i + 1}.</span>{def.text}</p>
+            {@const sm = senseMedia(def.media)}
+            {#if sm}
+              <figure class="di-sense-clip">
+                {#if isExport || !sm.src}
+                  <img src={sm.poster} alt={sm.alt} />
+                {:else}
+                  <!-- svelte-ignore a11y_media_has_caption -->
+                  <video src={sm.src} poster={sm.poster || undefined} muted loop autoplay playsinline></video>
+                {/if}
+                {#if sm.caption}<figcaption>{sm.caption}</figcaption>{/if}
+              </figure>
+            {/if}
+          {/each}
           {#if phraseMetrics.length}
             <div class="di-feature-metrics">{#each phraseMetrics as m, i (i)}<strong>{m.value} <small>{m.label}</small></strong>{/each}</div>
           {/if}
@@ -359,7 +393,11 @@
   .di-term { margin:2px 0 0; color:var(--mash-pulp); font:800 clamp(28px,6.5vw,34px)/.95 var(--font-display); letter-spacing:-.02em; }
   .di-pron { margin:7px 0 0; color:var(--fg-quiet); font:400 14px/1.4 var(--font-mono); }
   .di-pos { margin-left:8px; color:var(--fg-muted); font-weight:600; }
-  .di-def { margin:0; max-width:60ch; color:var(--fg-2); font:400 14px/1.6 var(--font-body); }
+  .di-def { margin:0 0 10px; max-width:60ch; color:var(--fg-2); font:400 14px/1.6 var(--font-body); }
+  .di-def:last-of-type { margin-bottom:0; }
+  .di-sense-clip { margin:10px 0 18px; max-width:60ch; }
+  .di-sense-clip video, .di-sense-clip img { display:block; width:100%; height:auto; border-radius:6px; border:1px solid var(--line); }
+  .di-sense-clip figcaption { margin-top:6px; color:var(--fg-quiet); font:400 10.5px/1.4 var(--font-mono); letter-spacing:.02em; }
   .di-def-num { margin-right:8px; color:var(--mash-pulp); font:700 12px/1 var(--font-mono); }
   .di-usages { margin-top:14px; display:grid; gap:10px; }
   .di-usage { padding-left:13px; border-left:2px solid var(--line-strong); }

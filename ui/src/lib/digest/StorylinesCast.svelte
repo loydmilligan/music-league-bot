@@ -237,7 +237,9 @@
     min-width: 0;
     overflow-wrap: break-word;
     color: var(--mash-pulp);
-    font: 700 10px/1.3 var(--font-mono);
+    /* A touch larger than the player name beside it: the archetype is the
+       headline of the entry, and at 10px it read as a label rather than a name. */
+    font: 700 12px/1.3 var(--font-mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
