@@ -649,7 +649,7 @@
             {#if panel.interchangeables}
               <div class="gsl-sp-sub">1 · the interchangeables</div>
               <svg class="gsl-sp-svg" viewBox="0 0 360 152" width="100%" aria-hidden="true">
-                {#each panel.interchangeables.spokes as sp, i (sp.name)}
+                {#each panel.interchangeables.spokes as sp, i (i)}
                   <path
                     d={i === 0 ? 'M70,118 Q120,52 183,40' : 'M300,118 Q250,52 187,40'}
                     fill="none"

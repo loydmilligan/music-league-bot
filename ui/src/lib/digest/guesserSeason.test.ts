@@ -37,6 +37,18 @@ describe('shortNames', () => {
     expect(s.get('Jon Black')).toBe('Jon');
   });
 
+  it('never gives two people the same word to be known by', () => {
+    // Two Daves push both to surnames, and one of those surnames is somebody
+    // else's first name: "Jensen" would name two players at once — one player as
+    // far as the reader (and as far as an {#each} key) is concerned.
+    const roster = ['Dave Jensen', 'Dave Steingart', 'Jensen Miller'];
+    const s = shortNames(roster);
+    expect(s.get('Dave Jensen')).not.toBe(s.get('Jensen Miller'));
+    expect(new Set(roster.map((n) => s.get(n))).size).toBe(roster.length);
+    // The players who never collided keep their short name.
+    expect(s.get('Dave Steingart')).toBe('Steingart');
+  });
+
   it('applies a league nickname override only inside that league', () => {
     expect(shortNames(['Darren Paletz'], 'boarz-ii-men').get('Darren Paletz')).toBe('Paletz');
     expect(shortNames(['Darren Paletz'], 'sssc').get('Darren Paletz')).toBe('Darren');

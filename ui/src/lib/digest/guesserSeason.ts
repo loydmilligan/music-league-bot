@@ -141,6 +141,15 @@ export function shortNames(names: string[], leagueSlug = ''): Map<string, string
     else if ((firsts.get(first) ?? 0) > 1 && parts.length > 1) out.set(n, parts[parts.length - 1]);
     else out.set(n, first);
   }
+  // Last resort: two people must never render as the same word. Two Jimmys, or
+  // a surname that collides with someone's first name, would otherwise print as
+  // one player — and, keyed in an {#each}, take the whole page down with a
+  // duplicate-key hydration crash.
+  const taken = new Map<string, number>();
+  for (const v of out.values()) taken.set(v, (taken.get(v) ?? 0) + 1);
+  for (const [full, shortForm] of out) {
+    if ((taken.get(shortForm) ?? 0) > 1) out.set(full, full);
+  }
   return out;
 }
 
