@@ -21,7 +21,21 @@
     title?: string;
     body?: string;
     items?: unknown[];
+    /** Hand-authored aside after the body, optionally with a link card. */
+    postscript?: { text?: string; link?: { url?: string; title?: string; thumb?: string; source?: string } };
   };
+
+  /** The URL, but only if it is one and only if it is http(s). Else empty. */
+  function safeUrl(url: string | undefined): string {
+    const raw = (url ?? '').trim();
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? raw : '';
+    } catch {
+      return '';
+    }
+  }
 
   // Cover A/B data shape (Contract 1 from sprint-44 coord-doc).
   // Null when no pipeline cover exists for this section.
@@ -649,6 +663,26 @@
       <p class="dg-section-body">{#each boldRuns(c.body) as r, ri (ri)}{#if r.b}<strong>{r.t}</strong>{:else}{r.t}{/if}{/each}</p>
     {/if}
 
+    {#if c.postscript?.text || safeUrl(c.postscript?.link?.url)}
+      {@const ps = c.postscript}
+      {@const psUrl = safeUrl(ps?.link?.url)}
+      {@const psThumb = safeUrl(ps?.link?.thumb)}
+      <div class="dg-postscript">
+        {#if ps?.text}
+          <p class="dg-section-body">{#each boldRuns(ps.text) as r, ri (ri)}{#if r.b}<strong>{r.t}</strong>{:else}{r.t}{/if}{/each}</p>
+        {/if}
+        {#if psUrl}
+          <a class="dg-ps-card" href={psUrl} target="_blank" rel="noopener noreferrer">
+            {#if psThumb}<img class="dg-ps-thumb" src={psThumb} alt={ps?.link?.title ?? ''} loading="lazy" />{/if}
+            <span class="dg-ps-meta">
+              <span class="dg-ps-title">{ps?.link?.title ?? psUrl}</span>
+              {#if ps?.link?.source}<span class="dg-ps-source">{ps.link.source}</span>{/if}
+            </span>
+          </a>
+        {/if}
+      </div>
+    {/if}
+
     {#if !items.length && !c.body}
       <p class="dg-section-body dg-section-empty">(no content)</p>
     {/if}
@@ -707,6 +741,47 @@
     color: var(--fg-2);
     font: 400 13px/1.55 var(--font-body);
     white-space: pre-wrap;
+  }
+  .dg-postscript {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line, rgba(255, 255, 255, 0.12));
+  }
+  .dg-ps-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    border-radius: 6px;
+    color: inherit;
+    text-decoration: none;
+    max-width: 440px;
+  }
+  .dg-ps-card:hover {
+    border-color: var(--accent, #ff5b2e);
+  }
+  .dg-ps-thumb {
+    width: 128px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex: none;
+  }
+  .dg-ps-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .dg-ps-title {
+    font: 600 13px/1.3 var(--font-body);
+    color: var(--fg-1, inherit);
+  }
+  .dg-ps-source {
+    font: 400 11px/1.2 var(--font-mono, monospace);
+    color: var(--fg-quiet);
   }
   .dg-section-empty {
     color: var(--fg-quiet);

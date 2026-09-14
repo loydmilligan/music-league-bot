@@ -50,6 +50,10 @@ podium = {
         },
     ],
     "body": "Jon Black wins Round 8 with 20 points, his first gold of Season Two, and he did it with the song he didn't want to send. His vote comment on \"Everlong\" tells the whole story: \"This was my original pick, but I received the dreaded red message. I suppose I must score accordingly.\" Somebody got there first, and that somebody was Sarah S. So Jon went scouring — \"I was pleasantly surprised to find their video when scouring YouTube for a music league submission\" — came back with a song he first heard on Guitar Hero 3 in 2008, and beat his own first choice by three.\n\nThe round was settled by one ballot. Voltron's YoungLion spent all twelve upvote points on exactly two songs — 6 on \"Knights of Cydonia,\" 6 on \"Hurt\" — and a downvote on Bad Bunny. Without it, \"Everlong\" wins.\n\nThe season table moved more than usual. Jon climbs from 4th to 3rd at 98, Layous jumps from 7th to 4th, and Sarah Z drops from 3rd to 5th. Mara (109) and Sarah S (105) still hold the top two.",
+    "postscript": {
+        "text": "Ding dong, the Yap King is dead. Mashew, the long-time holder of the Chatty Cathy award and the chat's top talker in six of the last seven rounds, has finally been deposed. This week he finished third, behind Michael Black (70) and Michael Layous (52). In honor of the two Mikes taking the top two spots, and on behalf of everyone who has to scroll past them, the first annual Please Stop Talking award comes with a song that captures how we all feel:",
+        "link": {"url": "https://www.youtube.com/watch?v=aPPI2yyxrOM", "title": "Peelander-Z — So Many Mike", "thumb": "https://i.ytimg.com/vi/aPPI2yyxrOM/hqdefault.jpg", "source": "youtube · official video"},
+    },
 }
 
 villain = {
