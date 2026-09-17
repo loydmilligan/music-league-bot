@@ -5,43 +5,47 @@
 storylines:
   title: The Usual Suspects
   cast:
-    - name: The Appellant
+    - name: The Absentee Voter
       player: Grant Koziol
-      type: claimant
+      type: non-filer
       style: quote-led
-      motif: litigates the score he then declines to defend
+      motif: lobbies all week for points, then does not vote
       note: >
-        He spent the week negotiating his position instead of occupying it. He opened by
-        admitting he had not read it, took "lame pick" personally, and conceded the premise
-        outright. Then he filed his petition, for five points from a round two months gone.
-        The league leader granted it in three words and Grant impeached him for it, before
-        stating the whole of his ambition: to place above Steiny, and maybe Shane.
+        He submitted the best-scoring song in the round and finished ninth, because
+        he never filed a ballot. Ten upvote points from six people, voided; the one
+        downvote left standing; final score −1. The league noticed before he did.
+        Jensen, at 6:34 in the morning: "Submitter of winning song doesn't vote,
+        fascinating." Jon, eleven minutes later: "Congrats, Kozh, on your first win!
+        . . . Oh, uh, never mind." Grant surfaced four and a half hours after that,
+        with an explanation about notifications.
 
-        He was tagged to vote twice. He did not vote. His song led the round on raw points
-        and the no-vote penalty took it to −1. Steiny — the exact man named in the petition —
-        won. Shane finished below him, which is the one clause that was granted. His response
-        arrived four and a half hours after Jon had already congratulated and un-congratulated
-        him.
+        What makes it is the week that came first. He had spent it lobbying — opening
+        with the admission that he had not read any of it, then petitioning to have
+        five points restored from a round two months gone, then impeaching the league
+        leader for granting it too easily, then naming his actual ambition: to place
+        above Steiny, and maybe Shane. He was tagged to vote twice. Steiny won the
+        round outright. Shane finished below him, which is the one clause of the
+        petition that was granted, and it was granted by the same penalty that cost
+        him the win.
       evidence:
         - Btw I’ve not read the last few days of banter hope it was good
-        - I am the go to for lame pick?
-        - I used to think I had good taste in music until I joined this club
         - Can I add back my 5 deducted from alanis ?
         - Or an asterisk of some sort
         - Spoken like a man who’s score is not threatened
         - I just want to place above steiny and maybe Shane
+        - I’m taking my 5 points back
         - Oh fk I missed the vote - normally it sends me an alert !!
       highlight:
-        - Or an asterisk of some sort
+        - Oh fk I missed the vote
         - maybe Shane
-        - normally it sends me an alert
+        - Or an asterisk of some sort
       stats:
-        - value: '5'
-          label: points formally petitioned for
         - value: '0'
           label: ballots filed
-        - value: '42'
-          label: chat messages, none on results day
+        - value: '10'
+          label: upvote points voided, leaving −1
+        - value: '5'
+          label: points he petitioned to get back
 
     - name: The Corrections Desk
       player: Jimmy Troy

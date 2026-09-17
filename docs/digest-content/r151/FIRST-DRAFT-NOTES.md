@@ -683,3 +683,24 @@ at the fair", "smoking armadillos", and the guesser's 2/9 all present.
 Re-attaching after any future full regeneration: re-run the same insert from
 `design/r151-regulars-coinage.yaml` — a regen drops the hand-inserted storylines
 row and resets `stats_content_json`.
+
+
+## 17. Regulars entry renamed (2026-09-17)
+
+**The Appellant → The Absentee Voter** (Grant Koziol), per Matt. The entry now
+leads with the missed ballot rather than the points petition:
+
+> He submitted the best-scoring song in the round and finished ninth, because he
+> never filed a ballot. Ten upvote points from six people, voided; the one
+> downvote left standing; final score −1. The league noticed before he did.
+
+The week of lobbying — the unread chat, the five-point petition, the asterisk,
+"I just want to place above steiny and maybe Shane" — is now the setup, and the
+payoff is that Steiny won the round outright while Shane finished below him,
+granted by the same penalty that cost Grant the win. Headline quote is "Oh fk I
+missed the vote."
+
+Stats on the card: `0` ballots filed · `10` upvote points voided, leaving −1 ·
+`5` points he petitioned to get back.
+
+Re-attached in place; chat content asserted byte-identical again.
