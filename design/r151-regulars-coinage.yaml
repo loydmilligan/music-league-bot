@@ -1,0 +1,121 @@
+# R151 (boarz-ii-men) "Plot so Thicc" — hand-authored Regulars + Coinage.
+# Drafted 2026-09-17. Chat window Sep 10 06:30Z – Sep 17 06:30Z, 329 messages
+# (Sep 12–17 recovered from WhatsApp export after the relay outage).
+# Neither Regular name has been used in this league before.
+storylines:
+  title: The Usual Suspects
+  cast:
+    - name: The Appellant
+      player: Grant Koziol
+      type: claimant
+      style: quote-led
+      motif: litigates the score he then declines to defend
+      note: >
+        He spent the week negotiating his position instead of occupying it. He opened by
+        admitting he had not read it, took "lame pick" personally, and conceded the premise
+        outright. Then he filed his petition, for five points from a round two months gone.
+        The league leader granted it in three words and Grant impeached him for it, before
+        stating the whole of his ambition: to place above Steiny, and maybe Shane.
+
+        He was tagged to vote twice. He did not vote. His song led the round on raw points
+        and the no-vote penalty took it to −1. Steiny — the exact man named in the petition —
+        won. Shane finished below him, which is the one clause that was granted. His response
+        arrived four and a half hours after Jon had already congratulated and un-congratulated
+        him.
+      evidence:
+        - Btw I’ve not read the last few days of banter hope it was good
+        - I am the go to for lame pick?
+        - I used to think I had good taste in music until I joined this club
+        - Can I add back my 5 deducted from alanis ?
+        - Or an asterisk of some sort
+        - Spoken like a man who’s score is not threatened
+        - I just want to place above steiny and maybe Shane
+        - Oh fk I missed the vote - normally it sends me an alert !!
+      highlight:
+        - Or an asterisk of some sort
+        - maybe Shane
+        - normally it sends me an alert
+      stats:
+        - value: '5'
+          label: points formally petitioned for
+        - value: '0'
+          label: ballots filed
+        - value: '42'
+          label: chat messages, none on results day
+
+    - name: The Corrections Desk
+      player: Jimmy Troy
+      type: unsolicited fact-checker
+      style: quote-led
+      motif: files the correction, then the correction to the correction
+      note: >
+        Nobody asks him for a ruling and he issues one anyway. When Clements said a singer
+        was permanently paralyzed, Jimmy arrived with photographic rebuttal — and then,
+        ninety seconds later, retracted the whole filing. On the ballot he is the same man,
+        keeping records no one requested and benchmarking against his own worst humiliation.
+
+        His masterwork came a day after voting closed, when the result could not be changed:
+        a motion to strike Paletz's ballot comment, seconded by Shane and Clements, and
+        closing on a finding about the word "story". Conor filed the dissent on Paletz's
+        behalf. Paletz, who wrote nothing all week, was not present for any of it.
+      evidence:
+        - That is false and not true!
+        - Sorry I see Clem was not talking about Lisa Loeb
+        - First Beatles track for the Boarz ML!
+        - Not as good as Tim Bootyman Wilson, but good enough for 1 upvote
+        - I think Paletz should have to delete his comment about Juicy not being a story.
+        - Paletz must have been confused and thought the theme was about “a single floor level of a building”
+      highlight:
+        - That is false and not true!
+        - a single floor level of a building
+      stats:
+        - value: '2'
+          label: corrections filed, one retracted
+        - value: '1'
+          label: motion to strike, filed after the verdict
+  note: ''
+
+phrase:
+  style: dictionary
+  term: killed at the fair
+  part_of_speech: phrase · unit of Bakersfield
+  coined:
+    by: Dave Jensen
+    at: Matt
+    context: >
+      who had just mourned learning that his hometown band's best song was a cover,
+      and offered in mitigation that they went over well at the county fair
+    date: '2026-09-16'
+  stats:
+    uses: 4
+    speakers: 3
+    prior_rounds: 0
+  definitions:
+    - text: >
+        The highest distinction available to a Bakersfield band: to have gone over well at
+        the county fair. Offered as a superlative rather than a description — the ceiling of
+        local achievement, and the only credential the room accepts without argument. Newest
+        entry in the Bakersfield Ledger.
+    - text: >
+        Armadillo mortality by smoke inhalation. Conor, twice, declining the idiom and
+        reading the sentence exactly as written — first attributing the deaths to the fair,
+        then to the air generally. No ruling has been issued on which sense governs.
+  usages:
+    - label: the memory
+      speaker: Matt
+      text: I still remember the disappointment learning it wasn't a smokin armadillo's original
+    - label: the citation
+      speaker: Matt
+      text: they killed at the fair
+    - label: the unit is declared
+      speaker: Dave Jensen
+      text: It doesn't get more Bakersfield than "The smoking armadillos killed at the fair"
+    - label: the first misreading
+      speaker: Conor
+      text: The smoke from the fair killed some armadillos?
+    - label: and the second, escalated
+      speaker: Conor
+      text: The armadillos from the fair got killed by the smoke we breathe every day?
+    - label: the fair is defended
+      speaker: Matt
+      text: You didn't go to a jumped up carnival every year that smelled like cow manure in your youths

@@ -12,7 +12,7 @@ Usage:
 Idempotent: re-running never double-inserts (content-hash dedup).
 """
 import re, sys, hashlib, argparse, sqlite3, zipfile, tempfile, os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent.parent / 'data' / 'league.db'
@@ -30,8 +30,14 @@ EDIT_SUFFIX = ' <This message was edited>'
 MENTION_STRIP = str.maketrans('', '', '⁨⁩')
 
 
-def parse_chat(path: str):
-    """Yield (sender, ts_ms, text) tuples, joining multi-line messages."""
+def parse_chat(path: str, tz_offset_hours: float = 0.0):
+    """Yield (sender, ts_ms, text) tuples, joining multi-line messages.
+
+    WhatsApp writes export timestamps in the exporting phone's LOCAL time with no
+    zone marker. `tz_offset_hours` is added to reach UTC, so a PDT (UTC-7) export
+    needs `--tz-offset-hours 7`. Left at 0 the old behaviour is unchanged: local
+    time is stored as if it were already UTC.
+    """
     msgs = []
     with open(path, encoding='utf-8', errors='replace') as f:
         for raw in f:
@@ -51,7 +57,7 @@ def parse_chat(path: str):
                         dt = datetime.strptime(f'{date_str} {time_str}', '%m/%d/%Y %I:%M%p')
                     else:
                         dt = datetime.strptime(f'{date_str} {time_str}', '%m/%d/%y %I:%M%p')
-                    dt = dt.replace(tzinfo=timezone.utc)
+                    dt = dt.replace(tzinfo=timezone.utc) + timedelta(hours=tz_offset_hours)
                 except ValueError:
                     continue
                 msgs.append([m.group('sender').strip(), int(dt.timestamp() * 1000),
@@ -82,6 +88,12 @@ def main():
     ap.add_argument('--group', help='Group name (default: auto-detect from filename)')
     ap.add_argument('--db', default=str(DB_PATH), help='Path to league.db')
     ap.add_argument('--dry-run', action='store_true', help='Parse only, do not write to DB')
+    ap.add_argument('--tz-offset-hours', type=float, default=0.0,
+                    help='Hours to ADD to export timestamps to reach UTC (PDT export = 7)')
+    ap.add_argument('--since', default=None,
+                    help='Only import messages strictly AFTER this UTC ISO timestamp. Use the '
+                         'group\'s current MAX(ts) to fill a relay gap: export senders differ '
+                         'from relay senders, so the natural-key dedup cannot catch overlaps.')
     args = ap.parse_args()
 
     src_path = args.path
@@ -108,8 +120,15 @@ def main():
     print(f'Parsing {args.path}')
     print(f'Group:  {group}')
 
-    msgs = parse_chat(src_path)
+    msgs = parse_chat(src_path, args.tz_offset_hours)
     print(f'Parsed {len(msgs)} messages')
+
+    if args.since:
+        cutoff_ms = int(datetime.fromisoformat(
+            args.since.replace('Z', '+00:00')).timestamp() * 1000)
+        before = len(msgs)
+        msgs = [m for m in msgs if m[1] > cutoff_ms]
+        print(f'Filtered to {len(msgs)} after {args.since} (dropped {before - len(msgs)})')
 
     if tmp_file:
         os.unlink(tmp_file.name)
