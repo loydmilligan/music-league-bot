@@ -495,7 +495,10 @@ function buildSeasonGrid(
        FROM rounds r JOIN seasons s ON s.id = r.season_id
        WHERE s.league_id = ?
          AND EXISTS (SELECT 1 FROM votes v WHERE v.round_id = r.id AND TRIM(COALESCE(v.comment,'')) <> '')
-       ORDER BY r.id ASC`,
+       -- Play order, not id order: ids are assigned at import, so Boarz R153
+       -- (closed 2026-09-03) sorts after R150 and R151 and the grid rendered a
+       -- past round as if it came after them.
+       ORDER BY COALESCE(r.voting_deadline, r.submission_deadline, r.created_at) ASC, r.id ASC`,
     )
     .all(leagueId) as { roundId: number }[];
   if (roundRows.length === 0) return { rounds: [], rows: [] };
