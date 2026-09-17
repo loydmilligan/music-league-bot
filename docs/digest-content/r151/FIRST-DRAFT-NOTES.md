@@ -564,3 +564,76 @@ is a stale R150-era snapshot sitting on top of both bugs.
 
 **Until these are fixed, every podium, villain and standings number in this
 digest has to be hand-checked against `cli-web-musicleague votes list`.**
+
+---
+---
+
+# UPDATE 2 — scoring bugs fixed, draft regenerated correctly
+
+Current draft: **`draft-151-862c87d0`**. Commits `20a7b84`, `bf2217b`, `7a89181`.
+**Supersedes §0, §12 and §13.**
+
+## 14. What was fixed
+
+Three occurrences of two defects, in three independent scoring paths:
+
+| Path | Defect | Fix |
+|---|---|---|
+| `standings.ts` (leaderboard) | raw `SUM(v.points)`; rounds `ORDER BY id` | both |
+| `seasonData.ts` (season songs) | raw `SUM(v.points)`; rounds `ORDER BY id` | both |
+| `llm.ts` `gatherRoundData` (podium/villain/consensus + cross-round bundle) | raw `SUM(v.points)`; **no tiebreak cascade at all** | both + cascade |
+| `guesserInsights.ts` `buildSeasonGrid` | rounds `ORDER BY id` | ordering |
+
+Both rules now live in one module, `ui/src/lib/db/scoring.ts`, because the three
+paths score independently and a rule written in one silently disagrees with the
+others — which is exactly how a correct standings block ended up printed directly
+above a podium that still crowned Grant.
+
+**Verified:** `computeStandings(db, 151)` now reproduces Music League's official
+board exactly — all ten players and the ranking order. Stored standings adopted;
+`reconcile: match`.
+
+**Tests:** 7 added across `scoring.test.ts` and `standings.test.ts`, every one
+mutation-tested — reverting the penalty fails two, reverting the ordering fails
+two, making upvoter counts penalty-blind fails one, dropping the cascade fails
+two. Full suite: **14 pre-existing failures before and after**, 2304 passing.
+
+**Deployed:** `bot-ui` rebuilt and force-recreated three times; bundle asserted
+in-container each time.
+
+### ⚠ One thing to decide: SSSC
+Applying the penalty changes **4 SSSC players**, two of them to zero (Lexa Prole
+51→0, Heath DG 47→0, Timmywhatup 203→165, bump versino 156→129). Those are
+genuine non-voters — SSSC rounds run 14–22 voters against 17–25 submitters — but
+SSSC's rulecard says the penalty has **never been observed** there, and SSSC is
+not in Matt's Music League account, so it **cannot be verified against the live
+site** the way Boarz was. Fam-Jam and Hip Jammers are unaffected (0 rows change).
+Stored SSSC standings were not rewritten; the next SSSC digest will report a
+reconcile mismatch. **Confirm the rule applies there before adopting it.**
+
+## 15. The shipping draft — final state
+
+Correct now: podium (Steiny 1st, Paletz 2nd on the upvoter tiebreak, Jensen 3rd),
+villain (**Shane, −2, dead last** — "Two downvotes, three abstentions, a −2 finish
+and dead last" is verified accurate), standings, "Rocky Raccoon went negative."
+All six `quotes` items verbatim. No PII. No R150 dedupe reuse. "Knifey Carnie"
+made it in.
+
+**Still needs a hand-edit — the prose miscounts voters** (a model habit the data
+fix cannot reach):
+
+| Section | Claim | Actual |
+|---|---|---|
+| podium #2 | Paletz "won the tiebreak anyway" | he **lost** it — the same note says "edged on breadth" two clauses earlier |
+| podium body | Juicy "finished fourth" | **5th** — Lake Pontchartrain takes 4th, same 5 pts and 5 upvoters but zero downvotes to Juicy's two |
+| flow | The Snake "seven upvoters and not a single downvote" | **5 up, 1 down** (Mashew, "Koziol") |
+| consensus | The Snake "Seven voters, zero downvotes" | **6 voters, 1 downvote** |
+| consensus | Secret Wars I "Six voters, no downvotes" | 6 voters, **1 downvote** (JB) |
+| consensus | Date Rape "collected five upvotes" | **6** |
+
+Reference board — submitter · upvoters · downvoters · voters:
+Steiny 5/1/6 · Paletz 4/1/6 · djensen 6/1/7 · Clements 5/0/6 · Jimmy 5/2/7.
+
+**Still missing, despite being steered for:** JB's "Congrats, Kozh, on your first
+win! . . . Oh, uh, never mind." and Grant's "Oh fk I missed the vote." The model
+keeps declining the round's best beat. Hand-insert it as chat moment 1 — see §7.
