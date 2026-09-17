@@ -46,6 +46,11 @@ Add to your Claude Code MCP config:
 - Every `/mcp` request must carry a valid `Cf-Access-Jwt-Assertion`
   (`src/accessAuth.ts` checks signature, issuer, AUD, expiry, email), so a LAN
   client hitting `:3890` directly gets 401. `/healthz` is unauthenticated.
+- Non-interactive clients (the Grok bot on Cursor) use Access service token
+  "mcp-mlb grok-cursor" (expires 2027-09-17) via a `non_identity` policy:
+  send `CF-Access-Client-Id` / `CF-Access-Client-Secret` on every request.
+  Its JWT has `common_name` instead of an email, so its client id must also be
+  listed in `MCP_ALLOWED_SERVICE_TOKENS`.
 - Rebuild + restart after changes:
   `npm run build && systemctl --user restart music-league-mcp-http`
 
