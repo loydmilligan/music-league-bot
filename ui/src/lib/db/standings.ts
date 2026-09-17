@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { SCORED_POINTS_SQL, seasonRoundIdsInPlayOrder } from './scoring.js';
 
 // Canonical season-standings logic (sprint-14, backend lane).
 //
@@ -53,9 +54,7 @@ function seasonAndRounds(
     .prepare('SELECT id, season_id FROM rounds WHERE id = ?')
     .get(roundId) as { id: number; season_id: number } | undefined;
   if (!target) throw new Error(`round not found: ${roundId}`);
-  const all = (db
-    .prepare('SELECT id FROM rounds WHERE season_id = ? ORDER BY id')
-    .all(target.season_id) as { id: number }[]).map((r) => r.id);
+  const all = seasonRoundIdsInPlayOrder(db, target.season_id);
   const idx = all.indexOf(roundId);
   return { seasonId: target.season_id, upTo: all.slice(0, idx + 1), prior: all.slice(0, idx) };
 }
@@ -70,12 +69,17 @@ function pointsByCompetitor(
   const placeholders = roundIds.map(() => '?').join(',');
   const rows = db
     .prepare(
-      `SELECT m.competitor_id AS cid, c.name AS name, COALESCE(SUM(v.points), 0) AS pts
-       FROM ml_submissions m
-       JOIN competitors c ON c.id = m.competitor_id
-       LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
-       WHERE m.round_id IN (${placeholders}) AND m.competitor_id IS NOT NULL
-       GROUP BY m.competitor_id`,
+      // Scored per SUBMISSION, then summed per competitor: the no-vote penalty
+      // applies to one round's ballot, so grouping straight to competitor would
+      // apply one round's non-voting to every round they did vote in.
+      `SELECT cid, name, COALESCE(SUM(pts), 0) AS pts FROM (
+         SELECT m.competitor_id AS cid, c.name AS name, ${SCORED_POINTS_SQL} AS pts
+         FROM ml_submissions m
+         JOIN competitors c ON c.id = m.competitor_id
+         LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
+         WHERE m.round_id IN (${placeholders}) AND m.competitor_id IS NOT NULL
+         GROUP BY m.id
+       ) GROUP BY cid`,
     )
     .all(...roundIds) as { cid: number; name: string; pts: number }[];
   for (const r of rows) out.set(r.cid, { name: r.name, pts: Number(r.pts) });

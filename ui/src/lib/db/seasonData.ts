@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { SCORED_POINTS_SQL, seasonRoundIdsInPlayOrder } from './scoring.js';
 import { computeStandings } from './standings.js';
 
 // ── Season-aggregation layer (sprint-21 season-recap) ───────────────────────
@@ -141,9 +142,9 @@ function seasonScope(db: Database.Database, roundId: number) {
     | undefined;
   if (!target) throw new Error(`round not found: ${roundId}`);
 
-  const allRounds = db
-    .prepare('SELECT id, name FROM rounds WHERE season_id = ? ORDER BY id')
-    .all(target.season_id) as { id: number; name: string }[];
+  const allRounds = seasonRoundIdsInPlayOrder(db, target.season_id).map(
+    (id) => db.prepare('SELECT id, name FROM rounds WHERE id = ?').get(id) as { id: number; name: string },
+  );
   const idx = allRounds.findIndex((r) => r.id === roundId);
   const upTo = allRounds.slice(0, idx + 1);
   const rounds: SeasonRoundRef[] = upTo.map((r, i) => ({ id: r.id, number: i + 1, name: r.name }));
@@ -168,7 +169,7 @@ function seasonSongs(db: Database.Database, roundIds: number[], roundNumberById:
     .prepare(
       `SELECT m.id AS sid, m.artists AS artists, m.title, m.album, c.name AS submitter,
               m.round_id AS round_id,
-              COALESCE(SUM(v.points), 0) AS points,
+              ${SCORED_POINTS_SQL} AS points,
               COUNT(v.points) AS voters,
               COALESCE(SUM(v.points * v.points), 0) AS sumsq
        FROM ml_submissions m
