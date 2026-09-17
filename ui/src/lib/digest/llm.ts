@@ -1,4 +1,9 @@
 import type Database from 'better-sqlite3';
+import {
+  SCORED_POINTS_SQL,
+  SCORED_UPVOTERS_SQL,
+  SCORED_DOWNVOTERS_SQL,
+} from '../db/scoring.js';
 import { randomUUID, createHash } from 'node:crypto';
 import type { SeasonData } from '../db/seasonData.js';
 import { buildArchiveContext } from './archiveContext.js';
@@ -157,7 +162,7 @@ export function gatherRoundData(
     .prepare(
       `SELECT r.id AS round_id, r.round_number, r.name AS round_name,
               m.title AS song, c.name AS submitter,
-              COALESCE(SUM(v.points), 0) AS vote_total
+              ${SCORED_POINTS_SQL} AS vote_total
        FROM rounds r
        JOIN ml_submissions m ON m.round_id = r.id
        LEFT JOIN competitors c ON c.id = m.competitor_id
@@ -209,13 +214,15 @@ export function gatherRoundData(
     .prepare(
       `SELECT m.artists AS artists, m.title, m.album, m.spotify_uri, m.comment, m.album_art_url,
               c.name AS submitter,
-              COALESCE(SUM(v.points), 0) AS vote_total
+              ${SCORED_POINTS_SQL} AS vote_total,
+              ${SCORED_UPVOTERS_SQL} AS upvoters,
+              ${SCORED_DOWNVOTERS_SQL} AS downvoters
        FROM ml_submissions m
        LEFT JOIN competitors c ON c.id = m.competitor_id
        LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
        WHERE m.round_id = ?
        GROUP BY m.id
-       ORDER BY vote_total DESC`,
+       ORDER BY vote_total DESC, upvoters DESC, downvoters ASC`,
     )
     .all(roundId) as {
     artists: string;

@@ -62,3 +62,33 @@ export function seasonRoundIdsInPlayOrder(db: Database.Database, seasonId: numbe
 			.all(seasonId) as { id: number }[]
 	).map((r) => r.id);
 }
+
+/**
+ * Upvoter / downvoter counts for the round tiebreak, penalty-aware.
+ *
+ * A voided song has no surviving upvotes, so its upvoter count is zero — using
+ * the raw count would let a penalised song win a tiebreak on support it was not
+ * credited with.
+ */
+export const SCORED_UPVOTERS_SQL = `CASE WHEN EXISTS (
+        SELECT 1 FROM votes bal
+        WHERE bal.round_id = m.round_id AND bal.voter_id = m.competitor_id
+      )
+      THEN COALESCE(SUM(CASE WHEN v.points > 0 THEN 1 ELSE 0 END), 0)
+      ELSE 0
+    END`;
+
+export const SCORED_DOWNVOTERS_SQL =
+	`COALESCE(SUM(CASE WHEN v.points < 0 THEN 1 ELSE 0 END), 0)`;
+
+/**
+ * The round tiebreak cascade, as an ORDER BY over the three expressions above.
+ *
+ * Confirmed the same in every league (Matt, 2026-08-20): total points, then
+ * more upvoters, then fewer downvoters. The cascade's fourth step — comparing
+ * vote weights highest-to-lowest — is not expressible here; it has decided
+ * nothing so far and a caller that needs it must sort in JS.
+ *
+ * Requires the three columns to be aliased `points`, `upvoters`, `downvoters`.
+ */
+export const TIEBREAK_ORDER_SQL = `points DESC, upvoters DESC, downvoters ASC`;
