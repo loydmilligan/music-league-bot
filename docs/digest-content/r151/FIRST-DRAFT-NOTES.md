@@ -601,7 +601,11 @@ two. Full suite: **14 pre-existing failures before and after**, 2304 passing.
 **Deployed:** `bot-ui` rebuilt and force-recreated three times; bundle asserted
 in-container each time.
 
-### ⚠ One thing to decide: SSSC
+### ~~One thing to decide: SSSC~~ — RESOLVED
+**Moot: SSSC is no longer an active league** (Matt, 2026-09-17). Left the stored
+SSSC standings as they are; nothing further to confirm. Original note below.
+
+### ⚠ (superseded) SSSC
 Applying the penalty changes **4 SSSC players**, two of them to zero (Lexa Prole
 51→0, Heath DG 47→0, Timmywhatup 203→165, bump versino 156→129). Those are
 genuine non-voters — SSSC rounds run 14–22 voters against 17–25 submitters — but
@@ -637,3 +641,45 @@ Steiny 5/1/6 · Paletz 4/1/6 · djensen 6/1/7 · Clements 5/0/6 · Jimmy 5/2/7.
 **Still missing, despite being steered for:** JB's "Congrats, Kozh, on your first
 win! . . . Oh, uh, never mind." and Grant's "Oh fk I missed the vote." The model
 keeps declining the round's best beat. Hand-insert it as chat moment 1 — see §7.
+
+
+---
+
+## 16. Regulars + Coinage are now IN the draft
+
+Both were authored but not attached — that is why they were not showing. Written
+into `draft-151-862c87d0` in place, **without regenerating** (the chat section had
+already been rewritten by another agent and had to survive untouched).
+
+- **The Regulars** → a `storylines` section row. Boarz is not in
+  `storylines_section_leagues` (only `sssc` is), so the generator hard-disables
+  the section and it has to be inserted by hand — which is how R150's got there
+  too. The renderer has no such gate; it just looks for the row.
+- **The Coinage** → `digest_drafts.stats_content_json.phrase`, rendered by
+  `DigestInsights` as "The Coinage".
+- **The Guesser** panel was also unpositioned; given a slot. Boarz *is* in
+  `guesser_section_leagues`.
+
+Document order now (one shared position space across sections, stats, guesser):
+
+| pos | item |
+|---|---|
+| 0 | podium |
+| 1 | villain |
+| 2 | **The Regulars** (storylines) |
+| 3 | flow |
+| 4 | **The Coinage** (stats) |
+| 5 | Guesser |
+| 6 | consensus |
+| 7 | quotes |
+| 8 | chat |
+
+**Chat was not touched.** The write asserted its `content_json` byte-identical
+before and after and aborts otherwise; only its position ordinal changed, and it
+stays last. Verified rendered at `http://localhost:3002/digest/151` (HTTP 200):
+"The Regulars", "The Coinage", "The Appellant", "The Corrections Desk", "killed
+at the fair", "smoking armadillos", and the guesser's 2/9 all present.
+
+Re-attaching after any future full regeneration: re-run the same insert from
+`design/r151-regulars-coinage.yaml` — a regen drops the hand-inserted storylines
+row and resets `stats_content_json`.
