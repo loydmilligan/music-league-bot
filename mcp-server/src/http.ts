@@ -8,7 +8,8 @@ import { createAccessVerifier } from './accessAuth.js';
 // is no session table to leak or lose on restart.
 //
 // Env: MCP_HTTP_HOST, MCP_HTTP_PORT, CF_ACCESS_TEAM_DOMAIN, CF_ACCESS_AUD,
-//      MCP_ALLOWED_EMAILS (comma list, optional), plus BOT_UI_* for the tools.
+//      MCP_ALLOWED_EMAILS (comma list, optional), MCP_ALLOWED_SERVICE_TOKENS
+//      (comma list of Access service-token client ids), plus BOT_UI_* for the tools.
 
 function required(name: string): string {
   const v = process.env[name];
@@ -22,6 +23,7 @@ const verify = createAccessVerifier({
   teamDomain: required('CF_ACCESS_TEAM_DOMAIN'),
   audience: required('CF_ACCESS_AUD'),
   allowedEmails: (process.env.MCP_ALLOWED_EMAILS ?? '').split(','),
+  allowedServiceTokens: (process.env.MCP_ALLOWED_SERVICE_TOKENS ?? '').split(','),
 });
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -43,7 +45,7 @@ async function handleMcp(req: IncomingMessage, res: ServerResponse): Promise<voi
   try {
     const header = req.headers['cf-access-jwt-assertion'];
     const who = await verify(Array.isArray(header) ? header[0] : header);
-    console.log(`${req.method} /mcp ${who.email}`);
+    console.log(`${req.method} /mcp ${'email' in who ? who.email : `service-token ${who.serviceToken}`}`);
   } catch (err) {
     console.warn(`rejected ${req.method} /mcp from ${req.socket.remoteAddress}: ${(err as Error).message}`);
     sendJson(res, 401, { error: 'unauthorized' });

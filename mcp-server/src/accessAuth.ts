@@ -13,12 +13,20 @@ export interface AccessVerifierOptions {
   audience: string;
   /** Optional defense-in-depth allowlist; empty = trust the Access policy. */
   allowedEmails?: string[];
+  /**
+   * Access service-token client ids (the JWT's common_name) allowed in.
+   * Unlike emails there is no trust-the-policy default: empty = none.
+   */
+  allowedServiceTokens?: string[];
   fetchJwks?: (url: string) => Promise<{ keys: object[] }>;
   /** How long to trust a fetched JWKS before refetching. */
   jwksTtlMs?: number;
 }
 
-export type AccessVerifier = (token: string | undefined) => Promise<{ email: string }>;
+/** email for a person (Access login); serviceToken for a service-token client. */
+export type AccessIdentity = { email: string } | { serviceToken: string };
+
+export type AccessVerifier = (token: string | undefined) => Promise<AccessIdentity>;
 
 const CLOCK_SKEW_S = 60;
 
@@ -38,6 +46,7 @@ export function createAccessVerifier(opts: AccessVerifierOptions): AccessVerifie
   const fetchJwks = opts.fetchJwks ?? defaultFetchJwks;
   const ttl = opts.jwksTtlMs ?? 60 * 60 * 1000;
   const allowed = new Set((opts.allowedEmails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean));
+  const allowedServiceTokens = new Set((opts.allowedServiceTokens ?? []).map((c) => c.trim()).filter(Boolean));
 
   let keys = new Map<string, KeyObject>();
   let fetchedAt = 0;
@@ -82,7 +91,13 @@ export function createAccessVerifier(opts: AccessVerifierOptions): AccessVerifie
     if (typeof claims.nbf === 'number' && claims.nbf - CLOCK_SKEW_S > now) throw new Error('token not yet valid');
 
     const email = typeof claims.email === 'string' ? claims.email.toLowerCase() : '';
-    if (allowed.size && !allowed.has(email)) throw new Error(`email not allowed: ${email || '<none>'}`);
+    if (!email) {
+      // Service-token JWTs carry no email; common_name is the token's client id.
+      const cn = typeof claims.common_name === 'string' ? claims.common_name : '';
+      if (cn && allowedServiceTokens.has(cn)) return { serviceToken: cn };
+      throw new Error(`service token not allowed: ${cn || '<none>'}`);
+    }
+    if (allowed.size && !allowed.has(email)) throw new Error(`email not allowed: ${email}`);
     return { email };
   };
 }

@@ -33,12 +33,13 @@ beforeAll(() => {
   jwks = { keys: [{ ...kp.publicKey.export({ format: 'jwk' }), kid: 'k1', alg: 'RS256', use: 'sig' }] };
 });
 
-function verifier(allowedEmails: string[] = []) {
+function verifier(allowedEmails: string[] = [], allowedServiceTokens: string[] = []) {
   let fetches = 0;
   const v = createAccessVerifier({
     teamDomain: TEAM,
     audience: AUD,
     allowedEmails,
+    allowedServiceTokens,
     fetchJwks: async () => {
       fetches++;
       return jwks;
@@ -107,5 +108,35 @@ describe('createAccessVerifier', () => {
     await expect(v(sign(claims()))).rejects.toThrow(/not allowed/);
     const { v: ok } = verifier(['MATT@example.com']);
     await expect(ok(sign(claims()))).resolves.toEqual({ email: 'matt@example.com' });
+  });
+
+  describe('service tokens', () => {
+    // Access service-token JWTs have no email; common_name is the client id.
+    const svc = (cn: string) => claims({ email: undefined, sub: '', common_name: cn });
+
+    it('accepts an allowlisted service token by common_name', async () => {
+      const { v } = verifier(['matt@example.com'], ['abc.access']);
+      await expect(v(sign(svc('abc.access')))).resolves.toEqual({ serviceToken: 'abc.access' });
+    });
+
+    it('rejects a service token that is not allowlisted', async () => {
+      const { v } = verifier([], ['abc.access']);
+      await expect(v(sign(svc('other.access')))).rejects.toThrow(/service token not allowed/);
+    });
+
+    it('rejects every service token when no allowlist is configured', async () => {
+      const { v } = verifier();
+      await expect(v(sign(svc('abc.access')))).rejects.toThrow(/service token not allowed/);
+    });
+
+    it('rejects a token with neither email nor common_name', async () => {
+      const { v } = verifier([], ['abc.access']);
+      await expect(v(sign(claims({ email: undefined })))).rejects.toThrow(/not allowed: <none>/);
+    });
+
+    it('does not let an email token in via a common_name that is allowlisted', async () => {
+      const { v } = verifier(['someone@else.com'], ['abc.access']);
+      await expect(v(sign(claims({ common_name: 'abc.access' })))).rejects.toThrow(/email not allowed/);
+    });
   });
 });
