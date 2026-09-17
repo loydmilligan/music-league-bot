@@ -1,0 +1,25 @@
+# Music League MCP — Streamable HTTP on 0.0.0.0:3890, published at
+# https://mcp-mlb.mattmariani.com/mcp via the CM4 tunnel (nextcloud22) behind
+# Cloudflare Access (email OTP + managed OAuth). Every /mcp request must carry
+# a valid Cf-Access-Jwt-Assertion, so LAN clients cannot bypass Access.
+#
+# Install: ln -s <this file> ~/.config/systemd/user/ && systemctl --user enable --now music-league-mcp-http
+# Rebuild after code changes: (cd mcp-server && npm run build) && systemctl --user restart music-league-mcp-http
+# Logs:    journalctl --user -u music-league-mcp-http -f
+
+[Unit]
+Description=Music League MCP (Streamable HTTP, port 3890)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/loydmilligan/Projects/music-league-bot/mcp-server
+EnvironmentFile=/home/loydmilligan/.config/music-league-mcp/http.env
+Environment=NODE_ENV=production
+ExecStart=/home/loydmilligan/.nvm/versions/node/v22.22.2/bin/node dist/http.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -32,6 +32,23 @@ Add to your Claude Code MCP config:
 }
 ```
 
+## Remote (Streamable HTTP) — claude.ai / phone
+
+`src/http.ts` serves the same tools over Streamable HTTP (stateless) at
+**`https://mcp-mlb.mattmariani.com/mcp`**:
+
+- Runs on mash-ubie as the user unit `systemd/music-league-mcp-http.service`
+  (`0.0.0.0:3890`, env in `~/.config/music-league-mcp/http.env`).
+- Published through the CM4 `nextcloud22` Cloudflare tunnel, behind the
+  Access app "Music League MCP (secure)" — email OTP for
+  mattmariani@gmail.com, with Access managed OAuth + dynamic client
+  registration so claude.ai can connect.
+- Every `/mcp` request must carry a valid `Cf-Access-Jwt-Assertion`
+  (`src/accessAuth.ts` checks signature, issuer, AUD, expiry, email), so a LAN
+  client hitting `:3890` directly gets 401. `/healthz` is unauthenticated.
+- Rebuild + restart after changes:
+  `npm run build && systemctl --user restart music-league-mcp-http`
+
 ## Tools
 
 | Tool | Purpose |
