@@ -2,6 +2,7 @@
   import type { ResearchSong, Settings } from '$lib/types.js';
   import { computeScore } from '$lib/scoring.js';
   import SongCard from '$lib/song/SongCard.svelte';
+  import PlayerAnalysisPanel from '$lib/components/PlayerAnalysisPanel.svelte';
   import { adapters } from '$lib/song/adapters.js';
   import type { SongRatings, SongCardConfig, Song } from '$lib/song/canonical.js';
 
@@ -295,15 +296,18 @@
     {:else}
       <div class="flex flex-col gap-3">
         {#each sorted as song (song.id)}
-          <SongCard
-            density="expanded"
-            song={toCard(song)}
-            config={{ ...RR_CONFIG, noteText: song.notes ?? undefined }}
-            onAction={handleAction}
-            onRate={handleRate}
-            onNotes={handleNotes}
-            onAnalyze={handleAnalyze}
-          />
+          <div>
+            <SongCard
+              density="expanded"
+              song={toCard(song)}
+              config={{ ...RR_CONFIG, noteText: song.notes ?? undefined }}
+              onAction={handleAction}
+              onRate={handleRate}
+              onNotes={handleNotes}
+              onAnalyze={handleAnalyze}
+            />
+            <PlayerAnalysisPanel roundId={roundId} spotifyUri={song.spotifyUri} />
+          </div>
         {/each}
       </div>
     {/if}
