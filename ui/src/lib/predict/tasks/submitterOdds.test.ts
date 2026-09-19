@@ -28,9 +28,9 @@ const INPUT: SubmitterOddsInput = {
   song: { title: 'Black Betty', artist: 'Ram Jam', spotifyUri: 'spotify:track:6kooDsorCpWVMGc994XjWN', metaBlock: 'Spotify popularity: 79/100' },
   theme: { name: 'These Go to 11', description: 'Loud songs' },
   players: [
-    { name: 'Dave Steingart', competitorName: 'Steiny', profileMd: '# Dave' },
-    { name: 'Conor Johnston', competitorName: 'CJ Wookie', profileMd: '# Conor' },
-    { name: 'Jimmy', competitorName: 'Jimmy Troy', profileMd: null },
+    { id: 'p20', name: 'Dave Steingart', competitorName: 'Steiny', profileMd: '# Dave' },
+    { id: 'p32', name: 'Conor Johnston', competitorName: 'CJ Wookie', profileMd: '# Conor' },
+    { id: 'p39', name: 'Jimmy', competitorName: 'Jimmy Troy', profileMd: null },
   ],
 };
 
@@ -84,8 +84,8 @@ describe('submitterOddsTask', () => {
     const messages = submitterOddsTask.buildMessages(INPUT);
     const all = messages.map((m) => m.content).join('\n');
     expect(all).toContain('Black Betty');
-    expect(all).toContain('### Dave Steingart (league display name: Steiny)');
-    expect(all).toContain('### Jimmy');
+    expect(all).toContain('### id:p20 · Dave Steingart (league display name: Steiny)');
+    expect(all).toContain('### id:p39 · Jimmy');
     expect(all).toContain('No profile data available');
   });
 });
@@ -93,12 +93,14 @@ describe('submitterOddsTask', () => {
 describe('runSubmitterOdds', () => {
   it('maps LLM output back to roster order and normalizes to 10', async () => {
     const db = openLeagueDb(':memory:');
+    // The model echoes ids but uses its own display names, out of order —
+    // the exact failure mode seen live before the id mapping existed.
     mockCallOpenRouter.mockResolvedValueOnce({
       content: JSON.stringify({
         players: [
-          { name: 'jimmy', likelihood: 2, note: 'nope' },
-          { name: 'Dave Steingart', likelihood: 8, note: 'dance rock fits' },
-          { name: 'Conor Johnston', likelihood: 2, note: 'possible' },
+          { id: 'p39', name: 'Jimmy Troy', likelihood: 2, note: 'nope' },
+          { id: 'p20', name: 'Steiny', likelihood: 8, note: 'dance rock fits' },
+          { id: 'p32', name: 'CJ Wookie', likelihood: 2, note: 'possible' },
         ],
       }),
       costUsd: 0.01, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
@@ -113,11 +115,30 @@ describe('runSubmitterOdds', () => {
     expect(Math.round(result.players.reduce((a, p) => a + p.score, 0) * 10)).toBe(100);
   });
 
+  it('falls back to display-name matching when the model drops ids', async () => {
+    const db = openLeagueDb(':memory:');
+    mockCallOpenRouter.mockResolvedValueOnce({
+      content: JSON.stringify({
+        players: [
+          { name: 'Steiny', likelihood: 6, note: 'a' },
+          { name: 'Conor Johnston', likelihood: 3, note: 'b' },
+          { name: 'Jimmy Troy', likelihood: 1, note: 'c' },
+        ],
+      }),
+      costUsd: 0.01, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
+    });
+
+    const result = await runSubmitterOdds(db, { roundId: 1, input: INPUT });
+    expect(result.players[0].note).toBe('a'); // matched via competitorName
+    expect(result.players[0].score).toBeCloseTo(6, 1);
+    expect(result.players.every((p) => p.score > 0)).toBe(true);
+  });
+
   it('caches by (round, song) and skips the LLM on the second call', async () => {
     const db = openLeagueDb(':memory:');
     mockCallOpenRouter.mockResolvedValue({
       content: JSON.stringify({
-        players: [{ name: 'Dave Steingart', likelihood: 10, note: 'clear favorite' }],
+        players: [{ id: 'p20', name: 'Dave Steingart', likelihood: 10, note: 'clear favorite' }],
       }),
       costUsd: 0.01, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
     });

@@ -42,6 +42,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const theme = { name: round.name, description: round.description ?? '' };
   const songInput = { title: song.title, artist: song.artist, spotifyUri, metaBlock };
   const players = roster.players.map((p) => ({
+    // The id is the identity the LLM must echo back — names alone proved
+    // unreliable (models mix in league display names like "Steiny").
+    id: `p${p.competitorId}`,
     name: p.displayName,
     competitorName: p.competitorName,
     profileMd: p.profileMd,

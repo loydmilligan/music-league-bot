@@ -14,6 +14,9 @@ export interface SubmitterOddsSong {
 }
 
 export interface SubmitterOddsPlayer {
+  /** Stable key the LLM must echo back (names are not reliable — models
+   *  mix in league display names). Assemble maps results by this id. */
+  id: string;
   name: string;
   competitorName: string;
   profileMd: string | null;
@@ -30,6 +33,7 @@ export const SubmitterOddsOutputSchema = z
     players: z
       .array(
         z.object({
+          id: z.string().min(1).optional(),
           name: z.string().min(1),
           likelihood: z.number().min(0).max(10),
           note: z.string().min(1),
@@ -64,7 +68,7 @@ export function buildSubmitterOddsMessages(input: SubmitterOddsInput) {
 
   lines.push('\n--- Player evidence profiles (one section per player) ---');
   for (const p of players) {
-    lines.push(`\n### ${p.name}${p.competitorName !== p.name ? ` (league display name: ${p.competitorName})` : ''}`);
+    lines.push(`\n### id:${p.id} · ${p.name}${p.competitorName !== p.name ? ` (league display name: ${p.competitorName})` : ''}`);
     lines.push(p.profileMd ?? 'No profile data available for this player.');
   }
 
@@ -77,10 +81,10 @@ Ground every score in the evidence profiles: their past submissions under simila
 
 Rules:
 - likelihood is 0-10 (10 = virtually certain it was them, 0 = virtually certain it was not). The numbers express RELATIVE fit: a clear favorite must stand out; near-certain non-matches must be near 0.
-- Score EVERY listed player, exactly once, using their exact name. Never invent or omit players.
+- Score EVERY listed player, exactly once. Each output row MUST carry the player's id exactly as given in its "id:N" heading (e.g. "id": "p33"). Never invent, omit, or merge players; the id — not the name — is the identity.
 - note: one sentence citing the strongest specific piece of evidence for your number.
 - The profiles describe historical taste, not certainty. Round themes constrain choices; say so when a theme weakens the evidence.
-- Respond with JSON only, no prose: { "players": [ { "name": "...", "likelihood": 0-10, "note": "..." } ] }`,
+- Respond with JSON only, no prose: { "players": [ { "id": "pN", "name": "...", "likelihood": 0-10, "note": "..." } ] }`,
     },
     { role: 'user' as const, content: lines.join('\n') },
   ];
@@ -144,12 +148,15 @@ export interface SubmitterOddsResult {
 type CachedRun = { output_json: string; model: string; cost_usd: number; latency_ms: number; created_at: string };
 
 function lookupCache(db: Database.Database, roundId: number, spotifyUri: string): CachedRun | undefined {
+  // Rows written before the id-based mapping (pre-c6116a2) assembled badly —
+  // exclude any cached input whose players carry no id.
   return db.prepare(
     `SELECT output_json, model, cost_usd, latency_ms, created_at
        FROM prediction_runs
       WHERE task_id = 'submitter-odds'
         AND round_id = ?
         AND json_extract(input_json, '$.song.spotifyUri') = ?
+        AND json_extract(input_json, '$.players[0].id') IS NOT NULL
         AND output_json IS NOT NULL AND outcome IS NULL
       ORDER BY created_at DESC
       LIMIT 1`,
@@ -179,14 +186,23 @@ function assemble(
   cacheHit: boolean,
   generatedAt: string,
 ): SubmitterOddsResult {
-  const byName = new Map(output.players.map((p) => [normName(p.name), p]));
-  const raw = input.players.map((p) => byName.get(normName(p.name))?.likelihood ?? 0);
+  // Primary key: the id we injected into the prompt. Fallback: normalized
+  // name match (profile name or league display name), for models that
+  // ignored the id instruction or stale cached rows written before ids.
+  const byId = new Map(output.players.filter((p) => p.id).map((p) => [p.id as string, p]));
+  const byName = new Map<string, SubmitterOddsOutput['players'][number]>();
+  for (const p of output.players) byName.set(normName(p.name), p);
+  const lookup = (player: SubmitterOddsPlayer) =>
+    byId.get(player.id) ??
+    byName.get(normName(player.name)) ??
+    byName.get(normName(player.competitorName));
+  const raw = input.players.map((p) => lookup(p)?.likelihood ?? 0);
   const scores = normalizeToTen(raw);
   const players: SubmitterOddsPlayerResult[] = input.players.map((p, i) => ({
     name: p.name,
     competitorName: p.competitorName,
     score: scores[i],
-    note: byName.get(normName(p.name))?.note ?? '',
+    note: lookup(p)?.note ?? '',
   }));
   const top3 = [...players]
     .map((p, i) => ({ p, i }))

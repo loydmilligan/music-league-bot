@@ -25,6 +25,7 @@ export const VoteForecastOutputSchema = z
     players: z
       .array(
         z.object({
+          id: z.string().min(1).optional(),
           name: z.string().min(1),
           points: z.number().min(0).max(12),
           note: z.string().min(1),
@@ -63,7 +64,7 @@ export function buildVoteForecastMessages(input: VoteForecastInput) {
 
   lines.push('\n--- Player evidence profiles (one section per player) ---');
   for (const p of players) {
-    lines.push(`\n### ${p.name}${p.competitorName !== p.name ? ` (league display name: ${p.competitorName})` : ''}`);
+    lines.push(`\n### id:${p.id} · ${p.name}${p.competitorName !== p.name ? ` (league display name: ${p.competitorName})` : ''}`);
     lines.push(p.profileMd ?? 'No profile data available for this player.');
   }
 
@@ -76,10 +77,10 @@ Ground every prediction in the evidence profiles: their recorded high/low vote e
 
 Rules:
 - points is between 0 and ${budget.cap}, one decimal allowed (an expected value). Respect the scale: most songs get middling-to-low marks; reserve ${budget.cap} for a strong profile match.
-- Predict for EVERY listed player, exactly once, using their exact name. Never invent or omit players.
+- Predict for EVERY listed player, exactly once. Each output row MUST carry the player's id exactly as given in its "id:N" heading (e.g. "id": "p33"). Never invent, omit, or merge players; the id — not the name — is the identity.
 - note: one sentence with the main reason for your number.
 - Round themes constrain choices; treat genre/era signals accordingly.
-- Respond with JSON only, no prose: { "players": [ { "name": "...", "points": 0-${budget.cap}, "note": "..." } ] }`,
+- Respond with JSON only, no prose: { "players": [ { "id": "pN", "name": "...", "points": 0-${budget.cap}, "note": "..." } ] }`,
     },
     { role: 'user' as const, content: lines.join('\n') },
   ];
@@ -110,12 +111,15 @@ export interface VoteForecastResult {
 type CachedRun = { output_json: string; model: string; cost_usd: number; latency_ms: number; created_at: string };
 
 function lookupCache(db: Database.Database, roundId: number, spotifyUri: string): CachedRun | undefined {
+  // Rows written before the id-based mapping (pre-c6116a2) assembled badly —
+  // exclude any cached input whose players carry no id.
   return db.prepare(
     `SELECT output_json, model, cost_usd, latency_ms, created_at
        FROM prediction_runs
       WHERE task_id = 'vote-forecast'
         AND round_id = ?
         AND json_extract(input_json, '$.song.spotifyUri') = ?
+        AND json_extract(input_json, '$.players[0].id') IS NOT NULL
         AND output_json IS NOT NULL AND outcome IS NULL
       ORDER BY created_at DESC
       LIMIT 1`,
@@ -145,10 +149,19 @@ function assemble(
   cacheHit: boolean,
   generatedAt: string,
 ): VoteForecastResult {
-  const byName = new Map(output.players.map((p) => [normName(p.name), p]));
+  // Primary key: the id we injected into the prompt. Fallback: normalized
+  // name match (profile name or league display name), for models that
+  // ignored the id instruction or stale cached rows written before ids.
+  const byId = new Map(output.players.filter((p) => p.id).map((p) => [p.id as string, p]));
+  const byName = new Map<string, VoteForecastOutput['players'][number]>();
+  for (const p of output.players) byName.set(normName(p.name), p);
+  const lookup = (player: SubmitterOddsPlayer) =>
+    byId.get(player.id) ??
+    byName.get(normName(player.name)) ??
+    byName.get(normName(player.competitorName));
   const cap = input.budget.cap;
   const players: VoteForecastPlayerResult[] = input.players.map((p) => {
-    const hit = byName.get(normName(p.name));
+    const hit = lookup(p);
     const pts = hit ? Math.max(0, Math.min(cap, hit.points)) : 0;
     return {
       name: p.name,
