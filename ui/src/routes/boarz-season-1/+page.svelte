@@ -11,6 +11,14 @@
   const playerStills = $derived(selectedPlayer ? data.stills?.[selectedPlayer.slug] ?? [] : []);
   const STILL_SHOTS = ['frontal', 'profile', 'face_closeup'] as const;
 
+  // The rendered baseball card lives in the player's card/ folder; show it in its
+  // own section and keep it out of the generic media grid below.
+  const cardMedia = $derived(selectedPlayer ? selectedPlayer.media.filter(m => m.path.startsWith('card/')) : []);
+  const cardFront = $derived(cardMedia.find(m => m.name === 'card-front.png'));
+  const cardBack = $derived(cardMedia.find(m => m.name === 'card-back.png'));
+  const cardVideo = $derived(cardMedia.find(m => m.name === 'card.mp4'));
+  const otherMedia = $derived(selectedPlayer ? selectedPlayer.media.filter(m => !m.path.startsWith('card/')) : []);
+
   let uploadBusy = $state(false);
   let stillsBusy = $state(false);
   let uploadNotice = $state('');
@@ -137,10 +145,10 @@
         </section>
 
         <section class="media-section" aria-labelledby="media-heading">
-          <div class="section-heading media-heading"><div><div class="eyebrow small">VISUAL DEVELOPMENT</div><h2 id="media-heading">Image &amp; motion<span class="period">.</span></h2></div><span class="status-pill muted">{selectedPlayer.media.length} ASSETS</span></div>
-          {#if selectedPlayer.media.length}
+          <div class="section-heading media-heading"><div><div class="eyebrow small">VISUAL DEVELOPMENT</div><h2 id="media-heading">Image &amp; motion<span class="period">.</span></h2></div><span class="status-pill muted">{otherMedia.length} ASSETS</span></div>
+          {#if otherMedia.length}
             <div class="media-grid">
-              {#each selectedPlayer.media as item}
+              {#each otherMedia as item}
                 <figure class="media-item">
                   {#if item.kind === 'image'}<a href={item.url} target="_blank" rel="noopener noreferrer"><img src={item.url} alt={item.name} loading="lazy" /></a>
                   {:else}
@@ -153,6 +161,27 @@
             </div>
           {:else}
             <div class="empty-media"><span class="media-glyph">◫</span><div><h3>Visual tests will live here.</h3><p>Images and videos saved in this player’s generations or selects folders will appear automatically.</p></div></div>
+          {/if}
+        </section>
+
+        <section class="card-section" aria-labelledby="card-heading">
+          <div class="section-heading">
+            <div><div class="eyebrow small">BASEBALL CARD</div><h2 id="card-heading">The card<span class="period">.</span></h2></div>
+            <a class="status-pill link" href={`/boarz-season-1/card/${selectedPlayer.slug}`}>OPEN CARD PAGE →</a>
+          </div>
+          {#if cardFront || cardBack || cardVideo}
+            <div class="card-showcase">
+              {#if cardVideo}
+                <!-- svelte-ignore a11y_media_has_caption: animated card has no caption track -->
+                <video class="card-video" src={cardVideo.url} controls preload="metadata" playsinline aria-label="Animated card"></video>
+              {/if}
+              <div class="card-faces">
+                {#if cardFront}<a href={cardFront.url} target="_blank" rel="noopener noreferrer"><img src={cardFront.url} alt="Card front" loading="lazy" /></a>{/if}
+                {#if cardBack}<a href={cardBack.url} target="_blank" rel="noopener noreferrer"><img src={cardBack.url} alt="Card back" loading="lazy" /></a>{/if}
+              </div>
+            </div>
+          {:else}
+            <div class="empty-media"><span class="media-glyph">▮</span><div><h3>Card not rendered yet.</h3><p>Run <code>npm run render:all</code> in card-studio to render this player’s card into their card/ folder.</p></div></div>
           {/if}
         </section>
 
@@ -296,6 +325,15 @@
   .empty-icon { color: #f25b38; font-size: 34px; }
   .empty-media { display: flex; align-items: center; gap: 24px; padding: 34px; }
   .media-glyph { color: #f25b38; font-size: 56px; line-height: 1; }
+  .card-section { margin-top: 22px; border-top: 1px solid #343840; padding-top: 52px; }
+  .status-pill.link { text-decoration: none; cursor: pointer; transition: border-color .15s, color .15s; }
+  .status-pill.link:hover { border-color: #f25b38; color: #f25b38; }
+  .card-showcase { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .card-video { width: 100%; aspect-ratio: 1080 / 1350; background: #05060a; border: 1px solid #3c454f; display: block; }
+  .card-faces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .card-faces a { display: block; }
+  .card-faces img { width: 100%; aspect-ratio: 1080 / 1350; object-fit: contain; background: #05060a; border: 1px solid #3c454f; display: block; }
+  @media (max-width: 850px) { .card-showcase { grid-template-columns: 1fr; } }
   .stills-section { margin-top: 22px; border-top: 1px solid #343840; padding-top: 52px; }
   .refpack { background: #191e25; border: 1px solid #3c454f; padding: clamp(22px, 3.4vw, 42px); }
   .refpack-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }

@@ -4,7 +4,7 @@ import { resolve, join, relative, sep, extname } from 'node:path';
 
 const localRoots = [resolve(process.cwd(), '../boarz-season-1-cinematic'), resolve(process.cwd(), '../../boarz-season-1-cinematic')];
 export const BOARZ_ROOT = process.env.BOARZ_REVIEW_DIR ?? localRoots.find(existsSync) ?? localRoots[0];
-const MEDIA_DIRS = ['generations', 'selects', 'stills'] as const;
+const MEDIA_DIRS = ['generations', 'selects', 'stills', 'card'] as const;
 const MIME: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.webp': 'image/webp', '.gif': 'image/gif', '.avif': 'image/avif',
