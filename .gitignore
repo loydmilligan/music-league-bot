@@ -112,3 +112,7 @@ data/second-best/*.png
 
 # Dev-only venv for the Python digest-qa tools (pytest). Runtime is stdlib-only.
 .venv-digestqa/
+
+# boarz-stats share instance
+.boarz-stats-port
+.boarz-stats-pid

@@ -22,6 +22,13 @@
   // it stays consistent across SSR (rendered at ?share=1) and client hydration
   // (served at /d/<slug>/). Distinct from ?export=1 — interactivity stays ON.
   const isShare = $derived(Boolean((page.data as { share?: boolean } | undefined)?.share));
+  // Stats share site — standalone, no operator chrome.
+  const isBoarzStats = $derived(
+    page.url.pathname === '/boarz-stats'
+      || page.url.pathname.startsWith('/boarz-stats/')
+      || page.url.pathname === '/stats'
+      || page.url.pathname.startsWith('/stats/')
+  );
 
   type NavItem = { href: string; label: string; glyph: string; count?: string; badge?: number };
   const chatUnassignedCount = $derived(((page.data as { chatUnassignedCount?: number } | undefined)?.chatUnassignedCount ?? 0));
@@ -120,7 +127,11 @@
   </ul>
 {/snippet}
 
-{#if isShare}
+{#if isBoarzStats}
+  <main class="min-h-screen bg-bg text-fg">
+    {@render children?.()}
+  </main>
+{:else if isShare}
   <!-- Bare share layout — digest content only, zero app chrome.
        No horizontal padding below sm (640px) so the digest card fills the
        phone viewport edge-to-edge. px-6/md:px-10 kick in at tablet+. -->
