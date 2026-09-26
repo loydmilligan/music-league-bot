@@ -455,4 +455,22 @@ describe('handleMessage', () => {
     const rows = db.prepare('SELECT * FROM submissions').all();
     expect(rows).toHaveLength(0);
   });
+
+  it('routes an explicit !jev request to the guarded responder and stops normal capture', async () => {
+    const jevRespond = vi.fn().mockResolvedValue('🧠 Jev read: friendly knife fight.');
+    const spotify = makeMockSpotify();
+    const msg = makeMockMsg('!jev read the room', {
+      priorMessages: [{ sender: 'bob', timeMs: 1, text: 'this round is chaos' }],
+    });
+
+    await handleMessage(msg, makeBotConfig({ spotify, jevRespond }));
+
+    expect(jevRespond).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: msg.from,
+      prompt: 'read the room',
+      priorMessages: msg.priorMessages,
+    }));
+    expect(msg.reply).toHaveBeenCalledWith('🧠 Jev read: friendly knife fight.');
+    expect(spotify.searchTrack).not.toHaveBeenCalled();
+  });
 });

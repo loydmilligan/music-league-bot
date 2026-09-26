@@ -123,6 +123,10 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       chatName,
       author: raw.author ?? raw.from,
       fromMe: raw.fromMe,
+      mentionsBot: raw.mentionedIds.some((id) => {
+        const serialized = typeof id === 'string' ? id : (id as { _serialized?: string })._serialized;
+        return !!serialized && selfIds.has(serialized);
+      }),
       capturedAt: new Date(timeMs).toISOString(),
       priorMessages: priors,
       reply: (text) => raw.reply(text).then(() => undefined),

@@ -13,6 +13,7 @@ import { runManualSend } from './digest/manualSend.js';
 import { startControlServer } from './control/server.js';
 import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
+import { createJevResponder } from './chat/jevResponder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -36,6 +37,17 @@ const ownerPhone = rawOwnerPhone.includes('@') ? rawOwnerPhone : `${rawOwnerPhon
 
 const masterPlaylistName = process.env.MASTER_PLAYLIST_NAME ?? 'Music League — All Mentions';
 
+const jevRespond = process.env.WHATSAPP_JEV_ENABLED === '1' && process.env.OPENROUTER_API_KEY
+  ? createJevResponder({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      model: process.env.WHATSAPP_JEV_MODEL,
+      cooldownMs: Number(process.env.WHATSAPP_JEV_COOLDOWN_MS ?? 30_000),
+    })
+  : undefined;
+if (process.env.WHATSAPP_JEV_ENABLED === '1' && !jevRespond) {
+  console.warn('[jev-chat] WHATSAPP_JEV_ENABLED=1 but OPENROUTER_API_KEY is missing; feature disabled');
+}
+
 const client = createClient(async (msg) => {
   await handleMessage(msg, {
     config,
@@ -45,6 +57,7 @@ const client = createClient(async (msg) => {
     ownerPhone,
     masterPlaylistName,
     sendDm: makeSendDm(client),
+    jevRespond,
   });
 });
 

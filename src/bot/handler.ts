@@ -12,6 +12,7 @@ import { songlinkLimiter } from '../resolver/songlinkRateLimiter.js';
 import { insertChatCapture } from '../storage/chatDb.js';
 import { interpretMessage } from '../chat/prompts/engine.js';
 import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
+import { extractJevPrompt, type JevChatRequest } from '../chat/jevResponder.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -25,6 +26,8 @@ export interface WhatsAppMessage {
   quotedFromBot?: boolean;
   /** Text/caption of the quoted message, when this is a quote-reply. */
   quotedText?: string;
+  /** True when WhatsApp's plain message payload says the bot account was @mentioned. */
+  mentionsBot?: boolean;
   reply(text: string): Promise<void>;
   getContact(): Promise<{ pushname: string }>;
 }
@@ -37,6 +40,7 @@ export interface BotConfig {
   ownerPhone: string;
   masterPlaylistName: string;
   sendDm(phone: string, text: string): Promise<void>;
+  jevRespond?: (request: JevChatRequest) => Promise<string>;
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
@@ -64,6 +68,31 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // Path 0: an answer to an open prompt. Runs first so a reply like "Koziol"
   // is never also scanned for song URLs, and returns early when it lands.
   if (await handlePromptAnswer(msg, botConfig)) return;
+
+  // Path J: explicitly ask the bot for a compact Jev read. Disabled unless a
+  // responder is wired at startup; ordinary chat never causes an AI call.
+  const jevPrompt = extractJevPrompt(msg.body, msg.mentionsBot);
+  if (jevPrompt && botConfig.jevRespond) {
+    let authorName: string | undefined;
+    try {
+      authorName = (await msg.getContact()).pushname || undefined;
+    } catch { /* stable author id remains available */ }
+    try {
+      const reply = await botConfig.jevRespond({
+        chatId: msg.from,
+        chatName: msg.chatName,
+        authorId: msg.author,
+        authorName,
+        prompt: jevPrompt,
+        priorMessages: msg.priorMessages,
+      });
+      await msg.reply(reply);
+    } catch (err) {
+      console.error('[jev-chat] request failed:', err);
+      await msg.reply('Jev tripped over its own clipboard. Try again in a minute.');
+    }
+    return;
+  }
 
   // Path A: explicit !song command
   const parsed = parseMessage(msg.body);
