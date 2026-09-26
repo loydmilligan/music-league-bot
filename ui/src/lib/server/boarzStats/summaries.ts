@@ -6,7 +6,6 @@ import Database from 'better-sqlite3';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { callOpenRouter } from '$lib/digest/llm.js';
-import { modelFor } from '$lib/digest/modelFor.js';
 import { dayOfTs, type ChatMsg } from './chat.js';
 import type { DaySummary } from '$lib/boarzStats/shared.js';
 
@@ -86,7 +85,9 @@ export async function summarizeMissingPeaks(
 	peaks: { day: string; count: number }[]
 ): Promise<SummaryMap> {
 	const summaries = loadSummaries();
-	const model = modelFor('predict', db);
+	// Stats summaries are decorative and cached permanently, so keep them off
+	// the paid predict/digest buckets unless the operator explicitly opts in.
+	const model = process.env.OPENROUTER_STATS_SUMMARY_MODEL ?? 'openrouter/free';
 	let dirty = false;
 	for (const peak of peaks) {
 		if (summaries[peak.day]) continue;
