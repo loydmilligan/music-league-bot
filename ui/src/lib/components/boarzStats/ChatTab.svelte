@@ -747,8 +747,9 @@
 						{/each}
 					</div>
 				</div>
-				<div class="overflow-x-auto">
-					<h3 class="mb-2 font-medium">👤 Player profiles (Jev means, 0–1)</h3>
+				<details class="min-w-0 rounded-xl border border-border-muted p-3">
+					<summary class="cursor-pointer font-medium">👤 Player profiles <span class="ml-2 text-xs font-normal text-fg-muted">Jev means, including roast counts</span></summary>
+					<div class="mt-2 overflow-x-auto">
 					<table class="w-full text-xs">
 						<thead>
 							<tr class="text-left text-fg-muted">
@@ -770,6 +771,7 @@
 									<td class="px-2 py-1 text-right font-mono">{p.avgChaos?.toFixed(2) ?? '—'}</td>
 									<td class="px-2 py-1 text-right font-mono">{p.avgAffection?.toFixed(2) ?? '—'}</td>
 									<td class="px-2 py-1 text-right font-mono">{p.mainCharacter?.toFixed(2) ?? '—'}</td>
+									<td class="px-2 py-1 text-right font-mono">{p.commissioner?.toFixed(2) ?? '—'}</td>
 									<td class="px-2 py-1 text-right font-mono">{p.slopIndex?.toFixed(2) ?? '—'}</td>
 									<td class="px-2 py-1 text-right font-mono">{p.roastsGiven}</td>
 								</tr>
@@ -777,7 +779,8 @@
 						</tbody>
 					</table>
 					<p class="mt-2 text-xs text-fg-muted">MC⚡ = main-character energy · Comm = commissioner energy · Slop = profanity+caps rate</p>
-				</div>
+					</div>
+				</details>
 			</div>
 
 			{#if deep.spiciest.length}

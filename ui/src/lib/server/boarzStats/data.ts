@@ -246,6 +246,26 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		)
 		.all(...seasonIds, ...seasonIds) as CompRow[];
 	const competitors: Comp[] = [...compRows2].sort((a, b) => a.id - b.id);
+	const displayModeRow = db.prepare('SELECT value FROM settings WHERE key = ?').get(`ml_stats_display_name:${league.id}`) as { value?: string } | undefined;
+	const displayMode = displayModeRow?.value === 'identity' ? 'identity' : 'bot';
+	const compIds = competitors.map((comp) => comp.id);
+	const rosterNames = compIds.length ? db.prepare(
+		`SELECT c.id competitor_id, p.name bot_name,
+			COALESCE(
+				(SELECT pi.identifier FROM player_identities pi WHERE pi.player_id = p.id AND pi.identity_type = 'music-league-stats' AND pi.league_id = ? ORDER BY pi.id DESC LIMIT 1),
+				(SELECT pi.identifier FROM player_identities pi WHERE pi.player_id = p.id AND pi.identity_type = 'music-league-stats' AND pi.league_id IS NULL ORDER BY pi.id DESC LIMIT 1),
+				p.name
+			) stats_name
+		 FROM competitors c LEFT JOIN players p ON p.id = c.player_id
+		 WHERE c.id IN (${compIds.map(() => '?').join(',')})`
+	).all(league.id, ...compIds) as { competitor_id: number; bot_name: string | null; stats_name: string | null }[] : [];
+	const rosterNamesByCompetitor = new Map(rosterNames.map((row) => [row.competitor_id, row]));
+	for (const comp of competitors) {
+		const roster = rosterNamesByCompetitor.get(comp.id);
+		const botName = roster?.bot_name ?? comp.name;
+		comp.botName = botName;
+		if (displayMode === 'identity' && roster?.bot_name) comp.name = roster.stats_name || botName;
+	}
 	const compIdToIdx = new Map(competitors.map((c, i) => [c.id, i]));
 
 	interface SubRow {
@@ -256,13 +276,15 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		artists: string;
 		album_art_url: string | null;
 		created_at: string;
+		ytm_url: string | null;
 	}
 	const subRows = db
 		.prepare(
 			`SELECT ms.round_id, ms.competitor_id, ms.spotify_uri, ms.title, ms.artists,
-				ms.album_art_url, ms.created_at
+				ms.album_art_url, ms.created_at, ytm.ytm_url
 			 FROM ml_submissions ms
 			 JOIN rounds r ON ms.round_id = r.id
+			 LEFT JOIN ytm_link_cache ytm ON ytm.spotify_uri = ms.spotify_uri
 			 WHERE r.season_id IN (${seasonPlaceholders})
 			 ORDER BY ms.created_at`
 		)
@@ -277,6 +299,8 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 			roundIdx,
 			compIdx,
 			uri: row.spotify_uri,
+			spotifyUrl: row.spotify_uri.startsWith('spotify:track:') ? `https://open.spotify.com/track/${row.spotify_uri.slice('spotify:track:'.length)}` : row.spotify_uri.startsWith('http') ? row.spotify_uri : null,
+			ytmUrl: row.ytm_url,
 			title: row.title,
 			artists: row.artists.split(/\s*[,\n]\s*/).filter(Boolean),
 			art: row.album_art_url,

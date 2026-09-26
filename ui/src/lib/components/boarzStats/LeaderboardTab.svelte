@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 	import ChartCanvas from './ChartCanvas.svelte';
 
@@ -16,7 +17,9 @@
 		snap.rounds.filter((r) => snap.subs.some((s) => s.roundIdx === r.idx && s.compIdx === i)).length
 	);
 
-	const standings = comps
+	let standingSort = $state<'total' | 'rounds' | 'avg' | 'name'>('total');
+	let sortAscending = $state(false);
+	const standings = $derived(comps
 		.map((c, i) => ({
 			name: c.name,
 			color: colors[i],
@@ -24,7 +27,14 @@
 			rounds: roundsPlayed[i],
 			avg: roundsPlayed[i] ? (last[i] ?? 0) / roundsPlayed[i] : 0,
 		}))
-		.sort((a, b) => b.total - a.total);
+		.sort((a, b) => {
+			const delta = standingSort === 'name' ? a.name.localeCompare(b.name) : standingSort === 'rounds' ? a.rounds - b.rounds : standingSort === 'avg' ? a.avg - b.avg : a.total - b.total;
+			return (sortAscending ? 1 : -1) * delta;
+		}));
+	function sortBy(key: 'total' | 'rounds' | 'avg' | 'name') {
+		if (standingSort === key) sortAscending = !sortAscending;
+		else { standingSort = key; sortAscending = key === 'name'; }
+	}
 
 	const positionConfig = {
 		type: 'line',
@@ -47,10 +57,11 @@
 			responsive: true,
 			maintainAspectRatio: false,
 			scales: {
-				y: { reverse: true, min: 1, ticks: { stepSize: 1 }, title: { display: true, text: 'Position' } },
+				y: { position: 'right' as const, reverse: true, min: 1, ticks: { stepSize: 1 }, title: { display: true, text: 'Rank' } },
 				x: { ticks: { maxRotation: 40, minRotation: 0 } },
 			},
-			plugins: { legend: { position: 'right' as const } },
+			plugins: { legend: { position: 'left' as const } },
+			animation: { duration: 900 },
 		},
 	};
 
@@ -109,6 +120,7 @@
 
 	let raceIdx = $state(R - 1);
 	let racePlaying = $state(false);
+	let fixedRankSlots = $state(false);
 	let raceTimer: ReturnType<typeof setInterval> | null = null;
 
 	function raceTotals(r: number): number[] {
@@ -143,39 +155,12 @@
 	}
 	$effect(() => () => stopRace());
 
-	const raceTotalsNow = $derived(raceTotals(raceIdx));
+	const raceDisplayRows = $derived(fixedRankSlots
+		? [...raceRows].sort((a, b) => (b.cum[raceIdx] ?? 0) - (a.cum[raceIdx] ?? 0) || a.c.name.localeCompare(b.c.name))
+		: raceRows);
 </script>
 
 <div class="space-y-6">
-	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-		<h2 class="mb-1 text-lg font-semibold">🏆 Standings</h2>
-		<p class="mb-4 text-sm text-fg-muted">Cumulative points across all {snap.rounds.length} rounds.</p>
-		<div class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="text-left text-fg-muted">
-						<th class="px-3 py-2">#</th>
-						<th class="px-3 py-2">Player</th>
-						<th class="px-3 py-2 text-right">Total</th>
-						<th class="px-3 py-2 text-right">Rounds</th>
-						<th class="px-3 py-2 text-right">Avg/round</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each standings as s, i (s.name)}
-						<tr class="border-t border-border-muted">
-							<td class="px-3 py-2">{medal[i] ?? i + 1}</td>
-							<td class="px-3 py-2 font-medium" style="color: {s.color}">{s.name}</td>
-							<td class="px-3 py-2 text-right font-mono">{s.total}</td>
-							<td class="px-3 py-2 text-right font-mono">{s.rounds}</td>
-							<td class="px-3 py-2 text-right font-mono">{s.avg.toFixed(1)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	</section>
-
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<h2 class="mb-1 text-lg font-semibold">🗺️ Standings Heatmap</h2>
 		<p class="mb-4 text-sm text-fg-muted">
@@ -233,10 +218,10 @@
 			press play.
 		</p>
 		<div class="space-y-2">
-			{#each raceRows as row, ri (row.c.id)}
-				{@const total = raceTotalsNow[ri]}
-				{@const rank = raceRank(row.i, raceIdx)}
-				<div class="race-row">
+			{#each raceDisplayRows as row, ri (row.c.id)}
+				{@const total = row.cum[raceIdx] ?? 0}
+				{@const rank = fixedRankSlots ? ri + 1 : raceRank(row.i, raceIdx)}
+				<div class="race-row" animate:flip={{ duration: 450 }}>
 					<span class="race-rank" class:lead={rank === 1}>{rank}</span>
 					<span class="race-name" title={row.c.name} style="color: {colors[row.i % colors.length]}">{row.c.name}</span>
 					<span class="race-track">
@@ -251,6 +236,7 @@
 			{/each}
 		</div>
 		<div class="mt-4 flex items-center gap-3">
+			<label class="flex items-center gap-2 whitespace-nowrap text-xs text-fg-muted"><input type="checkbox" bind:checked={fixedRankSlots} /> Keep rank slots fixed</label>
 			<button
 				type="button"
 				class="rounded-lg border border-border-muted px-3 py-1.5 text-sm transition-colors hover:bg-surface"
@@ -277,6 +263,20 @@
 		<p class="mb-4 text-sm text-fg-muted">Same story as the heatmap, as lines — 1st at the top.</p>
 		<ChartCanvas height={340} config={positionConfig} zoomable zoomMode="x" />
 	</section>
+
+	<details class="rounded-2xl border border-border-muted bg-surface/50 p-5">
+		<summary class="cursor-pointer list-none text-lg font-semibold">🏆 Standings table <span class="ml-2 text-xs font-normal text-fg-muted">Show exact totals and averages</span></summary>
+		<p class="mb-4 mt-2 text-sm text-fg-muted">Cumulative points across all {snap.rounds.length} rounds.</p>
+		<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-fg-muted">
+			<th class="px-3 py-2">#</th>
+			<th class="px-3 py-2"><button class="hover:text-fg" onclick={() => sortBy('name')}>Player {standingSort === 'name' ? (sortAscending ? '↑' : '↓') : '↕'}</button></th>
+			<th class="px-3 py-2 text-right"><button class="hover:text-fg" onclick={() => sortBy('total')}>Total {standingSort === 'total' ? (sortAscending ? '↑' : '↓') : '↕'}</button></th>
+			<th class="px-3 py-2 text-right"><button class="hover:text-fg" onclick={() => sortBy('rounds')}>Rounds {standingSort === 'rounds' ? (sortAscending ? '↑' : '↓') : '↕'}</button></th>
+			<th class="px-3 py-2 text-right"><button class="hover:text-fg" onclick={() => sortBy('avg')}>Avg/round {standingSort === 'avg' ? (sortAscending ? '↑' : '↓') : '↕'}</button></th>
+		</tr></thead><tbody>{#each standings as s, i (s.name)}
+			<tr class="border-t border-border-muted"><td class="px-3 py-2">{medal[i] ?? i + 1}</td><td class="px-3 py-2 font-medium" style="color: {s.color}">{s.name}</td><td class="px-3 py-2 text-right font-mono">{s.total}</td><td class="px-3 py-2 text-right font-mono">{s.rounds}</td><td class="px-3 py-2 text-right font-mono">{s.avg.toFixed(1)}</td></tr>
+		{/each}</tbody></table></div>
+	</details>
 </div>
 
 <style>

@@ -104,8 +104,8 @@
 		</div>
 	</section>
 
-	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-		<h2 class="mb-4 text-lg font-semibold">Full breakdown {mode === 'norm' ? '(per-round avg)' : '(raw totals)'}</h2>
+	<details class="rounded-2xl border border-border-muted bg-surface/50 p-5">
+		<summary class="cursor-pointer list-none text-lg font-semibold">Full breakdown {mode === 'norm' ? '(per-round avg)' : '(raw totals)'} <span class="ml-2 text-xs font-normal text-fg-muted">Show top recipient values</span></summary>
 		<div class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead>
@@ -132,5 +132,5 @@
 				</tbody>
 			</table>
 		</div>
-	</section>
+	</details>
 </div>

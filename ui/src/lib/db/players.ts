@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 export interface PlayerIdentity {
   id: number;
   league_id: number | null;
-  identity_type: 'whatsapp' | 'google-chat' | 'music-league';
+  identity_type: 'whatsapp' | 'google-chat' | 'music-league' | 'music-league-stats';
   identifier: string;
 }
 

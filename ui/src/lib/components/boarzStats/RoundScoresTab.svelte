@@ -7,8 +7,7 @@
 	const comps = snap.competitors;
 	const colors = snap.colors;
 
-	let selected = $state<number | 'all'>('all');
-	const shown = $derived(selected === 'all' ? comps.map((_, i) => i) : [selected]);
+	const shown = comps.map((_, i) => i);
 
 	const spansSeasons = new Set(snap.rounds.map((round) => round.seasonNumber)).size > 1;
 	const roundNames = snap.rounds.map((round) => {
@@ -82,18 +81,7 @@
 
 <div class="space-y-6">
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-		<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-			<h2 class="text-lg font-semibold">📈 Round-by-Round Scores</h2>
-			<select
-				class="rounded-lg border border-border-muted bg-surface px-3 py-1.5 text-sm"
-				bind:value={selected}
-			>
-				<option value={'all'}>All players</option>
-				{#each comps as c, i (c.id)}
-					<option value={i}>{c.name}</option>
-				{/each}
-			</select>
-		</div>
+		<h2 class="mb-3 text-lg font-semibold">📈 Round-by-Round Scores</h2>
 		<p class="mb-4 text-sm text-fg-muted">Points earned per round.</p>
 		<ChartCanvas height={380} config={scoresConfig} zoomable zoomMode="x" />
 	</section>

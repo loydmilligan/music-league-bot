@@ -170,6 +170,8 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 	}
 
 	const acc = new Map<string, Acc>();
+	const displayByKey = new Map<string, string>();
+	const competitorIdByKey = new Map<string, number>();
 	const person = (key: string): Acc => {
 		let a = acc.get(key);
 		if (!a) {
@@ -178,7 +180,12 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 		}
 		return a;
 	};
-	for (const c of comps) person(c.name); // everyone appears even if chat-quiet
+	for (const c of comps) {
+		const key = canonicalSender(c.botName ?? c.name) ?? c.botName ?? c.name;
+		person(key); // everyone appears even if chat-quiet
+		displayByKey.set(key, c.name);
+		competitorIdByKey.set(key, c.id);
+	}
 
 	const spiciest: DeepRatings['spiciest'] = [];
 	const bestMemes: DeepRatings['bestMemes'] = [];
@@ -221,10 +228,10 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 		}
 
 		if (key !== 'Brian' && r.heat >= 1.8) {
-			spiciest.push({ display: key, text: r.text.slice(0, 140), heat: r.heat, roast: r.roast_target, ts: r.ts });
+			spiciest.push({ display: displayByKey.get(key) ?? key, text: r.text.slice(0, 140), heat: r.heat, roast: r.roast_target, ts: r.ts });
 		}
 		if (r.meme_potential >= 2 && r.conversation_pull >= 1.5) {
-			bestMemes.push({ display: key, text: r.text.slice(0, 140), meme: r.meme_potential, pull: r.conversation_pull, ts: r.ts });
+			bestMemes.push({ display: displayByKey.get(key) ?? key, text: r.text.slice(0, 140), meme: r.meme_potential, pull: r.conversation_pull, ts: r.ts });
 		}
 		// driver collection: the single most extreme message per dimension per player
 		const dimDrivers: [keyof typeof drivers, number][] = [
@@ -233,7 +240,7 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 		for (const [dim, v] of dimDrivers) {
 			const list = drivers[dim];
 			if (list.length < 400 || v > list[list.length - 1]?.v) {
-				list.push({ display: key, text: r.text.slice(0, 140), ts: r.ts, v });
+				list.push({ display: displayByKey.get(key) ?? key, text: r.text.slice(0, 140), ts: r.ts, v });
 				list.sort((x, y) => y.v - x.v);
 				if (list.length > 400) list.pop();
 			}
@@ -253,8 +260,8 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 			const avgPull = a.n ? a.pull / n : null;
 			return {
 				key,
-				display: key,
-				competitorId: comps.find((c) => c.name === key)?.id ?? null,
+				display: displayByKey.get(key) ?? key,
+				competitorId: competitorIdByKey.get(key) ?? null,
 				msgsRated: a.n,
 				shareReaction: a.reaction / n,
 				shareMusic: a.music / n,

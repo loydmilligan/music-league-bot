@@ -3,7 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getPlayerById, addPlayerIdentity } from '$lib/db/players.js';
 
-const VALID_TYPES = ['whatsapp', 'google-chat', 'music-league'] as const;
+const VALID_TYPES = ['whatsapp', 'google-chat', 'music-league', 'music-league-stats'] as const;
 
 // POST /api/players/:playerId/identities — add an identity to a player.
 // Body: { identity_type, identifier, league_id? }

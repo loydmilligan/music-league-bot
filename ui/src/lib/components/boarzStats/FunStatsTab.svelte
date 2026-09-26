@@ -96,7 +96,9 @@
 			taste; higher = more mainstream.
 		</p>
 		<ChartCanvas height={340} config={contrarianConfig} />
-		<div class="mt-4 overflow-x-auto">
+		<details class="mt-4 rounded-lg border border-border-muted px-3 py-2">
+			<summary class="cursor-pointer text-sm text-fg-muted">Show contrarian values</summary>
+			<div class="mt-2 overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="text-left text-fg-muted">
@@ -117,7 +119,8 @@
 					{/each}
 				</tbody>
 			</table>
-		</div>
+			</div>
+		</details>
 	</section>
 
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
@@ -137,7 +140,9 @@
 				<ChartCanvas height={300} config={voteConfig} />
 			</div>
 		</div>
-		<div class="mt-4 overflow-x-auto">
+		<details class="mt-4 rounded-lg border border-border-muted px-3 py-2">
+			<summary class="cursor-pointer text-sm text-fg-muted">Show eagerness values</summary>
+			<div class="mt-2 overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="text-left text-fg-muted">
@@ -160,6 +165,7 @@
 					{/each}
 				</tbody>
 			</table>
-		</div>
+			</div>
+		</details>
 	</section>
 </div>

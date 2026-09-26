@@ -33,8 +33,10 @@ export const load: PageServerLoad = async () => {
       rounds: getRoundsForSeason(db, s.id),
     }));
 
+    const statsDisplayName = db.prepare('SELECT value FROM settings WHERE key = ?').get(`ml_stats_display_name:${league.id}`) as { value?: string } | undefined;
     return {
       ...league,
+      statsDisplayName: statsDisplayName?.value === 'identity' ? 'identity' as const : 'bot' as const,
       isActive: activeView?.isActive ?? false,
       manuallyActive: activeView?.manuallyActive ?? false,
       activeSeasonId: activeView?.activeSeasonId ?? null,

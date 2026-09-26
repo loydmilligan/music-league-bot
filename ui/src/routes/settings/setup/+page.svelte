@@ -98,6 +98,16 @@
     await invalidateAll();
   }
 
+  let statsNameSaving = $state<Record<number, boolean>>({});
+  async function setStatsDisplayName(league: League, mode: 'bot' | 'identity') {
+    statsNameSaving = { ...statsNameSaving, [league.id]: true };
+    const res = await apiCall(`/api/leagues/${league.id}/ml-stats-display-name`, 'PUT', { mode });
+    statsNameSaving = { ...statsNameSaving, [league.id]: false };
+    if (!res.ok) { showBanner('Error saving ML Stats display name', 'warn'); return; }
+    showBanner('ML Stats display name updated');
+    await invalidateAll();
+  }
+
   // ---- players section -----------------------------------------------------
   let newName = $state('');
   let addingPlayer = $state(false);
@@ -292,7 +302,7 @@
 
   // ---- identity section per player ----------------------------------------
   let showAddIdentity = $state(false);
-  let newIdentityType = $state<'whatsapp' | 'google-chat' | 'music-league'>('whatsapp');
+  let newIdentityType = $state<'whatsapp' | 'google-chat' | 'music-league' | 'music-league-stats'>('whatsapp');
   let newIdentityId = $state('');
   let newIdentityLeague = $state<string>('');
   let addingIdentity = $state(false);
@@ -301,6 +311,7 @@
     'whatsapp': "Display name in WhatsApp group (e.g. 'Matt M.')",
     'google-chat': 'Google Chat display name or email address',
     'music-league': 'Username on musicleague.app',
+    'music-league-stats': 'Display name shown in ML Stats',
   };
 
   async function addIdentity(playerId: number) {
@@ -753,6 +764,23 @@
           >
             {league.manuallyActive ? 'Deactivate' : 'Activate'}
           </button>
+        </div>
+
+        <div class="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-border-muted bg-bg-elevated/50 p-3">
+          <label for="ml-stats-name-{league.id}" class="text-sm font-medium text-fg">ML Stats Display Name</label>
+          <select
+            id="ml-stats-name-{league.id}"
+            value={league.statsDisplayName}
+            onchange={(event) => setStatsDisplayName(league, event.currentTarget.value as 'bot' | 'identity')}
+            disabled={statsNameSaving[league.id]}
+            title="Music League Bot uses each player's standard app name. Player Roster identity uses the Music League Stats identity and can be customized independently for this league."
+            class="bg-bg border border-border-muted rounded-md px-2.5 py-1.5 text-sm text-fg disabled:opacity-50"
+          >
+            <option value="bot">Music League Bot player name</option>
+            <option value="identity">Player Roster identity</option>
+          </select>
+          <span class="max-w-xl text-xs text-fg-faint">Music League Bot uses each player's standard app name. Player Roster identity uses the Music League Stats identity and can vary by league.</span>
+          {#if statsNameSaving[league.id]}<span class="text-xs text-fg-faint">Saving…</span>{/if}
         </div>
 
         <!-- Active-round selector -->
@@ -1590,6 +1618,7 @@
                         <option value="whatsapp">WhatsApp</option>
                         <option value="google-chat">Google Chat</option>
                         <option value="music-league">Music League</option>
+                        <option value="music-league-stats">Music League Stats</option>
                       </select>
                       <select
                         bind:value={newIdentityLeague}

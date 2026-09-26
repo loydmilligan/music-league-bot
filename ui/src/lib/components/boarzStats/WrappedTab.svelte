@@ -46,7 +46,11 @@
 			<div class="rounded-2xl border border-border-muted bg-surface/50 p-4">
 				<div class="text-2xl">{c.icon}</div>
 				<div class="mt-1 text-xs tracking-wide text-fg-muted uppercase">{c.title}</div>
-				<div class="mt-1 truncate text-lg font-bold" title={c.value ?? ''}>{c.value ?? '—'}</div>
+				{#if c.title === 'Song of the Season' && topSong?.spotifyUrl}
+					<div class="mt-1 truncate text-lg font-bold"><a href={topSong.spotifyUrl} target="_blank" rel="noreferrer" title="Open {topSong.title} by {topSong.artists.join(', ')} in Spotify" class="underline decoration-dotted hover:text-accent">{c.value}</a>{#if topSong.ytmUrl}<a class="ml-2 text-sm" href={topSong.ytmUrl} target="_blank" rel="noreferrer" title="Open {topSong.title} by {topSong.artists.join(', ')} on YouTube Music" aria-label="YouTube Music">▶</a>{/if}</div>
+				{:else}
+					<div class="mt-1 truncate text-lg font-bold" title={c.value ?? ''}>{c.value ?? '—'}</div>
+				{/if}
 				<div class="text-sm text-fg-muted">{c.sub}</div>
 			</div>
 		{/each}

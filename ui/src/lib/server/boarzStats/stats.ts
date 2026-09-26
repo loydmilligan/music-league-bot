@@ -5,6 +5,7 @@
 export interface Comp {
 	id: number;
 	name: string;
+	botName?: string;
 }
 
 export interface RoundInfo {
@@ -22,6 +23,8 @@ export interface Sub {
 	roundIdx: number;
 	compIdx: number;
 	uri: string;
+	spotifyUrl?: string | null;
+	ytmUrl?: string | null;
 	title: string;
 	artists: string[];
 	art: string | null;

@@ -292,7 +292,7 @@ export function openLeagueDb(path?: string): Database.Database {
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
 				league_id INTEGER REFERENCES leagues(id) ON DELETE SET NULL,
-				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league')),
+				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league','music-league-stats')),
 				identifier TEXT NOT NULL,
 				created_at TEXT DEFAULT (datetime('now'))
 			);
@@ -618,13 +618,13 @@ export function openLeagueDb(path?: string): Database.Database {
 	const piSql = (db.prepare(
 		"SELECT sql FROM sqlite_master WHERE type='table' AND name='player_identities'",
 	).get() as { sql?: string } | undefined)?.sql ?? '';
-	if (piSql && !piSql.includes("'discord'")) {
+	if (piSql && (!piSql.includes("'discord'") || !piSql.includes("'music-league-stats'"))) {
 		db.exec(`
 			CREATE TABLE player_identities_new (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
 				league_id INTEGER REFERENCES leagues(id) ON DELETE SET NULL,
-				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league','discord')),
+				identity_type TEXT NOT NULL CHECK(identity_type IN ('whatsapp','google-chat','music-league','discord','music-league-stats')),
 				identifier TEXT NOT NULL,
 				created_at TEXT DEFAULT (datetime('now'))
 			);
