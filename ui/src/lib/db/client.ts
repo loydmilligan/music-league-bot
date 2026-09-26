@@ -697,6 +697,11 @@ export function openLeagueDb(path?: string): Database.Database {
 }
 
 export function getDb(): Database.Database {
-	if (!_db) _db = openLeagueDb();
+	if (!_db) {
+		// Share instance (boarz-stats): read-only connection, no migrations, no writes.
+		_db = process.env.STATS_ONLY === '1'
+			? new Database(`${process.env.DATA_DIR ?? 'data'}/league.db`, { readonly: true, fileMustExist: true })
+			: openLeagueDb();
+	}
 	return _db;
 }
