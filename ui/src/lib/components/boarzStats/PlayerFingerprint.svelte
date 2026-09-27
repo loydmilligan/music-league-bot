@@ -14,15 +14,12 @@
 		{ key: 'meme', title: 'Word Salad', subtitle: 'Makes the moment', icon: '…', field: 'pctMeme' },
 	];
 	const allPlayers = $derived(snap.deep?.players ?? []);
-	let selectedKeys = $state<string[]>([]);
-	let initialized = $state(false);
+	let selectedKeys = $state((snap.deep?.players ?? []).slice(0, 3).map((player) => player.key));
 	let activeTrait = $state<FingerprintTrait>('chaos');
 	$effect(() => {
-		if (!initialized && allPlayers.length) {
-			selectedKeys = allPlayers.slice(0, Math.min(3, allPlayers.length)).map((p) => p.key);
-			initialized = true;
-		} else {
-			selectedKeys = selectedKeys.filter((key) => allPlayers.some((p) => p.key === key)).slice(0, 3);
+		const validKeys = selectedKeys.filter((key) => allPlayers.some((player) => player.key === key)).slice(0, 3);
+		if (validKeys.length !== selectedKeys.length || validKeys.some((key, index) => key !== selectedKeys[index])) {
+			selectedKeys = validKeys;
 		}
 	});
 	const selected = $derived(selectedKeys.map((key) => allPlayers.find((p) => p.key === key)).filter((p): p is Player => !!p));
