@@ -3,6 +3,7 @@
 	import { AXIS_META, type DaySummary } from '$lib/boarzStats/shared.js';
 	import { onMount } from 'svelte';
 	import ChartCanvas from './ChartCanvas.svelte';
+	import PlayerFingerprint from './PlayerFingerprint.svelte';
 
 	let { snap }: { snap: Snapshot } = $props();
 
@@ -722,6 +723,8 @@
 					<ChartCanvas height={340} config={tagMixByPlayerConfig} zoomable zoomMode="x" />
 				</div>
 			</div>
+
+			<PlayerFingerprint snap={snap} />
 
 			<div class="mt-6 grid gap-6 md:grid-cols-2">
 				<div>

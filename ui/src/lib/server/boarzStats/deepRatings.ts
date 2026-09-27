@@ -45,7 +45,11 @@ export interface PlayerRatings {
 	selfRoasts: number;
 	praiseGiven: number;
 	avgConfidence: number;
+	/** Up to three messages that most strongly express each profile trait. */
+	evidence: Record<FingerprintTrait, { high: { text: string; ts: string; score: number }[]; low: { text: string; ts: string; score: number } | null }>;
 }
+
+export type FingerprintTrait = 'heat' | 'chaos' | 'affection' | 'mainCharacter' | 'commissioner' | 'meme';
 
 export interface DeepRatings {
 	players: PlayerRatings[];
@@ -170,6 +174,7 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 	}
 
 	const acc = new Map<string, Acc>();
+	const evidenceByPlayer = new Map<string, Record<FingerprintTrait, { high: { text: string; ts: string; score: number }[]; low: { text: string; ts: string; score: number } | null }>>();
 	const displayByKey = new Map<string, string>();
 	const competitorIdByKey = new Map<string, number>();
 	const person = (key: string): Acc => {
@@ -180,9 +185,14 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 		}
 		return a;
 	};
+	const emptyEvidence = (): Record<FingerprintTrait, { high: { text: string; ts: string; score: number }[]; low: { text: string; ts: string; score: number } | null }> => ({
+		heat: { high: [], low: null }, chaos: { high: [], low: null }, affection: { high: [], low: null },
+		mainCharacter: { high: [], low: null }, commissioner: { high: [], low: null }, meme: { high: [], low: null },
+	});
 	for (const c of comps) {
 		const key = canonicalSender(c.botName ?? c.name) ?? c.botName ?? c.name;
 		person(key); // everyone appears even if chat-quiet
+		evidenceByPlayer.set(key, emptyEvidence());
 		displayByKey.set(key, c.name);
 		competitorIdByKey.set(key, c.id);
 	}
@@ -245,6 +255,21 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 				if (list.length > 400) list.pop();
 			}
 		}
+		const traitScores: [FingerprintTrait, number][] = [
+			['heat', r.heat], ['chaos', r.chaos], ['affection', r.affection],
+			['mainCharacter', r.main_character], ['commissioner', r.commissioner_energy], ['meme', r.meme_potential],
+		];
+		const evidence = evidenceByPlayer.get(key);
+		if (evidence) for (const [trait, score] of traitScores) {
+			const target = evidence[trait];
+			const item = { text: r.text.slice(0, 260), ts: r.ts, score };
+			if (target.high.length < 2 || score > target.high[target.high.length - 1].score) {
+				target.high.push(item);
+				target.high.sort((a, b) => b.score - a.score);
+				if (target.high.length > 2) target.high.pop();
+			}
+			if (!target.low || score < target.low.score) target.low = item;
+		}
 	}
 
 	const players: PlayerRatings[] = [...acc.entries()]
@@ -291,6 +316,7 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 				selfRoasts: a.selfRoasts,
 				praiseGiven: a.praise,
 				avgConfidence: a.n ? a.conf / n : 0,
+				evidence: evidenceByPlayer.get(key) ?? emptyEvidence(),
 			};
 		})
 		.sort((x, y) => y.msgsRated - x.msgsRated);
