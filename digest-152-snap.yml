@@ -1,0 +1,64 @@
+- generic [ref=e1543]:
+  - complementary [ref=e1544]:
+    - generic [ref=e1545]:
+      - generic [ref=e1546]: Mash co.
+      - link "m/l music-league-bot" [ref=e1547] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e1548]: m/l
+        - generic [ref=e1549]: music-league-bot
+      - button "Music League session OK (checked 3m ago)" [ref=e1551]:
+        - generic [ref=e1553]: ml ok
+    - navigation [ref=e1554]:
+      - list [ref=e1555]:
+        - listitem [ref=e1556]:
+          - link "Active round r-14" [ref=e1557] [cursor=pointer]:
+            - /url: /
+            - generic [aria-hidden] [ref=e1558]: ▸
+            - generic [ref=e1559]: Active round
+            - generic [ref=e1560]: r-14
+        - listitem [ref=e1561]:
+          - link "Shortlist 11" [ref=e1562] [cursor=pointer]:
+            - /url: /shortlist
+            - generic [aria-hidden] [ref=e1563]: ▸
+            - generic [ref=e1564]: Shortlist
+            - generic [ref=e1565]: "11"
+        - listitem [ref=e1566]:
+          - link "Chat Content 7" [ref=e1567] [cursor=pointer]:
+            - /url: /chat
+            - generic [aria-hidden] [ref=e1568]: ▸
+            - generic [ref=e1569]: Chat Content
+            - generic [ref=e1570]: "7"
+        - listitem [ref=e1571]:
+          - link "Content 2" [ref=e1572] [cursor=pointer]:
+            - /url: /content
+            - generic [aria-hidden] [ref=e1573]: ▸
+            - generic [ref=e1574]: Content
+            - generic [ref=e1575]: "2"
+        - listitem [ref=e1576]:
+          - link "History" [ref=e1577] [cursor=pointer]:
+            - /url: /history
+            - generic [aria-hidden] [ref=e1578]: ▸
+        - listitem [ref=e1580]:
+          - link "Jon's Boarz review" [ref=e1581] [cursor=pointer]:
+            - /url: /boarz-review-jon
+            - generic [aria-hidden] [ref=e1582]: ▸
+        - listitem [ref=e1584]:
+          - link "Settings" [ref=e1585] [cursor=pointer]:
+            - /url: /settings
+            - generic [aria-hidden] [ref=e1586]: ▸
+    - generic [ref=e1588]:
+      - generic [ref=e1589]: Leagues
+      - list [ref=e1590]:
+        - listitem [ref=e1591]: No active leagues.
+    - generic [ref=e1592]:
+      - generic [ref=e1593]: Cross-league next
+      - paragraph [ref=e1594]: No upcoming actions.
+    - generic [ref=e1596]:
+      - generic [ref=e1597]: WATCHER LIVE · 4D UPTIME
+      - generic [ref=e1598]: sqlite ml-bot.db · 12.4 MB
+      - generic [ref=e1599]: last poll 6:32:14 PM
+      - generic [ref=e1600]: mash co. · v1.13.0
+  - main [ref=e1601]:
+    - generic [ref=e1602]:
+      - heading "500" [level=1] [ref=e1603]
+      - paragraph [ref=e1604]: Internal Error
