@@ -359,4 +359,42 @@ describe('boarz-ii-men guess aliases', () => {
     expect(data.weekly.attempts).toBe(nicknames.length);
     expect(data.weekly.correct).toBe(nicknames.length);
   });
+
+  it('starts the Boarz season grid at play-order round five', () => {
+    const b = boarzDb();
+    const insertRound = b.prepare(
+      `INSERT INTO rounds (id, season_id, ml_round_id, name, created_at)
+       VALUES (?, 1, ?, ?, ?)`,
+    );
+    const insertSub = b.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (?, 2, ?, ?, 'Artist', ?)`,
+    );
+    const insertVote = b.prepare(
+      `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+       VALUES (?, 1, ?, 1, 'Clements', ?)`,
+    );
+
+    for (let i = 2; i <= 6; i++) {
+      const at = `2026-01-${String(i).padStart(2, '0')}T00:00:00Z`;
+      insertRound.run(i, `r-${i}`, `Round ${i}`, at);
+      insertSub.run(i, `round-${i}-song`, `Round ${i} song`, at);
+      insertVote.run(i, `round-${i}-song`, at);
+    }
+
+    const data = getGuesserData(b, 6);
+    expect(data.seasonGrid.rounds).toEqual([
+      { roundId: 5, label: '5' },
+      { roundId: 6, label: '6' },
+    ]);
+    expect(data.seasonGrid.rows.find((row) => row.name === 'Matt Mariani')).toMatchObject({
+      attempts: 2,
+      correct: 2,
+    });
+    expect(data.seasonGrid.rows.find((row) => row.name === 'Grant Koziol')).toMatchObject({
+      attempts: 0,
+      correct: 0,
+    });
+    expect(data.seasonRoundCount).toBe(2);
+  });
 });

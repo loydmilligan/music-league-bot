@@ -27,7 +27,9 @@
   const hasArtists = $derived(!!artists && artists.songCount > 0);
   const callbacks = $derived(artists?.callbacks ?? []);
   const hasWords = $derived(words.length > 0);
-  const hasAny = $derived(hasAudio || hasTiming || hasArtists || hasWords);
+  // The Coinage can be the only authored insight in a recap stats slot.
+  const phrase = $derived(insights.statsContent?.phrase ?? (content as { phrase?: import('../db/roundInsights.js').PhraseOfRound })?.phrase);
+  const hasAny = $derived(hasAudio || hasTiming || hasArtists || hasWords || !!phrase?.term);
   const variant = $derived(resolveTopSectionVariant(insights.topSectionVariant, insights.roundId ?? 0, { hero: true, sound: hasAudio, race: hasTiming, language: hasWords }));
   const selectedVisuals = $derived(insights.topSectionVisuals ?? []);
   const visuals = $derived(insights.topSectionVariant === "auto" && selectedVisuals.length ? selectedVisuals.filter((v) => v === "hero" || (v === "sound" && hasAudio) || (v === "race" && hasTiming) || (v === "language" && hasWords)) : [variant]);
@@ -35,7 +37,6 @@
   const editorContent = $derived((content ?? {}) as { title?: string; body?: string });
   // The Coinage — same card idiom as "Language of the room", rendered as a
   // dictionary entry. `style:` is forward-compatible and today always this layout.
-  const phrase = $derived(insights.statsContent?.phrase ?? (content as { phrase?: import('../db/roundInsights.js').PhraseOfRound })?.phrase);
   // PNG/PDF export screenshots the page — video elements never capture, so the
   // export path prints the poster still instead.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
@@ -107,6 +108,15 @@
   // `javascript:` URL would otherwise become a live link. Only http(s) survives;
   // anything else renders no link at all.
   const phraseSourceHref = $derived(safeUrl(phrase?.source));
+  const phraseRelated = $derived(
+    (phrase?.related ?? [])
+      .map((item) => ({
+        term: item.term?.trim() ?? '',
+        note: item.note?.trim() ?? '',
+        source: safeUrl(item.source),
+      }))
+      .filter((item) => !!item.term),
+  );
   const lateShare = $derived(timing?.submissionCount ? Math.round(((timing.finalSixHoursCount ?? 0) / timing.submissionCount) * 100) : 0);
   const heroLine = $derived(lateShare >= 45 ? "A late-running round with a packed final stretch." : artists && artists.uniqueArtistCount >= Math.max(1, artists.songCount * 0.8) ? "A wide-open artist field with very little recycling." : audio?.medianBpm != null && audio.medianBpm < 90 ? "A slower, moodier set with room to breathe." : "A round with a distinct sonic and social fingerprint.");
 
@@ -308,6 +318,19 @@
               {/each}
             </div>
           {/if}
+          {#if phraseRelated.length}
+            <div class="di-related">
+              <span class="di-related-label">also on the tape</span>
+              {#each phraseRelated as item, i (i)}
+                <p>
+                  {#if item.source && !isExport}
+                    <a href={item.source} target="_blank" rel="noopener noreferrer">{item.term}</a>
+                  {:else}<b>{item.term}</b>{/if}
+                  {#if item.note}<span> — {item.note}</span>{/if}
+                </p>
+              {/each}
+            </div>
+          {/if}
         </div>
         {#if phraseOrigin}
           <p class="di-origin">
@@ -409,6 +432,12 @@
   /* the origin sentence is the link — it stays prose, it doesn't turn blue */
   .di-origin a { color:inherit; text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:3px; }
   .di-origin a:hover { color:var(--fg-muted); text-decoration-color:var(--mash-pulp); }
+  .di-related { clear:both; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+  .di-related-label { display:block; margin-bottom:6px; color:var(--fg-quiet); font:700 9px/1.2 var(--font-mono); text-transform:uppercase; letter-spacing:.08em; }
+  .di-related p { margin:4px 0; color:var(--fg-muted); font:500 11px/1.45 var(--font-body); }
+  .di-related a, .di-related b { color:var(--fg); font-weight:750; }
+  .di-related a { text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:3px; }
+  .di-related a:hover { color:var(--mash-pulp); }
   .di-range, .di-race { display:flex; align-items:center; gap:8px; color:var(--fg-muted); font:600 10px/1 var(--font-mono); }
   .di-range > div, .di-race-track { position:relative; flex:1; height:8px; background:linear-gradient(90deg,var(--mash-pulp-soft),var(--mash-pulp)); border-radius:99px; }
   .di-range i, .di-race-track b { position:absolute; top:50%; width:12px; height:12px; background:var(--fg); border:2px solid var(--mash-pulp); border-radius:50%; transform:translate(-50%,-50%); }

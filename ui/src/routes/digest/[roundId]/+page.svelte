@@ -19,6 +19,7 @@
   import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
   import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
   import ReelSection from '$lib/digest/ReelSection.svelte';
+  import PlayerCardsSection from '$lib/digest/PlayerCardsSection.svelte';
   import NextRoundSection from '$lib/digest/NextRoundSection.svelte';
   import ChatLabSection from '$lib/digest/ChatLabSection.svelte';
   import type { PartRecommendation } from '$lib/digest/chatSection.js';
@@ -666,6 +667,7 @@
     guesser: GuesserLeaderboard,
     storylines: StorylinesCast,
     reel: ReelSection,
+    playerCards: PlayerCardsSection,
   };
 
   // The standings chart's data slot (StandingsChart reads `data`, not content).
@@ -694,13 +696,18 @@
   // sprint-21 season-recap: data-section framing when the active draft is a recap.
   const recap = $derived(inDigest ? data.recap : null);
 
-  let statsOverride = $state<typeof data.insights>(null);
-  const statsData = $derived(recap ? data.stats : statsOverride ?? (inDigest ? data.insights : null));
+  let statsOverride = $state<typeof data.insights | null>(null);
+  const insightsData = $derived(statsOverride ?? (inDigest ? data.insights : null));
+  const statsData = $derived(
+    recap
+      ? { ...data.stats, statsContent: data.insights?.statsContent }
+      : insightsData,
+  );
   let statsExcluded = $state(data.stage !== "prepare" && data.draft.stats_state === "excluded");
   const statsAvailable = $derived(
-    !!statsData && (recap
-      ? Object.values(statsData).some((v) => typeof v === 'number')
-      : !!statsData.audio && (!!statsData.audio.analyzedSongs || !!statsData.wordCloud?.length || !!statsData.artists?.songCount)),
+    recap
+      ? Object.values(data.stats ?? {}).some((v) => typeof v === 'number')
+      : !!insightsData?.audio && (!!insightsData.audio.analyzedSongs || !!insightsData.wordCloud?.length || !!insightsData.artists?.songCount),
   );
   // Gates on availability only — see showStandings comment above.
   const showStats = $derived(statsAvailable);
@@ -1265,12 +1272,6 @@
         ? labelForSection(modalTarget)
         : '',
   );
-  /** True when the open regen modal targets the Back cover chat section. */
-  const modalIsChat = $derived(
-    !!modalTarget &&
-      modalTarget !== 'whole' &&
-      renderSections.some((sec) => sec.id === modalTarget && sec.kind === 'chat'),
-  );
   const modalPreview = $derived(
     modalTarget === 'whole'
       ? 'All non-locked, non-excluded sections will regenerate in parallel.'
@@ -1304,10 +1305,16 @@
   const renderSections = $derived(
     [
       ...sectionsList,
-      ...(!recap && showStats ? [{ id: "stats", kind: "stats", position: data.draft.stats_position ?? 0, content: data.insights?.statsContent ?? {}, variant: "visual" }] : []),
-      ...(!recap && showGuesser ? [{ id: "guesser", kind: "guesser", position: data.guesserPosition ?? 0, content: guesserContent, variant: "visual" }] : []),
-      ...(!recap && showReel ? [{ id: "reel", kind: "reel", position: reelPosition, content: reelContent, variant: "visual" }] : []),
+      ...(showStats ? [{ id: "stats", kind: "stats", position: data.draft?.stats_position ?? 0, content: data.insights?.statsContent ?? {}, variant: "visual" }] : []),
+      ...(showGuesser ? [{ id: "guesser", kind: "guesser", position: data.guesserPosition ?? 0, content: guesserContent, variant: "visual" }] : []),
+      ...(showReel ? [{ id: "reel", kind: "reel", position: reelPosition, content: reelContent, variant: "visual" }] : []),
     ].sort((a, b) => a.position - b.position),
+  );
+  /** True when the open regen modal targets the Back cover chat section. */
+  const modalIsChat = $derived(
+    !!modalTarget &&
+      modalTarget !== 'whole' &&
+      renderSections.some((sec) => sec.id === modalTarget && sec.kind === 'chat'),
   );
 
   // Make sure unknown section kinds don't crash.
@@ -1691,6 +1698,21 @@
           onRegen={() => openDataRegen("reel")}
           onEditSave={saveReelInlineEdit}
           onKebabAction={(action) => kebabAction("reel", action)}
+        />
+      {:else if section.kind === "playerCards"}
+        <DigestSection
+          kind="playerCards"
+          label="The Roster · baseball cards"
+          sectionState="default"
+          content={section.content}
+          visualComponent={VISUAL_COMPONENTS.playerCards}
+          variant="visual"
+          sectionId="playerCards"
+          roundId={data.roundId}
+          onToggleExcluded={() => {}}
+          onToggleLocked={() => {}}
+          onRegen={() => {}}
+          onKebabAction={() => {}}
         />
       {:else}
         <DigestSection

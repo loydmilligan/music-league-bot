@@ -65,6 +65,8 @@
   import { page } from '$app/state';
   import { normalizeCast, resolveStyle } from './regularStyles.js';
   import { REGULAR_STYLE_COMPONENTS as REGISTRY } from './regularStyles/index.js';
+  import PlayerCards from './PlayerCards.svelte';
+  import { matchPlayerCard, type PlayerCardMedia } from './playerCardRoster.js';
 
   let { content }: VisualComponentProps = $props();
 
@@ -72,26 +74,83 @@
   const cast = $derived(normalizeCast(content));
   const n = $derived(cast.length);
 
-  // web accordion open-state. Every panel starts OPEN: each style's hero (the
-  // spotlight word, the roster map, the refrain token, the buzzer track, the
-  // redline) must be visible in web AND export, and that invariant can't be
-  // left to depend on how many regulars happened to fire. Collapsing is a user
-  // action from here, not a default.
+  // web accordion open-state. Only the FIRST panel starts open; the rest are
+  // collapsed by default and expand on user action. (Export still prints every
+  // style in full via the flat-card branch, so heroes stay visible on export.)
   let toggled = $state<Record<number, boolean>>({});
   // Derived, not an effect, so SSR emits the same open panels the client does.
-  const open = $derived(Object.fromEntries(cast.map((_, i) => [i, toggled[i] ?? true])));
+  const open = $derived(Object.fromEntries(cast.map((_, i) => [i, toggled[i] ?? (i === 0)])));
   function toggle(i: number) {
     toggled = { ...toggled, [i]: !open[i] };
   }
 
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
   const note = $derived(typeof c.note === 'string' ? c.note.trim() : DEFAULT_REGULARS_NOTE);
+
+  // Opt-in per-Regular video clip. Follows the Reel's media rules: absolute
+  // http(s) URLs only, poster mandatory; export prints the poster still.
+  function safeUrl(u?: string): string {
+    const raw = (u ?? '').trim();
+    if (!raw) return '';
+    try {
+      const p = new URL(raw);
+      return p.protocol === 'http:' || p.protocol === 'https:' ? raw : '';
+    } catch {
+      return '';
+    }
+  }
+  // normalizeCast() strips unknown fields, so read the clip from the RAW
+  // content, matched by name (robust to any reordering/filtering).
+  const rawCast = $derived((c.cast ?? []) as Array<Record<string, unknown>>);
+  function clipOf(name: string): { src: string; poster: string; alt: string; caption: string } | null {
+    const raw = rawCast.find((r) => (r?.name as string) === name)
+      ?? rawCast.find((r) => (r?.player as string) === name);
+    const clip = (raw?.clip ?? raw?.video) as Record<string, string> | undefined;
+    if (!clip) return null;
+    const src = safeUrl(clip.src);
+    const poster = safeUrl(clip.poster);
+    if (!src && !poster) return null;
+    return { src, poster, alt: clip.alt ?? '', caption: clip.caption ?? '' };
+  }
+
+  const gridCards = $derived.by((): PlayerCardMedia[] => {
+    const out: PlayerCardMedia[] = [];
+    for (const raw of rawCast) {
+      const clip = (raw.clip ?? raw.video) as Record<string, string> | undefined;
+      const src = safeUrl(clip?.src);
+      const poster = safeUrl(clip?.poster);
+      if (!src && !poster) continue;
+      const row = matchPlayerCard(raw);
+      if (!row) continue;
+      out.push({ ...row, src, poster, shareImage: safeUrl(clip?.shareImage) });
+    }
+    return out.sort((a, b) => a.rank - b.rank);
+  });
+  const showCardGrid = $derived(gridCards.length >= 3);
 </script>
 
 <div class="stl" data-component="storylines-render" data-export={isExport}>
   <div class="stl-subhead">
     who gave themselves away this week{#if n}<span> · <b>{n}</b> {n === 1 ? 'tell' : 'tells'} fired</span>{/if}
   </div>
+
+  {#if showCardGrid}
+    <PlayerCards cards={gridCards} />
+  {/if}
+
+  {#snippet castClip(m: StorylineCastMember)}
+    {@const clip = showCardGrid ? null : clipOf(m.name ?? '')}
+    {#if clip}
+      <figure class="stl-clip">
+        {#if isExport || !clip.src}
+          {#if clip.poster}<img src={clip.poster} alt={clip.alt} />{/if}
+        {:else}
+          <video src={clip.src} poster={clip.poster || undefined} controls muted loop playsinline aria-label={clip.alt || 'clip'}></video>
+        {/if}
+        {#if clip.caption}<figcaption>{clip.caption}</figcaption>{/if}
+      </figure>
+    {/if}
+  {/snippet}
 
   {#if n}
     <!-- persistent strip -->
@@ -116,6 +175,7 @@
               {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
             </p>
             <C entry={m} {isExport} />
+            {@render castClip(m)}
           </div>
         {/each}
       </div>
@@ -141,6 +201,7 @@
             {#if open[i]}
               <div class="stl-panel" id={`stl-panel-${i}`} role="region">
                 <C entry={m} {isExport} />
+                {@render castClip(m)}
               </div>
             {/if}
           </div>
@@ -162,6 +223,27 @@
     flex-direction: column;
     gap: 0;
     font-family: var(--font-body);
+  }
+
+  .stl-clip {
+    margin: 14px auto 2px;
+    max-width: 300px;
+  }
+  .stl-clip video,
+  .stl-clip img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-2);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-3);
+    background: #0a0d11;
+  }
+  .stl-clip figcaption {
+    margin: 8px 2px 0;
+    text-align: center;
+    font: italic 400 12px/1.5 var(--font-body);
+    color: var(--fg-muted);
   }
 
   .stl-subhead {

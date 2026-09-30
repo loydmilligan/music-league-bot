@@ -112,6 +112,11 @@ export interface PhraseOfRound {
   usages?: { label?: string; speaker?: string; text?: string }[];
   /** origin explainer URL; nothing renders when absent */
   source?: string;
+  /**
+   * Other attested season coinages. Each entry links back to its source or
+   * definition; the lead term above keeps the full dictionary treatment.
+   */
+  related?: { term: string; note?: string; source?: string }[];
   /** right-hand meta on the card head, e.g. "coined 8/9 · 4 speakers" */
   meta?: string;
   metrics?: { value: string; label: string }[];

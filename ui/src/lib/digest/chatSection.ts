@@ -134,6 +134,7 @@ export function loadChatWindow(
 			// The relay cannot flag edits; only the export can.
 			edited: false,
 			media: MEDIA_RE.test(text) ? text : null,
+			deleted: false,
 			mentions: [],
 		});
 	}

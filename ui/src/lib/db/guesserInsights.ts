@@ -390,6 +390,17 @@ const LEAGUE_ALIASES: Record<
   ],
 };
 
+/**
+ * Play-order round where the room began playing Guess the Submitter.
+ *
+ * Most leagues have played from their first round, so the default remains 1.
+ * Boarz introduced the game in round five; including rounds one through four
+ * would turn ordinary name mentions in vote comments into phantom guesses.
+ */
+const SEASON_GRID_START_ROUND: Record<string, number> = {
+  'boarz-ii-men': 5,
+};
+
 function rate(correct: number, attempts: number): number {
   return attempts > 0 ? correct / attempts : 0;
 }
@@ -485,11 +496,13 @@ function gridNotesFor(
 function buildSeasonGrid(
   db: Database.Database,
   leagueId: number,
+  leagueSlug: string,
   matcher: (comment: string) => number | null,
   playerNames: Map<number, string>,
+  rosterPlayerIds: readonly number[],
   gridNotes: Record<string, { display?: string; note?: string }>,
 ): GuesserGrid {
-  const roundRows = db
+  const allRoundRows = db
     .prepare(
       `SELECT r.id AS roundId
        FROM rounds r JOIN seasons s ON s.id = r.season_id
@@ -501,6 +514,10 @@ function buildSeasonGrid(
        ORDER BY COALESCE(r.voting_deadline, r.submission_deadline, r.created_at) ASC, r.id ASC`,
     )
     .all(leagueId) as { roundId: number }[];
+  const startRound = Math.max(1, SEASON_GRID_START_ROUND[leagueSlug] ?? 1);
+  const roundRows = allRoundRows
+    .map((row, index) => ({ ...row, label: String(index + 1) }))
+    .filter((_, index) => index + 1 >= startRound);
   if (roundRows.length === 0) return { rounds: [], rows: [] };
 
   const voteRows = db
@@ -525,12 +542,18 @@ function buildSeasonGrid(
       comment: string;
     }[];
 
-  const labelOf = new Map(roundRows.map((r, i) => [r.roundId, String(i + 1)]));
+  const includedRoundIds = new Set(roundRows.map((r) => r.roundId));
+  const labelOf = new Map(roundRows.map((r) => [r.roundId, r.label]));
 
   // Every player who has ever voted in this league, so the never-guessed rows survive.
   const seen = new Map<number, Map<number, { attempts: number; correct: number }>>();
   const detail = new Map<number, GuesserGridGuess[]>();
+  for (const playerId of rosterPlayerIds) {
+    seen.set(playerId, new Map());
+    detail.set(playerId, []);
+  }
   for (const row of voteRows) {
+    if (!includedRoundIds.has(row.roundId)) continue;
     if (row.voterPlayerId === null) continue;
     if (!seen.has(row.voterPlayerId)) seen.set(row.voterPlayerId, new Map());
     if (!detail.has(row.voterPlayerId)) detail.set(row.voterPlayerId, []);
@@ -587,7 +610,7 @@ function buildSeasonGrid(
   // a column headed "135" means nothing to a reader. The header cell above the
   // names carries the word "Round" so the numbers are legible without a key.
   return {
-    rounds: roundRows.map((r, i) => ({ roundId: r.roundId, label: String(i + 1) })),
+    rounds: roundRows.map((r) => ({ roundId: r.roundId, label: r.label })),
     rows,
   };
 }
@@ -715,6 +738,19 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   );
   const nameOf = (playerId: number | null): string | null =>
     playerId === null ? null : (playerNames.get(playerId) ?? null);
+  const rosterPlayerIds = Array.from(
+    new Set(competitorRows.flatMap((row) => (row.player_id === null ? [] : [row.player_id]))),
+  );
+  const seasonGrid = buildSeasonGrid(
+    db,
+    leagueId,
+    slug,
+    matcher,
+    playerNames,
+    rosterPlayerIds,
+    gridNotesFor(db, roundId),
+  );
+  const gameRoundIds = new Set(seasonGrid.rounds.map((round) => round.roundId));
 
   // 5. Weekly: every submission in the target round, ordered by spotify_uri
   // (play order), against the guesser's vote comment (if any) on that song.
@@ -834,6 +870,7 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const songsBySubmitter = new Map<number, { roundId: number; roundLabel: string; title: string; correct: boolean }[]>();
 
   for (const row of seasonRows) {
+    if (!gameRoundIds.has(row.round_id)) continue;
     const key = `${row.round_id}:${row.spotify_uri}`;
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
@@ -955,6 +992,6 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
     eludesHim,
     alwaysNails,
     littermates,
-    seasonGrid: buildSeasonGrid(db, leagueId, matcher, playerNames, gridNotesFor(db, roundId)),
+    seasonGrid,
   };
 }

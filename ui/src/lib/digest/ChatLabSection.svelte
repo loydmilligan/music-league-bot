@@ -86,6 +86,11 @@
   const bigWords = $derived(data?.stats?.biggestWords ?? []);
   const maxWords = $derived(Math.max(1, ...people.map((p: any) => p.words)));
   const maxChars = $derived(Math.max(1, ...people.map((p: any) => p.characters)));
+  const triMetrics = $derived([
+    { key: 'messages' as const, max: maxMessages, color: 'var(--mash-pulp, #ff5b2e)' },
+    { key: 'words' as const, max: maxWords, color: 'var(--sky, #5aa3ff)' },
+    { key: 'characters' as const, max: maxChars, color: 'var(--moss, #3ec27a)' },
+  ]);
   const trim = (t: string, n: number) => {
     const clean = (t ?? '').replace(/\s+/g, ' ').trim();
     return clean.length > n ? clean.slice(0, n) + '…' : clean;
@@ -213,19 +218,20 @@
           <!-- triptych, and the fallback when a feature has no data this round -->
           <h3>Messages · words · characters</h3>
           <div class="cl-bars">
-            {#each people.slice(0, 8) as p (p.name)}
+            {#each people.slice(0, 10) as p (p.name)}
               <div class="cl-tri-row">
                 <span class="cl-bar-name">{shortName(p.name)}</span>
                 <span class="cl-tri-stack">
-                  {#each [['messages', maxMessages, 'var(--mash-pulp, #ff5b2e)'], ['words', maxWords, 'var(--sky, #5aa3ff)'], ['characters', maxChars, 'var(--moss, #3ec27a)']] as [key, max, color] (key)}
+                  {#each triMetrics as metric (metric.key)}
+                    {@const value = p[metric.key]}
                     <span class="cl-tri-line">
                       <span class="cl-bar-track">
                         <span
                           class="cl-bar-fill"
-                          style="width: {(p[key] / max) * 100}%; background: {color}"
+                          style="width: {(value / metric.max) * 100}%; background: {metric.color}"
                         ></span>
                       </span>
-                      <span class="cl-tri-val">{p[key].toLocaleString()}</span>
+                      <span class="cl-tri-val">{value.toLocaleString()}</span>
                     </span>
                   {/each}
                 </span>
