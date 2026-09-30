@@ -41,6 +41,7 @@ services:
       # avatar uploads before the endpoint's own 5MB check ran (request.formData()
       # threw "failed to parse multipart form data"). 6M = 5MB cap + multipart overhead.
       - BODY_SIZE_LIMIT=6M
+      - BOARZ_REVIEW_DIR=/app/boarz-season-1-cinematic
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
       # on localhost:7679) via host.docker.internal.
@@ -52,6 +53,8 @@ services:
       # Shared digests/ volume — bot-ui WRITES rendered html-share artifacts here
       # (sprint-20 render-pipeline); digest-static serves the same dir read-only.
       - ./digests:/app/digests
+      # Read-only source for the unlisted Boarz concept/media review page.
+      - ../boarz-season-1-cinematic:/app/boarz-season-1-cinematic
       # sintel audio analysis — host project + uv binary are available in the
       # runtime image; this mount gives the container the source + pyproject.toml.
       - /home/loydmilligan/Projects/sintel:/home/loydmilligan/Projects/sintel
