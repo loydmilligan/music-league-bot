@@ -259,12 +259,16 @@ function extractImageDataUrl(payload: { choices?: { message?: { images?: { image
   throw new Error('no image in model response');
 }
 
-async function requestStillImage(key: string, model: string, prompt: string, personDataURL: string, inspirationURL: string | null): Promise<string> {
-  const content: Record<string, unknown>[] = [
-    { type: 'text', text: prompt },
-    { type: 'image_url', image_url: { url: personDataURL } }
-  ];
-  if (inspirationURL) content.push({ type: 'image_url', image_url: { url: inspirationURL } });
+type StillReferenceImage = { label: string; dataURL: string };
+
+async function requestStillImage(key: string, model: string, prompt: string, referenceImages: StillReferenceImage[]): Promise<string> {
+  const content: Record<string, unknown>[] = [{ type: 'text', text: prompt }];
+  for (const reference of referenceImages) {
+    content.push(
+      { type: 'text', text: reference.label },
+      { type: 'image_url', image_url: { url: reference.dataURL } }
+    );
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
@@ -319,17 +323,36 @@ export async function runStillGeneration(slug: string): Promise<StillGenerationR
   const stamp = runStamp(new Date());
   const runDir = join(pack.dir, `run-${stamp}`);
   const shots: StillShotResult[] = [];
+  const generatedReferences: { shot: StillShot; dataURL: string }[] = [];
   for (const shot of STILL_SHOTS) {
-    const prompt = [bible, pack.description, SHOT_PROMPTS[shot], AVOID_LIST].filter(Boolean).join('\n\n');
+    const continuityPrompt = generatedReferences.length === 0
+      ? 'SERIES CONTINUITY: This is the first and authoritative image in a three-image character reference set. Establish one definitive person and one definitive costume. Later views will receive this image and must copy its identity, face, hair, body proportions, costume construction, materials, colors, props, and small details exactly.'
+      : `STRICT SERIES CONTINUITY: Generate the same person in the same costume as the successful earlier image${generatedReferences.length === 1 ? '' : 's'} supplied below. The FIRST GENERATED STILL is the primary authority for both identity and costume. Preserve the exact face, hair, apparent age, body proportions, garment construction, materials, colors, seams, marks, props, and accessory placement. Use the original person photo to preserve likeness and the earlier generated stills to preserve the established costume. Change only the camera angle and pose requested for this shot. Do not redesign, simplify, add, remove, recolor, or relocate costume details.`;
+    const prompt = [bible, pack.description, continuityPrompt, SHOT_PROMPTS[shot], AVOID_LIST].filter(Boolean).join('\n\n');
+    const referenceImages: StillReferenceImage[] = [
+      { label: 'ORIGINAL PERSON REFERENCE — authoritative source for the person’s identity and facial likeness:', dataURL: personDataURL }
+    ];
+    if (inspirationURL) {
+      referenceImages.push({ label: 'ORIGINAL INSPIRATION REFERENCE — mood and rendering style only; it must not replace the person or established costume:', dataURL: inspirationURL });
+    }
+    for (const [index, reference] of generatedReferences.entries()) {
+      referenceImages.push({
+        label: index === 0
+          ? `PRIMARY GENERATED COSTUME AND IDENTITY AUTHORITY (${reference.shot}) — reproduce this exact person and costume:`
+          : `ADDITIONAL GENERATED CONTINUITY REFERENCE (${reference.shot}) — preserve these same details from another angle:`,
+        dataURL: reference.dataURL
+      });
+    }
     try {
-      const dataURL = await requestStillImage(key, model, prompt, personDataURL, inspirationURL);
+      const dataURL = await requestStillImage(key, model, prompt, referenceImages);
       await mkdir(runDir, { recursive: true });
       const outputPath = join(pack.dir, pack.outputs[shot].path);
       if (existsSync(outputPath)) await rename(outputPath, join(runDir, pack.outputs[shot].path));
       await writeFile(outputPath, Buffer.from(dataURL.slice(dataURL.indexOf(',') + 1), 'base64'));
-      await writeFile(join(runDir, `metadata-${shot}.json`), `${JSON.stringify({ date: new Date().toISOString(), provider: 'openrouter', model, shot, prompt, seed: null, notes: 'generated from the boarz review page' }, null, 2)}\n`);
+      await writeFile(join(runDir, `metadata-${shot}.json`), `${JSON.stringify({ date: new Date().toISOString(), provider: 'openrouter', model, shot, prompt, seed: null, continuityReferences: generatedReferences.map(reference => reference.shot), notes: 'generated from the boarz review page; earlier successful shots in this run were supplied as continuity references' }, null, 2)}\n`);
       await updateStillSpecOutputs(pack, shot, `run-${stamp}`, model);
       await appendFile(join(pack.dir, 'generation.log'), `${new Date().toISOString()} shot=${shot} provider=openrouter model=${model} run=run-${stamp} ok\n`);
+      generatedReferences.push({ shot, dataURL });
       shots.push({ shot, ok: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
