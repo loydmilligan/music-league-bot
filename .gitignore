@@ -116,3 +116,6 @@ data/second-best/*.png
 # boarz-stats share instance
 .boarz-stats-port
 .boarz-stats-pid
+
+# auto-appended digest-comedy cost ledger (data, not source)
+.planning/spikes/digest-comedy-media/media/.cost-ledger.jsonl
