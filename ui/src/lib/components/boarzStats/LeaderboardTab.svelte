@@ -3,7 +3,7 @@
 	import ChartCanvas from './ChartCanvas.svelte';
 	import LeaderboardRaceChart from './LeaderboardRaceChart.svelte';
 
-	let { snap }: { snap: Snapshot } = $props();
+	let { snap, omitRace = false }: { snap: Snapshot; omitRace?: boolean } = $props();
 
 	const comps = snap.competitors;
 	const colors = snap.colors;
@@ -161,7 +161,7 @@
 		</div>
 	</section>
 
-	<LeaderboardRaceChart {snap} />
+	{#if !omitRace}<LeaderboardRaceChart {snap} />{/if}
 
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<h2 class="mb-1 text-lg font-semibold">🥇 Leaderboard Position by Round</h2>

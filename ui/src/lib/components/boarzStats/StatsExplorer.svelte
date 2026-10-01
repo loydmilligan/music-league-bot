@@ -13,8 +13,10 @@
 	import FunStatsTab from './FunStatsTab.svelte';
 	import ChatTab from './ChatTab.svelte';
 	import WrappedTab from './WrappedTab.svelte';
+	import { computeVisibleTabIds } from '$lib/boarzStats/visibleTabs.js';
 
-	let { snapshot, basePath }: { snapshot: Snapshot; basePath: string } = $props();
+	let { snapshot, basePath, omitTabs = [], omitLeaderboardRace = false }:
+		{ snapshot: Snapshot; basePath: string; omitTabs?: readonly string[]; omitLeaderboardRace?: boolean } = $props();
 	const TABS = [
 		{ id: 'leaderboard', label: '🏆 Standings & Scores', title: 'Standings, cumulative race, points by round, and round winners', seasonOnly: true },
 		{ id: 'songs', label: '🎵 Songs', title: 'Song performance and submission details' },
@@ -30,7 +32,11 @@
 	const isAllSeasons = $derived(snapshot.league.selectedSeasons.length > 1);
 	let crossSeasonView = $state<'combined' | 'hide-season'>(page.url.searchParams.get('seasonView') === 'hide-season' ? 'hide-season' : 'combined');
 	let activeOnly = $state(page.url.searchParams.get('activeOnly') === '1');
-	const visibleTabs = $derived(TABS.filter((tab) => (!('needsChat' in tab) || snapshot.capabilities.chat) && (!(('seasonOnly' in tab) && tab.seasonOnly) || !isAllSeasons || crossSeasonView === 'combined')));
+	const visibleTabIdSet = $derived(new Set(computeVisibleTabIds(
+		TABS,
+		{ hasChat: snapshot.capabilities.chat, isAllSeasons, crossSeasonView, omitTabs }
+	)));
+	const visibleTabs = $derived(TABS.filter((tab) => visibleTabIdSet.has(tab.id)));
 	const tabIds = $derived(visibleTabs.map((tab) => tab.id));
 	const requestedTab = page.url.searchParams.get('tab') as TabId;
 	let active = $state<TabId>(TABS.some((tab) => tab.id === requestedTab) ? requestedTab : 'leaderboard');
@@ -188,7 +194,7 @@
 	<div use:downloadableStats={{ prefix: `${snapshot.league.slug}-${snapshot.league.selectedSeasons.join('-')}` }}>
 		{#key `${active}:${selectedPlayerIds.join(',')}`}
 		{#if active === 'leaderboard'}
-			<LeaderboardTab {snap} />
+			<LeaderboardTab {snap} omitRace={omitLeaderboardRace} />
 			<RoundScoresTab {snap} />
 		{:else if active === 'songs'}
 			<SongsTab {snap} />
