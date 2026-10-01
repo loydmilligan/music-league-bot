@@ -9,6 +9,7 @@
 	import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
 	import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
 	import ReelSection from '$lib/digest/ReelSection.svelte';
+	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
 	import { page } from '$app/state';
 	let { data } = $props();
 
@@ -91,6 +92,8 @@
 	{#if data.structural.reel}
 		<ReelSection kind="reel" content={data.structural.reel} variant="visual" />
 	{/if}
+
+	<StatsTeaser snapshot={data.snapshot} onOpenStats={() => setView('stats')} />
 </div>
 {:else}
 	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace />
