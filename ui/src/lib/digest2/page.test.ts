@@ -28,6 +28,8 @@ describe('buildDigest2Page', () => {
 		expect(page.roundId).toBe(100);
 		expect(page.snapshot).toBe(emptySnapshot);
 		expect(page.story.blocks.map((b) => b.kind)).toEqual(['podium']);
+		expect(page.structural).toBeDefined();
+		expect(page.structural.reel).toBeNull(); // the seed draft has no reel media
 	});
 
 	it('returns snapshot + empty story when the round exists but has no draft', () => {
@@ -42,6 +44,13 @@ describe('buildDigest2Page', () => {
 		db.close();
 		expect(page.snapshot).toBe(emptySnapshot);
 		expect(page.story).toEqual({ blocks: [], coinage: null });
+		expect(page.structural).toEqual({
+			standings: null,
+			nextRound: null,
+			tastemaker: null,
+			guesser: null,
+			reel: null
+		});
 	});
 
 	it('throws for an unknown round', () => {
