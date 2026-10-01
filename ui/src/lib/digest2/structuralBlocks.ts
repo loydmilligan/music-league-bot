@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { getStandings, type StandingsResult } from '$lib/db/standings.js';
+import { computeStandings, type StandingRow } from '$lib/db/standings.js';
 import { getNextRound, type NextRoundPreview } from '$lib/db/nextRound.js';
 import { getDiscoverability, type TastemakerPayload } from '$lib/db/discoverability.js';
 import { getGuesserData, type GuesserData } from '$lib/db/guesserInsights.js';
@@ -14,7 +14,8 @@ export interface ReelContent {
 }
 
 export interface Digest2Structural {
-	standings: StandingsResult | null;
+	/** `{ standings }` wrapper (the shape StandingsChart reads), computed fresh — never the persisted "gospel" snapshot, so this path never writes. */
+	standings: { standings: StandingRow[] } | null;
 	nextRound: NextRoundPreview | null;
 	tastemaker: TastemakerPayload | null;
 	guesser: GuesserData | null;
@@ -23,7 +24,7 @@ export interface Digest2Structural {
 
 /** The read-only suppliers this module calls. Overridable in tests to inject a throw. */
 export interface StructuralSuppliers {
-	getStandings: typeof getStandings;
+	computeStandings: typeof computeStandings;
 	getNextRound: typeof getNextRound;
 	getDiscoverability: typeof getDiscoverability;
 	getGuesserData: typeof getGuesserData;
@@ -32,7 +33,7 @@ export interface StructuralSuppliers {
 }
 
 const DEFAULT_SUPPLIERS: StructuralSuppliers = {
-	getStandings,
+	computeStandings,
 	getNextRound,
 	getDiscoverability,
 	getGuesserData,
@@ -76,9 +77,9 @@ export function buildDigest2Structural(
 ): Digest2Structural {
 	const s = { ...DEFAULT_SUPPLIERS, ...overrides };
 
-	const standings = safe<StandingsResult | null>(() => {
-		const r = s.getStandings(db, roundId);
-		return (r.standings?.length ?? 0) > 0 ? r : null;
+	const standings = safe<{ standings: StandingRow[] } | null>(() => {
+		const rows = s.computeStandings(db, roundId); // pure; never persists (unlike getStandings)
+		return rows.length > 0 ? { standings: rows } : null;
 	}, null);
 
 	const nextRound = safe<NextRoundPreview | null>(() => s.getNextRound(db, roundId) ?? null, null);

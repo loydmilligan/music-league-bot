@@ -19,6 +19,16 @@ function draftWithReel(db: Database.Database, reelContentJson: string, reelState
 	`);
 }
 
+// One submission in round 100 is enough to make computeStandings return a row,
+// so the standings block is non-null (and getStandings would persist a snapshot).
+function withScoringSubmission(db: Database.Database) {
+	db.exec(`
+		INSERT INTO competitors (id, ml_competitor_id, name) VALUES (1, 'c1', 'Alice');
+		INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at)
+			VALUES (1, 100, 1, 'spotify:track:aaa', 'Song', 'Artist', '2026-09-01T00:00:00Z');
+	`);
+}
+
 describe('buildDigest2Structural', () => {
 	it('returns all-null for a brand-new round with no votes, no draft, no opt-in', () => {
 		const db = openLeagueDb(':memory:');
@@ -73,14 +83,28 @@ describe('buildDigest2Structural', () => {
 	it('isolates a throwing supplier: that block is null, the others still resolve', () => {
 		const db = openLeagueDb(':memory:');
 		base(db);
+		withScoringSubmission(db); // standings would be non-null but for the throw
 		draftWithReel(db, '{"media":{"poster":"/x.jpg"}}');
 		const s = buildDigest2Structural(db, 100, {
-			getStandings: () => {
+			computeStandings: () => {
 				throw new Error('boom');
 			}
 		});
 		db.close();
 		expect(s.standings).toBeNull();
 		expect((s.reel as { media?: unknown })?.media).toBeTruthy();
+	});
+
+	it('never writes to season_standings — the standings block computes fresh, read-only', () => {
+		const db = openLeagueDb(':memory:');
+		base(db);
+		withScoringSubmission(db);
+		const count = () =>
+			(db.prepare('SELECT COUNT(*) AS n FROM season_standings').get() as { n: number }).n;
+		expect(count()).toBe(0);
+		const s = buildDigest2Structural(db, 100);
+		expect(count()).toBe(0); // getStandings would have persisted a snapshot here
+		expect(s.standings).not.toBeNull(); // still renders, from a fresh compute
+		db.close();
 	});
 });
