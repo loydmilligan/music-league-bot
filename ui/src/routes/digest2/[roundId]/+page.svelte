@@ -9,6 +9,7 @@
 	import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
 	import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
 	import ReelSection from '$lib/digest/ReelSection.svelte';
+	import { page } from '$app/state';
 	let { data } = $props();
 
 	// villain / coinage have no dedicated visual component — render simple cards.
@@ -18,12 +19,37 @@
 			| undefined
 	);
 	const coinage = $derived(data.story.coinage as { term?: string; meta?: string; gloss?: string } | null);
+
+	// Top-level Digest / Stats tabs, seeded from ?view= and synced to the URL.
+	let view = $state<'digest' | 'stats'>(page.url.searchParams.get('view') === 'stats' ? 'stats' : 'digest');
+	function setView(v: 'digest' | 'stats') {
+		view = v;
+		const url = new URL(window.location.href);
+		if (v === 'digest') url.searchParams.delete('view');
+		else url.searchParams.set('view', v);
+		window.history.replaceState({}, '', url);
+	}
 </script>
 
-<h1 style="padding:1rem;font:600 1rem/1.3 system-ui">
-	Digest 2.0 (dev) · round {data.roundId}
-</h1>
+<div style="max-width:720px;margin:0 auto;padding:1rem 1rem 0">
+	<h1 style="font:600 1rem/1.3 system-ui;margin-bottom:.5rem">Digest 2.0 (dev) · round {data.roundId}</h1>
+	<div role="tablist" style="display:flex;gap:.25rem;border-bottom:1px solid #2a2a2a">
+		<button
+			role="tab"
+			aria-selected={view === 'digest'}
+			onclick={() => setView('digest')}
+			style="padding:.5rem .9rem;background:none;border:none;border-bottom:2px solid {view === 'digest' ? '#fff' : 'transparent'};color:{view === 'digest' ? '#fff' : '#888'};cursor:pointer;font:600 .9rem system-ui"
+		>Digest</button>
+		<button
+			role="tab"
+			aria-selected={view === 'stats'}
+			onclick={() => setView('stats')}
+			style="padding:.5rem .9rem;background:none;border:none;border-bottom:2px solid {view === 'stats' ? '#fff' : 'transparent'};color:{view === 'stats' ? '#fff' : '#888'};cursor:pointer;font:600 .9rem system-ui"
+		>Stats</button>
+	</div>
+</div>
 
+{#if view === 'digest'}
 <div style="max-width:720px;margin:0 auto;padding:0 1rem">
 	{#each data.story.blocks as block (block.kind)}
 		{#if block.kind === 'podium'}
@@ -66,6 +92,6 @@
 		<ReelSection kind="reel" content={data.structural.reel} variant="visual" />
 	{/if}
 </div>
-
-<h2 style="padding:1rem;font:600 1rem/1.3 system-ui">Stats</h2>
-<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} />
+{:else}
+	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace />
+{/if}
