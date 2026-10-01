@@ -4,6 +4,11 @@
 	import AlbumPodium from '$lib/digest/AlbumPodium.svelte';
 	import ChatMoments from '$lib/digest/ChatMoments.svelte';
 	import StorylinesCast from '$lib/digest/StorylinesCast.svelte';
+	import StandingsChart from '$lib/digest/StandingsChart.svelte';
+	import NextRoundPreview from '$lib/digest/NextRoundPreview.svelte';
+	import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
+	import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
+	import ReelSection from '$lib/digest/ReelSection.svelte';
 	let { data } = $props();
 
 	// villain / coinage have no dedicated visual component — render simple cards.
@@ -43,6 +48,22 @@
 			{#if coinage.meta}<p style="opacity:.7">{coinage.meta}</p>{/if}
 			{#if coinage.gloss}<p>{coinage.gloss}</p>{/if}
 		</section>
+	{/if}
+
+	{#if data.structural.standings}
+		<StandingsChart kind="standings" content={{}} data={data.structural.standings} variant="visual" />
+	{/if}
+	{#if data.structural.tastemaker}
+		<TastemakerSection kind="discoverability" content={{}} data={data.structural.tastemaker} variant="visual" />
+	{/if}
+	{#if data.structural.guesser}
+		<GuesserLeaderboard kind="guesser" content={{}} data={data.structural.guesser} variant="visual" />
+	{/if}
+	{#if data.structural.nextRound}
+		<NextRoundPreview kind="nextRound" content={{}} data={data.structural.nextRound} variant="visual" />
+	{/if}
+	{#if data.structural.reel}
+		<ReelSection kind="reel" content={data.structural.reel} variant="visual" />
 	{/if}
 </div>
 
