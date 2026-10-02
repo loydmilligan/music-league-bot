@@ -257,6 +257,60 @@ export const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
   );
+  -- ── Digest 2.0 (parallel fork; see docs/superpowers/specs/2026-09-28-digest-2.0-design.md)
+  -- Isolated tables so 2.0 can never corrupt the live digest. digest2_sections.kind
+  -- intentionally has NO CHECK — 2.0 owns its own section kinds.
+  CREATE TABLE IF NOT EXISTS digest2_drafts (
+    id                TEXT PRIMARY KEY,
+    round_id          INTEGER NOT NULL REFERENCES rounds(id),
+    generated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    finalized_at      TEXT,
+    layout_json       TEXT NOT NULL DEFAULT '[]',
+    stats_params_json TEXT NOT NULL DEFAULT '{}',
+    llm_cost_usd      REAL NOT NULL DEFAULT 0,
+    run_id            TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_digest2_drafts_round ON digest2_drafts(round_id);
+  CREATE TABLE IF NOT EXISTS digest2_sections (
+    id           TEXT PRIMARY KEY,
+    draft_id     TEXT NOT NULL REFERENCES digest2_drafts(id) ON DELETE CASCADE,
+    kind         TEXT NOT NULL,
+    source       TEXT NOT NULL DEFAULT 'auto' CHECK(source IN ('auto','oneoff')),
+    position     INTEGER NOT NULL,
+    state        TEXT NOT NULL DEFAULT 'default' CHECK(state IN ('default','excluded','locked')),
+    content_json TEXT NOT NULL DEFAULT '{}',
+    variant      TEXT NOT NULL DEFAULT 'both'
+  );
+  CREATE INDEX IF NOT EXISTS idx_digest2_sections_draft ON digest2_sections(draft_id, position);
+  CREATE TABLE IF NOT EXISTS digest2_jobs (
+    round_id       INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id      INTEGER NOT NULL REFERENCES leagues(id),
+    status         TEXT NOT NULL,
+    gen_params     TEXT,
+    error          TEXT,
+    approval_token TEXT,
+    decision       TEXT,
+    decided_at     TEXT,
+    review_url     TEXT,
+    attempts       INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS digest2_sends (
+    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
+    league_id  INTEGER NOT NULL REFERENCES leagues(id),
+    claimed_at TEXT NOT NULL,
+    sent_at    TEXT,
+    target     TEXT,
+    url        TEXT,
+    error      TEXT
+  );
+  CREATE TABLE IF NOT EXISTS digest2_shares (
+    round_id   INTEGER PRIMARY KEY REFERENCES rounds(id),
+    slug       TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  );
   -- Canonical, human-verifiable season standings (sprint-14 D2). One row per
   -- (round, competitor): the competitor's running totals AS OF that round.
   -- prior_total = points received in earlier rounds; round_points = points this

@@ -1,49 +1,18 @@
 <script lang="ts">
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
-	import { AXIS_META, type DaySummary } from '$lib/boarzStats/shared.js';
-	import { onMount } from 'svelte';
+	import { AXIS_META } from '$lib/boarzStats/shared.js';
 	import ChartCanvas from './ChartCanvas.svelte';
 	import PlayerFingerprint from './PlayerFingerprint.svelte';
+	import ChatTalkativeness from './ChatTalkativeness.svelte';
+	import ChatRoastReport from './ChatRoastReport.svelte';
+	import ChatDailyActivity from './ChatDailyActivity.svelte';
 
-	let { snap }: { snap: Snapshot } = $props();
+	let { snap, omitHighlights = false }: { snap: Snapshot; omitHighlights?: boolean } = $props();
 
 	const chat = snap.chat;
 	const colors = snap.colors;
 	const people = chat.people;
 	const personColor = (i: number) => (i < snap.competitors.length ? colors[i % colors.length] : '#64748b');
-
-	let summaries = $state<Record<string, DaySummary>>({});
-	onMount(async () => {
-		if (snap.league.slug !== 'boarz-ii-men') return;
-		try {
-			const res = await fetch('/boarz-stats/api/day-topics');
-			const data = (await res.json()) as { summaries?: Record<string, DaySummary> };
-			summaries = data.summaries ?? {};
-		} catch {
-			/* topic summaries are decorative — fail quiet */
-		}
-	});
-
-	const talk = [...people].sort((a, b) => b.msgs - a.msgs);
-	const talkConfig = {
-		type: 'bar',
-		data: {
-			labels: talk.map((p) => p.display),
-			datasets: [
-				{
-					label: 'Messages',
-					data: talk.map((p) => p.msgs),
-					backgroundColor: talk.map((p) => personColor(people.indexOf(p))),
-				},
-			],
-		},
-		options: {
-			indexAxis: 'y' as const,
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: { legend: { display: false } },
-		},
-	};
 
 	const hourLabels = Array.from({ length: 24 }, (_, h) => String(h));
 	const hourConfig = {
@@ -63,126 +32,9 @@
 		},
 	};
 
-	// --- daily activity: total vs stacked-by-participant ----------------------
-	type ActMode = 'people' | 'total';
-	let actMode = $state<ActMode>('people');
-
-	const actLabels = snap.activity.map((d) => d.day.slice(5));
-	const actByDayPeople = new Map(chat.timelineByPerson.map((t) => [t.day, t.byKey]));
-	const actPeakIdx = new Set(chat.peaks.map((p) => snap.activity.findIndex((d) => d.day === p.day)).filter((i) => i >= 0));
-
-	const votesDataset = {
-		label: 'ML votes',
-		data: snap.activity.map((d) => d.votes),
-		type: 'bar' as const,
-		backgroundColor: 'rgba(45,212,191,0.3)',
-		yAxisID: 'y1',
-	};
-	const commentsDataset = {
-		label: 'Vote comments',
-		data: snap.activity.map((d) => d.voteComments),
-		borderColor: '#f472b6',
-		backgroundColor: '#f472b6',
-		tension: 0.3,
-		pointRadius: 2,
-		yAxisID: 'y1',
-	};
-
-	const activityConfig = $derived.by(() => {
-		const personDatasets = people.map((p, i) => ({
-			label: p.display,
-			data: snap.activity.map((d) => actMode === 'people' ? (actByDayPeople.get(d.day)?.[p.key] ?? 0) : 0),
-			borderColor: personColor(i),
-			backgroundColor: personColor(i),
-			fill: true,
-			pointRadius: 0,
-			tension: 0.25,
-			yAxisID: 'y',
-		}));
-		const totalDataset = {
-			label: 'WhatsApp msgs',
-			data: snap.activity.map((d) => d.chat),
-			borderColor: '#818cf8',
-			backgroundColor: 'rgba(129,140,248,0.2)',
-			fill: true,
-			tension: 0.25,
-			pointRadius: snap.activity.map((d) => (chat.peaks.some((p) => p.day === d.day) ? 4 : 0)),
-			pointBackgroundColor: '#fbbf24',
-			pointHoverRadius: 7,
-			yAxisID: 'y',
-		};
-		// peak dots overlay for the stacked view (gold dots at daily totals)
-		const peakDataset = {
-			label: 'Peak day',
-			data: snap.activity.map((d) => (chat.peaks.some((p) => p.day === d.day) ? d.chat : null)),
-			type: 'scatter' as const,
-			pointStyle: 'circle' as const,
-			pointRadius: 5,
-			pointBackgroundColor: '#fbbf24',
-			pointBorderColor: 'rgba(10,10,20,0.9)',
-			pointBorderWidth: 1.5,
-			showLine: false,
-			yAxisID: 'y',
-		};
-		return {
-			type: 'line',
-			data: {
-				labels: actLabels,
-				datasets: actMode === 'people' ? [...personDatasets, peakDataset, votesDataset, commentsDataset] : [totalDataset, votesDataset, commentsDataset],
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				interaction: { mode: 'index' as const, intersect: false },
-				scales: {
-					y: actMode === 'people'
-						? { stacked: true, beginAtZero: true, title: { display: true, text: 'Messages by participant' } }
-						: {
-							type: 'logarithmic' as const,
-							min: 10,
-							title: { display: true, text: 'WhatsApp messages (log scale)' },
-							ticks: { callback: (v: number) => (v === 10 || v === 100 || v === 250 || v === 500 || v === 1000 ? String(v) : '') },
-						},
-					y1: { position: 'right' as const, grid: { drawOnChartArea: false }, beginAtZero: true, title: { display: true, text: 'ML votes / comments' } },
-					x: { ticks: { autoSkip: true, maxTicksLimit: 14 }, stacked: actMode === 'people' },
-				},
-				plugins: {
-					legend: {
-						display: actMode === 'people',
-						labels: { boxWidth: 10, boxHeight: 10 },
-					},
-					tooltip: {
-						callbacks: {
-							afterBody: (items: { dataIndex: number }[]) => {
-								const day = snap.activity[items[0]?.dataIndex]?.day;
-								const s = day ? summaries[day] : undefined;
-								return s?.topics?.length ? '\n' + s.topics.map((t) => '• ' + t).join('\n') : '';
-							},
-						},
-					},
-				},
-			},
-		};
-	});
-
 	const nightOwl = [...people].sort(
 		(a, b) => b.hourHist.slice(0, 5).reduce((x, y) => x + y, 0) - a.hourHist.slice(0, 5).reduce((x, y) => x + y, 0)
 	)[0];
-
-	// roast matrix
-	const roastTotal = people.map((_, j) => chat.roastMatrix.reduce((a, row) => a + (row[j] ?? 0), 0));
-	const mostRoasted = people
-		.map((p, j) => ({ name: p.display, count: roastTotal[j] }))
-		.sort((a, b) => b.count - a.count)
-		.slice(0, 5);
-	const roastConfig = {
-		type: 'bar',
-		data: {
-			labels: mostRoasted.map((m) => m.name),
-			datasets: [{ label: 'Times mentioned by others', data: mostRoasted.map((m) => m.count), backgroundColor: '#fb7185' }],
-		},
-		options: { indexAxis: 'y' as const, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
-	};
 
 	// first in the chat
 	const starterRows = [...people]
@@ -423,52 +275,7 @@
 </script>
 
 <div class="space-y-6">
-	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-		<h2 class="mb-1 text-lg font-semibold">💬 Talkativeness</h2>
-		<p class="mb-4 text-sm text-fg-muted">
-			Messages, words per message, CAPS %, emoji %. Everyone in the group chat — including non-competing
-			friends.
-		</p>
-		<ChartCanvas height={340} config={talkConfig} />
-		<div class="mt-4 overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="text-left text-fg-muted">
-						<th class="px-3 py-2">Person</th>
-						<th class="px-3 py-2 text-right">Msgs</th>
-						<th class="px-3 py-2 text-right">Words/msg</th>
-						<th class="px-3 py-2 text-right">CAPS %</th>
-						<th class="px-3 py-2 text-right">Emoji %</th>
-						<th class="px-3 py-2 text-right">Tone</th>
-						<th class="px-3 py-2 text-right">{axisMetaA.label} / {axisMetaB.label}</th>
-						<th class="px-3 py-2">Vocabulary (lift)</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each talk as p (p.key)}
-						<tr class="border-t border-border-muted">
-							<td class="px-3 py-2 font-medium" style="color: {personColor(people.indexOf(p))}">
-								{p.display}{p.competitorId == null ? ' (guest)' : ''}
-							</td>
-							<td class="px-3 py-2 text-right font-mono">{p.msgs}</td>
-							<td class="px-3 py-2 text-right font-mono">{p.wpm}</td>
-							<td class="px-3 py-2 text-right font-mono">{p.capsPct}%</td>
-							<td class="px-3 py-2 text-right font-mono">{p.emojiPct}%</td>
-							<td class="px-3 py-2 text-right font-mono" class:text-rose-400={p.toneAvg < 0} class:text-emerald-400={p.toneAvg > 0}>
-								{p.toneAvg > 0 ? '+' : ''}{p.toneAvg}
-							</td>
-							<td class="px-3 py-2 text-right font-mono text-xs" title="{axisMetaA.label}: {p.react[quad.axisA]} · {axisMetaB.label}: {p.react[quad.axisB]} · {p.react.rated} rated messages">
-								{p.react[quad.axisA] == null ? '—' : p.react[quad.axisA]!.toFixed(1)}/{p.react[quad.axisB] == null ? '—' : p.react[quad.axisB]!.toFixed(1)}
-							</td>
-							<td class="px-3 py-2 text-fg-muted">
-								{p.topWords.slice(0, 5).map((t) => t.w).join(' · ')}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	</section>
+	{#if !omitHighlights}<ChatTalkativeness {snap} />{/if}
 
 	<section class="grid gap-6 md:grid-cols-2">
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
@@ -479,93 +286,10 @@
 				— {nightOwl?.hourHist.slice(0, 5).reduce((x, y) => x + y, 0) ?? 0} messages after midnight.
 			</p>
 		</div>
-		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-			<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-				<h2 class="text-lg font-semibold">📅 Daily Activity — chat vs Music League</h2>
-				<div class="flex gap-1 rounded-lg border border-border-muted p-1">
-					<button
-						type="button"
-						class="rounded-md px-3 py-1 text-sm {actMode === 'people' ? 'bg-fg text-bg font-semibold' : 'text-fg-muted'}"
-						onclick={() => (actMode = 'people')}
-					>
-						By participant
-					</button>
-					<button
-						type="button"
-						class="rounded-md px-3 py-1 text-sm {actMode === 'total' ? 'bg-fg text-bg font-semibold' : 'text-fg-muted'}"
-						onclick={() => (actMode = 'total')}
-					>
-						Total (log)
-					</button>
-				</div>
-			</div>
-			<p class="mb-4 text-sm text-fg-muted">
-				{#if actMode === 'people'}
-					Area colored by who was talking that day. Gold dots mark peak chatter days — hover for
-					LLM-summarized topics.
-				{:else}
-					Gold dots mark peak chatter days — hover for LLM-summarized topics.
-				{/if}
-			</p>
-			<ChartCanvas height={320} config={activityConfig} zoomable zoomMode="x" />
-			{#if chat.peaks.length}
-				<div class="mt-4 space-y-2">
-					{#each chat.peaks as pk (pk.day)}
-						<div class="rounded-xl border border-border-muted px-3 py-2 text-sm">
-							<span class="font-semibold text-amber-400">{pk.day.slice(5)}</span>
-							<span class="text-fg-muted"> · {pk.count} msgs · </span>
-							{#if summaries[pk.day]?.topics?.length}
-								{summaries[pk.day].topics.join(' · ')}
-							{:else}
-								<span class="text-fg-muted italic">summarizing…</span>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		{#if !omitHighlights}<ChatDailyActivity {snap} />{/if}
 	</section>
 
-	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-		<h2 class="mb-1 text-lg font-semibold">🔥 Roast Report</h2>
-		<p class="mb-4 text-sm text-fg-muted">
-			Name mentions in chat — who gets talked about the most, and the full directed matrix below.
-		</p>
-		<div class="grid gap-6 md:grid-cols-2">
-			<div>
-				<ChartCanvas height={260} config={roastConfig} />
-			</div>
-			<div class="overflow-x-auto">
-				<table class="border-separate text-xs" style="border-spacing: 2px">
-					<thead>
-						<tr>
-							<th class="p-1"></th>
-							{#each people as p (p.key)}
-								<th class="p-1 text-fg-muted" title={p.display}>{p.display.slice(0, 4)}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each people as row, i (row.key)}
-							<tr>
-								<th class="whitespace-nowrap p-1 text-right" style="color: {personColor(i)}">{row.display}</th>
-								{#each people as _, j (j)}
-									{@const v = chat.roastMatrix[i][j] ?? 0}
-									<td
-										class="rounded p-1 text-center font-mono"
-										style="background: {i === j ? 'transparent' : v ? `rgba(251,113,133,${Math.min(0.85, 0.15 + (v / Math.max(...roastTotal, 1)) * 0.7).toFixed(2)})` : 'transparent'}"
-										title="{row.display} mentions {people[j].display}: {v}"
-									>
-										{i === j ? '—' : v || ''}
-									</td>
-								{/each}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		</div>
-	</section>
+	{#if !omitHighlights}<ChatRoastReport {snap} />{/if}
 
 	<section class="grid gap-6 md:grid-cols-2">
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
