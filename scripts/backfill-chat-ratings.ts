@@ -4,7 +4,7 @@
 // message with the full 48-question schema stays sharp. Writes immediately so
 // re-runs resume. 4 parallel workers.
 //
-//   cd ui && npx tsx ../scripts/backfill-chat-ratings.ts [--limit N] [--skip-votes]
+//   cd ui && npx tsx ../scripts/backfill-chat-ratings.ts [--league <slug>] [--limit N] [--skip-votes]
 //
 // Cost: ~$0.00009/msg → ~$1.35 for ~15.4k items.
 
@@ -38,8 +38,27 @@ function argValue(flag: string): number | null {
 	const idx = process.argv.indexOf(flag);
 	return idx >= 0 ? Number(process.argv[idx + 1]) : null;
 }
+function argStr(flag: string): string | null {
+	const idx = process.argv.indexOf(flag);
+	return idx >= 0 ? (process.argv[idx + 1] ?? null) : null;
+}
 const LIMIT = argValue('--limit') ?? Infinity;
 const SKIP_VOTES = process.argv.includes('--skip-votes');
+const LEAGUE_SLUG = argStr('--league') ?? 'boarz-ii-men';
+
+// Chat messages are keyed by group_name (not a league fk). Resolve the league's
+// group via the same chat_league_group_map settings row the digest uses.
+function chatGroupName(slug: string): string {
+	const db = openLeague();
+	const row = db
+		.prepare("SELECT value FROM settings WHERE key = 'chat_league_group_map'")
+		.get() as { value?: string } | undefined;
+	db.close();
+	const map = JSON.parse(row?.value ?? '{}') as Record<string, string>;
+	const g = map[slug];
+	if (!g) throw new Error(`no chat group mapped for league '${slug}' (chat_league_group_map)`);
+	return g;
+}
 
 function loadApiKey(): string {
 	if (process.env.OPENROUTER_API_KEY) return process.env.OPENROUTER_API_KEY;
@@ -68,10 +87,10 @@ function loadChatMessages(): Item[] {
 	const rows = db
 		.prepare(
 			`SELECT id, sender, text, ts FROM chat_messages
-			 WHERE group_name LIKE 'Boarz%' AND length(trim(text)) > 0
+			 WHERE group_name = ? AND length(trim(text)) > 0
 			 ORDER BY ts`
 		)
-		.all() as unknown as { id: string; sender: string; text: string; ts: string }[];
+		.all(chatGroupName(LEAGUE_SLUG)) as unknown as { id: string; sender: string; text: string; ts: string }[];
 	db.close();
 	return rows.map((r) => ({ key: r.id, sender: r.sender, text: r.text.slice(0, 600), ts: r.ts }));
 }
@@ -116,11 +135,11 @@ function loadVoteComments(): { voteId: number; comment: string }[] {
 			`SELECT v.id, v.comment FROM votes v
 			 JOIN rounds r ON v.round_id = r.id
 			 JOIN seasons s ON r.season_id = s.id
-			 WHERE s.league_id = (SELECT id FROM leagues WHERE slug = 'boarz-ii-men')
+			 WHERE s.league_id = (SELECT id FROM leagues WHERE slug = ?)
 			   AND v.comment IS NOT NULL AND length(trim(v.comment)) > 0
 			 ORDER BY v.created_at`
 		)
-		.all() as unknown as { id: number; comment: string }[];
+		.all(LEAGUE_SLUG) as unknown as { id: number; comment: string }[];
 	db.close();
 	return rows.map((r) => ({ voteId: r.id, comment: r.comment.slice(0, 600) }));
 }
