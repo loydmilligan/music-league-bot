@@ -418,7 +418,7 @@ export function extractJsonContent(content: string): string {
 
 export async function callOpenRouter(
   messages: OpenRouterMessage[],
-  opts: { model?: string; jsonMode?: boolean; meta?: LLMCallMeta } = {},
+  opts: { model?: string; jsonMode?: boolean; meta?: LLMCallMeta; maxTokens?: number } = {},
 ): Promise<LLMResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
@@ -426,6 +426,9 @@ export async function callOpenRouter(
   const model = opts.model ?? process.env.OPENROUTER_DIGEST_MODEL ?? DEFAULT_MODEL;
   const body: Record<string, unknown> = { model, messages };
   if (opts.jsonMode) body.response_format = { type: 'json_object' };
+  // small jobs (e.g. topic summaries) must not inherit the model's huge
+  // default max_tokens — providers 402 when the key can't cover it
+  if (opts.maxTokens) body.max_tokens = opts.maxTokens;
   // Ask OpenRouter to include cost/usage accounting in the response (sprint-15
   // cost-capture). With this flag the chat-completion `usage` block carries the
   // call's USD `cost`.

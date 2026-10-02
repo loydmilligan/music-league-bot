@@ -121,7 +121,7 @@
 
 <script lang="ts">
   import { page } from '$app/state';
-  import { buildSeasonPanel, MIN_RATE_SAMPLE } from './guesserSeason.js';
+  import { buildSeasonPanel, MIN_RATE_SAMPLE, type SeasonPanel } from './guesserSeason.js';
 
   let { content, data }: VisualComponentProps = $props();
 
@@ -252,7 +252,17 @@
   // ── the season panel ──────────────────────────────────────────────────────
   // Four tabs over one dataset, all of it derived in guesserSeason.ts so the
   // numbers are unit-tested away from the markup.
-  const panel = $derived(buildSeasonPanel(grid, g?.leagueSlug ?? ''));
+  // Recaps may persist the deterministic season panel as a reviewed snapshot.
+  // Weekly drafts keep deriving it live from the grid; malformed/legacy
+  // content falls back to the same buildSeasonPanel path as before.
+  const persistedPanel = $derived(
+    ((content ?? {}) as { seasonPanel?: SeasonPanel }).seasonPanel,
+  );
+  const panel = $derived(
+    persistedPanel && Array.isArray(persistedPanel.cards) && Array.isArray(persistedPanel.field)
+      ? persistedPanel
+      : buildSeasonPanel(grid, g?.leagueSlug ?? ''),
+  );
   const TABS = ['By player', 'Field', 'Carrot box', 'Targets'];
   let tab = $state(0);
   // The exported PNG captures the DOM as it stands, so there is nothing to

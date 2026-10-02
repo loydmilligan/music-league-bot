@@ -4,7 +4,7 @@ import { classify, extractLinks } from './chatLinks';
 
 const T0 = Date.UTC(2026, 6, 11, 12, 0);
 const msg = (sender: string, text: string, ts = T0): Message => ({
-	sender, ts, text, edited: false, media: null, mentions: [],
+	sender, ts, text, edited: false, media: null, deleted: false, mentions: [],
 });
 
 describe('classify', () => {

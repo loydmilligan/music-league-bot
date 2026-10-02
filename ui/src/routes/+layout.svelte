@@ -22,11 +22,18 @@
   // it stays consistent across SSR (rendered at ?share=1) and client hydration
   // (served at /d/<slug>/). Distinct from ?export=1 — interactivity stays ON.
   const isShare = $derived(Boolean((page.data as { share?: boolean } | undefined)?.share));
-  // Stats share site — standalone, no operator chrome.
+  // The Boarz review is a standalone, unlisted site on this same app origin.
+  const isBoarzReview = $derived(
+    page.url.pathname === '/boarz-season-1'
+      || page.url.pathname.startsWith('/boarz-season-1/')
+      || page.url.pathname === '/boarz-review-jon'
+      || page.url.pathname.startsWith('/boarz-review-jon/')
+  );
+  // Boarz stats share site — standalone, no operator chrome.
   const isBoarzStats = $derived(
-    page.url.pathname === '/boarz-stats'
+	page.url.pathname === '/boarz-stats'
       || page.url.pathname.startsWith('/boarz-stats/')
-      || page.url.pathname === '/stats'
+	  || page.url.pathname === '/stats'
       || page.url.pathname.startsWith('/stats/')
   );
 
@@ -39,6 +46,7 @@
     { href: '/chat',      label: 'Chat Content',   glyph: '▸', count: chatUnassignedCount > 0 ? String(chatUnassignedCount) : undefined },
     { href: '/content',   label: 'Content',        glyph: '▸', badge: contentPendingCount > 0 ? contentPendingCount : undefined },
     { href: '/history',   label: 'History',        glyph: '▸' },
+    { href: '/boarz-review-jon', label: "Jon's Boarz review", glyph: '▸' },
     { href: '/settings',  label: 'Settings',       glyph: '▸' },
   ]);
 
@@ -131,6 +139,10 @@
   <main class="min-h-screen bg-bg text-fg">
     {@render children?.()}
   </main>
+{:else if isBoarzReview}
+  <div class="boarz-site">
+    {@render children?.()}
+  </div>
 {:else if isShare}
   <!-- Bare share layout — digest content only, zero app chrome.
        No horizontal padding below sm (640px) so the digest card fills the

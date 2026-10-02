@@ -86,6 +86,7 @@ describe('resolveStyle — priority chain', () => {
 	it('trims and lowercases type itself, on an entry that never went through normalizeCast', () => {
 		const handBuilt: RegularEntry = {
 			name: 'Conor',
+			player: 'Conor',
 			motif: 'minimum viable profundity',
 			type: '  One-Word Oracle  ',
 			style: '' as RegularStyle,

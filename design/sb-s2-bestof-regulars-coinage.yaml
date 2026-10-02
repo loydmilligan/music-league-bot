@@ -1,0 +1,665 @@
+# SB Season 2 "Best of" special — The Regulars + The Coinage.
+# Hand-authored 2026-09-20 from the season-two WhatsApp archive
+# (7/19 → 9/20, 5,066 messages) and league.db ballot comments.
+#
+# This is NOT a per-round file. It is the season-retrospective special:
+#   storylines → "The Usual Suspects: The Season in Cards" (8 cards)
+#   stats.phrase → "The Coinage" Word of the Year + coinages_of_the_year
+#
+# Deployment: same as the per-round files — write storylines into
+# digest_sections.content_json (kind='storylines') and the phrase block into
+# digest_drafts.stats_content_json. Generation SKIPS storylines for this league
+# (settings.storylines_section_leagues = {"sssc":true}), so a full regen drops
+# hand-authored sections; re-apply from this file.
+#
+# Verification bar: every quote below is verbatim from the archive; timestamps
+# are the poster's local time. Counts were computed from the archive and
+# league.db, not estimated. Sources per card are noted in comments.
+#
+# CHAD MOMENT (one, flagged per digest-flavor.md — punch-up decision, cut or
+# keep): end of the Coinage card — "I have recorded all four. I remember all
+# of them. That is not a compliment I can return."
+#
+# OWNER TO PROVIDE (visuals):
+#  - Cat Lobby card: kitten-yoga photo, Gravedigger kill photo (or reuse the
+#    r140 exhibits A–D), suitcase cat, Ninja + Churu. Treatment: heart-eyed
+#    cat emoji stacking up the side of the card.
+#  - Say What? card: drink-glass pictograms per transmission.
+
+storylines:
+  title: "The Usual Suspects: The Season in Cards"
+
+  cast:
+
+  # ── The Playwright ────────────────────────────────────────────────────────
+  # Returning regular (first carded r139 "They Dead"). 57 messages this season
+  # contained two or more ellipses — the verified floor for "staging."
+  - name: M-DOT
+    player: Michael Layous
+    type: ellipsis auteur
+    style: script
+    motif: the pause IS the punchline
+    note: >
+      M-DOT does not speak; he trails off. One hundred and nine of his three
+      hundred and seventy-two messages this season contained ellipses — two
+      hundred and thirteen dots deployed in total, each one a stage direction.
+      The season's masterwork opened at 2:55 in the morning on August 30,
+      mid-voting, and ran in seven lines and six pauses: a two-hander about a
+      friendship, a betrayal, and the voting window. It has never been
+      performed. It does not need to be…
+    script:
+      - { speaker: Me, line: "Listen to me" }
+      - { speaker: Mara, line: "No" }
+      - { speaker: Me, line: "Mara, you have to listen to me.." }
+      - { speaker: Mara, line: "I hate you (I wish we never roomed together)" }
+      - { speaker: Me, line: "I'm sorry………..I'm sorry……." }
+      - { speaker: Mara, line: "how could you do this" }
+      - { speaker: Me, line: "…………………it goes without saying…..,,,the voting has already started" }
+    evidence:
+      - Who would have thought….the commish and the co-commish…two of the last to vote….they must be really going at it…
+      - The lust…the bodies groinial regions….its hot and heavy…
+      - I always said I would go over there and protect her….
+      - But I never did…
+      - '"Hi Lauren… I''m here…if stops now…I''m here"'
+      - This dude gets to mouth off left and right and I'm told to tone it down….?
+      - Actually…he's been eerily quiet this afternoon…
+      - Maybe his cats got his tounge…
+      - '"We ain''t no one''s bitch" - The League'
+    highlight: [roomed together, already started, tounge]
+    stats:
+      - { value: 213, label: ellipsis marks deployed this season }
+      - { value: 109, label: of 372 messages staged in dots }
+      - { value: "2:55 AM", label: curtain time for the masterwork }
+    # media plan: still from the silent-film short of The Interrogation
+    # (beats already scripted — see the AI-short prompt set). OWNER TO
+    # PROVIDE once generated; suggested src _media/mdot_interrogation.jpg
+
+  # ── The Cat Lobby ─────────────────────────────────────────────────────────
+  # Returning regular — the season's only three-card player (r139, r140, r142).
+  - name: Ailurophila sapiens
+    player: Sarah Black
+    type: single-issue advocacy office
+    style: spotlight
+    motif: three cards, one platform, zero concessions
+    note: >
+      An ailurophile is a lover of cats; the card's name is the subspecies —
+      Ailurophila sapiens, the human who prefers the other species to her
+      own. The season's longest-running institution. Founded in the chat,
+      ignored by the humans, ignored by the digest, and — by its own formal
+      complaint — ignored by the AI that is literally tasked with summarizing
+      the chat.
+      Its year in review: a constituency welcomed and purged inside a single
+      hour; a takedown notice served on the one man who had posted nothing
+      cat-related; an apology received for a post that did not exist. The
+      Lobby ends the season holding a judicial record, a propaganda ministry
+      (see: the Coinage), and an opposition archive maintained by the other
+      Chapin. It does not rest.
+    spotlight:
+      text: I was going to formally welcome you to the cat lobby but now you're 86ed like JAC
+      caption: membership revoked eleven minutes after it was offered · aug 19
+    evidence:
+      - I would like to formally note that I have made multiple attempts to steer this group chat toward more important topics (specifically dogs and cats) and yet - neither the group nor the digest has seen fit to acknowledge my campaign. I'm not sure which is more offensive: being repeatedly ignored by my fellow humans, or being ignored by the AI that is literally tasked with summarizing the chat.
+      - I asked for this chat to have more talk about cats, not pussy
+      - Welcome to the constituency. The cat lobby thanks you.
+      - That's right Phil, you better delete any message that bedowngrades cat related content
+      - Sarah S. was competing with Sarah Z. for Miss Congeniality until Sarah S. had to lay the smack down on Phil for an anti-cat post.  Didn't even offer an apology.
+      - JB still hasn't unpacked his suitcase from a trip that ended 2 weeks ago, because the cats like to sit in it.
+    highlight: [constituency, 86ed, bedowngrades]
+    stats:
+      - { value: 3, label: cards this season, most in the league }
+      - { value: 11, label: minutes between welcome and purge }
+      - { value: 1, label: apology received for a post that did not exist }
+    media:
+      src: https://digest.mattmariani.com/_media/cat_in_bag.jpeg
+      poster: https://digest.mattmariani.com/_media/cat_in_bag.jpeg
+      caption: '"One of em is in a bag" — "Cats don''t belong in bags!" — "Fool, cats love bags." · aug 19'
+      alt: >-
+        A calico kitten sitting upright inside the zippered cooler pocket of
+        a navy Tommy Bahama beach chair, one paw draped over the edge, staring
+        directly into the camera with an affronted expression.
+    # The aug 19 cat summit, full exhibit list: Jon's dump IMG-20260819-
+    # WA0012/13/15 (this bag kitten; the wide-eyed one is now live at
+    # _media/jon_cat_wide_eyes.jpeg — Tommy captioned it "Fuck you lookin'
+    # at?"), Michael Black's Fatty Mango debut (now at _media/fatty_mango.jpeg),
+    # Matt's repost IMG-20260511-WA0003 ("the chat's recent pet bag focus"),
+    # BP's video VID-20260819-WA0020 ("Ninja wouldn't vacate this suitcase"),
+    # and Sarah Z's rescue kittens (now on the Penitent card). Kitten-yoga
+    # photo: still owner to provide. Treatment: heart-eyed cat emoji
+    # stacking up the card.
+    # further exhibits available in data/second-best/ — upload to _media/:
+    #   jb-cat-kill.jpeg (the 15-inch kill · aug 4), sarahs-at-catshow.jpeg,
+    #   ugly-cat-slash-rat.jpeg ("the cat that reads as a rat"), and the
+    #   r140 four-image exhibit (feline_assassin_gang.jpg/mp4, already
+    #   hosted). Kitten-yoga and suitcase-cat photos: OWNER TO PROVIDE from
+    #   phone gallery. Treatment: heart-eyed cat emoji stacking up the card.
+
+  # ── The Second Person ─────────────────────────────────────────────────────
+  # NEW card. The "Commenter Cometh" concept, renamed — his comments are
+  # literally written in second person. Verified: Tommy (player 37) filed
+  # ballot comments in all 9 rounds; within every round all comments share a
+  # single created_at timestamp — one sitting per round, 9 sittings, 98
+  # comments, 10,544 characters. Debut sitting 2026-07-25 01:35 UTC.
+  - name: The Second Person
+    player: Tommy Chapin
+    type: second-person narrator
+    style: vignette
+    motif: you are singing inside
+    note: >
+      Every ballot comment Tommy wrote this season was filed in a single
+      sitting — nine rounds, nine sittings, ninety-eight comments, ten and a
+      half thousand characters. He burst onto the scene in week one with a
+      fully formed style nobody had seen before and nobody has seen since:
+      each song received a second-person micro-fiction placing the voter
+      inside a karaoke bar of Tommy's devising, with a cast, a setting, and —
+      in the debut's masterpiece — a complete romantic arc. He never went
+      fully second-person again; the form was a debut-era experiment. The
+      quality never dropped. He is simply the best voter-commenter in the
+      league, and week one was him introducing himself.
+    vignettes:
+      - label: the masterpiece
+        song: Meatplow — Stone Temple Pilots
+        points: -1
+        text: >
+          You are singing inside the diviest bar inside the diviest Chinese
+          restaurant on earth.  Well drinks are only $3.  Doubles are only $5.
+          It's Christmas night and the bar is filled with lowlifes and end
+          stage alcoholics.  You sell coke to most of them.  The karaoke host
+          starts rummaging through her purse for her vape when a bottle of
+          Valtrex falls out and onto the stage.  You pick up the Valtrex and
+          hand it back to her.  She seems embarrassed but you give her a wink
+          and a smile and continue on singing. You go home with her later that
+          night.  Merry Christmas.
+      - label: the Brooklyn branch
+        song: Dance Yrself Clean — LCD Soundsystem
+        points: 1
+        text: >
+          You're singing inside the most popular karaoke bar in Brooklyn and
+          nobody cares that you picked a 9min long song because everyone is
+          too busy blowing themselves.  Good song.
+      - label: the reassessment
+        song: Turn It Off — the Book of Mormon cast
+        points: 1
+        text: Fun.  2nd gayest song on this list.
+      - label: the confession
+        song: Alone — Heart
+        points: 2
+        text: I don't possess the confidence to dream this big.
+      - label: the self-portrait
+        song: Wet Dream — Wet Leg
+        points: 1
+        text: >
+          You don't care about attracting the wrong attention.  You just want
+          to have fun and express yourself.  You are an artist.  Such a fun
+          song.
+      - label: the history lesson
+        song: Rasputin — Boney M.
+        points: 1
+        text: >
+          Maybe the most European sounding song of all time.  A very specific
+          sound and vibe built by, and for, the spawn of the overly serious
+          first hand witnesses and participants of WWII.  Fuck that noise dog.
+          … everyone ate amphetamines upon waking at 2pm to fuel their
+          afternoon into evening song writing sessions where every weird idea
+          was a genius idea. … their brains floating inside a based hedonistic
+          fog they never questioned or challenged.  God bless 'em.  This song
+          is indeed a banger!
+      - label: the apology-downvote
+        song: Rosa Parks — Outkast
+        points: -1
+        text: >
+          This song is great. I'm just bitter that my Bombs Over Bagdad
+          selection a few weeks back didn't get much love and I'm taking it
+          out on you.  I'm a POS. … Anyway...Andre's step dad sounds like a
+          super talented human being.  Also, SHOUT OUT to step-dads!  I love
+          you.
+    # After week one the second person retired; the standard did not. A
+    # season-wide selection from the other 87 sittings:
+    evidence:
+      - Damn Gina. The whole house smells like badussy but it's 9AM Sunday morning and we're gonna be late for church.
+      - Tiny Dinky Daffy.  Pancaked by a drunk dump truck driver.  Good song.
+      - It's not technically a crime IF you yell "Shark Attack!" before pulling her top down.  Don't forget.
+      - I shan't reward rule breakers no matter how much I like the song.  No member berries, no points!
+      - Slut shaming is timeless PLUS you followed the rules so hard and picked the song with the most NLVs.  Double P
+      - I now like the song more because of you.  Well done.
+      - Auto downvote bc Kristen Schaal's voice is in the song.  Stay in your lane Schaal.  Sorry Phil.
+    highlight:
+      - { value: 98, label: ballot comments this season }
+      - { value: 9, label: sittings, one per round }
+      - { value: "1,925", label: characters in the biggest sitting, most in the league }
+    # media plan: still from the Valtrex-vignette short (beat 1, the dive
+    # bar with Christmas garland). OWNER TO PROVIDE; suggested src
+    # _media/second_person_valtrex.jpg. Overlay: the wink lands on beat 3.
+
+  # ── The Old Fashionista (Say What?) ───────────────────────────────────────
+  # Returning regular (first carded r141). The drinking estimates are the
+  # archivist's, assigned on the same scale throughout — the archivist was
+  # sober, which is the problem. 360 jac messages this season; 16 entries
+  # selected for the log.
+  - name: The Old Fashionista
+    player: jac Chapin
+    type: intermittent transmitter
+    style: transmission log
+    motif: old-fashioned taste; the typing explains itself
+    note: >
+      The league's traditionalist — a man whose musical doctrine holds that a
+      foreign language song will never beat AC/DC, whose Guns N' Roses
+      scholarship includes the official ranking of Illusion volumes, and who
+      transmits accordingly: late at night, in bursts, with the keyboard set
+      to a difficulty the rest of the room cannot verify. The pattern held to
+      schedule all season — good for a day or two, then silent for a week,
+      then everything at once. The card's theory of the case is in its name:
+      an old fashioned, taken old-fashioned-ly. Three hundred and sixty
+      transmissions, and legibility was optional throughout. A season-ending
+      selection from the log, each entry annotated with the drinking estimate
+      of the archivist on duty.
+    transmissions:
+      - at: aug 1, 12:02 am
+        text: How gets the the thumb down?
+        drinks: 2
+      - at: aug 8, 8:36 pm
+        text: Pjust Creek? Be more worried.
+        drinks: 2
+      - at: aug 8, 8:36 pm
+        text: Creed sucks on all aspects of.
+        drinks: 1
+      - at: aug 8, 9:32 pm
+        text: The. Which of November came stealing!
+        correction: Witch (9:33 pm)
+        drinks: 3
+      - at: aug 15, 10:57 pm
+        text: It was a foot list.
+        drinks: 2
+      - at: aug 15, 11:20 pm
+        text: My nephew got a black eye on his birthday. Hey's okay, but he said a fat uncle gave it to him. I swear I've been here since two days ago.
+        drinks: 4
+      - at: aug 16, 8:00 pm
+        text: Cry guns and rises
+        correction: Sorry... "don't you cry tonight" (8:01 pm)
+        drinks: 3
+      - at: aug 16, 8:47 pm
+        text: REO speedwag
+        drinks: 1
+      - at: aug 20, 9:46 pm
+        text: My be little guy!
+        drinks: 2
+      - at: aug 20, 10:52 pm
+        text: A short NOXG for you.
+        drinks: 2
+      - at: aug 22, 11:22 pm
+        text: I wear Stank by Haliburton.
+        drinks: 3
+      - at: aug 22, 11:25 pm
+        text: Sometimes Buttcheese by Ralph Lauren.
+        drinks: 3
+      - at: aug 29, 10:15 pm
+        text: Don't....speak.....a.....turd!
+        context: the order he gave the room before his nap, forty minutes before voting closed
+        drinks: 2
+      - at: sep 13, 12:17 am
+        text: AI is an ugly girl. Just ignore it!
+        drinks: 4
+      - at: sep 18, 10:32 pm
+        text: I actually said Tool mistakenly and tried to cover it up.
+        drinks: 2
+      - at: sep 19, 12:23 am
+        text: Does Mexico offer Insurance? Or leverage?
+        drinks: 4
+    highlight: [Stank by Haliburton, turd, leverage]
+    stats:
+      - { value: 360, label: transmissions this season }
+      - { value: 16, label: entries in the season-ending log }
+      - { value: 4, label: drinks, highest estimate on record }
+    # media plan: no photo — the drink-glass pictograms ARE the image layer
+    # (1–5 per entry, per the estimate). Keep as overlay graphics, not media.
+
+  # ── The Penitent ──────────────────────────────────────────────────────────
+  # NEW card. Verified from ballot comments: 8 downvotes this season, 5 with
+  # an apology in the comment; the pre-emptive chat apology posted aug 21
+  # 9:32 pm, twenty-two hours before that round's voting closed.
+  - name: Lo Sientorita
+    player: Sarah Zucker
+    type: serial penitent
+    style: ledger
+    motif: apologizes to everything except Bad Bunny
+    note: >
+      Eight downvotes this season. Five arrived with an apology attached, and
+      the apologies are addressed less to the submitter than to the songs
+      themselves — one downvoted a dead man and apologized to him directly.
+      The practice also has a pre-emptive branch: apologizing in the chat
+      before any ballot has been filed. The one carve-out in the entire
+      doctrine is Bad Bunny, whose defense she conducts at full volume, in
+      Spanish, with no lo siento anywhere in the filing — "Ok I'm done now,"
+      she wrote, which is the closest the office comes to an unqualified
+      statement.
+    evidence:
+      - I'm so sorry I didn't want to do this, especially if it's for your brudder. I didn't love this particular song but there is nothing wrong with it at all.
+      - I'm so sorry I don't like them. I'm trying.
+      - I'm sorry that you died on stage and now I'm downvoting you. You did not deserve that. I appreciate the submitter cleverly pointing out just how untimely his passing was.
+      - I'm so sorry you didn't deserve the downvote.
+      - I'm really sorry but I don't like jam bands and a 40 minute song is overwhelming. I'm sure I like you though and I appreciate Phish fans as human beings.
+      - I just want to say for the record that I don't want to downvote anyone.
+      - Making sure you hoes know the Yo Perreo Sola video is for a purpose. The song and video are about consent and challenging rigid gender norms and toxic masculinity in reggaeton. Benito is a committed LGBTQ+ advocate. … Ok I'm done now.
+    highlight: [brudder, I'm trying, Benito]
+    stats:
+      - { value: 8, label: downvotes this season }
+      - { value: 5, label: apologies attached }
+      - { value: 1, label: apology filed before voting opened }
+    media:
+      src: https://digest.mattmariani.com/_media/penitent_rescue_kittens.jpeg
+      poster: https://digest.mattmariani.com/_media/penitent_rescue_kittens.jpeg
+      caption: '"They just showed up in my backyard and then their mom left or was eaten. I needed a lot of help and emotional support." · aug 4'
+      alt: >-
+        Four young rescue kittens — two tortoiseshells, one black, one
+        orange — curled together on the cushion of a blue-and-white outdoor
+        patio chair, all four staring at the camera.
+
+  # ── The Alternate Take ────────────────────────────────────────────────────
+  # Returning regular (first carded r142). HUMBLE. verified via the linked
+  # video id in the archive; "Ocean Views" verified the same way.
+  - name: The Alternate
+    player: Mara Mariani
+    type: co-commissioner
+    style: story-led
+    motif: herds the votes, mirrors the playlist, soundtracks the van
+    note: >
+      The mirror carried fifteen drops and counting; the deadline reminders
+      arrived every round on schedule. Three instances, season-wide:
+    evidence:
+      - I would have submitted this song but I learned my lesson last season. I have a vivid memory of riding in a van in Hawaii with @Jac Chapin, @Mike Layous, and @Matt Mariani on the way back to the hotel from one of the Black wedding events. DAMN. had just come out and I made the driver put it on.
+      - Pop out and show.
+      - 35 minutes left to submit. It's the last round of the season!
+    highlight: [DAMN., driver, 35 minutes]
+    stats:
+      - { value: 15, label: drops to the mirror, and counting }
+      - { value: 1, label: album she made the driver put on }
+    # media plan: HUMBLE. album art (Spotify cover, art exists in the wild)
+    # or a Hawaii van photo if one exists in the camera roll. OWNER TO
+    # PROVIDE; suggested src _media/alternate_take_humble.jpg
+
+  # ── The Botanist ──────────────────────────────────────────────────────────
+  # NEW card. Phil posted nothing cat-related all season (verified r142);
+  # plant consultation is his actual register.
+  - name: The Bonus Lotus
+    player: Phil Chapin
+    type: bonus Chapin, botanical division
+    style: quote-led
+    motif: answers the cat lobby with houseplants
+    note: >
+      The Bonus Lotus — of the three singing Chapins, the lesser known and,
+      by the family's own accounting, the sexy young one; a man into plants
+      the way his brothers are into cats and cat violence. The Cat Lobby
+      spent the season looking for its antagonist in the wrong Chapin. Phil
+      owns no cats and never pretended otherwise; his platform, stated in
+      full, is "I only have plants." Two leaves ain't dead. He celebrates
+      them. The Lobby's takedown notice found him on a night shift; the
+      apology he issued for the post he did not make stands as the season's
+      most courteous surrender.
+    evidence:
+      - I only have plants
+      - Two leaves ain't dead.  Celebrate them.
+      - I have a fiddle leaf that did well… but the Audrey is a little bitch
+      - I have googly-eyed plants. Have to! They're spooky!
+      - Sorry just got off of night shift and probably not writing coherently.
+      - Life Without cats
+      - Apologies… all around.
+    highlight: [Celebrate them, Audrey, spooky]
+    stats:
+      - { value: 0, label: cats owned }
+      - { value: 1, label: googly-eyed plant minimum }
+      - { value: 1, label: apology for a post that did not exist }
+    media:
+      src: https://digest.mattmariani.com/_media/philz_perfect_pothos.jpeg
+      poster: https://digest.mattmariani.com/_media/philz_perfect_pothos.jpeg
+      caption: the golden ones are easy anywhere · aug 13
+      alt: >-
+        A golden pothos houseplant with long trailing vines, photographed
+        indoors in a hanging position.
+
+  # ── The Devout ────────────────────────────────────────────────────────────
+  # NEW card. 509 messages in his first six weeks (Jul 19–Sep 20). The
+  # secession lasted 17 minutes (announced 8/10 9:38 pm, "No not leaving"
+  # 8/10 9:55 pm). Prayer material recurs July→September.
+  - name: Coach Mike
+    player: Michael Black
+    type: player-coach
+    style: testimony
+    motif: coaches everything that stands still
+    note: >
+      Joined August 8, passed the authenticity test within the hour, and
+      immediately began coaching. He coaches his son's baseball team, his
+      daughter's soccer team, the league's submission strategy, its
+      reproduction schedule, and — informally — its tone. The proudest stat
+      on his card is a brace. He is also the league's only praying voter,
+      which tracks: a man who believes in building the roster for next
+      season.
+    evidence:
+      - 2 day soccer tourney in Sacramento. Going to be yelling at some out of soccer shape girls. A few of them will be ruing the day they accepted the invitation to this team. I think some of them already are anti Coach MB
+      - Got up at 630 to get back for Olivia's soccer game at 12. 3-2 winners. 1-1 at halftime and then she got her brace in the second half.
+      - The problem is my daughter is really good. She's playing up this year and she's the youngest girl on the team
+      - I had to go to a Needoh release with Connor a few months ago. Waited in line for 3 hours to buy a glorified stress ball in the shape of a gummy bear. Yelled at a 13 year old for trying to cut with his friends. Good times
+      - The problem with folk like you guys is that you're not reproducing. … Let me see some reproduction. Give the next generation a chance
+      - I just want everyone to know that the music group on WhatsApp brings me so much more joy than the coaches group chap I mostly deal with. For my kids soccer teams. Bunch of whining adults
+      - '"Put that fat fuck on blast. He was the one with the C-C-C song right?" Guess she got a hold of my phone and scrolled through the chat'
+      - Well I hate you all but I'll do another season. One of my categories better be picked by you guys
+    highlight: [ruing, brace, reproduction]
+    stats:
+      - { value: 2, label: kids' teams coached, both undefeated in his heart }
+      - { value: 1, label: brace, second half, game won 3-2 }
+      - { value: 3, label: hours in a NeeDoh line for a gummy bear }
+    media:
+      src: https://digest.mattmariani.com/_media/devout_winter_formal.jpeg
+      poster: https://digest.mattmariani.com/_media/devout_winter_formal.jpeg
+      caption: the nightstand find · "Damn I was dashing" · sep 17
+      alt: >-
+        A printed photograph from the nineties: a teenage boy in a dress
+        shirt and loosened tie sits on a floral-couch arm holding a styrofoam
+        cup while a girl kisses his cheek. Photo of a photo, taken on a navy
+        bedsheet.
+    # further exhibits live in _media/: fatty_mango.jpeg (the cat's debut,
+    # aug 19), devout_first_drink.jpeg (plaid flannel, Pepsi, "That lid was
+    # legit", sep 18), devout_digest_502.jpeg (a Cloudflare 502 for
+    # digest.mattmariani.com — "Why do I get this when I try to look at the
+    # digest mariani?" — "What did you do?"), jon_cat_wide_eyes.jpeg (the
+    # summit cat Tommy captioned "Fuck you lookin' at?").
+
+  # ── The Bloop Father ──────────────────────────────────────────────────────
+  # NEW card. Coinage verified in the r141 dictionary card (14 uses, 5
+  # speakers, 73 min to first convert); vote-regret lines verified in the
+  # r142 Vote Regretter card.
+  - name: The Bloop Father
+    player: Tj Cook
+    type: word-founder, vote-regretter
+    style: doctrine
+    motif: coined the word, can't live it
+    note: >
+      Gave the league its word of the year — bloopin', the doctrine of
+      letting go — and then spent the season demonstrating how hard bloopin'
+      is. He files his ballot at speed and relitigates it in public for the
+      rest of the week, not with the commissioner, who could actually change
+      something, but with the room. The word spread in seventy-three minutes.
+      The regret has not spread to him as a practice.
+    evidence:
+      - You both need to relax and bloop.
+      - I sling votes around like monopoly money.
+      - If I could go back.
+      - I may need my votes back. This sounds like force inner circle.
+      - And I didn't downvote.
+      - Sorry. Thought you posted Runaround Sue. I may have voted for ya.
+      - Not to derail....*blooping
+    highlight: [bloop, monopoly, "*blooping"]
+    stats:
+      - { value: 14, label: uses of his word by five speakers }
+      - { value: 73, label: minutes from coin to first convert }
+      - { value: 1, label: doctrine he can't keep }
+
+  # ── The Body Horror ───────────────────────────────────────────────────────
+  # NEW card. Both injury posts verified in the 8/22 chat (video + pic; Phil
+  # and Matt's reactions; the "Fresh!!!" response). He also administered the
+  # season's only DQs (8/27, upheld from the chair).
+  - name: The Body Horror
+    player: Brian Pascoe
+    type: self-documenting casualty
+    style: exhibit-led
+    motif: documents his own injuries in real time
+    note: >
+      Twice this season the chat received unprompted photographic evidence of
+      its own mortality, and both times the evidence was Brian Pascoe. The
+      first was a video: a surfboard gash, uploaded from the scene. Jon asked
+      if it was a shark bite. "Cooler story if it was," he replied, and gave
+      the official finding — the board. Matt: "that looks like stitches
+      brosef." Hours later came the second exhibit, fresher, and the
+      diagnosis was his own: "Fresh!!!" — filed, like all his paperwork, with
+      a listening report attached (Mitski, fired up). Between injuries he
+      also administered the season's only disqualification, of the
+      co-commissioner, upheld on appeal by the chair. The body horror is not
+      the wound. It is that he is fine.
+    evidence:
+      - Cooler story if it was
+      - Point of board
+      - Fresh!!!
+      - Fired up on Mitski tonight
+      - DQ'd
+      - I didn't want to have to revote
+    highlight: [Point of board, Fresh!!!, Mitski]
+    stats:
+      - { value: 2, label: self-documented injuries with exhibits }
+      - { value: 1, label: stitches-level, per the chair }
+      - { value: 0, label: "sympathy sought — Fresh!!! issued instead" }
+    # media plan (both exhibits confirmed in the S2 media export):
+    # VID-20260822-WA0018.mp4 (the board gash video, aug 22 5:45 pm) and the
+    # second-injury pic in the 10:08 pm window ("Is that a new injury BP?" —
+    # "That looks awful" — "Fresh!!!"). OWNER TO PROVIDE; suggested src
+    # _media/body_horror_1.mp4 / _media/body_horror_2.jpg.
+
+  # ── The Mail-In Ballot ────────────────────────────────────────────────────
+  # NEW card. Verified: zero chat messages in the season archive; 47 ballot
+  # comments carrying 22 exclamation points.
+  - name: The Mail-In Ballot
+    player: Joe Quinto
+    type: ballot-only participant
+    style: postcard
+    motif: never in the chat, always on the ballot
+    note: >
+      Zero chat messages this season; forty-seven ballot comments. Every vote
+      arrives like a postcard from another room — earnest, exclamatory, and
+      graded on a karaoke axis only he can see. He has never met the argument
+      he joined and has never missed the vote that mattered. The league's
+      highest turnout-to-presence ratio.
+    evidence:
+      - No, thank you. Exclamation point.
+      - Even as an ardent anti- karaoke lad, I still feel that, like a bartender ready with a joke or quip,
+      - wishing I could give another thumbs down
+      - where the hell is norf?!  a place where your mouth is full of broken lightbulbs, and there are wasps
+      - despite myself, icannotvhelp myself
+      - I just don't get BB. do not approve
+    highlight: [exclamation point, norf, icannotvhelp]
+    stats:
+      - { value: 0, label: chat messages this season }
+      - { value: 47, label: ballot comments }
+      - { value: 22, label: exclamation points }
+
+  note: >
+    Season two in eleven cards. Three players live at the same address, one
+    narrates from the diviest bar on earth, one disqualified the
+    co-commissioner, one has never said a word in the chat and one never
+    stops. The through-line is the household: the M-DOT trails off, the
+    Ailurophila sapiens and the Bonus Botanus share a roof with the feline
+    assassin gang, the Old Fashionista and the Bloop Father arrive late at night
+    from opposite ends of the spectrum, and Lo Sientorita apologizes to all
+    of them equally — except Benito.
+
+
+# ── The Coinage → stats_content_json.phrase ──────────────────────────────────
+# Word of the Year gets the full dictionary card; the rest of the class of
+# 2026 follows in coinages_of_the_year (special-section block — if the
+# renderer only takes `phrase`, paste these as a second card or fold into the
+# section note).
+phrase:
+  style: dictionary
+  term: bloopin'
+  pronunciation: /ˈbluːpɪn/
+  part_of_speech: verb · gerund · doctrinal · word of the year
+  definition: >
+    1. To let it go — specifically, to decline a grudge that is available to
+    you. 2. (literal, original) To play frog music on a wind synthesizer.
+
+
+    The season's word by every measure that counts: fourteen uses, five
+    speakers, first convert seventy-three minutes after coining, and a
+    catechism ("Blooping ain't easy. But it works.") inside the hour. The
+    adoption was the fastest on record and, by the archive, the word has not
+    been needed since — last recorded use 12:08 the night it was coined,
+    Michael Black, "Straight bloopin." A word that arrived fully formed,
+    did its work, and retired undefeated. The league should be so bloopin'.
+  coined:
+    by: Tj Cook
+    date: '2026-08-29'
+    at: the league
+    context: posted as a track by eddie.ewi, a man who plays frog music on a wind synth, with the instruction attached
+  stats:
+    uses: 14
+    speakers: 5
+    prior_rounds: 0
+  usages:
+    - label: the instruction
+      speaker: Tj Cook
+      text: You both need to relax and bloop.
+    - label: the conversion
+      speaker: Tommy Chapin
+      text: I ain't like that no more.  TJ showed me a better way.  Bloopin' is the way.
+    - label: the correction
+      text: Not to derail....*blooping
+    - label: the catechism
+      text: Blooping ain't easy. But it works.
+    - label: the last word
+      speaker: Michael Black
+      at: 12:08 am, the night it was coined
+      text: Straight bloopin
+  source: https://open.spotify.com/track/19sgHQjCYliXCE4fwA64D2
+
+  # The rest of the class of 2026 — season retrospective card.
+  coinages_of_the_year:
+    - term: the feline assassin gang
+      by: Jonathan Black
+      date: '2026-08-16'
+      status: ratified by a judge's son
+      line: >-
+        A household's name for its own cats, entered into law the same day —
+        prosecution, ruling ("A human can't "murder" an animal. We can just
+        waste the meat."), and a dad-joke concurrence.
+    - term: all JB about it
+      by: Sarah Black
+      date: '2026-09-02'
+      status: single use, instantly permanent
+      line: >-
+        To concede the playlist is good and then raise the point of order
+        anyway. Coined by the offender's wife; the disclaimer arriving, as it
+        must, in the same breath as the pedantry it disclaims. Never used
+        again — it didn't need to be.
+    - term: plant brothers
+      by: Mashew
+      date: '2026-08-13'
+      status: provisional, as drafted
+      line: >-
+        Two men bound not by blood but by the shared custody of houseplants;
+        a kinship whose terms are explicitly conditional on the sicker plant
+        surviving.
+    - term: Third Eighth Best
+      by: Michael Black
+      date: '2026-08-10'
+      status: repealed by its coiner in 17 minutes
+      line: >-
+        The only coinage of the year to name an institution — a rival league,
+        announced with a guest list that excluded most of you, dissolved
+        before the hour was out.
+    - label: uncarded, pending season three
+      terms:
+        - term: waste the meat
+          by: Jac Chapin
+          note: ruled into the record during the assassin gang trial
+        - term: Meowing assassins
+          by: Tommy Chapin
+          note: the dad joke, entered as a concurrence
+        - term: jacism
+          note: the word for the genre ("My wheels are greased!" — filed on the spot, aug 29)
+  # Chad moment (flagged above) belongs after the last coinage line.

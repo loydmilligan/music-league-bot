@@ -14,7 +14,7 @@ import {
 const T0 = Date.UTC(2026, 6, 11, 12, 0);
 
 function msg(sender: string, text: string, over: Partial<Message> = {}): Message {
-	return { sender, ts: T0, text, edited: false, media: null, mentions: [], ...over };
+	return { sender, ts: T0, text, edited: false, media: null, mentions: [], ...over, deleted: over.deleted ?? false };
 }
 
 describe('chatIdentity', () => {

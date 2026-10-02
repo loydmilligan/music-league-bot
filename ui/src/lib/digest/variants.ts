@@ -12,7 +12,8 @@ export type DigestKind =
   | 'discoverability'
   | 'nextRound'
   | 'guesser'
-  | 'reel';
+  | 'reel'
+  | 'playerCards';
 
 // =============================================================================
 // VARIANT SLOT INTERFACE  (sprint-14 · frontend owns this; viz implements to it)
@@ -103,6 +104,7 @@ export const VISUAL_CAPABLE: Record<DigestKind, boolean> = {
   guesser: true, // synthetic data-driven (sprint: the-guesser): deterministic guess-comment ledger
   storylines: true, // sprint-storylines Task 5: cast-card list rendered by StorylinesCast
   reel: true, // synthetic draft-column section: weekly chat slideshow/video (media-first, Coinage media rules)
+  playerCards: true, // recap-only: animated baseball cards (not a digest_sections row)
 };
 
 /** Glyphs for the three variants — used by the per-section variant switcher and

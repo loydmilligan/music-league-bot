@@ -19,6 +19,7 @@ import { guesserSectionEnabledFor } from '$lib/digest/guesserSection.js';
 import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
 import { gatherPrepMaterial, type MaterialRow } from '$lib/digest/prepMaterial.js';
 import { digestBaseUrl } from '$lib/config/urls.js';
+import { attachPlayerCardClips, listBoarzPlayerCards, type PlayerCardMedia } from '$lib/digest/playerCardRoster.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = digestBaseUrl();
@@ -192,6 +193,8 @@ export type DigestPageData =
       /** "The Guesser" deterministic sub-section; null when the league hasn't opted in. */
       guesserData: GuesserData | null;
       guesserPosition: number;
+      /** Boarz S1 recap baseball cards; empty on other recaps/leagues. */
+      playerCards: PlayerCardMedia[];
     });
 
 export const load: PageServerLoad = async ({ params, fetch, url }) => {
@@ -300,6 +303,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
     }
 
     const stage: 'refine' | 'finalize' = draft.finalized_at ? 'finalize' : 'refine';
+    const isSeasonRecap = !!(draft as DigestDraftRow & { recap_enabled?: number }).recap_enabled;
     let statsContent: { title?: string; body?: string; phrase?: import('$lib/db/roundInsights.js').PhraseOfRound } = {};
     try { statsContent = JSON.parse(draft.stats_content_json ?? '{}'); } catch { /* use empty editable caption */ }
     let savedVisuals: unknown = [];
@@ -338,6 +342,26 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
         const idx = nums.findIndex((r) => r.id === roundId);
         const prevEnd = idx > 0 ? nums[idx - 1].voting_deadline : null;
         const roundNumber = nums[idx]?.round_number ?? idx + 1;
+        // A recap's chat visuals describe the season, not merely the final
+        // voting window. Start after the preceding season's last deadline; for
+        // Season 1, use the first captured message in this group.
+        const seasonStart = isSeasonRecap
+          ? (db.prepare(
+              `SELECT MIN(cm.ts) AS ts
+                 FROM chat_messages cm
+                WHERE cm.group_name = ?
+                  AND cm.ts < ?
+                  AND cm.ts >= COALESCE((
+                    SELECT MAX(pr.voting_deadline)
+                      FROM seasons current
+                      JOIN seasons prior
+                        ON prior.league_id = current.league_id
+                       AND prior.season_number < current.season_number
+                      JOIN rounds pr ON pr.season_id = prior.id
+                     WHERE current.id = (SELECT season_id FROM rounds WHERE id = ?)
+                  ), cm.ts)`,
+            ).get(groupName, round.voting_deadline, roundId) as { ts?: string } | undefined)?.ts
+          : null;
 
         chatSection = buildChatSection(db, {
           groupName,
@@ -345,10 +369,21 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
           platform,
           roundNumber,
           roundEndIso: round.voting_deadline,
-          previousRoundEndIso: prevEnd,
+          previousRoundEndIso: seasonStart ?? prevEnd,
         });
 
         if (chatSection) {
+          if (isSeasonRecap) {
+            // The season recap swaps the weekly heatmap/word feature for the
+            // volume triptych. Drop one-message system identities so every row
+            // in the panel is an actual participant.
+            const unmapped = new Set(chatSection.unmappedSenders);
+            chatSection.stats.people = chatSection.stats.people.filter(
+              (person) => !unmapped.has(person.name) || person.messages > 1,
+            );
+            chatSection.participantCount = chatSection.stats.people.length;
+            chatSection.rotation.feature = 'triptych';
+          }
           // Last round's section is what "shown recently" means for the
           // repeat-winner check.
           const prior =
@@ -366,6 +401,15 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
             (sec) => sec.kind === 'chat' && sec.state !== 'excluded',
           );
           chatRecommendations = recommendParts(chatSection, prior, hasLinerNotes);
+          if (isSeasonRecap) {
+            chatRecommendations = chatRecommendations.map((recommendation) =>
+              recommendation.part === 'chart'
+                ? { ...recommendation, include: false, reason: 'Season recap uses the full-season words-and-characters panel instead.' }
+                : recommendation.part === 'feature'
+                  ? { ...recommendation, include: true, reason: 'Full-season messages, words, and characters by person.' }
+                  : recommendation,
+            );
+          }
         }
       }
     } catch (err) {
@@ -406,7 +450,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
     let recap: RecapContext | null = null;
     let statsOut = stats;
     let nextRoundOut = nextRound;
-    if ((draft as DigestDraftRow & { recap_enabled?: number }).recap_enabled) {
+    if (isSeasonRecap) {
       const season = gatherSeasonData(db, roundId);
       recap = {
         enabled: true,
@@ -431,10 +475,26 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
       ? { data: null, excluded: nextRoundMeta.excluded, hasOverride: false }
       : nextRoundMeta;
 
+    const cardLeagueSlug = (db
+      .prepare('SELECT slug FROM leagues WHERE id = ?')
+      .get(round.league_id) as { slug?: string } | undefined)?.slug ?? null;
+    const playerCards = listBoarzPlayerCards({
+      leagueSlug: cardLeagueSlug,
+      recap: isSeasonRecap,
+      digestBase: B_SIDE_BASE,
+    });
+    const sectionsOut = playerCards.length
+      ? sections.map((section) =>
+          section.kind === 'storylines'
+            ? { ...section, content: attachPlayerCardClips(section.content, playerCards) }
+            : section,
+        )
+      : sections;
+
     return {
-      roundId, roundsIndex, currentRound, relContext, share, archiveUrl, rolloutRun, stage, draft, sections,
+      roundId, roundsIndex, currentRound, relContext, share, archiveUrl, rolloutRun, stage, draft, sections: sectionsOut,
       standings, stats: statsOut, insights, discoverability, chatSection, chatRecommendations, nextRound: nextRoundOut, nextRoundMeta: nextRoundMetaOut, recap,
-      guesserData, guesserPosition,
+      guesserData, guesserPosition, playerCards,
     } satisfies DigestPageData;
   }
 

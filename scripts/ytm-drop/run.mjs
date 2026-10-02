@@ -514,8 +514,12 @@ for (const round of candidates) {
 		}
 
 		const coverHost = path.join(ROOT, `data/tmp/r${round.id}-drop-cover.png`);
+		// process.execPath, not 'node': the unit's PATH has no nvm, so a bare
+		// 'node' is the system v18 while this process runs under nvm's v22 —
+		// and ui/node_modules/better-sqlite3 is compiled for exactly one of
+		// them. The child must inherit the interpreter that resolved it.
 		execFileSync(
-			'node',
+			process.execPath,
 			[path.join(ROOT, 'scripts/ytm-cover/generate.mjs'), String(round.id), COVER_VARIANT,
 			 '--playlist-url', round.playlistUrl, '--out', coverHost],
 			{ stdio: 'inherit', timeout: 120_000 },

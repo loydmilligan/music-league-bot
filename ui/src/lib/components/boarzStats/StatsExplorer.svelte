@@ -46,20 +46,27 @@
 
 	const initialPlayers = page.url.searchParams.get('players')?.split(',').map(Number).filter(Number.isFinite) ?? [];
 	let selectedPlayerIds = $state<number[]>(initialPlayers);
-	let draftPlayerIds = $state<number[]>(initialPlayers);
 	let playerSearch = $state('');
 	let filterOpen = $state(false);
+	$effect(() => {
+		const params = page.url.searchParams;
+		selectedPlayerIds = params.get('players')?.split(',').map(Number).filter(Number.isFinite) ?? [];
+		activeOnly = params.get('activeOnly') === '1';
+		crossSeasonView = params.get('seasonView') === 'hide-season' ? 'hide-season' : 'combined';
+		const requested = params.get('tab') as TabId;
+		active = TABS.some((tab) => tab.id === requested) ? requested : 'leaderboard';
+	});
 	const mostRecentSeason = $derived(Math.max(...snapshot.rounds.map((round) => round.seasonNumber)));
 	const activePlayerIds = $derived([...new Set(snapshot.subs.filter((sub) => snapshot.rounds[sub.roundIdx]?.seasonNumber === mostRecentSeason).map((sub) => snapshot.competitors[sub.compIdx]?.id).filter((id): id is number => id != null))]);
 	const basePlayerIds = $derived(activeOnly ? activePlayerIds : snapshot.competitors.map((competitor) => competitor.id));
 	const effectivePlayerIds = $derived((selectedPlayerIds.length ? selectedPlayerIds : basePlayerIds).filter((id) => basePlayerIds.includes(id)));
 	const snap = $derived(filterSnapshotPlayers(snapshot, effectivePlayerIds));
-	const allPlayers = $derived(selectedPlayerIds.length === 0 || selectedPlayerIds.length === snapshot.competitors.length);
+	const allEligibleSelected = $derived(selectedPlayerIds.length === 0 || basePlayerIds.every((id) => selectedPlayerIds.includes(id)));
 
 	function syncUrl() {
 		const url = new URL(window.location.href);
 		url.searchParams.set('tab', active);
-		if (allPlayers) url.searchParams.delete('players');
+		if (allEligibleSelected) url.searchParams.delete('players');
 		else url.searchParams.set('players', selectedPlayerIds.join(','));
 		if (activeOnly) url.searchParams.set('activeOnly', '1'); else url.searchParams.delete('activeOnly');
 		if (isAllSeasons && crossSeasonView !== 'combined') url.searchParams.set('seasonView', crossSeasonView); else url.searchParams.delete('seasonView');
@@ -72,28 +79,20 @@
 	}
 
 	function togglePlayer(id: number, checked: boolean) {
-		const current = allPlayers ? snapshot.competitors.map((competitor) => competitor.id) : selectedPlayerIds;
+		const current = allEligibleSelected ? [...basePlayerIds] : selectedPlayerIds;
 		selectedPlayerIds = checked
 			? [...new Set([...current, id])]
 			: current.filter((value) => value !== id);
-		if (selectedPlayerIds.length === snapshot.competitors.length) selectedPlayerIds = [];
+		if (basePlayerIds.every((value) => selectedPlayerIds.includes(value))) selectedPlayerIds = [];
 		syncUrl();
 	}
 
 	function selectAllPlayers() {
 		selectedPlayerIds = [];
-		draftPlayerIds = [];
-		syncUrl();
-	}
-
-	function applyPlayerFilter() {
-		selectedPlayerIds = draftPlayerIds.length === snapshot.competitors.length ? [] : [...draftPlayerIds];
-		filterOpen = false;
 		syncUrl();
 	}
 	function resetFilters() {
 		selectedPlayerIds = [];
-		draftPlayerIds = [];
 		activeOnly = false;
 		crossSeasonView = 'combined';
 		playerSearch = '';
@@ -135,7 +134,7 @@
 			<div class="flex flex-wrap items-end gap-2">
 				<div class="min-w-48 flex-1">
 				<label for="stats-season" class="mb-1 block text-xs font-semibold tracking-wide text-fg-muted uppercase">Season view</label>
-				<select id="stats-season" name="season" class="min-w-0 flex-1 rounded-lg border border-border-muted bg-bg-elevated px-3 py-2 text-sm text-fg">
+				<select id="stats-season" name="season" class="min-w-0 flex-1 rounded-lg border border-border-muted bg-bg-elevated px-3 py-2 text-sm text-fg" onchange={(event) => { filterOpen = false; event.currentTarget.form?.requestSubmit(); }}>
 					{#each snapshot.league.seasons as season (season.id)}
 						<option value={season.number} selected={snapshot.league.selectedSeasons.length === 1 && snapshot.league.selectedSeasons[0] === season.number}>
 							Season {season.number}{season.status === 'active' ? ' · active' : ''}
@@ -147,32 +146,31 @@
 				</select>
 				</div>
 				<input type="hidden" name="tab" value={active} />
-				{#if selectedPlayerIds.length}<input type="hidden" name="players" value={selectedPlayerIds.join(',')} />{/if}
+				{#if !allEligibleSelected}<input type="hidden" name="players" value={selectedPlayerIds.join(',')} />{/if}
 				{#if activeOnly}<input type="hidden" name="activeOnly" value="1" />{/if}
 				{#if crossSeasonView !== 'combined'}<input type="hidden" name="seasonView" value={crossSeasonView} />{/if}
-				<button class="rounded-full bg-fg px-4 py-2 text-sm font-semibold text-bg" type="submit">Apply season</button>
 				<div class="relative">
-					<button type="button" class="control-pill" aria-expanded={filterOpen} onclick={() => { filterOpen = !filterOpen; draftPlayerIds = effectivePlayerIds.length === snapshot.competitors.length ? [] : [...effectivePlayerIds]; }}>
-						<span aria-hidden="true">☷</span> Filters <span class="pill-count">{activeOnly || effectivePlayerIds.length < snapshot.competitors.length ? 'On' : 'All players'}</span>
+					<button type="button" class="control-pill" aria-expanded={filterOpen} onclick={() => { filterOpen = !filterOpen; }}>
+						<span aria-hidden="true">☷</span> Filters <span class="pill-count">{activeOnly || !allEligibleSelected ? 'On' : 'All players'}</span>
 					</button>
 					{#if filterOpen}
 						<div class="filter-popover">
 							<div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-fg">Player filters</h2><button type="button" class="text-xs text-fg-muted underline" onclick={selectAllPlayers}>Everyone</button></div>
-							<label class="mt-3 flex items-center gap-2 text-sm text-fg"><input type="checkbox" bind:checked={activeOnly} /> Only players active in Season {mostRecentSeason}</label>
+							<label class="mt-3 flex items-center gap-2 text-sm text-fg"><input type="checkbox" bind:checked={activeOnly} onchange={syncUrl} /> Only players active in Season {mostRecentSeason}</label>
 							<input class="mt-3 w-full rounded-lg border border-border-muted bg-bg-elevated px-3 py-2 text-sm" type="search" bind:value={playerSearch} placeholder="Search players" aria-label="Search players" />
 							<div class="mt-2 max-h-56 overflow-y-auto space-y-1">
 								{#each snapshot.competitors.filter((competitor) => competitor.name.toLowerCase().includes(playerSearch.toLowerCase()) && basePlayerIds.includes(competitor.id)) as competitor (competitor.id)}
-									<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface"><input type="checkbox" checked={draftPlayerIds.length === 0 ? true : draftPlayerIds.includes(competitor.id)} onchange={(event) => { const current = draftPlayerIds.length === 0 ? [...basePlayerIds] : draftPlayerIds; draftPlayerIds = event.currentTarget.checked ? [...new Set([...current, competitor.id])] : current.filter((id) => id !== competitor.id); }} />{competitor.name}</label>
+									<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface"><input type="checkbox" checked={allEligibleSelected || selectedPlayerIds.includes(competitor.id)} onchange={(event) => togglePlayer(competitor.id, event.currentTarget.checked)} />{competitor.name}</label>
 								{/each}
 							</div>
-							<div class="mt-4 flex justify-end gap-2 border-t border-border-muted pt-3"><button type="button" class="control-pill" onclick={resetFilters}>Reset</button><button type="button" class="control-pill primary" onclick={applyPlayerFilter}>Apply filters</button></div>
+							<div class="mt-4 flex justify-end border-t border-border-muted pt-3"><button type="button" class="control-pill" onclick={resetFilters}>Reset filters</button></div>
+							<p class="mt-2 text-xs text-fg-faint">Changes apply immediately. Season selection reloads the view; player filters update the charts.</p>
 						</div>
 					{/if}
 				</div>
 				{#if isAllSeasons}
 					<label class="min-w-56"><span class="mb-1 block text-xs font-semibold tracking-wide text-fg-muted uppercase">All season panels</span><select class="w-full rounded-lg border border-border-muted bg-bg-elevated px-3 py-2 text-sm" bind:value={crossSeasonView} onchange={syncUrl}><option value="combined">Combine rounds where comparable</option><option value="hide-season">Hide season-specific panels</option></select></label>
 				{/if}
-				<button type="button" class="px-3 py-2 text-sm text-fg-muted underline" onclick={resetFilters}>Reset all</button>
 			</div>
 			<p class="mt-2 text-xs text-fg-faint">Showing {snapshot.league.selectedSeasons.length > 1 ? `Seasons ${snapshot.league.selectedSeasons.join(', ')}` : `Season ${snapshot.league.selectedSeasons[0]}`} · {activeOnly ? `active in Season ${mostRecentSeason}` : `${effectivePlayerIds.length || snapshot.competitors.length} players`} · {isAllSeasons ? crossSeasonView === 'combined' ? 'combined cross-season view' : 'season-specific panels hidden' : 'season view'}.</p>
 		</form>
@@ -192,7 +190,7 @@
 	</nav>
 
 	<div use:downloadableStats={{ prefix: `${snapshot.league.slug}-${snapshot.league.selectedSeasons.join('-')}` }}>
-		{#key `${active}:${selectedPlayerIds.join(',')}`}
+		{#key `${active}:${snapshot.league.selectedSeasons.join(',')}:${effectivePlayerIds.join(',')}:${crossSeasonView}`}
 		{#if active === 'leaderboard'}
 			<LeaderboardTab {snap} omitRace={omitLeaderboardRace} />
 			<RoundScoresTab {snap} />
@@ -224,7 +222,6 @@
 <style>
 	.control-pill { display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--color-border-muted); border-radius:999px; padding:.5rem .85rem; color:var(--color-fg); font-size:.875rem; background:var(--color-surface); }
 	.control-pill:hover { border-color:var(--color-fg-muted); }
-	.control-pill.primary { background:var(--color-fg); color:var(--color-bg); font-weight:600; }
 	.pill-count { color:var(--color-fg-muted); font-size:.75rem; }
 	.filter-popover { position:absolute; right:0; top:calc(100% + .5rem); z-index:30; width:min(22rem,calc(100vw - 2rem)); border:1px solid var(--color-border-muted); border-radius:1rem; background:var(--color-bg-elevated); padding:1rem; box-shadow:0 14px 45px #0005; }
 </style>

@@ -2,9 +2,9 @@
   // ── The Reel · Register B (Newsroom) ────────────────────────────────────────
   // Built to design_handoff_reel_section/README.md (docs/Reel section
   // mockups.zip). A per-round looping video framed as an editorial unit: the
-  // .dgB-section-head from digest.css, a square 480px frame with four static
+  // .dgB-section-head from digest.css, a square 480px preview with four static
   // decorative overlays (grain, accent glow, letterbox top/bottom), and one
-  // italic caption line. No player UI — autoplay muted loop, no controls.
+  // italic caption line. The preview opens a centered player lightbox.
   //
   // Synthetic data-driven section (stats/guesser family): content lives on
   // digest_drafts.reel_content_json. Media follows the Coinage rules
@@ -17,6 +17,7 @@
   // implemented but content can switch it off (waveform:false) when the render
   // carries its own sound bed visuals.
   import { page } from '$app/state';
+  import { tick } from 'svelte';
   import type { VisualComponentProps } from './variants.js';
 
   type ReelAccent = 'pulp' | 'amber' | 'sky' | 'moss' | 'ember';
@@ -32,6 +33,14 @@
     waveform?: boolean;
     letterbox?: boolean;
     grain?: boolean;
+    /** in-frame heading; defaults to "The Reel" (opt-in override) */
+    heading?: string;
+    /** the ".deck" sub-label; defaults to the chat-moments line */
+    deck?: string;
+    /** frame aspect ratio, e.g. "16 / 9" or "9 / 16"; defaults square "1 / 1" */
+    aspect?: string;
+    /** frame max width in px; defaults 480 */
+    maxw?: number;
   }
 
   let { content }: VisualComponentProps = $props();
@@ -39,19 +48,41 @@
 
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
-  // "Sound on" needs a user gesture: browsers (mobile especially) only allow
-  // unmuted playback after a tap, and the spec's no-player-UI frame gives the
-  // user nothing to tap. The whole frame is the tap target — one press
-  // unmutes (and re-kicks play(), which iOS requires inside the gesture),
-  // another re-mutes. A small mono tag invites the first tap and disappears
-  // once sound is on. Export stays inert.
-  let videoEl = $state<HTMLVideoElement | null>(null);
-  let soundOn = $state(false);
-  function toggleSound() {
-    if (isExport || !videoEl) return;
-    soundOn = !soundOn;
-    videoEl.muted = !soundOn;
-    if (soundOn) void videoEl.play().catch(() => {});
+  let modalOpen = $state(false);
+  let modalVideo = $state<HTMLVideoElement | null>(null);
+  let closeButton = $state<HTMLButtonElement | null>(null);
+  let triggerButton = $state<HTMLButtonElement | null>(null);
+
+  async function openModal(button: HTMLButtonElement) {
+    if (isExport || !src) return;
+    triggerButton = button;
+    modalOpen = true;
+    await tick();
+    closeButton?.focus();
+    const player = modalVideo;
+    if (player) {
+      try {
+        await player.play();
+      } catch {
+        /* Browser media policy — the player controls remain available. */
+      }
+    }
+  }
+
+  async function closeModal() {
+    const player = modalVideo;
+    player?.pause();
+    modalOpen = false;
+    await tick();
+    triggerButton?.focus();
+    triggerButton = null;
+  }
+
+  function onWindowKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && modalOpen) {
+      event.preventDefault();
+      void closeModal();
+    }
   }
 
   /** The URL, but only if it is one and only if it is http(s). Else empty. */
@@ -86,6 +117,10 @@
   const showWaveform = $derived(reel.waveform ?? true);
   const showLetterbox = $derived(reel.letterbox ?? true);
   const showGrain = $derived(reel.grain ?? true);
+  const heading = $derived(reel.heading ?? 'The Reel');
+  const deck = $derived(reel.deck ?? 'Chat moments · sound on · loops');
+  const aspect = $derived(reel.aspect ?? '1 / 1');
+  const maxw = $derived(reel.maxw ?? 480);
 
   // 52-bar audio-envelope heights — the README's exact generator.
   const bars: string[] = (() => {
@@ -101,25 +136,25 @@
   })();
 </script>
 
+<svelte:window onkeydown={onWindowKeydown} />
+
 {#if hasMedia}
   <section class="reelB">
     <!-- Existing Newsroom section head (digest.css .dgB-section-head) -->
     <div class="dgB-section-head">
-      <h2>The Reel</h2>
-      <span class="deck">Chat moments · sound on · loops</span>
+      <h2>{heading}</h2>
+      <span class="deck">{deck}</span>
     </div>
 
-    <div class="reelB-wrap">
-      <div class="reelB-frame">
+    <div class="reelB-wrap" style={`max-width:${maxw}px`}>
+      <div class="reelB-frame" style={`aspect-ratio:${aspect}`}>
         {#if showVideo}
           <video
-            bind:this={videoEl}
             src={src}
             poster={poster || undefined}
-            autoplay
             muted
-            loop
             playsinline
+            preload="none"
             aria-label={reel.media?.alt ?? 'the reel'}
           ></video>
         {:else if showPoster}
@@ -147,12 +182,10 @@
           <button
             type="button"
             class="reelB-hit"
-            onclick={toggleSound}
-            aria-label={soundOn ? 'Mute the reel' : 'Unmute the reel'}
+            onclick={(event) => openModal(event.currentTarget)}
+            aria-label="Enlarge and play the reel"
           >
-            {#if !soundOn}
-              <span class="reelB-sound-tag" style={`color:rgb(${accentRgb});`}>tap for sound</span>
-            {/if}
+            <span class="reelB-modal-tag" style={`color:rgb(${accentRgb});`}>tap to enlarge</span>
           </button>
         {/if}
       </div>
@@ -160,6 +193,45 @@
 
     {#if reel.note}<p class="reelB-caption">{reel.note}</p>{/if}
   </section>
+{/if}
+
+{#if modalOpen && src}
+  <div class="reelB-lightbox" data-component="reel-lightbox">
+    <button
+      type="button"
+      class="reelB-backdrop"
+      aria-label="Close enlarged reel"
+      onclick={closeModal}
+    ></button>
+    <div
+      class="reelB-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={reel.heading ?? 'The Reel'}
+    >
+      <button
+        bind:this={closeButton}
+        type="button"
+        class="reelB-close"
+        aria-label="Close enlarged reel"
+        onclick={closeModal}
+      >×</button>
+      <!-- svelte-ignore a11y_media_has_caption: recap reel carries its own visuals -->
+      <video
+        bind:this={modalVideo}
+        src={src}
+        poster={poster || undefined}
+        controls
+        autoplay
+        playsinline
+        preload="auto"
+        aria-label={reel.media?.alt ?? 'the reel'}
+      ></video>
+      {#if reel.media?.caption || reel.note}
+        <p class="reelB-modal-caption">{reel.media?.caption ?? reel.note}</p>
+      {/if}
+    </div>
+  </div>
 {/if}
 
 <style>
@@ -253,7 +325,7 @@
     outline-offset: -2px;
     border-radius: var(--r-2);
   }
-  .reelB-sound-tag {
+  .reelB-modal-tag {
     margin: 0 18px 16px 0;
     font: 700 9px/1 var(--font-mono);
     letter-spacing: 0.16em;
@@ -265,5 +337,70 @@
     text-align: center;
     font: italic 400 12px/1.5 var(--font-body);
     color: var(--fg-muted);
+  }
+  .reelB-lightbox {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .reelB-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(4, 6, 10, 0.9);
+    cursor: default;
+  }
+  .reelB-modal {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(1100px, 96vw);
+    max-height: calc(100dvh - 32px);
+    padding: 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-2);
+    background: #0a0d11;
+    box-shadow: var(--shadow-3);
+  }
+  .reelB-modal video {
+    display: block;
+    width: 100%;
+    max-height: calc(100dvh - 104px);
+    object-fit: contain;
+    background: #05060a;
+  }
+  .reelB-close {
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    right: 8px;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    color: white;
+    background: rgba(4, 6, 10, 0.82);
+    font: 400 26px/1 var(--font-body);
+    cursor: pointer;
+  }
+  .reelB-modal-caption {
+    max-width: 100%;
+    margin: 10px 0 0;
+    text-align: center;
+    font: italic 400 12px/1.5 var(--font-body);
+    color: var(--fg-muted);
+  }
+  @media (max-width: 520px) {
+    .reelB-lightbox { padding: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .reelB-modal { width: 96vw; max-height: calc(100dvh - 16px); padding: 8px; }
+    .reelB-modal video { max-height: calc(100dvh - 72px); }
   }
 </style>
