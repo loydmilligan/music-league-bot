@@ -10,6 +10,7 @@
 	import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
 	import ReelSection from '$lib/digest/ReelSection.svelte';
 	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
+	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
 	import { page } from '$app/state';
 	let { data } = $props();
 
@@ -57,6 +58,9 @@
 			<AlbumPodium kind="podium" content={block.content} variant="both" />
 		{:else if block.kind === 'chat'}
 			<ChatMoments kind="chat" content={block.content} variant="both" />
+			{#if data.snapshot.capabilities.chat}
+				<DigestChatStats snapshot={data.snapshot} />
+			{/if}
 		{:else if block.kind === 'storylines'}
 			<StorylinesCast kind="storylines" content={block.content} variant="both" />
 		{/if}
@@ -96,5 +100,5 @@
 	<StatsTeaser snapshot={data.snapshot} onOpenStats={() => setView('stats')} />
 </div>
 {:else}
-	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace />
+	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace omitTabs={['chat']} />
 {/if}
