@@ -7,7 +7,7 @@
 	import ChatRoastReport from './ChatRoastReport.svelte';
 	import ChatDailyActivity from './ChatDailyActivity.svelte';
 
-	let { snap }: { snap: Snapshot } = $props();
+	let { snap, omitHighlights = false }: { snap: Snapshot; omitHighlights?: boolean } = $props();
 
 	const chat = snap.chat;
 	const colors = snap.colors;
@@ -275,7 +275,7 @@
 </script>
 
 <div class="space-y-6">
-	<ChatTalkativeness {snap} />
+	{#if !omitHighlights}<ChatTalkativeness {snap} />{/if}
 
 	<section class="grid gap-6 md:grid-cols-2">
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
@@ -286,10 +286,10 @@
 				— {nightOwl?.hourHist.slice(0, 5).reduce((x, y) => x + y, 0) ?? 0} messages after midnight.
 			</p>
 		</div>
-		<ChatDailyActivity {snap} />
+		{#if !omitHighlights}<ChatDailyActivity {snap} />{/if}
 	</section>
 
-	<ChatRoastReport {snap} />
+	{#if !omitHighlights}<ChatRoastReport {snap} />{/if}
 
 	<section class="grid gap-6 md:grid-cols-2">
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
