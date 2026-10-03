@@ -15,8 +15,8 @@
 	import WrappedTab from './WrappedTab.svelte';
 	import { computeVisibleTabIds } from '$lib/boarzStats/visibleTabs.js';
 
-	let { snapshot, basePath, omitTabs = [], omitLeaderboardRace = false }:
-		{ snapshot: Snapshot; basePath: string; omitTabs?: readonly string[]; omitLeaderboardRace?: boolean } = $props();
+	let { snapshot, basePath, omitTabs = [], omitLeaderboardRace = false, frozen = false }:
+		{ snapshot: Snapshot; basePath: string; omitTabs?: readonly string[]; omitLeaderboardRace?: boolean; frozen?: boolean } = $props();
 	const TABS = [
 		{ id: 'leaderboard', label: '🏆 Standings & Scores', title: 'Standings, cumulative race, points by round, and round winners', seasonOnly: true },
 		{ id: 'songs', label: '🎵 Songs', title: 'Song performance and submission details' },
@@ -113,13 +113,16 @@
 <div class="mx-auto max-w-6xl px-4 py-6">
 	<header class="mb-4 flex flex-wrap items-end justify-between gap-3">
 		<div>
+			{#if !frozen}
 			<a href="/stats" class="mb-1 inline-block font-mono text-xs tracking-widest text-fg-faint uppercase hover:text-accent">← All league stats</a>
+			{/if}
 			<h1 class="text-3xl font-bold text-fg">{snapshot.league.name}</h1>
 			<p class="text-sm text-fg-muted">
 				{snapshot.league.season} · {snapshot.rounds.length} rounds · stats generated
 				{new Date(snapshot.generatedAt).toLocaleString()}
 			</p>
 		</div>
+		{#if !frozen}
 		<button
 			type="button"
 			class="rounded-lg border border-border-muted px-3 py-1.5 text-sm text-fg-muted transition-colors hover:bg-surface hover:text-fg"
@@ -127,11 +130,13 @@
 		>
 			🔗 Copy filtered link
 		</button>
+		{/if}
 	</header>
 
 	<section class="mb-5 rounded-xl border border-border-muted bg-surface/30 p-4" data-noshot="1">
-		<form action={basePath} method="GET" class="space-y-1.5">
+		<form action={frozen ? undefined : basePath} method="GET" class="space-y-1.5">
 			<div class="flex flex-wrap items-end gap-2">
+				{#if !frozen}
 				<div class="min-w-48 flex-1">
 				<label for="stats-season" class="mb-1 block text-xs font-semibold tracking-wide text-fg-muted uppercase">Season view</label>
 				<select id="stats-season" name="season" class="min-w-0 flex-1 rounded-lg border border-border-muted bg-bg-elevated px-3 py-2 text-sm text-fg" onchange={(event) => { filterOpen = false; event.currentTarget.form?.requestSubmit(); }}>
@@ -145,6 +150,7 @@
 					{/if}
 				</select>
 				</div>
+				{/if}
 				<input type="hidden" name="tab" value={active} />
 				{#if !allEligibleSelected}<input type="hidden" name="players" value={selectedPlayerIds.join(',')} />{/if}
 				{#if activeOnly}<input type="hidden" name="activeOnly" value="1" />{/if}

@@ -12,6 +12,7 @@
 	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
 	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
 	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
+	import AdminBar from '$lib/digest2/AdminBar.svelte';
 	import { page } from '$app/state';
 	let { data } = $props();
 
@@ -35,7 +36,10 @@
 </script>
 
 <div style="max-width:720px;margin:0 auto;padding:1rem 1rem 0">
-	<h1 style="font:600 1rem/1.3 system-ui;margin-bottom:.5rem">Digest 2.0 (dev) · round {data.roundId}</h1>
+	{#if data.admin}
+		<AdminBar roundId={data.roundId} admin={data.admin} />
+	{/if}
+	<h1 style="font:600 1rem/1.3 system-ui;margin-bottom:.5rem">{data.meta.leagueName} · {data.meta.roundName}</h1>
 	<div role="tablist" style="display:flex;gap:.25rem;border-bottom:1px solid #2a2a2a">
 		<button
 			role="tab"
@@ -95,5 +99,5 @@
 	{/each}
 </div>
 {:else}
-	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace omitTabs={['chat']} />
+	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace omitTabs={['chat']} frozen={data.share} />
 {/if}
