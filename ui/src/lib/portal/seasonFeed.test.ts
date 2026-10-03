@@ -53,6 +53,38 @@ describe('normalizeSeasonFeed', () => {
 		expect(normalizeSeasonFeed(b)!.lineup[1].title).toBe('Mystery round');
 	});
 
+	it('empty teaser fields never fall back to raw title/description', () => {
+		const b = base();
+		Object.assign(b.lineup[0], { teaser: { title: '', description: '' }, title: 'SECRET', description: 'SECRET' });
+		const f = normalizeSeasonFeed(b)!;
+		const t = f.lineup.find((r) => r.round === 10)!;
+		expect(t.title).toBe('Mystery round');
+		expect(t.description).toBeNull();
+		expect(JSON.stringify(f)).not.toContain('SECRET');
+	});
+
+	it('teaser output has exactly the built key set and passes dates through', () => {
+		const b = base();
+		Object.assign(b.lineup[0], { songs: ['SECRET'], revealAt: 'R', startsAt: 'S', songsDue: 'D1', votesDue: 'D2' });
+		const f = normalizeSeasonFeed(b)!;
+		const t = f.lineup.find((r) => r.round === 10)!;
+		expect(t).toEqual({ round: 10, status: 'teaser', title: 'Poll Position', description: 'Vote!', commentRule: null, credit: [], revealAt: 'R', startsAt: 'S', songsDue: 'D1', votesDue: 'D2' });
+		expect(JSON.stringify(f)).not.toContain('SECRET');
+	});
+
+	it('drops unknown-status rounds, non-boolean survey.open, keeps option descriptions, revealed revealAt null', () => {
+		const b: any = base();
+		b.lineup.push({ round: 11, status: 'weird', title: 'x' });
+		b.survey = { open: 'yes' };
+		b.lineup[1].revealAt = '2026-01-01T00:00:00Z';
+		b.polls.open[0].options[0].description = 'desc';
+		const f = normalizeSeasonFeed(b)!;
+		expect(f.lineup.map((r) => r.round)).toEqual([2, 10]);
+		expect(f.surveyOpen).toBe(false);
+		expect(f.pollsOpen[0].options[0].description).toBe('desc');
+		expect(f.lineup[0].revealAt).toBeNull();
+	});
+
 	it('rejects bad versions and shapes', () => {
 		expect(normalizeSeasonFeed({ ...base(), version: 2 })).toBeNull();
 		expect(normalizeSeasonFeed(null)).toBeNull();
