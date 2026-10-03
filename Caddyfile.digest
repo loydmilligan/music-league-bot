@@ -3,6 +3,7 @@
 # Serves two namespaces on digest.mattmariani.com:
 #
 #   /d/<roundSlug>/          — sprint-20 round digest html-share artifacts
+#   /d2/<slug>/              — digest 2.0 share artifacts (frozen at finalize)
 #   /p/<slug>/               — MLB playlist pages (music videos for a round)
 #   /_bside/                 — shared b-side SPA bundle (bside.js / bside.css)
 #                              Built by `cd bside && npm run build`, output
@@ -93,6 +94,17 @@
 	handle /d/* {
 		header Cache-Control "public, max-age=300"
 		file_server
+	}
+
+	# ── Digest 2.0 share artifacts ─────────────────────────────────────────
+	# Same contract as /d/: folder-per-slug static copies written by bot-ui's
+	# publish endpoint; a re-publish swaps the folder in place (stable links).
+	# Dot-dirs (.<slug>.tmp / .<slug>.old) are publish scratch — never served.
+	handle /d2/* {
+		header Cache-Control "public, max-age=300"
+		file_server {
+			hide .*
+		}
 	}
 
 	# ── Shared digest media (clips, posters) ───────────────────────────────
