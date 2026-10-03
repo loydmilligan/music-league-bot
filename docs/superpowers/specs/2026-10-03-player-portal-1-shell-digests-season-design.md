@@ -21,7 +21,8 @@ clean per-league admin, piece 5 song rating (survey side, needs identity).
 2. Digests lists **every** completed round of the league (all seasons), newest first, each linking to
    its 2.0 digest if finalized, else its 1.0 share if one exists, else shown without a link.
 3. The Season section renders the survey feed: published lineup (teasers without titles + reveal
-   time), open polls (question + options, "Vote" → mlsurvey), closed polls (totals), "Add themes" when
+   time), open polls (question + options — or "Options revealed <date>" while withheld — "Vote" →
+   mlsurvey), closed polls (totals), "Add themes" when
    the survey is open. If the feed is unreachable or not configured, it degrades to one
    "Open season hub" link (or hides when no hub URL exists).
 4. No portal file or bundle contains the admin host (`new URL(appBaseUrl()).host`) or the internal origin.
@@ -111,26 +112,50 @@ not required (simple GET).
 {
   "version": 1,
   "generatedAt": "ISO",
-  "league": { "key": "second-best", "name": "SECOND BEST & FRIENDS", "season": 3, "mlLeagueId": "32c5…" },
+  "league": { "key": "second-best", "name": "SECOND BEST & FRIENDS", "season": 3, "mlLeagueId": "32c5…|null" },
   "portalUrl": "https://digest.mattmariani.com/yFfer5bePejN4PRXvgAfMg/",
   "links": { "hub": "https://mlsurvey…/second-best/season-3/", "polls": "…#polls", "mine": "…#mine", "survey": "…#survey" },
   "survey": { "open": true },
   "lineup": [
-    { "round": 1, "status": "revealed", "title": "…", "description": "…", "commentRule": "…",
-      "credit": "…", "startsAt": "ISO|null", "songsDue": "ISO|null", "votesDue": "ISO|null" },
-    { "round": 2, "status": "teaser", "teaser": "Something with saxophones", "revealAt": "ISO|null",
-      "startsAt": "ISO|null", "songsDue": "ISO|null", "votesDue": "ISO|null" }
+    { "round": 2, "status": "revealed", "title": "I Bought the Soundtrack", "description": "…",
+      "commentRule": { "level": "required|suggested", "prompt": "…", "hiddenUntilVotingEnds": false } ,
+      "credit": ["Sarah Black"],
+      "startsAt": "ISO|null", "songsDue": "ISO|null", "votesDue": "ISO|null" },
+    { "round": 10, "status": "teaser",
+      "teaser": { "title": "Poll Position", "description": "Players will vote on final theme…" },
+      "revealAt": "ISO|null", "startsAt": "ISO|null", "songsDue": "ISO|null", "votesDue": "ISO|null" }
   ],
   "polls": {
-    "open":   [ { "id": "p1", "question": "…", "options": [ { "id": "o1", "label": "…" } ], "closesAt": "ISO|null" } ],
-    "closed": [ { "id": "p0", "question": "…", "results": [ { "label": "…", "votes": 4 } ], "closedAt": "ISO|null" } ]
+    "open": [ { "id": "p1", "round": 10, "question": "…", "blurb": "…|null",
+                "options": [ { "id": "o1", "label": "…", "description": "…|null" } ] ,
+                "optionsRevealAt": "ISO|null", "closesAt": "ISO|null" } ],
+    "closed": [ { "id": "p0", "round": 9, "question": "…", "blurb": "…|null",
+                  "results": [ { "label": "…", "votes": 4 } ], "winner": "…|null", "closedAt": "ISO|null" } ]
   }
 }
 ```
 
+**Field meanings (agreed with the survey session 2026-10-03):**
+- **Lineup source = the published season only** (Matt confirmed Second Best S3 is published). Unpublished
+  draft edits never appear.
+- `teaser` is an object from the survey's `reveal.teaserTitle` / `reveal.teaserDescription`; an empty
+  title is sent as "Mystery round" (the name already pushed to Music League); description may be "".
+- `commentRule` is an object or `null` (a "none" rule → `null`).
+- `credit` is an array of submitter names (multiple linked themes possible); `[]` = no credit.
+- Dates come from the survey's Music League schedule (round-1 start + submission/voting days, with
+  overrides) — `null` until the schedule is set. Not a live Music League read.
+- `survey.open` = the Survey tab's league-wide default in Player access (per-player overrides ignored).
+- Poll `round` = the round position the poll decides. Option `label` = option title || description.
+  Closed-poll `results` sorted by votes descending; `winner` = applied option label or `null`.
+- **Poll option visibility (Matt decision 2026-10-03):** a poll's options may be withheld until a set
+  time — e.g. Second Best round 10's candidate themes are not revealed until round 8 starts. While
+  withheld, the open poll is sent with `"options": null` and `"optionsRevealAt"` set (or `null` if not
+  scheduled); the portal shows the question/blurb and "Options revealed <date>". The survey side owns
+  this rule (per-poll admin setting) and should apply it in the player hub as well.
+
 **Privacy (enforced survey-side):** teaser rounds never carry `title`/`description`/`commentRule`/
-`credit`; open polls carry no counts or ballots; no player-identifying data except theme `credit`
-(already public in ML round descriptions). Unpublished draft rounds are absent.
+`credit`; open polls carry no counts or ballots; withheld options are absent; no player-identifying
+data except theme `credit` (already public in ML round descriptions).
 
 **Nav strip on survey pages:** a slim top bar matching the b-side tokens (`bside/src/colors_and_type.css`:
 background `--ink-1`, text `--ink-8`, accent `--mash-pulp` `#ff5b2e`, fonts Bricolage Grotesque
