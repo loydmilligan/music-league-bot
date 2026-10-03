@@ -29,6 +29,7 @@ import { buildTasteData } from '$lib/dashboard/tasteData.js';
 import { getTasteSettings } from '$lib/db/settings.js';
 import { z } from 'zod';
 import { digestBaseUrl } from '$lib/config/urls.js';
+import { digestLinkForRound } from '$lib/portal/digestLinks.js';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
 const VALID_DECISIONS = new Set<string>(['refresh', 'hold', 'lock']);
@@ -706,7 +707,6 @@ function buildArchiveEntry(
 	seasonNumber: number,
 	n: number,
 ): z.infer<typeof ArchiveEntrySchema> {
-	const PUBLIC_DIGEST_BASE_URL = digestBaseUrl();
 
 	const winnerRow = db
 		.prepare(
@@ -729,10 +729,6 @@ function buildArchiveEntry(
 		db.prepare('SELECT voting_deadline FROM rounds WHERE id = ?').get(roundId) as { voting_deadline: string | null }
 	)?.voting_deadline;
 
-	const digestShare = db
-		.prepare('SELECT slug FROM digest_shares WHERE round_id = ?')
-		.get(roundId) as { slug: string } | undefined;
-
 	return {
 		n,
 		season: seasonNumber,
@@ -745,7 +741,7 @@ function buildArchiveEntry(
 		hue: winnerRow?.player_id != null
 			? `oklch(0.72 0.15 ${(winnerRow.player_id * 31) % 360})`
 			: 'oklch(0.72 0.15 0)',
-		digestUrl: digestShare ? `${PUBLIC_DIGEST_BASE_URL}/d/${digestShare.slug}` : null,
+		digestUrl: digestLinkForRound(db, roundId)?.url ?? null,
 	};
 }
 

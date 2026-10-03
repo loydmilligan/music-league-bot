@@ -36,7 +36,7 @@ import {
 	resolvePipeline,
 } from '../digest/pipeline.js';
 import type { Pipeline } from '../digest/pipeline.js';
-import { digestBaseUrl } from '$lib/config/urls.js';
+import { digestLinkForRound } from '$lib/portal/digestLinks.js';
 
 // ── Zod schemas (mirror ml-dashboard-data.jsx fixture shape) ───────────────────
 
@@ -297,7 +297,14 @@ function buildArchive(
 	db: Database.Database,
 	leagueId: number,
 ): z.infer<typeof ArchiveEntrySchema>[] {
-	const PUBLIC_DIGEST_BASE = digestBaseUrl();
+	return buildArchiveRows(db, leagueId).map(({ roundId: _r, digestKind: _k, ...e }) => e);
+}
+
+/** Archive entries (newest first) plus the round id and digest kind each links to. */
+export function buildArchiveRows(
+	db: Database.Database,
+	leagueId: number,
+): (z.infer<typeof ArchiveEntrySchema> & { roundId: number; digestKind: 'v2' | 'v1' | null })[] {
 
 	// Per-round winner: submission with highest total points
 	const winnerRows = db
@@ -351,18 +358,6 @@ function buildArchive(
 		.all(leagueId) as { round_id: number; total_votes: number }[];
 	const votesByRound = new Map(voteCountRows.map((r) => [r.round_id, r.total_votes]));
 
-	// Digest share slugs — lets archive cards deep-link to existing digest artifacts
-	const digestShareRows = db
-		.prepare(
-			`SELECT ds.round_id, ds.slug
-         FROM digest_shares ds
-         JOIN rounds r ON r.id = ds.round_id
-         JOIN seasons se ON se.id = r.season_id
-         WHERE se.league_id = ?`,
-		)
-		.all(leagueId) as { round_id: number; slug: string }[];
-	const digestSlugByRound = new Map(digestShareRows.map((r) => [r.round_id, r.slug]));
-
 	// Rounds with a result to archive. `rounds.phase` is unreliable — zip-imported and
 	// email-driven rounds routinely keep an empty phase forever (every Second Best S2
 	// round did, which silently emptied that league's archive of its whole live season),
@@ -385,7 +380,7 @@ function buildArchive(
 	return roundRows
 		.map((row, idx) => {
 			const winner = winnerByRound.get(row.round_id);
-			const digestSlug = digestSlugByRound.get(row.round_id);
+			const link = digestLinkForRound(db, row.round_id);
 			return {
 				n: idx + 1,
 				season: row.season_number,
@@ -396,7 +391,9 @@ function buildArchive(
 				date: row.voting_deadline ?? '',
 				votes: votesByRound.get(row.round_id) ?? 0,
 				hue: winner?.player_id != null ? playerHue(winner.player_id) : 'oklch(0.72 0.15 0)',
-				digestUrl: digestSlug ? `${PUBLIC_DIGEST_BASE}/d/${digestSlug}` : null,
+				digestUrl: link?.url ?? null,
+				roundId: row.round_id,
+				digestKind: link?.kind ?? null,
 			};
 		})
 		.reverse()

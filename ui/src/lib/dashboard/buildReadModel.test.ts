@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type Database from 'better-sqlite3';
 import { openLeagueDb } from '../db/client.js';
-import { buildReadModel, ReadModelSchema, FullMemberSchema, LiteMemberSchema, ACCENT_VALUES } from './buildReadModel.js';
+import { buildReadModel, buildArchiveRows, ReadModelSchema, FullMemberSchema, LiteMemberSchema, ACCENT_VALUES } from './buildReadModel.js';
 
 vi.mock('../digest/llm.js', () => ({
 	callOpenRouter: vi.fn(),
@@ -444,5 +444,25 @@ describe('buildReadModel — full + lite members', () => {
 
 		// n stays a contiguous 1..N sequence, newest first.
 		expect(model.archive.map((e) => e.n)).toEqual([5, 4, 3, 2, 1]);
+	});
+
+	it('archive links the 2.0 digest when both 1.0 and 2.0 shares exist', async () => {
+		const { rounds } = seedTwoMemberLeague();
+		db.prepare("INSERT INTO digest_shares (round_id, slug) VALUES (?, 'v1slug0000000000')").run(rounds[0]);
+		db.prepare("INSERT INTO digest2_shares (round_id, slug) VALUES (?, 'v2slug0000000000')").run(rounds[0]);
+		db.prepare("INSERT INTO digest_shares (round_id, slug) VALUES (?, 'v1only0000000000')").run(rounds[1]);
+
+		const model = await buildReadModel(db, leagueId);
+		const both = model.archive.find((e) => e.theme === 'Sad Bangers')!;
+		expect(both.digestUrl).toMatch(/\/d2\/v2slug0000000000$/);
+		const v1 = model.archive.find((e) => e.theme === 'Yacht Rock')!;
+		expect(v1.digestUrl).toMatch(/\/d\/v1only0000000000$/);
+
+		const rows = buildArchiveRows(db, leagueId);
+		const row = rows.find((r) => r.roundId === rounds[0])!;
+		expect(row.digestKind).toBe('v2');
+		expect(rows.find((r) => r.roundId === rounds[1])!.digestKind).toBe('v1');
+		expect(rows.find((r) => r.roundId === rounds[2])!.digestKind).toBeNull();
+		expect(rows.map((r) => r.n)).toEqual([4, 3, 2, 1]);
 	});
 });
