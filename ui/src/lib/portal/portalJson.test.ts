@@ -76,4 +76,11 @@ describe('writePortalJson', () => {
 		await expect(writePortalJson(db, 1, { digestsDir: dir })).rejects.toThrow(/admin|leak|forbidden/i);
 		expect(await readdir(dir)).toEqual([]);
 	});
+	it('refuses to write when the internal origin host would leak', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'portal-'));
+		const internalHost = new URL(process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`).host;
+		db.prepare(`INSERT INTO settings (key, value) VALUES ('portal_season_hub_url:1', ?)`).run(`https://${internalHost}/x`); // bypass validation
+		await expect(writePortalJson(db, 1, { digestsDir: dir })).rejects.toThrow(/forbidden host leak/);
+		expect(await readdir(dir)).toEqual([]);
+	});
 });
