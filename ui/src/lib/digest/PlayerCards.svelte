@@ -14,6 +14,7 @@
   /** Shareable still (front+back composite); falls back to deriving it from the clip URL. */
   function shareImageUrl(card: PlayerCardMedia): string {
     if (card.shareImage) return card.shareImage;
+    if (!card.src) return '';
     return `${card.src.replace(/\/[^/]*$/, '')}/share/${card.slug}-front-back.jpg?v2`;
   }
   let modalVideo: HTMLVideoElement | undefined;
@@ -66,7 +67,7 @@
       {#each cards as card (card.slug)}
         <li>
           <figure class="pcards-card">
-            {#if isExport}
+            {#if isExport || !card.src}
               <img src={card.poster} alt="{card.name} — {card.hero}" />
             {:else}
               <!-- svelte-ignore a11y_media_has_caption: animated card has no caption track -->
@@ -91,8 +92,12 @@
               <span class="pcards-name">{card.name}</span>
               <span class="pcards-hero">{card.hero} · {card.points} pts</span>
               <span class="pcards-share">
-                <a href={shareImageUrl(card)} target="_blank" rel="noopener">card ↗</a>
-                <a href={card.src.split('?')[0]} target="_blank" rel="noopener">video ↗</a>
+                {#if shareImageUrl(card)}
+                  <a href={shareImageUrl(card)} target="_blank" rel="noopener">card ↗</a>
+                {/if}
+                {#if card.src}
+                  <a href={card.src.split('?')[0]} target="_blank" rel="noopener">video ↗</a>
+                {/if}
               </span>
             </figcaption>
           </figure>
@@ -139,8 +144,12 @@
         <span class="pcards-name">{selectedCard.name}</span>
         <span class="pcards-hero">{selectedCard.hero} · {selectedCard.points} pts</span>
         <span class="pcards-share">
-          <a href={shareImageUrl(selectedCard)} target="_blank" rel="noopener">card ↗</a>
-          <a href={selectedCard.src.split('?')[0]} target="_blank" rel="noopener">video ↗</a>
+          {#if shareImageUrl(selectedCard)}
+            <a href={shareImageUrl(selectedCard)} target="_blank" rel="noopener">card ↗</a>
+          {/if}
+          {#if selectedCard.src}
+            <a href={selectedCard.src.split('?')[0]} target="_blank" rel="noopener">video ↗</a>
+          {/if}
         </span>
       </div>
     </div>
