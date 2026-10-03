@@ -1,5 +1,6 @@
 import { getDb } from '$lib/db/client.js';
 import { getContentPendingCount } from '$lib/db/layout.js';
+import { getSeasonSettings } from '$lib/portal/portalJson.js';
 import type { PageServerLoad } from './$types.js';
 
 export type ContentLeague = {
@@ -29,6 +30,7 @@ export interface ContentPageData {
   pendingCount: number;
   latestDigestRoundId: number | null;
   leagues: ContentLeague[];
+  seasonSettings: Record<number, { feedUrl: string | null; hubUrl: string | null }>;
 }
 
 export const load: PageServerLoad = async ({ fetch }): Promise<ContentPageData> => {
@@ -62,5 +64,8 @@ export const load: PageServerLoad = async ({ fetch }): Promise<ContentPageData> 
   const res = await fetch('/api/content/leagues');
   const leagues: ContentLeague[] = await res.json();
 
-  return { pendingCount, latestDigestRoundId, leagues };
+  const seasonSettings: ContentPageData['seasonSettings'] = {};
+  for (const l of leagues) seasonSettings[l.id] = getSeasonSettings(db, l.id);
+
+  return { pendingCount, latestDigestRoundId, leagues, seasonSettings };
 };

@@ -41,6 +41,47 @@
   let publishErr = $state<string | null>(null);
   let updateLeague = $state<(typeof leagues)[number] | null>(null);
 
+  let seasonForm = $state<Record<number, { feedUrl: string; hubUrl: string; status: string; saving: boolean }>>(
+    Object.fromEntries(
+      data.leagues.map((l) => [
+        l.id,
+        {
+          feedUrl: data.seasonSettings[l.id]?.feedUrl ?? '',
+          hubUrl: data.seasonSettings[l.id]?.hubUrl ?? '',
+          status: '',
+          saving: false,
+        },
+      ]),
+    ),
+  );
+
+  async function saveSeason(leagueId: number) {
+    const f = seasonForm[leagueId];
+    f.saving = true;
+    f.status = '';
+    try {
+      const res = await fetch(`/api/portal/${leagueId}/season`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ feedUrl: f.feedUrl.trim() || null, hubUrl: f.hubUrl.trim() || null }),
+      });
+      if (!res.ok) {
+        f.status = `Error: ${(await res.json().catch(() => ({}))).message ?? res.status}`;
+      } else {
+        const r = await res.json();
+        f.status = r.warning
+          ? `Saved · ${r.warning}`
+          : r.portalWritten
+            ? 'Saved · portal updated'
+            : 'Saved · no b-side yet';
+      }
+    } catch (e) {
+      f.status = `Error: ${e instanceof Error ? e.message : String(e)}`;
+    } finally {
+      f.saving = false;
+    }
+  }
+
   type ReshareData = {
     leagueId: number;
     url: string;
@@ -276,6 +317,21 @@
                 <button class="mash-btn mash-btn--secondary mash-btn--sm" disabled style="opacity: 0.5;">No new digest</button>
               {/if}
             </div>
+            {#if seasonForm[league.id]}
+              <form
+                class="ct-pending-line"
+                style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px;"
+                onsubmit={(e) => { e.preventDefault(); saveSeason(league.id); }}
+              >
+                <b>Player portal — Season</b>
+                <input type="url" placeholder="Season feed URL (https://)" aria-label="Season feed URL" bind:value={seasonForm[league.id].feedUrl} style="flex: 1 1 180px; min-width: 0;" />
+                <input type="url" placeholder="Season hub URL (https://)" aria-label="Season hub URL" bind:value={seasonForm[league.id].hubUrl} style="flex: 1 1 180px; min-width: 0;" />
+                <button type="submit" class="mash-btn mash-btn--secondary mash-btn--sm" disabled={seasonForm[league.id].saving}>
+                  {seasonForm[league.id].saving ? 'Saving…' : 'Save'}
+                </button>
+                {#if seasonForm[league.id].status}<span>{seasonForm[league.id].status}</span>{/if}
+              </form>
+            {/if}
           </div>
         </div>
       {/each}
