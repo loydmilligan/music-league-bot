@@ -22,6 +22,7 @@
     <p class="kicker">digest hil review</p>
     <h1>{data.round.name}</h1>
     {#if data.generatedAt}<p class="meta">ledes generated {data.generatedAt.slice(0, 16).replace('T', ' ')} UTC</p>{/if}
+    <p class="meta"><a href="/digest2/{data.round.id}" data-sveltekit-reload>Digest 2.0 preview →</a></p>
   </header>
 
   {#if !data.ledes.length}

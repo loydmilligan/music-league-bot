@@ -72,7 +72,7 @@ export function buildRunnerDeps(): RunnerDeps {
       const { league, round } = names(roundId, leagueId);
       await notify(getDb(), {
         alertType: 'digest_ready', title: `${league} — ${round}`, message: 'Digest ready.', link: reviewUrl,
-        approval: { kind: 'approve', token, approveUrl: `${appBase}/api/digest/approve`, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}` },
+        approval: { kind: 'approve', token, approveUrl: `${appBase}/api/digest/approve`, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}`, previewUrl: `${appBase}/digest2/${roundId}` },
       }, dispatchDeps);
     },
     awaitReview: async (roundId, leagueId, reviewUrl, reason) => {
@@ -81,7 +81,7 @@ export function buildRunnerDeps(): RunnerDeps {
       const { league, round } = names(roundId, leagueId);
       await notify(getDb(), {
         alertType: 'digest_ready', title: `${league} — ${round}`, message: `Needs review: ${reason}`, link: reviewUrl,
-        approval: { kind: 'review', token, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}`, reviewReason: reason },
+        approval: { kind: 'review', token, denyUrl: `${appBase}/api/digest/deny`, editUrl: `${appBase}/digest/${roundId}`, reviewReason: reason, previewUrl: `${appBase}/digest2/${roundId}` },
       }, dispatchDeps);
     },
     log: (msg) => console.log(msg),

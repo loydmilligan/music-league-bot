@@ -285,12 +285,13 @@ def notify(m: dict, send: bool) -> None:
     # repo's .env rather than the process environment.
     app_base = (env.get("PUBLIC_APP_BASE_URL") or "https://mlb13.mattmariani.com").rstrip("/")
     click = f"{app_base}/digest/{m['round_id']}/hil"
+    preview = f"{app_base}/digest2/{m['round_id']}"
     if not (url and topic):
         print("ntfy: NTFY_URL/NTFY_TOPIC not configured; skipping", file=sys.stderr)
         return
     if not send:
         print(f"ntfy (dry run — pass --notify to send): POST {url}/{topic}\n"
-              f"  Title: {m['league_name']} — HiL review\n  Click: {click}\n  Body: {body}",
+              f"  Title: {m['league_name']} — HiL review\n  Click: {click}\n  2.0: {preview}\n  Body: {body}",
               file=sys.stderr)
         return
     req = urllib.request.Request(f"{url}/{topic}", data=body.encode(), method="POST",
@@ -299,6 +300,7 @@ def notify(m: dict, send: bool) -> None:
                                           # the default Python-urllib user agent.
                                           "User-Agent": "mlbot-digest-qa/1.0",
                                           "Click": click,
+                                          "Actions": f"view, Digest 2.0, {preview}",
                                           **({"Authorization": f"Bearer {token}"} if token else {})})
     with urllib.request.urlopen(req, timeout=15) as resp:
         print(f"ntfy: sent ({resp.status})")

@@ -8,6 +8,7 @@ export interface ApprovalPayload {
   editUrl: string;
   reviewReason?: string; // present when kind==='review'
   snoozeUrl?: string;    // present when kind==='video_review'
+  previewUrl?: string;   // approve/review: read-only digest 2.0 preview
   /** video_review only: how many picks still need a human answer, and how many are ready. */
   needsDecision?: number;
   ready?: number;

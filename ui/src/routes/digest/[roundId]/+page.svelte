@@ -1351,6 +1351,13 @@
         {/if}
       </a>
     {/if}
+    <!-- bot-ui only: /digest2 doesn't exist on the digest host, so keep it out of the share export. -->
+    {#if !data.share}
+      <a href="/digest2/{data.roundId}" class="ct-tab" data-sveltekit-reload>
+        <span class="ct-tab-glyph">✦</span>
+        2.0 preview
+      </a>
+    {/if}
   </div>
 </div>
 

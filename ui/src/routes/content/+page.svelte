@@ -149,6 +149,12 @@
           <span class="ct-count">{data.pendingCount}</span>
         {/if}
       </span>
+      {#if data.latestDigestRoundId}
+        <a href="/digest2/{data.latestDigestRoundId}" class="ct-tab" data-sveltekit-reload>
+          <span class="ct-tab-glyph">✦</span>
+          2.0 preview
+        </a>
+      {/if}
     </div>
     <span class="ct-tabrow-note">
       {data.pendingCount > 0

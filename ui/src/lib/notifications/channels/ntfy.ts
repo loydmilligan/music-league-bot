@@ -26,7 +26,7 @@ export const ntfyChannel: Channel = {
       notif = buildApprovalNotification({
         league: p.title, round: p.message, reviewUrl: p.link ?? '',
         approveUrl: p.approval.approveUrl ?? '', denyUrl: p.approval.denyUrl, editUrl: p.approval.editUrl,
-        token: p.approval.token, bearer: c.token,
+        token: p.approval.token, bearer: c.token, previewUrl: p.approval.previewUrl,
       });
     } else if (p.approval?.kind === 'playlist_message') {
       notif = buildPlaylistMessageNotification({
@@ -49,6 +49,7 @@ export const ntfyChannel: Channel = {
         league: p.title, round: p.message, reviewUrl: p.link ?? '',
         editUrl: p.approval.editUrl, denyUrl: p.approval.denyUrl,
         token: p.approval.token, reason: p.approval.reviewReason ?? '', bearer: c.token,
+        previewUrl: p.approval.previewUrl,
       });
     } else {
       // plain alert

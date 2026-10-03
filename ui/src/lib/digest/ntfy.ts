@@ -40,10 +40,13 @@ function authedPost(url: string, token: string, bearer?: string): NtfyAction {
 export function buildApprovalNotification(o: {
   league: string; round: string; reviewUrl: string;
   approveUrl: string; denyUrl: string; editUrl: string; token: string; bearer?: string;
+  previewUrl?: string;
 }): Notification {
+  // All 3 ntfy action slots are taken, so the 2.0 preview rides in the body.
+  const preview = o.previewUrl ? `\nDigest 2.0 preview: ${o.previewUrl}` : '';
   return {
     title: `${o.league} — ${o.round}`,
-    message: 'Digest ready. Approve to post, Edit to open the editor, or Deny to drop it.',
+    message: `Digest ready. Approve to post, Edit to open the editor, or Deny to drop it.${preview}`,
     click: o.reviewUrl,
     priority: 4,
     tags: ['musical_note'],
@@ -58,6 +61,7 @@ export function buildApprovalNotification(o: {
 export function buildReviewNotification(o: {
   league: string; round: string; reviewUrl: string;
   editUrl: string; denyUrl: string; token: string; reason: string; bearer?: string;
+  previewUrl?: string;
 }): Notification {
   return {
     title: `${o.league} — ${o.round} (needs review)`,
@@ -68,6 +72,7 @@ export function buildReviewNotification(o: {
     actions: [
       { action: 'view', label: 'Review', url: o.editUrl, clear: false },
       { ...authedPost(o.denyUrl, o.token, o.bearer), label: 'Deny' },
+      ...(o.previewUrl ? [{ action: 'view' as const, label: '2.0 preview', url: o.previewUrl, clear: false }] : []),
     ],
   };
 }

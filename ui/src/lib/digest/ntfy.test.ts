@@ -54,6 +54,32 @@ describe('buildReviewNotification', () => {
   });
 });
 
+describe('digest 2.0 preview link', () => {
+  const base = {
+    league: 'Fam Jam', round: 'Round 12', reviewUrl: 'https://d/x',
+    denyUrl: 'https://mlb37/api/digest/deny', editUrl: 'https://mlb37/digest/12', token: 'tok',
+  };
+  it('approval: appends the preview URL to the message, keeping exactly 3 actions (ntfy max)', () => {
+    const n = buildApprovalNotification({ ...base, approveUrl: 'https://mlb37/api/digest/approve', previewUrl: 'https://mlb37/digest2/12' });
+    expect(n.message).toContain('https://mlb37/digest2/12');
+    expect(n.actions?.map((a) => a.label)).toEqual(['Approve', 'Edit', 'Deny']);
+  });
+  it('approval: message is unchanged without a previewUrl', () => {
+    const n = buildApprovalNotification({ ...base, approveUrl: 'https://mlb37/api/digest/approve' });
+    expect(n.message).not.toContain('digest2');
+    expect(n.message).not.toMatch(/2\.0/);
+  });
+  it('review: adds a 2.0 preview view action pointing at the preview URL', () => {
+    const n = buildReviewNotification({ ...base, reason: 'x', previewUrl: 'https://mlb37/digest2/12' });
+    expect(n.actions?.map((a) => a.label)).toEqual(['Review', 'Deny', '2.0 preview']);
+    expect(n.actions?.[2]).toMatchObject({ action: 'view', url: 'https://mlb37/digest2/12' });
+  });
+  it('review: no preview action without a previewUrl', () => {
+    const n = buildReviewNotification({ ...base, reason: 'x' });
+    expect(n.actions?.map((a) => a.label)).toEqual(['Review', 'Deny']);
+  });
+});
+
 describe('buildFailureNotification', () => {
   it('carries stage + reason', () => {
     const n = buildFailureNotification({ stage: 'capture', reason: 'ML auth expired', roundId: 7 });
