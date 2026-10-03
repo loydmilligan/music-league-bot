@@ -48,8 +48,41 @@ describe('findLeaks', () => {
 			expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }), attr).not.toEqual([]);
 		}
 	});
+	it('root-relative with single quotes → leak', () => {
+		const html = clean.replace('</body>', "<a href='/stats'>x</a></body>");
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative with uppercase attrs → leak', () => {
+		const html = clean.replace('</body>', '<a HREF="/stats">x</a></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative with spaces around = → leak', () => {
+		const html = clean.replace('</body>', '<a href = "/stats">x</a></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative srcset → leak', () => {
+		const html = clean.replace('</body>', '<img srcset="/a.jpg 1x, /b.jpg 2x">x</img></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative formaction → leak', () => {
+		const html = clean.replace('</body>', '<button formaction="/x">x</button></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative in url() style → leak', () => {
+		const html = clean.replace('</body>', '<div style="background:url(/share/x.jpg)">x</div></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('root-relative in url() with quotes → leak', () => {
+		const html = clean.replace('</body>', "<div style=\"background:url('/x.jpg')\">x</div></body>");
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
+	it('case-insensitive forbidden host → leak', () => {
+		const html = clean.replace('</body>', '<script>{"u":"https://MLB13.example.com/digest/1"}</script></body>');
+		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS }).length).toBeGreaterThan(0);
+	});
 	it('protocol-relative and ./ relative links are fine', () => {
-		const html = clean.replace('</body>', '<a href="./_app/x">a</a><img src="//i.scdn.co/x.jpg"></body>');
+		const html = clean.replace('</body>',
+			'<a href="./_app/x">a</a><img src="//i.scdn.co/x.jpg"><img srcset="//cdn/x.jpg 1x"><div style="background:url(//cdn/x.jpg)"></div></body>');
 		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS })).toEqual([]);
 	});
 });

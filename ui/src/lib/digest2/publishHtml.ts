@@ -21,7 +21,10 @@ export function transformDigest2Html(html: string, opts: { hasLocalFonts: boolea
 	return h;
 }
 
-const ROOT_RELATIVE_ATTR = /\b(href|src|action|poster)="\/(?!\/)[^"]*"/g;
+// Match root-relative paths in attributes: handles double/single quotes, no quotes, uppercase, spaces around =
+const ROOT_RELATIVE_ATTR = /\b(href|src|action|poster|srcset|formaction)\s*=\s*["']?\/(?!\/)[^"'\s>]*/gi;
+// Match root-relative paths in url() CSS functions: handles quotes or no quotes, but not protocol-relative //
+const ROOT_RELATIVE_URL = /url\s*\(\s*["']?\/(?!\/)[^)'"]*["']?\s*\)/gi;
 
 function snippet(text: string, at: number): string {
 	return text.slice(Math.max(0, at - 60), at + 80).replace(/\s+/g, ' ');
@@ -39,13 +42,17 @@ export function findLeaks(input: {
 }): string[] {
 	const leaks: string[] = [];
 	const sources: [string, string][] = [['index.html', input.html], ...input.textAssets];
+	const forbiddenHostsLower = input.forbiddenHosts.map((h) => h.toLowerCase());
 	for (const [name, text] of sources) {
-		for (const host of input.forbiddenHosts) {
-			const at = text.indexOf(host);
+		for (const host of forbiddenHostsLower) {
+			const at = text.toLowerCase().indexOf(host);
 			if (at !== -1) leaks.push(`${name}: forbidden host "${host}" … ${snippet(text, at)}`);
 		}
 	}
 	for (const m of input.html.matchAll(ROOT_RELATIVE_ATTR)) {
+		leaks.push(`index.html: root-relative ${m[0]} … ${snippet(input.html, m.index ?? 0)}`);
+	}
+	for (const m of input.html.matchAll(ROOT_RELATIVE_URL)) {
 		leaks.push(`index.html: root-relative ${m[0]} … ${snippet(input.html, m.index ?? 0)}`);
 	}
 	return leaks;
