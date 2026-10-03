@@ -11,6 +11,7 @@
 	import ReelSection from '$lib/digest/ReelSection.svelte';
 	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
 	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
+	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
 	import { page } from '$app/state';
 	let { data } = $props();
 
@@ -53,51 +54,45 @@
 
 {#if view === 'digest'}
 <div style="max-width:720px;margin:0 auto;padding:0 1rem">
-	{#each data.story.blocks as block (block.kind)}
-		{#if block.kind === 'podium'}
-			<AlbumPodium kind="podium" content={block.content} variant="both" />
-		{:else if block.kind === 'chat'}
-			<ChatMoments kind="chat" content={block.content} variant="both" />
-			{#if data.snapshot.capabilities.chat}
-				<DigestChatStats snapshot={data.snapshot} />
-			{/if}
-		{:else if block.kind === 'storylines'}
-			<StorylinesCast kind="storylines" content={block.content} variant="both" />
+	{#each DIGEST2_SECTION_ORDER as key (key)}
+		{#if key === 'story'}
+			{#each data.story.blocks as block (block.kind)}
+				{#if block.kind === 'podium'}
+					<AlbumPodium kind="podium" content={block.content} variant="both" />
+				{:else if block.kind === 'chat'}
+					<ChatMoments kind="chat" content={block.content} variant="both" />
+					{#if data.snapshot.capabilities.chat}
+						<DigestChatStats snapshot={data.snapshot} />
+					{/if}
+				{:else if block.kind === 'storylines'}
+					<StorylinesCast kind="storylines" content={block.content} variant="both" />
+				{/if}
+			{/each}
+		{:else if key === 'villain' && villain}
+			<section style="margin:1.5rem 0">
+				<h2>{villain.title ?? 'The Villain'}</h2>
+				<p>{villain.body ?? ''}</p>
+			</section>
+		{:else if key === 'coinage' && coinage}
+			<section style="margin:1.5rem 0">
+				<h2>The Coinage — {coinage.term ?? ''}</h2>
+				{#if coinage.meta}<p style="opacity:.7">{coinage.meta}</p>{/if}
+				{#if coinage.gloss}<p>{coinage.gloss}</p>{/if}
+			</section>
+		{:else if key === 'standings' && data.structural.standings}
+			<StandingsChart kind="standings" content={{}} data={data.structural.standings} variant="visual" />
+		{:else if key === 'tastemaker' && data.structural.tastemaker}
+			<TastemakerSection kind="discoverability" content={{}} data={data.structural.tastemaker} variant="visual" />
+		{:else if key === 'guesser' && data.structural.guesser}
+			<GuesserLeaderboard kind="guesser" content={{}} data={data.structural.guesser} variant="visual" />
+		{:else if key === 'reel' && data.structural.reel}
+			<ReelSection kind="reel" content={data.structural.reel} variant="visual" />
+		{:else if key === 'statsTeaser'}
+			<StatsTeaser snapshot={data.snapshot} onOpenStats={() => setView('stats')} />
+		{:else if key === 'nextRound' && data.structural.nextRound}
+			<NextRoundPreview kind="nextRound" content={{}} data={data.structural.nextRound} variant="visual" />
 		{/if}
 	{/each}
-
-	{#if villain}
-		<section style="margin:1.5rem 0">
-			<h2>{villain.title ?? 'The Villain'}</h2>
-			<p>{villain.body ?? ''}</p>
-		</section>
-	{/if}
-
-	{#if coinage}
-		<section style="margin:1.5rem 0">
-			<h2>The Coinage — {coinage.term ?? ''}</h2>
-			{#if coinage.meta}<p style="opacity:.7">{coinage.meta}</p>{/if}
-			{#if coinage.gloss}<p>{coinage.gloss}</p>{/if}
-		</section>
-	{/if}
-
-	{#if data.structural.standings}
-		<StandingsChart kind="standings" content={{}} data={data.structural.standings} variant="visual" />
-	{/if}
-	{#if data.structural.tastemaker}
-		<TastemakerSection kind="discoverability" content={{}} data={data.structural.tastemaker} variant="visual" />
-	{/if}
-	{#if data.structural.guesser}
-		<GuesserLeaderboard kind="guesser" content={{}} data={data.structural.guesser} variant="visual" />
-	{/if}
-	{#if data.structural.nextRound}
-		<NextRoundPreview kind="nextRound" content={{}} data={data.structural.nextRound} variant="visual" />
-	{/if}
-	{#if data.structural.reel}
-		<ReelSection kind="reel" content={data.structural.reel} variant="visual" />
-	{/if}
-
-	<StatsTeaser snapshot={data.snapshot} onOpenStats={() => setView('stats')} />
 </div>
 {:else}
 	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace omitTabs={['chat']} />
