@@ -6,8 +6,11 @@
 	import TasteWaveform from '../lib/taste-waveform/TasteWaveform.svelte';
 	import { tasteEngine, scopedLeague, DEFAULT_TASTE_SETTINGS } from '../lib/taste-waveform/taste-waveform.js';
 
-	interface Props { readModel: ReadModel; memberId: string; nav: Nav; }
-	let { readModel, memberId, nav }: Props = $props();
+	import PortalNav from '../lib/atoms/PortalNav.svelte';
+	import type { PortalJson } from '../lib/portal.js';
+
+	interface Props { readModel: ReadModel; memberId: string; nav: Nav; portal?: PortalJson | null; }
+	let { readModel, memberId, nav, portal = null }: Props = $props();
 
 	const member = $derived(readModel.members.find((m) => m.id === memberId));
 	const isFull = $derived(member?.tier === 'full');
@@ -87,6 +90,7 @@
 			</button>
 			<span class="bs-mark bs-mark--sm" style="margin-left:auto;">the b/side</span>
 		</div>
+		<PortalNav current="profile" {nav} {portal} />
 
 		<!-- Hero -->
 		<header class="bs-phero">

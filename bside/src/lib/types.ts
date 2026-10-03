@@ -107,6 +107,7 @@ export interface SharePayload {
 export interface Nav {
 	goHome: () => void;
 	goArchive: () => void;
+	goSeason: () => void;
 	goProfile: (id: string) => void;
 	openShare: (p: SharePayload) => void;
 }

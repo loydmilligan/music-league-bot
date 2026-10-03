@@ -1,17 +1,21 @@
 <script lang="ts">
 	import Avatar from '../lib/atoms/Avatar.svelte';
 	import { icons } from '../lib/icons.js';
+	import PortalNav from '../lib/atoms/PortalNav.svelte';
+	import { digestsFor, type PortalJson } from '../lib/portal.js';
 	import type { ReadModel, Nav } from '../lib/types.js';
 
-	interface Props { readModel: ReadModel; nav: Nav; }
-	let { readModel, nav }: Props = $props();
+	interface Props { readModel: ReadModel; nav: Nav; portal: PortalJson | null; }
+	let { readModel, nav, portal }: Props = $props();
+
+	const digests = $derived(digestsFor(readModel, portal));
 
 	const league = $derived(readModel.league);
 
 	// Group rounds by season, newest first
 	const grouped = $derived.by(() => {
-		const bySeasons = new Map<number, typeof readModel.archive>();
-		for (const entry of readModel.archive) {
+		const bySeasons = new Map<number, typeof digests>();
+		for (const entry of digests) {
 			const list = bySeasons.get(entry.season) ?? [];
 			list.push(entry);
 			bySeasons.set(entry.season, list);
@@ -19,7 +23,7 @@
 		return [...bySeasons.entries()].sort((a, b) => b[0] - a[0]);
 	});
 
-	const newestRound = $derived(readModel.archive[0]?.n ?? -1);
+	const newestRound = $derived(digests[0]?.n ?? -1);
 
 	function submitter(id: string) {
 		return readModel.members.find((m) => m.id === id) ?? null;
@@ -29,17 +33,15 @@
 <div class="bs-pad">
 	<!-- Top bar -->
 	<div class="bs-topbar">
-		<button class="bs-back" onclick={() => nav.goHome()}>
-			{@html icons.chevL} {league.name}
-		</button>
+		<PortalNav current="archive" {nav} {portal} />
 		<span class="bs-mark bs-mark--sm" style="margin-left:auto;">the b/side</span>
 	</div>
 
 	<!-- Hero -->
 	<header class="bs-hero" style="gap:8px;">
-		<div class="bs-hero-eyebrow">The archive</div>
+		<div class="bs-hero-eyebrow">The digests</div>
 		<div class="bs-hero-name" style="font-size:38px;">Every round,<br/>re-readable.</div>
-		<p class="bs-hero-tag">{readModel.archive.length} digests and counting — the full story of each round, kept forever.</p>
+		<p class="bs-hero-tag">{digests.length} digests and counting — the full story of each round, kept forever.</p>
 	</header>
 
 	<!-- Rounds grouped by season, newest first -->
@@ -79,6 +81,7 @@
 							<div class="bs-arch-meta">
 								{#if isNew}<span class="bs-tag-new">New</span>{/if}
 								<div class="bs-arch-date">{entry.date}</div>
+								<div class="bs-arch-date" style="opacity:.6">No digest</div>
 							</div>
 						</div>
 					{/if}

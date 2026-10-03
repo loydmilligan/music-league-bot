@@ -2,10 +2,14 @@
 	import Avatar from '../lib/atoms/Avatar.svelte';
 	import { icons } from '../lib/icons.js';
 	import { bsAcc, accentIcon } from '../lib/accents.js';
+	import PortalNav from '../lib/atoms/PortalNav.svelte';
+	import { digestsFor, type PortalJson } from '../lib/portal.js';
 	import type { ReadModel, Nav, SharePayload } from '../lib/types.js';
 
-	interface Props { readModel: ReadModel; nav: Nav; }
-	let { readModel, nav }: Props = $props();
+	interface Props { readModel: ReadModel; nav: Nav; portal: PortalJson | null; }
+	let { readModel, nav, portal }: Props = $props();
+
+	const latestDigestUrl = $derived(digestsFor(readModel, portal).find((d) => d.digestUrl)?.digestUrl ?? null);
 
 	const league = $derived(readModel.league);
 	const latestRound = $derived(readModel.archive[0] ?? null);
@@ -50,6 +54,7 @@
 
 	<!-- Masthead -->
 	<div class="bs-topbar">
+		<PortalNav current="home" {nav} {portal} />
 		<span class="bs-mini-mark">b/s</span>
 		<button class="bs-icon-btn" onclick={openLeagueShare} aria-label="Share this league"
 			style="margin-left:auto">
@@ -205,9 +210,15 @@
 					<span class="bs-winner-medal" style="color:var(--amber)">{@html icons.trophy}</span>
 				</div>
 			</div>
+			{#if latestDigestUrl}
+				<a class="bs-share-btn" href={latestDigestUrl}
+					style="align-self:stretch; justify-content:center; background:var(--mash-pulp); border-color:var(--mash-pulp); color:#fff; text-decoration:none; font-weight:700">
+					Read the latest digest &rarr;
+				</a>
+			{/if}
 			<button class="bs-share-btn" onclick={nav.goArchive}
 				style="align-self:stretch; justify-content:center">
-				Open the archive — {readModel.archive.length} rounds &nbsp;{@html icons.chevR}
+				All digests — {digestsFor(readModel, portal).length} rounds &nbsp;{@html icons.chevR}
 			</button>
 		</section>
 	{/if}

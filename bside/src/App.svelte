@@ -5,6 +5,8 @@
 	import HomeScreen from './routes/HomeScreen.svelte';
 	import ProfileScreen from './routes/ProfileScreen.svelte';
 	import ArchiveScreen from './routes/ArchiveScreen.svelte';
+	import SeasonScreen from './routes/SeasonScreen.svelte';
+	import { loadPortal, type PortalJson } from './lib/portal.js';
 
 	// The per-slug index.html sets data-league-slug on <body>.
 	const slug = (document.body as HTMLElement & { dataset: DOMStringMap }).dataset.leagueSlug ?? '';
@@ -12,7 +14,8 @@
 	type Route =
 		| { screen: 'home' }
 		| { screen: 'profile'; memberId: string }
-		| { screen: 'archive' };
+		| { screen: 'archive' }
+		| { screen: 'season' };
 
 	function parseRoute(pathname: string): Route {
 		// Strip slug prefix if present (prod: /{slug}/p/{id}, dev: /p/{id})
@@ -24,11 +27,13 @@
 			return { screen: 'profile', memberId: clean.slice(3).split('/')[0] || '' };
 		}
 		if (clean === '/archive') return { screen: 'archive' };
+		if (clean === '/season') return { screen: 'season' };
 		return { screen: 'home' };
 	}
 
 	let route = $state<Route>(parseRoute(window.location.pathname));
 	let readModel = $state<ReadModel | null>(null);
+	let portal = $state<PortalJson | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let sharePayload = $state<SharePayload | null>(null);
@@ -42,6 +47,7 @@
 	const nav: Nav = {
 		goHome:    () => push(`/${slug}`, { screen: 'home' }),
 		goArchive: () => push(`/${slug}/archive`, { screen: 'archive' }),
+		goSeason:  () => push(`/${slug}/season`, { screen: 'season' }),
 		goProfile: (id) => push(`/${slug}/p/${id}`, { screen: 'profile', memberId: id }),
 		openShare: (p) => { sharePayload = p; },
 	};
@@ -50,9 +56,11 @@
 		const onPop = () => { route = parseRoute(window.location.pathname); };
 		window.addEventListener('popstate', onPop);
 
-		fetch(`/${slug}/read_model.json`)
-			.then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<ReadModel>; })
-			.then((data) => { readModel = data; })
+		const readModelRequest = fetch(`/${slug}/read_model.json`)
+			.then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<ReadModel>; });
+
+		Promise.all([readModelRequest, loadPortal(slug)])
+			.then(([data, portalData]) => { readModel = data; portal = portalData; })
 			.catch((e: unknown) => { error = e instanceof Error ? e.message : 'Failed to load'; })
 			.finally(() => { loading = false; });
 
@@ -67,11 +75,13 @@
 		<div class="bs-error">Could not load league data: {error ?? 'unknown error'}</div>
 	{:else}
 		{#if route.screen === 'home'}
-			<HomeScreen {readModel} {nav} />
+			<HomeScreen {readModel} {nav} {portal} />
 		{:else if route.screen === 'profile'}
-			<ProfileScreen {readModel} memberId={route.memberId} {nav} />
+			<ProfileScreen {readModel} memberId={route.memberId} {nav} {portal} />
+		{:else if route.screen === 'season'}
+			<SeasonScreen {readModel} {nav} {portal} />
 		{:else}
-			<ArchiveScreen {readModel} {nav} />
+			<ArchiveScreen {readModel} {nav} {portal} />
 		{/if}
 
 		<ShareOverlay
