@@ -35,3 +35,24 @@ export function touchDigest2Share(db: Database.Database, roundId: number): void 
 		`UPDATE digest2_shares SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE round_id = ?`
 	).run(roundId);
 }
+
+/** Existing slug for a round, or null — never inserts. */
+export function peekDigest2Slug(db: Database.Database, roundId: number): string | null {
+	const row = db.prepare('SELECT slug FROM digest2_shares WHERE round_id = ?').get(roundId) as
+		| { slug: string }
+		| undefined;
+	return row?.slug ?? null;
+}
+
+/** A fresh unguessable slug candidate (not persisted). */
+export function newDigest2Slug(): string {
+	return randomBytes(12).toString('base64url');
+}
+
+/** Persist the share row after a successful publish; an existing row (and its slug) wins. */
+export function recordDigest2Share(db: Database.Database, roundId: number, slug: string): string {
+	db.prepare(
+		`INSERT INTO digest2_shares (round_id, slug) VALUES (?, ?) ON CONFLICT(round_id) DO NOTHING`
+	).run(roundId, slug);
+	return (db.prepare('SELECT slug FROM digest2_shares WHERE round_id = ?').get(roundId) as { slug: string }).slug;
+}
