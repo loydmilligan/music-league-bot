@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { mintSlug } from './slug.js';
+import { writePortalJson } from '../portal/portalJson.js';
 import { buildReadModel } from './buildReadModel.js';
 import type { ReadModel } from './buildReadModel.js';
 
@@ -85,6 +86,7 @@ export async function publishSite(
 	}
 
 	await writePublicArtifacts(slug, readModel);
+	await writePortalJson(db, leagueId).catch((e) => console.warn('[portal] portal.json write failed', e));
 
 	return { slug };
 }

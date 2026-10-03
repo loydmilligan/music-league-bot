@@ -7,6 +7,7 @@
 
 	let busy = $state<'' | 'generate' | 'publish'>('');
 	let err = $state('');
+	let warn = $state('');
 	let url = $state(admin.published?.url ?? '');
 	let copied = $state(false);
 
@@ -22,12 +23,13 @@
 
 	async function publish() {
 		if (admin.published && !confirm('Re-publish? The existing link stays the same but its content is replaced.')) return;
-		busy = 'publish'; err = '';
+		busy = 'publish'; err = ''; warn = '';
 		try {
 			const res = await fetch(`/api/digest2/${roundId}/publish`, { method: 'POST' });
 			const body = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(body.message ?? `publish failed (${res.status})`);
 			url = body.url;
+			warn = body.portalWarning ?? '';
 			await invalidateAll();
 		} catch (e) { err = String(e instanceof Error ? e.message : e); }
 		finally { busy = ''; }
@@ -56,6 +58,7 @@
 	{#if url}
 		<p class="d2-admin-link"><a href={url} target="_blank" rel="noopener">{url}</a> <button onclick={copy}>{copied ? 'Copied' : 'Copy'}</button></p>
 	{/if}
+	{#if warn}<p class="d2-admin-err">{warn}</p>{/if}
 	{#if err}<p class="d2-admin-err">{err}</p>{/if}
 </div>
 

@@ -9,11 +9,15 @@ vi.mock('$lib/digest2/publish.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('$lib/digest2/publish.js')>()),
 	publishDigest2: (id: number) => publishDigest2(id)
 }));
+const writePortalJson = vi.fn();
+vi.mock('$lib/portal/portalJson.js', () => ({ writePortalJson: (...a: unknown[]) => writePortalJson(...a) }));
 const { POST } = await import('./+server.js');
 const { Digest2PublishError } = await import('$lib/digest2/publish.js');
 
 beforeEach(() => {
 	publishDigest2.mockReset();
+	writePortalJson.mockReset();
+	writePortalJson.mockResolvedValue({ path: 'p', digests: 0 });
 	db = new Database(':memory:');
 	db.exec(SCHEMA);
 	db.exec(`INSERT INTO leagues (id, slug, name) VALUES (1, 'bz', 'Boarz');
@@ -33,11 +37,24 @@ describe('POST /api/digest2/:roundId/publish', () => {
 		db.exec(`INSERT INTO digest_drafts (id, round_id, rel_context, prep_checks, stats_content_json) VALUES ('d', 152, '{}', '{}', '{}')`);
 		publishDigest2.mockResolvedValue({ slug: 's', url: 'https://digest.example/d2/s', files: 3, bytes: 10 });
 		const res = await call('152');
-		expect(await res.json()).toMatchObject({ url: 'https://digest.example/d2/s' });
+		const body = await res.json();
+		expect(body).toMatchObject({ url: 'https://digest.example/d2/s' });
+		expect(body.portalWarning).toBeUndefined();
+		expect(writePortalJson).toHaveBeenCalledTimes(1);
+		expect(writePortalJson).toHaveBeenCalledWith(db, 1);
+	});
+	it('still 200 with a portalWarning when portal.json fails', async () => {
+		db.exec(`INSERT INTO digest_drafts (id, round_id, rel_context, prep_checks, stats_content_json) VALUES ('d', 152, '{}', '{}', '{}')`);
+		publishDigest2.mockResolvedValue({ slug: 's', url: 'https://digest.example/d2/s', files: 3, bytes: 10 });
+		writePortalJson.mockRejectedValue(new Error('disk full'));
+		const body = await (await call('152')).json();
+		expect(body.url).toBe('https://digest.example/d2/s');
+		expect(body.portalWarning).toContain('disk full');
 	});
 	it('maps a leak-scan failure to 422 with the message', async () => {
 		db.exec(`INSERT INTO digest_drafts (id, round_id, rel_context, prep_checks, stats_content_json) VALUES ('d', 152, '{}', '{}', '{}')`);
 		publishDigest2.mockRejectedValue(new Digest2PublishError(422, 'leak: index.html root-relative href="/stats"'));
 		await expect(call('152')).rejects.toMatchObject({ status: 422, body: { message: expect.stringContaining('/stats') } });
+		expect(writePortalJson).not.toHaveBeenCalled();
 	});
 });

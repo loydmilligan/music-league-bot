@@ -29,6 +29,7 @@ import { buildTasteData } from '$lib/dashboard/tasteData.js';
 import { getTasteSettings } from '$lib/db/settings.js';
 import { z } from 'zod';
 import { digestBaseUrl } from '$lib/config/urls.js';
+import { writePortalJson } from '$lib/portal/portalJson.js';
 import { digestLinkForRound } from '$lib/portal/digestLinks.js';
 
 type SectionDecision = 'refresh' | 'hold' | 'lock';
@@ -237,6 +238,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			).run(JSON.stringify(finalModel), JSON.stringify(newArchivedRoundIds), now, leagueId);
 
 			await writePublicArtifacts(site.slug, finalModel);
+			await writePortalJson(db, leagueId).catch((e) => console.warn('[portal] portal.json write failed', e));
 
 			const resharePayload = buildResharePayload(
 				league.name,
