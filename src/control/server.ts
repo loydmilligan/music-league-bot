@@ -1,9 +1,8 @@
 /**
  * Local control server for the bot. Binds to 0.0.0.0 so it is reachable by
- * sibling compose containers (e.g. bot-ui POSTing /trigger) — it is a
- * send-capable surface, so it is never published to the host (no `ports:` on
- * the `bot` service in docker-compose.yml), only reachable within the
- * internal compose network.
+ * sibling compose containers (e.g. bot-ui POSTing /trigger). The compose file
+ * also publishes it on the host loopback interface for the local survey sync
+ * worker; it is never exposed on a LAN-facing interface.
  *
  * Routes (see router.ts):
  *   POST /trigger                       run one scheduled poll now
@@ -14,6 +13,7 @@
 import http from 'node:http';
 import { parseControlRequest } from './router.js';
 import type { ManualSendReq, ManualSendResult } from '../digest/manualSend.js';
+import type { RoundRevealRequest, RevealAnnouncementResult } from '../reveal/announcement.js';
 
 export interface ControlHandlers {
   onTrigger: () => Promise<void>;
@@ -36,13 +36,14 @@ export interface ControlHandlers {
     text: string,
     pin: number | null,
   ) => Promise<{ target: string }>;
+  onRoundReveal: (request: RoundRevealRequest) => Promise<RevealAnnouncementResult>;
   onPrompt: (prompt: Record<string, unknown>) => Promise<{ id: string }>;
 }
 
 // Bind on the compose network so bot-ui (a sibling container) can POST /trigger
-// for immediate sends. NOT published to the host — see docker-compose.yml (`bot`
-// has no `ports:`), so only sibling containers can reach it. /send stays dry-run
-// by default and sendGuard stays fail-closed.
+// for immediate sends. Docker publishes this only to 127.0.0.1 for the local
+// survey worker. /send and /round-reveal remain fail-closed unless their
+// dedicated send modes are explicitly live.
 const CONTROL_HOST = process.env.BOT_CONTROL_HOST ?? '0.0.0.0';
 const DEFAULT_CONTROL_PORT = 3003;
 
@@ -73,6 +74,9 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
         if (route.action === 'trigger') {
           await handlers.onTrigger();
           reply(200, { ok: true, action: 'trigger' });
+        } else if (route.action === 'round-reveal') {
+          const result = await handlers.onRoundReveal(route);
+          reply(200, { ok: true, action: 'round-reveal', ...result });
         } else if (route.action === 'send') {
           const result = await handlers.onSend(route);
           reply(200, { ok: true, action: 'send', ...result });
@@ -101,7 +105,7 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
   });
 
   server.listen(port, CONTROL_HOST, () => {
-    console.log(`[control] listening on ${CONTROL_HOST}:${port} (reachable by sibling compose containers)`);
+    console.log(`[control] listening on ${CONTROL_HOST}:${port}`);
   });
   server.unref();
   return server;

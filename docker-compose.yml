@@ -6,6 +6,9 @@ services:
       - ./data:/app/data
       - ./.wwebjs_auth:/app/.wwebjs_auth
       - ./.wwebjs_cache:/app/.wwebjs_cache
+    ports:
+      # Host-side survey reveal worker. Loopback only: the control API can send WhatsApp messages.
+      - "127.0.0.1:3003:3003"
     restart: unless-stopped
 
   api:

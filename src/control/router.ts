@@ -2,6 +2,7 @@
  * Pure request router for the bot's local control server. Kept separate from the
  * HTTP glue so the routing — including the safe mode default — is unit-tested.
  */
+import type { RoundRevealRequest } from '../reveal/announcement.js';
 
 export type ControlAction =
   | { action: 'trigger' }
@@ -10,6 +11,7 @@ export type ControlAction =
   | { action: 'poll'; target: string | null; name: string; options: string[]; allowMultiple: boolean }
   | { action: 'media'; target: string | null; file: string; caption: string | null; pin: number | null }
   | { action: 'say'; target: string | null; text: string; pin: number | null }
+  | ({ action: 'round-reveal' } & RoundRevealRequest)
   | { action: 'prompt'; prompt: Record<string, unknown> }
   | { action: 'unknown'; reason: string };
 
@@ -22,6 +24,36 @@ export function parseControlRequest(method: string, path: string, body: unknown)
   if (method !== 'POST') return { action: 'unknown', reason: `method ${method} not allowed` };
 
   if (path === '/trigger') return { action: 'trigger' };
+
+  if (path === '/round-reveal') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    const required = ['leagueSlug', 'leagueName', 'leagueId', 'roundId', 'theme'] as const;
+    if (required.some((key) => typeof b[key] !== 'string' || !(b[key] as string).trim())) {
+      return { action: 'unknown', reason: `${required.join(', ')} are required` };
+    }
+    const leagueSlug = (b.leagueSlug as string).trim();
+    const leagueId = (b.leagueId as string).trim();
+    const roundId = (b.roundId as string).trim();
+    if (!/^[a-z0-9-]{1,80}$/.test(leagueSlug)) return { action: 'unknown', reason: 'invalid leagueSlug' };
+    if (!/^[a-f0-9]{32}$/i.test(leagueId) || !/^[a-f0-9]{32}$/i.test(roundId)) {
+      return { action: 'unknown', reason: 'leagueId and roundId must be 32-character hex ids' };
+    }
+    if (!Number.isInteger(b.roundNumber) || (b.roundNumber as number) < 1) {
+      return { action: 'unknown', reason: 'roundNumber must be a positive integer' };
+    }
+    return {
+      action: 'round-reveal',
+      leagueSlug,
+      leagueName: (b.leagueName as string).trim().slice(0, 160),
+      leagueId,
+      roundId,
+      roundNumber: b.roundNumber as number,
+      theme: (b.theme as string).trim().slice(0, 300),
+      description: typeof b.description === 'string' && b.description.trim()
+        ? b.description.trim().slice(0, 1500)
+        : null,
+    };
+  }
 
   if (path === '/send') {
     const b = (body ?? {}) as Record<string, unknown>;

@@ -9,6 +9,8 @@ import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
 import { guardedSend } from './whatsapp/sendGuard.js';
+import { parseTargets } from './whatsapp/sendGuard.js';
+import { generateOpenRouterRevealImage, runRevealAnnouncement } from './reveal/announcement.js';
 import { runManualSend } from './digest/manualSend.js';
 import { startControlServer } from './control/server.js';
 import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
@@ -135,6 +137,24 @@ client.on('ready', () => {
       await makeSay(client)(to, text, pin ?? undefined);
       console.log(`[say] sent ${text.length} chars to ${to}${pin ? ` (pinned ${pin}s)` : ''}`);
       return { target: to };
+    },
+    onRoundReveal: async (request) => {
+      const result = await runRevealAnnouncement(request, {
+        env: {
+          mode: process.env.ROUND_REVEAL_SEND_MODE,
+          targets: {
+            ...parseTargets(process.env.DIGEST_SEND_TARGETS),
+            ...parseTargets(process.env.ROUND_REVEAL_SEND_TARGETS),
+          },
+        },
+        dataDir: '/app/data',
+        generate: (prompt) => generateOpenRouterRevealImage(prompt),
+        sendMedia: (target, file, caption) => makeSendMedia(client)(target, file, caption),
+        sendText: (target, text) => makeSay(client)(target, text),
+      });
+      console.log(`[round-reveal] ${request.leagueSlug} round ${request.roundNumber}: ${result.sent ? (result.media ? 'image sent' : 'text sent') : 'blocked'} — ${result.reason}`);
+      if (result.warning) console.warn(`[round-reveal] ${result.warning}`);
+      return result;
     },
   });
 

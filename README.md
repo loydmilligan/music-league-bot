@@ -38,7 +38,7 @@ Spotify · Last.fm · lrclib ─────┤
 
 | Service | Build | Port | Role |
 |---|---|---|---|
-| `bot` | `Dockerfile` | — | WhatsApp client (`whatsapp-web.js`), digest poller, control server (:3003 in-container) |
+| `bot` | `Dockerfile` | 127.0.0.1:3003 | WhatsApp client (`whatsapp-web.js`), digest poller, loopback-only control server |
 | `api` | `Dockerfile` | 3001 | REST API, email/IMAP poller, `POST /webhooks/relay` chat ingestion |
 | `bot-ui` | `Dockerfile.ui` | 3002 | SvelteKit operator app — the thing you actually use |
 | `digest-static` | `caddy:2-alpine` | 8088 | Read-only static server for `digests/` (`/d/<slug>/`, `/_media/`, b-side slugs) |
@@ -65,7 +65,8 @@ src/               # bot + api (Node/TypeScript, run with tsx)
   bot/             #   message handler, intent classifier, URL detection
   whatsapp/        #   whatsapp-web.js client + send guard
   digest/          #   poller → autoPost/manualSend: posts finished digests
-  control/         #   local control server (:3003) — /send etc.
+  control/         #   local control server (:3003) — /send, /round-reveal, etc.
+  reveal/          #   round-theme thumbnail generation + WhatsApp announcement
   email/           #   IMAP poller (Music League notification mail)
   api/             #   REST server, Last.fm, ML auth heartbeat
   spotify/ resolver/ rules/ parser/ storage/ config/
