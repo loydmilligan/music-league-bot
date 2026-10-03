@@ -21,8 +21,7 @@ clean per-league admin, piece 5 song rating (survey side, needs identity).
 2. Digests lists **every** completed round of the league (all seasons), newest first, each linking to
    its 2.0 digest if finalized, else its 1.0 share if one exists, else shown without a link.
 3. The Season section renders the survey feed: published lineup (teasers without titles + reveal
-   time), open polls (question + options — or "Options revealed <date>" while withheld — "Vote" →
-   mlsurvey), closed polls (totals), "Add themes" when
+   time), open polls (question + options, "Vote" → mlsurvey), closed polls (totals), "Add themes" when
    the survey is open. If the feed is unreachable or not configured, it degrades to one
    "Open season hub" link (or hides when no hub URL exists).
 4. No portal file or bundle contains the admin host (`new URL(appBaseUrl()).host`) or the internal origin.
@@ -127,8 +126,8 @@ not required (simple GET).
   ],
   "polls": {
     "open": [ { "id": "p1", "round": 10, "question": "…", "blurb": "…|null",
-                "options": [ { "id": "o1", "label": "…", "description": "…|null" } ] ,
-                "optionsRevealAt": "ISO|null", "closesAt": "ISO|null" } ],
+                "options": [ { "id": "o1", "label": "…", "description": "…|null" } ],
+                "closesAt": "ISO|null" } ],
     "closed": [ { "id": "p0", "round": 9, "question": "…", "blurb": "…|null",
                   "results": [ { "label": "…", "votes": 4 } ], "winner": "…|null", "closedAt": "ISO|null" } ]
   }
@@ -147,14 +146,13 @@ not required (simple GET).
 - `survey.open` = the Survey tab's league-wide default in Player access (per-player overrides ignored).
 - Poll `round` = the round position the poll decides. Option `label` = option title || description.
   Closed-poll `results` sorted by votes descending; `winner` = applied option label or `null`.
-- **Poll option visibility (Matt decision 2026-10-03):** a poll's options may be withheld until a set
-  time — e.g. Second Best round 10's candidate themes are not revealed until round 8 starts. While
-  withheld, the open poll is sent with `"options": null` and `"optionsRevealAt"` set (or `null` if not
-  scheduled); the portal shows the question/blurb and "Options revealed <date>". The survey side owns
-  this rule (per-poll admin setting) and should apply it in the player hub as well.
+- **Poll visibility (Matt decision 2026-10-03):** only open and closed polls are in the feed; draft
+  polls (no open time) are invisible everywhere. Candidate themes that must stay secret until a set
+  time are handled by scheduling the poll's open time — e.g. Second Best round 10's poll opens at
+  round 8's start (Sun Nov 22, 12:00 AM PT). No options-withheld case exists in v1.
 
 **Privacy (enforced survey-side):** teaser rounds never carry `title`/`description`/`commentRule`/
-`credit`; open polls carry no counts or ballots; withheld options are absent; no player-identifying
+`credit`; open polls carry no counts or ballots; draft polls are absent; no player-identifying
 data except theme `credit` (already public in ML round descriptions).
 
 **Nav strip on survey pages:** a slim top bar matching the b-side tokens (`bside/src/colors_and_type.css`:
