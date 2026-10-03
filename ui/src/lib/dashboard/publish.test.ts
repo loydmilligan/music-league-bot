@@ -14,6 +14,9 @@ vi.mock('node:fs/promises', () => ({
 	writeFile: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { writePortalJson } = vi.hoisted(() => ({ writePortalJson: vi.fn().mockResolvedValue(null) }));
+vi.mock('../portal/portalJson.js', () => ({ writePortalJson }));
+
 import { callOpenRouter } from '../digest/llm.js';
 const mockCallOpenRouter = vi.mocked(callOpenRouter);
 
@@ -227,6 +230,23 @@ describe('publishSite', () => {
 				.get(leagueId) as { n: number }
 		).n;
 		expect(count).toBe(1);
+	});
+
+	it('refreshes portal.json once with (db, leagueId) after a successful publish', async () => {
+		writePortalJson.mockReset();
+		writePortalJson.mockResolvedValue(null);
+		seedLeague();
+		await publishSite(db, leagueId);
+		expect(writePortalJson).toHaveBeenCalledTimes(1);
+		expect(writePortalJson).toHaveBeenCalledWith(db, leagueId);
+	});
+
+	it('still resolves { slug } when portal.json write rejects', async () => {
+		writePortalJson.mockReset();
+		writePortalJson.mockRejectedValue(new Error('disk full'));
+		seedLeague();
+		const result = await publishSite(db, leagueId);
+		expect(typeof result.slug).toBe('string');
 	});
 
 	it('throws for a non-existent leagueId', async () => {
