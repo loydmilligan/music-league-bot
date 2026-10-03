@@ -59,6 +59,19 @@ describe('publishDigest2', () => {
 		expect(rows()).toEqual([]);
 		expect(existsSync(d2)).toBe(false);
 	});
+	it('a2. internal-origin host leak -> 422, no share row, no directory', async () => {
+		const internal = new URL(process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`).host;
+		await expect(publishDigest2(152, { capture: cap(shell(`<p>${internal}</p>`)) })).rejects.toMatchObject({ status: 422 });
+		expect(rows()).toEqual([]);
+		expect(existsSync(d2)).toBe(false);
+	});
+	it('a3. localized fonts css is leak-scanned -> 422, nothing written', async () => {
+		const host = new URL(appBaseUrl()).host;
+		const localizeFonts = async () => `@font-face{src:url(https://${host}/f.woff2)}`;
+		await expect(publishDigest2(152, { capture: cap(shell('<p>ok</p>')), localizeFonts })).rejects.toMatchObject({ status: 422 });
+		expect(rows()).toEqual([]);
+		expect(existsSync(d2)).toBe(false);
+	});
 	it('b. missing referenced asset -> 500, no share row, no directory', async () => {
 		const html = shell('<script type="module" src="../_app/missing.js"></script>');
 		await expect(publishDigest2(152, { capture: cap(html) })).rejects.toMatchObject({

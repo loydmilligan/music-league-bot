@@ -65,22 +65,42 @@ async function capturePuppeteer(roundId: number): Promise<Digest2Capture> {
 	const assets = new Map<string, Buffer>();
 	const pending: Promise<void>[] = [];
 	try {
-		const page = await browser.newPage();
-		await page.setViewport({ width: 480, height: 1000, deviceScaleFactor: 2 });
-		page.on('response', (resp) => {
-			pending.push((async () => {
-				try {
-					if (resp.request().method() !== 'GET' || !resp.ok()) return;
-					const u = new URL(resp.url());
-					if (u.origin === origin && u.pathname.startsWith('/_app/')) assets.set(u.pathname, await resp.buffer());
-				} catch { /* surfaced by the missing-assets check */ }
-			})());
-		});
-		const url = `${APP_INTERNAL_URL}/digest2/${roundId}?share=1`;
-		const resp = await page.goto(url, { waitUntil: 'networkidle0', timeout: 45_000 });
-		if (!resp || !resp.ok()) throw new Digest2PublishError(500, `render load failed: ${resp?.status() ?? 'no-response'}`);
-		rawHtml = await resp.text();
-		await Promise.allSettled(pending);
+		// Loads one URL, adding its same-origin /_app/ responses to the shared assets map.
+		const load = async (url: string) => {
+			const p = await browser.newPage();
+			await p.setViewport({ width: 480, height: 1000, deviceScaleFactor: 2 });
+			p.on('response', (resp) => {
+				pending.push((async () => {
+					try {
+						if (resp.request().method() !== 'GET' || !resp.ok()) return;
+						const u = new URL(resp.url());
+						if (u.origin === origin && u.pathname.startsWith('/_app/')) assets.set(u.pathname, await resp.buffer());
+					} catch { /* surfaced by the missing-assets check */ }
+				})());
+			});
+			const resp = await p.goto(url, { waitUntil: 'networkidle0', timeout: 45_000 });
+			if (!resp || !resp.ok()) throw new Error(`load failed: ${resp?.status() ?? 'no-response'}`);
+			const html = await resp.text();
+			if (url.includes('view=stats')) {
+				// Let lazily-imported chart chunks (e.g. zoom plugin) mount and fetch.
+				await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+				await p.waitForNetworkIdle({ idleTime: 500, timeout: 30_000 });
+			}
+			await Promise.allSettled(pending);
+			return html;
+		};
+		const base = `${APP_INTERNAL_URL}/digest2/${roundId}?share=1`;
+		try {
+			rawHtml = await load(base);
+		} catch (e) {
+			throw new Digest2PublishError(500, `render load failed: ${e instanceof Error ? e.message : String(e)}`);
+		}
+		// The Stats view lazy-imports chunks the Digest view never fetches; capture them too.
+		try {
+			await load(`${base}&view=stats`);
+		} catch (e) {
+			throw new Digest2PublishError(500, `stats render failed: ${e instanceof Error ? e.message : String(e)}`);
+		}
 	} catch (e) {
 		if (e instanceof Digest2PublishError) throw e;
 		throw new Digest2PublishError(500, `render failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -92,7 +112,10 @@ async function capturePuppeteer(roundId: number): Promise<Digest2Capture> {
 
 export async function publishDigest2(
 	roundId: number,
-	deps: { capture?: (roundId: number) => Promise<Digest2Capture> } = {}
+	deps: {
+		capture?: (roundId: number) => Promise<Digest2Capture>;
+		localizeFonts?: (html: string, assets: Map<string, Buffer>) => Promise<string | null>;
+	} = {}
 ): Promise<{ slug: string; url: string; files: number; bytes: number }> {
 	const db = getDb();
 	if (!getActiveDraftForRound(db, roundId)) throw new Digest2PublishError(409, 'No story draft yet — press Generate first.');
@@ -103,7 +126,7 @@ export async function publishDigest2(
 
 	const { rawHtml, assets } = await (deps.capture ?? capturePuppeteer)(roundId);
 
-	const fontCss = await localizeFonts(rawHtml, assets);
+	const fontCss = await (deps.localizeFonts ?? localizeFonts)(rawHtml, assets);
 	const indexHtml = transformDigest2Html(rawHtml, { hasLocalFonts: !!fontCss });
 	const textAssets = new Map<string, string>();
 	for (const [p, buf] of assets) if (TEXT_EXT.has(extname(p))) textAssets.set(p, buf.toString('utf8'));

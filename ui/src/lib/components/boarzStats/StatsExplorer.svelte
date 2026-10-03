@@ -134,7 +134,7 @@
 	</header>
 
 	<section class="mb-5 rounded-xl border border-border-muted bg-surface/30 p-4" data-noshot="1">
-		<form action={frozen ? undefined : basePath} method="GET" class="space-y-1.5">
+		<form action={frozen ? undefined : basePath} method="GET" onsubmit={(e) => { if (frozen) e.preventDefault(); }} class="space-y-1.5">
 			<div class="flex flex-wrap items-end gap-2">
 				{#if !frozen}
 				<div class="min-w-48 flex-1">
