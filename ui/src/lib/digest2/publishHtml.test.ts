@@ -86,3 +86,16 @@ describe('findLeaks', () => {
 		expect(findLeaks({ html, textAssets: new Map(), forbiddenHosts: HOSTS })).toEqual([]);
 	});
 });
+
+import { missingAppAssets } from './publishHtml.js';
+describe('missingAppAssets', () => {
+	const html = '<script src="./_app/a.js"></script><link href="./_app/b.css"><link href="./_app/fonts.css">import("./_app/c.js?v=1")';
+	it('lists referenced assets that were not captured', () => {
+		const assets = new Map([['/_app/a.js', Buffer.from('')]]);
+		expect(missingAppAssets(html, assets).sort()).toEqual(['_app/b.css', '_app/c.js']);
+	});
+	it('ignores fonts.css and returns [] when all present', () => {
+		const assets = new Map(['/_app/a.js', '/_app/b.css', '/_app/c.js'].map((k) => [k, Buffer.from('')] as [string, Buffer]));
+		expect(missingAppAssets(html, assets)).toEqual([]);
+	});
+});

@@ -57,3 +57,11 @@ export function findLeaks(input: {
 	}
 	return leaks;
 }
+
+export function missingAppAssets(html: string, assets: Map<string, Buffer>): string[] {
+	const missing = new Set<string>();
+	for (const m of html.matchAll(/\.\/(_app\/[^"'\s)>?#]+)/g)) {
+		if (m[1] !== '_app/fonts.css' && !assets.has('/' + m[1])) missing.add(m[1]);
+	}
+	return [...missing];
+}

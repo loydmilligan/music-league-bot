@@ -5,14 +5,14 @@ import { getDb } from '$lib/db/client.js';
 import { appBaseUrl } from '$lib/config/urls.js';
 import { getActiveDraftForRound } from '$lib/digest/llm.js';
 import { peekDigest2Slug, newDigest2Slug, recordDigest2Share, touchDigest2Share, digest2ShareUrl } from './shares.js';
-import { transformDigest2Html, findLeaks } from './publishHtml.js';
+import { transformDigest2Html, findLeaks, missingAppAssets } from './publishHtml.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
-const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
+export const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
 const DIGESTS_DIR = process.env.DIGESTS_DIR || '/app/digests';
 const CHROME_UA =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-const TEXT_EXT = new Set(['.js', '.css', '.json', '.html', '.svg']);
+export const TEXT_EXT = new Set(['.js', '.css', '.json', '.html', '.svg']);
 
 export class Digest2PublishError extends Error {
 	constructor(public status: 409 | 422 | 500, message: string) { super(message); }
@@ -35,7 +35,7 @@ export async function swapDirAtomically(tmpDir: string, finalDir: string): Promi
 }
 
 // Forked from 1.0 export.ts localizeFonts (not imported: that module is 1.0-owned).
-async function localizeFonts(html: string, assets: Map<string, Buffer>): Promise<string | null> {
+export async function localizeFonts(html: string, assets: Map<string, Buffer>): Promise<string | null> {
 	const m = html.match(/https:\/\/fonts\.googleapis\.com\/css2\?[^"'\s]+/);
 	if (!m) return null;
 	try {
@@ -138,11 +138,8 @@ export async function publishDigest2(
 	});
 	if (leaks.length) throw new Digest2PublishError(422, `Publish blocked — admin links found:\n${leaks.slice(0, 5).join('\n')}`);
 
-	const missing = new Set<string>();
-	for (const m of indexHtml.matchAll(/\.\/(_app\/[^"'\s)>?#]+)/g)) {
-		if (m[1] !== '_app/fonts.css' && !assets.has('/' + m[1])) missing.add(m[1]);
-	}
-	if (missing.size) throw new Digest2PublishError(500, `Publish blocked — missing assets: ${[...missing].slice(0, 10).join(', ')}`);
+	const missing = missingAppAssets(indexHtml, assets);
+	if (missing.length) throw new Digest2PublishError(500, `Publish blocked — missing assets: ${missing.slice(0, 10).join(', ')}`);
 
 	await rm(tmpDir, { recursive: true, force: true });
 	await mkdir(tmpDir, { recursive: true });
