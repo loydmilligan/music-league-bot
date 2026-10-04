@@ -49,6 +49,22 @@ describe('buildPortalJson', () => {
 		db.exec(`DELETE FROM digest_shares`);
 		expect(buildPortalJson(db, 1).digests.find((d) => d.roundId === 1)).toMatchObject({ digestUrl: null, digestKind: null });
 	});
+	it('stats is null when no stats publish is recorded', () => {
+		expect(buildPortalJson(db, 1).stats).toBeNull();
+	});
+	it('stats carries the recorded stats publish', () => {
+		db.prepare(`INSERT INTO settings (key, value) VALUES ('portal_stats_published:1', ?)`)
+			.run(JSON.stringify({ updatedAt: '2026-10-03T03:30:00Z', current: 2, seasons: [1, 2] }));
+		expect(buildPortalJson(db, 1).stats).toEqual({ updatedAt: '2026-10-03T03:30:00Z', current: 2, seasons: [1, 2] });
+		expect(buildPortalJson(db, 2).stats).toBeNull(); // per league
+	});
+	it('stats is null when the setting is invalid JSON or the wrong shape', () => {
+		const put = db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('portal_stats_published:1', ?)`);
+		put.run('{not json');
+		expect(buildPortalJson(db, 1).stats).toBeNull();
+		put.run(JSON.stringify({ updatedAt: 'x', current: 'two', seasons: [1] }));
+		expect(buildPortalJson(db, 1).stats).toBeNull();
+	});
 	it('carries the season settings', () => {
 		setSeasonSettings(db, 1, { feedUrl: 'https://s.example/feed.json', hubUrl: null });
 		expect(buildPortalJson(db, 1)).toMatchObject({ seasonFeedUrl: 'https://s.example/feed.json', seasonHubUrl: null });

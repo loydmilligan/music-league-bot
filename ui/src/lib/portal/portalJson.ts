@@ -17,10 +17,13 @@ export interface PortalJson {
 	version: 1; generatedAt: string;
 	seasonFeedUrl: string | null; seasonHubUrl: string | null;
 	digests: PortalDigest[];
+	stats: PortalStats | null;
 }
+export interface PortalStats { updatedAt: string; current: number; seasons: number[] }
 
 const feedKey = (id: number) => `portal_season_feed_url:${id}`;
 const hubKey = (id: number) => `portal_season_hub_url:${id}`;
+export const statsPublishedKey = (id: number) => `portal_stats_published:${id}`;
 
 function readSetting(db: Database.Database, key: string): string | null {
 	const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
@@ -33,6 +36,20 @@ function validHttps(u: string | null): string | null {
 	try { parsed = new URL(u.trim()); } catch { throw new Error(`invalid url: ${u}`); }
 	if (parsed.protocol !== 'https:') throw new Error(`invalid url: ${u}`);
 	return parsed.toString();
+}
+
+/** The recorded stats publish for a league; anything missing/malformed → null. */
+function readStats(db: Database.Database, leagueId: number): PortalStats | null {
+	const raw = readSetting(db, statsPublishedKey(leagueId));
+	if (!raw) return null;
+	try {
+		const v = JSON.parse(raw) as Partial<PortalStats>;
+		if (typeof v?.updatedAt !== 'string' || typeof v.current !== 'number' || !Array.isArray(v.seasons)) return null;
+		if (!v.seasons.every((n) => typeof n === 'number')) return null;
+		return { updatedAt: v.updatedAt, current: v.current, seasons: v.seasons };
+	} catch {
+		return null;
+	}
 }
 
 export function getSeasonSettings(db: Database.Database, leagueId: number) {
@@ -66,7 +83,8 @@ export function buildPortalJson(db: Database.Database, leagueId: number, now = n
 			roundId: r.roundId, n: r.n, season: r.season, theme: r.theme, date: r.date,
 			winnerSong: r.winnerSong, winnerArtist: r.winnerArtist, submitter: r.submitter,
 			votes: r.votes, hue: r.hue, digestUrl: r.digestUrl ?? null, digestKind: r.digestKind
-		}))
+		})),
+		stats: readStats(db, leagueId)
 	};
 }
 

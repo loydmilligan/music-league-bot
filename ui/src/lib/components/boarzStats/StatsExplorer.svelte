@@ -14,20 +14,11 @@
 	import ChatTab from './ChatTab.svelte';
 	import WrappedTab from './WrappedTab.svelte';
 	import { computeVisibleTabIds } from '$lib/boarzStats/visibleTabs.js';
+	import { STATS_TABS } from '$lib/boarzStats/tabs.js';
 
 	let { snapshot, basePath, omitTabs = [], omitLeaderboardRace = false, frozen = false }:
 		{ snapshot: Snapshot; basePath: string; omitTabs?: readonly string[]; omitLeaderboardRace?: boolean; frozen?: boolean } = $props();
-	const TABS = [
-		{ id: 'leaderboard', label: '🏆 Standings & Scores', title: 'Standings, cumulative race, points by round, and round winners', seasonOnly: true },
-		{ id: 'songs', label: '🎵 Songs', title: 'Song performance and submission details' },
-		{ id: 'artists', label: '🎤 Artists', title: 'Artist performance across submissions' },
-		{ id: 'heatmap', label: '🔥 Vote Heatmap', title: 'How players voted for one another' },
-		{ id: 'votesgiven', label: '💙 Votes Given', title: 'Voting patterns by player' },
-		{ id: 'playlist', label: '📍 Playlist Position', title: 'How playlist order relates to results' },
-		{ id: 'chat', label: '💬 Chat', title: 'League chat activity', needsChat: true },
-		{ id: 'fun', label: '✨ Fun Stats', title: 'Additional league superlatives' },
-		{ id: 'wrapped', label: '🎈 Wrapped', title: 'Season highlights', seasonOnly: true },
-	] as const;
+	const TABS = STATS_TABS;
 	type TabId = (typeof TABS)[number]['id'];
 	const isAllSeasons = $derived(snapshot.league.selectedSeasons.length > 1);
 	let crossSeasonView = $state<'combined' | 'hide-season'>(page.url.searchParams.get('seasonView') === 'hide-season' ? 'hide-season' : 'combined');
