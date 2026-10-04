@@ -1,4 +1,5 @@
 import { mkdir, writeFile, rm, readdir, cp } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join, dirname, extname } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { getDb } from '$lib/db/client.js';
@@ -80,6 +81,7 @@ export async function publishLeagueStats(
 
 		const snapshot = buildSnapshotCached({ leagueSlug: site.league, seasons: 'all' });
 		const numbers = snapshot.league.seasons.map((s) => s.number);
+		if (numbers.length === 0) return { updatedAt: new Date().toISOString(), seasons: [] };
 		const current = snapshot.league.seasons.find((s) => s.status === 'active')?.number ?? Math.max(...numbers);
 		const tabIds = computeVisibleTabIds(STATS_TABS, {
 			hasChat: snapshot.capabilities.chat, isAllSeasons: false, crossSeasonView: 'combined', omitTabs: []
@@ -144,7 +146,9 @@ export async function publishLeagueStats(
 		}
 
 		const updatedAt = new Date().toISOString();
-		if (results.some((r) => r.ok)) {
+		// Only advertise stats when stats/ is actually live (this run, or a previous publish).
+		const currentLive = results.some((r) => r.ok && r.path === 'stats') || existsSync(join(statsDir, 'index.html'));
+		if (currentLive && results.some((r) => r.ok)) {
 			const okSeasons = results.filter((r) => r.ok && r.path !== 'stats').map((r) => r.number);
 			db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
 				.run(statsPublishedKey(leagueId), JSON.stringify({ updatedAt, current, seasons: okSeasons }));

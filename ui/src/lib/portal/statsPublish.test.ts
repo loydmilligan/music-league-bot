@@ -139,6 +139,54 @@ describe('publishLeagueStats', () => {
 		expect(await read('stats/index.html')).toContain('S2');
 	});
 
+	it('a leak only inside a captured text asset blocks that target', async () => {
+		const host = new URL(appBaseUrl()).host;
+		const capture = async (urls: string[]) => {
+			const season = seasonOf(urls[0]);
+			return {
+				html: new Map(urls.map((u) => [u, page(season)])),
+				assets: new Map([['/_app/x.js', Buffer.from(season === 1 ? `fetch("https://${host}/api")` : 'console.log(1)')]])
+			};
+		};
+		const res = await publishLeagueStats(1, { capture, digestsDir: dir, localizeFonts: noFonts });
+		expect(res.seasons.find((s) => s.path === 'stats/s1')).toMatchObject({ ok: false, error: expect.stringMatching(/_app\/x\.js: forbidden host/) });
+		expect(existsSync(join(dir, SLUG, 'stats', 's1'))).toBe(false);
+		expect(await read('stats/s2/index.html')).toContain('S2');
+	});
+
+	it('first-ever publish whose stats/ target fails records nothing and portal.json stats stays null', async () => {
+		const host = new URL(appBaseUrl()).host;
+		// only the depth-2 (stats/) capture leaks
+		const { capture } = fakeCapture((u) => page(seasonOf(u), new URL(u).searchParams.get('depth') === '2' ? ` ${host}` : ''));
+		const res = await publishLeagueStats(1, { capture, digestsDir: dir, localizeFonts: noFonts });
+		expect(res.seasons.find((s) => s.path === 'stats')!.ok).toBe(false);
+		expect(res.seasons.filter((s) => s.ok)).toHaveLength(2);
+		expect(setting()).toBeUndefined();
+		const portalPath = join(dir, SLUG, 'portal.json');
+		if (existsSync(portalPath)) expect(JSON.parse(await read('portal.json')).stats).toBeNull();
+	});
+
+	it('a failed stats/ target still records when a previous stats/index.html is live', async () => {
+		await mkdir(join(dir, SLUG, 'stats'), { recursive: true });
+		await writeFile(join(dir, SLUG, 'stats', 'index.html'), 'OLDCURRENT');
+		const host = new URL(appBaseUrl()).host;
+		const { capture } = fakeCapture((u) => page(seasonOf(u), new URL(u).searchParams.get('depth') === '2' ? ` ${host}` : ''));
+		await publishLeagueStats(1, { capture, digestsDir: dir, localizeFonts: noFonts });
+		expect(await read('stats/index.html')).toBe('OLDCURRENT');
+		expect(JSON.parse(setting()!)).toMatchObject({ current: 2, seasons: [1, 2] });
+		expect(JSON.parse(await read('portal.json')).stats.current).toBe(2);
+	});
+
+	it('a league with no seasons does nothing and returns seasons: []', async () => {
+		snapshotFor.mockReturnValue({ league: { seasons: [] }, capabilities: { chat: false, deepRatings: false } });
+		const { capture, calls } = fakeCapture();
+		const res = await publishLeagueStats(1, { capture, digestsDir: dir, localizeFonts: noFonts });
+		expect(res.seasons).toEqual([]);
+		expect(calls).toHaveLength(0);
+		expect(setting()).toBeUndefined();
+		expect(existsSync(join(dir, SLUG))).toBe(false);
+	});
+
 	it('a missing referenced asset fails that target', async () => {
 		const { capture } = fakeCapture((u) => page(seasonOf(u), seasonOf(u) === 1 ? '<script src="../_app/missing.js"></script>' : ''));
 		const res = await publishLeagueStats(1, { capture, digestsDir: dir, localizeFonts: noFonts });
