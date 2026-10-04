@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { digestsFor, type PortalJson } from '../../../../bside/src/lib/portal.ts';
+import { digestsFor, statsHrefFor, type PortalJson } from '../../../../bside/src/lib/portal.ts';
 
 const rm = {
 	archive: [
@@ -8,7 +8,7 @@ const rm = {
 	]
 };
 const portal = (): PortalJson => ({
-	version: 1, generatedAt: 'x', seasonFeedUrl: null, seasonHubUrl: null,
+	version: 1, generatedAt: 'x', seasonFeedUrl: null, seasonHubUrl: null, stats: null,
 	digests: [{ roundId: 9, n: 3, season: 2, theme: 'Portal3', date: 'd', winnerSong: 'w', winnerArtist: 'a', submitter: 's', votes: 1, hue: 'h', digestUrl: 'https://x.example/d2/z', digestKind: 'v2' }]
 });
 
@@ -30,5 +30,27 @@ describe('digestsFor', () => {
 		expect(out.every((d) => d.roundId === null)).toBe(true);
 		expect(out[0].digestUrl).toBe('https://x.example/d/1');
 		expect(out[1].digestUrl).toBeNull();
+	});
+});
+
+describe('statsHrefFor', () => {
+	it('is relative from every SPA path', () => {
+		expect(statsHrefFor('/s/', 's')).toBe('stats/');
+		expect(statsHrefFor('/s', 's')).toBe('s/stats/');
+		expect(statsHrefFor('/s/archive', 's')).toBe('stats/');
+		expect(statsHrefFor('/s/season', 's')).toBe('stats/');
+		expect(statsHrefFor('/s/p/12', 's')).toBe('../stats/');
+		expect(statsHrefFor('/s/p/12/', 's')).toBe('../../stats/');
+	});
+	it('never returns a root-relative href', () => {
+		for (const p of ['/s', '/s/', '/s/archive', '/s/p/1']) expect(statsHrefFor(p, 's').startsWith('/')).toBe(false);
+	});
+});
+
+describe('PortalJson.stats', () => {
+	it('is part of the mirror type', () => {
+		const p: PortalJson = { ...portal(), stats: { updatedAt: 'x', current: 2, seasons: [1, 2] } };
+		expect(p.stats?.seasons).toEqual([1, 2]);
+		expect({ ...portal(), stats: null }.stats).toBeNull();
 	});
 });

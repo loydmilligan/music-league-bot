@@ -10,6 +10,7 @@ export interface PortalJson {
 	version: 1; generatedAt: string;
 	seasonFeedUrl: string | null; seasonHubUrl: string | null;
 	digests: PortalDigest[];
+	stats: { updatedAt: string; current: number; seasons: number[] } | null;
 }
 export type PortalDigestView = Omit<PortalDigest, 'roundId' | 'digestKind'> & {
 	roundId: number | null;
@@ -38,4 +39,16 @@ export function digestsFor(
 		winnerSong: a.winnerSong, winnerArtist: a.winnerArtist, submitter: a.submitter,
 		votes: a.votes, hue: a.hue, digestUrl: a.digestUrl ?? null, digestKind: null
 	}));
+}
+
+// Relative href from the current SPA path to the static stats pages at /<slug>/stats/.
+// Browsers resolve relative URLs against the path's directory, so '/s' (no trailing
+// slash) resolves against '/' and needs the slug segment; deeper paths climb back out.
+export function statsHrefFor(pathname: string, slug: string): string {
+	const segs = pathname.split('/').filter(Boolean);
+	if (segs[0] !== slug) return `${slug}/stats/`;
+	const endsWithSlash = pathname.endsWith('/');
+	if (segs.length === 1 && !endsWithSlash) return `${slug}/stats/`;
+	const dirDepth = (endsWithSlash ? segs.length : segs.length - 1) - 1;
+	return '../'.repeat(dirDepth) + 'stats/';
 }
