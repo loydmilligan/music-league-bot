@@ -14,7 +14,7 @@
 		<div class="pn-tabs">
 			<a href={nav.homeHref} data-sveltekit-reload>Home</a>
 			<a href={nav.digestsHref} data-sveltekit-reload>Digests</a>
-			<a class="active" href="./" aria-current="page" data-sveltekit-reload>Stats</a>
+			<a class="active" href={nav.statsHref} aria-current="page" data-sveltekit-reload>Stats</a>
 			<a href={nav.seasonHref} data-sveltekit-reload>Season</a>
 		</div>
 	</div>

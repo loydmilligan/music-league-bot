@@ -4,6 +4,7 @@ describe('buildStatsNav', () => {
 	it('depth 2 (/stats/) uses ../ and season links relative to stats/', () => {
 		const n = buildStatsNav({ leagueName: 'Boarz', depth: 2, seasons: [1, 2], currentSeason: 2, selectedSeason: 2 });
 		expect([n.homeHref, n.digestsHref, n.seasonHref]).toEqual(['../', '../archive', '../season']);
+		expect(n.statsHref).toBe('./');
 		expect(n.seasons).toEqual([
 			{ number: 2, href: './', current: true, selected: true },
 			{ number: 1, href: 's1/', current: false, selected: false }
@@ -12,6 +13,7 @@ describe('buildStatsNav', () => {
 	it('depth 3 (/stats/s1/) climbs two levels', () => {
 		const n = buildStatsNav({ leagueName: 'Boarz', depth: 3, seasons: [1, 2], currentSeason: 2, selectedSeason: 1 });
 		expect([n.homeHref, n.digestsHref, n.seasonHref]).toEqual(['../../', '../../archive', '../../season']);
+		expect(n.statsHref).toBe('../');
 		expect(n.seasons).toEqual([
 			{ number: 2, href: '../', current: true, selected: false },
 			{ number: 1, href: '../s1/', current: false, selected: true }

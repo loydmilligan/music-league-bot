@@ -40,6 +40,8 @@ describe('PortalStatsNav', () => {
 		expect(body).not.toContain('href="/');
 		expect(body).toContain('data-sveltekit-reload');
 		expect(body).toContain('href="../../archive"');
+		expect(body).toMatch(/href="\.\.\/"[^>]*>Stats</);
+		expect(body).toContain('href="../s1/"');
 	});
 });
 

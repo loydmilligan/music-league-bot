@@ -3,6 +3,7 @@ export interface StatsNav {
 	homeHref: string;
 	digestsHref: string;
 	seasonHref: string;
+	statsHref: string;
 	seasons: { number: number; href: string; current: boolean; selected: boolean }[];
 }
 
@@ -21,6 +22,7 @@ export function buildStatsNav(o: {
 		homeHref: up,
 		digestsHref: up + 'archive',
 		seasonHref: up + 'season',
+		statsHref: o.depth === 2 ? './' : '../',
 		seasons: [...o.seasons]
 			.sort((a, b) => b - a)
 			.map((n) => ({
