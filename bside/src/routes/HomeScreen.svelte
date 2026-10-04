@@ -9,7 +9,8 @@
 	interface Props { readModel: ReadModel; nav: Nav; portal: PortalJson | null; }
 	let { readModel, nav, portal }: Props = $props();
 
-	const latestDigestUrl = $derived(digestsFor(readModel, portal).find((d) => d.digestUrl)?.digestUrl ?? null);
+	const digests = $derived(digestsFor(readModel, portal));
+	const latestDigestUrl = $derived(digests.find((d) => d.digestUrl)?.digestUrl ?? null);
 
 	const league = $derived(readModel.league);
 	const latestRound = $derived(readModel.archive[0] ?? null);
@@ -210,16 +211,19 @@
 					<span class="bs-winner-medal" style="color:var(--amber)">{@html icons.trophy}</span>
 				</div>
 			</div>
-			{#if latestDigestUrl}
-				<a class="bs-share-btn" href={latestDigestUrl}
-					style="align-self:stretch; justify-content:center; background:var(--mash-pulp); border-color:var(--mash-pulp); color:#fff; text-decoration:none; font-weight:700">
-					Read the latest digest &rarr;
-				</a>
-			{/if}
 			<button class="bs-share-btn" onclick={nav.goArchive}
 				style="align-self:stretch; justify-content:center">
-				All digests — {digestsFor(readModel, portal).length} rounds &nbsp;{@html icons.chevR}
+				All digests — {digests.length} rounds &nbsp;{@html icons.chevR}
 			</button>
+		</section>
+	{/if}
+
+	{#if latestDigestUrl}
+		<section class="bs-sec">
+			<a class="bs-share-btn" href={latestDigestUrl}
+				style="align-self:stretch; justify-content:center; background:var(--mash-pulp); border-color:var(--mash-pulp); color:#fff; text-decoration:none; font-weight:700">
+				Read the latest digest &rarr;
+			</a>
 		</section>
 	{/if}
 

@@ -58,6 +58,8 @@
 				<span>Season details live on the league hub.</span>
 				<strong>Open the season hub →</strong>
 			</a>
+		{:else}
+			<div class="season-status">Season info isn't available right now.</div>
 		{/if}
 	{:else}
 		<header class="bs-hero season-hero">
