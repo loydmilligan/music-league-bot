@@ -33,14 +33,24 @@
 		return `${max > 0 ? Math.max(4, (votes / max) * 100) : 0}%`;
 	}
 
-	onMount(() => {
-		const url = safeHttps(portal?.seasonFeedUrl);
-		if (!url) { loading = false; return; }
-		fetch(url, { credentials: 'omit', signal: AbortSignal.timeout(8000) })
-			.then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<unknown>; })
-			.then((raw) => { feed = normalizeSeasonFeed(raw); })
-			.catch(() => { feed = null; })
-			.finally(() => { loading = false; });
+	onMount(async () => {
+		try {
+			const url = safeHttps(portal?.seasonFeedUrl);
+			if (!url) return;
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), 8000);
+			try {
+				const r = await fetch(url, { credentials: 'omit', signal: controller.signal });
+				if (!r.ok) throw new Error(`HTTP ${r.status}`);
+				feed = normalizeSeasonFeed((await r.json()) as unknown);
+			} finally {
+				clearTimeout(timer);
+			}
+		} catch {
+			feed = null;
+		} finally {
+			loading = false;
+		}
 	});
 </script>
 
@@ -173,7 +183,7 @@
 	.season-card { display: flex; flex-direction: column; gap: 11px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-5); background: var(--ink-2); }
 	.season-card.teaser { border-style: dashed; background: var(--ink-1); }
 	.season-card h3 { margin: 0; color: var(--fg); font-family: var(--font-display); font-size: 18px; line-height: 1.18; }
-	.season-card p { margin: 0; color: var(--fg-muted); font-size: 13px; line-height: 1.55; }
+	.season-card p { margin: 0; color: var(--fg-muted); font-size: 13px; line-height: 1.55; white-space: pre-line; }
 	.season-kicker { color: var(--mash-pulp); font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 	.round-head { display: flex; align-items: center; gap: 12px; }
 	.round-number { display: grid; place-items: center; width: 39px; height: 39px; flex: 0 0 auto; border-radius: 12px; background: var(--ink-3); color: var(--fg); font-family: var(--font-display); font-size: 20px; font-weight: 800; }

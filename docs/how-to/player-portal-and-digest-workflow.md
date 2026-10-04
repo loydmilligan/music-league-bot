@@ -16,7 +16,7 @@ Each league already had a "b-side" page at `https://digest.mattmariani.com/<leag
 | Tab | What players see |
 |---|---|
 | **Home** | Hero, KPIs, superlatives, members (as before) **+ a "Read the latest digest →" button** that opens the newest digest. |
-| **Digests** | Every completed round, every season, newest first. Each card opens that round's digest (2.0 if finalized, otherwise the old 1.0 share). Rounds with no digest say "No digest". Updates within seconds of a 2.0 Finalize — no "Update" run needed. |
+| **Digests** | Every completed round, every season, newest first. Each card opens that round's digest (2.0 if finalized, otherwise the old 1.0 share). Rounds with no digest say "No digest". Updates within seconds of a 2.0 Finalize (for leagues that have a portal page) — no "Update" run needed. |
 | **Season** | Live from the survey site: the season lineup (revealed themes with comment rules + credits; hidden rounds as teaser cards with "🔒 Revealed <date>"), open theme polls with a **Vote →** button, closed poll results, and **Add themes** when the survey is open. Anything that needs a login hands off to `mlsurvey.mattmariani.com`. If the survey site is down, it shows an "Open the season hub →" link instead. |
 | Player profiles | Unchanged (now with the same nav). |
 
@@ -41,7 +41,9 @@ admin app's address (`mlb13…`) anywhere.
 - Each league folder on the digest host gets a small `portal.json` (round list + digest links +
   season URLs), rebuilt on 2.0 Finalize, b-side Publish/Update, and Season-settings Save.
 - Every 2.0 digest and every `portal.json` passes a leak check before it's written: if the admin
-  address or any app-only link would appear, the publish is blocked with the offending snippet.
+  address or any app-only link would appear in a 2.0 digest, that digest's publish is blocked with
+  the offending snippet. For `portal.json`, a leak only skips updating the league's Digests list;
+  the digest itself is still published, with a warning.
 
 ---
 
