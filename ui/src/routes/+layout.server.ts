@@ -20,7 +20,11 @@ export interface LayoutData {
   contentPendingCount: number;
 }
 
-export const load: LayoutServerLoad = async (): Promise<LayoutData> => {
+// Share-mode pages (published digests, portal stats) are inlined to the public;
+// the bare share layout reads only `page.data.share` (from the page's own load),
+// so no admin data may be returned for them.
+export const load: LayoutServerLoad = async ({ url }): Promise<LayoutData | Record<string, never>> => {
+  if (url.searchParams.get('share') === '1' || url.pathname.startsWith('/portal-stats/')) return {};
   const db = getDb();
   const dataDir = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
   return {
