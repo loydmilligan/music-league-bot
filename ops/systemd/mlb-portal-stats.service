@@ -1,0 +1,9 @@
+[Unit]
+Description=Republish player-portal stats pages for every league (static, leak-gated)
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -fsS -m 1200 -X POST http://localhost:3002/api/portal/stats/publish-all
+StandardOutput=journal
+StandardError=journal

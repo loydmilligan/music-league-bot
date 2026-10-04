@@ -13,6 +13,7 @@
 #   /<leagueSlug>/p/<id>     → SPA fallback to /<leagueSlug>/index.html
 #   /<leagueSlug>/archive    → SPA fallback to /<leagueSlug>/index.html
 #   /<leagueSlug>/archive/<roundId> → SPA fallback (SPA redirects to /d/<digestSlug>)
+#   /<leagueSlug>/stats/[s<N>/]  — portal stats pages (static; own block so _app/ is served)
 #
 #   /api/p/*                 — the ONLY dynamic route: playlist writes, proxied
 #                              to the bot-ui container (see below).
@@ -137,6 +138,21 @@
 	# The frontend `shell` task copies its Vite build output here.
 	handle /_bside/* {
 		file_server
+	}
+
+	# ── Portal stats pages (player portal piece 2) ─────────────────────────
+	# Static leak-gated copies written by bot-ui's stats publisher into
+	# /<slug>/stats/ and /<slug>/stats/s<N>/. They carry a SvelteKit `_app/`
+	# folder, which the @league block's `hide _*` would 404 — so they get their
+	# own block that hides only dot-dirs (.stats.tmp / .s<N>.old scratch).
+	@portalstats path_regexp portalstats ^/[A-Za-z0-9_-]{14,}/stats(/.*)?$
+	handle @portalstats {
+		header X-Robots-Tag "noindex, nofollow"
+		header Cache-Control "public, max-age=300"
+		try_files {path} {path}/index.html =404
+		file_server {
+			hide .*
+		}
 	}
 
 	# ── B-side league routes (SPA, slug = first URL segment) ───────────────
