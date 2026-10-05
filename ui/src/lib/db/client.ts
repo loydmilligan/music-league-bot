@@ -384,6 +384,19 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (roundsCols4.length && !roundsCols4.some(c => c.name === 'edited_fields')) {
 		db.exec("ALTER TABLE rounds ADD COLUMN edited_fields TEXT NOT NULL DEFAULT '[]'");
 	}
+	// Survey round sync: rounds/seasons authored in the mlsurvey admin carry
+	// managed_by='survey'; those fields are read-only in the bot and the export
+	// importer won't overwrite their name/description.
+	const surveyRoundCols = db.prepare("PRAGMA table_info(rounds)").all() as { name: string }[];
+	if (surveyRoundCols.length) {
+		for (const col of ['managed_by', 'comment_level', 'comment_visibility', 'comment_prompt']) {
+			if (!surveyRoundCols.some(c => c.name === col)) db.exec(`ALTER TABLE rounds ADD COLUMN ${col} TEXT`);
+		}
+	}
+	const surveySeasonCols = db.prepare("PRAGMA table_info(seasons)").all() as { name: string }[];
+	if (surveySeasonCols.length && !surveySeasonCols.some(c => c.name === 'managed_by')) {
+		db.exec("ALTER TABLE seasons ADD COLUMN managed_by TEXT");
+	}
 	// sprint-28 player dossier: 1:1 profile row per player (notes, tags, AI fingerprint).
 	// Manual fields (notes/tags) and AI fields (fingerprint_*) are separate columns so
 	// regenerating a fingerprint never overwrites owner-authored content.

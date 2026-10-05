@@ -31,7 +31,7 @@ export function getLeagueBySlug(db: Database.Database, slug: string): League | n
 export function getSeasonsForLeague(db: Database.Database, leagueId: number): Season[] {
   return (db.prepare('SELECT * FROM seasons WHERE league_id=? ORDER BY season_number').all(leagueId) as any[])
     .map(r => ({ id: r.id, leagueId: r.league_id, seasonNumber: r.season_number, status: r.status,
-      source: r.source, sourceCompetitionId: r.source_competition_id }));
+      source: r.source, sourceCompetitionId: r.source_competition_id, managedBy: r.managed_by ?? null }));
 }
 
 export function getActiveSeasonsWithLeague(db: Database.Database): Array<Season & { league: League }> {

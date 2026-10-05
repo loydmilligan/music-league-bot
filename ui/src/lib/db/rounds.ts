@@ -6,7 +6,9 @@ function baseRow(r: any): Omit<Round, 'phase'> {
   return { id: r.id, seasonId: r.season_id, mlRoundId: r.ml_round_id, name: r.name,
     description: r.description, spotifyPlaylistUrl: r.spotify_playlist_url,
     submissionDeadline: r.submission_deadline, votingDeadline: r.voting_deadline, createdAt: r.created_at,
-    tag: r.tag ?? null, themeSubmittedBy: r.theme_submitted_by ?? null, roundNumber: r.round_number ?? null };
+    tag: r.tag ?? null, themeSubmittedBy: r.theme_submitted_by ?? null, roundNumber: r.round_number ?? null,
+    managedBy: r.managed_by ?? null, commentLevel: r.comment_level ?? null,
+    commentVisibility: r.comment_visibility ?? null, commentPrompt: r.comment_prompt ?? null };
 }
 
 /**
@@ -39,11 +41,12 @@ export function upsertRound(db: Database.Database, seasonId: number, r: {
   // Fields that were manually edited via patchRound/updateRound are protected:
   // edited_fields is a JSON array of field names (e.g. '["name","description"]').
   // instr checks membership without needing json_each — field names are unique substrings.
+  // Survey-managed rounds (managed_by set) keep the survey/ML name+description.
   return (db.prepare(`INSERT INTO rounds (season_id,ml_round_id,name,description,spotify_playlist_url,created_at)
     VALUES (@seasonId,@mlRoundId,@name,@description,@spotifyPlaylistUrl,@createdAt)
     ON CONFLICT(ml_round_id) DO UPDATE SET
-      name=CASE WHEN instr(rounds.edited_fields,'"name"')>0 THEN rounds.name ELSE excluded.name END,
-      description=CASE WHEN instr(rounds.edited_fields,'"description"')>0 THEN rounds.description ELSE excluded.description END,
+      name=CASE WHEN rounds.managed_by IS NOT NULL OR instr(rounds.edited_fields,'"name"')>0 THEN rounds.name ELSE excluded.name END,
+      description=CASE WHEN rounds.managed_by IS NOT NULL OR instr(rounds.edited_fields,'"description"')>0 THEN rounds.description ELSE excluded.description END,
       spotify_playlist_url=CASE WHEN instr(rounds.edited_fields,'"spotify_playlist_url"')>0 THEN rounds.spotify_playlist_url ELSE excluded.spotify_playlist_url END
     RETURNING id`).get({ seasonId, ...r }) as { id: number }).id;
 }

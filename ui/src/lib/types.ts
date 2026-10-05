@@ -1,11 +1,12 @@
 export interface League { id: number; slug: string; name: string; excludeFromCombined: boolean; notes: string | null; }
-export interface Season { id: number; leagueId: number; seasonNumber: number; status: 'active' | 'complete'; source?: string; sourceCompetitionId?: string | null; }
+export interface Season { id: number; leagueId: number; seasonNumber: number; status: 'active' | 'complete'; source?: string; sourceCompetitionId?: string | null; managedBy?: string | null; }
 export type RoundPhase = 'upcoming' | 'submission' | 'voting' | 'archive';
 export interface Round {
   id: number; seasonId: number; mlRoundId: string; name: string; description: string | null;
   spotifyPlaylistUrl: string | null; submissionDeadline: string | null; votingDeadline: string | null; createdAt: string;
   phase?: RoundPhase;
   tag?: string | null; themeSubmittedBy?: number | null; roundNumber?: number | null;
+  managedBy?: string | null; commentLevel?: string | null; commentVisibility?: string | null; commentPrompt?: string | null;
 }
 export interface Competitor { id: number; mlCompetitorId: string; name: string; }
 export interface MlSubmission {
