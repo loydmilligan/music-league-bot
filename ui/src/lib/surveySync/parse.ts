@@ -22,6 +22,14 @@ export const LEAGUE_DEFS: SurveyLeagueDef[] = [
   { slug: 'second-best', prefix: 'second-best-', submissions: 'second-best-season-3-submissions.json' },
 ];
 
+// Same pattern as the survey's season-hub-core.js ADMIN_LINK: survey admin URLs/paths
+// never reach player-facing text.
+const ADMIN_LINK = /(?:https?:\/\/\S*|\S*)\/admin(?:[/?#]\S*)?(?=\s|$)/gi;
+export function withoutAdminLinks(text: string): string {
+  const stripped = text.replace(ADMIN_LINK, '');
+  return stripped === text ? text : stripped.replace(/[ \t]{2,}/g, ' ').trim();
+}
+
 export const HEARTBEAT_STALE_MS = 24 * 3_600_000;
 
 export interface SurveyRound {
@@ -132,7 +140,7 @@ export function readSurveyLeague(dir: string, def: SurveyLeagueDef, nowMs: numbe
         comment = {
           level: commentLevel(req),
           visibility: req?.visibility ?? null,
-          prompt: String(req?.prompt ?? '').trim() || null,
+          prompt: withoutAdminLinks(String(req?.prompt ?? '')).trim() || null,
         };
       }
       return {

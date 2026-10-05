@@ -73,3 +73,11 @@ it('missing files produce an error, not a throw', () => {
   const res = readSurveyLeague(mkdtempSync(join(tmpdir(), 'empty-')), SB, NOW);
   expect(res.ok).toBe(false);
 });
+
+it('strips survey admin links from text it reads from the survey', async () => {
+  const { withoutAdminLinks } = await import('./parse.js');
+  expect(withoutAdminLinks('See https://mlsurvey.mattmariani.com/boarz/season-2/admin/ for rules'))
+    .toBe('See for rules');
+  expect(withoutAdminLinks('Link the /second-best/season-3/admin?x=1 page')).toBe('Link the page');
+  expect(withoutAdminLinks('Post a YouTube link')).toBe('Post a YouTube link');
+});
