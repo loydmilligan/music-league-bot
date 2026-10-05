@@ -45,6 +45,8 @@ services:
       # threw "failed to parse multipart form data"). 6M = 5MB cap + multipart overhead.
       - BODY_SIZE_LIMIT=6M
       - BOARZ_REVIEW_DIR=/app/boarz-season-1-cinematic
+      # Survey round sync: read-only view of the mlsurvey admin's data files.
+      - SURVEY_DATA_DIR=/app/survey-data
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
       # on localhost:7679) via host.docker.internal.
@@ -58,6 +60,9 @@ services:
       - ./digests:/app/digests
       # Read-only source for the unlisted Boarz concept/media review page.
       - ../boarz-season-1-cinematic:/app/boarz-season-1-cinematic
+      # mlsurvey admin data (themes, rules, schedule, ML snapshot) — read-only;
+      # the bot never writes it. See docs/superpowers/specs/2026-10-05-survey-round-sync-design.md.
+      - ../boarz-season-2-survey/data:/app/survey-data:ro
       # sintel audio analysis — host project + uv binary are available in the
       # runtime image; this mount gives the container the source + pyproject.toml.
       - /home/loydmilligan/Projects/sintel:/home/loydmilligan/Projects/sintel
