@@ -41,6 +41,9 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!seasonRow) throw error(404, `season not found: ${league} / season ${season}`);
 
   const rounds = getRoundsForSeason(db, seasonRow.id); // ordered by created_at
+  if (rounds.some(r => r.managedBy)) {
+    throw error(409, 'deadlines for this season are managed in the survey admin');
+  }
   if (rounds.length === 0) {
     return json({ updated: 0, rounds: [] });
   }

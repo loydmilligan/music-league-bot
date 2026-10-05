@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
-import { getRoundById, patchRound, updateRound, type RoundPatch } from '$lib/db/rounds.js';
+import { getRoundById, patchRound, updateRound, surveyLockedFieldsIn, type RoundPatch } from '$lib/db/rounds.js';
 import { getRoundPhase } from '$lib/lifecycle.js';
 import { ingestPlaylist } from '$lib/import/playlistIngest.js';
 import {
@@ -47,6 +47,11 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   if (!existing) throw error(404, `round not found: ${roundId}`);
 
   const body = (await request.json().catch(() => ({}))) as Partial<PatchBody>;
+
+  const locked = surveyLockedFieldsIn(existing, body as Record<string, unknown>);
+  if (locked.length) {
+    throw error(409, `managed in the survey admin: ${locked.join(', ')}`);
+  }
 
   const patch: RoundPatch = {};
 

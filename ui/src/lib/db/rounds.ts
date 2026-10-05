@@ -336,3 +336,14 @@ export function endVotingPhase(
   ).get(cur.season_id, id) as { submission_deadline: string | null } | undefined;
   return { nextSubmissionDeadline: next?.submission_deadline ?? null };
 }
+
+// Fields the mlsurvey admin owns on a survey-managed round (PATCH body keys).
+// Tag, playlist_url and video_playlist_config stay editable in the bot.
+export const SURVEY_LOCKED_PATCH_FIELDS = [
+  'name', 'theme', 'submission_deadline', 'voting_deadline', 'round_number', 'theme_submitted_by',
+] as const;
+
+export function surveyLockedFieldsIn(round: Pick<Round, 'managedBy'>, body: Record<string, unknown>): string[] {
+  if (!round.managedBy) return [];
+  return SURVEY_LOCKED_PATCH_FIELDS.filter(f => body[f] !== undefined);
+}

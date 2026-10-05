@@ -1,7 +1,8 @@
 import type { PageServerLoad, Actions } from './$types.js';
 import { getDb } from '$lib/db/client.js';
 import { getAllLeagues, getSeasonsForLeague, getActiveSeasonsWithLeague } from '$lib/db/leagues.js';
-import { getRoundsForSeason, updateDeadlines } from '$lib/db/rounds.js';
+import { getRoundsForSeason, getRoundById, updateDeadlines } from '$lib/db/rounds.js';
+import { fail } from '@sveltejs/kit';
 import {
   getVideoPlaylistDefaults,
   resolveVideoPlaylistConfig,
@@ -192,6 +193,7 @@ export const actions: Actions = {
     const sub  = subRaw  === '' ? undefined : subRaw;
     const vote = voteRaw === '' ? undefined : voteRaw;
     if (sub === undefined && vote === undefined) return { success: true, noop: true };
+    if (getRoundById(db, roundId)?.managedBy) return fail(409, { error: 'Deadlines for this round are managed in the survey admin.' });
     updateDeadlines(db, roundId, sub, vote);
     return { success: true };
   },

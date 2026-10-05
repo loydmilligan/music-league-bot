@@ -52,3 +52,11 @@ it('export importer still updates unmanaged rounds', () => {
   });
   expect(getRoundById(db, id)!.name).toBe('New');
 });
+
+it('locks survey-owned PATCH fields on managed rounds only', async () => {
+  const { surveyLockedFieldsIn } = await import('./rounds.js');
+  expect(surveyLockedFieldsIn({ managedBy: 'survey' }, { name: 'x', tag: '90s', theme_submitted_by: 3 }))
+    .toEqual(['name', 'theme_submitted_by']);
+  expect(surveyLockedFieldsIn({ managedBy: 'survey' }, { tag: '90s', video_playlist_config: null })).toEqual([]);
+  expect(surveyLockedFieldsIn({ managedBy: null }, { name: 'x' })).toEqual([]);
+});
