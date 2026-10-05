@@ -94,3 +94,12 @@ it('adopts an existing hand-made season without changing its status', () => {
   expect(res.seasonId).toBe(sid);
   expect(db.prepare('SELECT status, managed_by FROM seasons WHERE id=?').get(sid)).toEqual({ status: 'complete', managed_by: 'survey' });
 });
+
+it('runSurveySync records per-league status, including a missing league', async () => {
+  const { runSurveySync, getSurveySyncStatus } = await import('./runner.js');
+  const { db } = setup();
+  const status = runSurveySync(db, writeSurveyDir(), NOW);
+  expect(status['second-best']).toMatchObject({ ok: true, seasonNumber: 3, rounds: 4, inserted: 4 });
+  expect(status['boarz-ii-men'].ok).toBe(false);
+  expect(getSurveySyncStatus(db)).toEqual(status);
+});

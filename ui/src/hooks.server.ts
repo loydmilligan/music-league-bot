@@ -6,6 +6,7 @@ import { startQueueWorker } from '$lib/queueWorker.js';
 import { startDigestRunner } from '$lib/digest/runnerLoop.js';
 import { startMlAuthHeartbeat } from '$lib/mlAuth.js';
 import { startRolloutAppExecutor } from '$lib/rollout/appExecutor.js';
+import { startSurveySync } from '$lib/surveySync/runner.js';
 
 process.env.DATA_DIR ??= resolve(process.cwd(), '../data');
 const DATA_DIR = process.env.DATA_DIR;
@@ -26,6 +27,7 @@ if (!STATS_ONLY) {
 	startDigestRunner();
 	startRolloutAppExecutor();
 	startMlAuthHeartbeat();
+	startSurveySync();
 }
 
 export const handle: Handle = async ({ event, resolve }) => {

@@ -452,6 +452,22 @@
   // ---- rounds section ------------------------------------------------------
   let roundsExpanded = $state<Record<number, boolean>>({});
 
+  // Survey-managed rounds/seasons: authored in the mlsurvey admin, read-only here.
+  let surveySyncing = $state(false);
+  function playerName(id: number | null | undefined): string {
+    if (id == null) return '—';
+    return data.players.find(p => p.id === id)?.name ?? `#${id}`;
+  }
+  function commentRuleText(r: { commentLevel?: string | null; commentVisibility?: string | null; commentPrompt?: string | null }): string {
+    if (!r.commentLevel || r.commentLevel === 'none') return '';
+    const vis = r.commentVisibility === 'after-voting' ? 'hidden until voting ends'
+      : r.commentVisibility === 'during-voting' ? 'visible during voting' : '';
+    return `Comment ${r.commentLevel}${vis ? ` (${vis})` : ''}${r.commentPrompt ? `: ${r.commentPrompt}` : ''}`;
+  }
+  function surveyStatusFor(slug: string) {
+    return data.surveySync.status[slug] ?? null;
+  }
+
   type AddRoundForm = { name: string; subDeadline: string; voteDeadline: string; setActive: boolean; saving: boolean };
   let addRoundForms = $state<Record<number, AddRoundForm>>({});
 
@@ -747,6 +763,28 @@
 <!-- ======== LEAGUES & SEASONS ======== -->
 <CollapsiblePanel id="mls-leagues-seasons" title="Leagues & Seasons">
   <div class="flex flex-col gap-6">
+    <form
+      method="POST"
+      action="?/surveySync"
+      use:enhance={() => {
+        surveySyncing = true;
+        return async ({ update }) => { await update(); surveySyncing = false; };
+      }}
+      class="flex flex-wrap items-center gap-3 rounded-lg border border-border-muted bg-bg-elevated/50 p-3 text-sm"
+    >
+      <span class="text-fg flex-1 min-w-0">
+        Seasons and rounds marked <span class="font-mono text-[10px] tracking-widest text-accent">SURVEY ADMIN</span>
+        come from the mlsurvey admin (themes, rules, deadlines, credit) and are read-only here.
+        {#if !data.surveySync.enabled}<span class="text-warn">Sync is off: SURVEY_DATA_DIR is not set.</span>{/if}
+      </span>
+      <button
+        type="submit"
+        disabled={!data.surveySync.enabled || surveySyncing}
+        class="font-mono text-[10px] tracking-widest uppercase border border-border text-fg-muted hover:text-fg hover:border-accent px-3 py-1 rounded-md transition-colors disabled:opacity-50"
+      >
+        {surveySyncing ? 'Syncing…' : 'Sync now'}
+      </button>
+    </form>
     {#each data.leagues as league (league.id)}
       <div class="bg-surface border border-border-muted rounded-xl p-5">
         <!-- League header row -->
@@ -829,6 +867,9 @@
                     label={season.status.toUpperCase()}
                     tone={season.status === 'active' ? 'health' : 'muted'}
                   />
+                  {#if season.managedBy === 'survey'}
+                    <StatusChip label="SURVEY ADMIN" tone="accent" />
+                  {/if}
                   <span class="text-fg-dim text-xs flex-1 min-w-0">
                     {season.rounds.length} round{season.rounds.length === 1 ? '' : 's'}
                   </span>
@@ -841,6 +882,20 @@
                     {season.status === 'active' ? 'Mark complete' : 'Reactivate'}
                   </button>
                 </div>
+              {/each}
+            </div>
+          {/if}
+          {#if surveyStatusFor(league.slug)}
+            {@const st = surveyStatusFor(league.slug)!}
+            <div class="mt-2 text-xs {st.ok ? 'text-fg-dim' : 'text-warn'}">
+              Survey sync {new Date(st.at).toLocaleString()}:
+              {#if st.ok}
+                S{st.seasonNumber} · {st.rounds} rounds · ML league <span class="font-mono">{st.mlLeagueId?.slice(0, 8)}</span>
+              {:else}
+                {st.error}
+              {/if}
+              {#each st.warnings as w (w)}
+                <div class="text-warn">⚠ {w}</div>
               {/each}
             </div>
           {/if}
@@ -890,6 +945,9 @@
                     {@const edit = getRoundEdit(round)}
                     <tr class="border-t border-border-muted hover:bg-surface-hover">
                       <td class="px-4 py-1.5">
+                        {#if round.managedBy}
+                          <span class="font-mono text-sm text-fg">{round.roundNumber ?? '—'}</span>
+                        {:else}
                         <input
                           type="number"
                           value={edit.roundNumber}
@@ -904,8 +962,15 @@
                           }}
                           class="w-14 bg-bg-elevated border border-border-muted rounded px-1.5 py-1 text-sm text-fg focus:border-accent focus:outline-none text-center"
                         />
+                        {/if}
                       </td>
                       <td class="px-4 py-1.5">
+                        {#if round.managedBy}
+                          <div class="text-sm text-fg" title="Managed in the survey admin">{round.name}</div>
+                          {#if commentRuleText(round)}
+                            <div class="text-xs text-fg-dim">{commentRuleText(round)}</div>
+                          {/if}
+                        {:else}
                         <input
                           type="text"
                           value={edit.name}
@@ -920,6 +985,7 @@
                           }}
                           class="w-full min-w-[140px] bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                         />
+                        {/if}
                       </td>
                       <td class="px-4 py-1.5 font-mono text-xs text-fg-muted">S{round.seasonNumber}</td>
                       <td class="px-4 py-1.5">
@@ -942,6 +1008,9 @@
                         />
                       </td>
                       <td class="px-4 py-1.5">
+                        {#if round.managedBy}
+                          <span class="text-sm text-fg">{playerName(round.themeSubmittedBy)}</span>
+                        {:else}
                         <select
                           value={edit.submittedBy}
                           onchange={(e) => {
@@ -956,6 +1025,7 @@
                             <option value={p.id}>{p.name}</option>
                           {/each}
                         </select>
+                        {/if}
                         {#if edit.saving}
                           <span class="font-mono text-[9px] text-fg-faint">saving…</span>
                         {/if}
@@ -1010,6 +1080,9 @@
                 <div class="p-4 flex flex-col gap-2">
                   <div class="flex items-center gap-2">
                     <span class="font-mono text-[10px] text-fg-faint w-5">#</span>
+                    {#if round.managedBy}
+                      <span class="font-mono text-sm text-fg w-16">{round.roundNumber ?? '—'}</span>
+                    {:else}
                     <input
                       type="number"
                       value={edit.roundNumber}
@@ -1024,12 +1097,18 @@
                       }}
                       class="w-16 bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                     />
+                    {/if}
                     <StatusChip
                       label={round.phase === 'submission' ? 'OPEN' : round.phase === 'voting' ? 'VOTING' : round.phase === 'archive' ? 'DONE' : 'UPCOMING'}
                       tone={round.phase === 'submission' ? 'health' : round.phase === 'voting' ? 'warn' : 'muted'}
                     />
                     <span class="font-mono text-[10px] text-fg-faint ml-auto">S{round.seasonNumber}</span>
                   </div>
+                  {#if round.managedBy}
+                    <div class="text-sm text-fg">{round.name}</div>
+                    {#if commentRuleText(round)}<div class="text-xs text-fg-dim">{commentRuleText(round)}</div>{/if}
+                    <div class="text-xs text-fg-dim">Submitted by {playerName(round.themeSubmittedBy)}</div>
+                  {:else}
                   <input
                     type="text"
                     value={edit.name}
@@ -1045,6 +1124,7 @@
                     }}
                     class="w-full bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                   />
+                  {/if}
                   <div class="flex gap-2">
                     <input
                       type="text"
@@ -1057,6 +1137,7 @@
                       onblur={() => saveRoundField(round.id, 'tag', edit.tag.trim() || null)}
                       class="flex-1 bg-bg-elevated border border-border-muted rounded px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                     />
+                    {#if !round.managedBy}
                     <select
                       value={edit.submittedBy}
                       onchange={(e) => {
@@ -1071,6 +1152,7 @@
                         <option value={p.id}>{p.name}</option>
                       {/each}
                     </select>
+                    {/if}
                   </div>
                   <div class="pt-2 border-t border-border-muted">
                     <button
@@ -1865,6 +1947,7 @@
                 id="sub-{r.id}"
                 type="datetime-local"
                 name="submissionDeadline"
+                disabled={!!r.managedBy}
                 value={r.submissionDeadline?.slice(0, 16) ?? ''}
                 class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
               />
@@ -1875,16 +1958,21 @@
                 id="vote-{r.id}"
                 type="datetime-local"
                 name="votingDeadline"
+                disabled={!!r.managedBy}
                 value={r.votingDeadline?.slice(0, 16) ?? ''}
                 class="bg-bg border border-border-muted rounded-md px-2 py-1 text-xs text-fg font-mono focus:border-accent focus:outline-none transition-colors"
               />
             </div>
+            {#if r.managedBy}
+              <span class="ml-auto font-mono text-[10px] tracking-widest uppercase text-fg-faint">Survey admin</span>
+            {:else}
             <button
               type="submit"
               class="ml-auto border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-[10px] tracking-widest uppercase px-3 py-1 rounded-md transition-colors"
             >
               Save
             </button>
+            {/if}
           </form>
         {/each}
       </div>

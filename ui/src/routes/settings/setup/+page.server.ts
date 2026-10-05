@@ -3,6 +3,7 @@ import { getDb } from '$lib/db/client.js';
 import { getAllLeagues, getSeasonsForLeague, getActiveSeasonsWithLeague } from '$lib/db/leagues.js';
 import { getRoundsForSeason, getRoundById, updateDeadlines } from '$lib/db/rounds.js';
 import { fail } from '@sveltejs/kit';
+import { runSurveySync, getSurveySyncStatus } from '$lib/surveySync/runner.js';
 import {
   getVideoPlaylistDefaults,
   resolveVideoPlaylistConfig,
@@ -176,10 +177,20 @@ export const load: PageServerLoad = async () => {
     return rounds.map(r => ({ ...r, leagueName: s.league.name, seasonNumber: s.seasonNumber }));
   });
 
-  return { leagues, players, allSeasons, leagueRounds, competitors, allLeagues, activeRounds, videoPlaylistDefaults: videoDefaults };
+  const surveySync = {
+    enabled: Boolean(process.env.SURVEY_DATA_DIR),
+    status: getSurveySyncStatus(db),
+  };
+
+  return { leagues, players, allSeasons, leagueRounds, competitors, allLeagues, activeRounds, videoPlaylistDefaults: videoDefaults, surveySync };
 };
 
 export const actions: Actions = {
+  surveySync: async () => {
+    const dir = process.env.SURVEY_DATA_DIR;
+    if (!dir) return fail(400, { error: 'SURVEY_DATA_DIR is not set on this instance.' });
+    return { success: true, surveySync: runSurveySync(getDb(), dir) };
+  },
   updateDeadline: async ({ request }) => {
     const db = getDb();
     const fd = await request.formData();
