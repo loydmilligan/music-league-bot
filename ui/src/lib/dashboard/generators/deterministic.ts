@@ -11,6 +11,12 @@ export interface MemberStat {
 export type MemberTier = 'full' | 'lite';
 
 export interface KpiItem {
+	/**
+	 * Stable selector for the portal's KPI picker. Optional on purpose: read
+	 * models written before ids existed still validate (KpiItemSchema), and
+	 * the b-side falls back to showing every KPI when ids are absent.
+	 */
+	id?: string;
 	value: string;
 	label: string;
 	sub: string;
@@ -296,17 +302,30 @@ export function buildDeterministicSlices(
 function buildKpis(
 	db: Database.Database,
 	leagueId: number,
-	totalRounds: number,
+	_totalRounds: number,
 	subRows: SubPointsRow[],
 	roundMaxPts: Map<number, number>,
 ): KpiItem[] {
 	const kpis: KpiItem[] = [];
 
-	// Total songs submitted
+	// Total songs submitted. A round counts when it is marked complete OR has votes —
+	// the same rule as the archive (buildReadModel.ts). `totalRounds` alone reads only
+	// the stored rounds.phase, which is NULL for most imported rounds (Boarz S1 showed
+	// "across 0 rounds"). `totalRounds`
+	// is left as-is for the tier cutoff on purpose: fixing it there would re-tier members.
+	const votedRounds = (db
+		.prepare<[number], { n: number }>(
+			`SELECT COUNT(*) AS n FROM rounds r
+       JOIN seasons s ON s.id = r.season_id
+       WHERE s.league_id = ?
+         AND (r.phase = 'complete' OR EXISTS (SELECT 1 FROM votes v WHERE v.round_id = r.id))`,
+		)
+		.get(leagueId)?.n) ?? 0;
 	kpis.push({
+		id: 'songs',
 		value: subRows.length.toLocaleString(),
 		label: 'songs submitted',
-		sub: `across ${totalRounds} round${totalRounds !== 1 ? 's' : ''}`,
+		sub: `across ${votedRounds} round${votedRounds !== 1 ? 's' : ''}`,
 	});
 
 	// Total points awarded
@@ -321,6 +340,7 @@ function buildKpis(
 		.get(leagueId);
 	const totalPoints = ptRow?.totalPoints ?? 0;
 	kpis.push({
+		id: 'points',
 		value: totalPoints.toLocaleString(),
 		label: 'points awarded',
 		sub: 'the group is generous, mostly',
@@ -334,6 +354,7 @@ function buildKpis(
 	}
 	if (winnerIds.size > 0) {
 		kpis.push({
+			id: 'winners',
 			value: String(winnerIds.size),
 			label: 'different round winners',
 			sub: 'the trophy gets around',
@@ -359,6 +380,7 @@ function buildKpis(
 	if (commentRow && commentRow.commentCount >= 3) {
 		const avgWords = Math.round(commentRow.wordSum / commentRow.commentCount);
 		kpis.push({
+			id: 'noteWords',
 			value: String(avgWords),
 			label: 'avg words per submission note',
 			sub: 'the group has feelings',

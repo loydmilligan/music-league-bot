@@ -27,9 +27,9 @@ beforeEach(() => { db = openLeagueDb(':memory:'); seed(); });
 describe('season settings', () => {
 	it('round-trips and clears', () => {
 		setSeasonSettings(db, 1, { feedUrl: 'https://s.example/feed.json', hubUrl: 'https://s.example/hub/' });
-		expect(getSeasonSettings(db, 1)).toEqual({ feedUrl: 'https://s.example/feed.json', hubUrl: 'https://s.example/hub/' });
-		setSeasonSettings(db, 1, { feedUrl: null, hubUrl: null });
-		expect(getSeasonSettings(db, 1)).toEqual({ feedUrl: null, hubUrl: null });
+		expect(getSeasonSettings(db, 1)).toEqual({ feedUrl: 'https://s.example/feed.json', hubUrl: 'https://s.example/hub/', surveyKey: null });
+		setSeasonSettings(db, 1, { feedUrl: null, hubUrl: null, surveyKey: null });
+		expect(getSeasonSettings(db, 1)).toEqual({ feedUrl: null, hubUrl: null, surveyKey: null });
 	});
 	it('rejects non-https urls', () => {
 		expect(() => setSeasonSettings(db, 1, { feedUrl: 'http://s.example/f.json', hubUrl: null })).toThrow(/invalid url/);
@@ -67,7 +67,12 @@ describe('buildPortalJson', () => {
 	});
 	it('carries the season settings', () => {
 		setSeasonSettings(db, 1, { feedUrl: 'https://s.example/feed.json', hubUrl: null });
-		expect(buildPortalJson(db, 1)).toMatchObject({ seasonFeedUrl: 'https://s.example/feed.json', seasonHubUrl: null });
+		expect(buildPortalJson(db, 1)).toMatchObject({ seasonFeedUrl: 'https://s.example/feed.json', seasonHubUrl: null, survey: null });
+	});
+	it('writes survey.apiBase on the digest host from a league/season key', () => {
+		setSeasonSettings(db, 1, { feedUrl: null, hubUrl: null, surveyKey: 'boarz/season-2' });
+		expect(buildPortalJson(db, 1).survey).toEqual({ apiBase: 'https://digest.mattmariani.com/api/survey/boarz/season-2' });
+		expect(() => setSeasonSettings(db, 1, { feedUrl: null, hubUrl: null, surveyKey: 'Nope' })).toThrow(/invalid survey key/);
 	});
 });
 
@@ -98,5 +103,84 @@ describe('writePortalJson', () => {
 		db.prepare(`INSERT INTO settings (key, value) VALUES ('portal_season_hub_url:1', ?)`).run(`https://${internalHost}/x`); // bypass validation
 		await expect(writePortalJson(db, 1, { digestsDir: dir })).rejects.toThrow(/forbidden host leak/);
 		expect(await readdir(dir)).toEqual([]);
+	});
+});
+
+describe('roundLinks', () => {
+	it('assembles per-round links from playlist sources + ML, omitting empty rounds', () => {
+		db.exec(`UPDATE rounds SET round_number = 1 WHERE id = 1`);
+		db.exec(`UPDATE rounds SET round_number = 2, spotify_playlist_url = 'https://open.spotify.com/playlist/abc' WHERE id = 2`);
+		db.exec(`UPDATE rounds SET round_number = 3 WHERE id = 3`);
+		db.exec(`UPDATE seasons SET source_competition_id = 'comp-1' WHERE id = 11`);
+		// Host-side script owns this table (scripts/ytm-drop/run.mjs); the app
+		// never creates it, so portal.json must tolerate its absence.
+		db.exec(`CREATE TABLE ytm_drops (round_id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL, ytm_url TEXT)`);
+		db.prepare(`INSERT INTO ytm_drops (round_id, league_id, ytm_url) VALUES (?, 1, 'https://music.youtube.com/playlist?list=x')`).run(2);
+		db.exec(`CREATE TABLE ytm_video_reviews (round_id INTEGER PRIMARY KEY, league_id INTEGER NOT NULL, video_url TEXT)`);
+		db.prepare(`INSERT INTO ytm_video_reviews (round_id, league_id, video_url) VALUES (?, 1, 'https://www.youtube.com/playlist?list=v')`).run(2);
+
+		const links = buildPortalJson(db, 1).roundLinks;
+		expect(links).toEqual([
+			{ n: 2, spotify: 'https://open.spotify.com/playlist/abc',
+			  ytm: 'https://music.youtube.com/playlist?list=x',
+			  youtube: 'https://www.youtube.com/playlist?list=v',
+			  musicLeague: 'https://app.musicleague.com/l/comp-1/b/' }
+		]);
+	});
+
+	it('skips rounds with no round_number and rounds with no playlist', () => {
+		db.exec(`UPDATE rounds SET round_number = 2 WHERE id = 2`);
+		const links = buildPortalJson(db, 1).roundLinks;
+		// id 3 has a null round_number (survey-less league) AND no playlist.
+		expect(links).toEqual([]);
+	});
+
+	it('does not emit musicLeague for a round whose only pointer is the ML id', () => {
+		db.exec(`UPDATE rounds SET round_number = 2 WHERE id = 2`);
+		db.exec(`UPDATE seasons SET source_competition_id = 'comp-1' WHERE id = 11`);
+		expect(buildPortalJson(db, 1).roundLinks).toEqual([]);
+	});
+
+	it('survives absent host-side tables', () => {
+		expect(() => buildPortalJson(db, 1).roundLinks).not.toThrow();
+	});
+});
+
+describe('portal.json sections', () => {
+	it('carries the display subset of the admin config', () => {
+		const s = buildPortalJson(db, 1).sections;
+		expect(s).toMatchObject({
+			thisWeek: { cards: { latestDigest: true, currentRound: true, openPolls: true, themeSurvey: true }, links: { spotify: true, ytm: true, youtube: true, musicLeague: true } },
+			byNumbers: { kpis: ['songs', 'points', 'winners', 'noteWords'] },
+			family: { excluded: [] },
+			enabled: { byNumbers: true, family: true, moments: true, pulse: true, thisWeek: true, yearbook: true }
+		});
+		const json = JSON.stringify(s);
+		expect(json).not.toContain('prompt');
+		expect(json).not.toContain('runState');
+		expect(json).not.toContain('frequency');
+	});
+
+	it('reflects saved exclusions and card toggles', () => {
+		db.prepare(`INSERT INTO settings (key, value) VALUES ('portal_admin_config:1', ?)`).run(JSON.stringify(
+			{ version: 1, runState: {}, sections: { thisWeek: { enabled: true, frequency: 'on-event', cards: { latestDigest: false, currentRound: true, openPolls: true, themeSurvey: true }, links: { spotify: true, ytm: false, youtube: false, musicLeague: false } }, byNumbers: { enabled: true, frequency: 'daily', kpis: ['songs'] }, pulse: { enabled: true, frequency: 'weekly', prompt: 'SURPRISE PROMPT' }, yearbook: { enabled: false, frequency: 'on-event', season: null }, family: { enabled: true, frequency: 'weekly', players: { m1: false } }, moments: { enabled: true, frequency: 'on-event', prompt: null } } }
+		));
+		const s = buildPortalJson(db, 1).sections!;
+		expect(s).toMatchObject({ thisWeek: { cards: { latestDigest: false } }, byNumbers: { kpis: ['songs'] }, family: { excluded: ['m1'] }, enabled: { yearbook: false } });
+		expect(JSON.stringify(s)).not.toContain('SURPRISE PROMPT');
+	});
+
+	it('a corrupt config row yields defaults, never a throw', () => {
+		db.prepare(`INSERT INTO settings (key, value) VALUES ('portal_admin_config:1', '{not json')`).run();
+		expect(() => buildPortalJson(db, 1)).not.toThrow();
+		expect(buildPortalJson(db, 1).sections?.enabled.byNumbers).toBe(true);
+	});
+});
+
+describe('roundLinks leak guard', () => {
+	it('refuses to write when a playlist url points at a forbidden host', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'portal-roundlinks-'));
+		db.exec(`UPDATE rounds SET round_number = 1, spotify_playlist_url = '${appBaseUrl()}/open/leak' WHERE id = 1`);
+		await expect(writePortalJson(db, 1, { digestsDir: dir })).rejects.toThrow(/forbidden host leak|blocked|leak/i);
 	});
 });

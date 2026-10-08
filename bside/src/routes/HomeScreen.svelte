@@ -2,21 +2,62 @@
 	import Avatar from '../lib/atoms/Avatar.svelte';
 	import { icons } from '../lib/icons.js';
 	import { bsAcc, accentIcon } from '../lib/accents.js';
+	import { onMount } from 'svelte';
 	import PortalNav from '../lib/atoms/PortalNav.svelte';
-	import { digestsFor, type PortalJson } from '../lib/portal.js';
+	import { digestsFor, roundLinksFor, type PortalJson } from '../lib/portal.js';
+	import { currentRound, latestDigest, latestNews, openPolls, sectionsEnabled, upNext } from '../lib/homeCards.js';
+	import { normalizeSeasonFeed, type SeasonFeed } from '../lib/seasonFeed.js';
+	import { getPortalSession } from '../lib/portalSession.js';
+	import type { NewsItem } from '../lib/surveyApi.js';
 	import type { ReadModel, Nav, SharePayload } from '../lib/types.js';
 
 	interface Props { readModel: ReadModel; nav: Nav; portal: PortalJson | null; }
 	let { readModel, nav, portal }: Props = $props();
+	const session = getPortalSession();
 
 	const digests = $derived(digestsFor(readModel, portal));
-	const latestDigestUrl = $derived(digests.find((d) => d.digestUrl)?.digestUrl ?? null);
+	const digestCard = $derived(latestDigest(digests));
+	const latestDigestUrl = $derived(digestCard?.digestUrl ?? null);
+
+	let feed = $state<SeasonFeed | null>(null);
+	let news = $state<NewsItem[] | null>(null);
+	const nextRound = $derived(upNext(feed));
+	const cur = $derived(currentRound(feed));
+	const roundLinks = $derived(cur ? roundLinksFor(portal, cur.round.round) : null);
+	const hasSurvey = $derived(Boolean(feed?.surveyOpen));
+	const polls = $derived(openPolls(feed));
+	const newsCard = $derived(latestNews(news));
+
+	// Section + card gates from portal.json's display config.
+	// Default-on: a missing/stale `sections` block changes nothing.
+	const secThisWeek = $derived(sectionsEnabled(portal, 'thisWeek'));
+	const secByNumbers = $derived(sectionsEnabled(portal, 'byNumbers'));
+	const secPulse = $derived(sectionsEnabled(portal, 'pulse'));
+	const secYearbook = $derived(sectionsEnabled(portal, 'yearbook'));
+	const secFamily = $derived(sectionsEnabled(portal, 'family'));
+	const secMoments = $derived(sectionsEnabled(portal, 'moments'));
+	const cardsCfg = $derived(portal?.sections?.thisWeek?.cards ?? null);
+	const linksCfg = $derived(portal?.sections?.thisWeek?.links ?? null);
+	const showDigestCard = $derived(cardsCfg?.latestDigest ?? true);
+	const showCurCard = $derived(cardsCfg?.currentRound ?? true);
+	const showPollCards = $derived(cardsCfg?.openPolls ?? true);
+	const showSurveyCard = $derived(cardsCfg?.themeSurvey ?? true);
+	const showSpotify = $derived(linksCfg?.spotify ?? true);
+	const showYtm = $derived(linksCfg?.ytm ?? true);
+	const showYoutube = $derived(linksCfg?.youtube ?? true);
+	const showMusicLeague = $derived(linksCfg?.musicLeague ?? true);
+
+	// KPI + member filtering (portal config, present-only so stale files show all).
+	const kpiIds = $derived(portal?.sections?.byNumbers?.kpis ?? null);
+	const kpis = $derived(
+		kpiIds !== null ? readModel.kpis.filter((k) => k.id && kpiIds.includes(k.id)) : readModel.kpis
+	);
+	const excludedMembers = $derived(portal?.sections?.family?.excluded ?? null);
+	const members = $derived(
+		excludedMembers ? readModel.members.filter((m) => !excludedMembers.includes(m.id)) : readModel.members
+	);
 
 	const league = $derived(readModel.league);
-	const latestRound = $derived(readModel.archive[0] ?? null);
-	const latestSubmitter = $derived(
-		latestRound ? (readModel.members.find((m) => m.id === latestRound.submitter) ?? null) : null
-	);
 
 	const momentRows = $derived(readModel.moments ? [
 		{ key: 'mostLoved',    icon: icons.heart, accent: 'moss'  as const, kicker: 'Most loved',    d: readModel.moments.mostLoved },
@@ -49,6 +90,22 @@
 		};
 		nav.openShare(payload);
 	}
+
+	onMount(async () => {
+		const url = portal?.seasonFeedUrl;
+		if (url) {
+			try {
+				const parsed = new URL(url);
+				if (parsed.protocol === 'https:') {
+					const r = await fetch(url, { credentials: 'omit' });
+					if (r.ok) feed = normalizeSeasonFeed(await r.json());
+				}
+			} catch { /* cards stay empty */ }
+		}
+		if (session.api) {
+			try { news = (await session.api.news()).items; } catch { news = null; }
+		}
+	});
 </script>
 
 <div class="bs-pad">
@@ -70,24 +127,99 @@
 		<span class="bs-fresh"><span class="bs-pulse"></span>Updated {league.updated}</span>
 	</header>
 
-	<!-- KPI ribbon — celebratory, no win/loss ladder -->
-	<section class="bs-sec">
-		<div class="bs-eyebrow">By the numbers</div>
-		<div class="bs-sec-title">The season so far</div>
-		<div class="bs-sec-sub">Quirky over competitive — nobody's framed as a loser here.</div>
-		<div class="bs-ribbon">
-			{#each readModel.kpis as kpi}
-				<div class="bs-kpi">
-					<div class="bs-kpi-val">{kpi.value}</div>
-					<div class="bs-kpi-label">{kpi.label}</div>
-					<div class="bs-kpi-sub">{kpi.sub}</div>
-				</div>
-			{/each}
-		</div>
-	</section>
+	{#if secThisWeek && ((showDigestCard && digestCard) || (showPollCards && polls.length) || (showCurCard && (cur || nextRound)) || (showSurveyCard && hasSurvey) || newsCard)}
+		<section class="bs-sec">
+			<div class="bs-eyebrow bs-acc-pulp"><span class="bs-acc-dot"></span>Now</div>
+			<div class="bs-sec-title">This week</div>
+			<div class="bs-home-cards">
+				{#if showDigestCard && digestCard?.digestUrl}
+					<a class="bs-home-card" href={digestCard.digestUrl}>
+						<div class="bs-home-kicker">Latest digest</div>
+						<h3>{digestCard.theme}</h3>
+						<p>Round {digestCard.n} · {digestCard.winnerSong}</p>
+					</a>
+				{/if}
+				{#if showPollCards}
+					{#each polls as poll}
+						<button class="bs-home-card" onclick={nav.goSeason}>
+							<div class="bs-home-kicker">Open poll</div>
+							<h3>{poll.question}</h3>
+							<p>{poll.options.length} options{poll.closesAt ? ' · closes soon' : ''}</p>
+						</button>
+					{/each}
+				{/if}
+				{#if showSurveyCard && hasSurvey}
+					<button class="bs-home-card" onclick={nav.goSurvey}>
+						<div class="bs-home-kicker">Open theme survey</div>
+						<h3>Pick the next round's theme</h3>
+						<p>The theme survey is open — have your say before it closes.</p>
+					</button>
+				{/if}
+				{#if showCurCard && cur}
+					<div class="bs-home-card">
+						<div class="bs-home-card-topline">
+							<div class="bs-home-kicker">Current round</div>
+							<span class="bs-phase-pill bs-phase-{cur.phase}">{cur.phase}</span>
+						</div>
+						<h3>Round {cur.round.round} — {cur.round.title}</h3>
+						<p>{cur.phase === 'submission' ? 'Songs due' : 'Voting closes'} · {new Date(cur.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+						<div class="bs-round-links">
+							{#if showSpotify && roundLinks?.spotify}
+								<a href={roundLinks.spotify} target="_blank" rel="noopener">Spotify</a>
+							{/if}
+							{#if showYtm && roundLinks?.ytm}
+								<a href={roundLinks.ytm} target="_blank" rel="noopener">YouTube Music</a>
+							{/if}
+							{#if showYoutube && roundLinks?.youtube}
+								<a href={roundLinks.youtube} target="_blank" rel="noopener">YouTube video</a>
+							{/if}
+							{#if showMusicLeague && roundLinks?.musicLeague}
+								<a href={roundLinks.musicLeague} target="_blank" rel="noopener">Music League</a>
+							{/if}
+						</div>
+						<button class="bs-card-go-season" onclick={nav.goSeason}>View in the season →</button>
+					</div>
+				{:else if nextRound}
+					<button class="bs-home-card" onclick={nav.goSeason}>
+						<div class="bs-home-kicker">Up next</div>
+						<h3>{nextRound.title}</h3>
+						<p>Round {nextRound.round}{nextRound.songsDue ? ' · songs due' : nextRound.votesDue ? ' · votes due' : ''}</p>
+					</button>
+				{/if}
+				{#if newsCard}
+					<button class="bs-home-card" onclick={nav.goHome}>
+						<div class="bs-home-kicker">News</div>
+						<h3>{newsCard.title}</h3>
+						<p>{newsCard.body}</p>
+					</button>
+				{/if}
+			</div>
+			<button class="bs-share-btn" onclick={nav.goArchive}
+				style="align-self:stretch; justify-content:center">
+				All digests — {digests.length} rounds &nbsp;{@html icons.chevR}
+			</button>
+		</section>
+	{/if}
+
+	{#if secByNumbers}
+		<section class="bs-sec">
+			<div class="bs-eyebrow">By the numbers</div>
+			<div class="bs-sec-title">The season so far</div>
+			<div class="bs-sec-sub">Quirky over competitive — nobody's framed as a loser here.</div>
+			<div class="bs-ribbon">
+				{#each kpis as kpi}
+					<div class="bs-kpi">
+						<div class="bs-kpi-val">{kpi.value}</div>
+						<div class="bs-kpi-label">{kpi.label}</div>
+						<div class="bs-kpi-sub">{kpi.sub}</div>
+					</div>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	<!-- Season-Update pulse — narrated season signals, null when season is too thin -->
-	{#if readModel.seasonUpdate}
+	{#if secPulse && readModel.seasonUpdate}
 		<section class="bs-sec">
 			<div class="bs-eyebrow bs-acc-sky"><span class="bs-acc-dot"></span>The pulse</div>
 			<h2 class="bs-sec-title">{readModel.seasonUpdate.title}</h2>
@@ -100,6 +232,7 @@
 	{/if}
 
 	<!-- Superlative reel -->
+	{#if secYearbook}
 	<section class="bs-sec">
 		<div class="bs-eyebrow bs-acc-amber"><span class="bs-acc-dot"></span>Yearbook awards</div>
 		<div class="bs-sec-title">Season {league.season} superlatives</div>
@@ -129,14 +262,16 @@
 			{/each}
 		</div>
 	</section>
+	{/if}
 
 	<!-- The family -->
+	{#if secFamily}
 	<section class="bs-sec">
-		<div class="bs-eyebrow">{league.memberCount} members</div>
+		<div class="bs-eyebrow">{members.length} members</div>
 		<div class="bs-sec-title">The family</div>
 		<div class="bs-sec-sub">Everyone gets a page. Tap a face.</div>
 		<div class="bs-players">
-			{#each readModel.members as m}
+			{#each members as m}
 				<button class="bs-player" onclick={() => nav.goProfile(m.id)}>
 					<Avatar hue={m.hue} initials={m.initials} size="md" src={m.avatar_url ?? null} />
 					<span class="bs-player-txt">
@@ -155,9 +290,10 @@
 			{/each}
 		</div>
 	</section>
+	{/if}
 
 	<!-- Moments of the season -->
-	{#if momentRows.length > 0}
+	{#if secMoments && momentRows.length > 0}
 		<section class="bs-sec">
 			<div class="bs-eyebrow">Consensus, not ranking</div>
 			<div class="bs-sec-title">Moments of the season</div>
@@ -182,42 +318,6 @@
 		</section>
 	{/if}
 
-	<!-- Latest digest teaser -->
-	{#if latestRound}
-		<section class="bs-sec">
-			<div class="bs-eyebrow">Fresh off the press</div>
-			<div class="bs-sec-title">Latest round</div>
-			<div class="bs-sec-sub">The full digest archive lives here too.</div>
-			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-			<div class="bs-featured" role="button" tabindex="0"
-				onclick={nav.goArchive}
-				onkeydown={(e) => e.key === 'Enter' && nav.goArchive()}
-				style="--hue:{latestRound.hue}">
-				<div class="bs-featured-top">
-					<span class="bs-roundbadge">ROUND {latestRound.n}</span>
-					<span class="bs-tag-new">Just closed</span>
-				</div>
-				<div class="bs-featured-theme">{latestRound.theme}</div>
-				<div class="bs-winner-row">
-					{#if latestSubmitter}
-						<Avatar hue={latestSubmitter.hue} initials={latestSubmitter.initials} size="sm" src={latestSubmitter.avatar_url ?? null} />
-					{/if}
-					<div class="bs-winner-meta">
-						<div class="bs-winner-song">{latestRound.winnerSong} — {latestRound.winnerArtist}</div>
-						<div class="bs-winner-by">
-							Won by {latestSubmitter?.name ?? latestRound.submitter} · {latestRound.votes} votes cast
-						</div>
-					</div>
-					<span class="bs-winner-medal" style="color:var(--amber)">{@html icons.trophy}</span>
-				</div>
-			</div>
-			<button class="bs-share-btn" onclick={nav.goArchive}
-				style="align-self:stretch; justify-content:center">
-				All digests — {digests.length} rounds &nbsp;{@html icons.chevR}
-			</button>
-		</section>
-	{/if}
-
 	{#if latestDigestUrl}
 		<section class="bs-sec">
 			<a class="bs-share-btn" href={latestDigestUrl}
@@ -231,7 +331,35 @@
 	<footer class="bs-footer">
 		<div class="bs-footer-mark">the b/side</div>
 		<div class="bs-footer-note">
-			<b>No login. Just this link.</b> Share it with the family — it never reveals the league HQ.
+			<b>Share this link.</b> Sign in to vote, add themes, and pick ntfy or WhatsApp reminders.
 		</div>
 	</footer>
 </div>
+
+<style>
+	.bs-home-cards { display: grid; gap: 11px; }
+	.bs-home-card {
+		display: flex; flex-direction: column; gap: 6px; padding: 16px; text-align: left;
+		border: 1px solid var(--line); border-radius: var(--r-5); background: var(--ink-2);
+		color: inherit; text-decoration: none; cursor: pointer; font: inherit;
+	}
+	.bs-home-card:hover { border-color: var(--mash-pulp); }
+	.bs-home-kicker { color: var(--mash-pulp); font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+	.bs-home-card h3 { margin: 0; font-family: var(--font-display); font-size: 18px; }
+	.bs-home-card p { margin: 0; color: var(--fg-muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+	.bs-home-card-topline { display: flex; align-items: center; gap: 8px; }
+	.bs-phase-pill {
+		font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .06em;
+		text-transform: uppercase; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line);
+	}
+	.bs-phase-submission { color: var(--mash-pulp); background: color-mix(in oklab, var(--mash-pulp) 12%, transparent); }
+	.bs-phase-voting { color: var(--mash-amber); background: color-mix(in oklab, var(--mash-amber) 12%, transparent); }
+	.bs-round-links { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+	.bs-round-links a {
+		font-family: var(--font-mono); font-size: 11px; font-weight: 600; padding: 5px 10px;
+		border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: inherit;
+		background: var(--ink-1);
+	}
+	.bs-round-links a:hover { border-color: var(--mash-pulp); }
+	.bs-card-go-season { background: none; border: none; padding: 0; color: var(--mash-pulp); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+</style>

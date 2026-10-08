@@ -70,4 +70,14 @@ describe('parseControlRequest', () => {
     expect(parseControlRequest('POST', '/notify', {}).action).toBe('unknown');
     expect(parseControlRequest('POST', '/notify', { text: '  ' }).action).toBe('unknown');
   });
+
+  it('POST /dm requires E.164 and refuses groups', () => {
+    expect(parseControlRequest('POST', '/dm', { to: '+16617476822', text: 'hi' })).toEqual({
+      action: 'dm', to: '+16617476822', text: 'hi',
+    });
+    expect(parseControlRequest('POST', '/dm', { text: 'hi' }).action).toBe('unknown');
+    expect(parseControlRequest('POST', '/dm', { to: '12025550123@g.us', text: 'hi' })).toMatchObject({
+      action: 'unknown', reason: 'player DMs cannot target a group',
+    });
+  });
 });

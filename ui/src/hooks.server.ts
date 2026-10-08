@@ -7,6 +7,7 @@ import { startDigestRunner } from '$lib/digest/runnerLoop.js';
 import { startMlAuthHeartbeat } from '$lib/mlAuth.js';
 import { startRolloutAppExecutor } from '$lib/rollout/appExecutor.js';
 import { startSurveySync } from '$lib/surveySync/runner.js';
+import { isPortalAdminMounted } from '$lib/portalAdmin/auth.js';
 
 process.env.DATA_DIR ??= resolve(process.cwd(), '../data');
 const DATA_DIR = process.env.DATA_DIR;
@@ -41,5 +42,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 			|| p.startsWith('/favicon');
 		if (!allowed) return new Response('Not found', { status: 404 });
 	}
+
+	// Portal admin (spec §8 mounting): the group is dead unless the operator
+	// has configured PORTAL_ADMIN_TOKEN. No token → 404 the whole mount so the
+	// routes are unreachable rather than reachable-but-unauthorized.
+	if (event.url.pathname.startsWith('/api/portal-admin') && !isPortalAdminMounted()) {
+		return new Response('Not found', { status: 404 });
+	}
+
 	return resolve(event);
 };

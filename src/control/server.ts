@@ -36,6 +36,7 @@ export interface ControlHandlers {
     text: string,
     pin: number | null,
   ) => Promise<{ target: string }>;
+  onDm: (to: string, text: string) => Promise<{ sent: boolean; target?: string; reason: string }>;
   onRoundReveal: (request: RoundRevealRequest) => Promise<RevealAnnouncementResult>;
   onPrompt: (prompt: Record<string, unknown>) => Promise<{ id: string }>;
 }
@@ -95,6 +96,9 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
         } else if (route.action === 'say') {
           const result = await handlers.onSay(route.target, route.text, route.pin);
           reply(200, { ok: true, action: 'say', ...result });
+        } else if (route.action === 'dm') {
+          const result = await handlers.onDm(route.to, route.text);
+          reply(result.sent ? 200 : 400, { ok: result.sent, action: 'dm', ...result });
         } else {
           reply(400, { ok: false, reason: route.reason });
         }

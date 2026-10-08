@@ -1,0 +1,15 @@
+[Unit]
+Description=Music League dual-channel player reminders (ntfy and/or WhatsApp)
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v22.22.2/bin:/usr/local/bin:/usr/bin:/bin
+Environment=SURVEY_DATA_DIR=%h/Projects/boarz-season-2-survey/data
+Environment=BOT_CONTROL_URL=http://127.0.0.1:3003
+Environment=NTFY_URL=https://ntfy.mattmariani.com
+Environment=REMINDERS_USE_CLI=1
+ExecStart=/usr/bin/flock -n -E 0 %t/mlb-reminders.lock %h/.nvm/versions/node/v22.22.2/bin/npx --yes tsx scripts/reminders/run.ts
+StandardOutput=journal
+StandardError=journal

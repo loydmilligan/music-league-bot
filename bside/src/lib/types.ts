@@ -57,7 +57,7 @@ export interface LiteMember {
 
 export type Member = FullMember | LiteMember;
 
-export interface KpiItem { value: string; label: string; sub: string; }
+export interface KpiItem { id?: string; value: string; label: string; sub: string; }
 
 export interface MomentItem {
 	title: string; artist: string; submitter: string;
@@ -104,10 +104,18 @@ export interface SharePayload {
 	settings?: import('./taste-waveform/taste-waveform.js').TasteSettings;
 }
 
+export type PortalTab = 'home' | 'archive' | 'season' | 'profile' | 'survey' | 'mine' | 'settings' | 'admin' | 'login' | 'logout';
+
 export interface Nav {
 	goHome: () => void;
 	goArchive: () => void;
 	goSeason: () => void;
 	goProfile: (id: string) => void;
+	goLogin: () => void;
+	goLogout: () => void;
+	goSettings: () => void;
+	goAdmin: () => void;
+	goSurvey: () => void;
+	goMine: () => void;
 	openShare: (p: SharePayload) => void;
 }

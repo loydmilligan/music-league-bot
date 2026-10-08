@@ -6,9 +6,32 @@ export interface PortalDigest {
 	winnerSong: string; winnerArtist: string; submitter: string; votes: number; hue: string;
 	digestUrl: string | null; digestKind: 'v2' | 'v1' | null;
 }
+/**
+ * Deep-link buttons for the Home "Current round" card. Optional-only on this
+ * side: a stale portal.json on disk predates these fields, and the writer's
+ * `n` is the season feed's `round` (rounds.round_number). `sections` carries
+ * only display config — enabled flags, cards, links, selected KPIs, excluded
+ * players; never prompts, frequencies or run history.
+ */
+export interface PortalSections {
+	thisWeek: { cards: { latestDigest: boolean; currentRound: boolean; openPolls: boolean; themeSurvey: boolean }; links: { spotify: boolean; ytm: boolean; youtube: boolean; musicLeague: boolean } };
+	byNumbers: { kpis: string[] };
+	family: { excluded: string[] };
+	enabled: Record<string, boolean>;
+}
+export interface PortalRoundLinks {
+	n: number;
+	spotify: string | null;
+	ytm: string | null;
+	youtube: string | null;
+	musicLeague: string | null;
+}
 export interface PortalJson {
 	version: 1; generatedAt: string;
 	seasonFeedUrl: string | null; seasonHubUrl: string | null;
+	survey?: { apiBase: string } | null;
+	sections?: PortalSections | null;
+	roundLinks?: PortalRoundLinks[];
 	digests: PortalDigest[];
 	stats: { updatedAt: string; current: number; seasons: number[] } | null;
 }
@@ -16,6 +39,14 @@ export type PortalDigestView = Omit<PortalDigest, 'roundId' | 'digestKind'> & {
 	roundId: number | null;
 	digestKind: 'v2' | 'v1' | null;
 };
+
+export function roundLinksFor(
+	portal: PortalJson | null,
+	n: number
+): PortalRoundLinks | null {
+	if (!portal || !Array.isArray(portal.roundLinks)) return null;
+	return portal.roundLinks.find((r) => r.n === n) ?? null;
+}
 
 export async function loadPortal(slug: string): Promise<PortalJson | null> {
 	try {

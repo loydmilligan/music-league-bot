@@ -42,9 +42,19 @@
 # `/leagues/*`, `/chat/*`, anything under bot-ui's page routes, and any endpoint
 # that sends WhatsApp messages. Messages from the playlist page queue for Matt's
 # approval in the admin app; they never reach WhatsApp through this host.
+#
+# Piece-3 exception (recorded, not a regression): `/api/survey/*` is proxied to
+# the survey app on the host (port 18474), NOT to bot-ui. GET/POST/PUT only,
+# bodies ≤ 32 KB. It never reaches bot-ui, mlsurvey admin, or WhatsApp send
+# endpoints. Do not add `/api/survey/.../admin` — the survey router 404s those.
 {
 	admin off
 	auto_https off
+	# cloudflared sits in front and sets X-Forwarded-Proto / X-Forwarded-For.
+	# Keep those so the survey app's trust-proxy / cookie Secure rules see https.
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 # Internal listen port (published to the host for the cloudflared tunnel).
@@ -87,6 +97,23 @@
 				max_size 16KB
 			}
 			reverse_proxy bot-ui:3002
+		}
+	}
+
+	# ── Player survey API (piece 3 exception to the /api/p-only rule) ──────
+	# Digest host is Access-less. This prefix is the player portal login,
+	# survey, polls, settings, news, and co-admin step-up — all implemented
+	# on the survey app's allow-list. Admin workspace paths 404 there.
+	@surveyNotMethod not method GET POST PUT
+	handle /api/survey/* {
+		header X-Robots-Tag "noindex, nofollow"
+		header Cache-Control "no-store"
+		route {
+			respond @surveyNotMethod 405
+			request_body {
+				max_size 32KB
+			}
+			reverse_proxy host.docker.internal:18474
 		}
 	}
 

@@ -5,6 +5,7 @@ import { loadConfig } from './config/loader.js';
 import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay } from './whatsapp/client.js';
+import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
@@ -137,6 +138,18 @@ client.on('ready', () => {
       await makeSay(client)(to, text, pin ?? undefined);
       console.log(`[say] sent ${text.length} chars to ${to}${pin ? ` (pinned ${pin}s)` : ''}`);
       return { target: to };
+    },
+    onDm: async (to, text) => {
+      const surveyDir = process.env.SURVEY_DATA_DIR || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../boarz-season-2-survey/data');
+      const optedIn = await loadOptedInWhatsApp(surveyDir);
+      const decision = allowPlayerDm(to, optedIn);
+      if (decision.action === 'block') {
+        console.log(`[dm] blocked — ${decision.reason}`);
+        return { sent: false, reason: decision.reason };
+      }
+      await makeSay(client)(decision.target, text);
+      console.log(`[dm] sent ${text.length} chars to ${decision.target}`);
+      return { sent: true, target: decision.target, reason: decision.reason };
     },
     onRoundReveal: async (request) => {
       const result = await runRevealAnnouncement(request, {

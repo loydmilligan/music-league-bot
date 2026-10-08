@@ -49,21 +49,22 @@ describe('page ↔ endpoint URL contract', () => {
   });
 });
 
-describe('the public host proxies only the playlist API', () => {
+describe('the public host proxies playlist and survey APIs', () => {
   const raw = fs.readFileSync(path.join(ROOT, 'Caddyfile.digest'), 'utf8');
   // Comments discuss reverse_proxy at length — count directives, not prose.
   const caddy = raw.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n');
 
-  it('has exactly one reverse_proxy', () => {
-    // digest.mattmariani.com has NO Cloudflare Access in front of it. A second
-    // proxy, or a broader matcher, puts the admin app on the public internet.
-    expect(caddy.match(/reverse_proxy/g) ?? []).toHaveLength(1);
+  it('proxies /api/p/* to bot-ui and /api/survey/* to the host survey app', () => {
+    // digest.mattmariani.com has no Cloudflare Access. These two prefixes are
+    // the only live reverse_proxy directives — never /api/* at large, never
+    // bot-ui for the survey.
+    expect(caddy.match(/reverse_proxy/g) ?? []).toHaveLength(2);
+    expect(caddy).toMatch(/handle \/api\/p\/\*[\s\S]*?reverse_proxy bot-ui:3002/);
+    expect(caddy).toMatch(/handle \/api\/survey\/\*[\s\S]*?reverse_proxy host\.docker\.internal:18474/);
+    expect(caddy).not.toContain('handle /api/*');
   });
 
-  it('scopes that proxy to /api/p/* and nothing wider', () => {
-    // The proxy sits inside a nested `route {}`, so match the innermost
-    // enclosing `handle` by taking the last one declared before it rather than
-    // trying to balance braces.
+  it('scopes the first proxy to /api/p/*', () => {
     const upto = caddy.slice(0, caddy.indexOf('reverse_proxy'));
     const handles = [...upto.matchAll(/handle\s+(\/[^\s{]*)\s*\{/g)].map((m) => m[1]);
     expect(handles.at(-1)).toBe('/api/p/*');

@@ -788,6 +788,35 @@ CREATE TABLE IF NOT EXISTS submission_events (
 );
 CREATE INDEX IF NOT EXISTS idx_submission_events_round
   ON submission_events(round_id, submitter_name, occurred_at);
+
+CREATE TABLE IF NOT EXISTS portal_admin_tasks (
+  id INTEGER PRIMARY KEY,
+  league_id INTEGER NOT NULL REFERENCES leagues(id),
+  season_number INTEGER NOT NULL,
+  key TEXT NOT NULL,
+  round_number INTEGER,
+  title TEXT NOT NULL,
+  detail TEXT,
+  due_at TEXT,
+  kind TEXT NOT NULL CHECK(kind IN ('content','ops','review')),
+  source TEXT NOT NULL CHECK(source IN ('derived','custom')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','done','skipped')),
+completed_at TEXT,
+  notes TEXT,
+  UNIQUE(league_id, season_number, key)
+);
+
+CREATE TABLE IF NOT EXISTS portal_admin_runs (
+  id TEXT PRIMARY KEY,
+  league_id INTEGER NOT NULL REFERENCES leagues(id),
+  section_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','running','done','failed')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_portal_admin_runs_league
+  ON portal_admin_runs(league_id, created_at);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',

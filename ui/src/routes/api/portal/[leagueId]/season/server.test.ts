@@ -32,7 +32,7 @@ describe('season settings endpoint', () => {
   });
   it('PUT rejects non-https and stores nothing', async () => {
     await expect(put('1', { feedUrl: 'http://x', hubUrl: null })).rejects.toMatchObject({ status: 400 });
-    expect(await (await get('1')).json()).toEqual({ feedUrl: null, hubUrl: null });
+    expect(await (await get('1')).json()).toEqual({ feedUrl: null, hubUrl: null, surveyKey: null });
   });
   it('PUT rejects bad body', async () => {
     await expect(put('1', { feedUrl: 5, hubUrl: null })).rejects.toMatchObject({ status: 400 });
@@ -44,7 +44,7 @@ describe('season settings endpoint', () => {
     const body = await (await put('1', { feedUrl: 'https://f.example/feed.json', hubUrl: 'https://h.example/' })).json();
     expect(body).toEqual({ ok: true, portalWritten: true });
     expect(writeMock).toHaveBeenCalledWith(db, 1);
-    expect(await (await get('1')).json()).toEqual({ feedUrl: 'https://f.example/feed.json', hubUrl: 'https://h.example/' });
+    expect(await (await get('1')).json()).toEqual({ feedUrl: 'https://f.example/feed.json', hubUrl: 'https://h.example/', surveyKey: null });
   });
   it('PUT with no b-side reports portalWritten false', async () => {
     writeMock.mockResolvedValue(null);

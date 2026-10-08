@@ -7,6 +7,7 @@ import {
 	TIER_CUTOFF_RATIO,
 	TIER_OVERRIDE_KEY_PREFIX,
 } from './deterministic.js';
+import { KPI_CATALOG } from '../../portalAdmin/config.js';
 
 // ── Seed helpers ───────────────────────────────────────────────────────────────
 
@@ -235,6 +236,24 @@ describe('league kpis', () => {
 		const labels = league.kpis.map((k) => k.label);
 		expect(labels).toContain('songs submitted');
 		expect(labels).toContain('points awarded');
+	});
+
+	it('stamps a stable id on every kpi, drawn from the portal picker catalog', () => {
+		const r1 = addRound('R1');
+		const alice = addPlayer('Alice');
+		addSubmission(r1, alice.competitorId, alice.playerId, 'uri:a', 'Song A');
+
+		const { league } = buildDeterministicSlices(db, leagueId);
+		for (const kpi of league.kpis) {
+			expect(kpi.id, `kpi "${kpi.label}" has no id`).toBeTruthy();
+			expect(KPI_CATALOG).toContain(kpi.id as (typeof KPI_CATALOG)[number]);
+		}
+		// Two ids are conditional on having the data; the always-present pair
+		// must never drift from the catalog.
+		const ids = league.kpis.map((k) => k.id);
+		expect(ids).toContain('songs');
+		expect(ids).toContain('points');
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 
 	it('kpis contain NO win/loss-ladder language', () => {
@@ -470,5 +489,22 @@ describe('fan / hater relationships', () => {
 		// No cross-votes → fan/hater are null
 		expect(members.get(alice.playerId)!.biggestFan).toBeNull();
 		expect(members.get(bob.playerId)!.biggestFan).toBeNull();
+	});
+});
+
+describe('songs-submitted KPI round count', () => {
+	it('counts rounds that have votes even when rounds.phase was never set', () => {
+		// rounds.phase is operator data and is NULL for most imported rounds;
+		// a round with votes is a completed round. Upcoming rounds (no votes) don't count.
+		const alice = addPlayer('Alice');
+		const bob = addPlayer('Bob');
+		for (let i = 0; i < 3; i++) {
+			const r = addRound(`Done ${i}`);
+			addSubmission(r, alice.competitorId, alice.playerId, `uri:d${i}`, `D${i}`);
+			addVote(r, bob.competitorId, bob.playerId, `uri:d${i}`, 3);
+		}
+		addRound('Upcoming');
+		const kpi = buildDeterministicSlices(db, leagueId).league.kpis.find((k) => k.label === 'songs submitted')!;
+		expect(kpi.sub).toBe('across 3 rounds');
 	});
 });

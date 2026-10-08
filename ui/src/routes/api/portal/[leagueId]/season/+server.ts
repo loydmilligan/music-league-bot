@@ -26,11 +26,15 @@ export const PUT: RequestHandler = async ({ params, request }) => {
   const db = requireLeague(id);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const ok = (v: unknown) => v === null || typeof v === 'string';
-  if (!body || typeof body !== 'object' || !ok(body.feedUrl) || !ok(body.hubUrl)) {
-    throw error(400, 'body must be { feedUrl: string|null, hubUrl: string|null }');
+  if (!body || typeof body !== 'object' || !ok(body.feedUrl) || !ok(body.hubUrl) || (body.surveyKey !== undefined && !ok(body.surveyKey))) {
+    throw error(400, 'body must be { feedUrl: string|null, hubUrl: string|null, surveyKey?: string|null }');
   }
   try {
-    setSeasonSettings(db, id, { feedUrl: body.feedUrl as string | null, hubUrl: body.hubUrl as string | null });
+    setSeasonSettings(db, id, {
+      feedUrl: body.feedUrl as string | null,
+      hubUrl: body.hubUrl as string | null,
+      surveyKey: (body.surveyKey as string | null | undefined),
+    });
   } catch (e) {
     throw error(400, e instanceof Error ? e.message : 'invalid url');
   }

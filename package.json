@@ -18,7 +18,8 @@
     "cover-gen": "python3 scripts/cover-gen/cli.py",
     "playlist-to-csv": "tsx scripts/playlist-to-csv.ts",
     "api": "tsx src/api/server.ts",
-    "test:integration": "vitest run tests/spotify.integration.test.ts"
+    "test:integration": "vitest run tests/spotify.integration.test.ts",
+    "reminders": "tsx scripts/reminders/run.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",

@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { fetchSpotifyPlaylistTracks } from '../ytm-drop/spotifyPlaylist.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(path.join(ROOT, 'ui/package.json'));
@@ -59,11 +60,15 @@ const db = new Database(path.join(ROOT, 'data/league.db'), { readonly: true });
 // the Boarz calendar.
 const round = db
 	.prepare(
-		`SELECT r.name, r.description, se.league_id AS leagueId
-		   FROM rounds r JOIN seasons se ON se.id = r.season_id WHERE r.id = ?`,
+		`SELECT r.name, r.description, se.league_id AS leagueId, l.name AS leagueName
+		   FROM rounds r
+		   JOIN seasons se ON se.id = r.season_id
+		   JOIN leagues l ON l.id = se.league_id
+		  WHERE r.id = ?`,
 	)
 	.get(ROUND_ID);
 if (!round) throw new Error(`round ${ROUND_ID} not found`);
+const leagueMark = String(round.leagueName ?? 'MUSIC LEAGUE').toUpperCase();
 // Round number = chronological position by voting deadline (same rule as the Tape).
 const eras = db
 	.prepare(
@@ -119,44 +124,9 @@ async function dataUri(url) {
 	}
 }
 
-async function spotifyToken() {
-	const res = await fetch('https://accounts.spotify.com/api/token', {
-		method: 'POST',
-		headers: {
-			Authorization:
-				'Basic ' + Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
-			'Content-Type': 'application/x-www-form-urlencoded',
-		},
-		body: 'grant_type=client_credentials',
-	});
-	if (!res.ok) throw new Error(`Spotify token failed HTTP ${res.status}`);
-	return (await res.json()).access_token;
-}
-
 let playlistRuntimeMin = null;
 if (PLAYLIST_URL) {
-	const id = PLAYLIST_URL.match(/playlist\/([A-Za-z0-9]+)/)?.[1];
-	if (!id) throw new Error(`cannot parse playlist id from ${PLAYLIST_URL}`);
-	const tok = await spotifyToken();
-	const items = [];
-	let url = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=100&fields=next,items(track(name,uri,duration_ms,artists(name),album(images)))`;
-	while (url) {
-		const res = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
-		if (!res.ok) throw new Error(`Spotify playlist fetch HTTP ${res.status}`);
-		const body = await res.json();
-		items.push(...(body.items ?? []));
-		url = body.next;
-	}
-	songs = items
-		.map((i) => i.track)
-		.filter(Boolean)
-		.map((t) => ({
-			title: t.name,
-			artists: t.artists?.map((a) => a.name).join(', ') ?? '',
-			spotify_uri: t.uri,
-			album_art_url: t.album?.images?.[0]?.url ?? null,
-			duration_ms: t.duration_ms,
-		}));
+	songs = await fetchSpotifyPlaylistTracks(PLAYLIST_URL, env, { fillArtwork: true });
 	playlistRuntimeMin = Math.round(songs.reduce((n, s) => n + (s.duration_ms ?? 0), 0) / 60000) || null;
 }
 if (!songs.length) throw new Error(`round ${ROUND_ID} has no songs (no submissions and no --playlist-url)`);
@@ -210,7 +180,7 @@ if (variant === '1a') {
 			<span style="font-family:var(--font-mono);font-weight:700;font-size:13px;letter-spacing:.1em;color:var(--bone)">SEASON 1</span>
 		</div>
 		<div style="background:var(--ink-0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;padding:8px">
-			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.12em;color:var(--mash-pulp)">BOARZ II MEN</span>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.12em;color:var(--mash-pulp)">${esc(leagueMark)}</span>
 			<span style="font-family:var(--font-body);font-weight:600;font-size:17px;color:var(--fg-muted)">${songs.length} tracks · YTM drop</span>
 		</div>
 	</div></body>`;
@@ -250,7 +220,7 @@ if (variant === '1a') {
 	html = `${head}<body>
 	<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:var(--ink-0)">
 		<div style="background:var(--mash-pulp);padding:27px 37px;display:flex;justify-content:space-between;align-items:center">
-			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:32px;letter-spacing:-.04em;color:var(--bone);text-shadow:0 3px 0 var(--mash-pulp-edge)">BOARZ II MEN</span>
+			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:32px;letter-spacing:-.04em;color:var(--bone);text-shadow:0 3px 0 var(--mash-pulp-edge)">${esc(leagueMark)}</span>
 			<span style="font-family:var(--font-mono);font-weight:700;font-size:17px;color:var(--bone);background:rgba(0,0,0,.28);padding:4px 8px;border-radius:5px">R${rr} · S1</span>
 		</div>
 		<div style="display:flex;gap:3px">
@@ -283,7 +253,7 @@ if (variant === '1a') {
 			<div style="position:absolute;inset:20px;border-radius:50%;border:1.5px dashed var(--mash-pulp)"></div>
 			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.24em;color:var(--mash-pulp)">★ SEASON 1 ★</span>
 			<span style="font-family:var(--font-display);font-weight:800;font-style:italic;font-size:110px;line-height:1;letter-spacing:-.04em;color:var(--mash-pulp);text-shadow:0 3px 0 var(--mash-pulp-edge)">R${roundNum}</span>
-			<span style="font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.16em;color:var(--bone)">BOARZ II MEN</span>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:.16em;color:var(--bone)">${esc(leagueMark)}</span>
 		</div>
 	</div>
 	<div style="position:absolute;left:0;right:0;bottom:0;padding:18px 0 16px;text-align:center;background:linear-gradient(transparent, rgba(7,9,12,.7))">
@@ -301,7 +271,7 @@ if (variant === '1a') {
 	html = `${head}<body>
 	<div style="position:absolute;inset:0;background:var(--ink-1);padding:43px 40px;display:flex;flex-direction:column">
 		<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--ink-4);padding-bottom:12px;margin-bottom:18px">
-			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.12em;color:var(--mash-pulp)">BOARZ II MEN · YTM MIRROR</span>
+			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;letter-spacing:.12em;color:var(--mash-pulp)">${esc(leagueMark)} · YTM MIRROR</span>
 			<span style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--fg-quiet)">S1 / R${rr}</span>
 		</div>
 		<h1 style="font-family:var(--font-display);font-weight:800;font-size:40px;line-height:1.02;color:var(--fg);text-wrap:balance;margin-bottom:14px">${esc(round.name)}</h1>

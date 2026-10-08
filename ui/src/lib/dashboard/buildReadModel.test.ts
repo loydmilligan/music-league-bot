@@ -466,3 +466,20 @@ describe('buildReadModel — full + lite members', () => {
 		expect(rows.map((r) => r.n)).toEqual([4, 3, 2, 1]);
 	});
 });
+
+describe('KpiItem schema id compatibility', () => {
+	const kpi = { value: '12', label: 'songs submitted', sub: 'across 3 rounds' };
+
+	it('accepts a kpi with no id (read models stored before the picker)', () => {
+		expect(() => ReadModelSchema.shape.kpis.parse([kpi])).not.toThrow();
+	});
+
+	it('accepts a kpi with an id', () => {
+		const parsed = ReadModelSchema.shape.kpis.parse([{ ...kpi, id: 'songs' }]);
+		expect(parsed[0].id).toBe('songs');
+	});
+
+	it('keeps an id that is not in the picker catalog (a KPI added later)', () => {
+		expect(() => ReadModelSchema.shape.kpis.parse([{ ...kpi, id: 'brandNew' }])).not.toThrow();
+	});
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { digestsFor, statsHrefFor, type PortalJson } from '../../../../bside/src/lib/portal.ts';
+import { digestsFor, statsHrefFor, roundLinksFor, type PortalJson } from '../../../../bside/src/lib/portal.ts';
 
 const rm = {
 	archive: [
@@ -8,7 +8,7 @@ const rm = {
 	]
 };
 const portal = (): PortalJson => ({
-	version: 1, generatedAt: 'x', seasonFeedUrl: null, seasonHubUrl: null, stats: null,
+	version: 1, generatedAt: 'x', seasonFeedUrl: null, seasonHubUrl: null, survey: null, stats: null,
 	digests: [{ roundId: 9, n: 3, season: 2, theme: 'Portal3', date: 'd', winnerSong: 'w', winnerArtist: 'a', submitter: 's', votes: 1, hue: 'h', digestUrl: 'https://x.example/d2/z', digestKind: 'v2' }]
 });
 
@@ -52,5 +52,34 @@ describe('PortalJson.stats', () => {
 		const p: PortalJson = { ...portal(), stats: { updatedAt: 'x', current: 2, seasons: [1, 2] } };
 		expect(p.stats?.seasons).toEqual([1, 2]);
 		expect({ ...portal(), stats: null }.stats).toBeNull();
+	});
+});
+
+describe('roundLinksFor', () => {
+	const withLinks: PortalJson = {
+		...portal(),
+		roundLinks: [
+			{ n: 2, spotify: 'https://open.spotify.com/playlist/abc', ytm: null, youtube: null, musicLeague: 'https://app.musicleague.com/l/c/b/' },
+		],
+	};
+
+	it('finds the row by round number', () => {
+		expect(roundLinksFor(withLinks, 2)?.spotify).toBe('https://open.spotify.com/playlist/abc');
+		expect(roundLinksFor(withLinks, 2)?.musicLeague).toBe('https://app.musicleague.com/l/c/b/');
+	});
+
+	it('returns null for an unknown round or a portal without roundLinks', () => {
+		expect(roundLinksFor(withLinks, 9)).toBeNull();
+		expect(roundLinksFor({ ...portal(), roundLinks: undefined }, 2)).toBeNull();
+		expect(roundLinksFor({ ...portal(), roundLinks: [] }, 2)).toBeNull();
+		expect(roundLinksFor(null, 2)).toBeNull();
+	});
+
+	it('carries only numbers and urls — never a round name or theme', () => {
+		const keys = Object.keys(roundLinksFor(withLinks, 2)!);
+		expect(keys.sort()).toEqual(['musicLeague', 'n', 'spotify', 'youtube', 'ytm']);
+		const json = JSON.stringify(withLinks.roundLinks);
+		expect(json).not.toContain('Portal3');
+		expect(json).not.toContain('theme');
 	});
 });

@@ -118,6 +118,9 @@ export const MemberSchema = z.discriminatedUnion('tier', [FullMemberSchema, Lite
 export type Member = z.infer<typeof MemberSchema>;
 
 const KpiItemSchema = z.object({
+	// Optional: read models stored before the portal KPI picker existed have
+	// no id, and must keep validating when re-read from dashboard_sites.
+	id: z.string().optional(),
 	value: z.string(),
 	label: z.string(),
 	sub: z.string(),

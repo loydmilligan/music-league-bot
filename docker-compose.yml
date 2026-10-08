@@ -2,10 +2,14 @@ services:
   bot:
     build: .
     env_file: .env
+    environment:
+      - SURVEY_DATA_DIR=/app/survey-data
     volumes:
       - ./data:/app/data
       - ./.wwebjs_auth:/app/.wwebjs_auth
       - ./.wwebjs_cache:/app/.wwebjs_cache
+      # Player WhatsApp opt-in (Settings toggle). /dm fail-closes unless enabled.
+      - ../boarz-season-2-survey/data:/app/survey-data:ro
     ports:
       # Host-side survey reveal worker. Loopback only: the control API can send WhatsApp messages.
       - "127.0.0.1:3003:3003"
@@ -72,15 +76,14 @@ services:
     restart: unless-stopped
 
   # Public file server for the shared digests/ volume (sprint-20). No DB, and no
-  # Cloudflare Access — so the ONE dynamic route it carries, /api/p/* proxied to
-  # bot-ui for playlist votes/messages, is deliberately the narrowest prefix that
-  # works. Never widen it here or in Caddyfile.digest: bot-ui IS behind
-  # Cloudflare Access on its own host, and this proxy is a hole through it —
-  # anything reachable via this prefix is reachable with no Access check at all. Fronted by a SEPARATE public Cloudflare tunnel →
-  # digest.mattmariani.com (created by the user). Serves the folder-per-slug
-  # artifacts at /d/<slug>/ (index.html per the packaging-spike).
+  # Cloudflare Access. Dynamic routes: /api/p/* → bot-ui (playlist writes) and
+  # /api/survey/* → survey app on the host (player portal). Do not add a third
+  # prefix to bot-ui; bot-ui is behind Cloudflare Access on its own host.
+  # Fronted by a SEPARATE public Cloudflare tunnel → digest.mattmariani.com.
   digest-static:
     image: caddy:2-alpine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./digests:/srv/digests:ro
       - ./Caddyfile.digest:/etc/caddy/Caddyfile:ro

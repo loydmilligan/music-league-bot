@@ -2,14 +2,18 @@
 	import { onMount } from 'svelte';
 	import PortalNav from '../lib/atoms/PortalNav.svelte';
 	import { normalizeSeasonFeed, type SeasonFeed } from '../lib/seasonFeed.js';
+	import { getPortalSession } from '../lib/portalSession.js';
 	import type { PortalJson } from '../lib/portal.js';
 	import type { Nav, ReadModel } from '../lib/types.js';
 
 	interface Props { readModel: ReadModel; nav: Nav; portal: PortalJson | null; }
 	let { readModel, nav, portal }: Props = $props();
+	const session = getPortalSession();
 
 	let feed = $state<SeasonFeed | null>(null);
 	let loading = $state(true);
+	let voted = $state<Record<string, string>>({});
+	let voteError = $state<string | null>(null);
 
 	function safeHttps(value: string | null | undefined): string | null {
 		if (!value) return null;
@@ -31,6 +35,20 @@
 
 	function resultWidth(votes: number, max: number): string {
 		return `${max > 0 ? Math.max(4, (votes / max) * 100) : 0}%`;
+	}
+
+	async function vote(pollId: string, optionId: string) {
+		if (!session.api || session.me?.authenticated !== true) {
+			nav.goLogin();
+			return;
+		}
+		voteError = null;
+		try {
+			await session.api.vote(pollId, optionId);
+			voted = { ...voted, [pollId]: optionId };
+		} catch (e) {
+			voteError = e instanceof Error ? e.message : 'Vote failed.';
+		}
 	}
 
 	onMount(async () => {
@@ -84,6 +102,7 @@
 			<section class="bs-sec">
 				<div class="bs-eyebrow">Open now</div>
 				<h2 class="bs-sec-title">Vote in the polls</h2>
+				{#if voteError}<p class="vote-err">{voteError}</p>{/if}
 				<div class="season-stack">
 					{#each feed.pollsOpen as poll}
 						<article class="season-card poll-card">
@@ -92,12 +111,21 @@
 							{#if poll.blurb}<p>{poll.blurb}</p>{/if}
 							<ul class="poll-options">
 								{#each poll.options as option}
-									<li><strong>{option.label}</strong>{#if option.description}<span>{option.description}</span>{/if}</li>
+									<li>
+										<button class="poll-vote" class:picked={voted[poll.id] === option.id}
+											onclick={() => vote(poll.id, option.id)}>
+											<strong>{option.label}</strong>
+											{#if option.description}<span>{option.description}</span>{/if}
+											{#if voted[poll.id] === option.id}<em>Your vote</em>{/if}
+										</button>
+									</li>
 								{/each}
 							</ul>
 							<div class="season-actions">
 								{#if dateTime(poll.closesAt)}<span>Closes {dateTime(poll.closesAt)}</span>{/if}
-								{#if feed.links.polls}<a href={feed.links.polls}>Vote →</a>{/if}
+								{#if session.me?.authenticated !== true}
+									<button class="vote-login" onclick={nav.goLogin}>Sign in to vote</button>
+								{/if}
 							</div>
 						</article>
 					{/each}
@@ -195,10 +223,13 @@
 	.round-dates span { padding: 9px 10px; border-radius: var(--r-3); background: var(--ink-1); color: var(--fg-muted); font-size: 11px; }
 	.round-dates b { display: block; margin-bottom: 2px; color: var(--fg-2); font-family: var(--font-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
 	.poll-options { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; list-style: none; }
-	.poll-options li { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-3); background: var(--ink-1); color: var(--fg-2); font-size: 13px; }
-	.poll-options span { display: block; margin-top: 3px; color: var(--fg-quiet); font-size: 11px; }
+	.poll-options li { padding: 0; border: 0; background: transparent; }
+	.poll-vote { width: 100%; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-3); background: var(--ink-1); color: var(--fg-2); font-size: 13px; cursor: pointer; }
+	.poll-vote.picked { border-color: var(--mash-pulp); background: var(--mash-pulp-soft); }
+	.poll-vote span, .poll-vote em { display: block; margin-top: 3px; color: var(--fg-quiet); font-size: 11px; font-style: normal; }
+	.vote-login { padding: 7px 12px; border-radius: var(--r-full); border: 0; background: var(--mash-pulp); color: white; font-size: 11px; font-weight: 700; cursor: pointer; }
+	.vote-err { color: var(--ember); font-size: 13px; }
 	.season-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--fg-quiet); font-family: var(--font-mono); font-size: 10px; }
-	.season-actions a { padding: 7px 12px; border-radius: var(--r-full); background: var(--mash-pulp); color: white; font-size: 11px; font-weight: 700; text-decoration: none; }
 	.poll-results { display: flex; flex-direction: column; gap: 10px; }
 	.result-label { display: flex; justify-content: space-between; gap: 12px; color: var(--fg-2); font-size: 12px; }
 	.result-track { height: 7px; margin-top: 4px; overflow: hidden; border-radius: var(--r-full); background: var(--ink-4); }

@@ -41,13 +41,14 @@
   let publishErr = $state<string | null>(null);
   let updateLeague = $state<(typeof leagues)[number] | null>(null);
 
-  let seasonForm = $state<Record<number, { feedUrl: string; hubUrl: string; status: string; saving: boolean }>>(
+  let seasonForm = $state<Record<number, { feedUrl: string; hubUrl: string; surveyKey: string; status: string; saving: boolean }>>(
     Object.fromEntries(
       data.leagues.map((l) => [
         l.id,
         {
           feedUrl: data.seasonSettings[l.id]?.feedUrl ?? '',
           hubUrl: data.seasonSettings[l.id]?.hubUrl ?? '',
+          surveyKey: data.seasonSettings[l.id]?.surveyKey ?? '',
           status: '',
           saving: false,
         },
@@ -63,7 +64,11 @@
       const res = await fetch(`/api/portal/${leagueId}/season`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ feedUrl: f.feedUrl.trim() || null, hubUrl: f.hubUrl.trim() || null }),
+        body: JSON.stringify({
+          feedUrl: f.feedUrl.trim() || null,
+          hubUrl: f.hubUrl.trim() || null,
+          surveyKey: f.surveyKey.trim() || null,
+        }),
       });
       if (!res.ok) {
         f.status = `Error: ${(await res.json().catch(() => ({}))).message ?? res.status}`;
@@ -326,6 +331,7 @@
                 <b>Player portal — Season</b>
                 <input type="url" placeholder="Season feed URL (https://)" aria-label="Season feed URL" bind:value={seasonForm[league.id].feedUrl} style="flex: 1 1 180px; min-width: 0;" />
                 <input type="url" placeholder="Season hub URL (https://)" aria-label="Season hub URL" bind:value={seasonForm[league.id].hubUrl} style="flex: 1 1 180px; min-width: 0;" />
+                <input type="text" placeholder="Survey key (boarz/season-2)" aria-label="Survey league/season key" bind:value={seasonForm[league.id].surveyKey} style="flex: 1 1 160px; min-width: 0;" />
                 <button type="submit" class="mash-btn mash-btn--secondary mash-btn--sm" disabled={seasonForm[league.id].saving}>
                   {seasonForm[league.id].saving ? 'Saving…' : 'Save'}
                 </button>

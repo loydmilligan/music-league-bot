@@ -11,6 +11,7 @@ export type ControlAction =
   | { action: 'poll'; target: string | null; name: string; options: string[]; allowMultiple: boolean }
   | { action: 'media'; target: string | null; file: string; caption: string | null; pin: number | null }
   | { action: 'say'; target: string | null; text: string; pin: number | null }
+  | { action: 'dm'; to: string; text: string }
   | ({ action: 'round-reveal' } & RoundRevealRequest)
   | { action: 'prompt'; prompt: Record<string, unknown> }
   | { action: 'unknown'; reason: string };
@@ -113,6 +114,21 @@ export function parseControlRequest(method: string, path: string, body: unknown)
     const target = typeof b.target === 'string' && b.target.trim() ? b.target.trim() : null;
     const caption = typeof b.caption === 'string' && b.caption.trim() ? b.caption.trim() : null;
     return { action: 'media', target, file, caption, pin: parsePin(b.pin) };
+  }
+
+  // Player DM. `to` must be E.164; groups are refused in dmGuard, not here.
+  if (path === '/dm') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    if (typeof b.text !== 'string' || !b.text.trim()) {
+      return { action: 'unknown', reason: 'text (non-empty string) required' };
+    }
+    if (typeof b.to !== 'string' || !b.to.trim()) {
+      return { action: 'unknown', reason: 'to (E.164 number) required' };
+    }
+    if (b.to.includes('@g.us')) {
+      return { action: 'unknown', reason: 'player DMs cannot target a group' };
+    }
+    return { action: 'dm', to: b.to.trim(), text: b.text.trim() };
   }
 
   // Plain text to an arbitrary chat, optionally pinned (how-to-play explainer).

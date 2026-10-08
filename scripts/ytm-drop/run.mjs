@@ -29,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { extractVideoIds, fetchBallotComments, resolveVideoPicks, decodeEntities } from './videos.mjs';
 import { readRoundVideoConfig, hasNoVideoSource } from './videoConfig.mjs';
+import { fetchSpotifyPlaylistTracks } from './spotifyPlaylist.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(path.join(ROOT, 'ui/package.json'));
@@ -209,35 +210,7 @@ const iso8601ToSec = (d) => {
 };
 
 async function spotifyPlaylistTracks(playlistUrl) {
-	const id = playlistUrl?.match(/playlist\/([A-Za-z0-9]+)/)?.[1];
-	if (!id) throw new Error(`no usable Spotify playlist URL (${playlistUrl})`);
-	const tokRes = await fetch('https://accounts.spotify.com/api/token', {
-		method: 'POST',
-		headers: {
-			Authorization: 'Basic ' + Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
-			'Content-Type': 'application/x-www-form-urlencoded',
-		},
-		body: 'grant_type=client_credentials',
-	});
-	if (!tokRes.ok) throw new Error(`Spotify token HTTP ${tokRes.status}`);
-	const tok = (await tokRes.json()).access_token;
-	const items = [];
-	let url = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=100&fields=next,items(track(name,uri,duration_ms,artists(name)))`;
-	while (url) {
-		const res = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
-		if (!res.ok) throw new Error(`Spotify playlist HTTP ${res.status}`);
-		const body = await res.json();
-		items.push(...(body.items ?? []));
-		url = body.next;
-	}
-	return items
-		.map((i) => i.track)
-		.filter(Boolean)
-		.map((t) => ({
-			title: t.name,
-			artists: t.artists?.map((a) => a.name).join(', ') ?? '',
-			durationSec: Math.round((t.duration_ms ?? 0) / 1000),
-		}));
+	return fetchSpotifyPlaylistTracks(playlistUrl, env);
 }
 
 /**

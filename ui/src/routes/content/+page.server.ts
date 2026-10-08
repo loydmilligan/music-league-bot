@@ -30,7 +30,7 @@ export interface ContentPageData {
   pendingCount: number;
   latestDigestRoundId: number | null;
   leagues: ContentLeague[];
-  seasonSettings: Record<number, { feedUrl: string | null; hubUrl: string | null }>;
+  seasonSettings: Record<number, { feedUrl: string | null; hubUrl: string | null; surveyKey: string | null }>;
 }
 
 export const load: PageServerLoad = async ({ fetch }): Promise<ContentPageData> => {
