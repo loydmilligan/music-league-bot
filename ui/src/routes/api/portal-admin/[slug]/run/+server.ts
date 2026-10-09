@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { requirePortalAdmin } from '$lib/portalAdmin/api.js';
-import { SECTION_IDS } from '$lib/portalAdmin/config.js';
+import { SECTION_IDS, type SectionId } from '$lib/portalAdmin/config.js';
 import { enqueueSectionRun } from '$lib/portalAdmin/runner.js';
 
 export const POST: RequestHandler = async (event) => {
@@ -11,5 +11,5 @@ export const POST: RequestHandler = async (event) => {
 	if (typeof section !== 'string' || !(SECTION_IDS as readonly string[]).includes(section)) {
 		throw error(400, `section must be one of: ${SECTION_IDS.join(', ')}`);
 	}
-	return json(enqueueSectionRun(db, leagueId, section));
+	return json(await enqueueSectionRun(db, leagueId, section as SectionId));
 };

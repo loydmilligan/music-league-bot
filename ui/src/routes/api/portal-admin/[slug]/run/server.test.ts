@@ -1,11 +1,27 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterAll, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { openLeagueDb } from '$lib/db/client.js';
 import { setAuth, seedLeagueAndSeason, makeEvent, AUTH } from '../testHelpers.js';
 
 let db: ReturnType<typeof openLeagueDb>;
 vi.mock('$lib/db/client.js', async (importOriginal) => ({ ...(await importOriginal<typeof import('$lib/db/client.js')>()), getDb: () => db }));
+const digests = mkdtempSync(join(tmpdir(), 'pa-run-'));
+process.env.DIGESTS_DIR = digests;
 const { POST } = await import('./+server.js');
 const { GET } = await import('./[jobId]/+server.js');
+
+const seedSite = () =>
+	db.prepare(
+		`INSERT INTO dashboard_sites (slug, league_id, season, read_model, published_at, refreshed_at)
+		 VALUES ('bz', 1, 2, '{}', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z')`
+	).run();
+
+afterAll(() => {
+	rmSync(digests, { recursive: true, force: true });
+	delete process.env.DIGESTS_DIR;
+});
 
 beforeEach(() => {
 	db = openLeagueDb(':memory:');
@@ -24,6 +40,7 @@ describe('POST /run', () => {
 	});
 	it('enqueues a run and returns a jobId', async () => {
 		seedLeagueAndSeason(db);
+		seedSite();
 		const res = await POST(makeEvent({ body: { section: 'pulse' }, url: 'http://t/run', headers: AUTH }));
 		const body = await res.json();
 		expect(typeof body.jobId).toBe('string');
@@ -50,6 +67,7 @@ describe('GET /run/[jobId]', () => {
 	});
 	it('reports the enqueued run status', async () => {
 		seedLeagueAndSeason(db);
+		seedSite();
 		const { jobId } = await (await POST(makeEvent({ body: { section: 'moments' }, url: 'http://t/run', headers: AUTH }))).json();
 		const res = await GET(makeEvent({ url: `http://t/run/${jobId}`, headers: AUTH }));
 		const status = await res.json();
