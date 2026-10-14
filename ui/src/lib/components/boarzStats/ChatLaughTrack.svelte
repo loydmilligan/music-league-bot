@@ -139,7 +139,7 @@
 	.lt-bar { display: flex; align-items: center; gap: 0.35rem; height: 0.85rem; }
 	.lt-bar i { display: block; height: 100%; border-radius: 3px; min-width: 2px; }
 	.lt-bar span { font: 600 0.72rem ui-monospace, monospace; opacity: 0.8; }
-	.lt-biggest { margin: 1rem 0 0; padding: 0.75rem 0.9rem; border-left: 3px solid #fbbf24; background: rgba(251, 191, 36, 0.06); border-radius: 6px; }
+	.lt-biggest { margin: 1rem 0 0; padding: 0.75rem 0.9rem; border: 1px solid rgba(251, 191, 36, 0.25); background: rgba(251, 191, 36, 0.06); border-radius: 10px; }
 	.lt-biggest figcaption { font: 700 0.7rem ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #fbbf24; }
 	.lt-biggest blockquote { margin: 0.35rem 0; font-style: italic; }
 	.lt-biggest p { margin: 0; font-size: 0.8rem; opacity: 0.75; }
