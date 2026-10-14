@@ -478,14 +478,14 @@ interface SeasonGuessRow {
 function gridNotesFor(
   db: Database.Database,
   roundId: number,
-): Record<string, { display?: string; note?: string }> {
+): Record<string, { display?: string; note?: string; exclude?: boolean }> {
   try {
     const row = db
       .prepare('SELECT guesser_content_json FROM digest_drafts WHERE round_id = ? ORDER BY generated_at DESC LIMIT 1')
       .get(roundId) as { guesser_content_json?: string } | undefined;
     if (!row?.guesser_content_json) return {};
     const parsed = JSON.parse(row.guesser_content_json) as {
-      gridNotes?: Record<string, { display?: string; note?: string }>;
+      gridNotes?: Record<string, { display?: string; note?: string; exclude?: boolean }>;
     };
     return parsed?.gridNotes && typeof parsed.gridNotes === 'object' ? parsed.gridNotes : {};
   } catch {
@@ -508,7 +508,9 @@ function buildSeasonGrid(
   matcher: (comment: string) => number | null,
   playerNames: Map<number, string>,
   rosterPlayerIds: readonly number[],
-  gridNotes: Record<string, { display?: string; note?: string }>,
+  // `exclude: true` drops a voter's matched comments for that round (a name
+  // mentioned in a joke, not a guess) — the cell keeps its display/note.
+  gridNotes: Record<string, { display?: string; note?: string; exclude?: boolean }>,
 ): GuesserGrid {
   const allRoundRows = db
     .prepare(
@@ -568,6 +570,7 @@ function buildSeasonGrid(
     if (!seen.has(row.voterPlayerId)) seen.set(row.voterPlayerId, new Map());
     if (!detail.has(row.voterPlayerId)) detail.set(row.voterPlayerId, []);
     if (row.actualPlayerId !== null && row.actualPlayerId === row.voterPlayerId) continue;
+    if (gridNotes[`${row.voterPlayerId}:${row.roundId}`]?.exclude) continue;
     const guessed = matcher(row.comment);
     if (guessed === null) continue;
     const perRound = seen.get(row.voterPlayerId)!;

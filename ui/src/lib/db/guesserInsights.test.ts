@@ -428,5 +428,16 @@ describe('boarz-ii-men guess aliases', () => {
       correct: 1,
     });
     expect(data.seasonGrid.rows.map((row) => row.name)).not.toContain('Season One Only');
+
+    // A gridNotes `exclude` drops that voter's round from the counts (a joke
+    // that names someone is not a guess) while keeping the note on the cell.
+    b.prepare(
+      `INSERT INTO digest_drafts (id, round_id, rel_context, prep_checks, guesser_content_json)
+       VALUES ('d-10', 10, '', '[]', ?)`,
+    ).run(JSON.stringify({ gridNotes: { '1:10': { exclude: true, note: 'a joke, not a guess' } } }));
+    const excluded = getGuesserData(b, 10);
+    const matt = excluded.seasonGrid.rows.find((row) => row.name === 'Matt Mariani');
+    expect(matt).toMatchObject({ attempts: 0, correct: 0 });
+    expect(matt?.cells[0]).toMatchObject({ attempts: 0, note: 'a joke, not a guess' });
   });
 });
