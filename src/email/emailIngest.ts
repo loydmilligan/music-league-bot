@@ -121,7 +121,17 @@ export function resolveLeagueIdFromLabel(
     const n = normalizeLabel(l.name);
     return n.length > 0 && needle.includes(n);
   });
-  return hits.length === 1 ? hits[0].id : null;
+  if (hits.length > 0) return hits.length === 1 ? hits[0].id : null;
+  // Seasons also get renamed AROUND the league name ("Boarz II Men" →
+  // "Boarz II Grumpy Old Men"), which no containment test catches. Fall back to
+  // every word of the league name appearing in the label — still unique-or-null.
+  const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const labelWords = new Set(words(label));
+  const wordHits = leagues.filter((l) => {
+    const w = words(l.name);
+    return w.length > 0 && w.every((x) => labelWords.has(x));
+  });
+  return wordHits.length === 1 ? wordHits[0].id : null;
 }
 
 /** Resolve a parsed email to an mlbot round id, or null if unknown. */

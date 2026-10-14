@@ -125,6 +125,11 @@ describe('resolveLeagueIdFromLabel — ML season labels that are not name prefix
     expect(resolveLeagueIdFromLabel(db, 'Hip Jammers 3: its all hippening')).toBe(1);
   });
 
+  it('places a season renamed around the league name ("Boarz II Grumpy Old Men")', () => {
+    db.prepare("INSERT INTO leagues (id, slug, name) VALUES (5, 'boarz-ii-men', 'Boarz II Men')").run();
+    expect(resolveLeagueIdFromLabel(db, 'Boarz II Grumpy Old Men')).toBe(5);
+  });
+
   it('returns null for a label that matches no league', () => {
     expect(resolveLeagueIdFromLabel(db, 'Nostalgia Pit')).toBeNull();
   });
