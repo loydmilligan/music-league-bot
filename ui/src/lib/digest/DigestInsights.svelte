@@ -16,7 +16,9 @@
   import { resolveTopSectionVariant, TOP_SECTION_VARIANT_META } from './topSectionVariants.js';
   import { markRuns } from './regularStyles.js';
   import { page } from '$app/state';
-  let { data, content }: VisualComponentProps = $props();
+  // coinageOnly: digest 2.0 renders The Coinage as its own section — skip the
+  // round-intelligence header/visuals and show just the dictionary card.
+  let { data, content, coinageOnly = false }: VisualComponentProps & { coinageOnly?: boolean } = $props();
   const insights = $derived((data ?? {}) as DigestInsightsData);
   const audio = $derived(insights.audio);
   const timing = $derived(insights.submissionTiming);
@@ -29,7 +31,7 @@
   const hasWords = $derived(words.length > 0);
   // The Coinage can be the only authored insight in a recap stats slot.
   const phrase = $derived(insights.statsContent?.phrase ?? (content as { phrase?: import('../db/roundInsights.js').PhraseOfRound })?.phrase);
-  const hasAny = $derived(hasAudio || hasTiming || hasArtists || hasWords || !!phrase?.term);
+  const hasAny = $derived(coinageOnly ? !!phrase?.term : hasAudio || hasTiming || hasArtists || hasWords || !!phrase?.term);
   const variant = $derived(resolveTopSectionVariant(insights.topSectionVariant, insights.roundId ?? 0, { hero: true, sound: hasAudio, race: hasTiming, language: hasWords }));
   const selectedVisuals = $derived(insights.topSectionVisuals ?? []);
   const visuals = $derived(insights.topSectionVariant === "auto" && selectedVisuals.length ? selectedVisuals.filter((v) => v === "hero" || (v === "sound" && hasAudio) || (v === "race" && hasTiming) || (v === "language" && hasWords)) : [variant]);
@@ -223,6 +225,7 @@
 
 {#if hasAny}
   <div class="di" data-component="digest-insights">
+    {#if !coinageOnly}
     <header class="di-head">
       <div>
         <span class="di-kicker">Round intelligence</span>
@@ -249,6 +252,7 @@
       <section class="di-feature"><div class="di-card-head"><span>Round signals</span><span>selected automatically</span></div><div class="di-mini-grid">{#if hasWords}<div><b>{words[0]?.word ?? "—"}</b><span>top room signal</span></div>{/if}{#if hasArtists}<div><b>{artists.uniqueArtistCount}/{artists.songCount}</b><span>artist variety</span></div>{/if}{#if hasTiming}<div><b>{fmtHours(timing.earliestHoursBeforeDeadline)}</b><span>earliest submission</span></div>{/if}{#if hasAudio}<div><b>{audio.topKeys[0]?.value ?? "mixed"}</b><span>key center</span></div>{/if}</div></section>
     {/if}
     {/each}
+    {/if}
 
     {#if phrase?.term}
       <section class="di-feature di-feature--phrase">
@@ -345,7 +349,7 @@
       </section>
     {/if}
 
-    {#if hasArtists && callbacks.length}<div class="di-callbacks"><span>Season callbacks</span>{#each callbacks.slice(0, 3) as item, i (i)}<span><b>{item.artist}</b> · {item.sameSubmitter ? "self callback" : "artist revival"}</span>{/each}</div>{/if}
+    {#if !coinageOnly && hasArtists && callbacks.length}<div class="di-callbacks"><span>Season callbacks</span>{#each callbacks.slice(0, 3) as item, i (i)}<span><b>{item.artist}</b> · {item.sameSubmitter ? "self callback" : "artist revival"}</span>{/each}</div>{/if}
   </div>
 
   <!-- Web-only clip enlargement. `?export=1` never renders the trigger or this

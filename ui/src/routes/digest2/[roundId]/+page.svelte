@@ -9,6 +9,7 @@
 	import TastemakerSection from '$lib/digest/TastemakerSection.svelte';
 	import GuesserLeaderboard from '$lib/digest/GuesserLeaderboard.svelte';
 	import ReelSection from '$lib/digest/ReelSection.svelte';
+	import DigestInsights from '$lib/digest/DigestInsights.svelte';
 	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
 	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
 	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
@@ -16,13 +17,14 @@
 	import { page } from '$app/state';
 	let { data } = $props();
 
-	// villain / coinage have no dedicated visual component — render simple cards.
+	// villain has no dedicated visual component — render a simple card. Coinage
+	// reuses the 1.0 dictionary card (DigestInsights, coinageOnly).
 	const villain = $derived(
 		data.story.blocks.find((b: { kind: string }) => b.kind === 'villain')?.content as
 			| { title?: string; body?: string }
 			| undefined
 	);
-	const coinage = $derived(data.story.coinage as { term?: string; meta?: string; gloss?: string } | null);
+	const coinage = $derived(data.story.coinage as { term?: string } | null);
 
 	// Top-level Digest / Stats tabs, seeded from ?view= and synced to the URL.
 	let view = $state<'digest' | 'stats'>(page.url.searchParams.get('view') === 'stats' ? 'stats' : 'digest');
@@ -78,11 +80,7 @@
 				<p>{villain.body ?? ''}</p>
 			</section>
 		{:else if key === 'coinage' && coinage}
-			<section style="margin:1.5rem 0">
-				<h2>The Coinage — {coinage.term ?? ''}</h2>
-				{#if coinage.meta}<p style="opacity:.7">{coinage.meta}</p>{/if}
-				{#if coinage.gloss}<p>{coinage.gloss}</p>{/if}
-			</section>
+			<DigestInsights kind="stats" content={{ phrase: coinage }} coinageOnly />
 		{:else if key === 'standings' && data.structural.standings}
 			<StandingsChart kind="standings" content={{}} data={data.structural.standings} variant="visual" />
 		{:else if key === 'tastemaker' && data.structural.tastemaker}
