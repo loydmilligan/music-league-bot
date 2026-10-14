@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import type { Client as ClientType, Message, Chat } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { formatEnvelope } from './listGroups.js';
+import { recordSeenMessage, recordReaction } from '../storage/reactionsDb.js';
 
 const _require = createRequire(import.meta.url);
 const { Client, LocalAuth, Poll, MessageMedia } = _require('whatsapp-web.js') as typeof import('whatsapp-web.js');
@@ -53,6 +54,26 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     process.exit(1);
   });
 
+  // Every emoji reaction in the bot's groups (the relay phone can't see these).
+  client.on('message_reaction', (reaction) => {
+    try {
+      const chatId = reaction.msgId?.remote;
+      if (!chatId || !String(chatId).endsWith('@g.us')) return;
+      recordReaction({
+        targetMsgId: reaction.msgId._serialized,
+        chatId: String(chatId),
+        reactorId: reaction.senderId,
+        reaction: reaction.reaction ?? '',
+        ts: new Date((reaction.timestamp ?? Date.now() / 1000) * 1000).toISOString(),
+      });
+      if (process.env.LOG_REACTIONS === '1') {
+        console.log(`[reactions] ${reaction.senderId} ${reaction.reaction || '(removed)'} → ${reaction.msgId._serialized}`);
+      }
+    } catch (err) {
+      console.error('[reactions] could not record reaction:', err);
+    }
+  });
+
   client.on('message_create', async (raw: Message) => {
     const chatId = raw.from;
     const timeMs = raw.timestamp * 1000;
@@ -92,6 +113,25 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       const chat: Chat = await raw.getChat();
       chatName = chat.name || chatId;
     } catch { /* fallback to chatId */ }
+
+    // Index group messages so emoji reactions can be credited to their author.
+    // Best-effort: a storage error must never break message handling.
+    if (chatId.endsWith('@g.us')) {
+      try {
+        const d = (raw as { _data?: { notifyName?: string } })._data ?? {};
+        recordSeenMessage({
+          msgId: raw.id._serialized,
+          chatId,
+          chatName: chatName === chatId ? null : chatName,
+          authorId: raw.author ?? null,
+          authorName: d.notifyName ?? null,
+          text: raw.body ?? '',
+          ts: new Date(timeMs).toISOString(),
+        });
+      } catch (err) {
+        console.error('[reactions] could not index message:', err);
+      }
+    }
 
     // Is this a quote-reply to something WE said? getQuotedMessage() is a Store
     // call and Store is broken in this build, so read the plain _data envelope.

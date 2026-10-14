@@ -137,14 +137,25 @@ export function readLaughReactions(
 ): LaughReaction[] {
 	if (!groupName || !from || !to) return [];
 	try {
+		// The bot's session can't read chat names in this wwebjs build, so rows
+		// carry only chat_id; settings.wa_group_names maps id → relay group name.
+		let ids: string[] = [];
+		try {
+			const raw = (db.prepare(`SELECT value FROM settings WHERE key = 'wa_group_names'`).get() as { value?: string } | undefined)?.value;
+			const map = JSON.parse(raw ?? '{}') as Record<string, string>;
+			ids = Object.entries(map).filter(([, name]) => name === groupName).map(([id]) => id);
+		} catch {
+			ids = [];
+		}
 		const rows = db
 			.prepare(
 				`SELECT reactor_name AS reactorName, target_author_name AS authorName, ts, target_snippet AS snippet
 				 FROM chat_reactions
-				 WHERE group_name = ? AND ts >= ? AND ts <= ? AND removed = 0
+				 WHERE (group_name = ? OR chat_id IN (${ids.map(() => '?').join(',') || "''"}))
+				   AND ts >= ? AND ts <= ? AND removed = 0
 				   AND reaction IN (${LAUGH_REACTIONS.map(() => '?').join(',')})`,
 			)
-			.all(groupName, from, to, ...LAUGH_REACTIONS) as {
+			.all(groupName, ...ids, from, to, ...LAUGH_REACTIONS) as {
 			reactorName: string | null;
 			authorName: string | null;
 			ts: string;
