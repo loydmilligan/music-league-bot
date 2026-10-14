@@ -419,6 +419,18 @@ async function resolveLeagueId({ leagueName, slug }) {
 			const n = normalize(l?.name);
 			return n.includes(needle) || needle.includes(n);
 		});
+		// Seasons get renamed around the league name ("Boarz II Men" →
+		// "Boarz II Grumpy Old Men"): fall back to every needle word appearing
+		// in the ML name, still requiring a unique hit.
+		if (!fuzzy.length) {
+			const words = needle.split(' ').filter(Boolean);
+			fuzzy.push(
+				...leagues.filter((l) => {
+					const n = new Set(normalize(l?.name).split(' '));
+					return words.length > 0 && words.every((w) => n.has(w));
+				}),
+			);
+		}
 		if (fuzzy.length === 1) target = fuzzy[0];
 		else if (fuzzy.length > 1) {
 			return {
