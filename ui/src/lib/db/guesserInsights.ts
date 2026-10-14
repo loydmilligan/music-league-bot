@@ -336,6 +336,13 @@ const LEAGUE_ALIASES: Record<
     // "Grant"), so any word-shaped nickname has to be listed exactly.
     { match: 'Pallets', asName: 'Darren Paletz' },
     { match: 'Pellet', asName: 'Darren Paletz' },
+    // Season 2 newcomers (R167): Ron Bertolina plays as "Ronnie B" and is
+    // "Berto(s)" in the room; Brian Grushkin plays as "Bagel Shop".
+    { match: 'Berto', asName: 'Ronnie B' },
+    { match: 'Bertos', asName: 'Ronnie B', exactOnly: true },
+    { match: 'Bertolina', asName: 'Ronnie B' },
+    { match: 'Grushkin', asName: 'Bagel Shop' },
+    { match: 'Grush', asName: 'Bagel Shop' },
   ],
   // Second Best is a family league, so it collides on surnames the way Boarz
   // collides on "Dave". Four names are deliberately absent:
