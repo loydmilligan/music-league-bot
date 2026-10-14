@@ -397,4 +397,36 @@ describe('boarz-ii-men guess aliases', () => {
     });
     expect(data.seasonRoundCount).toBe(2);
   });
+
+  it('starts a later season fresh: round 1, this season only, this season\'s voters', () => {
+    const b = boarzDb();
+    // A Season 1 voter who never plays Season 2 must not get a Season 2 row.
+    b.prepare("INSERT INTO players (id, name) VALUES (90, 'Season One Only')").run();
+    b.prepare("INSERT INTO competitors (id, ml_competitor_id, name, player_id) VALUES (90, 'ml-90', 'Season One Only', 90)").run();
+    b.prepare(
+      `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+       VALUES (1, 90, 'uri-0', 1, 'nice', '2026-01-01T12:00:00Z')`,
+    ).run();
+
+    b.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (2, 1, 2, 'active')").run();
+    b.prepare("INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (10, 2, 'r-10', 'S2 R1', '2026-03-01T00:00:00Z')").run();
+    const target = b.prepare('SELECT name FROM competitors WHERE id = 2').get() as { name: string };
+    b.prepare(
+      `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+       VALUES (10, 2, 's2-song', 'S2 song', 'Artist', '2026-03-01T01:00:00Z')`,
+    ).run();
+    b.prepare(
+      `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+       VALUES (10, 1, 's2-song', 1, ?, '2026-03-01T12:00:00Z')`,
+    ).run(target.name);
+
+    const data = getGuesserData(b, 10);
+    // Fresh numbering from 1 — the season-1 "starts at round five" rule does not apply.
+    expect(data.seasonGrid.rounds).toEqual([{ roundId: 10, label: '1' }]);
+    expect(data.seasonGrid.rows.find((row) => row.name === 'Matt Mariani')).toMatchObject({
+      attempts: 1,
+      correct: 1,
+    });
+    expect(data.seasonGrid.rows.map((row) => row.name)).not.toContain('Season One Only');
+  });
 });

@@ -401,8 +401,9 @@ const LEAGUE_ALIASES: Record<
  * Play-order round where the room began playing Guess the Submitter.
  *
  * Most leagues have played from their first round, so the default remains 1.
- * Boarz introduced the game in round five; including rounds one through four
- * would turn ordinary name mentions in vote comments into phantom guesses.
+ * Boarz introduced the game in round five of its FIRST season; including rounds
+ * one through four would turn ordinary name mentions in vote comments into
+ * phantom guesses. Only applies to season 1 — later seasons start fresh at 1.
  */
 const SEASON_GRID_START_ROUND: Record<string, number> = {
   'boarz-ii-men': 5,
@@ -502,7 +503,7 @@ function gridNotesFor(
  */
 function buildSeasonGrid(
   db: Database.Database,
-  leagueId: number,
+  seasonId: number,
   leagueSlug: string,
   matcher: (comment: string) => number | null,
   playerNames: Map<number, string>,
@@ -512,16 +513,18 @@ function buildSeasonGrid(
   const allRoundRows = db
     .prepare(
       `SELECT r.id AS roundId
-       FROM rounds r JOIN seasons s ON s.id = r.season_id
-       WHERE s.league_id = ?
+       FROM rounds r
+       WHERE r.season_id = ?
          AND EXISTS (SELECT 1 FROM votes v WHERE v.round_id = r.id AND TRIM(COALESCE(v.comment,'')) <> '')
        -- Play order, not id order: ids are assigned at import, so Boarz R153
        -- (closed 2026-09-03) sorts after R150 and R151 and the grid rendered a
        -- past round as if it came after them.
        ORDER BY COALESCE(r.voting_deadline, r.submission_deadline, r.created_at) ASC, r.id ASC`,
     )
-    .all(leagueId) as { roundId: number }[];
-  const startRound = Math.max(1, SEASON_GRID_START_ROUND[leagueSlug] ?? 1);
+    .all(seasonId) as { roundId: number }[];
+  const seasonNumber =
+    (db.prepare('SELECT season_number AS n FROM seasons WHERE id = ?').get(seasonId) as { n: number } | undefined)?.n ?? 1;
+  const startRound = seasonNumber === 1 ? Math.max(1, SEASON_GRID_START_ROUND[leagueSlug] ?? 1) : 1;
   const roundRows = allRoundRows
     .map((row, index) => ({ ...row, label: String(index + 1) }))
     .filter((_, index) => index + 1 >= startRound);
@@ -539,10 +542,10 @@ function buildSeasonGrid(
        JOIN competitors c ON c.id = v.voter_id
        LEFT JOIN ml_submissions s ON s.round_id = v.round_id AND s.spotify_uri = v.spotify_uri
        LEFT JOIN competitors sc ON sc.id = s.competitor_id
-       WHERE se.league_id = ? AND TRIM(COALESCE(v.comment,'')) <> ''
+       WHERE se.id = ? AND TRIM(COALESCE(v.comment,'')) <> ''
        ORDER BY v.round_id ASC, voterPlayerId ASC, v.spotify_uri ASC`,
     )
-    .all(leagueId) as {
+    .all(seasonId) as {
       roundId: number;
       voterPlayerId: number | null;
       actualPlayerId: number | null;
@@ -552,7 +555,7 @@ function buildSeasonGrid(
   const includedRoundIds = new Set(roundRows.map((r) => r.roundId));
   const labelOf = new Map(roundRows.map((r) => [r.roundId, r.label]));
 
-  // Every player who has ever voted in this league, so the never-guessed rows survive.
+  // Every player who has voted this season, so the never-guessed rows survive.
   const seen = new Map<number, Map<number, { attempts: number; correct: number }>>();
   const detail = new Map<number, GuesserGridGuess[]>();
   for (const playerId of rosterPlayerIds) {
@@ -745,12 +748,28 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   );
   const nameOf = (playerId: number | null): string | null =>
     playerId === null ? null : (playerNames.get(playerId) ?? null);
-  const rosterPlayerIds = Array.from(
-    new Set(competitorRows.flatMap((row) => (row.player_id === null ? [] : [row.player_id]))),
-  );
+  // The grid's roster is this season's voters + submitters only — a fresh start each season
+  // (the matcher above still knows every league name, past players included).
+  const rosterPlayerIds = (
+    db
+      .prepare(
+        `SELECT DISTINCT COALESCE(v.player_id, c.player_id) AS pid
+         FROM votes v
+         JOIN rounds r ON r.id = v.round_id
+         JOIN competitors c ON c.id = v.voter_id
+         WHERE r.season_id = ? AND COALESCE(v.player_id, c.player_id) IS NOT NULL
+         UNION
+         SELECT DISTINCT c.player_id AS pid
+         FROM ml_submissions m
+         JOIN rounds r ON r.id = m.round_id
+         JOIN competitors c ON c.id = m.competitor_id
+         WHERE r.season_id = ? AND c.player_id IS NOT NULL`,
+      )
+      .all(seasonId, seasonId) as { pid: number }[]
+  ).map((row) => row.pid);
   const seasonGrid = buildSeasonGrid(
     db,
-    leagueId,
+    seasonId,
     slug,
     matcher,
     playerNames,
