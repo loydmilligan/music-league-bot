@@ -3,6 +3,7 @@
 	import ChatTalkativeness from '$lib/components/boarzStats/ChatTalkativeness.svelte';
 	import ChatDailyActivity from '$lib/components/boarzStats/ChatDailyActivity.svelte';
 	import ChatRoastReport from '$lib/components/boarzStats/ChatRoastReport.svelte';
+	import ChatLaughTrack from '$lib/components/boarzStats/ChatLaughTrack.svelte';
 	import ChatTab from '$lib/components/boarzStats/ChatTab.svelte';
 	let { snapshot }: { snapshot: Snapshot } = $props();
 	let showMore = $state(false);
@@ -14,6 +15,7 @@
 		<ChatTalkativeness snap={snapshot} />
 		<ChatDailyActivity snap={snapshot} />
 		<ChatRoastReport snap={snapshot} />
+		<ChatLaughTrack snap={snapshot} />
 	</div>
 	<button
 		type="button"

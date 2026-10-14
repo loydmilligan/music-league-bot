@@ -49,6 +49,9 @@ const SENDER_ALIAS: Record<string, string> = {
 	// ~ Dave's "Boarz 4 Justice" message). His ML handle is the display name.
 	conorj: 'CJ Wookie',
 	conorjohnston: 'CJ Wookie',
+	// Season 2 (2026-10): Ron Bertolina plays as "Ronnie B"; the room calls him Berto.
+	ronbertolina: 'Ronnie B',
+	ronniebertolina: 'Ronnie B',
 };
 
 // GroupRelay shows unsaved contacts as raw phone numbers (normSender strips
@@ -69,6 +72,7 @@ export function canonicalSender(s: string): string | null {
 const MENTION_PATTERNS: [RegExp, string][] = [
 	// Conor IS CJ Wookie — chat calls him Conor, his ML handle is CJ Wookie
 	[/\bconor/i, 'CJ Wookie'],
+	[/\bbertos?\b/i, 'Ronnie B'],
 	[/\bbrian\b/i, 'Brian'],
 	[/\bclements/i, 'Clements'],
 	[/\bdarren/i, 'Darren Paletz'],

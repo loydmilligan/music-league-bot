@@ -36,6 +36,7 @@ import {
 	dayOfTs,
 } from './chat.js';
 import { buildDeepRatings } from './deepRatings.js';
+import { buildLaughTrack, readLaughReactions, type LaughTrack } from './laughs.js';
 
 export const DEFAULT_STATS_LEAGUE = 'boarz-ii-men';
 
@@ -81,6 +82,8 @@ export interface Snapshot {
 	/** Per-day ML activity vs WhatsApp chatter (local days). */
 	activity: { day: string; chat: number; votes: number; voteComments: number }[];
 	chat: ChatAgg;
+	/** 😂 Laugh Track (additive; null if it could not be built). */
+	laughTrack: LaughTrack | null;
 	/** Jev deep ratings — null until the backfill script has run. */
 	deep: ReturnType<typeof buildDeepRatings>;
 	hype: {
@@ -397,6 +400,14 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 	}));
 
 	const chat = aggregateChat(chatRows, anchors, scrambleWindows, competitors);
+	// Additive and isolated: a Laugh Track failure must never break the snapshot.
+	let laughTrack: LaughTrack | null = null;
+	try {
+		const displayByKey = new Map(chat.people.map((p) => [p.key, p.display]));
+		laughTrack = buildLaughTrack(chatRows, competitors, (k) => displayByKey.get(k) ?? k, readLaughReactions(db, chatGroup, chatFrom, chatTo));
+	} catch {
+		laughTrack = null;
+	}
 
 	// ML activity vs chat, per local day: votes + vote comments alongside messages
 	const voteDays = new Map<string, { v: number; c: number }>();
@@ -504,6 +515,7 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		artists,
 		activity,
 		chat,
+		laughTrack,
 		hype,
 		deep,
 	};
