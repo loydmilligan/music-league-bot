@@ -58,7 +58,7 @@
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5" data-component="laugh-track">
 		<h2 class="mb-1 text-lg font-semibold">😂 Tear Forecast</h2>
 		<p class="mb-3 text-sm text-fg-muted">
-			Tears measured as precipitation. <b style="color:#fbbf24">Made it rain</b> = laughs other people sent within ten
+			{#if snap.league.slug === 'boarz-ii-men'}Inspired by Berto, the league's leading producer of 😂 — most of it in reactions this chart can only count from next round. {/if}Tears measured as precipitation. <b style="color:#fbbf24">Made it rain</b> = laughs other people sent within ten
 			minutes of your message. <b style="color:#60a5fa">Shed tears</b> = your own 😂 🤣 💀 / haha / lol / lmao.
 			{#if track.reactionLaughs > 0}Includes {track.reactionLaughs} 😂 reactions.{:else}Counted from message text; 😂 reactions are tracked from next round.{/if}
 		</p>
