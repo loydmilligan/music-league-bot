@@ -19,6 +19,23 @@ const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { sm
  */
 const selfIds = new Set<string>();
 
+/**
+ * A message id's serialized form. This wwebjs build leaves `_serialized`
+ * undefined and stores it under a minified `$1` key, so fall back to that, then
+ * to rebuilding it ("fromMe_remote_id[_participant]") from the parts.
+ */
+export function serializeMsgId(id: unknown): string | null {
+  if (!id || typeof id !== 'object') return typeof id === 'string' ? id : null;
+  const o = id as Record<string, unknown>;
+  if (typeof o._serialized === 'string' && o._serialized) return o._serialized;
+  if (typeof o.$1 === 'string' && o.$1) return o.$1;
+  const part = o.participant as { _serialized?: string } | string | undefined;
+  const participant = typeof part === 'string' ? part : part?._serialized;
+  if (o.remote == null || o.id == null) return null;
+  const remote = typeof o.remote === 'string' ? o.remote : (o.remote as { _serialized?: string })._serialized;
+  return `${Boolean(o.fromMe)}_${remote}_${o.id}${participant ? `_${participant}` : ''}`;
+}
+
 interface BufferedMsg { sender: string; timeMs: number; text: string; }
 const chatBuffer = new Map<string, BufferedMsg[]>();
 const BUFFER_SIZE = 5;
@@ -57,17 +74,20 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
   // Every emoji reaction in the bot's groups (the relay phone can't see these).
   client.on('message_reaction', (reaction) => {
     try {
-      const chatId = reaction.msgId?.remote;
-      if (!chatId || !String(chatId).endsWith('@g.us')) return;
+      const remote = reaction.msgId?.remote as unknown;
+      const chatId = typeof remote === 'string' ? remote : (remote as { _serialized?: string } | undefined)?._serialized;
+      if (!chatId || !chatId.endsWith('@g.us')) return;
+      const targetMsgId = serializeMsgId(reaction.msgId);
+      if (!targetMsgId) return;
       recordReaction({
-        targetMsgId: reaction.msgId._serialized,
+        targetMsgId,
         chatId: String(chatId),
         reactorId: reaction.senderId,
         reaction: reaction.reaction ?? '',
         ts: new Date((reaction.timestamp ?? Date.now() / 1000) * 1000).toISOString(),
       });
       if (process.env.LOG_REACTIONS === '1') {
-        console.log(`[reactions] ${reaction.senderId} ${reaction.reaction || '(removed)'} → ${reaction.msgId._serialized}`);
+        console.log(`[reactions] ${reaction.senderId} ${reaction.reaction || '(removed)'} → ${targetMsgId}`);
       }
     } catch (err) {
       console.error('[reactions] could not record reaction:', err);
@@ -119,8 +139,9 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     if (chatId.endsWith('@g.us')) {
       try {
         const d = (raw as { _data?: { notifyName?: string } })._data ?? {};
-        recordSeenMessage({
-          msgId: raw.id._serialized,
+        const msgId = serializeMsgId(raw.id) ?? serializeMsgId((raw as { _data?: { id?: unknown } })._data?.id);
+        if (msgId) recordSeenMessage({
+          msgId,
           chatId,
           chatName: chatName === chatId ? null : chatName,
           authorId: raw.author ?? null,
