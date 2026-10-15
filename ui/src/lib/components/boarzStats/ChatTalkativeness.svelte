@@ -54,7 +54,7 @@
 		['Tone', TIPS.tone],
 		[`${axisMetaA.label} / ${axisMetaB.label}`, tipAxes],
 		['Signature words', TIPS.lift],
-		['Guest', 'In the chat but not playing in this league this season.'],
+		['Guest', 'In the chat but hasn\'t submitted or voted in this league this season (yet).'],
 	];
 </script>
 
@@ -62,7 +62,7 @@
 	<h2 class="mb-1 text-lg font-semibold">💬 Talkativeness</h2>
 	<p class="mb-4 text-sm text-fg-muted">
 		How much each person talks, and how. The bars are total messages; the table breaks down their style.
-		Everyone in the group chat counts, including friends who aren't playing (marked “guest”).
+		Everyone in the group chat counts, including anyone who hasn't played this season yet (marked “guest”).
 	</p>
 	<ChartCanvas height={340} config={talkConfig} />
 	<div class="mt-4 overflow-x-auto">

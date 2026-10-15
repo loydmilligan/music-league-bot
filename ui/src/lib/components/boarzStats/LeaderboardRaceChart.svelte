@@ -17,7 +17,16 @@
 			.map((c, i) => ({ c, i, cum: snap.cumulative.map((r) => r[i] ?? 0) }))
 			.sort((a, b) => b.cum[b.cum.length - 1] - a.cum[a.cum.length - 1] || a.c.name.localeCompare(b.c.name))
 	);
-	const R = snap.rounds.length;
+	// Only rounds that have been played: the season's future rounds are in the
+	// snapshot too, and starting the slider on the last scheduled round read as
+	// "Round 12 of 12" after round one. Played = results recorded, or anyone's
+	// total moved (older imports lack votingEnded).
+	const played = snap.rounds.map((round, i) =>
+		!!round.votingEnded || snap.cumulative[i]?.some((v, c) => v !== (i > 0 ? (snap.cumulative[i - 1]?.[c] ?? 0) : 0)),
+	);
+	const lastPlayed = played.lastIndexOf(true);
+	const R = Math.max(1, lastPlayed + 1);
+	const totalRounds = snap.rounds.length;
 	const maxTotal = Math.max(...raceRows.map((r) => r.cum[R - 1]), 1);
 
 	let raceIdx = $state(R - 1);
@@ -85,7 +94,7 @@
 		</button>
 		<input type="range" min="0" max={R - 1} bind:value={raceIdx} oninput={stopRace} class="h-1.5 flex-1 accent-violet-400" />
 		<span class="whitespace-nowrap text-xs text-fg-muted">
-			Round {raceIdx + 1} of {R} — {roundLabel(snap.rounds[raceIdx])}
+			Round {raceIdx + 1} of {R} played{totalRounds > R ? ` (${totalRounds} this season)` : ''} — {roundLabel(snap.rounds[raceIdx])}
 		</span>
 	</div>
 	<HowToRead items={[

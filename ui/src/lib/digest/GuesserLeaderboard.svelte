@@ -522,7 +522,7 @@
                   </div>
                   <div class="lbl">▶ guessing</div>
                   {#if c.attempts === 0}
-                    <p class="gsl-sp-none">didn't play</p>
+                    <p class="gsl-sp-none">no guesses yet</p>
                   {:else}
                     <div class="pips">
                       {#each c.cells as cell, i (i)}

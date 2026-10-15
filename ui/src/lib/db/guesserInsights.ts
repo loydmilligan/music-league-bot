@@ -1002,7 +1002,9 @@ export function getGuesserData(db: Database.Database, roundId: number): GuesserD
   const pairList = [...pairSwaps.values()].sort(
     (a, b) => b.swaps - a.swaps || a.aName.localeCompare(b.aName) || a.bName.localeCompare(b.bName),
   );
-  if (pairList.length > 0) {
+  // A "recurring mix-up" needs repetition and a clear leader: with every wrong
+  // guess tied at ×1 (any first round), the top pair was just alphabetical.
+  if (pairList.length > 0 && pairList[0].swaps >= 2 && (pairList.length === 1 || pairList[1].swaps < pairList[0].swaps)) {
     const top = pairList[0];
     littermates = { aName: top.aName, bName: top.bName, swaps: top.swaps };
   }

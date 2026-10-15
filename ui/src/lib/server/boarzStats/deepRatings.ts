@@ -237,7 +237,7 @@ export function buildDeepRatings(leagueDbPath: string, comps: Comp[]): DeepRatin
 			a.outcomes += 1;
 		}
 
-		if (key !== 'Brian' && r.heat >= 1.8) {
+		if (key !== 'Brian' && key !== 'Bagel Shop' && r.heat >= 1.8) {
 			spiciest.push({ display: displayByKey.get(key) ?? key, text: r.text.slice(0, 140), heat: r.heat, roast: r.roast_target, ts: r.ts });
 		}
 		if (r.meme_potential >= 2 && r.conversation_pull >= 1.5) {

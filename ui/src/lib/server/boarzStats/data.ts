@@ -216,7 +216,9 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		)
 		.all(...seasonIds) as RoundRow[];
 
-	const rounds: RoundInfo[] = roundRows.map((r, idx) => ({
+	// Every scheduled round — the chat window/anchors still span the full
+	// schedule (unchanged behaviour). Scoring views use `rounds` below.
+	const allRounds: RoundInfo[] = roundRows.map((r, idx) => ({
 		id: r.id,
 		idx,
 		seasonNumber: r.season_number,
@@ -227,6 +229,18 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		voteDeadline: r.vote,
 		votingEnded: r.vend,
 	}));
+	// Only rounds that have been played (votes imported). Survey-synced seasons
+	// carry the whole schedule up front, and scoring every future round read as
+	// "12 rounds", flat 12-column standings and 'Mashew · 0 pts' winning each
+	// unplayed round. A season with nothing played yet keeps its first round so
+	// the charts still have one column.
+	const playedIds = new Set(
+		(db
+			.prepare(`SELECT DISTINCT round_id AS id FROM votes WHERE round_id IN (${roundRows.map(() => '?').join(',') || 'NULL'})`)
+			.all(...roundRows.map((r) => r.id)) as { id: number }[]).map((r) => r.id),
+	);
+	const playedRounds = allRounds.filter((r) => playedIds.has(r.id));
+	const rounds: RoundInfo[] = (playedRounds.length ? playedRounds : allRounds.slice(0, 1)).map((r, idx) => ({ ...r, idx }));
 	const roundIdToIdx = new Map(rounds.map((r) => [r.id, r.idx]));
 
 	interface CompRow {
@@ -377,8 +391,8 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		leagueGroupMap = {};
 	}
 	const chatGroup = leagueGroupMap[league.slug] ?? '';
-	const chatFrom = rounds[0]?.t0 ?? '';
-	const finalRound = rounds.at(-1);
+	const chatFrom = allRounds[0]?.t0 ?? '';
+	const finalRound = allRounds.at(-1);
 	const chatTo = finalRound?.votingEnded ?? finalRound?.voteDeadline ?? '';
 	const chatRows = chatGroup && chatFrom && chatTo
 		? db.prepare(
@@ -387,13 +401,13 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 			).all(chatGroup, chatFrom, chatTo) as ChatMsg[]
 		: [];
 
-	const anchors: StarterAnchor[] = rounds
+	const anchors: StarterAnchor[] = allRounds
 		.map((r, i) => [
 			{ kind: 'round' as const, label: r.name, ts: r.t0 },
 			...(r.votingEnded ? [{ kind: 'results' as const, label: r.name, ts: r.votingEnded }] : []),
 		])
 		.flat();
-	const scrambleWindows = rounds.map((r) => ({
+	const scrambleWindows = allRounds.map((r) => ({
 		label: r.name,
 		start: new Date(new Date(r.voteDeadline).getTime() - 24 * 3600_000).toISOString(),
 		end: r.voteDeadline,

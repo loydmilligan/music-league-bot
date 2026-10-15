@@ -24,7 +24,9 @@ export interface StarterAnchor {
 const SENDER_ALIAS: Record<string, string> = {
 	// Mashew = Matt Mariani (same person — ML handle vs WhatsApp name)
 	mattmariani: 'Mashew',
-	brian: 'Brian',
+	// Brian Grushkin plays as "Bagel Shop" from Season 2.
+	brian: 'Bagel Shop',
+	briangrushkin: 'Bagel Shop',
 	clementsjohnson: 'Clements',
 	darren: 'Darren Paletz',
 	darrenpallets: 'Darren Paletz',
@@ -73,7 +75,7 @@ const MENTION_PATTERNS: [RegExp, string][] = [
 	// Conor IS CJ Wookie — chat calls him Conor, his ML handle is CJ Wookie
 	[/\bconor/i, 'CJ Wookie'],
 	[/\bbertos?\b/i, 'Ronnie B'],
-	[/\bbrian\b/i, 'Brian'],
+	[/\b(brian|grush|grushkin)\b/i, 'Bagel Shop'],
 	[/\bclements/i, 'Clements'],
 	[/\bdarren/i, 'Darren Paletz'],
 	[/\b(dave|jensen)/i, 'djensen37'],
@@ -384,6 +386,8 @@ export function aggregateChat(
 		EMOJI_RE.lastIndex = 0;
 		p._tone += toneScore(m.text);
 		for (const w of words) {
+			// Links are not vocabulary ("wwwyoutubecom" topped Signature words).
+			if (/^(https?:|www\.)|\.(com|net|org|be|ly|co)(\/|$)/i.test(w)) continue;
 			const clean = w.toLowerCase().replace(/[^a-z0-9']/g, '');
 			if (clean.length < 3 || STOPWORDS.has(clean)) continue;
 			p._wordFreq.set(clean, (p._wordFreq.get(clean) ?? 0) + 1);
@@ -518,9 +522,10 @@ export function aggregateChat(
 	}
 
 	// --- roast matrix --------------------------------------------------------
+	// Brian Grushkin ("Bagel Shop") chats as a guest in seasons he didn't play.
 	const roster = [
 		...comps.map((c) => c.name),
-		'Brian',
+		...(comps.some((c) => c.name === 'Bagel Shop') ? [] : ['Bagel Shop']),
 	];
 	const keyOf = new Map(roster.map((r) => [r, r]));
 	const roastMatrix = Array.from({ length: roster.length }, () => new Array<number>(roster.length).fill(0));

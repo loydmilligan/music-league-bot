@@ -39,9 +39,21 @@ export function getNextRound(db: Database.Database, roundId: number): NextRoundP
   const description = nx.description?.trim() ?? '';
   const name = nx.name?.trim() ?? '';
   const themeSource: NextRoundPreview['themeSource'] = description ? 'description' : 'name';
-  const submissionsSoFar = (db
+  // Music League's export carries no submissions until a round closes, so
+  // mid-round the export count is 0. "User Submitted" emails (submission_events)
+  // name each submitter as they go in; count distinct people from either source.
+  const exported = (db
     .prepare('SELECT COUNT(*) AS n FROM ml_submissions WHERE round_id = ?')
     .get(nx.id) as { n: number }).n;
+  let emailed = 0;
+  try {
+    emailed = (db
+      .prepare('SELECT COUNT(DISTINCT submitter_name) AS n FROM submission_events WHERE round_id = ?')
+      .get(nx.id) as { n: number }).n;
+  } catch {
+    emailed = 0; // table absent in older/test DBs
+  }
+  const submissionsSoFar = Math.max(exported, emailed);
 
   return {
     theme: description || name || `Round ${idx + 2}`,
