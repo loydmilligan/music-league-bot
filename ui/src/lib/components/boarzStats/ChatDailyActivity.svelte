@@ -13,14 +13,21 @@
 	const personColor = (i: number) => (i < snap.competitors.length ? colors[i % colors.length] : '#64748b');
 
 	let summaries = $state<Record<string, DaySummary>>({});
+	// 'loading' only while the admin-side topics API is being asked; published
+	// static pages have no such API, so the fetch fails and the placeholder goes.
+	let topicsLoading = $state(false);
 	onMount(async () => {
 		if (snap.league.slug !== 'boarz-ii-men') return;
+		topicsLoading = true;
 		try {
 			const res = await fetch('/boarz-stats/api/day-topics');
+			if (!res.ok) throw new Error(String(res.status));
 			const data = (await res.json()) as { summaries?: Record<string, DaySummary> };
 			summaries = data.summaries ?? {};
 		} catch {
 			/* topic summaries are decorative — fail quiet */
+		} finally {
+			topicsLoading = false;
 		}
 	});
 
@@ -149,11 +156,11 @@
 	<p class="mb-4 text-sm text-fg-muted">
 		{#if actMode === 'people'}
 			Each day's group-chat messages, stacked and colored by who sent them, with Music League votes and
-			vote comments per day on the right axis. Gold dots mark the busiest days — hover a dot for what
+			vote comments per day on the right axis. Gold dots mark the busiest days — hover a dot for details on what
 			people were talking about.
 		{:else}
 			Chat messages per day (left axis, log scale) against Music League votes and vote comments per day
-			(right axis). Gold dots mark the busiest chat days — hover a dot for what people were talking about.
+			(right axis). Gold dots mark the busiest chat days — hover a dot for details.
 		{/if}
 	</p>
 	<ChartCanvas height={320} config={activityConfig} zoomable zoomMode="x" />
@@ -163,7 +170,7 @@
 			['By participant', 'Messages per day, stacked by sender — the taller a color band, the more that person talked that day.'],
 			['Total (log)', 'All chat messages per day on the left axis. Log scale: each gridline is ten times the one below, so quiet days stay visible next to huge ones.'],
 			['ML votes / comments', 'Lines on the right axis, both views: how many Music League votes and written vote comments were cast that day. Chat spikes that line up with these are voting-night chatter.'],
-			['Gold dots / peak days', 'Days busier than the days around them. The summaries below each are AI-written topic lists from that day\'s messages.'],
+			['Gold dots / peak days', 'Days busier than the days around them, listed below with their message counts (and, where available, an AI-written list of topics).'],
 			['Zoom', 'Drag or pinch on the chart to zoom into a stretch of days.'],
 		]}
 	/>
@@ -175,7 +182,7 @@
 					<span class="text-fg-muted"> · {pk.count} msgs · </span>
 					{#if summaries[pk.day]?.topics?.length}
 						{summaries[pk.day].topics.join(' · ')}
-					{:else}
+					{:else if topicsLoading}
 						<span class="text-fg-muted italic">summarizing…</span>
 					{/if}
 				</div>
