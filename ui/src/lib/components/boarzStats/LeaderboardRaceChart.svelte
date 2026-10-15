@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HowToRead from './HowToRead.svelte';
 	import { flip } from 'svelte/animate';
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 
@@ -87,6 +88,14 @@
 			Round {raceIdx + 1} of {R} — {roundLabel(snap.rounds[raceIdx])}
 		</span>
 	</div>
+	<HowToRead items={[
+		['Bars', 'Each player\'s running season total: every round\'s points (upvotes received minus downvotes received) added up, as of the round shown.'],
+		['Rank (left)', 'Position after that round. Gold = in the lead.'],
+		['Number (right)', 'Season points so far.'],
+		['Slider / Play', 'Scrub or play through the season round by round and watch the order shuffle.'],
+		['Keep rank slots fixed', 'Off: rows re-sort as the lead changes. On: rows stay put and only the bars move, which is easier to follow one person.'],
+		['Stripes', 'Every other bar is striped just to tell neighbors apart. It doesn\'t mean anything.'],
+	]} />
 </section>
 
 <style>

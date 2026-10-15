@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 	import ChartCanvas from './ChartCanvas.svelte';
+	import HowToRead from './HowToRead.svelte';
 
 	let { snap }: { snap: Snapshot } = $props();
 
@@ -27,7 +28,8 @@
 <section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 	<h2 class="mb-1 text-lg font-semibold">🔥 Roast Report</h2>
 	<p class="mb-4 text-sm text-fg-muted">
-		Name mentions in chat — who gets talked about the most, and the full directed matrix below.
+		Who gets talked about. Every time someone's name or nickname comes up in another person's message, it
+		counts — roast or not. Left: the five most-mentioned people. Right: who mentions whom.
 	</p>
 	<div class="grid gap-6 md:grid-cols-2">
 		<div>
@@ -63,4 +65,13 @@
 			</table>
 		</div>
 	</div>
+	<HowToRead
+		items={[
+			['Bars', 'Total times each person was mentioned by someone else this season. Top five only.'],
+			['Mentions', 'Names and nicknames both count — Conor or CJ, Dave or Jensen, Berto, Mashew or Matt, and so on. Mentioning yourself doesn\'t.'],
+			['Grid rows', 'The person doing the talking.'],
+			['Grid columns', 'The person being talked about (first four letters of their name; hover for the full name).'],
+			['Cell number', 'How many of the row person\'s messages mention the column person. Darker red = more.'],
+		]}
+	/>
 </section>

@@ -2,6 +2,7 @@
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 	import { AXIS_META } from '$lib/boarzStats/shared.js';
 	import ChartCanvas from './ChartCanvas.svelte';
+	import HowToRead from './HowToRead.svelte';
 	import PlayerFingerprint from './PlayerFingerprint.svelte';
 	import ChatTalkativeness from './ChatTalkativeness.svelte';
 	import ChatRoastReport from './ChatRoastReport.svelte';
@@ -129,6 +130,13 @@
 	const quad = chat.quadrant;
 	const axisMetaA = AXIS_META[quad.axisA];
 	const axisMetaB = AXIS_META[quad.axisB];
+	// Each axis scores a message by its next three replies (weights 3·2·1), −1 to +1.
+	const AXIS_TIPS = {
+		energy: 'Energy (−1 flat → +1 hype): how excited the replies to their messages are — emoji, lmao/haha, CAPS, !!!.',
+		warmth: 'Warmth (−1 spicy → +1 warm): agreeing, affectionate replies (love, great, fair, legend) versus pushback (nah, wrong, mid, trash).',
+		engagement: 'Engagement (−1 ignored → +1 lights up): how fast replies come and how many different people jump in.',
+		momentum: 'Momentum (−1 kills it → +1 keeps it going): how much conversation keeps going after their message — how many more messages, and for how long.',
+	};
 	const paddedBounds = (values: number[], minimumSpan = 0.12) => {
 		if (values.length === 0) return { min: -1, max: 1 };
 		const low = Math.min(...values);
@@ -282,9 +290,13 @@
 			<h2 class="mb-4 text-lg font-semibold">🦉 Night Owl Index</h2>
 			<ChartCanvas height={260} config={hourConfig} />
 			<p class="mt-3 text-sm text-fg-muted">
-				Late-night champ (12–4am): <span class="font-semibold text-fg">{nightOwl?.display}</span>
+				Late-night champ (12–4:59am): <span class="font-semibold text-fg">{nightOwl?.display}</span>
 				— {nightOwl?.hourHist.slice(0, 5).reduce((x, y) => x + y, 0) ?? 0} messages after midnight.
 			</p>
+			<HowToRead items={[
+				['Bars', 'Everyone\'s chat messages this season, grouped by the hour they were sent (Central time). Left = midnight, right = 11pm.'],
+				['Late-night champ', 'Whoever sent the most messages between midnight and 4:59am.'],
+			]} />
 		</div>
 		{#if !omitHighlights}<ChatDailyActivity {snap} />{/if}
 	</section>
@@ -296,6 +308,10 @@
 			<h2 class="mb-1 text-lg font-semibold">🚪 First In The Chat</h2>
 			<p class="mb-4 text-sm text-fg-muted">Who posts first when a round drops or results land.</p>
 			<ChartCanvas height={280} config={starterConfig} />
+			<HowToRead items={[
+				['Round drops (teal)', 'How many times this person sent the first chat message after a new round opened (within 48 hours).'],
+				['Results posts (gold)', 'How many times they sent the first chat message after a round\'s results came out.'],
+			]} />
 		</div>
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 			<h2 class="mb-1 text-lg font-semibold">⏰ Deadline Scramble</h2>
@@ -317,14 +333,18 @@
 				Scramble king: <span class="font-semibold text-fg">{scrambleRows[0]?.name}</span>
 				({scrambleRows[0]?.v ?? 0} msgs, {((scrambleRows[0]?.v ?? 0) / Math.max(scrambleTotal, 1) * 100).toFixed(0)}%)
 			</p>
+			<HowToRead items={[
+				['Each row', 'One round: chat messages sent in the 24 hours before that round\'s voting deadline. Longer bar = more last-minute chatter.'],
+				['Scramble king', 'The person who sent the most of those last-24-hour messages across all rounds, with their share of the total.'],
+			]} />
 		</div>
 	</section>
 
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<h2 class="mb-1 text-lg font-semibold">🧨 Conversation Bursts</h2>
 		<p class="mb-4 text-sm text-fg-muted">
-			Bursts = message clusters separated by 15+ min of silence. "Ignited" = started one after an hour of
-			silence.
+			A burst is a run of messages with no gap longer than 15 minutes; 15+ minutes of quiet ends it. “Ignited”
+			means you sent the first message of a burst — you broke the silence.
 		</p>
 		<div class="grid gap-6 md:grid-cols-2">
 			<div class="overflow-x-auto">
@@ -332,10 +352,10 @@
 					<thead>
 						<tr class="text-left text-fg-muted">
 							<th class="px-3 py-2">Person</th>
-							<th class="px-3 py-2 text-right">Ignited</th>
-							<th class="px-3 py-2 text-right">Avg size</th>
-							<th class="px-3 py-2 text-right">Biggest</th>
-							<th class="px-3 py-2 text-right">Vibe shift</th>
+							<th class="px-3 py-2 text-right" title="Bursts this person started — the first message after 15+ minutes of quiet.">Ignited ⓘ</th>
+							<th class="px-3 py-2 text-right" title="Average number of messages in the bursts this person posted in.">Avg size ⓘ</th>
+							<th class="px-3 py-2 text-right" title="The largest burst (in messages) this person posted in.">Biggest ⓘ</th>
+							<th class="px-3 py-2 text-right" title="How many of their messages got enough replies to be scored on the reaction axes (needs a reply inside a burst of 3+ messages).">Rated msgs ⓘ</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -351,7 +371,7 @@
 					</tbody>
 				</table>
 				<p class="mt-2 text-xs text-fg-muted">
-					Rated messages: how often their messages were scored on the {axisMetaA.label}/{axisMetaB.label} reaction axes.
+					Top eight by bursts ignited. Rated msgs: how many of their messages drew enough replies to be scored on the reaction axes (see Reaction Quadrant).
 				</p>
 			</div>
 			<div>
@@ -399,11 +419,11 @@
 				<thead>
 					<tr class="text-left text-fg-muted">
 						<th class="px-3 py-2">Player</th>
-						<th class="px-3 py-2 text-right">⚡ Energy</th>
-						<th class="px-3 py-2 text-right">💛 Warmth</th>
-						<th class="px-3 py-2 text-right">📣 Engagement</th>
-						<th class="px-3 py-2 text-right">🌊 Momentum</th>
-						<th class="px-3 py-2 text-right">Rated</th>
+						<th class="px-3 py-2 text-right" title={AXIS_TIPS.energy}>⚡ Energy ⓘ</th>
+						<th class="px-3 py-2 text-right" title={AXIS_TIPS.warmth}>💛 Warmth ⓘ</th>
+						<th class="px-3 py-2 text-right" title={AXIS_TIPS.engagement}>📣 Engagement ⓘ</th>
+						<th class="px-3 py-2 text-right" title={AXIS_TIPS.momentum}>🌊 Momentum ⓘ</th>
+						<th class="px-3 py-2 text-right" title="How many of their messages were scored (each needs at least one reply inside a burst of 3+ messages).">Rated ⓘ</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -420,6 +440,16 @@
 				</tbody>
 			</table>
 		</div>
+		<HowToRead items={[
+			['How a message is scored', 'Each message is judged by the next three replies, the first reply counting most (3·2·1). A message only counts if it gets a reply inside a burst of 3+ messages.'],
+			['Each player\'s score', 'The average of all their scored messages, from −1 to +1. 0 is neutral.'],
+			['The chart', `Plots the two axes that vary most across the league this season: ${axisMetaA.label} across, ${axisMetaB.label} up. Corner labels say what each corner means.`],
+			['⚡ Energy', AXIS_TIPS.energy],
+			['💛 Warmth', AXIS_TIPS.warmth],
+			['📣 Engagement', AXIS_TIPS.engagement],
+			['🌊 Momentum', AXIS_TIPS.momentum],
+			['Rated', 'How many of their messages qualified to be scored. Small numbers = shakier scores.'],
+		]} />
 	</section>
 
 	{#if deep}
@@ -537,20 +567,35 @@
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 			<h2 class="mb-1 text-lg font-semibold">📣 Chat Hype vs Votes</h2>
 			<p class="mb-4 text-sm text-fg-muted">
-				Songs shared in chat vs their actual round score. Off the diagonal = the hype bubble.
+				Songs talked about in the chat versus how they actually scored. Off the diagonal = the hype bubble.
 			</p>
 			<ChartCanvas height={300} config={hypeConfig} zoomable />
+			<HowToRead items={[
+				['Each dot', 'One song from this league that someone linked or named in the chat.'],
+				['Across', 'How many times the song came up in the chat.'],
+				['Up', 'The total points it finished the round with.'],
+				['Reading it', 'Top-left: quiet songs that scored big. Bottom-right: songs everyone talked about that the votes didn\'t back up.'],
+			]} />
 		</div>
 		<div class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 			<h2 class="mb-1 text-lg font-semibold">🫥 Lurker Index</h2>
-			<p class="mb-4 text-sm text-fg-muted">Chat volume vs Music League activity — loud-but-late vs silent-workhorses.</p>
+			<p class="mb-4 text-sm text-fg-muted">How much each player talks versus how much they actually play.</p>
 			<ChartCanvas height={300} config={lurkerConfig} zoomable />
+			<HowToRead items={[
+				['Each dot', 'One player.'],
+				['Across', 'Music League actions this season: songs submitted plus votes cast.'],
+				['Up', 'Group-chat messages this season.'],
+				['Reading it', 'High and left: all talk, little play. Low and right: silent workhorses who vote and submit but rarely post.'],
+			]} />
 		</div>
 	</section>
 
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<h2 class="mb-1 text-lg font-semibold">🫶 Self-Promo Index</h2>
-		<p class="mb-4 text-sm text-fg-muted">Who hyped their own submission in chat before voting closed.</p>
+		<p class="mb-4 text-sm text-fg-muted">
+			Who talked up their own song in the chat before voting closed — which, since submissions are anonymous,
+			is basically signing your ballot.
+		</p>
 		<div class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead>

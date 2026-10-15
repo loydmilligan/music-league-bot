@@ -159,8 +159,11 @@
         {/each}
       </div>
       <p class="tm-legend-score">
-        <b>Tastemaker score</b> = median of your songs' discovery percentile (how obscure vs. the
-        season, from Last.fm play counts). Buckets use each song's raw obscurity.
+        <b>Tastemaker score</b> (the big number, 0–100) = how obscure your picks run compared with
+        everyone else's this season — the median of your songs' obscurity percentiles, from Last.fm
+        listener counts. Higher = deeper cuts. Each colored segment counts your songs in that bucket,
+        from radio hits to rabbit holes (bucket ranges are raw obscurity); tap one for the list.
+        <b>▲ / ▼ (n)</b> = moved up or down from rank n after last round.
       </p>
     </div>
 

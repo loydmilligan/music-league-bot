@@ -3,6 +3,7 @@
 	import { type DaySummary } from '$lib/boarzStats/shared.js';
 	import { onMount } from 'svelte';
 	import ChartCanvas from './ChartCanvas.svelte';
+	import HowToRead from './HowToRead.svelte';
 
 	let { snap }: { snap: Snapshot } = $props();
 
@@ -147,13 +148,25 @@
 	</div>
 	<p class="mb-4 text-sm text-fg-muted">
 		{#if actMode === 'people'}
-			Area colored by who was talking that day. Gold dots mark peak chatter days — hover for
-			LLM-summarized topics.
+			Each day's group-chat messages, stacked and colored by who sent them, with Music League votes and
+			vote comments per day on the right axis. Gold dots mark the busiest days — hover a dot for what
+			people were talking about.
 		{:else}
-			Gold dots mark peak chatter days — hover for LLM-summarized topics.
+			Chat messages per day (left axis, log scale) against Music League votes and vote comments per day
+			(right axis). Gold dots mark the busiest chat days — hover a dot for what people were talking about.
 		{/if}
 	</p>
 	<ChartCanvas height={320} config={activityConfig} zoomable zoomMode="x" />
+	<HowToRead
+		items={[
+			['Across', 'Calendar days (Central time) from the start of this season to today.'],
+			['By participant', 'Messages per day, stacked by sender — the taller a color band, the more that person talked that day.'],
+			['Total (log)', 'All chat messages per day on the left axis. Log scale: each gridline is ten times the one below, so quiet days stay visible next to huge ones.'],
+			['ML votes / comments', 'Lines on the right axis, both views: how many Music League votes and written vote comments were cast that day. Chat spikes that line up with these are voting-night chatter.'],
+			['Gold dots / peak days', 'Days busier than the days around them. The summaries below each are AI-written topic lists from that day\'s messages.'],
+			['Zoom', 'Drag or pinch on the chart to zoom into a stretch of days.'],
+		]}
+	/>
 	{#if chat.peaks.length}
 		<div class="mt-4 space-y-2">
 			{#each chat.peaks as pk (pk.day)}
