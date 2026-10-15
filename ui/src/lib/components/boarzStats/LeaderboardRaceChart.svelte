@@ -35,8 +35,10 @@
 	let raceTimer: ReturnType<typeof setInterval> | null = null;
 
 	function raceRank(pi: number, r: number): number {
-		const totals = raceRows.map((row) => ({ t: row.cum[r] ?? 0, comp: row.i }));
-		const sorted = [...totals].sort((a, b) => b.t - a.t || a.comp - b.comp);
+		// Ties break by display order so the rank column always reads 1,2,3 down
+		// the list (comp-index tiebreak showed "3" above "2" on equal points).
+		const totals = raceRows.map((row, pos) => ({ t: row.cum[r] ?? 0, comp: row.i, pos }));
+		const sorted = [...totals].sort((a, b) => b.t - a.t || a.pos - b.pos);
 		return sorted.findIndex((o) => o.comp === pi) + 1;
 	}
 	function stopRace() {

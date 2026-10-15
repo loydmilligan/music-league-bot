@@ -413,6 +413,34 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 		end: r.voteDeadline,
 	}));
 
+	// Map chat senders the static alias table doesn't know to this season's ML
+	// handle via player_identities (WhatsApp display name → player → competitor).
+	// Second Best's handles (Queen0Reno, missmara, jac, Voltron's YoungLion…)
+	// never match the chat names, so all but four people were silently dropped.
+	// Whitespace is normalized because WhatsApp "~" names carry U+202F.
+	try {
+		const ws = (v: string) => v.replace(/[\u00a0\u202f]/g, ' ').trim();
+		const compNameByPlayer = new Map<number, string>();
+		for (const row of db
+			.prepare(`SELECT id, name, player_id FROM competitors WHERE id IN (${competitors.map(() => '?').join(',') || 'NULL'}) AND player_id IS NOT NULL`)
+			.all(...competitors.map((c) => c.id)) as { id: number; name: string; player_id: number }[]) {
+			compNameByPlayer.set(row.player_id, row.name);
+		}
+		const handleBySender = new Map<string, string>();
+		for (const row of db
+			.prepare(`SELECT identifier, player_id FROM player_identities WHERE identity_type = 'whatsapp'`)
+			.all() as { identifier: string; player_id: number }[]) {
+			const handle = compNameByPlayer.get(row.player_id);
+			if (handle && !handleBySender.has(ws(row.identifier))) handleBySender.set(ws(row.identifier), handle);
+		}
+		for (const m of chatRows) {
+			if (canonicalSender(m.sender) != null) continue;
+			const handle = handleBySender.get(ws(m.sender));
+			if (handle) m.sender = handle;
+		}
+	} catch {
+		/* identity mapping is a best-effort upgrade; fall back to raw senders */
+	}
 	const chat = aggregateChat(chatRows, anchors, scrambleWindows, competitors);
 	// Additive and isolated: a Laugh Track failure must never break the snapshot.
 	let laughTrack: LaughTrack | null = null;

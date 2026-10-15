@@ -63,14 +63,22 @@
   // Relative countdown (web only — would go stale in a shared static artifact).
   const relDeadline = $derived.by(() => {
     if (Number.isNaN(deadlineMs)) return '';
-    const diff = deadlineMs - Date.now();
+    // Say which deadline: once submissions close the round is in voting, which
+    // read as a flat 'closed' while the round was very much open.
+    const votingMs = nr?.votingDeadline ? new Date(nr.votingDeadline).getTime() : Number.NaN;
+    let label = 'submissions close';
+    let diff = deadlineMs - Date.now();
+    if (diff <= 0 && !Number.isNaN(votingMs) && votingMs > Date.now()) {
+      label = 'voting closes';
+      diff = votingMs - Date.now();
+    }
     if (diff <= 0) return 'closed';
     const mins = Math.round(diff / 60000);
     const hrs = Math.round(diff / 3600000);
     const days = Math.round(diff / 86400000);
-    if (mins < 60) return `closes in ${mins} min`;
-    if (hrs < 24) return `closes in ${hrs} hr${hrs === 1 ? '' : 's'}`;
-    return `closes in ${days} day${days === 1 ? '' : 's'}`;
+    if (mins < 60) return `${label} in ${mins} min`;
+    if (hrs < 24) return `${label} in ${hrs} hr${hrs === 1 ? '' : 's'}`;
+    return `${label} in ${days} day${days === 1 ? '' : 's'}`;
   });
 
   const subs = $derived(typeof nr?.submissionsSoFar === 'number' ? nr.submissionsSoFar : null);
