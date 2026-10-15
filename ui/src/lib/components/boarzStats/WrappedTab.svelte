@@ -77,7 +77,7 @@
 	<section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<h2 class="mb-1 text-lg font-semibold">📖 The story of the season</h2>
 		<p class="text-sm text-fg-muted">
-			{snap.rounds.length} rounds, {snap.subs.length} songs, {snap.votes.length} votes, and
+			{snap.rounds.length} {snap.rounds.length === 1 ? 'round' : 'rounds'}, {snap.subs.length} songs, {snap.votes.length} votes, and
 			{people.reduce((a, p) => a + p.msgs, 0)} chat messages between friends.
 			{champion?.name} took the crown; {topTalker?.display} never stopped talking about it.
 		</p>

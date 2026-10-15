@@ -171,7 +171,7 @@
 
 	<details class="rounded-2xl border border-border-muted bg-surface/50 p-5">
 		<summary class="cursor-pointer list-none text-lg font-semibold">🏆 Standings table <span class="ml-2 text-xs font-normal text-fg-muted">Show exact totals and averages</span></summary>
-		<p class="mb-4 mt-2 text-sm text-fg-muted">Cumulative points across all {snap.rounds.length} rounds.</p>
+		<p class="mb-4 mt-2 text-sm text-fg-muted">Cumulative points across {snap.rounds.length === 1 ? 'the 1 round' : `all ${snap.rounds.length} rounds`} played so far.</p>
 		<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-fg-muted">
 			<th class="px-3 py-2">#</th>
 			<th class="px-3 py-2"><button class="hover:text-fg" onclick={() => sortBy('name')}>Player {standingSort === 'name' ? (sortAscending ? '↑' : '↓') : '↕'}</button></th>

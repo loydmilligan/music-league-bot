@@ -109,7 +109,7 @@
 			{/if}
 			<h1 class="text-3xl font-bold text-fg">{snapshot.league.name}</h1>
 			<p class="text-sm text-fg-muted">
-				{snapshot.league.season} · {snapshot.rounds.length} rounds · stats generated
+				{snapshot.league.season} · {snapshot.rounds.length} {snapshot.rounds.length === 1 ? 'round' : 'rounds'} played · stats generated
 				{new Date(snapshot.generatedAt).toLocaleString()}
 			</p>
 		</div>
