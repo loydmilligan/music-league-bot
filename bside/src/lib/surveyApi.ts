@@ -25,6 +25,15 @@ export interface AuthMe {
 	voterName?: string;
 	submitted?: boolean;
 	codeRequiredToSwitch?: boolean;
+	loginCode?: 'off' | 'notify' | 'approve';
+}
+
+export interface LoginCodeRequest {
+	id: string;
+	playerName: string;
+	status: 'pending' | 'sent' | 'denied' | 'failed' | 'expired';
+	expiresAt: string;
+	reason: 'no_number' | 'unknown_player' | 'rate_limited' | 'send_failed' | null;
 }
 
 export interface Hub {
@@ -92,6 +101,12 @@ export function createSurveyApi(apiBase: string, fetchFn: typeof fetch = fetch) 
 		news: () => request<{ ok: boolean; items: NewsItem[] }>('GET', 'news'),
 		postNews: (body: { title: string; body: string }) => request<{ ok: boolean }>('POST', 'news', body),
 		unpublishNews: (id: string) => request<{ ok: boolean }>('PUT', `news/${id}`, { unpublished: true }),
+		requestCode: (name: string) =>
+			request<{ ok: boolean; request: LoginCodeRequest }>('POST', 'auth/request-code', { name }),
+		codeStatus: (id: string) =>
+			request<{ ok: boolean; request: LoginCodeRequest }>('GET', `auth/request-code/${encodeURIComponent(id)}`),
+		verifyCode: (name: string, code: string) =>
+			request<{ ok: boolean; voterName: string }>('POST', 'auth/verify-code', { name, code }),
 		switchRequest: (voterName: string) => request<{ ok: boolean }>('POST', 'auth/switch-request', { voterName }),
 		switchRequests: () => request<{ ok: boolean; requests: { id: string; playerName: string; status: string; code: string | null }[] }>('GET', 'switch-requests'),
 		actSwitch: (id: string, action: 'activate' | 'deny' | 'send') =>
