@@ -12,6 +12,7 @@ export type ControlAction =
   | { action: 'media'; target: string | null; file: string; caption: string | null; pin: number | null }
   | { action: 'say'; target: string | null; text: string; pin: number | null }
   | { action: 'dm'; to: string; text: string }
+  | { action: 'login-code'; league: string; name: string; code: string }
   | ({ action: 'round-reveal' } & RoundRevealRequest)
   | { action: 'prompt'; prompt: Record<string, unknown> }
   | { action: 'unknown'; reason: string };
@@ -129,6 +130,21 @@ export function parseControlRequest(method: string, path: string, body: unknown)
       return { action: 'unknown', reason: 'player DMs cannot target a group' };
     }
     return { action: 'dm', to: b.to.trim(), text: b.text.trim() };
+  }
+
+  // Portal login code. The bot resolves name → number itself; callers never see it.
+  if (path === '/login-code') {
+    const b = (body ?? {}) as Record<string, unknown>;
+    if (typeof b.league !== 'string' || !b.league.trim()) {
+      return { action: 'unknown', reason: 'league (string) required' };
+    }
+    if (typeof b.name !== 'string' || !b.name.trim()) {
+      return { action: 'unknown', reason: 'name (string) required' };
+    }
+    if (typeof b.code !== 'string' || !/^\d{6}$/.test(b.code)) {
+      return { action: 'unknown', reason: 'code (6-digit string) required' };
+    }
+    return { action: 'login-code', league: b.league.trim(), name: b.name.trim(), code: b.code };
   }
 
   // Plain text to an arbitrary chat, optionally pinned (how-to-play explainer).

@@ -6,6 +6,8 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
+import Database from 'better-sqlite3';
+import { createLoginCodeService, lookupPlayerNumber } from './whatsapp/loginCode.js';
 import { handleMessage } from './bot/handler.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
@@ -82,6 +84,19 @@ client.on('ready', () => {
     notifyOwner: (msg) => makeSendDm(client)(ownerPhone, msg),
   });
 
+  // Portal login codes: read-only lookup in league.db; bypasses the opt-in guard
+  // (the player asked) with its own 3/hour limit. LOGIN_CODE_REDIRECT diverts all.
+  let leagueDbRo: Database.Database | null = null;
+  const loginCodes = createLoginCodeService({
+    lookup: (name) => {
+      leagueDbRo ??= new Database(path.join(__dirname, '../data/league.db'), { readonly: true, fileMustExist: true });
+      return lookupPlayerNumber(leagueDbRo, name);
+    },
+    send: (target, text) => makeSay(client)(target, text),
+    redirect: process.env.LOGIN_CODE_REDIRECT,
+    log: (line) => console.log(line),
+  });
+
   // Local control plane (container-local only): trigger a poll, or send any
   // round's digest to any group. See src/control/server.ts.
   startControlServer({
@@ -151,6 +166,7 @@ client.on('ready', () => {
       console.log(`[dm] sent ${text.length} chars to ${decision.target}`);
       return { sent: true, target: decision.target, reason: decision.reason };
     },
+    onLoginCode: (req) => loginCodes.request(req),
     onRoundReveal: async (request) => {
       const result = await runRevealAnnouncement(request, {
         env: {

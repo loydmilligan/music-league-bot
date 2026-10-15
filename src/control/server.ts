@@ -9,11 +9,14 @@
  *   POST /send {roundId, target, mode}  send any round's digest to any group
  *                                       (mode defaults to dry-run)
  *   POST /notify {text}                 DM the bot owner (fixed recipient)
+ *   POST /login-code {league,name,code} DM a portal login code to the player's
+ *                                       number on file (or LOGIN_CODE_REDIRECT)
  */
 import http from 'node:http';
 import { parseControlRequest } from './router.js';
 import type { ManualSendReq, ManualSendResult } from '../digest/manualSend.js';
 import type { RoundRevealRequest, RevealAnnouncementResult } from '../reveal/announcement.js';
+import type { LoginCodeRequest, LoginCodeResult } from '../whatsapp/loginCode.js';
 
 export interface ControlHandlers {
   onTrigger: () => Promise<void>;
@@ -37,6 +40,7 @@ export interface ControlHandlers {
     pin: number | null,
   ) => Promise<{ target: string }>;
   onDm: (to: string, text: string) => Promise<{ sent: boolean; target?: string; reason: string }>;
+  onLoginCode: (req: LoginCodeRequest) => Promise<LoginCodeResult>;
   onRoundReveal: (request: RoundRevealRequest) => Promise<RevealAnnouncementResult>;
   onPrompt: (prompt: Record<string, unknown>) => Promise<{ id: string }>;
 }
@@ -99,6 +103,10 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
         } else if (route.action === 'dm') {
           const result = await handlers.onDm(route.to, route.text);
           reply(result.sent ? 200 : 400, { ok: result.sent, action: 'dm', ...result });
+        } else if (route.action === 'login-code') {
+          // Shape is exactly { sent, reason? } — never the phone number.
+          const result = await handlers.onLoginCode({ league: route.league, name: route.name, code: route.code });
+          reply(200, result);
         } else {
           reply(400, { ok: false, reason: route.reason });
         }
