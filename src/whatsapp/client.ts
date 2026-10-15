@@ -257,6 +257,30 @@ async function tryPin(sent: unknown, pinSeconds?: number): Promise<void> {
 
 // Plain text to an arbitrary chat, optionally pinned. makeSendDm exists but is
 // fire-and-forget; this returns through pin(), which needs the sent Message.
+/**
+ * DM a phone number (`<digits>@c.us`). Sending straight to the @c.us id hangs
+ * until Puppeteer's protocol timeout for LID-migrated contacts, so ask WhatsApp
+ * for the contact's LID first and send there; fall back to the @c.us id.
+ */
+export function makeSendToNumber(
+  client: ClientType,
+  log: (line: string) => void = console.log,
+): (chatId: string, text: string) => Promise<void> {
+  return async (chatId, text) => {
+    const t0 = Date.now();
+    let target = chatId;
+    try {
+      const [ids] = await client.getContactLidAndPhone([chatId]);
+      if (ids?.lid) target = ids.lid;
+    } catch (err) {
+      log(`[dm-number] lid lookup failed (${err instanceof Error ? err.message : String(err)}); using ${chatId.slice(-9)}`);
+    }
+    log(`[dm-number] resolved ${target.endsWith('@lid') ? 'lid' : 'c.us'} in ${Date.now() - t0}ms`);
+    await client.sendMessage(target, text);
+    log(`[dm-number] sent in ${Date.now() - t0}ms`);
+  };
+}
+
 export function makeSay(
   client: ClientType,
 ): (chatId: string, text: string, pinSeconds?: number) => Promise<void> {

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config/loader.js';
 import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
-import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay } from './whatsapp/client.js';
+import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
 import { createLoginCodeService, lookupPlayerNumber } from './whatsapp/loginCode.js';
@@ -92,7 +92,7 @@ client.on('ready', () => {
       leagueDbRo ??= new Database(path.join(__dirname, '../data/league.db'), { readonly: true, fileMustExist: true });
       return lookupPlayerNumber(leagueDbRo, name);
     },
-    send: (target, text) => makeSay(client)(target, text),
+    send: (target, text) => makeSendToNumber(client)(target, text),
     redirect: process.env.LOGIN_CODE_REDIRECT,
     log: (line) => console.log(line),
   });
