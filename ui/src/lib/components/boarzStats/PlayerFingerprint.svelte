@@ -29,7 +29,29 @@
 	const selected = $derived(selectedKeys.map((key) => allPlayers.find((p) => p.key === key)).filter((p): p is Player => !!p));
 	const active = $derived(traits.find((trait) => trait.key === activeTrait) ?? traits[0]);
 	const palette = (player: Player) => snap.colors[Math.max(0, snap.competitors.findIndex((c) => c.id === player.competitorId)) % snap.colors.length] ?? '#a78bfa';
-	const score = (player: Player, trait: Trait) => Number(player[trait.field] ?? 0);
+	// Display score. The server stretches each trait min-max across players, but
+	// unrated players (0 messages) pin the minimum at 0 and squash everyone who
+	// talks into a 0.7–1.0 band — every fingerprint came out the same big hexagon.
+	// So, here and only for the visual: (1) rank rated players within each trait
+	// (0 = lowest, 1 = highest — immune to the squash), then (2) tilt each player
+	// toward their own strengths by removing half of their overall level, so the
+	// shape shows what they stand out at rather than how loud they are overall.
+	const rated = $derived(allPlayers.filter((p) => p.msgsRated > 0));
+	const rankScores = $derived.by(() => {
+		const out = new Map<string, Record<string, number>>();
+		for (const p of rated) out.set(p.key, {});
+		for (const t of traits) {
+			const ordered = [...rated].sort((a, b) => Number(a[t.field] ?? 0) - Number(b[t.field] ?? 0));
+			ordered.forEach((p, i) => (out.get(p.key)![t.key] = ordered.length > 1 ? i / (ordered.length - 1) : 0.5));
+		}
+		for (const [, rec] of out) {
+			const mean = traits.reduce((sum, t) => sum + rec[t.key], 0) / traits.length;
+			for (const t of traits) rec[t.key] = Math.min(1, Math.max(0.06, rec[t.key] - 0.5 * (mean - 0.5)));
+		}
+		return out;
+	});
+	const score = (player: Player, trait: Trait) => rankScores.get(player.key)?.[trait.key] ?? 0;
+	const SMALL_SAMPLE = 150;
 	const avatarFiles: Record<string, string> = {
 		mashew: '/boarz/avatars/mashew.png',
 		'jonathan black': '/boarz/avatars/jonathan-black.png',
@@ -179,7 +201,7 @@
 								<img src={avatarFor(player)} alt="" onerror={() => failedAvatarKeys = new Set([...failedAvatarKeys, player.key])} />
 							{:else}<span>{initials(player.display)}</span>{/if}
 						</div>
-						<div class="identity-copy"><div class="card-kicker">PLAYER FINGERPRINT</div><h3>{player.display}</h3><div class="archetype">{archetype(player)}</div><div class="card-context">{snap.league.name} · {snap.league.season}</div><p>{player.msgsRated.toLocaleString()} rated messages</p></div>
+						<div class="identity-copy"><div class="card-kicker">PLAYER FINGERPRINT</div><h3>{player.display}</h3><div class="archetype">{archetype(player)}</div><div class="card-context">{snap.league.name} · {snap.league.season}</div><p>{player.msgsRated.toLocaleString()} rated messages{#if player.msgsRated < SMALL_SAMPLE} · <span class="small-sample" title="Fewer than {SMALL_SAMPLE} rated messages — this shape is based on a small sample and may swing a lot.">small sample</span>{/if}</p></div>
 					</div>
 					<div class="card-actions" data-noshot="1">
 						<button class="share-action" type="button" title={`Download ${player.display}'s fingerprint as PNG`} aria-label={`Download ${player.display}'s fingerprint as PNG`} disabled={cardBusyKey !== null} onclick={(event) => downloadFingerprint(event, player)}>{cardBusyKey === player.key ? 'Saving…' : '↓ PNG'}</button>
@@ -189,7 +211,7 @@
 				</div>
 				{#if cardStatus[player.key]}<p class="card-status" aria-live="polite" data-noshot="1">{cardStatus[player.key]}</p>{/if}
 				<div class="radar-wrap">
-					<svg viewBox="0 0 220 204" role="img" aria-label={`${player.display} trait fingerprint. Select a point to view message evidence.`}>
+					<svg viewBox="-18 -16 256 236" role="img" aria-label={`${player.display} trait fingerprint. Select a point to view message evidence.`}>
 						{#each [0.33, 0.66, 1] as ring}
 							<polygon points={traits.map((_, i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / traits.length; return `${110 + Math.cos(a) * 72 * ring},${102 + Math.sin(a) * 72 * ring}`; }).join(' ')} class="grid-ring" fill="none" stroke="#60708a66" stroke-width="1" />
 						{/each}
@@ -200,6 +222,17 @@
 							<g class:active-dot={activeTrait === trait.key} role="button" tabindex="0" aria-label={`Show ${trait.title} message evidence`} onclick={() => activeTrait = trait.key} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') activeTrait = trait.key; }}>
 								<circle cx={end.x} cy={end.y} r="15" class="hit-area" fill="transparent" />
 								<circle cx={end.x} cy={end.y} r="5.5" class="trait-dot" fill={palette(player)} stroke="white" stroke-width="1.5" />
+							</g>
+						{/each}
+						{#each traits as trait, i (trait.key)}
+							{@const a = -Math.PI / 2 + i * Math.PI * 2 / traits.length}
+							{@const lx = 110 + Math.cos(a) * 92}
+							{@const ly = 102 + Math.sin(a) * 92}
+							<g class="axis-label" class:axis-active={activeTrait === trait.key} role="button" tabindex="0" aria-label={`${trait.title}: ${Math.round(score(player, trait) * 100)}`} onclick={() => activeTrait = trait.key} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') activeTrait = trait.key; }}>
+								<circle cx={lx} cy={ly} r="11" class="axis-chip" />
+								<text x={lx} y={ly + 4.5} text-anchor="middle" class="axis-icon">{trait.icon}</text>
+								<text x={lx} y={ly + (Math.sin(a) > 0.3 ? 23 : -15)} text-anchor="middle" class="axis-name">{trait.title}</text>
+								<title>{trait.title} — {trait.subtitle}: {Math.round(score(player, trait) * 100)}</title>
 							</g>
 						{/each}
 						<polygon points={radarPolygon(player)} fill={palette(player)} fill-opacity="0.24" stroke={palette(player)} stroke-width="2.4" stroke-linejoin="round" />
@@ -245,7 +278,7 @@
 					</div>
 				{/each}
 			</div>
-			<p class="method-note">Trait scores are stretched across this roster for readability. Message receipts are the highest individual ratings in the available Boarz chat data; they illustrate a trait, but are not necessarily typical.</p>
+			<p class="method-note">Scores rank each player against the others on every trait (0 = lowest in the league, 100 = highest), then tilt each shape toward that player's own strengths, so a fingerprint shows what someone stands out at rather than how much they talk overall. Message receipts are the highest individual ratings in the available Boarz chat data; they illustrate a trait, but are not necessarily typical.</p>
 		</div>
 	{/if}
 </section>
@@ -255,7 +288,8 @@
 	.intro-row,.card-head,.evidence-heading,.evidence-person-head{display:flex;justify-content:space-between;align-items:center;gap:1rem}.intro-row,.player-picker,.cards,.evidence-panel{position:relative}.intro-row h2{font-size:clamp(1.6rem,3vw,2.25rem);font-weight:800;letter-spacing:-.045em;background:linear-gradient(100deg,#fff 15%,#ffd09a 65%,#f08b68);color:transparent;background-clip:text}
 	h2,h3,p{margin:0}.muted,.card-head p{color:#a6b1c7;font-size:.85rem;margin-top:.2rem}.eyebrow,.card-kicker{color:#bb9aff;font-size:.64rem;font-weight:800;letter-spacing:.16em;margin-bottom:.35rem}.selection-hint{color:#c3cbda;font-size:.78rem}.selection-hint span{background:#261d3b;color:#d6bcff;border-radius:999px;padding:.25rem .55rem;margin-left:.3rem}.clear-selection{margin-left:.55rem;border:1px solid #566078;border-radius:999px;background:#1a2231;color:#e1e7f2;padding:.2rem .55rem;font-size:.7rem}.clear-selection:hover{border-color:#c4a5ff;background:#282039}.empty-selection{margin:.25rem 0 .8rem;padding:1.2rem;border:1px dashed #46516a;border-radius:.8rem;color:#aab5c8;text-align:center;font-size:.85rem}
 	.player-picker{display:flex;flex-wrap:wrap;gap:.4rem;margin:1rem 0 1.1rem}.player-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .68rem;border-radius:999px;border:1px solid #29344a;background:#111927;color:#bec8d9;font-size:.78rem;transition:.15s}.player-chip:hover,.player-chip.chosen{border-color:var(--player,#a78bfa);color:white;background:#1a2234}.dot{width:.55rem;height:.55rem;border-radius:50%;background:var(--player)}
-	.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:.8rem}.profile-card{border:1px solid color-mix(in srgb,var(--player) 45%,#273347);background:linear-gradient(145deg,color-mix(in srgb,var(--player) 10%,#141927),#0c121d 68%);border-radius:1rem;padding:.95rem;min-width:0}.card-head{align-items:flex-start}.identity{display:flex;align-items:center;gap:.78rem;min-width:0}.identity-copy{min-width:0}.card-head h3{font-size:1.22rem;line-height:1.1;overflow-wrap:anywhere}.card-kicker{font-size:.58rem}.archetype{margin-top:.17rem;color:var(--player);font-size:.8rem;font-weight:700;font-style:italic}.card-context{margin-top:.18rem;color:#a9b2c5;font-size:.64rem}.avatar{width:4rem;height:4rem;flex:0 0 4rem;border-radius:50%;overflow:hidden;border:2px solid var(--player);background:radial-gradient(circle at 35% 25%,color-mix(in srgb,var(--player) 65%,white),#171a27 70%);box-shadow:0 0 0 4px color-mix(in srgb,var(--player) 15%,transparent),0 5px 18px #0007;display:grid;place-items:center}.avatar img{width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block}.avatar span{color:white;font-size:1rem;font-weight:800;letter-spacing:.04em}.card-actions{display:flex;align-items:center;gap:.28rem;flex:0 0 auto}.share-action{border:1px solid #536078;border-radius:999px;background:#182131;color:#cbd5e6;padding:.3rem .48rem;font-size:.65rem;font-weight:700;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}.share-action:hover:not(:disabled){border-color:var(--player);background:color-mix(in srgb,var(--player) 18%,#182131);color:white}.share-action:disabled{opacity:.65;cursor:wait}.share-primary{border-color:color-mix(in srgb,var(--player) 65%,#526078);color:white}.crown{font-size:1.05rem;color:var(--player);background:#ffffff0b;border-radius:.65rem;padding:.22rem .38rem}.card-status{margin:.5rem 0 0 auto;text-align:right;color:#c5cede;font-size:.67rem}.radar-wrap{max-width:270px;height:210px;margin:.25rem auto 0}.radar-wrap svg{width:100%;height:100%;overflow:visible}.grid-ring{fill:none;stroke:#60708a66;stroke-width:1}.spoke{stroke:#60708a55;stroke-width:1}.trait-dot{fill:var(--player);stroke:#fff;stroke-width:1.5;cursor:pointer}.hit-area{fill:transparent;cursor:pointer}.active-dot .trait-dot,.trait-dot:hover{r:7}.top-dot{fill:#fff;stroke:var(--player);stroke-width:3}.trait-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.3rem}.trait-line{display:flex;align-items:center;gap:.4rem;text-align:left;padding:.38rem;border-radius:.55rem;color:#c5cede;background:transparent;min-width:0}.trait-line:hover,.trait-line.trait-selected{background:#ffffff0d;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--player) 35%,transparent)}.trait-icon{color:var(--player);font-size:1.12rem;width:1.15rem;text-align:center}.trait-copy{display:flex;flex-direction:column;min-width:0;flex:1}.trait-copy b{font-size:.73rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trait-copy small{font-size:.6rem;color:#8794aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trait-line strong{font-size:.74rem;color:var(--player);font-variant-numeric:tabular-nums}
+	.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:.8rem}.profile-card{border:1px solid color-mix(in srgb,var(--player) 45%,#273347);background:linear-gradient(145deg,color-mix(in srgb,var(--player) 10%,#141927),#0c121d 68%);border-radius:1rem;padding:.95rem;min-width:0}.card-head{align-items:flex-start}.identity{display:flex;align-items:center;gap:.78rem;min-width:0}.identity-copy{min-width:0}.card-head{flex-wrap:wrap-reverse}.card-head h3{font-size:1.22rem;line-height:1.1;overflow-wrap:break-word;word-break:normal}.card-actions{margin-left:auto}.card-kicker{font-size:.58rem}.archetype{margin-top:.17rem;color:var(--player);font-size:.8rem;font-weight:700;font-style:italic}.card-context{margin-top:.18rem;color:#a9b2c5;font-size:.64rem}.avatar{width:4rem;height:4rem;flex:0 0 4rem;border-radius:50%;overflow:hidden;border:2px solid var(--player);background:radial-gradient(circle at 35% 25%,color-mix(in srgb,var(--player) 65%,white),#171a27 70%);box-shadow:0 0 0 4px color-mix(in srgb,var(--player) 15%,transparent),0 5px 18px #0007;display:grid;place-items:center}.avatar img{width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block}.avatar span{color:white;font-size:1rem;font-weight:800;letter-spacing:.04em}.card-actions{display:flex;align-items:center;gap:.28rem;flex:0 0 auto}.share-action{border:1px solid #536078;border-radius:999px;background:#182131;color:#cbd5e6;padding:.3rem .48rem;font-size:.65rem;font-weight:700;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}.share-action:hover:not(:disabled){border-color:var(--player);background:color-mix(in srgb,var(--player) 18%,#182131);color:white}.share-action:disabled{opacity:.65;cursor:wait}.share-primary{border-color:color-mix(in srgb,var(--player) 65%,#526078);color:white}.crown{font-size:1.05rem;color:var(--player);background:#ffffff0b;border-radius:.65rem;padding:.22rem .38rem}.card-status{margin:.5rem 0 0 auto;text-align:right;color:#c5cede;font-size:.67rem}.radar-wrap{max-width:270px;height:210px;margin:.25rem auto 0}.radar-wrap svg{width:100%;height:100%;overflow:visible}.grid-ring{fill:none;stroke:#60708a66;stroke-width:1}.spoke{stroke:#60708a55;stroke-width:1}.trait-dot{fill:var(--player);stroke:#fff;stroke-width:1.5;cursor:pointer}.hit-area{fill:transparent;cursor:pointer}.active-dot .trait-dot,.trait-dot:hover{r:7}.top-dot{fill:#fff;stroke:var(--player);stroke-width:3}.trait-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.3rem}.trait-line{display:flex;align-items:center;gap:.4rem;text-align:left;padding:.38rem;border-radius:.55rem;color:#c5cede;background:transparent;min-width:0}.trait-line:hover,.trait-line.trait-selected{background:#ffffff0d;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--player) 35%,transparent)}.trait-icon{color:var(--player);font-size:1.12rem;width:1.15rem;text-align:center}.trait-copy{display:flex;flex-direction:column;min-width:0;flex:1}.trait-copy b{font-size:.73rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trait-copy small{font-size:.6rem;color:#8794aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trait-line strong{font-size:.74rem;color:var(--player);font-variant-numeric:tabular-nums}
+	.axis-chip{fill:#0b101a;stroke:#60708a88;stroke-width:1}.axis-icon{font-size:12px;fill:#e7ebf3}.axis-name{font-size:8.5px;font-weight:700;fill:#9aa6bb;letter-spacing:.02em}.axis-label{cursor:pointer}.axis-label.axis-active .axis-chip{stroke:var(--player);stroke-width:2}.axis-label.axis-active .axis-name{fill:#fff}.small-sample{color:#fbbf24}
 	.evidence-panel{margin-top:1rem;border:1px solid #322747;border-radius:1rem;background:linear-gradient(135deg,#171625,#101722);padding:1rem}.evidence-heading{align-items:flex-start;margin-bottom:.85rem}.evidence-heading h3{font-size:1.12rem}.evidence-heading h3 span{color:#d29fff}.evidence-heading h3 small{display:block;margin:.18rem 0 0 1.7rem;font-size:.72rem;font-weight:400;color:#9ea9be}.explanation{max-width:34rem;color:#d1c4e7;font-size:.8rem;line-height:1.5}.evidence-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:.6rem}.evidence-person{min-width:0;border:1px solid color-mix(in srgb,var(--player) 42%,#283347);border-radius:.75rem;padding:.65rem;background:#0b111bd9}.evidence-person-head{margin-bottom:.55rem;font-size:.82rem}.evidence-person-head b{color:var(--player)}.evidence-person-head span{font-size:.67rem;color:#abb6c9}.evidence-person blockquote{margin:.4rem 0 0;padding:.65rem;border-radius:.6rem;background:#171f2d;color:#dce2ed;font-size:.79rem;line-height:1.45}.evidence-person blockquote.lower-signal{background:#111824;color:#b8c2d1}.evidence-label{display:block;margin-bottom:.25rem;color:var(--player);font-size:.61rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.evidence-person footer{margin-top:.45rem;color:#92a0b6;font-size:.64rem}.no-evidence,.method-note{color:#9ba7ba;font-size:.72rem}.method-note{margin-top:.75rem}.evidence-person blockquote:first-of-type{margin-top:0}
 	@media(max-width:650px){.fingerprint-shell{padding:.8rem}.intro-row,.evidence-heading{align-items:flex-start;flex-direction:column}.selection-hint{align-self:flex-end;margin-top:-.2rem}.trait-grid{gap:.2rem}.trait-line{padding:.3rem}.cards{grid-template-columns:1fr}}
 </style>
