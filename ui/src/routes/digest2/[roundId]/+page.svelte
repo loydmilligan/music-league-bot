@@ -12,6 +12,8 @@
 	import DigestInsights from '$lib/digest/DigestInsights.svelte';
 	import StatsTeaser from '$lib/digest2/StatsTeaser.svelte';
 	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
+	import BallotSongs from '$lib/digest2/BallotSongs.svelte';
+	import BallotGrid from '$lib/digest2/BallotGrid.svelte';
 	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
 	import AdminBar from '$lib/digest2/AdminBar.svelte';
 	import { page } from '$app/state';
@@ -74,8 +76,12 @@
 					<StorylinesCast kind="storylines" content={block.content} variant="both" />
 				{/if}
 			{/each}
+		{:else if key === 'ballot' && data.ballot}
+			<BallotSongs ballot={data.ballot} />
+		{:else if key === 'ballotGrid' && data.ballot}
+			<BallotGrid ballot={data.ballot} />
 		{:else if key === 'villain' && villain}
-			<section style="margin:1.5rem 0">
+			<section id="villain" style="margin:1.5rem 0">
 				<h2>{villain.title ?? 'The Villain'}</h2>
 				<p>{villain.body ?? ''}</p>
 			</section>
