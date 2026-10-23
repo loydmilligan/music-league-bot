@@ -10,6 +10,21 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — AMA voting works on the published copy (R168 follow-up 0)
+
+### Visible (UI)
+
+- **AMA** vote buttons and tally are back on the share copy (undoes the B3 hide),
+  and votes there land in `ama_votes`.
+
+### Under the hood
+
+- New public route `/api/p/ama/<shareSlug>` (GET tallies, POST one vote), under
+  the one prefix `Caddyfile.digest` already proxies to bot-ui; unknown slug → 404.
+  mlb13 and the share copy both use it. Shared logic in `lib/server/amaVotes.ts`;
+  the admin `/api/digest2/<id>/ama-vote` route now uses it too. HttpOnly cookie
+  dedupe unchanged; prompt/answer indices validated (integers 0–49).
+
 ## 2026-10-23 — How It Played comments fold away (R168 follow-up 1)
 
 ### Visible (UI)
