@@ -44,9 +44,12 @@ export interface BallotSong {
 	artist: string;
 	submitter: string;
 	submitterAvatar: string | null;
-	net: number;
-	ups: number;
+	net: number; // scored: upvotes voided when the submitter did not vote
+	rawNet: number;
+	ups: number; // scored (0 when forfeited)
+	rawUps: number;
 	downs: number;
+	forfeited: boolean;
 	note: string | null;
 	votes: BallotVote[]; // non-zero first by points desc, then zero-point comments
 }
@@ -157,17 +160,27 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 		return null;
 	};
 
+	const voterNames = new Set(votes.map((v) => v.voter));
 	const songs = subs.map((s) => {
 		const vs = votes.filter((v) => v.uri === s.uri);
+		const rawNet = vs.reduce((t, v) => t + v.pts, 0);
+		const rawUps = vs.filter((v) => v.pts > 0).length;
+		const downs = vs.filter((v) => v.pts < 0).length;
+		const forfeited = !voterNames.has(s.submitter);
+		const net = forfeited ? vs.reduce((t, v) => t + (v.pts < 0 ? v.pts : 0), 0) : rawNet;
+		const ups = forfeited ? 0 : rawUps;
 		return {
 			uri: s.uri,
 			title: s.title,
 			artist: artistText(s.artists),
 			submitter: s.submitter,
 			submitterAvatar: avatarFor(leagueSlug, s.submitter),
-			net: vs.reduce((t, v) => t + v.pts, 0),
-			ups: vs.filter((v) => v.pts > 0).length,
-			downs: vs.filter((v) => v.pts < 0).length,
+			net,
+			rawNet,
+			ups,
+			rawUps,
+			downs,
+			forfeited,
 			note: noteFor(s.title),
 			votes: vs
 				.filter((v) => v.pts !== 0 || v.comment.trim())
@@ -178,8 +191,8 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 	songs.sort((a, b) => b.net - a.net || b.ups - a.ups || a.downs - b.downs || a.title.localeCompare(b.title));
 	const ranked: BallotSong[] = songs.map((s, i) => ({ ...s, rank: i + 1 }));
 
-	const voterNames = [...new Set(votes.map((v) => v.voter))].sort((a, b) => a.localeCompare(b));
-	const grid: BallotRow[] = voterNames.map((voter) => {
+	const gridVoters = [...voterNames].sort((a, b) => a.localeCompare(b));
+	const grid: BallotRow[] = gridVoters.map((voter) => {
 		const mine = votes.filter((v) => v.voter === voter);
 		const ballot = mine.map((v) => v.pts).filter((p) => p !== 0).sort((a, b) => b - a);
 		return {

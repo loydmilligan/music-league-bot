@@ -186,6 +186,34 @@ function seedNonVoter(db: Database.Database) {
   return { r1, ids };
 }
 
+it('ranks a points tie by scored upvoters, not name', () => {
+  seedLeagues(db);
+  const leagueId = (db.prepare("SELECT id FROM leagues WHERE slug='hip-jammers'").get() as { id: number }).id;
+  const seasonId = upsertSeason(db, leagueId, 1, 'active');
+  const r1 = upsertRound(db, seasonId, { mlRoundId: 'tb1', name: 'T', description: '', spotifyPlaylistUrl: '', createdAt: '2026-01-01T00:00:00Z' });
+  const cstmt = db.prepare('INSERT INTO competitors (ml_competitor_id, name) VALUES (?, ?)');
+  const apple = Number(cstmt.run('tb-Apple', 'Apple').lastInsertRowid);
+  const zebra = Number(cstmt.run('tb-Zebra', 'Zebra').lastInsertRowid);
+  const extra = Number(cstmt.run('tb-Extra', 'Extra').lastInsertRowid);
+  const sub = db.prepare('INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at) VALUES (?,?,?,?,?,?)');
+  const vote = db.prepare('INSERT INTO votes (round_id, voter_id, spotify_uri, points, created_at) VALUES (?,?,?,?,?)');
+  const now = '2026-01-01T00:00:00Z';
+  sub.run(r1, apple, 'uri:a', 'a', 'Apple', now);
+  sub.run(r1, zebra, 'uri:z', 'z', 'Zebra', now);
+  // Both songs net 4. Apple has 1 upvoter; Zebra has 2. Name-only tiebreak
+  // would put Apple first; ML order is more positive voters first.
+  vote.run(r1, zebra, 'uri:a', 4, now);
+  vote.run(r1, apple, 'uri:z', 2, now);
+  vote.run(r1, extra, 'uri:z', 2, now);
+  vote.run(r1, apple, 'uri:a', 0, now);
+  vote.run(r1, extra, 'uri:a', 0, now);
+  const s = computeStandings(db, r1);
+  expect(s.map((r) => [r.name, r.rank, r.currentTotal])).toEqual([
+    ['Zebra', 1, 4],
+    ['Apple', 2, 4],
+  ]);
+});
+
 it('voids a non-voting submitter\'s upvotes but keeps their downvotes', () => {
   const { r1 } = seedNonVoter(db);
   const s = computeStandings(db, r1);

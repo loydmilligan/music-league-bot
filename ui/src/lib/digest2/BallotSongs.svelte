@@ -41,19 +41,24 @@
 						<h3>{s.title}</h3>
 						<p>{s.artist} · <i>{s.submitter}</i></p>
 					</div>
-					<span class="net" class:neg={s.net < 0}>{s.net > 0 ? '+' : ''}{s.net}</span>
+					<div class="netwrap">
+						<span class="net" class:neg={s.net < 0}>{s.net > 0 ? '+' : ''}{s.net}</span>
+						{#if s.forfeited}
+							<span class="forfeit-note"><s>{s.rawNet > 0 ? '+' : ''}{s.rawNet}</s> forfeited (didn't vote)</span>
+						{/if}
+					</div>
 				</header>
 				<div class="bar">
 					<div class="knives">
 						{#each s.votes.filter((v) => v.pts < 0) as v (v.voter)}{@render face(v.voter, v.avatar, v.pts)}{/each}
 					</div>
 					<div class="axis"></div>
-					<div class="ups">
+					<div class="ups" class:forfeit={s.forfeited}>
 						{#each s.votes.filter((v) => v.pts > 0) as v (v.voter)}{@render face(v.voter, v.avatar, v.pts)}{/each}
 					</div>
 				</div>
 				<p class="tally">
-					{s.ups} paid · {s.downs} knifed{#if villain} · <a href="#villain">see The Villain ↓</a>{/if}
+					{s.ups} paid · {s.downs} knifed{#if s.forfeited} · {s.rawUps} upvotes forfeited{/if}{#if villain} · <a href="#villain">see The Villain ↓</a>{/if}
 				</p>
 				{#if villain}
 					<!-- The Villain section tells this one; no repeat here. -->
@@ -102,8 +107,12 @@
 	.t { flex: 1; min-width: 0; }
 	.t h3 { margin: 0; font: 600 1.1rem/1.2 var(--font-display, system-ui); }
 	.t p { margin: 2px 0 0; color: var(--fg-muted, #8b96a5); font-size: .85rem; }
+	.netwrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 	.net { font: 800 1.6rem var(--font-display, system-ui); color: #7cc47a; }
 	.net.neg { color: #e5534b; }
+	.forfeit-note { font: .68rem/1.2 var(--font-mono, monospace); color: #8b96a5; max-width: 11rem; text-align: right; }
+	.forfeit-note s { color: #9aa4b1; }
+	.ups.forfeit .face { border-color: #6b7380; filter: grayscale(1); opacity: .55; }
 	.bar { display: grid; grid-template-columns: 1fr 2px 2.2fr; gap: 6px; align-items: center; margin: 12px 0 2px; }
 	.knives { display: flex; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
 	.ups { display: flex; gap: 4px; flex-wrap: wrap; }

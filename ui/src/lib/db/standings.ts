@@ -1,5 +1,10 @@
 import type Database from 'better-sqlite3';
-import { SCORED_POINTS_SQL, seasonRoundIdsInPlayOrder } from './scoring.js';
+import {
+  SCORED_DOWNVOTERS_SQL,
+  SCORED_POINTS_SQL,
+  SCORED_UPVOTERS_SQL,
+  seasonRoundIdsInPlayOrder,
+} from './scoring.js';
 
 // Canonical season-standings logic (sprint-14, backend lane).
 //
@@ -63,8 +68,8 @@ function seasonAndRounds(
 function pointsByCompetitor(
   db: Database.Database,
   roundIds: number[],
-): Map<number, { name: string; pts: number }> {
-  const out = new Map<number, { name: string; pts: number }>();
+): Map<number, { name: string; pts: number; upvoters: number; downvoters: number }> {
+  const out = new Map<number, { name: string; pts: number; upvoters: number; downvoters: number }>();
   if (!roundIds.length) return out;
   const placeholders = roundIds.map(() => '?').join(',');
   const rows = db
@@ -72,8 +77,10 @@ function pointsByCompetitor(
       // Scored per SUBMISSION, then summed per competitor: the no-vote penalty
       // applies to one round's ballot, so grouping straight to competitor would
       // apply one round's non-voting to every round they did vote in.
-      `SELECT cid, name, COALESCE(SUM(pts), 0) AS pts FROM (
-         SELECT m.competitor_id AS cid, c.name AS name, ${SCORED_POINTS_SQL} AS pts
+      `SELECT cid, name, COALESCE(SUM(pts), 0) AS pts,
+              COALESCE(SUM(upv), 0) AS upvoters, COALESCE(SUM(dnv), 0) AS downvoters FROM (
+         SELECT m.competitor_id AS cid, c.name AS name, ${SCORED_POINTS_SQL} AS pts,
+                ${SCORED_UPVOTERS_SQL} AS upv, ${SCORED_DOWNVOTERS_SQL} AS dnv
          FROM ml_submissions m
          JOIN competitors c ON c.id = m.competitor_id
          LEFT JOIN votes v ON v.round_id = m.round_id AND v.spotify_uri = m.spotify_uri
@@ -81,14 +88,29 @@ function pointsByCompetitor(
          GROUP BY m.id
        ) GROUP BY cid`,
     )
-    .all(...roundIds) as { cid: number; name: string; pts: number }[];
-  for (const r of rows) out.set(r.cid, { name: r.name, pts: Number(r.pts) });
+    .all(...roundIds) as { cid: number; name: string; pts: number; upvoters: number; downvoters: number }[];
+  for (const r of rows) {
+    out.set(r.cid, {
+      name: r.name,
+      pts: Number(r.pts),
+      upvoters: Number(r.upvoters),
+      downvoters: Number(r.downvoters),
+    });
+  }
   return out;
 }
 
-/** Standing-order ranks (1-based) by total desc, ties broken by name for determinism. */
-function rankByTotal(entries: { cid: number; name: string; total: number }[]): Map<number, number> {
-  const sorted = [...entries].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+/** Standing-order ranks (1-based): points desc, then more upvoters, then fewer downvoters, then name. */
+function rankByTotal(
+  entries: { cid: number; name: string; total: number; upvoters?: number; downvoters?: number }[],
+): Map<number, number> {
+  const sorted = [...entries].sort(
+    (a, b) =>
+      b.total - a.total ||
+      (b.upvoters ?? 0) - (a.upvoters ?? 0) ||
+      (a.downvoters ?? 0) - (b.downvoters ?? 0) ||
+      a.name.localeCompare(b.name),
+  );
   const m = new Map<number, number>();
   sorted.forEach((e, i) => m.set(e.cid, i + 1));
   return m;
@@ -101,8 +123,24 @@ export function computeStandings(db: Database.Database, roundId: number): Standi
   const roundMap = pointsByCompetitor(db, [roundId]);
   const priorMap = pointsByCompetitor(db, prior);
 
-  const rankMap = rankByTotal([...current].map(([cid, v]) => ({ cid, name: v.name, total: v.pts })));
-  const prevRankMap = rankByTotal([...priorMap].map(([cid, v]) => ({ cid, name: v.name, total: v.pts })));
+  const rankMap = rankByTotal(
+    [...current].map(([cid, v]) => ({
+      cid,
+      name: v.name,
+      total: v.pts,
+      upvoters: v.upvoters,
+      downvoters: v.downvoters,
+    })),
+  );
+  const prevRankMap = rankByTotal(
+    [...priorMap].map(([cid, v]) => ({
+      cid,
+      name: v.name,
+      total: v.pts,
+      upvoters: v.upvoters,
+      downvoters: v.downvoters,
+    })),
+  );
 
   const rows: StandingRow[] = [...current].map(([cid, v]) => {
     const currentTotal = v.pts;
@@ -233,7 +271,8 @@ export interface StandingEdit {
 }
 
 /**
- * Write human-corrected values as the new gospel. Re-ranks by current_total.
+ * Write human-corrected values as the new gospel. Re-ranks by current_total,
+ * then scored upvoters / downvoters from the live vote table.
  * Any field omitted from an edit keeps its prior value; currentTotal is derived
  * from prior+round only when the editor didn't supply it explicitly.
  */
@@ -242,10 +281,11 @@ export function applyEdits(
   roundId: number,
   edits: StandingEdit[],
 ): StandingsResult {
-  const { seasonId } = seasonAndRounds(db, roundId);
+  const { seasonId, upTo } = seasonAndRounds(db, roundId);
   const stored = readStoredStandings(db, roundId);
   const base = stored.length ? stored : computeStandings(db, roundId);
   const byId = new Map(base.map((r) => [r.competitorId, { ...r }]));
+  const tiebreak = pointsByCompetitor(db, upTo);
 
   for (const e of edits) {
     const row = byId.get(e.competitorId);
@@ -256,7 +296,18 @@ export function applyEdits(
     else row.currentTotal = row.priorTotal + row.roundPoints;
   }
 
-  const ranked = rankByTotal([...byId.values()].map((r) => ({ cid: r.competitorId, name: r.name, total: r.currentTotal })));
+  const ranked = rankByTotal(
+    [...byId.values()].map((r) => {
+      const tb = tiebreak.get(r.competitorId);
+      return {
+        cid: r.competitorId,
+        name: r.name,
+        total: r.currentTotal,
+        upvoters: tb?.upvoters ?? 0,
+        downvoters: tb?.downvoters ?? 0,
+      };
+    }),
+  );
   const rows = [...byId.values()].map((r) => ({ ...r, rank: ranked.get(r.competitorId)! }));
   rows.sort((a, b) => a.rank - b.rank);
   persistStandings(db, roundId, seasonId, rows);
