@@ -290,6 +290,7 @@
 	.story-pop p, .story-body p { margin: 0 0 .6em; white-space: pre-line; overflow-wrap: anywhere; }
 	.story-pop p:last-child, .story-body p:last-child { margin-bottom: 0; }
 	.story-dialog {
+		margin: auto; /* the page reset zeroes it, which pins a modal dialog top-left */
 		padding: 0;
 		border: 1px solid #3a4452;
 		border-radius: 14px;
