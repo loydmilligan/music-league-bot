@@ -107,3 +107,40 @@ describe('ama_votes table', () => {
 		expect(tally168.c).toBe(1);
 	});
 });
+
+// Cookie resolution: the endpoint reads an HttpOnly cookie (primary) and falls
+// back to a localStorage UUID in the query/body. This pure-function mirror
+// tests the same priority rules the endpoint follows.
+describe('voter identity resolution (cookie-first)', () => {
+	const uuid = () => crypto.randomUUID();
+
+	function resolveVoterId(cookie: string | null, fallback?: string | null) {
+		if (cookie?.length) return cookie;
+		if (fallback?.length) return fallback;
+		return uuid();
+	}
+
+	it('uses cookie when present', () => {
+		expect(resolveVoterId('cookie-uuid-abc', 'local-uuid-xyz')).toBe('cookie-uuid-abc');
+	});
+
+	it('falls back to localStorage param when cookie is missing', () => {
+		expect(resolveVoterId(null, 'local-uuid-xyz')).toBe('local-uuid-xyz');
+	});
+
+	it('generates a new UUID when neither cookie nor fallback exist', () => {
+		const id = resolveVoterId(null, null);
+		const id2 = resolveVoterId(null, '');
+		expect(id).toMatch(/^[0-9a-f-]{36}$/);
+		expect(id2).toMatch(/^[0-9a-f-]{36}$/);
+		expect(id).not.toBe(id2);
+	});
+
+	it('ignores empty-string cookie and fallback', () => {
+		expect(resolveVoterId('', '')).toMatch(/^[0-9a-f-]{36}$/);
+	});
+
+	it('prefers cookie over any fallback', () => {
+		expect(resolveVoterId('cookie', 'fallback')).toBe('cookie');
+	});
+});

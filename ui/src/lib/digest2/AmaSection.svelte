@@ -25,23 +25,27 @@
 	};
 	let vote = $state<VoteState>({ myVotes: {}, results: {}, voterId: null, loading: false });
 
-	function ensureVoterId() {
-		if (vote.voterId) return;
+	function fallbackId() {
 		let id = localStorage.getItem('ama_voter_id');
 		if (!id) {
 			id = crypto.randomUUID();
 			localStorage.setItem('ama_voter_id', id);
 		}
-		vote = { ...vote, voterId: id };
+		return id;
 	}
 
 	async function loadVotes() {
-		ensureVoterId();
 		vote = { ...vote, loading: true };
 		try {
-			const res = await fetch(`/api/digest2/${roundId}/ama-vote?voter_id=${vote.voterId}`);
+			const fb = fallbackId();
+			const url = `/api/digest2/${roundId}/ama-vote`;
+			const res = await fetch(fb ? `${url}?voter_id=${encodeURIComponent(fb)}` : url);
 			if (!res.ok) throw new Error(String(res.status));
 			const data = await res.json();
+			if (data.voter_id) {
+				vote = { ...vote, voterId: data.voter_id };
+				localStorage.setItem('ama_voter_id', data.voter_id);
+			}
 			vote = { ...vote, myVotes: data.myVotes ?? {}, results: data.results ?? {}, loading: false };
 		} catch {
 			vote = { ...vote, loading: false };
@@ -49,19 +53,23 @@
 	}
 
 	async function castVote(promptIndex: number, answerIndex: number) {
-		ensureVoterId();
 		vote = { ...vote, loading: true };
 		try {
+			const body: Record<string, unknown> = { prompt_index: promptIndex, answer_index: answerIndex };
+			if (vote.voterId) body.voter_id = vote.voterId;
 			const res = await fetch(`/api/digest2/${roundId}/ama-vote`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ voter_id: vote.voterId, prompt_index: promptIndex, answer_index: answerIndex }),
+				body: JSON.stringify(body),
 			});
 			if (!res.ok) throw new Error(String(res.status));
 			const data = await res.json();
+			if (data.voter_id) {
+				vote = { ...vote, voterId: data.voter_id };
+				localStorage.setItem('ama_voter_id', data.voter_id);
+			}
 			vote = {
 				...vote,
-				voterId: data.voter_id ?? vote.voterId,
 				myVotes: { ...vote.myVotes, [promptIndex]: answerIndex },
 				results: data.results ? { ...vote.results, [promptIndex]: data.results } : vote.results,
 				loading: false,
