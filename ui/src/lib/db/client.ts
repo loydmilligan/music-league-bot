@@ -706,6 +706,21 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (cutRunCols.length > 0 && !cutRunCols.some(c => c.name === 'awaiting_classification')) {
 		db.exec('ALTER TABLE rollout_cut_runs ADD COLUMN awaiting_classification INTEGER NOT NULL DEFAULT 0');
 	}
+
+	// AMA favorite-answer poll (R168 lanes).
+	const amaVotesExists = (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ama_votes'").get() as { name: string } | undefined) != null;
+	if (!amaVotesExists) {
+		db.exec(`CREATE TABLE IF NOT EXISTS ama_votes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			round_id INTEGER NOT NULL,
+			prompt_index INTEGER NOT NULL,
+			answer_index INTEGER NOT NULL,
+			voter_id TEXT NOT NULL,
+			voted_at TEXT NOT NULL DEFAULT (datetime('now')),
+			UNIQUE(round_id, prompt_index, voter_id)
+		)`);
+	}
+
 	return db;
 }
 
