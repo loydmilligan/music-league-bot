@@ -309,6 +309,11 @@ describe('boarz-ii-men guess aliases', () => {
     ['Koz.', 'Grant Koziol'],
     ['Conie no play right', 'CJ Wookie'],
     ['new to me - stein', 'Steiny'],
+    // S2 R2 (round 168): four of Matt's ten guesses were coinages no rule reached.
+    ['weird stuff this week that I liked - conorific', 'CJ Wookie'],
+    ['Grushfriend is my submitter guess because the comment.', 'Bagel Shop'],
+    ['Good stuff.  Falleetz', 'Darren Paletz'],
+    ['what sounds like a bird - Jensownian institute is my guess', 'djensen37'],
   ];
 
   // One song per nickname, submitted by the person that nickname names, so a

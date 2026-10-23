@@ -343,6 +343,11 @@ const LEAGUE_ALIASES: Record<
     { match: 'Bertolina', asName: 'Ronnie B' },
     { match: 'Grushkin', asName: 'Bagel Shop' },
     { match: 'Grush', asName: 'Bagel Shop' },
+    // S2 R2 (round 168) coinages, each too far from a name for fuzz to reach.
+    { match: 'Grushfriend', asName: 'Bagel Shop', exactOnly: true },
+    { match: 'conorific', asName: 'CJ Wookie', exactOnly: true },
+    { match: 'Falleetz', asName: 'Darren Paletz', exactOnly: true },
+    { match: 'Jensownian', asName: 'djensen37', exactOnly: true },
   ],
   // Second Best is a family league, so it collides on surnames the way Boarz
   // collides on "Dave". Four names are deliberately absent:
