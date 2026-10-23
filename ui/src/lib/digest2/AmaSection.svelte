@@ -6,9 +6,10 @@
 	type Ama = { prompt?: string; askedBy?: string; when?: string; answers?: Answer[]; verdict?: string };
 	type AmaContent = { title?: string; intro?: string; amas?: Ama[] };
 
-	// share: the published static copy can't reach the vote API (the digest host proxies
-	// only /api/p/*), so it renders the answers without the poll.
-	let { content, snapshot, roundId = 168, share = false }: { content: unknown; snapshot?: Snapshot | null; roundId?: number; share?: boolean } = $props();
+	// voteSlug: the round's digest2 share slug. With it, votes go to /api/p/ama/<slug>,
+	// the one prefix the static digest host proxies, so the published copy can vote too.
+	let { content, snapshot, roundId = 168, voteSlug = null }: { content: unknown; snapshot?: Snapshot | null; roundId?: number; voteSlug?: string | null } = $props();
+	const voteUrl = $derived(voteSlug ? `/api/p/ama/${voteSlug}` : `/api/digest2/${roundId}/ama-vote`);
 	const c = $derived((content ?? {}) as AmaContent);
 	const amas = $derived((Array.isArray(c.amas) ? c.amas : []).filter((a) => a?.prompt?.trim()));
 
@@ -40,8 +41,7 @@
 		vote = { ...vote, loading: true };
 		try {
 			const fb = fallbackId();
-			const url = `/api/digest2/${roundId}/ama-vote`;
-			const res = await fetch(fb ? `${url}?voter_id=${encodeURIComponent(fb)}` : url);
+			const res = await fetch(fb ? `${voteUrl}?voter_id=${encodeURIComponent(fb)}` : voteUrl);
 			if (!res.ok) throw new Error(String(res.status));
 			const data = await res.json();
 			if (data.voter_id) {
@@ -59,7 +59,7 @@
 		try {
 			const body: Record<string, unknown> = { prompt_index: promptIndex, answer_index: answerIndex };
 			if (vote.voterId) body.voter_id = vote.voterId;
-			const res = await fetch(`/api/digest2/${roundId}/ama-vote`, {
+			const res = await fetch(voteUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body),
@@ -81,7 +81,7 @@
 		}
 	}
 
-	onMount(() => { if (!share) loadVotes(); });
+	onMount(() => { loadVotes(); });
 
 	function totalVotes(promptIndex: number) {
 		const r = vote.results[promptIndex] ?? {};
@@ -114,7 +114,7 @@
 								<div class="answer-who">{ans.who} · #{j + 1}</div>
 								<div class="answer-summary">{ans.summary}</div>
 							</div>
-							{#if !share}<button
+							<button
 								type="button"
 								class="vote-btn"
 								class:vote-active={vote.myVotes[i] === j}
@@ -126,11 +126,11 @@
 									<path d="M8 3L13.5 13H2.5L8 3Z" fill="currentColor" />
 								</svg>
 								<span class="vote-count">{vote.results[i]?.[j] ?? 0}</span>
-							</button>{/if}
+							</button>
 						</li>
 					{/each}
 				</ul>
-				{#if !share && totalVotes(i) > 0}
+				{#if totalVotes(i) > 0}
 					<div class="vote-tally">{totalVotes(i)} vote{totalVotes(i) !== 1 ? 's' : ''} so far</div>
 				{/if}
 				{#if a.verdict}<p class="verdict">{a.verdict}</p>{/if}

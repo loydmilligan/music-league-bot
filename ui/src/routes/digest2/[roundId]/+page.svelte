@@ -78,7 +78,7 @@
 				{/if}
 			{/each}
 {:else if key === 'ama' && data.oneoffs?.ama}
-					<AmaSection content={data.oneoffs.ama} snapshot={data.snapshot} roundId={data.roundId} share={data.share} />
+					<AmaSection content={data.oneoffs.ama} snapshot={data.snapshot} roundId={data.roundId} voteSlug={data.amaVoteSlug} />
 		{:else if key === 'ballot' && data.ballot}
 			<BallotSongs ballot={data.ballot} />
 		{:else if key === 'ballotGrid' && data.ballot}

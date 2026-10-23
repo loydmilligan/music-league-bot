@@ -37,6 +37,8 @@
 # POSTs (vote, message, identity) at /api/p/<slug>/<action>, carrying a small
 # JSON body, per design/mlb-playlist-spec.md.
 # The playlist page's `apiBase` defaults to `/api/p` to match.
+# Also under it: `/api/p/ama/<shareSlug>` (GET tallies, POST one vote), the digest2
+# AMA poll, keyed by the unlisted share slug and writing only ama_votes.
 #
 # MUST NEVER BE PROXIED from this host: `/api/*` at large, `/ytm/*`, `/digests/*`,
 # `/leagues/*`, `/chat/*`, anything under bot-ui's page routes, and any endpoint
