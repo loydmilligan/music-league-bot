@@ -10,6 +10,26 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — Standings, race and How It Played agree (R168 combined deploy)
+
+### Visible (UI)
+
+- **How It Played** scores a non-voter's song with its negatives only, ranks on
+  that score, and marks the forfeited points ("+4 forfeited (didn't vote)").
+- **Leaderboard Race** applies the same non-voter rule and tiebreak as the
+  standings (R168: Paletz 2 and last, not 11). Its round label wraps on phones;
+  it had widened the digest to 584px at a 390px viewport.
+- **AMA** shows no vote buttons or tally on the published copy (the static digest
+  host can't reach the vote API).
+
+### Under the hood
+
+- Ties everywhere: points, then upvotes received, then fewer downvotes
+  (`db/standings.ts rankByTotal`, `boarzStats/stats.ts computePositionsByRound`).
+  Upvotes are summed per song (matches ML's table: Clements over Jimmy 14–13),
+  not distinct voters.
+- `computeRoundScores` matches `SCORED_POINTS_SQL`; new `computeTiebreakCounts`.
+
 ## 2026-10-23 — Digest 2.0: R168 AMA redesign + favorite-answer poll
 
 ### Visible (UI)
