@@ -4,6 +4,7 @@ import { buildStatsEmbedForRound } from './statsEmbed.js';
 import { buildDigest2Ballot, type Digest2Ballot } from './ballot.js';
 import { buildDigest2StoryBlocks, type Digest2Story } from './storyBlocks.js';
 import { buildDigest2Structural, type Digest2Structural } from './structuralBlocks.js';
+import { buildDigest2Oneoffs } from './oneoffBlocks.js';
 
 export interface Digest2Page {
 	roundId: number;
@@ -11,6 +12,8 @@ export interface Digest2Page {
 	story: Digest2Story;
 	structural: Digest2Structural;
 	ballot: Digest2Ballot | null;
+	/** Hand-built 2.0 sections by kind (e.g. 'ama'). */
+	oneoffs: Record<string, unknown>;
 }
 
 /** Assemble the read-only digest 2.0 page: stats embed (Phase ①) + reused 1.0 story blocks (Phase ②) + structural auto blocks (Phase ③). */
@@ -23,5 +26,6 @@ export function buildDigest2Page(
 	const story = buildDigest2StoryBlocks(db, roundId);
 	const structural = buildDigest2Structural(db, roundId);
 	const ballot = buildDigest2Ballot(db, roundId);
-	return { roundId, snapshot, story, structural, ballot };
+	const oneoffs = buildDigest2Oneoffs(db, roundId);
+	return { roundId, snapshot, story, structural, ballot, oneoffs };
 }

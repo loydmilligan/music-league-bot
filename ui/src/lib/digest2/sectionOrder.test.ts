@@ -9,7 +9,7 @@ describe('DIGEST2_SECTION_ORDER', () => {
 	it('lists every section exactly once', () => {
 		expect(new Set(DIGEST2_SECTION_ORDER).size).toBe(DIGEST2_SECTION_ORDER.length);
 		expect([...DIGEST2_SECTION_ORDER].sort()).toEqual(
-			['ballot', 'ballotGrid', 'coinage', 'guesser', 'nextRound', 'reel', 'standings', 'statsTeaser', 'story', 'tastemaker', 'villain'].sort()
+			['ama', 'ballot', 'ballotGrid', 'coinage', 'guesser', 'nextRound', 'reel', 'standings', 'statsTeaser', 'story', 'tastemaker', 'villain'].sort()
 		);
 	});
 	it('the page renders sections by iterating the order list (not a hand-ordered block)', () => {

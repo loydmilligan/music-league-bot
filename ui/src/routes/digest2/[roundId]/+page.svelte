@@ -14,6 +14,7 @@
 	import DigestChatStats from '$lib/digest2/DigestChatStats.svelte';
 	import BallotSongs from '$lib/digest2/BallotSongs.svelte';
 	import BallotGrid from '$lib/digest2/BallotGrid.svelte';
+	import AmaSection from '$lib/digest2/AmaSection.svelte';
 	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
 	import AdminBar from '$lib/digest2/AdminBar.svelte';
 	import { page } from '$app/state';
@@ -76,6 +77,8 @@
 					<StorylinesCast kind="storylines" content={block.content} variant="both" />
 				{/if}
 			{/each}
+		{:else if key === 'ama' && data.oneoffs?.ama}
+			<AmaSection content={data.oneoffs.ama} />
 		{:else if key === 'ballot' && data.ballot}
 			<BallotSongs ballot={data.ballot} />
 		{:else if key === 'ballotGrid' && data.ballot}

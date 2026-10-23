@@ -5,6 +5,7 @@
  */
 export type Digest2SectionKey =
 	| 'story'
+	| 'ama'
 	| 'ballot'
 	| 'villain'
 	| 'ballotGrid'
@@ -18,6 +19,7 @@ export type Digest2SectionKey =
 
 export const DIGEST2_SECTION_ORDER: readonly Digest2SectionKey[] = [
 	'story',
+	'ama',
 	'ballot',
 	'villain',
 	'ballotGrid',
