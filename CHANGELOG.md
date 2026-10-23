@@ -10,6 +10,25 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — Digest 2.0: R168 AMA redesign + favorite-answer poll
+
+### Visible (UI)
+
+- **AMA section, Reddit-style** — orange header band, one card per prompt with
+  flair, asker/when, avatar answer rows and an upvote button per answer.
+  (`ui/src/lib/digest2/AmaSection.svelte`)
+- **Favorite-answer poll** — one vote per reader per prompt; re-voting moves it.
+  Live tally returned on each vote.
+
+### Under the hood
+
+- New endpoint `GET|POST /api/digest2/[roundId]/ama-vote`. Voter identity is an
+  HttpOnly `ama_voter_id` cookie (1 year, SameSite=Lax, Secure on https), with a
+  localStorage fallback. No IP or PII is stored.
+- New table `ama_votes` (additive `CREATE TABLE IF NOT EXISTS` in
+  `openLeagueDb()`), `UNIQUE(round_id, prompt_index, voter_id)`.
+- Tests: `ui/src/lib/digest2/amaVote.test.ts`.
+
 ## 2026-08-27 → 2026-08-30 — The Boarz Tape and the YTM drop
 
 **A season site of its own, and the playlist finally reaches YouTube Music.**
