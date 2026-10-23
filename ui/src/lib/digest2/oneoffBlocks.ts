@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { attachAmaStories } from './amaStories.js';
 
 /**
  * Hand-built 2.0 sections (digest2_sections, source='oneoff') from the round's newest
@@ -20,7 +21,8 @@ export function buildDigest2Oneoffs(db: Database.Database, roundId: number): Rec
 	const out: Record<string, unknown> = {};
 	for (const r of rows) {
 		try {
-			out[r.kind] = JSON.parse(r.content_json);
+			const parsed = JSON.parse(r.content_json);
+			out[r.kind] = r.kind === 'ama' ? attachAmaStories(db, roundId, parsed) : parsed;
 		} catch {
 			/* skip the bad block */
 		}

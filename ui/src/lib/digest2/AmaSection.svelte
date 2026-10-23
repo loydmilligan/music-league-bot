@@ -2,7 +2,7 @@
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 	import { onMount } from 'svelte';
 
-	type Answer = { who?: string; summary?: string };
+	type Answer = { who?: string; summary?: string; story?: string[] };
 	type Ama = { prompt?: string; askedBy?: string; when?: string; answers?: Answer[]; verdict?: string };
 	type AmaContent = { title?: string; intro?: string; amas?: Ama[] };
 
@@ -83,6 +83,24 @@
 
 	onMount(() => { loadVotes(); });
 
+	// Whole story: a hover card on desktop (CSS only), and on any device a tap on the
+	// story button opens a modal <dialog> (Esc, close button or a tap outside closes;
+	// showModal makes the rest of the page inert). The vote button never opens it.
+	let storyDialog = $state<HTMLDialogElement | null>(null);
+	let story = $state<{ who: string; prompt: string; paras: string[] } | null>(null);
+	function openStory(ans: Answer, prompt: string) {
+		story = { who: ans.who ?? '', prompt, paras: ans.story ?? [] };
+		storyDialog?.showModal();
+		document.documentElement.style.overflow = 'hidden';
+	}
+	function onStoryClose() {
+		document.documentElement.style.overflow = '';
+		story = null;
+	}
+	function onDialogClick(e: MouseEvent) {
+		if (e.target === storyDialog) storyDialog?.close(); // the backdrop, not the panel
+	}
+
 	function totalVotes(promptIndex: number) {
 		const r = vote.results[promptIndex] ?? {};
 		return Object.values(r).reduce((a, c) => a + c, 0);
@@ -113,6 +131,19 @@
 							<div class="answer-body">
 								<div class="answer-who">{ans.who} · #{j + 1}</div>
 								<div class="answer-summary">{ans.summary}</div>
+								{#if ans.story?.length}
+									<div class="story-wrap">
+										<button
+											type="button"
+											class="story-btn"
+											aria-haspopup="dialog"
+											onclick={() => openStory(ans, a.prompt ?? '')}
+										>Read the whole story</button>
+										<div class="story-pop" role="tooltip">
+											{#each ans.story as para, k (k)}<p>{para}</p>{/each}
+										</div>
+									</div>
+								{/if}
 							</div>
 							<button
 								type="button"
@@ -137,6 +168,24 @@
 			</article>
 		{/each}
 	</section>
+
+	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+	<dialog class="story-dialog" bind:this={storyDialog} onclose={onStoryClose} onclick={onDialogClick} aria-labelledby="ama-story-title">
+		{#if story}
+			<div class="story-panel">
+				<header class="story-head">
+					<div>
+						<h3 id="ama-story-title">{story.who}</h3>
+						<p>“{story.prompt}”</p>
+					</div>
+					<button type="button" class="story-close" aria-label="Close" onclick={() => storyDialog?.close()}>×</button>
+				</header>
+				<div class="story-body">
+					{#each story.paras as para, k (k)}<p>{para}</p>{/each}
+				</div>
+			</div>
+		{/if}
+	</dialog>
 {/if}
 
 <style>
@@ -205,6 +254,57 @@
 	.answer-body { flex: 1; min-width: 0; }
 	.answer-who { font-size: .8rem; font-weight: 600; color: #e4e7ec; margin-bottom: 2px; }
 	.answer-summary { font-size: .82rem; color: #9aa4b1; line-height: 1.35; }
+	.story-wrap { position: relative; margin-top: 4px; }
+	.story-btn {
+		background: none;
+		border: none;
+		padding: 4px 0;
+		min-height: 28px;
+		color: #fdb44a;
+		font: 600 .75rem system-ui;
+		cursor: pointer;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.story-pop { display: none; }
+	@media (hover: hover) and (pointer: fine) {
+		.story-pop {
+			position: absolute;
+			left: 0;
+			top: 100%;
+			z-index: 20;
+			width: min(30rem, 80vw);
+			max-height: 18rem;
+			overflow-y: auto;
+			padding: 10px 12px;
+			background: #1b212a;
+			border: 1px solid #3a4452;
+			border-radius: 10px;
+			box-shadow: 0 10px 30px #0009;
+			font-size: .82rem;
+			line-height: 1.45;
+			color: #d5dae1;
+		}
+		.story-wrap:hover .story-pop, .story-wrap:focus-within .story-pop { display: block; }
+	}
+	.story-pop p, .story-body p { margin: 0 0 .6em; white-space: pre-line; overflow-wrap: anywhere; }
+	.story-pop p:last-child, .story-body p:last-child { margin-bottom: 0; }
+	.story-dialog {
+		padding: 0;
+		border: 1px solid #3a4452;
+		border-radius: 14px;
+		background: #11151b;
+		color: #e4e7ec;
+		width: min(36rem, calc(100vw - 24px));
+		max-height: 85dvh;
+	}
+	.story-dialog::backdrop { background: #000b; }
+	.story-panel { display: flex; flex-direction: column; max-height: 85dvh; }
+	.story-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 14px 14px 10px; border-bottom: 1px solid #262d37; }
+	.story-head h3 { margin: 0; font: 600 1rem system-ui; }
+	.story-head p { margin: 2px 0 0; font-size: .78rem; color: #fdb44a; }
+	.story-close { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid #3a4452; background: none; color: inherit; font-size: 1.3rem; line-height: 1; cursor: pointer; }
+	.story-body { padding: 12px 14px 16px; overflow-y: auto; overscroll-behavior: contain; font-size: .92rem; line-height: 1.5; }
 	.vote-btn {
 		flex-shrink: 0;
 		display: flex;
