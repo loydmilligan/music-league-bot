@@ -57,14 +57,52 @@ export function computeSpread(votes: Vote[]): { pts: number; count: number }[] {
 }
 
 /** Points earned per round per competitor: [roundIdx][compIdx] (0 when absent). */
+/** Who cast any ballot row in each round (all-zero ballots count as voting). */
+function votedByRound(votes: Vote[], nRounds: number, nComps: number): boolean[][] {
+	const voted = Array.from({ length: nRounds }, () => new Array<boolean>(nComps).fill(false));
+	for (const v of votes) voted[v.roundIdx][v.voterIdx] = true;
+	return voted;
+}
+
+/**
+ * Points per submitter per round under the non-voter rule standings use
+ * (db/scoring.ts SCORED_POINTS_SQL): no ballot that round = keep the negatives,
+ * forfeit the positives. The Leaderboard Race must agree with the standings.
+ */
 export function computeRoundScores(subs: Sub[], votes: Vote[], nRounds: number, nComps: number): number[][] {
 	const out = Array.from({ length: nRounds }, () => new Array<number>(nComps).fill(0));
+	const voted = votedByRound(votes, nRounds, nComps);
 	for (const s of subs) out[s.roundIdx][s.compIdx] = 0;
 	for (const v of votes) {
 		const song = subs[v.songIdx];
-		if (song) out[v.roundIdx][song.compIdx] += v.pts;
+		if (!song) continue;
+		if (v.pts > 0 && !voted[v.roundIdx][song.compIdx]) continue;
+		out[v.roundIdx][song.compIdx] += v.pts;
 	}
 	return out;
+}
+
+/**
+ * Cumulative scored upvotes / downvotes received after each round — the standings
+ * tiebreak (points, then more upvotes, then fewer downvotes). Forfeited upvotes
+ * (non-voter rule) don't count, matching SCORED_UPVOTERS_SQL.
+ */
+export function computeTiebreakCounts(
+	subs: Sub[],
+	votes: Vote[],
+	nRounds: number,
+	nComps: number,
+): { up: number[][]; down: number[][] } {
+	const voted = votedByRound(votes, nRounds, nComps);
+	const up = Array.from({ length: nRounds }, () => new Array<number>(nComps).fill(0));
+	const down = Array.from({ length: nRounds }, () => new Array<number>(nComps).fill(0));
+	for (const v of votes) {
+		const song = subs[v.songIdx];
+		if (!song) continue;
+		if (v.pts > 0 && voted[v.roundIdx][song.compIdx]) up[v.roundIdx][song.compIdx] += 1;
+		else if (v.pts < 0) down[v.roundIdx][song.compIdx] += 1;
+	}
+	return { up: computeCumulative(up), down: computeCumulative(down) };
 }
 
 /** Cumulative totals carried forward through missed rounds. */
@@ -79,10 +117,20 @@ export function computeCumulative(scores: number[][]): number[][] {
 	return out;
 }
 
-/** Standing position (1-based, 1 = leader) after each round. */
-export function computePositionsByRound(cumulative: number[][]): number[][] {
-	return cumulative.map((totals) => {
-		const order = totals.map((t, i) => ({ t, i })).sort((a, b) => b.t - a.t || a.i - b.i);
+/**
+ * Standing position (1-based, 1 = leader) after each round. With `tiebreak`, ties
+ * on points go to more upvotes received, then fewer downvotes (as standings do).
+ */
+export function computePositionsByRound(
+	cumulative: number[][],
+	tiebreak?: { up: number[][]; down: number[][] },
+): number[][] {
+	return cumulative.map((totals, r) => {
+		const up = tiebreak?.up[r] ?? [];
+		const down = tiebreak?.down[r] ?? [];
+		const order = totals
+			.map((t, i) => ({ t, i }))
+			.sort((a, b) => b.t - a.t || (up[b.i] ?? 0) - (up[a.i] ?? 0) || (down[a.i] ?? 0) - (down[b.i] ?? 0) || a.i - b.i);
 		const pos = new Array<number>(totals.length).fill(0);
 		order.forEach((o, rank) => (pos[o.i] = rank + 1));
 		return pos;

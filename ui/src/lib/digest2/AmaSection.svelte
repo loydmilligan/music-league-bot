@@ -6,7 +6,9 @@
 	type Ama = { prompt?: string; askedBy?: string; when?: string; answers?: Answer[]; verdict?: string };
 	type AmaContent = { title?: string; intro?: string; amas?: Ama[] };
 
-	let { content, snapshot, roundId = 168 }: { content: unknown; snapshot?: Snapshot | null; roundId?: number } = $props();
+	// share: the published static copy can't reach the vote API (the digest host proxies
+	// only /api/p/*), so it renders the answers without the poll.
+	let { content, snapshot, roundId = 168, share = false }: { content: unknown; snapshot?: Snapshot | null; roundId?: number; share?: boolean } = $props();
 	const c = $derived((content ?? {}) as AmaContent);
 	const amas = $derived((Array.isArray(c.amas) ? c.amas : []).filter((a) => a?.prompt?.trim()));
 
@@ -79,7 +81,7 @@
 		}
 	}
 
-	onMount(() => { loadVotes(); });
+	onMount(() => { if (!share) loadVotes(); });
 
 	function totalVotes(promptIndex: number) {
 		const r = vote.results[promptIndex] ?? {};
@@ -112,7 +114,7 @@
 								<div class="answer-who">{ans.who} · #{j + 1}</div>
 								<div class="answer-summary">{ans.summary}</div>
 							</div>
-							<button
+							{#if !share}<button
 								type="button"
 								class="vote-btn"
 								class:vote-active={vote.myVotes[i] === j}
@@ -124,11 +126,11 @@
 									<path d="M8 3L13.5 13H2.5L8 3Z" fill="currentColor" />
 								</svg>
 								<span class="vote-count">{vote.results[i]?.[j] ?? 0}</span>
-							</button>
+							</button>{/if}
 						</li>
 					{/each}
 				</ul>
-				{#if totalVotes(i) > 0}
+				{#if !share && totalVotes(i) > 0}
 					<div class="vote-tally">{totalVotes(i)} vote{totalVotes(i) !== 1 ? 's' : ''} so far</div>
 				{/if}
 				{#if a.verdict}<p class="verdict">{a.verdict}</p>{/if}

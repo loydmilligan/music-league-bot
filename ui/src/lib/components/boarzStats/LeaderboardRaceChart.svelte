@@ -12,10 +12,16 @@
 		`${spansSeasons ? `S${round.seasonNumber} · ` : ''}${round.name}`;
 
 	// --- leaderboard race (moved verbatim from LeaderboardTab) -----------------
+	// Order by snap.positions (points, then the standings tiebreak) so the race and
+	// the standings table agree on ties; name is only the last resort.
+	const posAt = (r: number, i: number) => snap.positions?.[r]?.[i] ?? Number.MAX_SAFE_INTEGER;
 	const raceRows = $derived(
 		comps
 			.map((c, i) => ({ c, i, cum: snap.cumulative.map((r) => r[i] ?? 0) }))
-			.sort((a, b) => b.cum[b.cum.length - 1] - a.cum[a.cum.length - 1] || a.c.name.localeCompare(b.c.name))
+			.sort((a, b) => {
+				const last = snap.cumulative.length - 1;
+				return b.cum[last] - a.cum[last] || posAt(last, a.i) - posAt(last, b.i) || a.c.name.localeCompare(b.c.name);
+			})
 	);
 	// Only rounds that have been played: the season's future rounds are in the
 	// snapshot too, and starting the slider on the last scheduled round read as
@@ -38,7 +44,7 @@
 		// Ties break by display order so the rank column always reads 1,2,3 down
 		// the list (comp-index tiebreak showed "3" above "2" on equal points).
 		const totals = raceRows.map((row, pos) => ({ t: row.cum[r] ?? 0, comp: row.i, pos }));
-		const sorted = [...totals].sort((a, b) => b.t - a.t || a.pos - b.pos);
+		const sorted = [...totals].sort((a, b) => b.t - a.t || posAt(r, a.comp) - posAt(r, b.comp) || a.pos - b.pos);
 		return sorted.findIndex((o) => o.comp === pi) + 1;
 	}
 	function stopRace() {
@@ -57,7 +63,7 @@
 	$effect(() => () => stopRace());
 
 	const raceDisplayRows = $derived(fixedRankSlots
-		? [...raceRows].sort((a, b) => (b.cum[raceIdx] ?? 0) - (a.cum[raceIdx] ?? 0) || a.c.name.localeCompare(b.c.name))
+		? [...raceRows].sort((a, b) => (b.cum[raceIdx] ?? 0) - (a.cum[raceIdx] ?? 0) || posAt(raceIdx, a.i) - posAt(raceIdx, b.i) || a.c.name.localeCompare(b.c.name))
 		: raceRows);
 </script>
 
@@ -85,7 +91,7 @@
 			</div>
 		{/each}
 	</div>
-	<div class="mt-4 flex items-center gap-3">
+	<div class="mt-4 flex flex-wrap items-center gap-3">
 		<label class="flex items-center gap-2 whitespace-nowrap text-xs text-fg-muted"><input type="checkbox" bind:checked={fixedRankSlots} /> Keep rank slots fixed</label>
 		<button
 			type="button"
@@ -95,7 +101,7 @@
 			{racePlaying ? '⏸ Pause' : '▶ Play'}
 		</button>
 		<input type="range" min="0" max={R - 1} bind:value={raceIdx} oninput={stopRace} class="h-1.5 flex-1 accent-violet-400" />
-		<span class="whitespace-nowrap text-xs text-fg-muted">
+		<span class="min-w-0 basis-full text-xs text-fg-muted sm:basis-auto">
 			Round {raceIdx + 1} of {R} played{totalRounds > R ? ` (${totalRounds} this season)` : ''} — {roundLabel(snap.rounds[raceIdx])}
 		</span>
 	</div>
