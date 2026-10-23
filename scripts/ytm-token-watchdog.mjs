@@ -116,8 +116,11 @@ async function notify({ title, body, priority, tags }) {
     console.log(`[dry-run] ntfy ${priority} "${title}" — ${body.replace(/\n/g, ' / ')}`);
     return true;
   }
+  // Header values must be Latin-1; an em dash in a title threw before the POST and
+  // silently killed every day-7 and dead-token alert. ntfy decodes RFC 2047.
+  const hdr = (v) => (/^[\x20-\x7e]*$/.test(v) ? v : `=?UTF-8?B?${Buffer.from(v).toString('base64')}?=`);
   const headers = {
-    Title: title,
+    Title: hdr(title),
     Priority: priority,
     Tags: tags,
     Actions: `view, Refresh token now, ${REFRESH_URL}`,
