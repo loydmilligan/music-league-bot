@@ -3,6 +3,7 @@ import { getDb } from '$lib/db/client.js';
 import { buildSnapshotCached } from '$lib/server/boarzStats/data.js';
 import { buildDigest2Page } from '$lib/digest2/page.js';
 import { buildDigest2Chrome } from '$lib/digest2/chrome.js';
+import { peekDigest2Slug } from '$lib/digest2/shares.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
@@ -13,7 +14,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const share = url.searchParams.get('share') === '1';
 	try {
 		const db = getDb();
-		return { ...buildDigest2Page(db, roundId, buildSnapshotCached), ...buildDigest2Chrome(db, roundId, share) };
+		return {
+			...buildDigest2Page(db, roundId, buildSnapshotCached),
+			...buildDigest2Chrome(db, roundId, share),
+			amaVoteSlug: peekDigest2Slug(db, roundId),
+		};
 	} catch {
 		throw error(404, 'round not found');
 	}
