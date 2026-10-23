@@ -10,6 +10,14 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — How It Played comments fold away (R168 follow-up 1)
+
+### Visible (UI)
+
+- **How It Played** hides each song's vote comments behind a "Show N comments"
+  button (collapsed by default; `aria-expanded`, tap or click, no hover).
+  `BallotSongs.svelte`, test `BallotSongs.test.ts`.
+
 ## 2026-10-23 — Standings, race and How It Played agree (R168 combined deploy)
 
 ### Visible (UI)
