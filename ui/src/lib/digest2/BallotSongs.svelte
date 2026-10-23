@@ -6,6 +6,8 @@
 
 	const SHOW_FIRST = 4;
 	let showAll = $state(false);
+	// Per-song vote comments start collapsed; keyed by rank.
+	let openComments = $state<Record<number, boolean>>({});
 	const initials = (n: string) => {
 		const parts = n.split(/\s+/).filter((p) => /[a-z0-9]/i.test(p[0] ?? ''));
 		return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
@@ -66,7 +68,17 @@
 					{#if s.note}<p class="note">{s.note}</p>{/if}
 					{@const said = s.votes.filter((v) => v.comment)}
 					{#if said.length}
-						<div class="qs">
+						{@const open = !!openComments[s.rank]}
+						<button
+							class="qs-toggle"
+							aria-expanded={open}
+							aria-controls="hip-comments-{s.rank}"
+							onclick={() => (openComments[s.rank] = !open)}
+						>
+							{open ? 'Hide' : 'Show'} {said.length} {said.length === 1 ? 'comment' : 'comments'}
+							<span class="chev" aria-hidden="true">{open ? '▴' : '▾'}</span>
+						</button>
+						<div class="qs" id="hip-comments-{s.rank}" hidden={!open}>
 							{#each said as v (v.voter)}
 								<figure class="q" class:zero={v.pts === 0}>
 									<span class="qface">
@@ -127,6 +139,10 @@
 	.tally a { color: #ff8a83; }
 	.note { margin: 10px 0 0; }
 	.qs { display: grid; gap: 8px; margin-top: 10px; }
+	.qs[hidden] { display: none; }
+	.qs-toggle { margin-top: 10px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line, #262d37); border-radius: 999px; background: none; color: var(--fg-muted, #9aa4b1); cursor: pointer; font: .82rem var(--font-mono, monospace); }
+	.qs-toggle[aria-expanded='true'] { color: inherit; }
+	.chev { margin-left: 4px; }
 	.q { margin: 0; display: flex; gap: 10px; padding: 9px 11px; background: #ffffff08; border-radius: 10px; }
 	.q.zero { background: transparent; border: 1px dashed var(--line, #262d37); }
 	.qface { width: 26px; height: 26px; flex: none; }
