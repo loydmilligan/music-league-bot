@@ -10,6 +10,23 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — AMA whole story (R168 follow-up 2)
+
+### Visible (UI)
+
+- **AMA** answers with a longer source story get a "Read the whole story" button:
+  a hover card on desktop, and a modal on any tap (close button, Esc or tap
+  outside; page scroll locked while open). Separate from the vote button. No
+  button when the summary already is the whole message (R168: Jensen, Matt's
+  "cool" answer). Works on the published copy.
+
+### Under the hood
+
+- `lib/digest2/amaStories.ts`: hand-curated chat_messages ids per answer
+  (round → prompt → answer, `who` must match), resolved read-only at load; an
+  edited message uses its newest capture. p18's keyword matcher was dropped
+  (found 4 of 12, two of them wrong). No draft-row writes.
+
 ## 2026-10-23 — AMA voting works on the published copy (R168 follow-up 0)
 
 ### Visible (UI)
