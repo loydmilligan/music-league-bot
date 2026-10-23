@@ -19,6 +19,7 @@ import {
 	computeRoundScores,
 	computeCumulative,
 	computePositionsByRound,
+	computeTiebreakCounts,
 	computeHeatmap,
 	computePositionBias,
 	computeContrarian,
@@ -366,7 +367,7 @@ export function buildSnapshot(selection: StatsSelection = {}): Snapshot {
 	const nRounds = rounds.length;
 	const scores = computeRoundScores(subs, votes, nRounds, nComps);
 	const cumulative = computeCumulative(scores);
-	const positions = computePositionsByRound(cumulative);
+	const positions = computePositionsByRound(cumulative, computeTiebreakCounts(subs, votes, nRounds, nComps));
 	const heat = computeHeatmap(subs, votes, nRounds, nComps);
 	const spread = computeSpread(votes);
 	const contrarian = computeContrarian(votes, nComps);

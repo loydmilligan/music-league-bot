@@ -3,6 +3,7 @@ import {
 	computeRoundScores,
 	computeCumulative,
 	computePositionsByRound,
+	computeTiebreakCounts,
 	computeHeatmap,
 	computeContrarian,
 	computeGenerosity,
@@ -74,6 +75,37 @@ describe('round scores & standings', () => {
 		const pos = computePositionsByRound(computeCumulative(computeRoundScores(subs, votes, N_ROUNDS, N_COMPS)));
 		expect(pos[0]).toEqual([1, 2, 3]); // 6,5,0
 		expect(pos[2]).toEqual([1, 2, 3]); // 11,10,2
+	});
+});
+
+// Boarz non-voter rule (same as standings' SCORED_POINTS_SQL): a submitter with no
+// ballot in a round keeps the negatives their song drew and forfeits the positives.
+describe('non-voter forfeit + standings tiebreak', () => {
+	// one round, four submitters; comp3 submits but casts no ballot
+	const s4 = [sub(0, 0, 10), sub(0, 1, 11), sub(0, 2, 12), sub(0, 3, 13)];
+	const at = (c: number) => s4.findIndex((s) => s.compIdx === c);
+	const v4: Vote[] = [
+		{ roundIdx: 0, voterIdx: 0, songIdx: at(3), pts: 3, createdAt: 't' },
+		{ roundIdx: 0, voterIdx: 1, songIdx: at(3), pts: -1, createdAt: 't' },
+		// comp1 and comp2 both end on 3: comp2 from two upvoters, comp1 from one
+		{ roundIdx: 0, voterIdx: 0, songIdx: at(1), pts: 3, createdAt: 't' },
+		{ roundIdx: 0, voterIdx: 0, songIdx: at(2), pts: 2, createdAt: 't' },
+		{ roundIdx: 0, voterIdx: 1, songIdx: at(2), pts: 1, createdAt: 't' },
+		{ roundIdx: 0, voterIdx: 2, songIdx: at(0), pts: 1, createdAt: 't' },
+	];
+
+	it('a non-voter keeps negatives only', () => {
+		expect(computeRoundScores(s4, v4, 1, 4)[0]).toEqual([1, 3, 3, -1]);
+	});
+
+	it('forfeited upvotes do not count toward the tiebreak', () => {
+		expect(computeTiebreakCounts(s4, v4, 1, 4)).toEqual({ up: [[1, 1, 2, 0]], down: [[0, 0, 0, 1]] });
+	});
+
+	it('ties on points go to more upvotes received, not to the lower index', () => {
+		const cum = computeCumulative(computeRoundScores(s4, v4, 1, 4));
+		expect(computePositionsByRound(cum)[0]).toEqual([3, 1, 2, 4]); // no tiebreak: index order
+		expect(computePositionsByRound(cum, computeTiebreakCounts(s4, v4, 1, 4))[0]).toEqual([3, 2, 1, 4]);
 	});
 });
 
