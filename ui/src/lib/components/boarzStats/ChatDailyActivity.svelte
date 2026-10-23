@@ -5,7 +5,13 @@
 	import ChartCanvas from './ChartCanvas.svelte';
 	import HowToRead from './HowToRead.svelte';
 
-	let { snap }: { snap: Snapshot } = $props();
+	let { snap, fromDay = null }: { snap: Snapshot; fromDay?: string | null } = $props();
+	// Open on the days from `fromDay` (a round's first day) to the end; Reset shows the season.
+	const openRange = $derived.by((): [number, number] | null => {
+		if (!fromDay) return null;
+		const i = snap.activity.findIndex((a) => a.day >= fromDay);
+		return i > 0 ? [i, snap.activity.length - 1] : null;
+	});
 
 	const chat = snap.chat;
 	const colors = snap.colors;
@@ -163,7 +169,7 @@
 			(right axis). Gold dots mark the busiest chat days — hover a dot for details.
 		{/if}
 	</p>
-	<ChartCanvas height={320} config={activityConfig} zoomable zoomMode="x" />
+	<ChartCanvas height={320} config={activityConfig} zoomable zoomMode="x" initialRange={openRange} />
 	<HowToRead
 		items={[
 			['Across', 'Calendar days (Central time) from the start of this season to today.'],

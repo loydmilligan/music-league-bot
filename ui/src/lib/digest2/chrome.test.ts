@@ -25,6 +25,21 @@ describe('buildDigest2Chrome', () => {
 		expect(c.share).toBe(true);
 		expect(c.admin).toBeNull();
 	});
+	// 03:00Z is still the previous evening in Central time, so a UTC slice would be a day late.
+	it('roundStartDay is the round start as a stats (Central) day', () => {
+		db.exec(`UPDATE rounds SET round_started_at = '2026-10-14T03:00:00Z' WHERE id = 100`);
+		expect(buildDigest2Chrome(db, 100, true).roundStartDay).toBe('2026-10-13');
+	});
+	it('roundStartDay falls back to the previous round closing, then to null', () => {
+		db.exec(`
+			UPDATE rounds SET round_number = 2 WHERE id = 100;
+			INSERT INTO rounds (id, season_id, ml_round_id, name, created_at, round_number, voting_ended_at)
+			VALUES (99, 10, 'ml-99', 'Prev', '2026-08-01T00:00:00Z', 1, '2026-09-08T20:00:00Z');
+		`);
+		expect(buildDigest2Chrome(db, 100, false).roundStartDay).toBe('2026-09-08');
+		db.exec(`DELETE FROM rounds WHERE id = 99`);
+		expect(buildDigest2Chrome(db, 100, false).roundStartDay).toBeNull();
+	});
 	it('admin mode, no draft, never published', () => {
 		expect(buildDigest2Chrome(db, 100, false).admin).toEqual({ draftGeneratedAt: null, published: null });
 	});

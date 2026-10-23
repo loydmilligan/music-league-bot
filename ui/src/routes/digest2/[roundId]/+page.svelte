@@ -70,7 +70,7 @@
 				{:else if block.kind === 'chat'}
 					<ChatMoments kind="chat" content={block.content} variant="both" />
 					{#if data.snapshot.capabilities.chat}
-						<DigestChatStats snapshot={data.snapshot} />
+						<DigestChatStats snapshot={data.snapshot} fromDay={data.roundStartDay} />
 					{/if}
 				{:else if block.kind === 'storylines'}
 					<StorylinesCast kind="storylines" content={block.content} variant="both" />

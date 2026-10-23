@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Chart } from 'chart.js/auto';
 	import type { ChartConfiguration } from 'chart.js';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	Chart.defaults.color = '#94a3b8';
 	Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.12)';
 	Chart.defaults.font.family = 'ui-sans-serif, system-ui, sans-serif';
@@ -11,11 +11,14 @@
 		height = 300,
 		zoomable = false,
 		zoomMode = 'xy',
+		initialRange = null,
 	}: {
 		config: ChartConfiguration<any>;
 		height?: number;
 		zoomable?: boolean;
 		zoomMode?: 'x' | 'y' | 'xy';
+		/** x index window to open on (zoomable charts only); Reset still shows everything. */
+		initialRange?: [number, number] | null;
 	} = $props();
 
 	let canvas = $state<HTMLCanvasElement>();
@@ -41,14 +44,24 @@
 		brushEnd = Math.min(pointCount - 1, Math.ceil(Number(scale.max) || pointCount - 1));
 	}
 	function resetChart() {
+		chart?.resetZoom();
+		// resetZoom returns to the configured window (and re-syncs the brush to it);
+		// Reset means the whole series.
+		if (initialRange && chart?.options.scales?.x) {
+			(chart.options.scales.x as any).min = undefined;
+			(chart.options.scales.x as any).max = undefined;
+			chart.update('none');
+		}
 		brushStart = 0;
 		brushEnd = Math.max(pointCount - 1, 0);
-		chart?.resetZoom();
 	}
 	$effect(() => {
 		const count = pointCount;
-		brushStart = 0;
-		brushEnd = Math.max(count - 1, 0);
+		const max = Math.max(count - 1, 0);
+		const [from, to] = zoomable && initialRange ? initialRange : [0, max];
+		const start = Math.min(Math.max(from, 0), max);
+		brushStart = start;
+		brushEnd = Math.min(Math.max(to, start), max);
 	});
 
 	onMount(async () => {
@@ -61,11 +74,14 @@
 	$effect(() => {
 		const el = canvas;
 		if (!el || !zoomReady) return;
+		// untrack: the brush moves on every zoom — reading it here would rebuild the chart each time.
+		const opening = initialRange ? untrack(() => ({ min: brushStart, max: brushEnd ?? pointCount - 1 })) : {};
 		const chartConfig = zoomable
 			? {
 					...config,
 					options: {
 						...config.options,
+						scales: { ...config.options?.scales, x: { ...config.options?.scales?.x, ...opening } },
 						plugins: {
 							...config.options?.plugins,
 							zoom: {
