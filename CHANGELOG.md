@@ -10,6 +10,33 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — Avatar Factory v1 (admin)
+
+### Visible (UI)
+
+- New admin page **Avatar Factory** (`/avatar-factory`, left nav). Pick a league,
+  load its members, give each a photo (upload, or pick from the read-only
+  `~/Pictures/boarz-players` mount), pick a theme (South Park, Simpsons), review
+  A/B/C candidates: rate 1–5, approve one per member per theme, group shot once
+  all are approved.
+- Boarz II Men pre-seeded via idempotent **Rescan sources** (copy only): 11
+  members, South Park + Simpsons themes, every existing avatar as a candidate
+  (SP v1, SP v2, Grok Imagine set labeled unapproved/archived, Simpsons).
+- **OpenRouter image generation is PAUSED** (Mashew 5:21 PM PT): Generate,
+  Tweak and Group-shot return "OpenRouter image gen paused" unless
+  `AVATAR_FACTORY_OPENROUTER_PAUSED=0` is set explicitly (it is not).
+
+### Internal
+
+- Factory state is JSON + images under `data/avatar-factory/` (versioned
+  filenames, no overwrite, reject = flag). Never writes league.db, digests,
+  survey sync or player records; sends nothing.
+- docker-compose bot-ui: `AVATAR_SOURCES_DIR=/app/avatar-sources` and a
+  read-only mount of `${HOME}/Pictures/boarz-players`.
+- Lane `lane/grok-avatar-factory` (grok p1A): 8438ce3, 817e241, 2b0c50d,
+  d0445b8; merge 00d1f9a. Rollback: 6be2c62. Backup:
+  `data/backups/league.pre-avatar-factory-1750.db`.
+
 ## 2026-10-23 — AMA whole story (R168 follow-up 2)
 
 ### Visible (UI)
