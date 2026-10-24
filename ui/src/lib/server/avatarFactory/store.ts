@@ -24,6 +24,8 @@ export interface CandidateRecord {
 	createdAt: string;
 	costUsd?: number;
 	costEstimated?: boolean;
+	pricingBasis?: string;
+	promptTruncated?: boolean;
 	provider?: string;
 	model?: string;
 }
@@ -49,6 +51,8 @@ export interface GroupShotRecord {
 	createdAt: string;
 	costUsd?: number;
 	costEstimated?: boolean;
+	pricingBasis?: string;
+	promptTruncated?: boolean;
 	provider?: string;
 	model?: string;
 	prompt?: string;

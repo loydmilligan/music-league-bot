@@ -72,6 +72,26 @@ export function assembleAvatarPrompt(input: AssembleAvatarPromptInput): string {
 	return parts.join('\n');
 }
 
+export const RUNWAY_PROMPT_LIMIT = 1000;
+
+/** Keep member notes + KEEP/FIX first, then fill remaining budget. */
+export function truncatePromptKeepNotes(
+	assembled: string,
+	keep: string[],
+	limit = RUNWAY_PROMPT_LIMIT,
+): { text: string; truncated: boolean } {
+	if (assembled.length <= limit) return { text: assembled, truncated: false };
+	const keepText = keep.map((s) => s.trim()).filter(Boolean).join('\n\n');
+	if (keepText.length >= limit) {
+		return { text: `${keepText.slice(0, Math.max(0, limit - 1))}…`, truncated: true };
+	}
+	const marker = '\n\n[truncated]\n';
+	const room = limit - keepText.length - marker.length;
+	const head = assembled.slice(0, Math.max(0, room));
+	const text = keepText ? `${keepText}${marker}${head}` : `${head}…`;
+	return { text: text.length > limit ? `${text.slice(0, limit - 1)}…` : text, truncated: true };
+}
+
 export interface GroupMemberPrompt {
 	slug: string;
 	name: string;

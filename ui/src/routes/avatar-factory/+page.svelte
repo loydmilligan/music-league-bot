@@ -15,6 +15,8 @@
 		createdAt: string;
 		costUsd?: number;
 		costEstimated?: boolean;
+		pricingBasis?: string;
+		promptTruncated?: boolean;
 		provider?: string;
 		model?: string;
 		usedNotes?: string;
@@ -37,6 +39,8 @@
 		source: string;
 		costUsd?: number;
 		costEstimated?: boolean;
+		pricingBasis?: string;
+		promptTruncated?: boolean;
 		provider?: string;
 		model?: string;
 	};
@@ -89,6 +93,7 @@
 		title: string;
 		images: number;
 		estimatedCostUsd: number;
+		provider: string;
 		model: string;
 		body: Record<string, unknown>;
 	}>(null);
@@ -122,11 +127,19 @@
 		return bits.join(' · ');
 	}
 
-	function costLine(c: { source?: string; provider?: string; model?: string; costUsd?: number; costEstimated?: boolean }) {
+	function costLine(c: {
+		source?: string;
+		provider?: string;
+		model?: string;
+		costUsd?: number;
+		costEstimated?: boolean;
+		pricingBasis?: string;
+	}) {
 		if (c.source === 'imported') return 'imported, $0';
 		const head = [c.provider, c.model].filter(Boolean).join(' · ');
 		if (c.costUsd == null) return head || '';
-		return `${head}${head ? ' · ' : ''}$${c.costUsd.toFixed(4)}${c.costEstimated ? ' estimate' : ''}`;
+		const est = c.costEstimated ? (c.pricingBasis ? ` estimate · ${c.pricingBasis}` : ' estimate') : '';
+		return `${head}${head ? ' · ' : ''}$${c.costUsd.toFixed(4)}${est}`;
 	}
 
 	function askConfirm(title: string, images: number, body: Record<string, unknown>) {
@@ -136,6 +149,7 @@
 			title,
 			images,
 			estimatedCostUsd: unit * images,
+			provider: selectedProvider?.label ?? selectedProvider?.id ?? '',
 			model: selectedProvider?.model ?? '',
 			body: { ...body, confirmed: true },
 		};
@@ -246,7 +260,7 @@
 			<SectionLabel>Admin</SectionLabel>
 			<h1 class="font-display text-3xl mt-1">Avatar Factory</h1>
 			<p class="text-sm text-fg-muted mt-1">
-				OpenRouter on · confirm before each run · Grok / Runway / fal.ai disabled pending Mashew OK
+				OpenRouter / Runway / fal.ai · confirm before each run · Grok disabled
 			</p>
 		</div>
 		<div class="flex flex-col items-end gap-1 text-right">
@@ -406,6 +420,9 @@
 								{/if}
 							</div>
 							<p class="font-mono text-[10px] text-fg-dim">{costLine(c)}</p>
+							{#if c.promptTruncated}
+								<p class="font-mono text-[10px] text-warn">prompt truncated to 1000 chars (Runway)</p>
+							{/if}
 							{#if c.usedNotes}
 								<p class="text-[11px] text-fg-muted whitespace-pre-wrap">{c.usedNotes}</p>
 							{/if}
@@ -545,10 +562,10 @@
 		<div class="bg-bg-elevated border border-border rounded-md w-full max-w-md p-4 space-y-3">
 			<h3 class="font-display text-xl">{confirmJob.title}</h3>
 			<p class="text-sm">
-				{confirmJob.images} image{confirmJob.images === 1 ? '' : 's'} · {confirmJob.model}
+				{confirmJob.provider} · {confirmJob.model} · {confirmJob.images} image{confirmJob.images === 1 ? '' : 's'}
 			</p>
 			<p class="font-mono text-sm">Estimated cost: ${confirmJob.estimatedCostUsd.toFixed(4)}</p>
-			<p class="text-xs text-fg-dim">Cancel makes no request. Opening this dialog does not call OpenRouter.</p>
+			<p class="text-xs text-fg-dim">Cancel makes no request. Opening this dialog does not call any provider.</p>
 			<div class="flex gap-2 justify-end">
 				<button type="button" class={btnGhost} onclick={() => (confirmJob = null)}>Cancel</button>
 				<button type="button" class={btn} onclick={runConfirmed}>Confirm</button>

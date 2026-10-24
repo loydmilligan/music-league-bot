@@ -6,6 +6,7 @@ import {
 	assembleRatingNotes,
 	extractFencedPrompt,
 	parseAttachInspiration,
+	truncatePromptKeepNotes,
 } from './prompts.js';
 
 describe('prompt assembly', () => {
@@ -75,6 +76,17 @@ describe('prompt assembly', () => {
 		expect(prompt).toContain('short');
 		expect(prompt).toContain('tallest of all');
 		expect(prompt).toContain('not bald');
+	});
+
+	it('truncates long prompts but keeps member notes and KEEP/FIX first', () => {
+		const keep = 'KEEP (high-rated — preserve what was liked):\n- A (5/5): great hair';
+		const assembled = `${'STYLE '.repeat(400)}\nMEMBER NOTES (must follow):\nglasses\n${keep}`;
+		expect(assembled.length).toBeGreaterThan(1000);
+		const fit = truncatePromptKeepNotes(assembled, ['glasses', keep], 1000);
+		expect(fit.truncated).toBe(true);
+		expect(fit.text.length).toBeLessThanOrEqual(1000);
+		expect(fit.text).toContain('great hair');
+		expect(fit.text).toContain('glasses');
 	});
 
 	it('extracts the fenced style.md template', () => {

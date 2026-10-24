@@ -3,12 +3,19 @@ import { dirname, extname, join } from 'node:path';
 import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
 import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
-import { fileToDataUrl, generateOpenRouterImage, type FetchLike } from './openrouter.js';
+import { generateFactoryImage, type FetchLike } from './generate.js';
+import { fileToDataUrl } from './openrouter.js';
 import { factoryCostTotals } from './cost.js';
 import { assertConfirmed, assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
 import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
-import { assembleAvatarPrompt, assembleGroupShotPrompt, assembleRatingNotes } from './prompts.js';
+import {
+	assembleAvatarPrompt,
+	assembleGroupShotPrompt,
+	assembleRatingNotes,
+	RUNWAY_PROMPT_LIMIT,
+	truncatePromptKeepNotes,
+} from './prompts.js';
 import { readInspirationAbs, readNotesMd, rescanSources } from './seed.js';
 import {
 	approvedForTheme,
@@ -271,7 +278,7 @@ export async function generateOptions(
 
 	const notesMd = readNotesMd(sourcesDir, member.slug);
 	const ratingNotes = memberRatingNotes(member, input.themeSlug);
-	const prompt = assembleAvatarPrompt({
+	let prompt = assembleAvatarPrompt({
 		stylePrompt: theme.prompt,
 		globalNotes: GLOBAL_NOTES,
 		memberSlug: member.slug,
@@ -282,6 +289,17 @@ export async function generateOptions(
 		tweakNote: input.tweakNote,
 		ratingNotes,
 	});
+	let promptTruncated = false;
+	if (provider.id === 'runway') {
+		const tagLine = 'Use @subject as the person.';
+		const fit = truncatePromptKeepNotes(
+			prompt,
+			[member.notes, notesMd, ratingNotes, input.tweakNote ?? ''],
+			RUNWAY_PROMPT_LIMIT - tagLine.length - 1,
+		);
+		prompt = `${tagLine}\n${fit.text}`;
+		promptTruncated = fit.truncated;
+	}
 
 	const imageDataUrls = [dataUrlFromFile(photoAbs)];
 	if (theme.attachInspiration) {
@@ -292,7 +310,7 @@ export async function generateOptions(
 
 	const created: CandidateRecord[] = [];
 	for (const letter of letters) {
-		const result = await generateOpenRouterImage({
+		const result = await generateFactoryImage(provider, {
 			prompt,
 			imageDataUrls,
 			model: provider.defaultModel,
@@ -316,6 +334,8 @@ export async function generateOptions(
 			createdAt: new Date().toISOString(),
 			costUsd,
 			costEstimated: result.costEstimated,
+			pricingBasis: result.costEstimated ? provider.pricingBasis : undefined,
+			promptTruncated: promptTruncated || undefined,
 			provider: provider.id,
 			model: provider.defaultModel,
 		};
@@ -348,7 +368,7 @@ export async function requestGroupShot(
 		throw new Error('group shot locked until every member has an approved avatar');
 	}
 
-	const prompt = assembleGroupShotPrompt({
+	let prompt = assembleGroupShotPrompt({
 		stylePrompt: theme.prompt,
 		themeName: theme.name,
 		members: league.members.map((m) => ({
@@ -359,6 +379,14 @@ export async function requestGroupShot(
 		})),
 		globalNotes: GLOBAL_NOTES,
 	});
+	let promptTruncated = false;
+	if (provider.id === 'runway') {
+		const tagLine = 'Use @subject as the people.';
+		const memberNotes = league.members.map((m) => m.notes).filter(Boolean);
+		const fit = truncatePromptKeepNotes(prompt, memberNotes, RUNWAY_PROMPT_LIMIT - tagLine.length - 1);
+		prompt = `${tagLine}\n${fit.text}`;
+		promptTruncated = fit.truncated;
+	}
 
 	const imageDataUrls: string[] = [];
 	for (const m of league.members) {
@@ -368,7 +396,7 @@ export async function requestGroupShot(
 		if (existsSync(abs)) imageDataUrls.push(dataUrlFromFile(abs));
 	}
 
-	const result = await generateOpenRouterImage({
+	const result = await generateFactoryImage(provider, {
 		prompt,
 		imageDataUrls,
 		model: provider.defaultModel,
@@ -388,6 +416,8 @@ export async function requestGroupShot(
 		createdAt: new Date().toISOString(),
 		costUsd,
 		costEstimated: result.costEstimated,
+		pricingBasis: result.costEstimated ? provider.pricingBasis : undefined,
+		promptTruncated: promptTruncated || undefined,
 		provider: provider.id,
 		model: provider.defaultModel,
 		prompt,
