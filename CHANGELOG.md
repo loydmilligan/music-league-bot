@@ -10,6 +10,39 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — Avatar Factory v1.2 + generation bug fixes (admin)
+
+### Visible (UI)
+
+- **Runway** (`gen4_image`, 720p, est. $0.05/image = 5 credits × $0.01, per
+  docs.dev.runwayml.com/guides/pricing) and **fal.ai** (`fal-ai/nano-banana/edit`,
+  est. $0.0398/image, per fal.ai/models/fal-ai/nano-banana/edit) enabled in the
+  picker (Mashew 7:22 PM PT). Same click + confirm + cost rules as OpenRouter.
+  Grok stays disabled (no key; no Grok Imagine).
+- **Errors named**: safety/likeness refusal, out of credits (402), bad input
+  image, rate limited, timeout. Failed attempts record no cost (any provider
+  cost on a refusal is shown separately as failed cost). No auto-retry.
+- **Group shot** now sends ONE labeled reference sheet (approved avatars,
+  ~256px tiles, name labels, short → tallest) plus height notes, instead of 11
+  full-size images (~10.7 MB base64). Sheet shown next to the result.
+
+### Internal
+
+- Provider errors logged server-side as one JSON line (status, code, finish
+  reason, generation id, payload bytes, reference names; never keys/base64);
+  `lastError` saved in state.json.
+- All input images normalized with `sharp` (EXIF-rotate, flatten alpha, ≤1024px,
+  baseline JPEG). Longer request timeout with a typed timeout error.
+- Keys reach bot-ui from an untracked env_file
+  (`~/.local/state/boarz-lanes/avatar-factory/providers.env`, chmod 600) via
+  `docker-compose.avatar-providers.yml` in the same state dir. Never in git.
+- Lane commits d6d68ad (A6), 73382a8 (B1), 21ce483 (B2), board docs 8251418,
+  24f844f, dd92d16; merge cca42fe. Rollback d481080. Backup
+  `data/backups/league.pre-avatar-factory-v12-2005.db` and
+  `data/backups/avatar-factory-state.pre-v12-2005.json`.
+- Rebuild command now adds
+  `-f ~/.local/state/boarz-lanes/avatar-factory/docker-compose.avatar-providers.yml`.
+
 ## 2026-10-23 — Avatar Factory v1.1 (admin)
 
 ### Visible (UI)
