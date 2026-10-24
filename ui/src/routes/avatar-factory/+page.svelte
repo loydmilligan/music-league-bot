@@ -13,6 +13,9 @@
 		source: 'generated' | 'imported';
 		createdAt: string;
 		costUsd?: number;
+		costEstimated?: boolean;
+		provider?: string;
+		model?: string;
 	};
 	type Member = {
 		slug: string;
@@ -32,6 +35,16 @@
 		source: string;
 	};
 	type Theme = { slug: string; name: string; prompt: string; attachInspiration: boolean };
+	type ProviderStatus = {
+		id: string;
+		label: string;
+		model: string;
+		available: boolean;
+		needsKey: boolean;
+		enabled: boolean;
+		isDefault: boolean;
+		disabledReason?: string | null;
+	};
 	type FactoryPayload = {
 		leagues: { slug: string; name: string }[];
 		themes: Theme[];
@@ -39,6 +52,8 @@
 		costUsd: number;
 		attemptCount: number;
 		sourcesConfigured: boolean;
+		providers?: ProviderStatus[];
+		defaultProvider?: string;
 		generationPaused?: boolean;
 		pausedMessage?: string | null;
 	};
@@ -60,6 +75,7 @@
 	let pickerEntries = $state<{ name: string; rel: string; type: 'file' | 'dir'; size: number }[]>([]);
 	let newThemeName = $state('');
 	let newThemePrompt = $state('');
+	let providerId = $state('openrouter');
 
 	const members = $derived(payload?.league.members ?? []);
 	const themes = $derived(payload?.themes ?? []);
@@ -73,8 +89,10 @@
 	);
 	const groupUnlocked = $derived(members.length > 0 && approvedCount === members.length);
 	const groupShots = $derived((payload?.league.groupShots ?? []).filter((g) => g.themeSlug === themeSlug));
+	const providers = $derived(payload?.providers ?? []);
 	const generationPaused = $derived(!!payload?.generationPaused);
-	const genBlocked = $derived(generationPaused || !!busy);
+	const selectedProvider = $derived(providers.find((p) => p.id === providerId) ?? providers.find((p) => p.isDefault));
+	const genBlocked = $derived(generationPaused || !!busy || !selectedProvider?.enabled);
 
 	function imgUrl(kind: 'images' | 'photos', rel: string | null | undefined) {
 		if (!rel) return '';
@@ -174,7 +192,7 @@
 			<SectionLabel>Admin</SectionLabel>
 			<h1 class="font-display text-3xl mt-1">Avatar Factory</h1>
 			<p class="text-sm text-fg-muted mt-1">
-				OpenRouter only · copy-in from sources · never writes players or digests
+				OpenRouter (Gemini) default · paused · Grok / Runway / fal.ai needs key or disabled pending Mashew OK
 			</p>
 		</div>
 		<div class="flex flex-col items-end gap-1">
@@ -215,6 +233,21 @@
 				>
 			{/each}
 		</div>
+		<label class="flex flex-col gap-1 text-xs font-mono uppercase tracking-wider text-fg-faint">
+			Provider
+			<select
+				class="bg-surface border border-border rounded-md px-2 py-2 text-sm text-fg min-w-56"
+				data-provider="picker"
+				value={providerId}
+				onchange={(e) => (providerId = (e.currentTarget as HTMLSelectElement).value)}
+			>
+				{#each providers as p}
+					<option value={p.id} disabled={!p.enabled}>
+						{p.label}{p.isDefault ? ' · default' : ''}{p.disabledReason ? ` · ${p.disabledReason}` : ''}
+					</option>
+				{/each}
+			</select>
+		</label>
 		<button type="button" class={btnGhost} disabled={!!busy} onclick={() => post({ action: 'rescan' })}>
 			{busy === 'rescan' ? 'Scanning…' : 'Rescan sources'}
 		</button>
@@ -285,7 +318,14 @@
 								class={btn}
 								disabled={genBlocked || !member.photoRel}
 								onclick={() =>
-									post({ action: 'generate', leagueSlug, themeSlug, memberSlug: member.slug, count: 3 })}
+									post({
+										action: 'generate',
+										leagueSlug,
+										themeSlug,
+										memberSlug: member.slug,
+										count: 3,
+										provider: providerId,
+									})}
 							>
 								{busy === 'generate' ? 'Generating…' : 'Generate A/B/C'}
 							</button>
@@ -309,6 +349,14 @@
 									<StatusChip label="approved" tone="muted" />
 								{/if}
 							</div>
+							{#if c.provider}
+								<p class="font-mono text-[10px] text-fg-dim">
+									{c.provider} · {c.model ?? ''}
+									{#if c.costUsd != null}
+										· ${c.costUsd.toFixed(4)}{c.costEstimated ? ' est.' : ''}
+									{/if}
+								</p>
+							{/if}
 							<div class="flex gap-1" aria-label="rating">
 								{#each [1, 2, 3, 4, 5] as star}
 									<button
@@ -364,6 +412,7 @@
 								themeSlug,
 								memberSlug: member.slug,
 								tweakNote,
+								provider: providerId,
 							})}
 						>Tweak (new version)</button
 					>
@@ -381,7 +430,7 @@
 			type="button"
 			class={btn}
 			disabled={!groupUnlocked || genBlocked}
-			onclick={() => post({ action: 'group-shot', leagueSlug, themeSlug })}
+			onclick={() => post({ action: 'group-shot', leagueSlug, themeSlug, provider: providerId })}
 		>
 			{busy === 'group-shot' ? 'Requesting…' : 'Request group shot'}
 		</button>

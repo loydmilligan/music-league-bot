@@ -37,7 +37,27 @@ describe('OpenRouter client (mocked)', () => {
 		expect(body.model).toBe('google/gemini-2.5-flash-image');
 		expect(body.modalities).toEqual(['image', 'text']);
 		expect(result.costUsd).toBe(0.04);
+		expect(result.costEstimated).toBe(false);
 		expect(result.bytes.byteLength).toBeGreaterThan(10);
+	});
+
+	it('flags costEstimated when usage.cost is missing', async () => {
+		const fetchImpl = vi.fn(async () => {
+			return new Response(
+				JSON.stringify({
+					choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${PNG_B64}` } }] } }],
+					usage: { prompt_tokens: 10 },
+				}),
+				{ status: 200, headers: { 'Content-Type': 'application/json' } },
+			);
+		});
+		const result = await generateOpenRouterImage({
+			prompt: 'draw a cartoon',
+			apiKey: 'test-key-not-real',
+			fetchImpl,
+		});
+		expect(result.costEstimated).toBe(true);
+		expect(result.costUsd).toBe(0);
 	});
 
 	it('redacts the key from error bodies', async () => {

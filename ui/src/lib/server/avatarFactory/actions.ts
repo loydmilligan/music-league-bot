@@ -5,6 +5,7 @@ import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.j
 import { GLOBAL_NOTES } from './notes.js';
 import { fileToDataUrl, generateOpenRouterImage, type FetchLike } from './openrouter.js';
 import { assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
+import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
 import { assembleAvatarPrompt, assembleGroupShotPrompt } from './prompts.js';
 import { readInspirationAbs, readNotesMd, rescanSources } from './seed.js';
@@ -93,6 +94,8 @@ export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
 		sourcesConfigured: existsSync(ctx.sourcesDir ?? sourcesRoot()),
 		generationPaused: isGenerationPaused(),
 		pausedMessage: isGenerationPaused() ? PAUSED_MESSAGE : null,
+		providers: listProviders(),
+		defaultProvider: DEFAULT_PROVIDER,
 	};
 }
 
@@ -236,10 +239,12 @@ export async function generateOptions(
 		count?: number;
 		tweakNote?: string;
 		baseCandidateId?: string;
+		provider?: string;
 	},
 	ctx: FactoryCtx = {},
 ) {
 	assertGenerationAllowed();
+	const provider = resolveProvider(input.provider);
 	const { factoryDir, sourcesDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const member = requireMember(state, input.leagueSlug, input.memberSlug);
@@ -273,10 +278,12 @@ export async function generateOptions(
 		const result = await generateOpenRouterImage({
 			prompt,
 			imageDataUrls,
+			model: provider.defaultModel,
 			fetchImpl: ctx.fetchImpl,
 		});
 		const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, input.memberSlug, letter);
 		writeFileSync(allocated.abs, result.bytes);
+		const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
 		const rec: CandidateRecord = {
 			id: newId(),
 			themeSlug: input.themeSlug,
@@ -289,11 +296,14 @@ export async function generateOptions(
 			prompt,
 			tweakNote: input.tweakNote,
 			createdAt: new Date().toISOString(),
-			costUsd: result.costUsd,
+			costUsd,
+			costEstimated: result.costEstimated,
+			provider: provider.id,
+			model: provider.defaultModel,
 		};
 		member.candidates.push(rec);
 		created.push(rec);
-		state.costUsd += result.costUsd;
+		state.costUsd += costUsd;
 		state.attemptCount += 1;
 	}
 	saveState(state, factoryDir);
@@ -301,10 +311,11 @@ export async function generateOptions(
 }
 
 export async function requestGroupShot(
-	input: { leagueSlug: string; themeSlug: string },
+	input: { leagueSlug: string; themeSlug: string; provider?: string },
 	ctx: FactoryCtx = {},
 ) {
 	assertGenerationAllowed();
+	const provider = resolveProvider(input.provider);
 	const { factoryDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const league = state.leagues[input.leagueSlug];
@@ -341,11 +352,13 @@ export async function requestGroupShot(
 	const result = await generateOpenRouterImage({
 		prompt,
 		imageDataUrls,
+		model: provider.defaultModel,
 		aspectRatio: '16:9',
 		fetchImpl: ctx.fetchImpl,
 	});
 	const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, 'group', 'G');
 	writeFileSync(allocated.abs, result.bytes);
+	const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
 	const rec = {
 		id: newId(),
 		themeSlug: input.themeSlug,
@@ -354,11 +367,14 @@ export async function requestGroupShot(
 		status: 'candidate' as const,
 		source: 'generated' as const,
 		createdAt: new Date().toISOString(),
-		costUsd: result.costUsd,
+		costUsd,
+		costEstimated: result.costEstimated,
+		provider: provider.id,
+		model: provider.defaultModel,
 		prompt,
 	};
 	league.groupShots.push(rec);
-	state.costUsd += result.costUsd;
+	state.costUsd += costUsd;
 	state.attemptCount += 1;
 	saveState(state, factoryDir);
 	return rec;

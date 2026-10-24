@@ -129,6 +129,10 @@ describe('generate + group-shot actions', () => {
 		);
 		expect(out.created).toHaveLength(3);
 		expect(out.created.map((c) => c.letter)).toEqual(['A', 'B', 'C']);
+		expect(out.created[0].provider).toBe('openrouter');
+		expect(out.created[0].model).toBe('google/gemini-2.5-flash-image');
+		expect(out.created[0].costUsd).toBe(0.01);
+		expect(out.created[0].costEstimated).toBe(false);
 		expect(out.prompt).toContain('glasses');
 		expect(out.prompt).toMatch(/height class tall/i);
 		expect(fetchImpl).toHaveBeenCalledTimes(3);

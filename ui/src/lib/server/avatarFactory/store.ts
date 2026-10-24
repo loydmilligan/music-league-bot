@@ -21,6 +21,9 @@ export interface CandidateRecord {
 	tweakNote?: string;
 	createdAt: string;
 	costUsd?: number;
+	costEstimated?: boolean;
+	provider?: string;
+	model?: string;
 }
 
 export interface MemberRecord {
@@ -43,6 +46,9 @@ export interface GroupShotRecord {
 	importKey?: string;
 	createdAt: string;
 	costUsd?: number;
+	costEstimated?: boolean;
+	provider?: string;
+	model?: string;
 	prompt?: string;
 }
 

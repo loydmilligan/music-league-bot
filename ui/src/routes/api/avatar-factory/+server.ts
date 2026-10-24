@@ -20,7 +20,12 @@ function fail(e: unknown, fallback = 500): never {
 	if (e instanceof PathGuardError) error(400, e.message);
 	const msg = e instanceof Error ? e.message : 'error';
 	if (/paused/i.test(msg)) error(503, msg);
-	if (/locked|not found|invalid|too large|not an image|rating/i.test(msg)) error(400, msg);
+	if (
+		/locked|not found|invalid|too large|not an image|rating|not enabled|needs key|disabled pending|unknown provider/i.test(
+			msg,
+		)
+	)
+		error(400, msg);
 	error(fallback, msg);
 }
 
@@ -78,6 +83,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						themeSlug: String(body.themeSlug),
 						memberSlug: String(body.memberSlug),
 						count: body.count as number | undefined,
+						provider: body.provider ? String(body.provider) : undefined,
 					}),
 				);
 			case 'tweak':
@@ -89,6 +95,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						count: 1,
 						tweakNote: String(body.tweakNote ?? ''),
 						baseCandidateId: body.candidateId ? String(body.candidateId) : undefined,
+						provider: body.provider ? String(body.provider) : undefined,
 					}),
 				);
 			case 'group-shot':
@@ -96,6 +103,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					await requestGroupShot({
 						leagueSlug: String(body.leagueSlug),
 						themeSlug: String(body.themeSlug),
+						provider: body.provider ? String(body.provider) : undefined,
 					}),
 				);
 			default:
