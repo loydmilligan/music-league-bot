@@ -4,9 +4,11 @@ import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
 import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
 import { fileToDataUrl, generateOpenRouterImage, type FetchLike } from './openrouter.js';
-import { assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
+import { factoryCostTotals } from './cost.js';
+import { assertConfirmed, assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
+import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
-import { assembleAvatarPrompt, assembleGroupShotPrompt } from './prompts.js';
+import { assembleAvatarPrompt, assembleGroupShotPrompt, assembleRatingNotes } from './prompts.js';
 import { readInspirationAbs, readNotesMd, rescanSources } from './seed.js';
 import {
 	approvedForTheme,
@@ -93,6 +95,9 @@ export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
 		sourcesConfigured: existsSync(ctx.sourcesDir ?? sourcesRoot()),
 		generationPaused: isGenerationPaused(),
 		pausedMessage: isGenerationPaused() ? PAUSED_MESSAGE : null,
+		providers: listProviders(),
+		defaultProvider: DEFAULT_PROVIDER,
+		costTotals: factoryCostTotals(fresh, leagueSlug),
 	};
 }
 
@@ -115,14 +120,17 @@ export function setRating(
 	candidateId: string,
 	rating: number,
 	ctx: FactoryCtx = {},
+	comment?: string,
 ) {
-	if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new Error('rating must be 1–5');
+	const hasRating = Number.isInteger(rating) && rating >= 1 && rating <= 5;
+	if (!hasRating && comment === undefined) throw new Error('rating must be 1–5');
 	const { factoryDir } = roots(ctx);
 	const state = loadState(factoryDir);
 	const member = requireMember(state, leagueSlug, memberSlug);
 	const c = member.candidates.find((x) => x.id === candidateId);
 	if (!c) throw new Error('candidate not found');
-	c.rating = rating;
+	if (hasRating) c.rating = rating;
+	if (comment !== undefined) c.ratingComment = comment;
 	saveState(state, factoryDir);
 	return c;
 }
@@ -228,6 +236,14 @@ function requireTheme(state: FactoryState, themeSlug: string): ThemeRecord {
 	return t;
 }
 
+function memberRatingNotes(member: { candidates: CandidateRecord[] }, themeSlug: string): string {
+	return assembleRatingNotes(
+		member.candidates
+			.filter((c) => c.themeSlug === themeSlug && c.rating != null && (c.ratingComment ?? '').trim())
+			.map((c) => ({ letter: c.letter, rating: c.rating as number, comment: (c.ratingComment ?? '').trim() })),
+	);
+}
+
 export async function generateOptions(
 	input: {
 		leagueSlug: string;
@@ -236,10 +252,14 @@ export async function generateOptions(
 		count?: number;
 		tweakNote?: string;
 		baseCandidateId?: string;
+		provider?: string;
+		confirmed?: boolean;
 	},
 	ctx: FactoryCtx = {},
 ) {
+	assertConfirmed(input.confirmed);
 	assertGenerationAllowed();
+	const provider = resolveProvider(input.provider);
 	const { factoryDir, sourcesDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const member = requireMember(state, input.leagueSlug, input.memberSlug);
@@ -250,6 +270,7 @@ export async function generateOptions(
 	if (!existsSync(photoAbs)) throw new Error('source photo missing on disk');
 
 	const notesMd = readNotesMd(sourcesDir, member.slug);
+	const ratingNotes = memberRatingNotes(member, input.themeSlug);
 	const prompt = assembleAvatarPrompt({
 		stylePrompt: theme.prompt,
 		globalNotes: GLOBAL_NOTES,
@@ -259,6 +280,7 @@ export async function generateOptions(
 		notesMd,
 		height: member.height,
 		tweakNote: input.tweakNote,
+		ratingNotes,
 	});
 
 	const imageDataUrls = [dataUrlFromFile(photoAbs)];
@@ -273,10 +295,12 @@ export async function generateOptions(
 		const result = await generateOpenRouterImage({
 			prompt,
 			imageDataUrls,
+			model: provider.defaultModel,
 			fetchImpl: ctx.fetchImpl,
 		});
 		const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, input.memberSlug, letter);
 		writeFileSync(allocated.abs, result.bytes);
+		const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
 		const rec: CandidateRecord = {
 			id: newId(),
 			themeSlug: input.themeSlug,
@@ -288,12 +312,16 @@ export async function generateOptions(
 			source: 'generated',
 			prompt,
 			tweakNote: input.tweakNote,
+			usedNotes: ratingNotes || undefined,
 			createdAt: new Date().toISOString(),
-			costUsd: result.costUsd,
+			costUsd,
+			costEstimated: result.costEstimated,
+			provider: provider.id,
+			model: provider.defaultModel,
 		};
 		member.candidates.push(rec);
 		created.push(rec);
-		state.costUsd += result.costUsd;
+		state.costUsd += costUsd;
 		state.attemptCount += 1;
 	}
 	saveState(state, factoryDir);
@@ -301,10 +329,12 @@ export async function generateOptions(
 }
 
 export async function requestGroupShot(
-	input: { leagueSlug: string; themeSlug: string },
+	input: { leagueSlug: string; themeSlug: string; provider?: string; confirmed?: boolean },
 	ctx: FactoryCtx = {},
 ) {
+	assertConfirmed(input.confirmed);
 	assertGenerationAllowed();
+	const provider = resolveProvider(input.provider);
 	const { factoryDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const league = state.leagues[input.leagueSlug];
@@ -341,11 +371,13 @@ export async function requestGroupShot(
 	const result = await generateOpenRouterImage({
 		prompt,
 		imageDataUrls,
+		model: provider.defaultModel,
 		aspectRatio: '16:9',
 		fetchImpl: ctx.fetchImpl,
 	});
 	const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, 'group', 'G');
 	writeFileSync(allocated.abs, result.bytes);
+	const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
 	const rec = {
 		id: newId(),
 		themeSlug: input.themeSlug,
@@ -354,11 +386,14 @@ export async function requestGroupShot(
 		status: 'candidate' as const,
 		source: 'generated' as const,
 		createdAt: new Date().toISOString(),
-		costUsd: result.costUsd,
+		costUsd,
+		costEstimated: result.costEstimated,
+		provider: provider.id,
+		model: provider.defaultModel,
 		prompt,
 	};
 	league.groupShots.push(rec);
-	state.costUsd += result.costUsd;
+	state.costUsd += costUsd;
 	state.attemptCount += 1;
 	saveState(state, factoryDir);
 	return rec;

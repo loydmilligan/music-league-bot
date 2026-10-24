@@ -14,13 +14,18 @@ export interface CandidateRecord {
 	relPath: string;
 	label: string;
 	rating: number | null;
+	ratingComment?: string;
 	status: CandidateStatus;
 	source: CandidateSource;
 	importKey?: string;
 	prompt?: string;
 	tweakNote?: string;
+	usedNotes?: string;
 	createdAt: string;
 	costUsd?: number;
+	costEstimated?: boolean;
+	provider?: string;
+	model?: string;
 }
 
 export interface MemberRecord {
@@ -43,6 +48,9 @@ export interface GroupShotRecord {
 	importKey?: string;
 	createdAt: string;
 	costUsd?: number;
+	costEstimated?: boolean;
+	provider?: string;
+	model?: string;
 	prompt?: string;
 }
 

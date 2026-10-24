@@ -6,6 +6,7 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 export interface ImageGenResult {
 	bytes: Uint8Array;
 	costUsd: number;
+	costEstimated?: boolean;
 	promptTokens: number;
 	completionTokens: number;
 	totalTokens: number;
@@ -99,8 +100,10 @@ export async function generateOpenRouterImage(opts: GenerateImageOpts): Promise<
 
 	if (!raw) throw new Error('OpenRouter returned no image');
 
+	const hasCost = typeof json.usage?.cost === 'number';
 	const cost = {
-		costUsd: typeof json.usage?.cost === 'number' ? json.usage.cost : 0,
+		costUsd: hasCost ? json.usage!.cost! : 0,
+		costEstimated: !hasCost,
 		promptTokens: typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0,
 		completionTokens: typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0,
 		totalTokens: typeof json.usage?.total_tokens === 'number' ? json.usage.total_tokens : 0,

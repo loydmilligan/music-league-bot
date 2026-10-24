@@ -52,6 +52,26 @@ function labelForImportedAvatar(filename: string): { letter: string; label: stri
 	return { letter: 'X', label: filename, themeSlug: 'south-park' };
 }
 
+/** `<slug>-<letter><n>.png` — e.g. matt-mariani-A.png, conor-johnston-C2.png */
+export function parseAbcFilename(filename: string): { slug: string; letter: string; tag: string } | null {
+	const m = filename.match(/^([a-z0-9]+(?:-[a-z0-9]+)*)-([A-Za-z])(\d*)\.png$/i);
+	if (!m) return null;
+	const letter = m[2].toUpperCase();
+	const tag = m[3] ? `${letter}${m[3]}` : letter;
+	return { slug: m[1].toLowerCase(), letter, tag };
+}
+
+function simpsonsPlateLabel(filename: string): string {
+	if (filename === 'boarz-simpsons-plate-1615.png') return 'Simpsons group plate (p1C 1615)';
+	if (filename === 'boarz-simpsons-plate-1615-v2.png') return 'Simpsons group plate v2 (p1C 1615)';
+	return `Simpsons group plate (${filename})`;
+}
+
+function contactSheetLabel(filename: string): string {
+	if (/-v2\.png$/i.test(filename)) return 'South Park ABC contact sheet v2 (p1C 1615)';
+	return 'South Park ABC contact sheet (p1C 1615)';
+}
+
 function ensureMember(league: ReturnType<typeof ensureLeague>, slug: string, name: string, playerId: number | null): MemberRecord {
 	let m = league.members.find((x) => x.slug === slug);
 	if (!m) {
@@ -194,6 +214,23 @@ function importRosterAndHeadshots(
 	}
 }
 
+function refreshImportedLabel(state: FactoryState, id: string, label: string): void {
+	for (const league of Object.values(state.leagues)) {
+		const g = league.groupShots.find((x) => x.id === id);
+		if (g) {
+			g.label = label;
+			return;
+		}
+		for (const m of league.members) {
+			const c = m.candidates.find((x) => x.id === id);
+			if (c) {
+				c.label = label;
+				return;
+			}
+		}
+	}
+}
+
 function importOneImage(
 	state: FactoryState,
 	factoryDir: string,
@@ -209,6 +246,7 @@ function importOneImage(
 	if (!existsSync(srcAbs)) return;
 	const key = importKey(srcAbs);
 	if (state.importIndex[key]) {
+		refreshImportedLabel(state, state.importIndex[key], label);
 		result.skipped += 1;
 		return;
 	}
@@ -285,20 +323,37 @@ function importAbcAndPlates(
 	const abcDir = join(playersDir, '_styles', 'south-park', 'sp-v2-abc-1615');
 	if (existsSync(abcDir)) {
 		for (const f of readdirSync(abcDir)) {
-			const m = f.match(/^([a-z0-9-]+)-([ABC])\.png$/i);
-			if (!m) continue;
-			const slug = m[1];
-			const letter = m[2].toUpperCase();
+			const parsed = parseAbcFilename(f);
+			if (!parsed) continue;
 			importOneImage(
 				state,
 				factoryDir,
 				join(abcDir, f),
 				BOARZ_LEAGUE_SLUG,
 				'south-park',
-				slug,
-				letter,
-				`South Park ${letter} (p1C 1615)`,
+				parsed.slug,
+				parsed.letter,
+				`South Park ${parsed.tag} (p1C 1615)`,
 				'candidate',
+				result,
+			);
+		}
+	}
+
+	const spDir = join(playersDir, '_styles', 'south-park');
+	if (existsSync(spDir)) {
+		for (const f of readdirSync(spDir)) {
+			if (!/^sp-v2-abc-contact/i.test(f) || !isImageName(f)) continue;
+			importOneImage(
+				state,
+				factoryDir,
+				join(spDir, f),
+				BOARZ_LEAGUE_SLUG,
+				'south-park',
+				'group',
+				'T',
+				contactSheetLabel(f),
+				'group',
 				result,
 			);
 		}
@@ -308,10 +363,6 @@ function importAbcAndPlates(
 	if (existsSync(simDir)) {
 		for (const f of readdirSync(simDir)) {
 			if (!/^boarz-simpsons-plate/i.test(f) || !isImageName(f)) continue;
-			const label =
-				f === 'boarz-simpsons-plate-1615.png'
-					? 'Simpsons group plate (p1C 1615)'
-					: `Simpsons group plate (${f})`;
 			importOneImage(
 				state,
 				factoryDir,
@@ -320,7 +371,7 @@ function importAbcAndPlates(
 				'simpsons',
 				'group',
 				'G',
-				label,
+				simpsonsPlateLabel(f),
 				'group',
 				result,
 			);

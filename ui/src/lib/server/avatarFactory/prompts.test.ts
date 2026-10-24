@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GLOBAL_NOTES } from './notes.js';
-import { assembleAvatarPrompt, assembleGroupShotPrompt, extractFencedPrompt, parseAttachInspiration } from './prompts.js';
+import {
+	assembleAvatarPrompt,
+	assembleGroupShotPrompt,
+	assembleRatingNotes,
+	extractFencedPrompt,
+	parseAttachInspiration,
+} from './prompts.js';
 
 describe('prompt assembly', () => {
 	it('includes member notes and height class', () => {
@@ -17,6 +23,29 @@ describe('prompt assembly', () => {
 		expect(prompt).toContain('TALLEST');
 		expect(prompt).toContain('# Clements');
 		expect(prompt).toContain(GLOBAL_NOTES.split('\n')[0]);
+	});
+
+	it('includes liked vs fix rated comments', () => {
+		const ratingNotes = assembleRatingNotes([
+			{ letter: 'A', rating: 5, comment: 'great hair' },
+			{ letter: 'B', rating: 1, comment: 'too bald' },
+			{ letter: 'C', rating: 4, comment: '' },
+		]);
+		expect(ratingNotes).toMatch(/KEEP[\s\S]*great hair/);
+		expect(ratingNotes).toMatch(/FIX[\s\S]*too bald/);
+		expect(ratingNotes).not.toContain('C (');
+		const prompt = assembleAvatarPrompt({
+			stylePrompt: 'style',
+			memberSlug: 'matt-mariani',
+			memberName: 'Matt',
+			memberNotes: '',
+			notesMd: '',
+			height: 'tall',
+			ratingNotes,
+		});
+		expect(prompt).toContain('RATED CANDIDATE NOTES:');
+		expect(prompt).toContain('great hair');
+		expect(prompt).toContain('too bald');
 	});
 
 	it('appends a tweak note when present', () => {
