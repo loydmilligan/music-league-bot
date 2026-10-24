@@ -47,6 +47,7 @@
     { href: '/content',   label: 'Content',        glyph: '▸', badge: contentPendingCount > 0 ? contentPendingCount : undefined },
     { href: '/history',   label: 'History',        glyph: '▸' },
     { href: '/boarz-review-jon', label: "Jon's Boarz review", glyph: '▸' },
+    { href: '/avatar-factory', label: 'Avatar Factory', glyph: '▸' },
     { href: '/settings',  label: 'Settings',       glyph: '▸' },
   ]);
 

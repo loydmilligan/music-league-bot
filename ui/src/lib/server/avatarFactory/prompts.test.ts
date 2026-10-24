@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { GLOBAL_NOTES } from './notes.js';
+import { assembleAvatarPrompt, assembleGroupShotPrompt, extractFencedPrompt, parseAttachInspiration } from './prompts.js';
+
+describe('prompt assembly', () => {
+	it('includes member notes and height class', () => {
+		const prompt = assembleAvatarPrompt({
+			stylePrompt: 'Draw a South Park cutout.',
+			memberSlug: 'clements-johnson',
+			memberName: 'Clements Johnson',
+			memberNotes: 'Not bald. No glasses. Barely any beard.',
+			notesMd: '# Clements\n- Height: TALLEST',
+			height: 'tallest',
+		});
+		expect(prompt).toContain('Draw a South Park cutout.');
+		expect(prompt).toContain('Not bald. No glasses. Barely any beard.');
+		expect(prompt).toContain('TALLEST');
+		expect(prompt).toContain('# Clements');
+		expect(prompt).toContain(GLOBAL_NOTES.split('\n')[0]);
+	});
+
+	it('appends a tweak note when present', () => {
+		const prompt = assembleAvatarPrompt({
+			stylePrompt: 'style',
+			memberSlug: 'shane-farkas',
+			memberName: 'Shane',
+			memberNotes: 'thick beard',
+			notesMd: '',
+			height: 'short',
+			tweakNote: 'more hair on the sides',
+		});
+		expect(prompt).toContain('more hair on the sides');
+		expect(prompt).toMatch(/height class short/i);
+	});
+
+	it('group-shot prompt lists every member height', () => {
+		const prompt = assembleGroupShotPrompt({
+			stylePrompt: 'yellow sitcom cel',
+			themeName: 'Simpsons',
+			members: [
+				{ slug: 'ronnie-bertolina', name: 'Ronnie', height: 'short', notes: 'new photo' },
+				{ slug: 'clements-johnson', name: 'Clements', height: 'tallest', notes: 'not bald' },
+			],
+		});
+		expect(prompt).toContain('ronnie-bertolina');
+		expect(prompt).toContain('short');
+		expect(prompt).toContain('tallest of all');
+		expect(prompt).toContain('not bald');
+	});
+
+	it('extracts the fenced style.md template', () => {
+		const md = '# x\n\n```\nTHE TEMPLATE\n```\n';
+		expect(extractFencedPrompt(md)).toBe('THE TEMPLATE');
+		expect(parseAttachInspiration('api_attach_inspiration: false\n')).toBe(false);
+		expect(parseAttachInspiration('# south-park\n')).toBe(true);
+	});
+});
