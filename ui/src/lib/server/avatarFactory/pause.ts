@@ -3,10 +3,14 @@ export const CONFIRM_REQUIRED = 'confirm required';
 
 type EnvBag = Record<string, string | undefined>;
 
-/** Kill switch: paused only when the flag is `1` or `true`. Unset / `0` = enabled. */
+function flagOn(v: string | undefined): boolean {
+	const s = (v ?? '').trim().toLowerCase();
+	return s === '1' || s === 'true';
+}
+
+/** Kill switch: paused when OPENROUTER_PAUSED or GEN_PAUSED is `1`/`true`. Unset / `0` = enabled. */
 export function isGenerationPaused(env: EnvBag = process.env): boolean {
-	const v = (env.AVATAR_FACTORY_OPENROUTER_PAUSED ?? '').trim().toLowerCase();
-	return v === '1' || v === 'true';
+	return flagOn(env.AVATAR_FACTORY_GEN_PAUSED) || flagOn(env.AVATAR_FACTORY_OPENROUTER_PAUSED);
 }
 
 export function assertGenerationAllowed(env: EnvBag = process.env): void {

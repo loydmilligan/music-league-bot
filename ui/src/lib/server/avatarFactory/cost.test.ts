@@ -45,5 +45,26 @@ describe('cost totals', () => {
 		expect(totals.themes['south-park'].actualUsd).toBeCloseTo(0.04);
 		expect(totals.themes['south-park'].importedCount).toBe(1);
 		expect(totals.themes['simpsons'].estimatedUsd).toBeCloseTo(0.04);
+		expect(totals.overall.failedCostUsd).toBe(0);
+		expect(totals.league.failedCostUsd).toBe(0);
+	});
+
+	it('surfaces failedCostUsd on totals without mixing it into actualUsd', () => {
+		const totals = factoryCostTotals(
+			{
+				failedCostUsd: 0.012,
+				leagues: {
+					'boarz-ii-men': {
+						members: [{ candidates: [{ source: 'generated', themeSlug: 'simpsons', costUsd: 0.04, costEstimated: false }] }],
+						groupShots: [],
+					},
+				},
+			},
+			'boarz-ii-men',
+		);
+		expect(totals.overall.actualUsd).toBeCloseTo(0.04);
+		expect(totals.overall.failedCostUsd).toBeCloseTo(0.012);
+		expect(totals.league.failedCostUsd).toBeCloseTo(0.012);
 	});
 });
+

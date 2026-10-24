@@ -9,6 +9,9 @@ describe('OpenRouter generation pause', () => {
 		expect(isGenerationPaused({ AVATAR_FACTORY_OPENROUTER_PAUSED: '1' })).toBe(true);
 		expect(isGenerationPaused({ AVATAR_FACTORY_OPENROUTER_PAUSED: 'true' })).toBe(true);
 		expect(isGenerationPaused({ AVATAR_FACTORY_OPENROUTER_PAUSED: 'TRUE' })).toBe(true);
+		expect(isGenerationPaused({ AVATAR_FACTORY_GEN_PAUSED: '1' })).toBe(true);
+		expect(isGenerationPaused({ AVATAR_FACTORY_GEN_PAUSED: 'true' })).toBe(true);
+		expect(isGenerationPaused({ AVATAR_FACTORY_GEN_PAUSED: '0' })).toBe(false);
 		expect(PAUSED_MESSAGE).toBe('OpenRouter image gen paused');
 	});
 });

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { factoryRoot } from './paths.js';
 import type { HeightClass } from './gating.js';
+import type { LastError } from './errors.js';
 
 export type CandidateStatus = 'candidate' | 'approved' | 'rejected';
 export type CandidateSource = 'generated' | 'imported';
@@ -24,6 +25,8 @@ export interface CandidateRecord {
 	createdAt: string;
 	costUsd?: number;
 	costEstimated?: boolean;
+	pricingBasis?: string;
+	promptTruncated?: boolean;
 	provider?: string;
 	model?: string;
 }
@@ -36,6 +39,7 @@ export interface MemberRecord {
 	notes: string;
 	photoRel: string | null;
 	candidates: CandidateRecord[];
+	lastError?: LastError;
 }
 
 export interface GroupShotRecord {
@@ -49,9 +53,12 @@ export interface GroupShotRecord {
 	createdAt: string;
 	costUsd?: number;
 	costEstimated?: boolean;
+	pricingBasis?: string;
+	promptTruncated?: boolean;
 	provider?: string;
 	model?: string;
 	prompt?: string;
+	sheetRel?: string;
 }
 
 export interface ThemeRecord {
@@ -68,11 +75,14 @@ export interface LeagueRecord {
 	name: string;
 	members: MemberRecord[];
 	groupShots: GroupShotRecord[];
+	lastError?: LastError;
+	lastSheetRel?: string;
 }
 
 export interface FactoryState {
 	version: 1;
 	costUsd: number;
+	failedCostUsd: number;
 	attemptCount: number;
 	themes: ThemeRecord[];
 	leagues: Record<string, LeagueRecord>;
@@ -80,7 +90,7 @@ export interface FactoryState {
 }
 
 export function emptyState(): FactoryState {
-	return { version: 1, costUsd: 0, attemptCount: 0, themes: [], leagues: {}, importIndex: {} };
+	return { version: 1, costUsd: 0, failedCostUsd: 0, attemptCount: 0, themes: [], leagues: {}, importIndex: {} };
 }
 
 export function statePath(root = factoryRoot()): string {
@@ -104,6 +114,7 @@ export function loadState(root = factoryRoot()): FactoryState {
 	raw.leagues ??= {};
 	raw.importIndex ??= {};
 	raw.costUsd ??= 0;
+	raw.failedCostUsd ??= 0;
 	raw.attemptCount ??= 0;
 	return raw;
 }

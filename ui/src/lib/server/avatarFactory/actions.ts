@@ -1,14 +1,30 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join } from 'node:path';
-import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
-import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
+import { basename, dirname, extname, join } from 'node:path';
+import { allocateVersionedNamedPath, allocateVersionedPath, assertSlug, slugify } from './filenames.js';
+import { canRequestGroupShot, clampOptionCount, optionLetters, orderMembersByHeight } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
-import { fileToDataUrl, generateOpenRouterImage, type FetchLike } from './openrouter.js';
+import {
+	isAbortError,
+	logProviderError,
+	ProviderError,
+	reasonFromHttpStatus,
+	type ImageRefMeta,
+	type LastError,
+} from './errors.js';
+import { generateFactoryImage, GROUP_SHOT_TIMEOUT_MS, type FetchLike } from './generate.js';
 import { factoryCostTotals } from './cost.js';
+import { normalizeImage, type NormalizedImage } from './normalize.js';
+import { composeReferenceSheet, type SheetResult } from './sheet.js';
 import { assertConfirmed, assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
 import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
-import { assembleAvatarPrompt, assembleGroupShotPrompt, assembleRatingNotes } from './prompts.js';
+import {
+	assembleAvatarPrompt,
+	assembleGroupShotPrompt,
+	assembleRatingNotes,
+	RUNWAY_PROMPT_LIMIT,
+	truncatePromptKeepNotes,
+} from './prompts.js';
 import { readInspirationAbs, readNotesMd, rescanSources } from './seed.js';
 import {
 	approvedForTheme,
@@ -25,18 +41,13 @@ import {
 } from './store.js';
 import { listLeaguesReadonly, readRoster } from './roster.js';
 
-const MIME: Record<string, string> = {
-	'.png': 'image/png',
-	'.jpg': 'image/jpeg',
-	'.jpeg': 'image/jpeg',
-	'.webp': 'image/webp',
-	'.gif': 'image/gif',
-};
-
 export interface FactoryCtx {
 	factoryDir?: string;
 	sourcesDir?: string;
 	fetchImpl?: FetchLike;
+	normalizeImpl?: (input: Buffer, filename: string) => Promise<NormalizedImage>;
+	composeSheetImpl?: (tiles: { input: Buffer; name: string }[]) => Promise<SheetResult>;
+	timeoutMs?: number;
 }
 
 function roots(ctx: FactoryCtx) {
@@ -45,12 +56,55 @@ function roots(ctx: FactoryCtx) {
 	return { factoryDir, sourcesDir, img: imagesRoot(factoryDir) };
 }
 
-function mimeFor(path: string): string {
-	return MIME[extname(path).toLowerCase()] ?? 'application/octet-stream';
+async function normalizeFile(abs: string, ctx: FactoryCtx): Promise<NormalizedImage> {
+	const fn = ctx.normalizeImpl ?? normalizeImage;
+	return fn(readFileSync(abs), basename(abs));
 }
 
-function dataUrlFromFile(abs: string): string {
-	return fileToDataUrl(readFileSync(abs), mimeFor(abs));
+function asProviderError(
+	e: unknown,
+	provider: string,
+	model: string,
+	refs?: ImageRefMeta[],
+): ProviderError {
+	if (e instanceof ProviderError) return e;
+	if (isAbortError(e)) {
+		return new ProviderError({
+			provider,
+			model,
+			status: null,
+			reason: 'timeout',
+			snippet: e instanceof Error ? e.message : 'aborted',
+			refs,
+		});
+	}
+	const msg = e instanceof Error ? e.message : 'error';
+	const hit = msg.match(/\b(400|401|402|429|500|502|503)\b/);
+	const status = hit ? Number(hit[1]) : null;
+	return new ProviderError({
+		provider,
+		model,
+		status,
+		reason: status != null ? reasonFromHttpStatus(status) : 'provider_http',
+		snippet: msg,
+		refs,
+	});
+}
+
+function persistProviderFailure(
+	state: FactoryState,
+	factoryDir: string,
+	pe: ProviderError,
+	target: { member?: { lastError?: LastError }; league?: { lastError?: LastError } },
+): never {
+	logProviderError(pe);
+	const last = pe.toLastError();
+	if (target.member) target.member.lastError = last;
+	if (target.league) target.league.lastError = last;
+	if (typeof pe.failedCostUsd === 'number') state.failedCostUsd += pe.failedCostUsd;
+	state.attemptCount += 1;
+	saveState(state, factoryDir);
+	throw pe;
 }
 
 export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
@@ -271,7 +325,7 @@ export async function generateOptions(
 
 	const notesMd = readNotesMd(sourcesDir, member.slug);
 	const ratingNotes = memberRatingNotes(member, input.themeSlug);
-	const prompt = assembleAvatarPrompt({
+	let prompt = assembleAvatarPrompt({
 		stylePrompt: theme.prompt,
 		globalNotes: GLOBAL_NOTES,
 		memberSlug: member.slug,
@@ -282,22 +336,48 @@ export async function generateOptions(
 		tweakNote: input.tweakNote,
 		ratingNotes,
 	});
+	let promptTruncated = false;
+	if (provider.id === 'runway') {
+		const tagLine = 'Use @subject as the person.';
+		const fit = truncatePromptKeepNotes(
+			prompt,
+			[member.notes, notesMd, ratingNotes, input.tweakNote ?? ''],
+			RUNWAY_PROMPT_LIMIT - tagLine.length - 1,
+		);
+		prompt = `${tagLine}\n${fit.text}`;
+		promptTruncated = fit.truncated;
+	}
 
-	const imageDataUrls = [dataUrlFromFile(photoAbs)];
+	const photo = await normalizeFile(photoAbs, ctx);
+	const imageDataUrls = [photo.dataUrl];
+	const imageMeta = [photo];
 	if (theme.attachInspiration) {
 		for (const abs of readInspirationAbs(sourcesDir, theme.inspirationRels).slice(0, 4)) {
-			imageDataUrls.push(dataUrlFromFile(abs));
+			const n = await normalizeFile(abs, ctx);
+			imageDataUrls.push(n.dataUrl);
+			imageMeta.push(n);
 		}
 	}
 
 	const created: CandidateRecord[] = [];
 	for (const letter of letters) {
-		const result = await generateOpenRouterImage({
-			prompt,
-			imageDataUrls,
-			model: provider.defaultModel,
-			fetchImpl: ctx.fetchImpl,
-		});
+		let result;
+		try {
+			result = await generateFactoryImage(provider, {
+				prompt,
+				imageDataUrls,
+				model: provider.defaultModel,
+				fetchImpl: ctx.fetchImpl,
+				imageMeta,
+			});
+		} catch (e) {
+			persistProviderFailure(
+				state,
+				factoryDir,
+				asProviderError(e, provider.id, provider.defaultModel, imageMeta),
+				{ member },
+			);
+		}
 		const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, input.memberSlug, letter);
 		writeFileSync(allocated.abs, result.bytes);
 		const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
@@ -316,6 +396,8 @@ export async function generateOptions(
 			createdAt: new Date().toISOString(),
 			costUsd,
 			costEstimated: result.costEstimated,
+			pricingBasis: result.costEstimated ? provider.pricingBasis : undefined,
+			promptTruncated: promptTruncated || undefined,
 			provider: provider.id,
 			model: provider.defaultModel,
 		};
@@ -324,6 +406,7 @@ export async function generateOptions(
 		state.costUsd += costUsd;
 		state.attemptCount += 1;
 	}
+	delete member.lastError;
 	saveState(state, factoryDir);
 	return { created, prompt, costUsd: state.costUsd, attemptCount: state.attemptCount };
 }
@@ -348,10 +431,11 @@ export async function requestGroupShot(
 		throw new Error('group shot locked until every member has an approved avatar');
 	}
 
-	const prompt = assembleGroupShotPrompt({
+	const ordered = orderMembersByHeight(league.members);
+	let prompt = assembleGroupShotPrompt({
 		stylePrompt: theme.prompt,
 		themeName: theme.name,
-		members: league.members.map((m) => ({
+		members: ordered.map((m) => ({
 			slug: m.slug,
 			name: m.name,
 			height: m.height,
@@ -359,22 +443,60 @@ export async function requestGroupShot(
 		})),
 		globalNotes: GLOBAL_NOTES,
 	});
+	let promptTruncated = false;
+	if (provider.id === 'runway') {
+		const tagLine = 'Use @subject as the people.';
+		const memberNotes = ordered.map((m) => m.notes).filter(Boolean);
+		const fit = truncatePromptKeepNotes(prompt, memberNotes, RUNWAY_PROMPT_LIMIT - tagLine.length - 1);
+		prompt = `${tagLine}\n${fit.text}`;
+		promptTruncated = fit.truncated;
+	}
 
-	const imageDataUrls: string[] = [];
-	for (const m of league.members) {
+	const tiles: { input: Buffer; name: string }[] = [];
+	for (const m of ordered) {
 		const ap = approvedForTheme(m, input.themeSlug);
 		if (!ap) continue;
 		const abs = join(img, ap.relPath);
-		if (existsSync(abs)) imageDataUrls.push(dataUrlFromFile(abs));
+		if (!existsSync(abs)) continue;
+		tiles.push({ input: readFileSync(abs), name: m.name });
 	}
+	if (tiles.length === 0) throw new Error('approved avatars missing on disk');
 
-	const result = await generateOpenRouterImage({
-		prompt,
-		imageDataUrls,
-		model: provider.defaultModel,
-		aspectRatio: '16:9',
-		fetchImpl: ctx.fetchImpl,
-	});
+	const compose = ctx.composeSheetImpl ?? composeReferenceSheet;
+	const sheet = await compose(tiles);
+	const sheetPath = allocateVersionedNamedPath(img, input.leagueSlug, input.themeSlug, 'group', 'sheet', 'jpg');
+	writeFileSync(sheetPath.abs, sheet.jpeg);
+	league.lastSheetRel = sheetPath.rel;
+
+	const imageMeta: ImageRefMeta[] = [
+		{
+			filename: basename(sheetPath.rel),
+			width: sheet.width,
+			height: sheet.height,
+			bytes: sheet.jpeg.byteLength,
+		},
+	];
+	const imageDataUrls = [`data:image/jpeg;base64,${sheet.jpeg.toString('base64')}`];
+
+	let result;
+	try {
+		result = await generateFactoryImage(provider, {
+			prompt,
+			imageDataUrls,
+			model: provider.defaultModel,
+			aspectRatio: '16:9',
+			fetchImpl: ctx.fetchImpl,
+			imageMeta,
+			timeoutMs: ctx.timeoutMs ?? GROUP_SHOT_TIMEOUT_MS,
+		});
+	} catch (e) {
+		persistProviderFailure(
+			state,
+			factoryDir,
+			asProviderError(e, provider.id, provider.defaultModel, imageMeta),
+			{ league },
+		);
+	}
 	const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, 'group', 'G');
 	writeFileSync(allocated.abs, result.bytes);
 	const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
@@ -388,13 +510,17 @@ export async function requestGroupShot(
 		createdAt: new Date().toISOString(),
 		costUsd,
 		costEstimated: result.costEstimated,
+		pricingBasis: result.costEstimated ? provider.pricingBasis : undefined,
+		promptTruncated: promptTruncated || undefined,
 		provider: provider.id,
 		model: provider.defaultModel,
 		prompt,
+		sheetRel: sheetPath.rel,
 	};
 	league.groupShots.push(rec);
 	state.costUsd += costUsd;
 	state.attemptCount += 1;
+	delete league.lastError;
 	saveState(state, factoryDir);
 	return rec;
 }

@@ -1,4 +1,12 @@
 import { appBaseUrl } from '$lib/config/urls.js';
+import {
+	isAbortError,
+	openRouterErrorFields,
+	parseJsonObject,
+	ProviderError,
+	reasonFromHttpStatus,
+	type ImageRefMeta,
+} from './errors.js';
 
 export const DEFAULT_FACTORY_MODEL = 'google/gemini-2.5-flash-image';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -7,6 +15,7 @@ export interface ImageGenResult {
 	bytes: Uint8Array;
 	costUsd: number;
 	costEstimated?: boolean;
+	pricingBasis?: string;
 	promptTokens: number;
 	completionTokens: number;
 	totalTokens: number;
@@ -33,6 +42,8 @@ export interface GenerateImageOpts {
 	aspectRatio?: string;
 	fetchImpl?: FetchLike;
 	apiKey?: string;
+	imageMeta?: ImageRefMeta[];
+	timeoutMs?: number;
 }
 
 /**
@@ -58,25 +69,66 @@ export async function generateOpenRouterImage(opts: GenerateImageOpts): Promise<
 	};
 
 	const startMs = Date.now();
-	const res = await fetchImpl(OPENROUTER_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'HTTP-Referer': appBaseUrl(),
-			'X-Title': 'Music League Bot - Avatar Factory',
-		},
-		body: JSON.stringify(body),
-	});
+	const payloadBytes = Buffer.byteLength(JSON.stringify(body), 'utf8');
+	const refs = opts.imageMeta;
+	const controller = opts.timeoutMs && opts.timeoutMs > 0 ? new AbortController() : null;
+	const timer = controller ? setTimeout(() => controller.abort(), opts.timeoutMs) : undefined;
+	let res: Response;
+	try {
+		res = await fetchImpl(OPENROUTER_URL, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+				'Content-Type': 'application/json',
+				'HTTP-Referer': appBaseUrl(),
+				'X-Title': 'Music League Bot - Avatar Factory',
+			},
+			body: JSON.stringify(body),
+			signal: controller?.signal,
+		});
+	} catch (e) {
+		if (isAbortError(e)) {
+			throw new ProviderError({
+				provider: 'openrouter',
+				model,
+				status: null,
+				reason: 'timeout',
+				snippet: `timed out after ${opts.timeoutMs}ms`,
+				payloadBytes,
+				refs,
+			});
+		}
+		throw e;
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
 	const latencyMs = Date.now() - startMs;
 
 	if (!res.ok) {
 		const text = redact(await res.text().catch(() => ''), apiKey).slice(0, 500);
-		throw new Error(`OpenRouter image ${res.status}: ${text}`);
+		const parsed = parseJsonObject(text);
+		const fields = openRouterErrorFields(parsed);
+		throw new ProviderError({
+			provider: 'openrouter',
+			model,
+			status: res.status,
+			reason: reasonFromHttpStatus(res.status),
+			snippet: fields.message ?? text,
+			providerCode: fields.code,
+			generationId: fields.generationId,
+			finishReason: fields.finishReason,
+			nativeFinishReason: fields.nativeFinishReason,
+			failedCostUsd: fields.failedCostUsd,
+			payloadBytes,
+			refs,
+		});
 	}
 
 	const json = (await res.json()) as {
+		id?: string;
 		choices?: {
+			finish_reason?: string;
+			native_finish_reason?: string;
 			message?: {
 				images?: { image_url: { url: string } | string }[];
 				content?: string;
@@ -87,7 +139,21 @@ export async function generateOpenRouterImage(opts: GenerateImageOpts): Promise<
 
 	const images = json.choices?.[0]?.message?.images;
 	if (!images || images.length === 0) {
-		throw new Error('OpenRouter returned no image');
+		const fields = openRouterErrorFields(json as Record<string, unknown>);
+		throw new ProviderError({
+			provider: 'openrouter',
+			model,
+			status: 200,
+			reason: 'no_image',
+			snippet: fields.content ?? fields.message ?? 'OpenRouter returned no image',
+			providerCode: fields.code,
+			generationId: fields.generationId ?? json.id,
+			finishReason: fields.finishReason ?? json.choices?.[0]?.finish_reason,
+			nativeFinishReason: fields.nativeFinishReason ?? json.choices?.[0]?.native_finish_reason,
+			failedCostUsd: fields.failedCostUsd,
+			payloadBytes,
+			refs,
+		});
 	}
 
 	const imageEntry = images[0];
@@ -98,12 +164,23 @@ export async function generateOpenRouterImage(opts: GenerateImageOpts): Promise<
 				? imageEntry.image_url
 				: imageEntry.image_url?.url;
 
-	if (!raw) throw new Error('OpenRouter returned no image');
+	if (!raw) {
+		throw new ProviderError({
+			provider: 'openrouter',
+			model,
+			status: 200,
+			reason: 'no_image',
+			snippet: 'OpenRouter returned no image',
+			payloadBytes,
+			refs,
+		});
+	}
 
 	const hasCost = typeof json.usage?.cost === 'number';
 	const cost = {
 		costUsd: hasCost ? json.usage!.cost! : 0,
 		costEstimated: !hasCost,
+		pricingBasis: 'OpenRouter usage.cost when present; else ~$0.04/image estimate',
 		promptTokens: typeof json.usage?.prompt_tokens === 'number' ? json.usage.prompt_tokens : 0,
 		completionTokens: typeof json.usage?.completion_tokens === 'number' ? json.usage.completion_tokens : 0,
 		totalTokens: typeof json.usage?.total_tokens === 'number' ? json.usage.total_tokens : 0,

@@ -10,10 +10,11 @@ export interface CostBucket {
 	estimatedUsd: number;
 	importedCount: number;
 	generatedCount: number;
+	failedCostUsd: number;
 }
 
 export function emptyCostBucket(): CostBucket {
-	return { actualUsd: 0, estimatedUsd: 0, importedCount: 0, generatedCount: 0 };
+	return { actualUsd: 0, estimatedUsd: 0, importedCount: 0, generatedCount: 0, failedCostUsd: 0 };
 }
 
 export function addRecordCost(bucket: CostBucket, rec: CostedRecord): CostBucket {
@@ -30,6 +31,7 @@ export function addRecordCost(bucket: CostBucket, rec: CostedRecord): CostBucket
 
 export function factoryCostTotals(
 	state: {
+		failedCostUsd?: number;
 		leagues: Record<
 			string,
 			{ members: { candidates: CostedRecord[] }[]; groupShots: CostedRecord[] }
@@ -56,5 +58,7 @@ export function factoryCostTotals(
 			}
 		}
 	}
+	overall.failedCostUsd = state.failedCostUsd ?? 0;
+	league.failedCostUsd = state.failedCostUsd ?? 0;
 	return { overall, league, themes };
 }

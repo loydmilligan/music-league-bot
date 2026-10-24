@@ -15,9 +15,19 @@
 		createdAt: string;
 		costUsd?: number;
 		costEstimated?: boolean;
+		pricingBasis?: string;
+		promptTruncated?: boolean;
 		provider?: string;
 		model?: string;
 		usedNotes?: string;
+	};
+	type LastError = {
+		at: string;
+		provider: string;
+		model: string;
+		status: number | null;
+		reason: string;
+		message: string;
 	};
 	type Member = {
 		slug: string;
@@ -27,6 +37,7 @@
 		notes: string;
 		photoRel: string | null;
 		candidates: Candidate[];
+		lastError?: LastError;
 	};
 	type GroupShot = {
 		id: string;
@@ -37,10 +48,19 @@
 		source: string;
 		costUsd?: number;
 		costEstimated?: boolean;
+		pricingBasis?: string;
+		promptTruncated?: boolean;
 		provider?: string;
 		model?: string;
+		sheetRel?: string;
 	};
-	type CostBucket = { actualUsd: number; estimatedUsd: number; importedCount: number; generatedCount: number };
+	type CostBucket = {
+		actualUsd: number;
+		estimatedUsd: number;
+		importedCount: number;
+		generatedCount: number;
+		failedCostUsd?: number;
+	};
 	type Theme = { slug: string; name: string; prompt: string; attachInspiration: boolean };
 	type ProviderStatus = {
 		id: string;
@@ -56,7 +76,14 @@
 	type FactoryPayload = {
 		leagues: { slug: string; name: string }[];
 		themes: Theme[];
-		league: { slug: string; name: string; members: Member[]; groupShots: GroupShot[] };
+		league: {
+			slug: string;
+			name: string;
+			members: Member[];
+			groupShots: GroupShot[];
+			lastError?: LastError;
+			lastSheetRel?: string;
+		};
 		costUsd: number;
 		attemptCount: number;
 		sourcesConfigured: boolean;
@@ -89,6 +116,7 @@
 		title: string;
 		images: number;
 		estimatedCostUsd: number;
+		provider: string;
 		model: string;
 		body: Record<string, unknown>;
 	}>(null);
@@ -118,15 +146,24 @@
 		const bits: string[] = [];
 		if (b.actualUsd) bits.push(`$${b.actualUsd.toFixed(4)} actual`);
 		if (b.estimatedUsd) bits.push(`$${b.estimatedUsd.toFixed(4)} estimate`);
+		if (b.failedCostUsd) bits.push(`$${b.failedCostUsd.toFixed(4)} failed`);
 		if (!bits.length) bits.push('$0');
 		return bits.join(' · ');
 	}
 
-	function costLine(c: { source?: string; provider?: string; model?: string; costUsd?: number; costEstimated?: boolean }) {
+	function costLine(c: {
+		source?: string;
+		provider?: string;
+		model?: string;
+		costUsd?: number;
+		costEstimated?: boolean;
+		pricingBasis?: string;
+	}) {
 		if (c.source === 'imported') return 'imported, $0';
 		const head = [c.provider, c.model].filter(Boolean).join(' · ');
 		if (c.costUsd == null) return head || '';
-		return `${head}${head ? ' · ' : ''}$${c.costUsd.toFixed(4)}${c.costEstimated ? ' estimate' : ''}`;
+		const est = c.costEstimated ? (c.pricingBasis ? ` estimate · ${c.pricingBasis}` : ' estimate') : '';
+		return `${head}${head ? ' · ' : ''}$${c.costUsd.toFixed(4)}${est}`;
 	}
 
 	function askConfirm(title: string, images: number, body: Record<string, unknown>) {
@@ -136,6 +173,7 @@
 			title,
 			images,
 			estimatedCostUsd: unit * images,
+			provider: selectedProvider?.label ?? selectedProvider?.id ?? '',
 			model: selectedProvider?.model ?? '',
 			body: { ...body, confirmed: true },
 		};
@@ -163,7 +201,14 @@
 				body: JSON.stringify(body),
 			});
 			const j = await r.json().catch(() => ({}));
-			if (!r.ok) throw new Error((j as { message?: string }).message || (j as { error?: string }).error || r.statusText);
+			if (!r.ok) {
+				try {
+					await reload();
+				} catch {
+					/* keep the provider message even if reload fails */
+				}
+				throw new Error((j as { message?: string }).message || (j as { error?: string }).error || r.statusText);
+			}
 			await reload();
 			return j;
 		} catch (e) {
@@ -246,7 +291,7 @@
 			<SectionLabel>Admin</SectionLabel>
 			<h1 class="font-display text-3xl mt-1">Avatar Factory</h1>
 			<p class="text-sm text-fg-muted mt-1">
-				OpenRouter on · confirm before each run · Grok / Runway / fal.ai disabled pending Mashew OK
+				OpenRouter / Runway / fal.ai · confirm before each run · Grok disabled
 			</p>
 		</div>
 		<div class="flex flex-col items-end gap-1 text-right">
@@ -352,6 +397,15 @@
 					<div class="flex-1 min-w-0 space-y-2">
 						<h2 class="font-display text-2xl">{member.name}</h2>
 						<p class="font-mono text-xs text-fg-dim">{member.slug} · {member.height}</p>
+						{#if member.lastError}
+							<div class="rounded-md border border-ember bg-ember-bg px-3 py-2 text-sm" data-last-error>
+								<p>{member.lastError.message}</p>
+								<p class="font-mono text-[10px] text-fg-dim mt-1">
+									{member.lastError.provider} · {member.lastError.model} · {member.lastError.reason}
+									{member.lastError.status != null ? ` · HTTP ${member.lastError.status}` : ''}
+								</p>
+							</div>
+						{/if}
 						<textarea
 							class="w-full bg-surface border border-border rounded-md p-2 text-sm min-h-20"
 							value={member.notes}
@@ -406,6 +460,9 @@
 								{/if}
 							</div>
 							<p class="font-mono text-[10px] text-fg-dim">{costLine(c)}</p>
+							{#if c.promptTruncated}
+								<p class="font-mono text-[10px] text-warn">prompt truncated to 1000 chars (Runway)</p>
+							{/if}
 							{#if c.usedNotes}
 								<p class="text-[11px] text-fg-muted whitespace-pre-wrap">{c.usedNotes}</p>
 							{/if}
@@ -499,6 +556,15 @@
 		<p class="text-sm text-fg-muted">
 			Approved {approvedCount}/{members.length}. Request group shot unlocks when every member has one approved avatar.
 		</p>
+		{#if payload?.league.lastError}
+			<div class="rounded-md border border-ember bg-ember-bg px-3 py-2 text-sm" data-last-error-league>
+				<p>{payload.league.lastError.message}</p>
+				<p class="font-mono text-[10px] text-fg-dim mt-1">
+					{payload.league.lastError.provider} · {payload.league.lastError.model} · {payload.league.lastError.reason}
+					{payload.league.lastError.status != null ? ` · HTTP ${payload.league.lastError.status}` : ''}
+				</p>
+			</div>
+		{/if}
 		<button
 			type="button"
 			class={btn}
@@ -514,6 +580,14 @@
 			{busy === 'group-shot' ? 'Requesting…' : 'Request group shot'}
 		</button>
 		<div class="grid sm:grid-cols-2 gap-4">
+			{#if payload?.league.lastSheetRel}
+				<figure class="bg-surface border border-border rounded-md p-3" data-group-sheet>
+					<img src={imgUrl('images', payload.league.lastSheetRel)} alt="Labeled reference sheet" class="w-full rounded-sm" />
+					<figcaption class="mt-2 font-mono text-xs text-fg-dim">
+						Labeled reference sheet · short → tallest · sent as one image
+					</figcaption>
+				</figure>
+			{/if}
 			{#each groupShots as g}
 				<figure class="bg-surface border border-border rounded-md p-3">
 					<img src={imgUrl('images', g.relPath)} alt={g.label} class="w-full rounded-sm" />
@@ -545,10 +619,10 @@
 		<div class="bg-bg-elevated border border-border rounded-md w-full max-w-md p-4 space-y-3">
 			<h3 class="font-display text-xl">{confirmJob.title}</h3>
 			<p class="text-sm">
-				{confirmJob.images} image{confirmJob.images === 1 ? '' : 's'} · {confirmJob.model}
+				{confirmJob.provider} · {confirmJob.model} · {confirmJob.images} image{confirmJob.images === 1 ? '' : 's'}
 			</p>
 			<p class="font-mono text-sm">Estimated cost: ${confirmJob.estimatedCostUsd.toFixed(4)}</p>
-			<p class="text-xs text-fg-dim">Cancel makes no request. Opening this dialog does not call OpenRouter.</p>
+			<p class="text-xs text-fg-dim">Cancel makes no request. Opening this dialog does not call any provider.</p>
 			<div class="flex gap-2 justify-end">
 				<button type="button" class={btnGhost} onclick={() => (confirmJob = null)}>Cancel</button>
 				<button type="button" class={btn} onclick={runConfirmed}>Confirm</button>

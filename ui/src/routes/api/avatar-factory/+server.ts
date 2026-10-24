@@ -14,10 +14,12 @@ import {
 } from '$lib/server/avatarFactory/actions.js';
 import { PathGuardError } from '$lib/server/avatarFactory/paths.js';
 import { BOARZ_LEAGUE_SLUG } from '$lib/server/avatarFactory/notes.js';
+import { ProviderError } from '$lib/server/avatarFactory/errors.js';
 
 function fail(e: unknown, fallback = 500): never {
 	if (isHttpError(e)) throw e;
 	if (e instanceof PathGuardError) error(400, e.message);
+	if (e instanceof ProviderError) error(e.httpStatus, e.userMessage);
 	const msg = e instanceof Error ? e.message : 'error';
 	if (/paused/i.test(msg)) error(503, msg);
 	if (

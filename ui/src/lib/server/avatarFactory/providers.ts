@@ -4,6 +4,13 @@ import { isGenerationPaused } from './pause.js';
 export const DEFAULT_PROVIDER = 'openrouter' as const;
 export const DISABLED_PENDING = 'disabled pending Mashew OK';
 
+export const OPENROUTER_PRICING_BASIS =
+	'OpenRouter usage.cost when present; else ~$0.04/image estimate';
+export const RUNWAY_PRICING_BASIS =
+	'gen4_image 720p: 5 credits × $0.01 = $0.05 (https://docs.dev.runwayml.com/guides/pricing/)';
+export const FAL_PRICING_BASIS =
+	'fal-ai/nano-banana/edit $0.0398/image (https://fal.ai/models/fal-ai/nano-banana/edit)';
+
 export type ProviderId = 'openrouter' | 'grok' | 'runway' | 'fal';
 
 export interface ProviderDef {
@@ -12,6 +19,7 @@ export interface ProviderDef {
 	envVars: readonly string[];
 	defaultModel: string;
 	estimatedCostUsd: number;
+	pricingBasis: string;
 }
 
 export interface ProviderStatus {
@@ -19,6 +27,7 @@ export interface ProviderStatus {
 	label: string;
 	model: string;
 	estimatedCostUsd: number;
+	pricingBasis: string;
 	available: boolean;
 	needsKey: boolean;
 	enabled: boolean;
@@ -33,6 +42,7 @@ export const PROVIDER_CATALOG: readonly ProviderDef[] = [
 		envVars: ['OPENROUTER_API_KEY'],
 		defaultModel: DEFAULT_FACTORY_MODEL,
 		estimatedCostUsd: 0.04,
+		pricingBasis: OPENROUTER_PRICING_BASIS,
 	},
 	{
 		id: 'grok',
@@ -40,20 +50,23 @@ export const PROVIDER_CATALOG: readonly ProviderDef[] = [
 		envVars: ['XAI_API_KEY', 'GROK_API_KEY'],
 		defaultModel: 'grok-imagine-image-2.0',
 		estimatedCostUsd: 0.04,
+		pricingBasis: 'Grok Imagine disabled — no xAI key',
 	},
 	{
 		id: 'runway',
 		label: 'Runway',
-		envVars: ['RUNWAYML_API_SECRET', 'RUNWAY_API_KEY'],
+		envVars: ['RUNWAY_API_SECRET', 'RUNWAYML_API_SECRET'],
 		defaultModel: 'gen4_image',
-		estimatedCostUsd: 0.08,
+		estimatedCostUsd: 0.05,
+		pricingBasis: RUNWAY_PRICING_BASIS,
 	},
 	{
 		id: 'fal',
 		label: 'fal.ai',
 		envVars: ['FAL_KEY'],
-		defaultModel: 'fal-ai/flux/dev',
-		estimatedCostUsd: 0.03,
+		defaultModel: 'fal-ai/nano-banana/edit',
+		estimatedCostUsd: 0.0398,
+		pricingBasis: FAL_PRICING_BASIS,
 	},
 ] as const;
 
@@ -68,13 +81,18 @@ export function providerDef(id: string): ProviderDef | undefined {
 	return PROVIDER_CATALOG.find((p) => p.id === id);
 }
 
+function generationAllowed(id: ProviderId): boolean {
+	return id === 'openrouter' || id === 'runway' || id === 'fal';
+}
+
 export function listProviders(env: EnvBag = process.env): ProviderStatus[] {
 	const paused = isGenerationPaused(env);
 	return PROVIDER_CATALOG.map((p) => {
 		const hasKey = envKeyPresent(p.envVars, env);
 		const isDefault = p.id === DEFAULT_PROVIDER;
+		const allowed = generationAllowed(p.id);
 		let disabledReason: string | null = null;
-		if (!isDefault) {
+		if (!allowed) {
 			disabledReason = hasKey ? DISABLED_PENDING : 'needs key';
 		} else if (paused) {
 			disabledReason = 'paused';
@@ -86,24 +104,28 @@ export function listProviders(env: EnvBag = process.env): ProviderStatus[] {
 			label: p.label,
 			model: p.defaultModel,
 			estimatedCostUsd: p.estimatedCostUsd,
+			pricingBasis: p.pricingBasis,
 			needsKey: !hasKey,
-			enabled: isDefault,
-			available: isDefault && hasKey && !paused,
+			enabled: allowed,
+			available: allowed && hasKey && !paused,
 			isDefault,
 			disabledReason,
 		};
 	});
 }
 
-/** OpenRouter only. Grok / Runway / fal stay listed and are never enabled for generation. */
+/** OpenRouter, Runway, and fal.ai when keyed. Grok stays listed and is never enabled. */
 export function resolveProvider(id: string | undefined, env: EnvBag = process.env): ProviderDef {
 	const chosen = id && id.length ? id : DEFAULT_PROVIDER;
 	const def = providerDef(chosen);
 	if (!def) throw new Error('unknown provider');
-	if (def.id !== DEFAULT_PROVIDER) {
+	if (!generationAllowed(def.id)) {
 		throw new Error(
 			envKeyPresent(def.envVars, env) ? `${def.label} ${DISABLED_PENDING}` : `${def.label} needs key`,
 		);
+	}
+	if (!envKeyPresent(def.envVars, env)) {
+		throw new Error(`${def.label} needs key`);
 	}
 	return def;
 }
