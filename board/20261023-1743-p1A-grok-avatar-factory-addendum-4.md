@@ -1,7 +1,7 @@
 # p1A Avatar Factory — ADDENDUM 4 pause (FIRST)
 
 - Branch: `lane/grok-avatar-factory` (on top of v1 `817e241`)
-- SHA: (filled after commit)
+- SHA: `2b0c50d`
 - Tests: `cd ui && npm test -- --run src/lib/server/avatarFactory` → **25 passed / 9 files**
 - No merge, no push, no rebuild. No OpenRouter calls from this agent. No `.env` / compose `=0`.
 
