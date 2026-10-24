@@ -1,4 +1,4 @@
-import { bytesFromImageRef, pollIntervalMs, redact, sleep } from './fetchUtil.js';
+import { bytesFromImageRef, pollIntervalMs, redact, sleep, throwIfTimedOut, timedFetch } from './fetchUtil.js';
 import type { FetchLike, GenerateImageOpts, ImageGenResult } from './openrouter.js';
 import { RUNWAY_PRICING_BASIS } from './providers.js';
 
@@ -51,53 +51,68 @@ export async function generateRunwayImage(opts: GenerateImageOpts): Promise<Imag
 	if (refs.length) body.referenceImages = refs;
 
 	const startMs = Date.now();
-	const created = await fetchImpl(`${RUNWAY_BASE}/text_to_image`, {
-		method: 'POST',
-		headers: runwayHeaders(apiKey),
-		body: JSON.stringify(body),
-	});
-	if (!created.ok) {
-		const text = redact(await created.text().catch(() => ''), apiKey).slice(0, 500);
-		throw new Error(`Runway image ${created.status}: ${text}`);
-	}
-	const createdJson = (await created.json()) as { id?: string; status?: string; output?: string[] };
-	let taskId = createdJson.id;
-	let status = createdJson.status;
-	let output = createdJson.output;
-
-	if (status !== 'SUCCEEDED' || !output?.[0]) {
-		if (!taskId) throw new Error('Runway returned no task id');
-		for (let i = 0; i < MAX_POLLS; i++) {
-			await sleep(interval);
-			const polled = await fetchImpl(`${RUNWAY_BASE}/tasks/${taskId}`, {
-				headers: { Authorization: `Bearer ${apiKey}`, 'X-Runway-Version': RUNWAY_VERSION },
+	const timed = timedFetch(fetchImpl, opts.timeoutMs);
+	try {
+		let created: Response;
+		try {
+			created = await timed.fetch(`${RUNWAY_BASE}/text_to_image`, {
+				method: 'POST',
+				headers: runwayHeaders(apiKey),
+				body: JSON.stringify(body),
 			});
-			if (!polled.ok) {
-				const text = redact(await polled.text().catch(() => ''), apiKey).slice(0, 500);
-				throw new Error(`Runway poll ${polled.status}: ${text}`);
-			}
-			const task = (await polled.json()) as {
-				status?: string;
-				failure?: string;
-				output?: string[];
-			};
-			status = task.status;
-			output = task.output;
-			if (status === 'SUCCEEDED') break;
-			if (status === 'FAILED') throw new Error(`Runway task failed: ${redact(task.failure ?? '', apiKey)}`);
+		} catch (e) {
+			throwIfTimedOut(e, { provider: 'runway', model, timeoutMs: opts.timeoutMs, refs: opts.imageMeta });
 		}
-		if (status !== 'SUCCEEDED' || !output?.[0]) throw new Error('Runway task did not succeed');
-	}
+		if (!created.ok) {
+			const text = redact(await created.text().catch(() => ''), apiKey).slice(0, 500);
+			throw new Error(`Runway image ${created.status}: ${text}`);
+		}
+		const createdJson = (await created.json()) as { id?: string; status?: string; output?: string[] };
+		let taskId = createdJson.id;
+		let status = createdJson.status;
+		let output = createdJson.output;
 
-	const bytes = await bytesFromImageRef(output[0], fetchImpl);
-	return {
-		bytes,
-		costUsd: 0,
-		costEstimated: true,
-		pricingBasis: RUNWAY_PRICING_BASIS,
-		promptTokens: 0,
-		completionTokens: 0,
-		totalTokens: 0,
-		latencyMs: Date.now() - startMs,
-	};
+		if (status !== 'SUCCEEDED' || !output?.[0]) {
+			if (!taskId) throw new Error('Runway returned no task id');
+			for (let i = 0; i < MAX_POLLS; i++) {
+				await sleep(interval);
+				let polled: Response;
+				try {
+					polled = await timed.fetch(`${RUNWAY_BASE}/tasks/${taskId}`, {
+						headers: { Authorization: `Bearer ${apiKey}`, 'X-Runway-Version': RUNWAY_VERSION },
+					});
+				} catch (e) {
+					throwIfTimedOut(e, { provider: 'runway', model, timeoutMs: opts.timeoutMs, refs: opts.imageMeta });
+				}
+				if (!polled.ok) {
+					const text = redact(await polled.text().catch(() => ''), apiKey).slice(0, 500);
+					throw new Error(`Runway poll ${polled.status}: ${text}`);
+				}
+				const task = (await polled.json()) as {
+					status?: string;
+					failure?: string;
+					output?: string[];
+				};
+				status = task.status;
+				output = task.output;
+				if (status === 'SUCCEEDED') break;
+				if (status === 'FAILED') throw new Error(`Runway task failed: ${redact(task.failure ?? '', apiKey)}`);
+			}
+			if (status !== 'SUCCEEDED' || !output?.[0]) throw new Error('Runway task did not succeed');
+		}
+
+		const bytes = await bytesFromImageRef(output[0], timed.fetch);
+		return {
+			bytes,
+			costUsd: 0,
+			costEstimated: true,
+			pricingBasis: RUNWAY_PRICING_BASIS,
+			promptTokens: 0,
+			completionTokens: 0,
+			totalTokens: 0,
+			latencyMs: Date.now() - startMs,
+		};
+	} finally {
+		timed.clear();
+	}
 }

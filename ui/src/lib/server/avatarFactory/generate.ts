@@ -5,6 +5,9 @@ import { generateRunwayImage } from './runway.js';
 
 export type { FetchLike, GenerateImageOpts, ImageGenResult };
 
+/** Group-shot OpenRouter/Runway/fal wall clock (AbortController). */
+export const GROUP_SHOT_TIMEOUT_MS = 180_000;
+
 export async function generateFactoryImage(
 	provider: ProviderDef,
 	opts: GenerateImageOpts,

@@ -1,5 +1,5 @@
-import { bytesFromImageRef, pollIntervalMs, redact, sleep } from './fetchUtil.js';
-import type { GenerateImageOpts, ImageGenResult } from './openrouter.js';
+import { bytesFromImageRef, pollIntervalMs, redact, sleep, throwIfTimedOut, timedFetch } from './fetchUtil.js';
+import type { FetchLike, GenerateImageOpts, ImageGenResult } from './openrouter.js';
 import { FAL_PRICING_BASIS } from './providers.js';
 
 const FAL_QUEUE = 'https://queue.fal.run/fal-ai/nano-banana/edit';
@@ -48,7 +48,10 @@ export async function generateFalImage(opts: GenerateImageOpts): Promise<ImageGe
 	const aspect = opts.aspectRatio === '16:9' ? '16:9' : '1:1';
 
 	const startMs = Date.now();
-	const created = await fetchImpl(FAL_QUEUE, {
+	const timed = timedFetch(fetchImpl, opts.timeoutMs);
+	const model = opts.model ?? 'fal-ai/nano-banana/edit';
+	try {
+	const created = await timed.fetch(FAL_QUEUE, {
 		method: 'POST',
 		headers: falHeaders(apiKey),
 		body: JSON.stringify({
@@ -87,7 +90,7 @@ export async function generateFalImage(opts: GenerateImageOpts): Promise<ImageGe
 		for (let i = 0; i < MAX_POLLS; i++) {
 			if (status === 'COMPLETED') break;
 			await sleep(interval);
-			const st = await fetchImpl(statusUrl, { headers: { Authorization: `Key ${apiKey}` } });
+			const st = await timed.fetch(statusUrl, { headers: { Authorization: `Key ${apiKey}` } });
 			if (!st.ok) {
 				const text = redact(await st.text().catch(() => ''), apiKey).slice(0, 500);
 				throw new Error(`fal.ai poll ${st.status}: ${text}`);
@@ -97,7 +100,7 @@ export async function generateFalImage(opts: GenerateImageOpts): Promise<ImageGe
 			if (status === 'FAILED') throw new Error('fal.ai task failed');
 		}
 		if (status !== 'COMPLETED') throw new Error('fal.ai task did not complete');
-		const done = await fetchImpl(responseUrl, { headers: { Authorization: `Key ${apiKey}` } });
+		const done = await timed.fetch(responseUrl, { headers: { Authorization: `Key ${apiKey}` } });
 		if (!done.ok) {
 			const text = redact(await done.text().catch(() => ''), apiKey).slice(0, 500);
 			throw new Error(`fal.ai result ${done.status}: ${text}`);
@@ -108,7 +111,7 @@ export async function generateFalImage(opts: GenerateImageOpts): Promise<ImageGe
 
 	if (!imageUrl) throw new Error('fal.ai returned no image');
 	const actual = reportedCost(payload);
-	const bytes = await bytesFromImageRef(imageUrl, fetchImpl);
+	const bytes = await bytesFromImageRef(imageUrl, timed.fetch);
 	return {
 		bytes,
 		costUsd: actual ?? 0,
@@ -119,4 +122,9 @@ export async function generateFalImage(opts: GenerateImageOpts): Promise<ImageGe
 		totalTokens: 0,
 		latencyMs: Date.now() - startMs,
 	};
+	} catch (e) {
+		throwIfTimedOut(e, { provider: 'fal', model, timeoutMs: opts.timeoutMs, refs: opts.imageMeta });
+	} finally {
+		timed.clear();
+	}
 }

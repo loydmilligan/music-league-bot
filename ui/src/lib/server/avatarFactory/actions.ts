@@ -1,12 +1,20 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
-import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
-import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
+import { allocateVersionedNamedPath, allocateVersionedPath, assertSlug, slugify } from './filenames.js';
+import { canRequestGroupShot, clampOptionCount, optionLetters, orderMembersByHeight } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
-import { logProviderError, ProviderError, reasonFromHttpStatus, type ImageRefMeta, type LastError } from './errors.js';
-import { generateFactoryImage, type FetchLike } from './generate.js';
+import {
+	isAbortError,
+	logProviderError,
+	ProviderError,
+	reasonFromHttpStatus,
+	type ImageRefMeta,
+	type LastError,
+} from './errors.js';
+import { generateFactoryImage, GROUP_SHOT_TIMEOUT_MS, type FetchLike } from './generate.js';
 import { factoryCostTotals } from './cost.js';
 import { normalizeImage, type NormalizedImage } from './normalize.js';
+import { composeReferenceSheet, type SheetResult } from './sheet.js';
 import { assertConfirmed, assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
 import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
@@ -38,6 +46,8 @@ export interface FactoryCtx {
 	sourcesDir?: string;
 	fetchImpl?: FetchLike;
 	normalizeImpl?: (input: Buffer, filename: string) => Promise<NormalizedImage>;
+	composeSheetImpl?: (tiles: { input: Buffer; name: string }[]) => Promise<SheetResult>;
+	timeoutMs?: number;
 }
 
 function roots(ctx: FactoryCtx) {
@@ -58,6 +68,16 @@ function asProviderError(
 	refs?: ImageRefMeta[],
 ): ProviderError {
 	if (e instanceof ProviderError) return e;
+	if (isAbortError(e)) {
+		return new ProviderError({
+			provider,
+			model,
+			status: null,
+			reason: 'timeout',
+			snippet: e instanceof Error ? e.message : 'aborted',
+			refs,
+		});
+	}
 	const msg = e instanceof Error ? e.message : 'error';
 	const hit = msg.match(/\b(400|401|402|429|500|502|503)\b/);
 	const status = hit ? Number(hit[1]) : null;
@@ -411,10 +431,11 @@ export async function requestGroupShot(
 		throw new Error('group shot locked until every member has an approved avatar');
 	}
 
+	const ordered = orderMembersByHeight(league.members);
 	let prompt = assembleGroupShotPrompt({
 		stylePrompt: theme.prompt,
 		themeName: theme.name,
-		members: league.members.map((m) => ({
+		members: ordered.map((m) => ({
 			slug: m.slug,
 			name: m.name,
 			height: m.height,
@@ -425,23 +446,37 @@ export async function requestGroupShot(
 	let promptTruncated = false;
 	if (provider.id === 'runway') {
 		const tagLine = 'Use @subject as the people.';
-		const memberNotes = league.members.map((m) => m.notes).filter(Boolean);
+		const memberNotes = ordered.map((m) => m.notes).filter(Boolean);
 		const fit = truncatePromptKeepNotes(prompt, memberNotes, RUNWAY_PROMPT_LIMIT - tagLine.length - 1);
 		prompt = `${tagLine}\n${fit.text}`;
 		promptTruncated = fit.truncated;
 	}
 
-	const imageDataUrls: string[] = [];
-	const imageMeta: NormalizedImage[] = [];
-	for (const m of league.members) {
+	const tiles: { input: Buffer; name: string }[] = [];
+	for (const m of ordered) {
 		const ap = approvedForTheme(m, input.themeSlug);
 		if (!ap) continue;
 		const abs = join(img, ap.relPath);
 		if (!existsSync(abs)) continue;
-		const n = await normalizeFile(abs, ctx);
-		imageDataUrls.push(n.dataUrl);
-		imageMeta.push(n);
+		tiles.push({ input: readFileSync(abs), name: m.name });
 	}
+	if (tiles.length === 0) throw new Error('approved avatars missing on disk');
+
+	const compose = ctx.composeSheetImpl ?? composeReferenceSheet;
+	const sheet = await compose(tiles);
+	const sheetPath = allocateVersionedNamedPath(img, input.leagueSlug, input.themeSlug, 'group', 'sheet', 'jpg');
+	writeFileSync(sheetPath.abs, sheet.jpeg);
+	league.lastSheetRel = sheetPath.rel;
+
+	const imageMeta: ImageRefMeta[] = [
+		{
+			filename: basename(sheetPath.rel),
+			width: sheet.width,
+			height: sheet.height,
+			bytes: sheet.jpeg.byteLength,
+		},
+	];
+	const imageDataUrls = [`data:image/jpeg;base64,${sheet.jpeg.toString('base64')}`];
 
 	let result;
 	try {
@@ -452,6 +487,7 @@ export async function requestGroupShot(
 			aspectRatio: '16:9',
 			fetchImpl: ctx.fetchImpl,
 			imageMeta,
+			timeoutMs: ctx.timeoutMs ?? GROUP_SHOT_TIMEOUT_MS,
 		});
 	} catch (e) {
 		persistProviderFailure(
@@ -479,6 +515,7 @@ export async function requestGroupShot(
 		provider: provider.id,
 		model: provider.defaultModel,
 		prompt,
+		sheetRel: sheetPath.rel,
 	};
 	league.groupShots.push(rec);
 	state.costUsd += costUsd;

@@ -1,5 +1,24 @@
 export type HeightClass = 'short' | 'medium' | 'tall' | 'tallest';
 
+export const HEIGHT_RANK: Record<HeightClass, number> = {
+	short: 0,
+	medium: 1,
+	tall: 2,
+	tallest: 3,
+};
+
+/** Short → tallest (Clements last). Name/slug break ties inside a class. */
+export function orderMembersByHeight<T extends { height: HeightClass; name: string; slug: string }>(
+	members: T[],
+): T[] {
+	return [...members].sort(
+		(a, b) =>
+			HEIGHT_RANK[a.height] - HEIGHT_RANK[b.height] ||
+			a.name.localeCompare(b.name) ||
+			a.slug.localeCompare(b.slug),
+	);
+}
+
 export interface MemberApproval {
 	slug: string;
 	approvedCandidateId: string | null;

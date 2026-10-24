@@ -1,4 +1,5 @@
 import type { HeightClass } from './gating.js';
+import { orderMembersByHeight } from './gating.js';
 import { GLOBAL_NOTES, heightLine } from './notes.js';
 
 export function extractFencedPrompt(styleMd: string): string {
@@ -105,15 +106,18 @@ export function assembleGroupShotPrompt(input: {
 	members: GroupMemberPrompt[];
 	globalNotes?: string;
 }): string {
-	const heights = input.members
+	const ordered = orderMembersByHeight(input.members);
+	const heights = ordered
 		.map((m) => `- ${m.name} (${m.slug}): ${m.height}${m.height === 'tallest' ? ' — tallest of all' : ''}`)
 		.join('\n');
-	const notes = input.members
+	const notes = ordered
 		.filter((m) => m.notes.trim())
 		.map((m) => `- ${m.name}: ${m.notes.trim()}`)
 		.join('\n');
 	return [
-		`Group shot of every league member together, in the same style as the attached approved avatars (${input.themeName}).`,
+		`Group shot of every league member together, in the same style as the attached labeled reference sheet (${input.themeName}).`,
+		'',
+		'The attached image is ONE labeled reference sheet. Left-to-right, top-to-bottom: short → tallest (Clements last). Each tile is labeled with the member name. Match those faces. Do not copy the labels into the output.',
 		'',
 		input.stylePrompt.trim(),
 		'',

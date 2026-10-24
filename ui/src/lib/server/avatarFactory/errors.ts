@@ -4,6 +4,7 @@ export type ProviderErrorReason =
 	| 'bad_input'
 	| 'rate_limited'
 	| 'no_image'
+	| 'timeout'
 	| 'provider_http';
 
 export interface ImageRefMeta {
@@ -28,6 +29,7 @@ const USER_REASON: Record<ProviderErrorReason, string> = {
 	bad_input: 'Bad input image',
 	rate_limited: 'Rate limited',
 	no_image: 'Safety/likeness refusal by the model',
+	timeout: 'Request timed out',
 	provider_http: 'Provider error',
 };
 
@@ -87,6 +89,7 @@ export class ProviderError extends Error {
 		if (this.reason === 'rate_limited') return 429;
 		if (this.reason === 'bad_input') return 400;
 		if (this.reason === 'safety_refusal' || this.reason === 'no_image') return 422;
+		if (this.reason === 'timeout') return 504;
 		return 502;
 	}
 
@@ -100,6 +103,10 @@ export class ProviderError extends Error {
 			message: this.userMessage,
 		};
 	}
+}
+
+export function isAbortError(e: unknown): boolean {
+	return e instanceof Error && (e.name === 'AbortError' || /aborted|timed out/i.test(e.message));
 }
 
 export function reasonFromHttpStatus(status: number): ProviderErrorReason {

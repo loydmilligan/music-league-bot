@@ -130,5 +130,32 @@ describe('OpenRouter client (mocked)', () => {
 			expect(pe.userMessage).toMatch(/I cannot generate images of this person/);
 		}
 	});
+
+	it('surfaces a typed timeout when AbortController fires', async () => {
+		const { ProviderError } = await import('./errors.js');
+		const fetchImpl = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+			await new Promise<never>((_, reject) => {
+				const sig = init?.signal;
+				const fail = () => {
+					const err = new Error('The operation was aborted');
+					err.name = 'AbortError';
+					reject(err);
+				};
+				if (sig?.aborted) fail();
+				else sig?.addEventListener('abort', fail, { once: true });
+			});
+			return new Response('unreachable');
+		});
+		try {
+			await generateOpenRouterImage({ prompt: 'group', apiKey: 'k', fetchImpl, timeoutMs: 20 });
+			throw new Error('expected throw');
+		} catch (e) {
+			expect(e).toBeInstanceOf(ProviderError);
+			const pe = e as InstanceType<typeof ProviderError>;
+			expect(pe.reason).toBe('timeout');
+			expect(pe.httpStatus).toBe(504);
+			expect(pe.userMessage).toMatch(/Request timed out/);
+		}
+	});
 });
 

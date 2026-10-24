@@ -58,6 +58,7 @@ export interface GroupShotRecord {
 	provider?: string;
 	model?: string;
 	prompt?: string;
+	sheetRel?: string;
 }
 
 export interface ThemeRecord {
@@ -75,6 +76,7 @@ export interface LeagueRecord {
 	members: MemberRecord[];
 	groupShots: GroupShotRecord[];
 	lastError?: LastError;
+	lastSheetRel?: string;
 }
 
 export interface FactoryState {

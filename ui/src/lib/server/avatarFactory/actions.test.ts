@@ -515,5 +515,137 @@ describe('generate + group-shot actions', () => {
 			vi.restoreAllMocks();
 		}
 	});
+
+	function seedTwoApproved(factoryDir: string) {
+		mkdirSync(join(photosRoot(factoryDir), 'boarz-ii-men/matt-mariani'), { recursive: true });
+		mkdirSync(join(imagesRoot(factoryDir), 'boarz-ii-men/south-park/matt-mariani'), { recursive: true });
+		mkdirSync(join(imagesRoot(factoryDir), 'boarz-ii-men/south-park/ronnie-bertolina'), { recursive: true });
+		writeFileSync(join(photosRoot(factoryDir), 'boarz-ii-men/matt-mariani/headshot.png'), PNG);
+		writeFileSync(join(imagesRoot(factoryDir), 'boarz-ii-men/south-park/matt-mariani/a.png'), PNG);
+		writeFileSync(join(imagesRoot(factoryDir), 'boarz-ii-men/south-park/ronnie-bertolina/a.png'), PNG);
+		const state = emptyState();
+		state.themes.push({
+			slug: 'south-park',
+			name: 'South Park',
+			prompt: 'Draw a South Park cutout.',
+			attachInspiration: false,
+			inspirationRels: [],
+			source: 'in-app',
+		});
+		const league = ensureLeague(state, 'boarz-ii-men', 'Boarz II Men');
+		league.members.push(
+			{
+				slug: 'clements-johnson',
+				name: 'Clements',
+				playerId: 35,
+				height: 'tallest',
+				notes: 'not bald',
+				photoRel: null,
+				candidates: [
+					{
+						id: 'clem-a',
+						themeSlug: 'south-park',
+						letter: 'A',
+						relPath: 'boarz-ii-men/south-park/matt-mariani/a.png',
+						label: 'option A',
+						rating: 5,
+						status: 'approved',
+						source: 'generated',
+						createdAt: '2026-01-01T00:00:00.000Z',
+					},
+				],
+			},
+			{
+				slug: 'ronnie-bertolina',
+				name: 'Ronnie',
+				playerId: 69,
+				height: 'short',
+				notes: 'new photo',
+				photoRel: null,
+				candidates: [
+					{
+						id: 'ron-a',
+						themeSlug: 'south-park',
+						letter: 'A',
+						relPath: 'boarz-ii-men/south-park/ronnie-bertolina/a.png',
+						label: 'option A',
+						rating: 5,
+						status: 'approved',
+						source: 'generated',
+						createdAt: '2026-01-01T00:00:00.000Z',
+					},
+				],
+			},
+		);
+		saveState(state, factoryDir);
+	}
+
+	it('group shot sends one labeled sheet image, saves the sheet, and records cost', async () => {
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-gs-'));
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-gs-src-'));
+		seedTwoApproved(factoryDir);
+		const fetchImpl = mockFetch({ cost: 0.04 });
+		const rec = await withEnv({ OPENROUTER_API_KEY: 'x' }, () =>
+			requestGroupShot(
+				{ leagueSlug: 'boarz-ii-men', themeSlug: 'south-park', confirmed: true },
+				{ factoryDir, sourcesDir, fetchImpl },
+			),
+		);
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		const body = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body));
+		const images = body.messages[0].content.filter((c: { type: string }) => c.type === 'image_url');
+		expect(images).toHaveLength(1);
+		expect(images[0].image_url.url.startsWith('data:image/jpeg;base64,')).toBe(true);
+		expect(rec.sheetRel).toMatch(/-sheet\.jpg$/);
+		expect(existsSync(join(imagesRoot(factoryDir), rec.sheetRel!))).toBe(true);
+		expect(rec.prompt).toMatch(/labeled reference sheet/i);
+		const heightsAt = rec.prompt.indexOf('HEIGHTS');
+		expect(rec.prompt.indexOf('ronnie-bertolina', heightsAt)).toBeLessThan(
+			rec.prompt.indexOf('clements-johnson', heightsAt),
+		);
+		const after = loadState(factoryDir);
+		expect(after.leagues['boarz-ii-men'].lastSheetRel).toBe(rec.sheetRel);
+		expect(after.costUsd).toBeCloseTo(0.04);
+		expect(after.failedCostUsd).toBe(0);
+	});
+
+	it('group shot timeout persists lastError, keeps the sheet, records no cost, and does not retry', async () => {
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-gstime-'));
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-gstime-src-'));
+		seedTwoApproved(factoryDir);
+		const fetchImpl = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+			await new Promise<never>((_, reject) => {
+				const fail = () => {
+					const err = new Error('The operation was aborted');
+					err.name = 'AbortError';
+					reject(err);
+				};
+				if (init?.signal?.aborted) fail();
+				else init?.signal?.addEventListener('abort', fail, { once: true });
+			});
+			return new Response('unreachable');
+		});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await expect(
+				withEnv({ OPENROUTER_API_KEY: 'x' }, () =>
+					requestGroupShot(
+						{ leagueSlug: 'boarz-ii-men', themeSlug: 'south-park', confirmed: true },
+						{ factoryDir, sourcesDir, fetchImpl, timeoutMs: 30 },
+					),
+				),
+			).rejects.toThrow(/Request timed out/);
+			expect(fetchImpl).toHaveBeenCalledTimes(1);
+			const after = loadState(factoryDir);
+			const league = after.leagues['boarz-ii-men'];
+			expect(league.groupShots).toHaveLength(0);
+			expect(after.costUsd).toBe(0);
+			expect(league.lastError?.reason).toBe('timeout');
+			expect(league.lastSheetRel).toMatch(/-sheet\.jpg$/);
+			expect(existsSync(join(imagesRoot(factoryDir), league.lastSheetRel!))).toBe(true);
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
 });
 

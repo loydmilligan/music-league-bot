@@ -14,6 +14,17 @@ describe('provider errors', () => {
 		expect(reasonFromHttpStatus(500)).toBe('provider_http');
 	});
 
+	it('maps timeout to a 504 user reason', () => {
+		const err = new ProviderError({
+			provider: 'openrouter',
+			model: 'google/gemini-2.5-flash-image',
+			status: null,
+			reason: 'timeout',
+		});
+		expect(err.httpStatus).toBe(504);
+		expect(err.userMessage).toBe('Request timed out');
+	});
+
 	it('strips keys and base64 from snippets', () => {
 		const raw =
 			'Bearer sk-live-secret data:image/png;base64,AAAAKEYDATA== plus Key abcdef and a face';

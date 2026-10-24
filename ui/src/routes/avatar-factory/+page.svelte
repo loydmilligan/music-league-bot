@@ -52,6 +52,7 @@
 		promptTruncated?: boolean;
 		provider?: string;
 		model?: string;
+		sheetRel?: string;
 	};
 	type CostBucket = {
 		actualUsd: number;
@@ -75,7 +76,14 @@
 	type FactoryPayload = {
 		leagues: { slug: string; name: string }[];
 		themes: Theme[];
-		league: { slug: string; name: string; members: Member[]; groupShots: GroupShot[]; lastError?: LastError };
+		league: {
+			slug: string;
+			name: string;
+			members: Member[];
+			groupShots: GroupShot[];
+			lastError?: LastError;
+			lastSheetRel?: string;
+		};
 		costUsd: number;
 		attemptCount: number;
 		sourcesConfigured: boolean;
@@ -572,6 +580,14 @@
 			{busy === 'group-shot' ? 'Requesting…' : 'Request group shot'}
 		</button>
 		<div class="grid sm:grid-cols-2 gap-4">
+			{#if payload?.league.lastSheetRel}
+				<figure class="bg-surface border border-border rounded-md p-3" data-group-sheet>
+					<img src={imgUrl('images', payload.league.lastSheetRel)} alt="Labeled reference sheet" class="w-full rounded-sm" />
+					<figcaption class="mt-2 font-mono text-xs text-fg-dim">
+						Labeled reference sheet · short → tallest · sent as one image
+					</figcaption>
+				</figure>
+			{/if}
 			{#each groupShots as g}
 				<figure class="bg-surface border border-border rounded-md p-3">
 					<img src={imgUrl('images', g.relPath)} alt={g.label} class="w-full rounded-sm" />

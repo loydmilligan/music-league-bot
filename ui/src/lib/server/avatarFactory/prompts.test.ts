@@ -76,6 +76,11 @@ describe('prompt assembly', () => {
 		expect(prompt).toContain('short');
 		expect(prompt).toContain('tallest of all');
 		expect(prompt).toContain('not bald');
+		expect(prompt).toMatch(/labeled reference sheet/i);
+		const heightsAt = prompt.indexOf('HEIGHTS');
+		expect(prompt.indexOf('ronnie-bertolina', heightsAt)).toBeLessThan(
+			prompt.indexOf('clements-johnson', heightsAt),
+		);
 	});
 
 	it('truncates long prompts but keeps member notes and KEEP/FIX first', () => {

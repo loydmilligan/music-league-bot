@@ -1,5 +1,6 @@
 import { appBaseUrl } from '$lib/config/urls.js';
 import {
+	isAbortError,
 	openRouterErrorFields,
 	parseJsonObject,
 	ProviderError,
@@ -42,6 +43,7 @@ export interface GenerateImageOpts {
 	fetchImpl?: FetchLike;
 	apiKey?: string;
 	imageMeta?: ImageRefMeta[];
+	timeoutMs?: number;
 }
 
 /**
@@ -67,19 +69,40 @@ export async function generateOpenRouterImage(opts: GenerateImageOpts): Promise<
 	};
 
 	const startMs = Date.now();
-	const res = await fetchImpl(OPENROUTER_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'HTTP-Referer': appBaseUrl(),
-			'X-Title': 'Music League Bot - Avatar Factory',
-		},
-		body: JSON.stringify(body),
-	});
-	const latencyMs = Date.now() - startMs;
 	const payloadBytes = Buffer.byteLength(JSON.stringify(body), 'utf8');
 	const refs = opts.imageMeta;
+	const controller = opts.timeoutMs && opts.timeoutMs > 0 ? new AbortController() : null;
+	const timer = controller ? setTimeout(() => controller.abort(), opts.timeoutMs) : undefined;
+	let res: Response;
+	try {
+		res = await fetchImpl(OPENROUTER_URL, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+				'Content-Type': 'application/json',
+				'HTTP-Referer': appBaseUrl(),
+				'X-Title': 'Music League Bot - Avatar Factory',
+			},
+			body: JSON.stringify(body),
+			signal: controller?.signal,
+		});
+	} catch (e) {
+		if (isAbortError(e)) {
+			throw new ProviderError({
+				provider: 'openrouter',
+				model,
+				status: null,
+				reason: 'timeout',
+				snippet: `timed out after ${opts.timeoutMs}ms`,
+				payloadBytes,
+				refs,
+			});
+		}
+		throw e;
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
+	const latencyMs = Date.now() - startMs;
 
 	if (!res.ok) {
 		const text = redact(await res.text().catch(() => ''), apiKey).slice(0, 500);
