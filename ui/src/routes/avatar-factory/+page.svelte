@@ -221,10 +221,10 @@
 						<button
 							type="button"
 							data-member={m.slug}
-							class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm border-l-2"
-							class:border-accent={member?.slug === m.slug}
+							class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors"
 							class:bg-accent-bg={member?.slug === m.slug}
-							class:border-transparent={member?.slug !== m.slug}
+							class:text-accent={member?.slug === m.slug}
+							class:hover:bg-surface={member?.slug !== m.slug}
 							onclick={() => (memberSlug = m.slug)}
 						>
 							{#if m.photoRel}
