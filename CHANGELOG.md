@@ -10,6 +10,30 @@ versions track `ui/package.json` and render in the app footer (`mash co. · vX.Y
 > numbering also stopped after sprint-46, so entries cite the work-stream, task
 > or phase name the commits themselves use.
 
+## 2026-10-23 — Avatar Factory v1.1 (admin)
+
+### Visible (UI)
+
+- **OpenRouter generation back on, click-only** (Mashew 6:49 PM PT). Generate,
+  Tweak and Group shot open a confirm dialog with the image count and the
+  estimated cost; nothing is sent until confirmed (API requires
+  `confirmed: true`). Kill switch: `AVATAR_FACTORY_OPENROUTER_PAUSED=1`.
+- **Provider picker**: OpenRouter (Gemini) default; Grok, Runway and fal.ai
+  shown disabled (stay off per Mashew).
+- **Cost** per candidate: provider, model and actual cost from the OpenRouter
+  usage field, or a labeled estimate; imported seeds show $0. Running totals
+  per theme, league and overall.
+- **Ratings with comments**: 1–5 plus a comment per candidate; generate/tweak
+  feeds the member's liked (KEEP) and criticized (FIX) notes into the prompt and
+  shows the notes used on each new candidate.
+- Rescan also imports Conor C2 and the South Park v2 contact sheet.
+
+### Internal
+
+- Lane `lane/grok-avatar-factory` (grok p1A): b91de2a (A2), 632aeca (picker),
+  f9f2749 (A5), board docs a4287aa/2688275/0a3bc1b; merge 7bd4aff.
+  Rollback: d4b49d0. Backup: `data/backups/league.pre-avatar-factory-v11-1911.db`.
+
 ## 2026-10-23 — Avatar Factory v1 (admin)
 
 ### Visible (UI)
