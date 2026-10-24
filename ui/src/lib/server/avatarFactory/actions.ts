@@ -4,6 +4,7 @@ import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
 import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
 import { fileToDataUrl, generateOpenRouterImage, type FetchLike } from './openrouter.js';
+import { assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
 import { assembleAvatarPrompt, assembleGroupShotPrompt } from './prompts.js';
 import { readInspirationAbs, readNotesMd, rescanSources } from './seed.js';
@@ -90,6 +91,8 @@ export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
 		costUsd: fresh.costUsd,
 		attemptCount: fresh.attemptCount,
 		sourcesConfigured: existsSync(ctx.sourcesDir ?? sourcesRoot()),
+		generationPaused: isGenerationPaused(),
+		pausedMessage: isGenerationPaused() ? PAUSED_MESSAGE : null,
 	};
 }
 
@@ -236,6 +239,7 @@ export async function generateOptions(
 	},
 	ctx: FactoryCtx = {},
 ) {
+	assertGenerationAllowed();
 	const { factoryDir, sourcesDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const member = requireMember(state, input.leagueSlug, input.memberSlug);
@@ -300,6 +304,7 @@ export async function requestGroupShot(
 	input: { leagueSlug: string; themeSlug: string },
 	ctx: FactoryCtx = {},
 ) {
+	assertGenerationAllowed();
 	const { factoryDir, img } = roots(ctx);
 	const state = loadState(factoryDir);
 	const league = state.leagues[input.leagueSlug];

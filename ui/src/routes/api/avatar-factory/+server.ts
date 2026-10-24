@@ -19,6 +19,7 @@ function fail(e: unknown, fallback = 500): never {
 	if (isHttpError(e)) throw e;
 	if (e instanceof PathGuardError) error(400, e.message);
 	const msg = e instanceof Error ? e.message : 'error';
+	if (/paused/i.test(msg)) error(503, msg);
 	if (/locked|not found|invalid|too large|not an image|rating/i.test(msg)) error(400, msg);
 	error(fallback, msg);
 }

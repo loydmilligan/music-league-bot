@@ -24,6 +24,63 @@ function mockFetch() {
 }
 
 describe('generate + group-shot actions', () => {
+	it('paused generate, tweak, and group-shot make no outbound fetch', async () => {
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-pause-'));
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-pause-src-'));
+		mkdirSync(join(photosRoot(factoryDir), 'boarz-ii-men/matt-mariani'), { recursive: true });
+		writeFileSync(join(photosRoot(factoryDir), 'boarz-ii-men/matt-mariani/headshot.png'), PNG);
+		const state = emptyState();
+		state.themes.push({
+			slug: 'south-park',
+			name: 'South Park',
+			prompt: 'Draw a South Park cutout.',
+			attachInspiration: false,
+			inspirationRels: [],
+			source: 'in-app',
+		});
+		const league = ensureLeague(state, 'boarz-ii-men', 'Boarz II Men');
+		league.members.push({
+			slug: 'matt-mariani',
+			name: 'Matt',
+			playerId: 1,
+			height: 'tall',
+			notes: 'glasses',
+			photoRel: 'boarz-ii-men/matt-mariani/headshot.png',
+			candidates: [],
+		});
+		saveState(state, factoryDir);
+		const fetchImpl = mockFetch();
+		const prev = process.env.AVATAR_FACTORY_OPENROUTER_PAUSED;
+		delete process.env.AVATAR_FACTORY_OPENROUTER_PAUSED;
+		try {
+			await expect(
+				generateOptions(
+					{ leagueSlug: 'boarz-ii-men', themeSlug: 'south-park', memberSlug: 'matt-mariani', count: 1 },
+					{ factoryDir, sourcesDir, fetchImpl },
+				),
+			).rejects.toThrow('OpenRouter image gen paused');
+			await expect(
+				generateOptions(
+					{
+						leagueSlug: 'boarz-ii-men',
+						themeSlug: 'south-park',
+						memberSlug: 'matt-mariani',
+						count: 1,
+						tweakNote: 'more hair',
+					},
+					{ factoryDir, sourcesDir, fetchImpl },
+				),
+			).rejects.toThrow('OpenRouter image gen paused');
+			await expect(
+				requestGroupShot({ leagueSlug: 'boarz-ii-men', themeSlug: 'south-park' }, { factoryDir, sourcesDir, fetchImpl }),
+			).rejects.toThrow('OpenRouter image gen paused');
+			expect(fetchImpl).not.toHaveBeenCalled();
+		} finally {
+			if (prev === undefined) delete process.env.AVATAR_FACTORY_OPENROUTER_PAUSED;
+			else process.env.AVATAR_FACTORY_OPENROUTER_PAUSED = prev;
+		}
+	});
+
 	it('writes versioned options and gates the group shot until all approved', async () => {
 		const factoryDir = mkdtempSync(join(tmpdir(), 'af-act-'));
 		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-src-'));
@@ -63,6 +120,9 @@ describe('generate + group-shot actions', () => {
 		saveState(state, factoryDir);
 
 		const fetchImpl = mockFetch();
+		const prev = process.env.AVATAR_FACTORY_OPENROUTER_PAUSED;
+		process.env.AVATAR_FACTORY_OPENROUTER_PAUSED = '0';
+		try {
 		const out = await generateOptions(
 			{ leagueSlug: 'boarz-ii-men', themeSlug: 'south-park', memberSlug: 'matt-mariani', count: 3 },
 			{ factoryDir, sourcesDir, fetchImpl },
@@ -94,5 +154,9 @@ describe('generate + group-shot actions', () => {
 			/^boarz-ii-men\/south-park\/matt-mariani\/\d{8}-\d{6}-A\.png$/,
 		);
 		expect(existsSync(join(imagesRoot(factoryDir), out.created[0].relPath))).toBe(true);
+		} finally {
+			if (prev === undefined) delete process.env.AVATAR_FACTORY_OPENROUTER_PAUSED;
+			else process.env.AVATAR_FACTORY_OPENROUTER_PAUSED = prev;
+		}
 	});
 });

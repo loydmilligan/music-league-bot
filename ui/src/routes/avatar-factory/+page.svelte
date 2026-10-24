@@ -39,6 +39,8 @@
 		costUsd: number;
 		attemptCount: number;
 		sourcesConfigured: boolean;
+		generationPaused?: boolean;
+		pausedMessage?: string | null;
 	};
 
 	let { data } = $props();
@@ -71,6 +73,8 @@
 	);
 	const groupUnlocked = $derived(members.length > 0 && approvedCount === members.length);
 	const groupShots = $derived((payload?.league.groupShots ?? []).filter((g) => g.themeSlug === themeSlug));
+	const generationPaused = $derived(!!payload?.generationPaused);
+	const genBlocked = $derived(generationPaused || !!busy);
 
 	function imgUrl(kind: 'images' | 'photos', rel: string | null | undefined) {
 		if (!rel) return '';
@@ -179,6 +183,11 @@
 		</div>
 	</header>
 
+	{#if generationPaused}
+		<div class="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
+			{payload?.pausedMessage || 'OpenRouter image gen paused'}. Browsing, rating, approve, and Rescan still work.
+		</div>
+	{/if}
 	{#if errorMsg}
 		<div class="rounded-md border border-ember bg-ember-bg px-3 py-2 text-sm">{errorMsg}</div>
 	{/if}
@@ -274,7 +283,7 @@
 							<button
 								type="button"
 								class={btn}
-								disabled={!!busy || !member.photoRel}
+								disabled={genBlocked || !member.photoRel}
 								onclick={() =>
 									post({ action: 'generate', leagueSlug, themeSlug, memberSlug: member.slug, count: 3 })}
 							>
@@ -347,7 +356,7 @@
 					<button
 						type="button"
 						class={btnGhost}
-						disabled={!!busy || !tweakNote.trim()}
+						disabled={genBlocked || !tweakNote.trim()}
 						onclick={() =>
 							post({
 								action: 'tweak',
@@ -371,7 +380,7 @@
 		<button
 			type="button"
 			class={btn}
-			disabled={!groupUnlocked || !!busy}
+			disabled={!groupUnlocked || genBlocked}
 			onclick={() => post({ action: 'group-shot', leagueSlug, themeSlug })}
 		>
 			{busy === 'group-shot' ? 'Requesting…' : 'Request group shot'}
