@@ -51,6 +51,7 @@ services:
       - BOARZ_REVIEW_DIR=/app/boarz-season-1-cinematic
       # Survey round sync: read-only view of the mlsurvey admin's data files.
       - SURVEY_DATA_DIR=/app/survey-data
+      - AVATAR_SOURCES_DIR=/app/avatar-sources
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
       # on localhost:7679) via host.docker.internal.
@@ -73,6 +74,9 @@ services:
       # Isolated venv for sintel inside the container (named volume so it persists
       # across recreates and never clobbers the host's .venv).
       - sintel_venv:/app/sintel-venv
+      # Avatar Factory v1 — READ-ONLY player photo library. Picker lists only
+      # under AVATAR_SOURCES_DIR. Originals are never modified.
+      - ${HOME}/Pictures/boarz-players:/app/avatar-sources/boarz-players:ro
     restart: unless-stopped
 
   # Public file server for the shared digests/ volume (sprint-20). No DB, and no
