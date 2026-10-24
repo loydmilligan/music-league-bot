@@ -70,4 +70,65 @@ describe('OpenRouter client (mocked)', () => {
 			}),
 		).rejects.toThrow(/\[redacted\]/);
 	});
+
+	it('treats HTTP 402 as typed out-of-credits', async () => {
+		const { ProviderError } = await import('./errors.js');
+		const fetchImpl = vi.fn(async () =>
+			new Response(JSON.stringify({ error: { code: 402, message: 'Payment required' } }), { status: 402 }),
+		);
+		try {
+			await generateOpenRouterImage({ prompt: 'x', apiKey: 'k', fetchImpl });
+			throw new Error('expected throw');
+		} catch (e) {
+			expect(e).toBeInstanceOf(ProviderError);
+			const pe = e as InstanceType<typeof ProviderError>;
+			expect(pe.reason).toBe('out_of_credits');
+			expect(pe.status).toBe(402);
+			expect(pe.httpStatus).toBe(402);
+			expect(pe.userMessage).toMatch(/Out of credits \(402\)/);
+			expect(pe.userMessage).toMatch(/Payment required/);
+		}
+	});
+
+	it('treats 200 with no images as a typed safety/likeness refusal', async () => {
+		const { ProviderError } = await import('./errors.js');
+		const fetchImpl = vi.fn(async () =>
+			new Response(
+				JSON.stringify({
+					id: 'gen_refuse',
+					choices: [
+						{
+							finish_reason: 'stop',
+							native_finish_reason: 'STOP',
+							message: { content: 'I cannot generate images of this person.' },
+						},
+					],
+					usage: { cost: 0.012 },
+				}),
+				{ status: 200, headers: { 'Content-Type': 'application/json' } },
+			),
+		);
+		try {
+			await generateOpenRouterImage({
+				prompt: 'simpsons',
+				apiKey: 'k',
+				fetchImpl,
+				imageMeta: [{ filename: '1792809638774.png', width: 245, height: 700, bytes: 12 }],
+			});
+			throw new Error('expected throw');
+		} catch (e) {
+			expect(e).toBeInstanceOf(ProviderError);
+			const pe = e as InstanceType<typeof ProviderError>;
+			expect(pe.reason).toBe('no_image');
+			expect(pe.status).toBe(200);
+			expect(pe.httpStatus).toBe(422);
+			expect(pe.generationId).toBe('gen_refuse');
+			expect(pe.finishReason).toBe('stop');
+			expect(pe.failedCostUsd).toBe(0.012);
+			expect(pe.refs?.[0]?.filename).toBe('1792809638774.png');
+			expect(pe.userMessage).toMatch(/Safety\/likeness refusal by the model/);
+			expect(pe.userMessage).toMatch(/I cannot generate images of this person/);
+		}
+	});
 });
+

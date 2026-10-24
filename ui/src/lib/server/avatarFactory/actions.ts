@@ -1,11 +1,12 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { allocateVersionedPath, assertSlug, slugify } from './filenames.js';
 import { canRequestGroupShot, clampOptionCount, optionLetters } from './gating.js';
 import { GLOBAL_NOTES } from './notes.js';
+import { logProviderError, ProviderError, reasonFromHttpStatus, type ImageRefMeta, type LastError } from './errors.js';
 import { generateFactoryImage, type FetchLike } from './generate.js';
-import { fileToDataUrl } from './openrouter.js';
 import { factoryCostTotals } from './cost.js';
+import { normalizeImage, type NormalizedImage } from './normalize.js';
 import { assertConfirmed, assertGenerationAllowed, isGenerationPaused, PAUSED_MESSAGE } from './pause.js';
 import { DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 import { factoryRoot, isImageName, PathGuardError, resolveUnderRoot, sourcesRoot } from './paths.js';
@@ -32,18 +33,11 @@ import {
 } from './store.js';
 import { listLeaguesReadonly, readRoster } from './roster.js';
 
-const MIME: Record<string, string> = {
-	'.png': 'image/png',
-	'.jpg': 'image/jpeg',
-	'.jpeg': 'image/jpeg',
-	'.webp': 'image/webp',
-	'.gif': 'image/gif',
-};
-
 export interface FactoryCtx {
 	factoryDir?: string;
 	sourcesDir?: string;
 	fetchImpl?: FetchLike;
+	normalizeImpl?: (input: Buffer, filename: string) => Promise<NormalizedImage>;
 }
 
 function roots(ctx: FactoryCtx) {
@@ -52,12 +46,45 @@ function roots(ctx: FactoryCtx) {
 	return { factoryDir, sourcesDir, img: imagesRoot(factoryDir) };
 }
 
-function mimeFor(path: string): string {
-	return MIME[extname(path).toLowerCase()] ?? 'application/octet-stream';
+async function normalizeFile(abs: string, ctx: FactoryCtx): Promise<NormalizedImage> {
+	const fn = ctx.normalizeImpl ?? normalizeImage;
+	return fn(readFileSync(abs), basename(abs));
 }
 
-function dataUrlFromFile(abs: string): string {
-	return fileToDataUrl(readFileSync(abs), mimeFor(abs));
+function asProviderError(
+	e: unknown,
+	provider: string,
+	model: string,
+	refs?: ImageRefMeta[],
+): ProviderError {
+	if (e instanceof ProviderError) return e;
+	const msg = e instanceof Error ? e.message : 'error';
+	const hit = msg.match(/\b(400|401|402|429|500|502|503)\b/);
+	const status = hit ? Number(hit[1]) : null;
+	return new ProviderError({
+		provider,
+		model,
+		status,
+		reason: status != null ? reasonFromHttpStatus(status) : 'provider_http',
+		snippet: msg,
+		refs,
+	});
+}
+
+function persistProviderFailure(
+	state: FactoryState,
+	factoryDir: string,
+	pe: ProviderError,
+	target: { member?: { lastError?: LastError }; league?: { lastError?: LastError } },
+): never {
+	logProviderError(pe);
+	const last = pe.toLastError();
+	if (target.member) target.member.lastError = last;
+	if (target.league) target.league.lastError = last;
+	if (typeof pe.failedCostUsd === 'number') state.failedCostUsd += pe.failedCostUsd;
+	state.attemptCount += 1;
+	saveState(state, factoryDir);
+	throw pe;
 }
 
 export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
@@ -301,21 +328,36 @@ export async function generateOptions(
 		promptTruncated = fit.truncated;
 	}
 
-	const imageDataUrls = [dataUrlFromFile(photoAbs)];
+	const photo = await normalizeFile(photoAbs, ctx);
+	const imageDataUrls = [photo.dataUrl];
+	const imageMeta = [photo];
 	if (theme.attachInspiration) {
 		for (const abs of readInspirationAbs(sourcesDir, theme.inspirationRels).slice(0, 4)) {
-			imageDataUrls.push(dataUrlFromFile(abs));
+			const n = await normalizeFile(abs, ctx);
+			imageDataUrls.push(n.dataUrl);
+			imageMeta.push(n);
 		}
 	}
 
 	const created: CandidateRecord[] = [];
 	for (const letter of letters) {
-		const result = await generateFactoryImage(provider, {
-			prompt,
-			imageDataUrls,
-			model: provider.defaultModel,
-			fetchImpl: ctx.fetchImpl,
-		});
+		let result;
+		try {
+			result = await generateFactoryImage(provider, {
+				prompt,
+				imageDataUrls,
+				model: provider.defaultModel,
+				fetchImpl: ctx.fetchImpl,
+				imageMeta,
+			});
+		} catch (e) {
+			persistProviderFailure(
+				state,
+				factoryDir,
+				asProviderError(e, provider.id, provider.defaultModel, imageMeta),
+				{ member },
+			);
+		}
 		const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, input.memberSlug, letter);
 		writeFileSync(allocated.abs, result.bytes);
 		const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
@@ -344,6 +386,7 @@ export async function generateOptions(
 		state.costUsd += costUsd;
 		state.attemptCount += 1;
 	}
+	delete member.lastError;
 	saveState(state, factoryDir);
 	return { created, prompt, costUsd: state.costUsd, attemptCount: state.attemptCount };
 }
@@ -389,20 +432,35 @@ export async function requestGroupShot(
 	}
 
 	const imageDataUrls: string[] = [];
+	const imageMeta: NormalizedImage[] = [];
 	for (const m of league.members) {
 		const ap = approvedForTheme(m, input.themeSlug);
 		if (!ap) continue;
 		const abs = join(img, ap.relPath);
-		if (existsSync(abs)) imageDataUrls.push(dataUrlFromFile(abs));
+		if (!existsSync(abs)) continue;
+		const n = await normalizeFile(abs, ctx);
+		imageDataUrls.push(n.dataUrl);
+		imageMeta.push(n);
 	}
 
-	const result = await generateFactoryImage(provider, {
-		prompt,
-		imageDataUrls,
-		model: provider.defaultModel,
-		aspectRatio: '16:9',
-		fetchImpl: ctx.fetchImpl,
-	});
+	let result;
+	try {
+		result = await generateFactoryImage(provider, {
+			prompt,
+			imageDataUrls,
+			model: provider.defaultModel,
+			aspectRatio: '16:9',
+			fetchImpl: ctx.fetchImpl,
+			imageMeta,
+		});
+	} catch (e) {
+		persistProviderFailure(
+			state,
+			factoryDir,
+			asProviderError(e, provider.id, provider.defaultModel, imageMeta),
+			{ league },
+		);
+	}
 	const allocated = allocateVersionedPath(img, input.leagueSlug, input.themeSlug, 'group', 'G');
 	writeFileSync(allocated.abs, result.bytes);
 	const costUsd = result.costEstimated ? provider.estimatedCostUsd : result.costUsd;
@@ -425,6 +483,7 @@ export async function requestGroupShot(
 	league.groupShots.push(rec);
 	state.costUsd += costUsd;
 	state.attemptCount += 1;
+	delete league.lastError;
 	saveState(state, factoryDir);
 	return rec;
 }

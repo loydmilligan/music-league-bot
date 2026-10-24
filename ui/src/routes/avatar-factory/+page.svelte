@@ -21,6 +21,14 @@
 		model?: string;
 		usedNotes?: string;
 	};
+	type LastError = {
+		at: string;
+		provider: string;
+		model: string;
+		status: number | null;
+		reason: string;
+		message: string;
+	};
 	type Member = {
 		slug: string;
 		name: string;
@@ -29,6 +37,7 @@
 		notes: string;
 		photoRel: string | null;
 		candidates: Candidate[];
+		lastError?: LastError;
 	};
 	type GroupShot = {
 		id: string;
@@ -44,7 +53,13 @@
 		provider?: string;
 		model?: string;
 	};
-	type CostBucket = { actualUsd: number; estimatedUsd: number; importedCount: number; generatedCount: number };
+	type CostBucket = {
+		actualUsd: number;
+		estimatedUsd: number;
+		importedCount: number;
+		generatedCount: number;
+		failedCostUsd?: number;
+	};
 	type Theme = { slug: string; name: string; prompt: string; attachInspiration: boolean };
 	type ProviderStatus = {
 		id: string;
@@ -60,7 +75,7 @@
 	type FactoryPayload = {
 		leagues: { slug: string; name: string }[];
 		themes: Theme[];
-		league: { slug: string; name: string; members: Member[]; groupShots: GroupShot[] };
+		league: { slug: string; name: string; members: Member[]; groupShots: GroupShot[]; lastError?: LastError };
 		costUsd: number;
 		attemptCount: number;
 		sourcesConfigured: boolean;
@@ -123,6 +138,7 @@
 		const bits: string[] = [];
 		if (b.actualUsd) bits.push(`$${b.actualUsd.toFixed(4)} actual`);
 		if (b.estimatedUsd) bits.push(`$${b.estimatedUsd.toFixed(4)} estimate`);
+		if (b.failedCostUsd) bits.push(`$${b.failedCostUsd.toFixed(4)} failed`);
 		if (!bits.length) bits.push('$0');
 		return bits.join(' · ');
 	}
@@ -177,7 +193,14 @@
 				body: JSON.stringify(body),
 			});
 			const j = await r.json().catch(() => ({}));
-			if (!r.ok) throw new Error((j as { message?: string }).message || (j as { error?: string }).error || r.statusText);
+			if (!r.ok) {
+				try {
+					await reload();
+				} catch {
+					/* keep the provider message even if reload fails */
+				}
+				throw new Error((j as { message?: string }).message || (j as { error?: string }).error || r.statusText);
+			}
 			await reload();
 			return j;
 		} catch (e) {
@@ -366,6 +389,15 @@
 					<div class="flex-1 min-w-0 space-y-2">
 						<h2 class="font-display text-2xl">{member.name}</h2>
 						<p class="font-mono text-xs text-fg-dim">{member.slug} · {member.height}</p>
+						{#if member.lastError}
+							<div class="rounded-md border border-ember bg-ember-bg px-3 py-2 text-sm" data-last-error>
+								<p>{member.lastError.message}</p>
+								<p class="font-mono text-[10px] text-fg-dim mt-1">
+									{member.lastError.provider} · {member.lastError.model} · {member.lastError.reason}
+									{member.lastError.status != null ? ` · HTTP ${member.lastError.status}` : ''}
+								</p>
+							</div>
+						{/if}
 						<textarea
 							class="w-full bg-surface border border-border rounded-md p-2 text-sm min-h-20"
 							value={member.notes}
@@ -516,6 +548,15 @@
 		<p class="text-sm text-fg-muted">
 			Approved {approvedCount}/{members.length}. Request group shot unlocks when every member has one approved avatar.
 		</p>
+		{#if payload?.league.lastError}
+			<div class="rounded-md border border-ember bg-ember-bg px-3 py-2 text-sm" data-last-error-league>
+				<p>{payload.league.lastError.message}</p>
+				<p class="font-mono text-[10px] text-fg-dim mt-1">
+					{payload.league.lastError.provider} · {payload.league.lastError.model} · {payload.league.lastError.reason}
+					{payload.league.lastError.status != null ? ` · HTTP ${payload.league.lastError.status}` : ''}
+				</p>
+			</div>
+		{/if}
 		<button
 			type="button"
 			class={btn}

@@ -424,4 +424,96 @@ describe('generate + group-shot actions', () => {
 			expect(fetchImpl).not.toHaveBeenCalled();
 		});
 	});
+
+	it('persists lastError on 200-with-no-image, records no candidate cost, and does not retry remaining letters', async () => {
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-refuse-'));
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-refuse-src-'));
+		seedMatt(factoryDir);
+		const fetchImpl = vi.fn(async () =>
+			new Response(
+				JSON.stringify({
+					id: 'gen_refuse',
+					choices: [
+						{
+							finish_reason: 'stop',
+							message: { content: 'I cannot generate images of this person.' },
+						},
+					],
+					usage: { cost: 0.012 },
+				}),
+				{ status: 200 },
+			),
+		);
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await expect(
+				withEnv({ OPENROUTER_API_KEY: 'x' }, () =>
+					generateOptions(
+						{
+							leagueSlug: 'boarz-ii-men',
+							themeSlug: 'south-park',
+							memberSlug: 'matt-mariani',
+							count: 3,
+							confirmed: true,
+						},
+						{ factoryDir, sourcesDir, fetchImpl },
+					),
+				),
+			).rejects.toThrow(/Safety\/likeness refusal by the model/);
+			expect(fetchImpl).toHaveBeenCalledTimes(1);
+			const body = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body));
+			const urls = body.messages[0].content.filter((c: { type: string }) => c.type === 'image_url');
+			expect(urls[0].image_url.url.startsWith('data:image/jpeg;base64,')).toBe(true);
+			const after = loadState(factoryDir);
+			const matt = after.leagues['boarz-ii-men'].members.find((m) => m.slug === 'matt-mariani')!;
+			expect(matt.candidates).toHaveLength(0);
+			expect(after.costUsd).toBe(0);
+			expect(after.failedCostUsd).toBeCloseTo(0.012);
+			expect(matt.lastError?.reason).toBe('no_image');
+			expect(matt.lastError?.provider).toBe('openrouter');
+			expect(matt.lastError?.message).toMatch(/Safety\/likeness refusal/);
+			const logged = log.mock.calls.map((c) => String(c[0])).join('\n');
+			expect(logged).toMatch(/avatarFactoryProviderError/);
+			expect(logged).not.toMatch(/data:image\/jpeg;base64,/);
+			expect(logged).not.toMatch(/OPENROUTER_API_KEY/);
+		} finally {
+			log.mockRestore();
+		}
+	});
+
+	it('records no costUsd on HTTP 402 and maps Out of credits', async () => {
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-402-'));
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-402-src-'));
+		seedMatt(factoryDir);
+		const fetchImpl = vi.fn(
+			async () => new Response(JSON.stringify({ error: { code: 402, message: 'Payment required' } }), { status: 402 }),
+		);
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			await expect(
+				withEnv({ OPENROUTER_API_KEY: 'x' }, () =>
+					generateOptions(
+						{
+							leagueSlug: 'boarz-ii-men',
+							themeSlug: 'south-park',
+							memberSlug: 'matt-mariani',
+							count: 3,
+							confirmed: true,
+						},
+						{ factoryDir, sourcesDir, fetchImpl },
+					),
+				),
+			).rejects.toThrow(/Out of credits \(402\)/);
+			expect(fetchImpl).toHaveBeenCalledTimes(1);
+			const after = loadState(factoryDir);
+			expect(after.costUsd).toBe(0);
+			expect(after.failedCostUsd).toBe(0);
+			const matt = after.leagues['boarz-ii-men'].members.find((m) => m.slug === 'matt-mariani')!;
+			expect(matt.lastError?.reason).toBe('out_of_credits');
+			expect(matt.candidates).toHaveLength(0);
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
 });
+
