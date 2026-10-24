@@ -38,6 +38,8 @@ describe('rescan import is copy-only and idempotent', () => {
 
 		const second = rescanSources({ factoryDir, sourcesDir });
 		expect(second.copied).toBe(0);
-		expect(loadState(factoryDir).leagues['boarz-ii-men'].members[0].candidates).toHaveLength(matt.candidates.length);
+		expect(
+			loadState(factoryDir).leagues['boarz-ii-men'].members.find((m) => m.slug === 'matt-mariani')!.candidates,
+		).toHaveLength(matt.candidates.length);
 	});
 });
