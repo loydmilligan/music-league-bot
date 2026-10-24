@@ -18,6 +18,7 @@ export interface ProviderStatus {
 	id: ProviderId;
 	label: string;
 	model: string;
+	estimatedCostUsd: number;
 	available: boolean;
 	needsKey: boolean;
 	enabled: boolean;
@@ -84,6 +85,7 @@ export function listProviders(env: EnvBag = process.env): ProviderStatus[] {
 			id: p.id,
 			label: p.label,
 			model: p.defaultModel,
+			estimatedCostUsd: p.estimatedCostUsd,
 			needsKey: !hasKey,
 			enabled: isDefault,
 			available: isDefault && hasKey && !paused,

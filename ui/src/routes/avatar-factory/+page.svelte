@@ -9,6 +9,7 @@
 		relPath: string;
 		label: string;
 		rating: number | null;
+		ratingComment?: string;
 		status: 'candidate' | 'approved' | 'rejected';
 		source: 'generated' | 'imported';
 		createdAt: string;
@@ -16,6 +17,7 @@
 		costEstimated?: boolean;
 		provider?: string;
 		model?: string;
+		usedNotes?: string;
 	};
 	type Member = {
 		slug: string;
@@ -33,12 +35,18 @@
 		label: string;
 		status: string;
 		source: string;
+		costUsd?: number;
+		costEstimated?: boolean;
+		provider?: string;
+		model?: string;
 	};
+	type CostBucket = { actualUsd: number; estimatedUsd: number; importedCount: number; generatedCount: number };
 	type Theme = { slug: string; name: string; prompt: string; attachInspiration: boolean };
 	type ProviderStatus = {
 		id: string;
 		label: string;
 		model: string;
+		estimatedCostUsd?: number;
 		available: boolean;
 		needsKey: boolean;
 		enabled: boolean;
@@ -56,6 +64,7 @@
 		defaultProvider?: string;
 		generationPaused?: boolean;
 		pausedMessage?: string | null;
+		costTotals?: { overall: CostBucket; league: CostBucket; themes: Record<string, CostBucket> };
 	};
 
 	let { data } = $props();
@@ -76,6 +85,13 @@
 	let newThemeName = $state('');
 	let newThemePrompt = $state('');
 	let providerId = $state('openrouter');
+	let confirmJob = $state<null | {
+		title: string;
+		images: number;
+		estimatedCostUsd: number;
+		model: string;
+		body: Record<string, unknown>;
+	}>(null);
 
 	const members = $derived(payload?.league.members ?? []);
 	const themes = $derived(payload?.themes ?? []);
@@ -92,7 +108,45 @@
 	const providers = $derived(payload?.providers ?? []);
 	const generationPaused = $derived(!!payload?.generationPaused);
 	const selectedProvider = $derived(providers.find((p) => p.id === providerId) ?? providers.find((p) => p.isDefault));
-	const genBlocked = $derived(generationPaused || !!busy || !selectedProvider?.enabled);
+	const genBlocked = $derived(
+		generationPaused || !!busy || !selectedProvider?.enabled || selectedProvider?.available === false,
+	);
+	const themeCosts = $derived(payload?.costTotals?.themes?.[themeSlug]);
+
+	function fmtBucket(b?: CostBucket) {
+		if (!b) return '$0';
+		const bits: string[] = [];
+		if (b.actualUsd) bits.push(`$${b.actualUsd.toFixed(4)} actual`);
+		if (b.estimatedUsd) bits.push(`$${b.estimatedUsd.toFixed(4)} estimate`);
+		if (!bits.length) bits.push('$0');
+		return bits.join(' · ');
+	}
+
+	function costLine(c: { source?: string; provider?: string; model?: string; costUsd?: number; costEstimated?: boolean }) {
+		if (c.source === 'imported') return 'imported, $0';
+		const head = [c.provider, c.model].filter(Boolean).join(' · ');
+		if (c.costUsd == null) return head || '';
+		return `${head}${head ? ' · ' : ''}$${c.costUsd.toFixed(4)}${c.costEstimated ? ' estimate' : ''}`;
+	}
+
+	function askConfirm(title: string, images: number, body: Record<string, unknown>) {
+		if (genBlocked) return;
+		const unit = selectedProvider?.estimatedCostUsd ?? 0.04;
+		confirmJob = {
+			title,
+			images,
+			estimatedCostUsd: unit * images,
+			model: selectedProvider?.model ?? '',
+			body: { ...body, confirmed: true },
+		};
+	}
+
+	async function runConfirmed() {
+		const job = confirmJob;
+		confirmJob = null;
+		if (!job) return;
+		await post(job.body);
+	}
 
 	function imgUrl(kind: 'images' | 'photos', rel: string | null | undefined) {
 		if (!rel) return '';
@@ -192,12 +246,14 @@
 			<SectionLabel>Admin</SectionLabel>
 			<h1 class="font-display text-3xl mt-1">Avatar Factory</h1>
 			<p class="text-sm text-fg-muted mt-1">
-				OpenRouter (Gemini) default · paused · Grok / Runway / fal.ai needs key or disabled pending Mashew OK
+				OpenRouter on · confirm before each run · Grok / Runway / fal.ai disabled pending Mashew OK
 			</p>
 		</div>
-		<div class="flex flex-col items-end gap-1">
+		<div class="flex flex-col items-end gap-1 text-right">
 			<StatusChip label={`${payload?.attemptCount ?? 0} attempts`} tone="muted" />
-			<span class="font-mono text-xs text-fg-dim">${(payload?.costUsd ?? 0).toFixed(4)}</span>
+			<span class="font-mono text-[10px] text-fg-dim">overall {fmtBucket(payload?.costTotals?.overall)}</span>
+			<span class="font-mono text-[10px] text-fg-dim">league {fmtBucket(payload?.costTotals?.league)}</span>
+			<span class="font-mono text-[10px] text-fg-dim">{theme?.name ?? 'theme'} {fmtBucket(themeCosts)}</span>
 		</div>
 	</header>
 
@@ -318,7 +374,7 @@
 								class={btn}
 								disabled={genBlocked || !member.photoRel}
 								onclick={() =>
-									post({
+									askConfirm('Generate A/B/C', 3, {
 										action: 'generate',
 										leagueSlug,
 										themeSlug,
@@ -349,13 +405,9 @@
 									<StatusChip label="approved" tone="muted" />
 								{/if}
 							</div>
-							{#if c.provider}
-								<p class="font-mono text-[10px] text-fg-dim">
-									{c.provider} · {c.model ?? ''}
-									{#if c.costUsd != null}
-										· ${c.costUsd.toFixed(4)}{c.costEstimated ? ' est.' : ''}
-									{/if}
-								</p>
+							<p class="font-mono text-[10px] text-fg-dim">{costLine(c)}</p>
+							{#if c.usedNotes}
+								<p class="text-[11px] text-fg-muted whitespace-pre-wrap">{c.usedNotes}</p>
 							{/if}
 							<div class="flex gap-1" aria-label="rating">
 								{#each [1, 2, 3, 4, 5] as star}
@@ -365,11 +417,32 @@
 										class:text-warn={c.rating && star <= c.rating}
 										class:text-fg-faint={!c.rating || star > c.rating}
 										onclick={() =>
-											post({ action: 'rate', leagueSlug, memberSlug: member.slug, candidateId: c.id, rating: star })}
+											post({
+												action: 'rate',
+												leagueSlug,
+												memberSlug: member.slug,
+												candidateId: c.id,
+												rating: star,
+												comment: c.ratingComment ?? '',
+											})}
 										>★</button
 									>
 								{/each}
 							</div>
+							<textarea
+								class="w-full bg-bg border border-border rounded-sm p-1.5 text-xs min-h-12"
+								placeholder="Comment (fed into later generate/tweak)"
+								value={c.ratingComment ?? ''}
+								onchange={(e) =>
+									post({
+										action: 'rate',
+										leagueSlug,
+										memberSlug: member.slug,
+										candidateId: c.id,
+										rating: c.rating ?? 0,
+										comment: (e.currentTarget as HTMLTextAreaElement).value,
+									})}
+							></textarea>
 							<div class="flex flex-wrap gap-1">
 								<button
 									type="button"
@@ -406,7 +479,7 @@
 						class={btnGhost}
 						disabled={genBlocked || !tweakNote.trim()}
 						onclick={() =>
-							post({
+							askConfirm('Tweak (1 image)', 1, {
 								action: 'tweak',
 								leagueSlug,
 								themeSlug,
@@ -430,7 +503,13 @@
 			type="button"
 			class={btn}
 			disabled={!groupUnlocked || genBlocked}
-			onclick={() => post({ action: 'group-shot', leagueSlug, themeSlug, provider: providerId })}
+			onclick={() =>
+				askConfirm('Request group shot', 1, {
+					action: 'group-shot',
+					leagueSlug,
+					themeSlug,
+					provider: providerId,
+				})}
 		>
 			{busy === 'group-shot' ? 'Requesting…' : 'Request group shot'}
 		</button>
@@ -438,7 +517,7 @@
 			{#each groupShots as g}
 				<figure class="bg-surface border border-border rounded-md p-3">
 					<img src={imgUrl('images', g.relPath)} alt={g.label} class="w-full rounded-sm" />
-					<figcaption class="mt-2 font-mono text-xs text-fg-dim">{g.label} · {g.source}</figcaption>
+					<figcaption class="mt-2 font-mono text-xs text-fg-dim">{g.label} · {costLine(g)}</figcaption>
 				</figure>
 			{/each}
 		</div>
@@ -460,6 +539,23 @@
 		</div>
 	</section>
 </div>
+
+{#if confirmJob}
+	<div class="fixed inset-0 bg-black/60 z-40 flex items-end md:items-center justify-center p-4">
+		<div class="bg-bg-elevated border border-border rounded-md w-full max-w-md p-4 space-y-3">
+			<h3 class="font-display text-xl">{confirmJob.title}</h3>
+			<p class="text-sm">
+				{confirmJob.images} image{confirmJob.images === 1 ? '' : 's'} · {confirmJob.model}
+			</p>
+			<p class="font-mono text-sm">Estimated cost: ${confirmJob.estimatedCostUsd.toFixed(4)}</p>
+			<p class="text-xs text-fg-dim">Cancel makes no request. Opening this dialog does not call OpenRouter.</p>
+			<div class="flex gap-2 justify-end">
+				<button type="button" class={btnGhost} onclick={() => (confirmJob = null)}>Cancel</button>
+				<button type="button" class={btn} onclick={runConfirmed}>Confirm</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if pickerOpen}
 	<div class="fixed inset-0 bg-black/60 z-40 flex items-end md:items-center justify-center p-4">

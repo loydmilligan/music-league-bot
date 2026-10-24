@@ -3,11 +3,11 @@ import { generateOptions } from './actions.js';
 import { DISABLED_PENDING, DEFAULT_PROVIDER, listProviders, resolveProvider } from './providers.js';
 
 describe('provider picker', () => {
-	it('defaults to OpenRouter paused; others need key or stay disabled even with a key', () => {
+	it('defaults to OpenRouter on; others need key or stay disabled even with a key', () => {
 		const none = listProviders({});
 		expect(DEFAULT_PROVIDER).toBe('openrouter');
 		expect(none.find((p) => p.isDefault)?.id).toBe('openrouter');
-		expect(none.find((p) => p.id === 'openrouter')?.disabledReason).toBe('paused');
+		expect(none.find((p) => p.id === 'openrouter')?.disabledReason).toBe('needs key');
 		expect(none.find((p) => p.id === 'openrouter')?.available).toBe(false);
 		expect(none.find((p) => p.id === 'grok')?.disabledReason).toBe('needs key');
 		expect(none.filter((p) => p.enabled).map((p) => p.id)).toEqual(['openrouter']);
@@ -19,22 +19,23 @@ describe('provider picker', () => {
 			RUNWAYML_API_SECRET: 'x',
 			FAL_KEY: 'x',
 		});
-		expect(keyed.find((p) => p.id === 'openrouter')?.available).toBe(false);
-		expect(keyed.find((p) => p.id === 'openrouter')?.disabledReason).toBe('paused');
+		expect(keyed.find((p) => p.id === 'openrouter')?.available).toBe(true);
+		expect(keyed.find((p) => p.id === 'openrouter')?.disabledReason).toBeNull();
 		expect(keyed.find((p) => p.id === 'grok')?.needsKey).toBe(false);
 		expect(keyed.find((p) => p.id === 'grok')?.enabled).toBe(false);
 		expect(keyed.find((p) => p.id === 'grok')?.disabledReason).toBe(DISABLED_PENDING);
 		expect(keyed.find((p) => p.id === 'runway')?.disabledReason).toBe(DISABLED_PENDING);
 		expect(keyed.find((p) => p.id === 'fal')?.disabledReason).toBe(DISABLED_PENDING);
 
-		const unpaused = listProviders({
+		const paused = listProviders({
 			OPENROUTER_API_KEY: 'x',
 			XAI_API_KEY: 'x',
-			AVATAR_FACTORY_OPENROUTER_PAUSED: '0',
+			AVATAR_FACTORY_OPENROUTER_PAUSED: '1',
 		});
-		expect(unpaused.find((p) => p.id === 'openrouter')?.available).toBe(true);
-		expect(unpaused.find((p) => p.id === 'grok')?.available).toBe(false);
-		expect(unpaused.find((p) => p.id === 'grok')?.disabledReason).toBe(DISABLED_PENDING);
+		expect(paused.find((p) => p.id === 'openrouter')?.available).toBe(false);
+		expect(paused.find((p) => p.id === 'openrouter')?.disabledReason).toBe('paused');
+		expect(paused.find((p) => p.id === 'grok')?.available).toBe(false);
+		expect(paused.find((p) => p.id === 'grok')?.disabledReason).toBe(DISABLED_PENDING);
 	});
 
 	it('resolveProvider never auto-picks Grok, Runway, or fal', () => {
@@ -60,6 +61,7 @@ describe('provider picker', () => {
 						themeSlug: 'south-park',
 						memberSlug: 'matt-mariani',
 						provider: 'grok',
+						confirmed: true,
 					},
 					{ fetchImpl },
 				),

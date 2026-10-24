@@ -21,7 +21,7 @@ function fail(e: unknown, fallback = 500): never {
 	const msg = e instanceof Error ? e.message : 'error';
 	if (/paused/i.test(msg)) error(503, msg);
 	if (
-		/locked|not found|invalid|too large|not an image|rating|not enabled|needs key|disabled pending|unknown provider/i.test(
+		/locked|not found|invalid|too large|not an image|rating|not enabled|needs key|disabled pending|unknown provider|confirm required/i.test(
 			msg,
 		)
 	)
@@ -58,7 +58,14 @@ export const POST: RequestHandler = async ({ request }) => {
 				return json(runRescan());
 			case 'rate':
 				return json(
-					setRating(String(body.leagueSlug), String(body.memberSlug), String(body.candidateId), Number(body.rating)),
+					setRating(
+						String(body.leagueSlug),
+						String(body.memberSlug),
+						String(body.candidateId),
+						Number(body.rating),
+						{},
+						body.comment != null ? String(body.comment) : undefined,
+					),
 				);
 			case 'approve':
 				return json(setStatus(String(body.leagueSlug), String(body.memberSlug), String(body.candidateId), 'approved'));
@@ -84,6 +91,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						memberSlug: String(body.memberSlug),
 						count: body.count as number | undefined,
 						provider: body.provider ? String(body.provider) : undefined,
+						confirmed: body.confirmed === true,
 					}),
 				);
 			case 'tweak':
@@ -96,6 +104,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						tweakNote: String(body.tweakNote ?? ''),
 						baseCandidateId: body.candidateId ? String(body.candidateId) : undefined,
 						provider: body.provider ? String(body.provider) : undefined,
+						confirmed: body.confirmed === true,
 					}),
 				);
 			case 'group-shot':
@@ -104,6 +113,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						leagueSlug: String(body.leagueSlug),
 						themeSlug: String(body.themeSlug),
 						provider: body.provider ? String(body.provider) : undefined,
+						confirmed: body.confirmed === true,
 					}),
 				);
 			default:
