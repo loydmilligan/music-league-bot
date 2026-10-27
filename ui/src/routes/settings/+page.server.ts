@@ -11,6 +11,7 @@ import { runStartupImport } from '$lib/import/startupScan.js';
 import { getHierarchy } from '$lib/db/metadataQueue.js';
 import { getEmailPollerData } from '$lib/email/emailPollerQuery.js';
 import { getSeasonBudget } from '$lib/voting-lab/ballotDb.js';
+import { buildDigestFaces, listDigestAvatarOptions, setDigestAvatarSet } from '$lib/server/digestAvatars.js';
 
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), '../data');
 
@@ -33,7 +34,14 @@ export const load: PageServerLoad = async () => {
     }
   }
 
-  return { settings, importLog, allLeagues, hierarchy, emailPoller, seasonBudgets };
+  let digestAvatars: ReturnType<typeof listDigestAvatarOptions> = [];
+  try {
+    digestAvatars = listDigestAvatarOptions(db);
+  } catch {
+    // No Avatar Factory state yet — the panel just shows nothing to choose.
+  }
+
+  return { settings, importLog, allLeagues, hierarchy, emailPoller, seasonBudgets, digestAvatars };
 };
 
 export const actions: Actions = {
@@ -79,6 +87,27 @@ export const actions: Actions = {
     const result = importZipData(db, leagueSlug, seasonNumber, parsed);
     logImport(db, { leagueSlug, seasonNumber, filename: file.name, importedAt: new Date().toISOString(), ...result, error: result.error ?? null });
     return { success: true, ...result };
+  },
+
+  // One Avatar Factory set per league's digests; choosing (or re-choosing) a set
+  // cuts its 96px faces, so this is also the "rebuild faces" button.
+  setDigestAvatars: async ({ request }) => {
+    const db = getDb();
+    const fd = await request.formData();
+    const league = String(fd.get('league') ?? '');
+    const theme = String(fd.get('theme') ?? '');
+    if (!league) return fail(400, { digestAvatarError: 'league required' });
+    if (!theme) {
+      setDigestAvatarSet(db, league, null);
+      return { digestAvatars: { league, theme: null, written: 0, missing: [] as string[] } };
+    }
+    try {
+      const built = await buildDigestFaces(db, league, theme);
+      setDigestAvatarSet(db, league, theme);
+      return { digestAvatars: { league, theme, written: built.written.length, missing: built.missing } };
+    } catch (e) {
+      return fail(400, { digestAvatarError: (e as Error).message });
+    }
   },
 
   rescan: async () => {

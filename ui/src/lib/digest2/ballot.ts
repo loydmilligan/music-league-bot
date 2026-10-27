@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { getActiveDraftForRound, getSectionsForDraft } from '$lib/digest/llm.js';
+import { digestFaceLookup } from '$lib/server/digestAvatars.js';
 
 /**
  * "How It Played" + "The Ballot Grid": every vote of the round, per song and per
@@ -24,11 +25,24 @@ export function avatarFor(leagueSlug: string, playerName: string): string | null
 	return AVATARS[`./avatars/${leagueSlug}/${slug}.jpg`] ? `av-${slug}` : null;
 }
 
-/** One rule per face so each image is inlined once, however many times it appears. */
-function avatarCss(leagueSlug: string, keys: Iterable<string>): string {
-	return [...new Set(keys)]
-		.map((k) => `.${k}{background-image:url(${AVATARS[`./avatars/${leagueSlug}/${k.slice(3)}.jpg`]})}`)
-		.join('');
+/**
+ * Face source for one league: its chosen Avatar Factory set when there is one (a player
+ * missing from the set gets initials, so a digest never mixes styles), else the built-in
+ * crops above. Returns the CSS class key and that key's image.
+ */
+function faceSource(db: Database.Database, leagueSlug: string) {
+	const lookup = digestFaceLookup(db, leagueSlug);
+	const uri = (key: string) =>
+		lookup ? lookup(key.slice(3)) : AVATARS[`./avatars/${leagueSlug}/${key.slice(3)}.jpg`] ?? null;
+	return {
+		keyFor: (name: string): string | null => {
+			const key = `av-${slugName(name)}`;
+			return uri(key) ? key : null;
+		},
+		/** One rule per face so each image is inlined once, however many times it appears. */
+		css: (keys: Iterable<string>): string =>
+			[...new Set(keys)].map((k) => `.${k}{background-image:url(${uri(k)})}`).join(''),
+	};
 }
 
 export interface BallotVote {
@@ -107,6 +121,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 		)
 		.get(roundId) as { slug: string } | undefined;
 	const leagueSlug = league?.slug ?? '';
+	const faces = faceSource(db, leagueSlug);
 
 	const subs = db
 		.prepare(
@@ -174,7 +189,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 			title: s.title,
 			artist: artistText(s.artists),
 			submitter: s.submitter,
-			submitterAvatar: avatarFor(leagueSlug, s.submitter),
+			submitterAvatar: faces.keyFor(s.submitter),
 			net,
 			rawNet,
 			ups,
@@ -184,7 +199,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 			note: noteFor(s.title),
 			votes: vs
 				.filter((v) => v.pts !== 0 || v.comment.trim())
-				.map((v) => ({ voter: v.voter, avatar: avatarFor(leagueSlug, v.voter), pts: v.pts, comment: v.comment.trim() }))
+				.map((v) => ({ voter: v.voter, avatar: faces.keyFor(v.voter), pts: v.pts, comment: v.comment.trim() }))
 				.sort((a, b) => (b.pts === 0 ? -99 : b.pts) - (a.pts === 0 ? -99 : a.pts))
 		};
 	});
@@ -197,7 +212,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 		const ballot = mine.map((v) => v.pts).filter((p) => p !== 0).sort((a, b) => b - a);
 		return {
 			voter,
-			avatar: avatarFor(leagueSlug, voter),
+			avatar: faces.keyFor(voter),
 			ballot,
 			broke: RULE_CHECK_LEAGUES.has(leagueSlug) && [...ballot].sort((a, b) => a - b).join(',') !== LEGAL,
 			cells: songs.map((s) => {
@@ -214,8 +229,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 		villainRank: ranked.length ? ranked[ranked.length - 1].rank : null,
 		grid,
 		gridCaption,
-		avatarCss: avatarCss(
-			leagueSlug,
+		avatarCss: faces.css(
 			[...ranked.flatMap((s) => [s.submitterAvatar, ...s.votes.map((v) => v.avatar)]), ...grid.map((r) => r.avatar)].filter(
 				(k): k is string => !!k
 			)

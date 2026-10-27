@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getStandings, adoptComputed, applyEdits, type StandingEdit } from '$lib/db/standings.js';
+import { digestFaceLookup } from '$lib/server/digestAvatars.js';
 
 // GET /api/digest/:roundId/standings
 // Returns the gospel Standings payload + a reconcile block (computed-vs-stored).
@@ -23,20 +24,29 @@ export const GET: RequestHandler = ({ params }) => {
     const placeholders = cids.map(() => '?').join(',');
     const playerRows = cids.length > 0
       ? (db.prepare(
-          `SELECT c.id AS competitor_id, c.player_id,
+          `SELECT c.id AS competitor_id, c.player_id, p.name AS player_name,
                   pa.base_r2_key, pa.themed_r2_key
            FROM competitors c
+           LEFT JOIN players p ON p.id = c.player_id
            LEFT JOIN player_avatars pa ON pa.player_id = c.player_id
            WHERE c.id IN (${placeholders})`
-        ).all(...cids) as { competitor_id: number; player_id: number | null; base_r2_key: string | null; themed_r2_key: string | null }[])
+        ).all(...cids) as { competitor_id: number; player_id: number | null; player_name: string | null; base_r2_key: string | null; themed_r2_key: string | null }[])
       : [];
     const playerMap = new Map(playerRows.map(r => [r.competitor_id, r]));
+    // The league's chosen Avatar Factory set wins over per-round themed avatars;
+    // with a set chosen, a player missing from it shows initials (one style per digest).
+    const league = db
+      .prepare('SELECT l.slug FROM rounds r JOIN seasons s ON s.id = r.season_id JOIN leagues l ON l.id = s.league_id WHERE r.id = ?')
+      .get(roundId) as { slug: string } | undefined;
+    const setFace = league ? digestFaceLookup(db, league.slug) : null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (result as any).standings = result.standings.map((row) => {
       const pr = playerMap.get(row.competitorId ?? 0);
       const playerId = pr?.player_id ?? null;
-      const avatar_url = pr?.themed_r2_key
+      const avatar_url = setFace
+        ? setFace(pr?.player_name ?? row.name)
+        : pr?.themed_r2_key
         ? `/api/avatars/${playerId}/themed`
         : pr?.base_r2_key
         ? `/api/avatars/${playerId}/base`

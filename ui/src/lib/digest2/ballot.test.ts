@@ -62,3 +62,32 @@ it('scores a non-voter song as downs-only, ranks by scored net then upvoters, an
 	]);
 	expect(ballot!.villainRank).toBe(4);
 });
+
+it('with an Avatar Factory set chosen, faces come from that set only; missing players get initials', async () => {
+	const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+	const { join } = await import('node:path');
+	const { tmpdir } = await import('node:os');
+	const { setDigestAvatarSet } = await import('$lib/server/digestAvatars.js');
+	const r = seedNonVoterRound(db);
+	const dataDir = mkdtempSync(join(tmpdir(), 'ballot-faces-'));
+	const dir = join(dataDir, 'avatar-factory/digest-faces/boarz-ii-men/gta');
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(join(dir, 'jensen.jpg'), Buffer.from('fake-jpeg'));
+	const prev = process.env.DATA_DIR;
+	process.env.DATA_DIR = dataDir;
+	try {
+		// Jimmy has a built-in crop (avatars/boarz-ii-men/jimmy.jpg): the set must not fall back to it.
+		expect(buildDigest2Ballot(db, r)!.songs.find((s) => s.submitter === 'Jimmy')!.submitterAvatar).toBe('av-jimmy');
+		setDigestAvatarSet(db, 'boarz-ii-men', 'gta');
+		const ballot = buildDigest2Ballot(db, r)!;
+		const jensen = ballot.songs.find((s) => s.submitter === 'Jensen')!;
+		const jimmy = ballot.songs.find((s) => s.submitter === 'Jimmy')!;
+		expect(jensen.submitterAvatar).toBe('av-jensen');
+		expect(jimmy.submitterAvatar).toBeNull();
+		expect(ballot.avatarCss).toContain(`.av-jensen{background-image:url(data:image/jpeg;base64,${Buffer.from('fake-jpeg').toString('base64')})}`);
+		expect(ballot.avatarCss).not.toContain('av-jimmy');
+	} finally {
+		if (prev === undefined) delete process.env.DATA_DIR;
+		else process.env.DATA_DIR = prev;
+	}
+});

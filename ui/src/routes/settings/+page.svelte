@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PageData } from './$types.js';
+  import type { ActionData, PageData } from './$types.js';
   import { enhance } from '$app/forms';
   import StatusChip from '$lib/components/StatusChip.svelte';
   import SettingsTabs from '$lib/components/SettingsTabs.svelte';
@@ -18,7 +18,7 @@
   import QueueSongCard from '$lib/metadata-queue/QueueSongCard.svelte';
   import Triage from '$lib/metadata-queue/Triage.svelte';
 
-  let { data } = $props<{ data: PageData }>();
+  let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
   // Auto-analyze audio toggle
   let autoAnalyzeEnabled = $state(false);
@@ -1331,6 +1331,45 @@
       <StatusChip label="SAVED" tone="accent" />
     {/if}
   </div>
+</CollapsiblePanel>
+
+<!-- Digest avatars: one Avatar Factory set per league -->
+<CollapsiblePanel id="app-digest-avatars" title="Digest avatars">
+  <p class="text-xs text-fg-dim mb-5">
+    Pick one approved Avatar Factory set per league. Its faces are used everywhere a digest shows a player:
+    the 2.0 How It Played cards and Ballot Grid, and the 1.0 Standings (instead of per-round themed avatars).
+    A player missing from the set shows initials. Saving re-cuts the faces, so re-save after approving new images.
+  </p>
+  {#if form?.digestAvatarError}
+    <p class="text-xs text-warn mb-3">{form.digestAvatarError}</p>
+  {:else if form?.digestAvatars}
+    <p class="text-xs text-health mb-3">
+      {form.digestAvatars.league}: {form.digestAvatars.theme ? `${form.digestAvatars.written} faces cut from ${form.digestAvatars.theme}` : 'set cleared'}{#if form.digestAvatars.missing.length} · no image for {form.digestAvatars.missing.join(', ')}{/if}
+    </p>
+  {/if}
+  {#if data.digestAvatars.length}
+    <div class="space-y-3">
+      {#each data.digestAvatars as opt (opt.leagueSlug)}
+        <form method="POST" action="?/setDigestAvatars" use:enhance class="flex flex-wrap items-center gap-3">
+          <input type="hidden" name="league" value={opt.leagueSlug} />
+          <span class="text-sm text-fg w-40">{opt.leagueName}</span>
+          <select name="theme" value={opt.current ?? ''} class="bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-fg">
+            <option value="">Built-in faces</option>
+            {#each opt.themes as t (t.slug)}
+              <option value={t.slug}>{t.name} · {t.approved}/{opt.members}</option>
+            {/each}
+          </select>
+          <button
+            type="submit"
+            class="border border-border text-fg-muted hover:text-fg hover:border-accent font-mono text-xs tracking-widest uppercase px-3 py-1.5 rounded-md transition-colors"
+          >Save &amp; cut faces</button>
+          {#if opt.current}<span class="font-mono text-[11px] text-fg-faint">{opt.built} faces ready</span>{/if}
+        </form>
+      {/each}
+    </div>
+  {:else}
+    <p class="text-fg-dim text-sm">No Avatar Factory leagues yet.</p>
+  {/if}
 </CollapsiblePanel>
 
 <!-- Season vote-budget editor (Voting Phase Lab) -->
