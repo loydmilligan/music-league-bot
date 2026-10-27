@@ -314,6 +314,10 @@ describe('boarz-ii-men guess aliases', () => {
     ['Grushfriend is my submitter guess because the comment.', 'Bagel Shop'],
     ['Good stuff.  Falleetz', 'Darren Paletz'],
     ['what sounds like a bird - Jensownian institute is my guess', 'djensen37'],
+    // S2 R3 (round 169): three of Matt's nine guesses were coinages no rule reached.
+    ['farkasian- laugh tears in heaven and i am in', 'Shane Farkas'],
+    ['Grushfire - not my fav - but at least interesting', 'Bagel Shop'],
+    ['hanclammy - my most favorite of the bad ones', 'Clements'],
   ];
 
   // One song per nickname, submitted by the person that nickname names, so a
@@ -350,8 +354,10 @@ describe('boarz-ii-men guess aliases', () => {
         insertPlayer.run(id, roster);
         insertCompetitor.run(id, `ml-${id}`, roster, id);
       }
-      insertSub.run(id, `uri-${i}`, `Song ${i}`);
-      insertVote.run(`uri-${i}`, comment);
+      // Zero-padded: play order is ORDER BY spotify_uri, and 'uri-10' < 'uri-2'.
+      const uri = `uri-${String(i).padStart(3, '0')}`;
+      insertSub.run(id, uri, `Song ${i}`);
+      insertVote.run(uri, comment);
     });
     return b;
   }
