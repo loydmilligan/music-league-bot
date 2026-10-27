@@ -6,6 +6,10 @@ import {
 	BOARZ_HEIGHTS,
 	BOARZ_LEAGUE_SLUG,
 	DEFAULT_MEMBER_NOTES,
+	HIP_JAMMERS_LEAGUE_SLUG,
+	HIP_JAMMERS_PLAYERS_SUB,
+	SECOND_BEST_LEAGUE_SLUG,
+	SECOND_BEST_PLAYERS_SUB,
 	heightFor,
 } from './notes.js';
 import { extractFencedPrompt, parseAttachInspiration } from './prompts.js';
@@ -103,24 +107,38 @@ export interface RescanResult {
 	groupShots: number;
 }
 
+const HEADSHOT_NAMES = ['headshot.png', 'headshot.jpg', 'headshot.jpeg'] as const;
+
+function findHeadshot(memberDir: string): string | null {
+	for (const name of HEADSHOT_NAMES) {
+		const p = join(memberDir, name);
+		if (existsSync(p)) return p;
+	}
+	return null;
+}
+
 export function rescanSources(opts?: { factoryDir?: string; sourcesDir?: string }): RescanResult {
 	const factoryDir = opts?.factoryDir ?? factoryRoot();
 	const srcRoot = opts?.sourcesDir ?? sourcesRoot();
 	const playersDir = join(srcRoot, PLAYERS_SUB);
+	const hipDir = join(srcRoot, HIP_JAMMERS_PLAYERS_SUB);
+	const secondBestDir = join(srcRoot, SECOND_BEST_PLAYERS_SUB);
 	const state = loadState(factoryDir);
 	const result: RescanResult = { copied: 0, skipped: 0, themes: 0, members: 0, candidates: 0, groupShots: 0 };
 
 	importThemes(state, playersDir, result);
-	importRosterAndHeadshots(state, playersDir, factoryDir, result);
+	importRosterAndHeadshots(state, playersDir, factoryDir, result, BOARZ_LEAGUE_SLUG, 'Boarz II Men');
+	importRosterAndHeadshots(state, hipDir, factoryDir, result, HIP_JAMMERS_LEAGUE_SLUG, 'Hip Jammers');
+	importRosterAndHeadshots(state, secondBestDir, factoryDir, result, SECOND_BEST_LEAGUE_SLUG, 'Second Best');
 	importExistingAvatars(state, playersDir, factoryDir, result);
 	importAbcAndPlates(state, playersDir, factoryDir, result);
 
 	saveState(state, factoryDir);
 	result.themes = state.themes.length;
-	const league = state.leagues[BOARZ_LEAGUE_SLUG];
-	result.members = league?.members.length ?? 0;
-	result.candidates = league?.members.reduce((n, m) => n + m.candidates.length, 0) ?? 0;
-	result.groupShots = league?.groupShots.length ?? 0;
+	const leagues = Object.values(state.leagues);
+	result.members = leagues.reduce((n, l) => n + l.members.length, 0);
+	result.candidates = leagues.reduce((n, l) => n + l.members.reduce((m, x) => m + x.candidates.length, 0), 0);
+	result.groupShots = leagues.reduce((n, l) => n + l.groupShots.length, 0);
 	return result;
 }
 
@@ -175,10 +193,13 @@ function importRosterAndHeadshots(
 	playersDir: string,
 	factoryDir: string,
 	result: RescanResult,
+	leagueSlug: string,
+	leagueName: string,
 ): void {
-	const league = ensureLeague(state, BOARZ_LEAGUE_SLUG, 'Boarz II Men');
-	const roster = readRoster(BOARZ_LEAGUE_SLUG);
-	const manifest = loadManifestPlayers(playersDir);
+	const league = ensureLeague(state, leagueSlug, leagueName);
+	const roster = readRoster(leagueSlug);
+	const dirOk = existsSync(playersDir) && statSync(playersDir).isDirectory();
+	const manifest = dirOk ? loadManifestPlayers(playersDir) : [];
 	const seen = new Set<string>();
 
 	const rows: { slug: string; name: string; playerId: number | null }[] = [];
@@ -189,23 +210,24 @@ function importRosterAndHeadshots(
 	}
 
 	for (const row of rows) {
-		if (!BOARZ_HEIGHTS[row.slug] && !manifest.some((p) => p.slug === row.slug)) {
+		if (leagueSlug === BOARZ_LEAGUE_SLUG && !BOARZ_HEIGHTS[row.slug] && !manifest.some((p) => p.slug === row.slug)) {
 			// still include DB-only members
 		}
 		const member = ensureMember(league, row.slug, row.name, row.playerId);
 		seen.add(row.slug);
-		const head = join(playersDir, row.slug, 'headshot.png');
-		if (existsSync(head) && !member.photoRel) {
-			const destRel = `${BOARZ_LEAGUE_SLUG}/${row.slug}/headshot.png`;
-			const destAbs = join(photosRoot(factoryDir), destRel);
-			if (!existsSync(destAbs)) {
-				copyOnly(head, destAbs);
-				result.copied += 1;
-			} else {
-				result.skipped += 1;
-			}
-			member.photoRel = destRel;
+		if (!dirOk || member.photoRel) continue;
+		const head = findHeadshot(join(playersDir, row.slug));
+		if (!head) continue;
+		const destName = basename(head).toLowerCase() === 'headshot.jpeg' ? 'headshot.jpg' : basename(head);
+		const destRel = `${leagueSlug}/${row.slug}/${destName}`;
+		const destAbs = join(photosRoot(factoryDir), destRel);
+		if (!existsSync(destAbs)) {
+			copyOnly(head, destAbs);
+			result.copied += 1;
+		} else {
+			result.skipped += 1;
 		}
+		member.photoRel = destRel;
 	}
 
 	for (const p of manifest) {

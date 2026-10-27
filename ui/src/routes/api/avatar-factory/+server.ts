@@ -2,6 +2,7 @@ import { error, isHttpError, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import {
 	createTheme,
+	updateTheme,
 	generateOptions,
 	pickSourcePhoto,
 	publicState,
@@ -12,6 +13,8 @@ import {
 	setStatus,
 	uploadPhoto,
 } from '$lib/server/avatarFactory/actions.js';
+import { brainstormTheme, buildThemePrompt, suggestThemes } from '$lib/server/avatarFactory/brainstorm.js';
+import { startImplementStyle } from '$lib/server/avatarFactory/implementStyle.js';
 import { PathGuardError } from '$lib/server/avatarFactory/paths.js';
 import { BOARZ_LEAGUE_SLUG } from '$lib/server/avatarFactory/notes.js';
 import { ProviderError } from '$lib/server/avatarFactory/errors.js';
@@ -23,7 +26,7 @@ function fail(e: unknown, fallback = 500): never {
 	const msg = e instanceof Error ? e.message : 'error';
 	if (/paused/i.test(msg)) error(503, msg);
 	if (
-		/locked|not found|invalid|too large|not an image|rating|not enabled|needs key|disabled pending|unknown provider|confirm required/i.test(
+		/locked|not found|invalid|too large|not an image|rating|not enabled|needs key|disabled pending|unknown provider|confirm required|missing photos|already in progress|NTFY_URL|no members/i.test(
 			msg,
 		)
 	)
@@ -83,6 +86,14 @@ export const POST: RequestHandler = async ({ request }) => {
 						slug: String(body.slug ?? ''),
 						name: String(body.name ?? ''),
 						prompt: String(body.prompt ?? ''),
+						...(body.attachInspiration != null ? { attachInspiration: body.attachInspiration === true } : {}),
+					}),
+				);
+			case 'update-theme':
+				return json(
+					updateTheme(String(body.slug ?? ''), {
+						name: body.name != null ? String(body.name) : undefined,
+						prompt: body.prompt != null ? String(body.prompt) : undefined,
 					}),
 				);
 			case 'generate':
@@ -116,6 +127,39 @@ export const POST: RequestHandler = async ({ request }) => {
 						themeSlug: String(body.themeSlug),
 						provider: body.provider ? String(body.provider) : undefined,
 						confirmed: body.confirmed === true,
+					}),
+				);
+			case 'brainstorm-theme':
+				return json(
+					await brainstormTheme({
+						idea: body.idea != null ? String(body.idea) : undefined,
+						leagueSlug: body.leagueSlug ? String(body.leagueSlug) : undefined,
+					}),
+				);
+			case 'suggest-themes':
+				return json(
+					await suggestThemes({
+						idea: body.idea != null ? String(body.idea) : undefined,
+						leagueSlug: body.leagueSlug ? String(body.leagueSlug) : undefined,
+						count: body.count != null ? Number(body.count) : undefined,
+					}),
+				);
+			case 'build-theme-prompt':
+				return json(
+					await buildThemePrompt({
+						name: body.name != null ? String(body.name) : undefined,
+						idea: body.idea != null ? String(body.idea) : undefined,
+						notes: body.notes != null ? String(body.notes) : undefined,
+						prompt: body.prompt != null ? String(body.prompt) : undefined,
+						leagueSlug: body.leagueSlug ? String(body.leagueSlug) : undefined,
+					}),
+				);
+			case 'implement-style':
+				return json(
+					await startImplementStyle({
+						leagueSlug: String(body.leagueSlug),
+						themeSlug: String(body.themeSlug),
+						provider: body.provider ? String(body.provider) : undefined,
 					}),
 				);
 			default:

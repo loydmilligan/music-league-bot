@@ -48,6 +48,10 @@ export const BOARZ_PLAYER_IDS: Record<number, string> = {
 
 export const BOARZ_LEAGUE_SLUG = 'boarz-ii-men';
 export const BOARZ_SEASON_NUMBER = 2;
+export const HIP_JAMMERS_LEAGUE_SLUG = 'hip-jammers';
+export const HIP_JAMMERS_PLAYERS_SUB = 'hip-jammers-players';
+export const SECOND_BEST_LEAGUE_SLUG = 'second-best';
+export const SECOND_BEST_PLAYERS_SUB = 'second-best-players';
 
 export function heightFor(slug: string): HeightClass {
 	return BOARZ_HEIGHTS[slug] ?? 'medium';

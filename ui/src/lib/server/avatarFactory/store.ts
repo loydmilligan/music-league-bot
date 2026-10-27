@@ -79,6 +79,35 @@ export interface LeagueRecord {
 	lastSheetRel?: string;
 }
 
+export type StyleJobStatus =
+	| 'awaiting-members'
+	| 'generating-members'
+	| 'awaiting-group'
+	| 'generating-group'
+	| 'done'
+	| 'denied'
+	| 'failed';
+
+export interface StyleJob {
+	id: string;
+	leagueSlug: string;
+	themeSlug: string;
+	name: string;
+	prompt: string;
+	idea?: string;
+	rationale?: string;
+	provider?: string;
+	status: StyleJobStatus;
+	tokens: { members?: string; group?: string };
+	usedTokens: string[];
+	membersDone: string[];
+	skipped: string[];
+	groupShotId?: string;
+	lastError?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface FactoryState {
 	version: 1;
 	costUsd: number;
@@ -87,10 +116,20 @@ export interface FactoryState {
 	themes: ThemeRecord[];
 	leagues: Record<string, LeagueRecord>;
 	importIndex: Record<string, string>;
+	styleJobs: StyleJob[];
 }
 
 export function emptyState(): FactoryState {
-	return { version: 1, costUsd: 0, failedCostUsd: 0, attemptCount: 0, themes: [], leagues: {}, importIndex: {} };
+	return {
+		version: 1,
+		costUsd: 0,
+		failedCostUsd: 0,
+		attemptCount: 0,
+		themes: [],
+		leagues: {},
+		importIndex: {},
+		styleJobs: [],
+	};
 }
 
 export function statePath(root = factoryRoot()): string {
@@ -116,6 +155,7 @@ export function loadState(root = factoryRoot()): FactoryState {
 	raw.costUsd ??= 0;
 	raw.failedCostUsd ??= 0;
 	raw.attemptCount ??= 0;
+	raw.styleJobs ??= [];
 	return raw;
 }
 
