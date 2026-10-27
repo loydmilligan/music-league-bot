@@ -184,7 +184,10 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 		const forfeited = !voterNames.has(s.submitter);
 		const net = forfeited ? vs.reduce((t, v) => t + (v.pts < 0 ? v.pts : 0), 0) : rawNet;
 		const ups = forfeited ? 0 : rawUps;
+		// Tiebreak weight: SUMMED upvote points (ML + standings rule), not the voter count.
+		const upPts = forfeited ? 0 : vs.reduce((t, v) => t + (v.pts > 0 ? v.pts : 0), 0);
 		return {
+			upPts,
 			uri: s.uri,
 			title: s.title,
 			artist: artistText(s.artists),
@@ -203,8 +206,8 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 				.sort((a, b) => (b.pts === 0 ? -99 : b.pts) - (a.pts === 0 ? -99 : a.pts))
 		};
 	});
-	songs.sort((a, b) => b.net - a.net || b.ups - a.ups || a.downs - b.downs || a.title.localeCompare(b.title));
-	const ranked: BallotSong[] = songs.map((s, i) => ({ ...s, rank: i + 1 }));
+	songs.sort((a, b) => b.net - a.net || b.upPts - a.upPts || a.downs - b.downs || a.title.localeCompare(b.title));
+	const ranked: BallotSong[] = songs.map(({ upPts: _upPts, ...s }, i) => ({ ...s, rank: i + 1 }));
 
 	const gridVoters = [...voterNames].sort((a, b) => a.localeCompare(b));
 	const grid: BallotRow[] = gridVoters.map((voter) => {

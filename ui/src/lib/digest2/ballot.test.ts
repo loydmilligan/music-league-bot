@@ -35,7 +35,7 @@ function seedNonVoterRound(db: Database.Database) {
 	sub.run(r, ids.Jimmy, 'uri:tou', 'Toubouk', '["Etran"]', now);
 	sub.run(r, ids.Paletz, 'uri:hard', "What's Hardcore?", '["K\'NAAN"]', now);
 	sub.run(r, ids.Berto, 'uri:radio', 'Radio Ga Ga', '["Queen"]', now);
-	// Jensen 11 from 2 upvoters; Jimmy 11 from 1 upvoter → Jensen ranks above.
+	// Jensen 11 (6+5) and Jimmy 11 (11) tie on net AND summed upvotes; no downs → title order.
 	vote.run(r, ids.Jimmy, 'uri:love', 6, now);
 	vote.run(r, ids.Berto, 'uri:love', 5, now);
 	vote.run(r, ids.Jensen, 'uri:tou', 11, now);
@@ -49,7 +49,7 @@ function seedNonVoterRound(db: Database.Database) {
 	return r;
 }
 
-it('scores a non-voter song as downs-only, ranks by scored net then upvoters, and marks the forfeit', () => {
+it('scores a non-voter song as downs-only, ranks by scored net, and marks the forfeit', () => {
 	const r = seedNonVoterRound(db);
 	const ballot = buildDigest2Ballot(db, r);
 	expect(ballot).not.toBeNull();
@@ -90,4 +90,33 @@ it('with an Avatar Factory set chosen, faces come from that set only; missing pl
 		if (prev === undefined) delete process.env.DATA_DIR;
 		else process.env.DATA_DIR = prev;
 	}
+});
+
+it('breaks a points tie on SUMMED upvote points, not the number of upvoters (matches ML + standings)', () => {
+	seedLeagues(db);
+	const leagueId = (db.prepare("SELECT id FROM leagues WHERE slug='boarz-ii-men'").get() as { id: number }).id;
+	const seasonId = upsertSeason(db, leagueId, 1, 'active');
+	const r = upsertRound(db, seasonId, { mlRoundId: 'tie-sum', name: 'R', description: '', spotifyPlaylistUrl: '', createdAt: '2026-01-01T00:00:00Z' });
+	const c = db.prepare('INSERT INTO competitors (ml_competitor_id, name) VALUES (?, ?)');
+	const ids: Record<string, number> = {};
+	for (const n of ['Ann', 'Bob', 'Cy', 'Di', 'Ed']) ids[n] = Number(c.run(`t-${n}`, n).lastInsertRowid);
+	const sub = db.prepare('INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at) VALUES (?,?,?,?,?,?)');
+	const vote = db.prepare('INSERT INTO votes (round_id, voter_id, spotify_uri, points, created_at) VALUES (?,?,?,?,?)');
+	const now = '2026-01-01T00:00:00Z';
+	sub.run(r, ids.Ann, 'uri:a', 'Alpha', '["X"]', now);
+	sub.run(r, ids.Bob, 'uri:b', 'Bravo', '["X"]', now);
+	// Both net 10. Alpha: three upvoters summing 10. Bravo: two upvoters summing 12, one -2.
+	// By upvoter COUNT Alpha wins; by SUMMED upvote points (ML's rule) Bravo wins.
+	vote.run(r, ids.Bob, 'uri:a', 4, now);
+	vote.run(r, ids.Cy, 'uri:a', 3, now);
+	vote.run(r, ids.Di, 'uri:a', 3, now);
+	vote.run(r, ids.Cy, 'uri:b', 6, now);
+	vote.run(r, ids.Di, 'uri:b', 6, now);
+	vote.run(r, ids.Ed, 'uri:b', -2, now);
+	vote.run(r, ids.Ann, 'uri:b', 0, now);
+	const ballot = buildDigest2Ballot(db, r)!;
+	expect(ballot.songs.map((s) => [s.rank, s.title, s.net])).toEqual([
+		[1, 'Bravo', 10],
+		[2, 'Alpha', 10],
+	]);
 });
