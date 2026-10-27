@@ -348,6 +348,10 @@ const LEAGUE_ALIASES: Record<
     { match: 'conorific', asName: 'CJ Wookie', exactOnly: true },
     { match: 'Falleetz', asName: 'Darren Paletz', exactOnly: true },
     { match: 'Jensownian', asName: 'djensen37', exactOnly: true },
+    // S2 R3 (round 169) coinages.
+    { match: 'farkasian', asName: 'Shane Farkas', exactOnly: true },
+    { match: 'Grushfire', asName: 'Bagel Shop', exactOnly: true },
+    { match: 'hanclammy', asName: 'Clements', exactOnly: true },
   ],
   // Second Best is a family league, so it collides on surnames the way Boarz
   // collides on "Dave". Four names are deliberately absent:
