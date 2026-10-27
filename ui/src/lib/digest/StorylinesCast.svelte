@@ -366,6 +366,12 @@
   }
   .stl-chev.is-open { transform: rotate(90deg); }
   .stl-trig .stl-mo { margin-left: auto; }
+  /* Phone: the motif takes its own line under the archetype + player, or a long
+     motif squeezes the player name until it breaks mid-word ("Jonath / an Black"). */
+  @media (max-width: 480px) {
+    .stl-trig { flex-wrap: wrap; row-gap: 4px; }
+    .stl-trig .stl-mo { flex-basis: 100%; margin-left: 20px; text-align: left; }
+  }
   .stl-panel {
     padding: 2px 15px 15px 36px;
     background: var(--surface);
