@@ -48,6 +48,7 @@ export interface FactoryCtx {
 	normalizeImpl?: (input: Buffer, filename: string) => Promise<NormalizedImage>;
 	composeSheetImpl?: (tiles: { input: Buffer; name: string }[]) => Promise<SheetResult>;
 	timeoutMs?: number;
+	ntfyFetchImpl?: FetchLike;
 }
 
 function roots(ctx: FactoryCtx) {
@@ -152,6 +153,7 @@ export function publicState(leagueSlug: string, ctx: FactoryCtx = {}) {
 		providers: listProviders(),
 		defaultProvider: DEFAULT_PROVIDER,
 		costTotals: factoryCostTotals(fresh, leagueSlug),
+		styleJobs: (fresh.styleJobs ?? []).filter((j) => j.leagueSlug === leagueSlug),
 	};
 }
 
@@ -272,6 +274,24 @@ export function createTheme(
 		source: 'in-app',
 	};
 	state.themes.push(theme);
+	saveState(state, factoryDir);
+	return theme;
+}
+
+export function updateTheme(
+	slug: string,
+	input: { name?: string; prompt?: string },
+	ctx: FactoryCtx = {},
+) {
+	const { factoryDir } = roots(ctx);
+	const state = loadState(factoryDir);
+	const theme = state.themes.find((x) => x.slug === slug);
+	if (!theme) throw new Error('theme not found');
+	if (input.name != null) {
+		const name = input.name.trim();
+		if (name) theme.name = name;
+	}
+	if (input.prompt != null) theme.prompt = input.prompt;
 	saveState(state, factoryDir);
 	return theme;
 }

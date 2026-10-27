@@ -92,6 +92,16 @@
 		generationPaused?: boolean;
 		pausedMessage?: string | null;
 		costTotals?: { overall: CostBucket; league: CostBucket; themes: Record<string, CostBucket> };
+		styleJobs?: {
+			id: string;
+			themeSlug: string;
+			name: string;
+			status: string;
+			membersDone: string[];
+			skipped: string[];
+			lastError?: string;
+			updatedAt: string;
+		}[];
 	};
 
 	let { data } = $props();
@@ -108,9 +118,22 @@
 	let tweakNote = $state('');
 	let pickerOpen = $state(false);
 	let pickerPath = $state('boarz-players');
+	function pickerRootForLeague(slug: string): string {
+		if (slug === 'hip-jammers') return 'hip-jammers-players';
+		if (slug === 'second-best') return 'second-best-players';
+		return 'boarz-players';
+	}
 	let pickerEntries = $state<{ name: string; rel: string; type: 'file' | 'dir'; size: number }[]>([]);
 	let newThemeName = $state('');
 	let newThemePrompt = $state('');
+	let newThemeNotes = $state('');
+	let newThemeSlug = $state('');
+	let newThemeRationale = $state('');
+	let brainstormIdea = $state('');
+	let suggestions = $state<
+		{ slug: string; name: string; prompt: string; rationale: string; source: string }[]
+	>([]);
+	let pickedSuggestion = $state('');
 	let providerId = $state('openrouter');
 	let confirmJob = $state<null | {
 		title: string;
@@ -140,6 +163,9 @@
 		generationPaused || !!busy || !selectedProvider?.enabled || selectedProvider?.available === false,
 	);
 	const themeCosts = $derived(payload?.costTotals?.themes?.[themeSlug]);
+	const latestJob = $derived(
+		[...(payload?.styleJobs ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null,
+	);
 
 	function fmtBucket(b?: CostBucket) {
 		if (!b) return '$0';
@@ -191,7 +217,7 @@
 		return `/api/avatar-factory/media/${kind}/${rel.split('/').map(encodeURIComponent).join('/')}`;
 	}
 
-	async function post(body: Record<string, unknown>) {
+	async function post(body: Record<string, unknown>, opts?: { reload?: boolean }) {
 		busy = String(body.action ?? 'working');
 		errorMsg = '';
 		try {
@@ -209,13 +235,30 @@
 				}
 				throw new Error((j as { message?: string }).message || (j as { error?: string }).error || r.statusText);
 			}
-			await reload();
+			if (opts?.reload !== false) await reload();
 			return j;
 		} catch (e) {
 			errorMsg = e instanceof Error ? e.message : 'request failed';
 		} finally {
 			busy = '';
 		}
+	}
+
+	function applyDraft(d: { slug?: string; name?: string; prompt?: string; rationale?: string }) {
+		if (d.slug) newThemeSlug = d.slug;
+		if (d.name) newThemeName = d.name;
+		if (d.prompt) newThemePrompt = d.prompt;
+		if (d.rationale) newThemeRationale = d.rationale;
+	}
+
+	function loadSelectedIntoBuilder() {
+		if (!theme) return;
+		newThemeSlug = theme.slug;
+		newThemeName = theme.name;
+		newThemePrompt = theme.prompt;
+		newThemeRationale = '';
+		newThemeNotes = '';
+		pickedSuggestion = theme.slug;
 	}
 
 	async function reload() {
@@ -229,6 +272,7 @@
 
 	async function onLeague(slug: string) {
 		leagueSlug = slug;
+		pickerPath = pickerRootForLeague(slug);
 		await reload();
 		memberSlug = payload?.league.members[0]?.slug ?? '';
 	}
@@ -324,16 +368,19 @@
 				{/each}
 			</select>
 		</label>
-		<div class="flex gap-2 flex-wrap">
-			{#each themes as t}
-				<button
-					type="button"
-					data-theme={t.slug}
-					class={themeSlug === t.slug ? btn : btnGhost}
-					onclick={() => (themeSlug = t.slug)}>{t.name}</button
-				>
-			{/each}
-		</div>
+		<label class="flex flex-col gap-1 text-xs font-mono uppercase tracking-wider text-fg-faint">
+			Theme
+			<select
+				class="bg-surface border border-border rounded-md px-2 py-2 text-sm text-fg min-w-56"
+				data-theme-select
+				value={themeSlug}
+				onchange={(e) => (themeSlug = (e.currentTarget as HTMLSelectElement).value)}
+			>
+				{#each themes as t}
+					<option value={t.slug} data-theme={t.slug}>{t.name}</option>
+				{/each}
+			</select>
+		</label>
 		<label class="flex flex-col gap-1 text-xs font-mono uppercase tracking-wider text-fg-faint">
 			Provider
 			<select
@@ -353,6 +400,35 @@
 			{busy === 'rescan' ? 'Scanning…' : 'Rescan sources'}
 		</button>
 	</div>
+
+	{#if theme}
+		<div class="bg-surface border border-border rounded-md p-3 space-y-2" data-theme-preview>
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<p class="font-mono text-xs uppercase tracking-wider text-fg-faint">
+					{theme.name}
+					<span class="text-fg-dim">· {theme.slug}</span>
+				</p>
+				<div class="flex flex-wrap gap-2">
+					<button type="button" class={btnGhost} onclick={loadSelectedIntoBuilder}>Edit in builder</button>
+					<button
+						type="button"
+						class={btn}
+						disabled={!!busy || !themeSlug}
+						onclick={() => post({ action: 'implement-style', leagueSlug, themeSlug, provider: providerId })}
+						>Implement this style</button
+					>
+				</div>
+			</div>
+			<pre class="whitespace-pre-wrap text-sm text-fg-muted font-sans leading-snug max-h-28 overflow-auto">{theme.prompt}</pre>
+			{#if latestJob}
+				<p class="font-mono text-xs text-fg-dim" data-style-job>
+					Job {latestJob.name} · {latestJob.status}
+					{#if latestJob.membersDone?.length} · {latestJob.membersDone.length} done{/if}
+					{#if latestJob.lastError} · {latestJob.lastError}{/if}
+				</p>
+			{/if}
+		</div>
+	{/if}
 
 	<section class="grid md:grid-cols-[220px_1fr] gap-6">
 		<aside class="space-y-2">
@@ -597,18 +673,134 @@
 		</div>
 	</section>
 
-	<section class="space-y-2 border-t border-border-muted pt-6">
-		<SectionLabel>New theme</SectionLabel>
+	<section class="space-y-3 border-t border-border-muted pt-6" data-theme-suggester>
+		<SectionLabel>Theme suggester</SectionLabel>
+		<p class="text-sm text-fg-muted">
+			Suggest a handful of styles from an idea. Pick one into the prompt builder, refine, then save. Implement still uses
+			the selected theme and two ntfy avatar-hil taps.
+		</p>
 		<div class="flex flex-wrap gap-2">
-			<input class="bg-surface border border-border rounded-md px-2 py-2 text-sm" placeholder="Name" bind:value={newThemeName} />
-			<input class="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm" placeholder="Prompt" bind:value={newThemePrompt} />
+			<input
+				class="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm"
+				placeholder="Idea (optional) — muppets, stained glass, bakersfield diner…"
+				bind:value={brainstormIdea}
+			/>
+			<button
+				type="button"
+				class={btn}
+				data-suggest
+				disabled={!!busy}
+				onclick={async () => {
+					const j = (await post(
+						{ action: 'suggest-themes', idea: brainstormIdea, leagueSlug, count: 5 },
+						{ reload: false },
+					)) as { drafts?: typeof suggestions } | undefined;
+					suggestions = j?.drafts ?? [];
+					pickedSuggestion = '';
+				}}>{busy === 'suggest-themes' ? 'Suggesting…' : 'Suggest styles'}</button
+			>
+		</div>
+		{#if suggestions.length}
+			<ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+				{#each suggestions as s}
+					<li>
+						<button
+							type="button"
+							data-style-draft={s.slug}
+							class="w-full text-left bg-surface border rounded-md p-3 space-y-1 hover:bg-accent-bg transition-colors {pickedSuggestion ===
+							s.slug
+								? 'border-accent'
+								: 'border-border'}"
+							onclick={() => {
+								pickedSuggestion = s.slug;
+								applyDraft(s);
+								if (brainstormIdea.trim() === '') brainstormIdea = s.name;
+							}}
+						>
+							<p class="font-display text-base">{s.name}</p>
+							<p class="text-xs text-fg-muted">{s.rationale}</p>
+							<p class="font-mono text-[10px] text-fg-dim">{s.source} · {s.slug}</p>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+
+	<section class="space-y-3 border-t border-border-muted pt-6" data-prompt-builder>
+		<SectionLabel>Prompt builder</SectionLabel>
+		<div class="grid sm:grid-cols-2 gap-2">
+			<input
+				class="bg-surface border border-border rounded-md px-2 py-2 text-sm"
+				placeholder="Name"
+				bind:value={newThemeName}
+			/>
+			<input
+				class="bg-surface border border-border rounded-md px-2 py-2 text-sm"
+				placeholder="Slug (optional)"
+				bind:value={newThemeSlug}
+			/>
+		</div>
+		<input
+			class="w-full bg-surface border border-border rounded-md px-2 py-2 text-sm"
+			placeholder="Builder notes — wardrobe, palette, era, what to avoid"
+			bind:value={newThemeNotes}
+		/>
+		<textarea
+			class="w-full min-h-28 bg-surface border border-border rounded-md px-2 py-2 text-sm"
+			placeholder="Style prompt for a 1:1 portrait"
+			bind:value={newThemePrompt}
+		></textarea>
+		{#if newThemeRationale}
+			<p class="text-sm text-fg-muted">{newThemeRationale}</p>
+		{/if}
+		<div class="flex flex-wrap gap-2">
 			<button
 				type="button"
 				class={btnGhost}
-				disabled={!newThemeName.trim() || !newThemePrompt.trim()}
-				onclick={() =>
-					post({ action: 'create-theme', name: newThemeName, slug: newThemeName, prompt: newThemePrompt })}
-				>Add theme</button
+				data-build-prompt
+				disabled={!!busy || (!newThemeName.trim() && !brainstormIdea.trim() && !newThemePrompt.trim())}
+				onclick={async () => {
+					const j = (await post(
+						{
+							action: 'build-theme-prompt',
+							name: newThemeName,
+							idea: brainstormIdea,
+							notes: newThemeNotes,
+							prompt: newThemePrompt,
+							leagueSlug,
+						},
+						{ reload: false },
+					)) as { draft?: { slug?: string; name?: string; prompt?: string; rationale?: string } } | undefined;
+					if (j?.draft) applyDraft(j.draft);
+				}}>{busy === 'build-theme-prompt' ? 'Building…' : 'Build prompt'}</button
+			>
+			<button
+				type="button"
+				class={btn}
+				data-save-theme
+				disabled={!!busy || !newThemeName.trim() || !newThemePrompt.trim()}
+				onclick={async () => {
+					const existing = themes.some((t) => t.slug === (newThemeSlug.trim() || newThemeName.trim()));
+					if (existing) {
+						const j = (await post({
+							action: 'update-theme',
+							slug: newThemeSlug.trim() || newThemeName.trim(),
+							name: newThemeName,
+							prompt: newThemePrompt,
+						})) as { slug?: string } | undefined;
+						if (j?.slug) themeSlug = j.slug;
+					} else {
+						const j = (await post({
+							action: 'create-theme',
+							name: newThemeName,
+							slug: newThemeSlug || newThemeName,
+							prompt: newThemePrompt,
+							attachInspiration: false,
+						})) as { slug?: string } | undefined;
+						if (j?.slug) themeSlug = j.slug;
+					}
+				}}>{themes.some((t) => t.slug === (newThemeSlug.trim() || newThemeName.trim())) ? 'Save prompt' : 'Save as theme'}</button
 			>
 		</div>
 	</section>

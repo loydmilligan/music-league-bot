@@ -43,6 +43,58 @@ describe('rescan import is copy-only and idempotent', () => {
 		).toHaveLength(matt.candidates.length);
 	});
 
+	it('imports second-best jpg headshots into the second-best league', () => {
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-sb-src-'));
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-sb-dst-'));
+		mkdirSync(join(sourcesDir, 'boarz-players'), { recursive: true });
+		const jon = join(sourcesDir, 'second-best-players/jon-black');
+		mkdirSync(jon, { recursive: true });
+		writeFileSync(join(jon, 'headshot.jpg'), PNG);
+		writeFileSync(
+			join(sourcesDir, 'second-best-players/manifest.json'),
+			JSON.stringify({ players: [{ slug: 'jon-black', name: 'Jon Black', player_id: 4 }] }),
+		);
+
+		const first = rescanSources({ factoryDir, sourcesDir });
+		expect(first.copied).toBeGreaterThan(0);
+		const state = loadState(factoryDir);
+		const member = state.leagues['second-best'].members.find((m) => m.slug === 'jon-black')!;
+		expect(member.photoRel).toBe('second-best/jon-black/headshot.jpg');
+		expect(existsSync(join(factoryDir, 'photos', member.photoRel!))).toBe(true);
+
+		const second = rescanSources({ factoryDir, sourcesDir });
+		expect(second.copied).toBe(0);
+		expect(
+			loadState(factoryDir).leagues['second-best'].members.find((m) => m.slug === 'jon-black')!.photoRel,
+		).toBe('second-best/jon-black/headshot.jpg');
+	});
+
+	it('imports hip-jammers jpg headshots into the hip-jammers league', () => {
+		const sourcesDir = mkdtempSync(join(tmpdir(), 'af-hip-src-'));
+		const factoryDir = mkdtempSync(join(tmpdir(), 'af-hip-dst-'));
+		mkdirSync(join(sourcesDir, 'boarz-players'), { recursive: true });
+		const mara = join(sourcesDir, 'hip-jammers-players/mara-mariani');
+		mkdirSync(mara, { recursive: true });
+		writeFileSync(join(mara, 'headshot.jpg'), PNG);
+		writeFileSync(
+			join(sourcesDir, 'hip-jammers-players/manifest.json'),
+			JSON.stringify({ players: [{ slug: 'mara-mariani', name: 'Mara Mariani', player_id: 2 }] }),
+		);
+
+		const first = rescanSources({ factoryDir, sourcesDir });
+		expect(first.copied).toBeGreaterThan(0);
+		const state = loadState(factoryDir);
+		const member = state.leagues['hip-jammers'].members.find((m) => m.slug === 'mara-mariani')!;
+		expect(member.photoRel).toBe('hip-jammers/mara-mariani/headshot.jpg');
+		expect(existsSync(join(factoryDir, 'photos', member.photoRel!))).toBe(true);
+
+		const second = rescanSources({ factoryDir, sourcesDir });
+		expect(second.copied).toBe(0);
+		expect(
+			loadState(factoryDir).leagues['hip-jammers'].members.find((m) => m.slug === 'mara-mariani')!.photoRel,
+		).toBe('hip-jammers/mara-mariani/headshot.jpg');
+	});
+
 	it('parses <slug>-<letter><n>.png variants', () => {
 		expect(parseAbcFilename('matt-mariani-A.png')).toEqual({ slug: 'matt-mariani', letter: 'A', tag: 'A' });
 		expect(parseAbcFilename('conor-johnston-C2.png')).toEqual({ slug: 'conor-johnston', letter: 'C', tag: 'C2' });

@@ -77,6 +77,8 @@ services:
       # Avatar Factory v1 — READ-ONLY player photo library. Picker lists only
       # under AVATAR_SOURCES_DIR. Originals are never modified.
       - ${HOME}/Pictures/boarz-players:/app/avatar-sources/boarz-players:ro
+      - ${HOME}/Pictures/hip-jammers-players:/app/avatar-sources/hip-jammers-players:ro
+      - ${HOME}/Pictures/second-best-players:/app/avatar-sources/second-best-players:ro
     restart: unless-stopped
 
   # Public file server for the shared digests/ volume (sprint-20). No DB, and no
