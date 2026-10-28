@@ -48,6 +48,8 @@
      * where that origin story means nothing.
      */
     note?: string;
+    /** Optional dress-up for a themed round. "got" = Game of Thrones: Cinzel type, house colors, crests. */
+    theme?: string;
   };
 
   export const DEFAULT_REGULARS_NOTE =
@@ -127,9 +129,24 @@
     return out.sort((a, b) => a.rank - b.rank);
   });
   const showCardGrid = $derived(gridCards.length >= 3);
+
+  // Opt-in house dress per Regular (any theme): `crest` image URL + `color`
+  // accent. Read from the raw content for the same reason as clips.
+  const themed = $derived(c.theme === 'got');
+  function houseOf(m: StorylineCastMember): { crest: string; color: string } {
+    const raw = rawCast.find((r) => (r?.name as string) === m.name);
+    const color = typeof raw?.color === 'string' && /^#[0-9a-f]{3,8}$/i.test(raw.color) ? raw.color : '';
+    return { crest: safeUrl(raw?.crest as string | undefined), color };
+  }
 </script>
 
-<div class="stl" data-component="storylines-render" data-export={isExport}>
+<svelte:head>
+  {#if themed}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" />
+  {/if}
+</svelte:head>
+
+<div class="stl" class:stl--got={themed} data-component="storylines-render" data-export={isExport}>
   <div class="stl-subhead">
     who gave themselves away this week{#if n}<span> · <b>{n}</b> {n === 1 ? 'tell' : 'tells'} fired</span>{/if}
   </div>
@@ -168,8 +185,10 @@
         {#each cast as m, i (i)}
           {@const style = resolveStyle(m)}
           {@const C = REGISTRY[style]}
-          <div class="stl-card">
+          {@const house = houseOf(m)}
+          <div class="stl-card" style:--house={house.color || null}>
             <p class="stl-cardhd">
+              {#if house.crest}<img class="stl-crest" src={house.crest} alt="" />{/if}
               <span class="stl-name">{m.name}</span>
               {#if m.player && m.player !== m.name}<span class="stl-who">{m.player}</span>{/if}
               {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
@@ -185,7 +204,8 @@
         {#each cast as m, i (i)}
           {@const style = resolveStyle(m)}
           {@const C = REGISTRY[style]}
-          <div class="stl-item">
+          {@const house = houseOf(m)}
+          <div class="stl-item" style:--house={house.color || null}>
             <button
               type="button"
               class="stl-trig"
@@ -194,6 +214,7 @@
               onclick={() => toggle(i)}
             >
               <span class="stl-chev" class:is-open={open[i]} aria-hidden="true">▸</span>
+              {#if house.crest}<img class="stl-crest" src={house.crest} alt="" />{/if}
               <span class="stl-name">{m.name}</span>
               {#if m.player && m.player !== m.name}<span class="stl-who">{m.player}</span>{/if}
               {#if m.motif}<span class="stl-mo">{m.motif}</span>{/if}
@@ -218,6 +239,14 @@
 </div>
 
 <style>
+  .stl-trig:has(.stl-crest), .stl-cardhd:has(.stl-crest) { align-items: center; }
+  .stl-crest { width: 34px; height: 34px; object-fit: contain; flex: none; margin-right: 2px; }
+  .stl-item[style*='--house'], .stl-card[style*='--house'] { border-left: 4px solid var(--house); padding-left: 10px; }
+  .stl--got .stl-name, .stl--got .stl-subhead, .stl--got .stl-reg {
+    font-family: 'Cinzel', Georgia, serif; letter-spacing: 0.04em;
+  }
+  .stl--got .stl-name { font-weight: 700; text-transform: uppercase; }
+  .stl--got .stl-item[style*='--house'] .stl-name, .stl--got .stl-card[style*='--house'] .stl-name { color: var(--house); }
   .stl {
     display: flex;
     flex-direction: column;
