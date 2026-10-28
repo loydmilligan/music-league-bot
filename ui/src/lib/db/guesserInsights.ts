@@ -376,9 +376,19 @@ const LEAGUE_ALIASES: Record<
     { match: 'Mike Black', asName: 'monicac1217' },
     { match: 'Monica', asName: 'monicac1217' },
     { match: 'Zucker', asName: 'Sarah' },
-    { match: 'Sarah Z', asName: 'Sarah' },
+    { match: 'Sarah Z', asName: 'Sarah', exactOnly: true },
     { match: 'SZ', asName: 'Sarah', allowShort: true },
-    { match: 'Sarah Black', asName: 'Sarah S' },
+    // "Sarah S" was her old handle and no longer exists as a competitor, so this
+    // alias silently resolved nothing. She is Queen0Reno now.
+    { match: 'Sarah Black', asName: 'Queen0Reno' },
+    // R181: "Sarah B" fell through to Zucker's bare "Sarah", and the fuzzy rule
+    // let "Sarah Z" claim it too ("sarahb" is one edit from "sarahz"). Both
+    // two-letter Sarahs are exact-only for that reason.
+    { match: 'Sarah B', asName: 'Queen0Reno', exactOnly: true },
+    { match: 'MB', asName: 'monicac1217', allowShort: true },
+    { match: 'JP', asName: 'JohnPaul Rodriguez', allowShort: true },
+    // Mara won S2. Re-point this when a new champion is crowned.
+    { match: 'defending champ', asName: 'missmara', exactOnly: true },
     { match: 'Susan', asName: 'SusieQ' },
     { match: 'Susie', asName: 'SusieQ' },
     { match: 'Suz', asName: 'SusieQ' },

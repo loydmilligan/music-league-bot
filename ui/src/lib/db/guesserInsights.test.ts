@@ -452,3 +452,57 @@ describe('boarz-ii-men guess aliases', () => {
     expect(matt?.cells[0]).toMatchObject({ attempts: 0, note: 'a joke, not a guess' });
   });
 });
+
+// ── Second Best guess aliases ─────────────────────────────────────────────────
+//
+// S3 R3 (round 181): Matt guessed 11 songs and got JP's and Mara's right, but the
+// matcher scored 1/9 — and the one it scored right was wrong. "Sarah B buy
+// Process of Elim" matched Zucker's competitor name "Sarah" (the B was ignored),
+// so a wrong guess of Sarah Black counted as a correct guess of Sarah Zucker.
+// "JP", "MB" and "defending champ" reached nobody. The roster below keeps Zucker
+// as plain "Sarah" so the Sarah B row discriminates.
+describe('second-best guess aliases', () => {
+  const guesses: [comment: string, roster: string][] = [
+    ['Sarah B buy Process of Elim', 'Queen0Reno'],
+    ['Sarah Z', 'Sarah'],
+    ['JP', 'JohnPaul Rodriguez'],
+    ['MB', 'monicac1217'],
+    ['great song, submitted by the defending champ', 'missmara'],
+  ];
+
+  function sbDb(): Database.Database {
+    const b = openLeagueDb(':memory:');
+    b.prepare("INSERT INTO leagues (id, slug, name) VALUES (1, 'second-best', 'Second Best')").run();
+    b.prepare("INSERT INTO seasons (id, league_id, season_number, status) VALUES (1, 1, 3, 'active')").run();
+    b.prepare("INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (1, 1, 'r-1', 'R', '2026-01-01T00:00:00Z')").run();
+    const insertPlayer = b.prepare('INSERT INTO players (id, name) VALUES (?, ?)');
+    const insertCompetitor = b.prepare('INSERT INTO competitors (id, ml_competitor_id, name, player_id) VALUES (?, ?, ?, ?)');
+    insertPlayer.run(1, 'Matt Mariani');
+    insertCompetitor.run(1, 'ml-matt', 'Mashew', 1);
+    // Every roster name submits a song, so each alias has a live candidate; the
+    // guessed song is always the named person's, so resolved = correct.
+    const roster = [...new Set(guesses.map(([, r]) => r))];
+    roster.forEach((name, i) => {
+      insertPlayer.run(i + 2, name);
+      insertCompetitor.run(i + 2, `ml-${i + 2}`, name, i + 2);
+    });
+    guesses.forEach(([comment, name], i) => {
+      const uri = `uri-${String(i).padStart(3, '0')}`;
+      b.prepare(
+        `INSERT INTO ml_submissions (round_id, competitor_id, spotify_uri, title, artists, created_at)
+         VALUES (1, ?, ?, ?, 'Artist', '2026-01-01T01:00:00Z')`,
+      ).run(roster.indexOf(name) + 2, uri, `Song ${i}`);
+      b.prepare(
+        `INSERT INTO votes (round_id, voter_id, spotify_uri, points, comment, created_at)
+         VALUES (1, 1, ?, 1, ?, '2026-01-01T12:00:00Z')`,
+      ).run(uri, comment);
+    });
+    return b;
+  }
+
+  it('resolves R181 guesses to the right player', () => {
+    const data = getGuesserData(sbDb(), 1);
+    expect(data.weekly.guesses.map((g) => [g.comment, g.guessedName])).toEqual(guesses);
+    expect(data.weekly.correct).toBe(guesses.length);
+  });
+});
