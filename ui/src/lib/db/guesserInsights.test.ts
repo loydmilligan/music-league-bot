@@ -465,6 +465,7 @@ describe('second-best guess aliases', () => {
   const guesses: [comment: string, roster: string][] = [
     ['Sarah B buy Process of Elim', 'Queen0Reno'],
     ['Sarah Z', 'Sarah'],
+    ['Zuck cause...obviously zuck', 'Sarah'],
     ['JP', 'JohnPaul Rodriguez'],
     ['MB', 'monicac1217'],
     ['great song, submitted by the defending champ', 'missmara'],

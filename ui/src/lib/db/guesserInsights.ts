@@ -376,6 +376,8 @@ const LEAGUE_ALIASES: Record<
     { match: 'Mike Black', asName: 'monicac1217' },
     { match: 'Monica', asName: 'monicac1217' },
     { match: 'Zucker', asName: 'Sarah' },
+    // R182: "Zuck cause...obviously zuck" was a correct guess that reached nobody.
+    { match: 'Zuck', asName: 'Sarah', exactOnly: true },
     { match: 'Sarah Z', asName: 'Sarah', exactOnly: true },
     { match: 'SZ', asName: 'Sarah', allowShort: true },
     // "Sarah S" was her old handle and no longer exists as a competitor, so this
