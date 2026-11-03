@@ -49,6 +49,22 @@
       : [],
   );
 
+  // Bare https:// URLs inside a moment's text render as links. Plain text only:
+  // no HTML is ever injected, and only https is linked.
+  type Part = { text: string; href?: string };
+  function parts(text: string): Part[] {
+    const out: Part[] = [];
+    let last = 0;
+    for (const m of text.matchAll(/https:\/\/[^\s<>"')]+[^\s<>"')\].,;:!?]/g)) {
+      const i = m.index ?? 0;
+      if (i > last) out.push({ text: text.slice(last, i) });
+      out.push({ text: m[0], href: m[0] });
+      last = i + m[0].length;
+    }
+    if (last < text.length) out.push({ text: text.slice(last) });
+    return out;
+  }
+
   // Static (PNG/PDF) export can't expand → render the anchor-linked variant.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
 
@@ -87,7 +103,7 @@
             <p class="chatm-detail-label">
               <span class="chatm-detail-num">{String(i + 1).padStart(2, '0')}</span>{m.label ?? ''}
             </p>
-            {#if m.detail}<p class="chatm-detail-body">{m.detail}</p>{/if}
+            {#if m.detail}<p class="chatm-detail-body">{#each parts(m.detail) as seg}{#if seg.href}<a href={seg.href} target="_blank" rel="noopener noreferrer">{seg.text}</a>{:else}{seg.text}{/if}{/each}</p>{/if}
           </div>
         {/each}
       </div>
@@ -108,7 +124,7 @@
             </button>
             {#if open[i]}
               <div class="chatm-panel" id={anchorId(i)} role="region">
-                {#if m.detail}<p class="chatm-detail-body">{m.detail}</p>{:else}<p
+                {#if m.detail}<p class="chatm-detail-body">{#each parts(m.detail) as seg}{#if seg.href}<a href={seg.href} target="_blank" rel="noopener noreferrer">{seg.text}</a>{:else}{seg.text}{/if}{/each}</p>{:else}<p
                     class="chatm-detail-body chatm-empty"
                   >(no detail)</p>{/if}
               </div>
@@ -279,6 +295,11 @@
     font: 400 12.5px/1.55 var(--font-body);
     color: var(--fg-2);
     white-space: pre-wrap;
+  }
+  .chatm-detail-body a {
+    color: inherit;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
   }
   .chatm-empty {
     color: var(--fg-quiet);
