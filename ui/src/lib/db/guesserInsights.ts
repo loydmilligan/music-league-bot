@@ -348,6 +348,8 @@ const LEAGUE_ALIASES: Record<
     { match: 'conorific', asName: 'CJ Wookie', exactOnly: true },
     { match: 'Falleetz', asName: 'Darren Paletz', exactOnly: true },
     { match: 'Jensownian', asName: 'djensen37', exactOnly: true },
+    // S2 R4 (round 170): Matt's "Stenson" for Jensen, a correct guess that reached nobody.
+    { match: 'Stenson', asName: 'djensen37', exactOnly: true },
     // S2 R3 (round 169) coinages.
     { match: 'farkasian', asName: 'Shane Farkas', exactOnly: true },
     { match: 'Grushfire', asName: 'Bagel Shop', exactOnly: true },

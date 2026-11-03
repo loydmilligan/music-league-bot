@@ -314,6 +314,7 @@ describe('boarz-ii-men guess aliases', () => {
     ['Grushfriend is my submitter guess because the comment.', 'Bagel Shop'],
     ['Good stuff.  Falleetz', 'Darren Paletz'],
     ['what sounds like a bird - Jensownian institute is my guess', 'djensen37'],
+    ['Stenson', 'djensen37'],
     // S2 R3 (round 169): three of Matt's nine guesses were coinages no rule reached.
     ['farkasian- laugh tears in heaven and i am in', 'Shane Farkas'],
     ['Grushfire - not my fav - but at least interesting', 'Bagel Shop'],
