@@ -46,18 +46,18 @@ PODIUM = {
          "color": "Tommy's pitch opened \"This song fucking rules!\" and the room agreed in points. Phil paid "
                   "the maximum 3, five voters paid 2, Jac paid 1, and only JohnPaul brought a knife. Tommy found "
                   "the band on his YouTube feed \"a couple months ago,\" which in this league counts as research. "
-                  "For the occasion we redrew the cover with him as the screamer.",
+                  "For the occasion we redrew the cover with him in it, smiling, with the black eyes.",
          "coverUrl": "https://digest.mattmariani.com/_media/r182/lobotomize-tommy-wipe.gif"},
         {"place": 2, "artist": "Noname", "title": "namesake", "submitter": "Jonathan Black", "points": 11,
          "color": "Jon's pitch spends one sentence on the IBTC and the Kendrick Lamar NFL deal. Five voters "
                   "paid and nobody knifed it. Sarah Black and Sarah Zucker both paid the maximum. "
-                  "On the cover he has taken over the portrait, hoops and all.",
+                  "On the cover he has taken over the portrait, glasses, hoops and a second set of lips.",
          "coverUrl": "https://digest.mattmariani.com/_media/r182/namesake-jon-wipe.gif"},
         {"place": 3, "artist": "Us", "title": "Yo-Yo Revolution", "submitter": "missmara", "points": 9,
          "color": "Mara's pitch was one line of Finnish, \"Suoraan Helsingistä toukokuussa 2026,\" which means "
                   "straight from Helsinki, May 2026. Six voters paid and nobody knifed it. Matt's 3 came with a "
                   "witness statement: \"Mara as she has been playing this a lot this week.\" "
-                  "Cabaret cover, now with a yo-yo and two Maras.",
+                  "Cabaret cover, with Mara in sunglasses, lying back, unbothered.",
          "coverUrl": "https://digest.mattmariani.com/_media/r182/yoyo-mara-wipe.gif"},
     ],
 }
