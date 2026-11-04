@@ -19,11 +19,14 @@ vi.mock('$lib/server/coverFactory/inputs.js', async (orig) => {
 		...actual,
 		resolveSpotifyCover: vi.fn(async () => ({ title: 'Song', artists: 'Artist', artUrl: 'https://i.example/a.jpg', spotifyUri: 'spotify:track:abc' })),
 		fetchCoverBytes: vi.fn(async () => png),
+		saveCoverUpload: vi.fn(actual.saveCoverUpload),
 		listPlayers: vi.fn(() => [{ slug: 'jon', name: 'Jon', leagueSlug: 'boarz-ii-men', headshotRel: 'x', lowRes: false, missing: false }]),
 		loadHeadshot: vi.fn(async () => png),
 	};
 });
 
+import * as inputs from '$lib/server/coverFactory/inputs.js';
+import { slugify } from '$lib/server/avatarFactory/filenames.js';
 import { GET, POST } from './+server.js';
 import { GET as MEDIA } from './media/[...path]/+server.js';
 
@@ -35,6 +38,9 @@ const IMG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwA
 let chatCalls = 0;
 const fakeFetch = vi.fn(async (_u: unknown, init?: { body?: string }) => {
 	const body = JSON.parse(String(init?.body ?? '{}'));
+	if (body.model === 'img/nogen') {
+		return new Response(JSON.stringify({ choices: [{ message: { content: 'cannot' } }] }), { status: 200 });
+	}
 	if (String(body.model).startsWith('img/')) {
 		return new Response(JSON.stringify({ choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${IMG}` } }] } }], usage: { cost: 0.07 } }), { status: 200 });
 	}
@@ -59,6 +65,8 @@ afterAll(() => {
 });
 beforeEach(() => {
 	chatCalls = 0;
+	fakeFetch.mockClear();
+	delete process.env.AVATAR_FACTORY_GEN_PAUSED;
 	db.exec('DELETE FROM cover_requests; DELETE FROM cover_versions; DELETE FROM cover_projects; DELETE FROM ai_models;');
 	db.prepare("DELETE FROM settings WHERE key LIKE 'cover_factory_%'").run();
 	const base = { nickname: null, description: null, model_type: null, context_len: null, price_in: null, price_out: null, is_free: 0, cost_override: null, cap_reason: 0, cap_stream: 1, cap_vision: 0, cap_tools: 0, cap_json: 1, favorite: 0, sort_order: 0 };
@@ -150,7 +158,10 @@ describe('cover-factory API', () => {
 		expect(ok.headers.get('content-type')).toBe('image/jpeg');
 		expect(ok.headers.get('content-disposition')).toMatch(/attachment/);
 		const bad = await MEDIA({ params: { path: '../../etc/passwd' }, url: new URL('http://x/m') } as never);
-		expect([403, 404]).toContain(bad.status);
+		expect(bad.status).toBe(403);
+		for (const p of ['/etc/passwd', '..\\..\\etc\\passwd']) {
+			expect((await MEDIA({ params: { path: p }, url: new URL('http://x/m') } as never)).status).toBe(403);
+		}
 		const missing = await MEDIA({ params: { path: 'covers/nope.jpg' }, url: new URL('http://x/m') } as never);
 		expect(missing.status).toBe(404);
 	});
@@ -162,5 +173,61 @@ describe('cover-factory API', () => {
 		const res = await MEDIA({ params: { path: `export/${v}.gif` }, url: new URL('http://x/m') } as never);
 		expect(res.status).toBe(200);
 		expect(res.headers.get('content-type')).toBe('image/gif');
+	});
+
+	it('generate while paused is 409 and makes no provider calls', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		fakeFetch.mockClear();
+		process.env.AVATAR_FACTORY_GEN_PAUSED = '1';
+		const t = [{ label: 'A', mode: 'player', playerSlug: 'jon', playerName: 'Jon' }];
+		const r = await post({ action: 'generate', projectId: id, treatments: t, modelId: 'img/gen' });
+		expect(r.status).toBe(409);
+		expect(fakeFetch).not.toHaveBeenCalled();
+	});
+
+	it('a no-image generation is 200 with a failed version and reason', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		const r = await post({ action: 'generate', projectId: id, treatments: [], modelId: 'img/nogen' });
+		expect(r.status).toBe(200);
+		expect(r.json.version.status).toBe('failed');
+		expect(r.json.version.error_reason).toBeTruthy();
+	});
+
+	it('create(round) takes league from rounds->seasons->leagues and defaults to the submitter', async () => {
+		db.exec(`DELETE FROM ml_submissions; DELETE FROM rounds; DELETE FROM seasons; DELETE FROM leagues; DELETE FROM competitors;
+			INSERT INTO leagues (id, slug, name) VALUES (7, 'second-best', 'Second Best');
+			INSERT INTO seasons (id, league_id, season_number, status) VALUES (3, 7, 1, 'active');
+			INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (11, 3, 'mlr', 'R', '2026-01-01');
+			INSERT INTO competitors (id, ml_competitor_id, name) VALUES (5, 'c5', 'Jon Doe');
+			INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at, album_art_url)
+			  VALUES (21, 11, 5, 'spotify:track:zzz', 'Tune', 'Band', '2026-01-01', 'https://i.example/z.jpg');`);
+		const c = await post({ action: 'create', source: 'round', roundId: 11, submissionId: 21 });
+		expect(c.status).toBe(200);
+		expect(c.json.project).toMatchObject({ league_slug: 'second-best', round_id: 11, title: 'Tune — Band' });
+		const rd = await post({ action: 'read', projectId: c.json.project.id });
+		expect(rd.json.treatments[0]).toMatchObject({ mode: 'player', playerSlug: slugify('Jon Doe'), playerName: 'Jon Doe' });
+	});
+
+	const upload = async (name: string, bytes: Buffer) => {
+		const f = new FormData();
+		f.set('action', 'upload-cover');
+		f.set('file', new File([new Uint8Array(bytes)], name));
+		const res = await POST({ request: new Request('http://x/api/cover-factory', { method: 'POST', body: f }) } as never);
+		return { status: res.status, json: (await res.json()) as any };
+	};
+
+	it('upload: non-image is 400, disk failure is 5xx, valid image works', async () => {
+		const bad = await upload('x.txt', Buffer.from('not an image'));
+		expect(bad.status).toBe(400);
+		expect(bad.json.error).toBe('not a valid image');
+		vi.mocked(inputs.saveCoverUpload).mockRejectedValueOnce(new Error('ENOSPC: no space left'));
+		const disk = await upload('c.png', png);
+		expect(disk.status).toBe(500);
+		expect(disk.json.error).toMatch(/ENOSPC/);
+		const ok = await upload('c.png', png);
+		expect(ok.status).toBe(200);
+		expect(ok.json.project.source).toBe('upload');
 	});
 });

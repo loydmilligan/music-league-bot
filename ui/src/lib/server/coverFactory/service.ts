@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { ProviderError } from '../avatarFactory/errors.js';
+import { assertGenerationAllowed } from '../avatarFactory/pause.js';
 import { normalizeImage } from '../avatarFactory/normalize.js';
 import { listLeaguesReadonly } from '../avatarFactory/roster.js';
 import { normalizeBreakdown, type Breakdown } from './breakdown.js';
@@ -255,6 +256,8 @@ function actPreview(db: DB, b: Record<string, unknown>) {
 }
 
 async function actGenerate(db: DB, b: Record<string, unknown>) {
+	// Before any paid call (identity description runs ahead of generateVersion's own gate).
+	assertGenerationAllowed();
 	const project = need(db, num(b.projectId, 'projectId'));
 	const treatments = validateTreatments(b.treatments);
 	breakdownOf(project);
@@ -334,36 +337,35 @@ export async function runUpload(db: DB, form: FormData): Promise<unknown> {
 	if (!(file instanceof File)) bad('file required');
 	const bytes = Buffer.from(await (file as File).arrayBuffer());
 	const action = String(form.get('action') ?? '');
+	if (action !== 'upload-cover' && action !== 'upload-headshot') return bad('unknown action');
+	// Only an undecodable image is a client error; disk/DB failures must surface as 5xx.
 	try {
-		if (action === 'upload-cover') {
-			const rel = await saveCoverUpload(bytes);
-			const league = form.get('leagueSlug');
-			const title = String(form.get('title') ?? '').trim() || (file as File).name.replace(/\.[^.]+$/, '') || 'Uploaded cover';
-			return {
-				project: createProject(db, {
-					title, source: 'upload', round_id: null, spotify_uri: null,
-					league_slug: typeof league === 'string' && league ? league : null, cover_rel: rel, cover_url: null,
-				}),
-			};
-		}
-		if (action === 'upload-headshot') {
-			const project = need(db, num(form.get('projectId'), 'projectId'));
-			const slug = String(form.get('slug') ?? '');
-			if (!/^[a-z0-9-]+$/.test(slug)) bad('invalid player slug');
-			const rel = await saveHeadshotUpload(project.id, slug, bytes);
-			// A new headshot invalidates that player's cached identity description.
-			const cache = parseJson<Record<string, string>>(project.identities_json, {});
-			if (cache[slug]) {
-				delete cache[slug];
-				updateProject(db, project.id, { identities_json: JSON.stringify(cache) });
-			}
-			return { rel, players: playersFor(need(db, project.id)) };
-		}
-	} catch (e) {
-		if (e instanceof ApiError) throw e;
+		await normalizeImage(bytes, 'upload.jpg');
+	} catch {
 		throw new ApiError(400, 'not a valid image');
 	}
-	return bad('unknown action');
+	if (action === 'upload-cover') {
+		const rel = await saveCoverUpload(bytes);
+		const league = form.get('leagueSlug');
+		const title = String(form.get('title') ?? '').trim() || (file as File).name.replace(/\.[^.]+$/, '') || 'Uploaded cover';
+		return {
+			project: createProject(db, {
+				title, source: 'upload', round_id: null, spotify_uri: null,
+				league_slug: typeof league === 'string' && league ? league : null, cover_rel: rel, cover_url: null,
+			}),
+		};
+	}
+	const project = need(db, num(form.get('projectId'), 'projectId'));
+	const slug = String(form.get('slug') ?? '');
+	if (!/^[a-z0-9-]+$/.test(slug)) bad('invalid player slug');
+	const rel = await saveHeadshotUpload(project.id, slug, bytes);
+	// A new headshot invalidates that player's cached identity description.
+	const cache = parseJson<Record<string, string>>(project.identities_json, {});
+	if (cache[slug]) {
+		delete cache[slug];
+		updateProject(db, project.id, { identities_json: JSON.stringify(cache) });
+	}
+	return { rel, players: playersFor(need(db, project.id)) };
 }
 
 /** Download variants built on the fly: still JPEG or wipe GIF for one version. */
