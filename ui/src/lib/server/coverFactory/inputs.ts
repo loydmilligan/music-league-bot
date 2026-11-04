@@ -33,8 +33,43 @@ export interface RoundSong {
 	artUrl: string | null;
 }
 
-export async function listRoundSongs(db: Database.Database, roundId: number): Promise<RoundSong[]> {
-	await ensureAlbumArt(db, roundId);
+/** Spotify oEmbed needs no API credentials, so it still works when the Web API refuses (403). */
+async function oembedCover(trackId: string, fetchImpl: FetchLike): Promise<{ title: string; artUrl: string } | null> {
+	try {
+		const page = `https://open.spotify.com/track/${encodeURIComponent(trackId)}`;
+		const res = await fetchImpl(`https://open.spotify.com/oembed?url=${encodeURIComponent(page)}`);
+		if (!res.ok) return null;
+		const j = (await res.json()) as { title?: string; thumbnail_url?: string };
+		if (!j.thumbnail_url || !/^https:\/\//.test(j.thumbnail_url)) return null;
+		// oEmbed returns the 300 px rendition; the same image hash with the b273 size code is 640 px.
+		return { title: j.title ?? '', artUrl: j.thumbnail_url.replace('ab67616d00001e02', 'ab67616d0000b273') };
+	} catch {
+		return null;
+	}
+}
+
+/** Fill missing album art via oEmbed and cache it on ml_submissions (the column ensureAlbumArt fills). */
+async function fillArtFromOembed(db: Database.Database, roundId: number, fetchImpl: FetchLike): Promise<void> {
+	const rows = db
+		.prepare(
+			`SELECT id, spotify_uri FROM ml_submissions
+			 WHERE round_id = ? AND album_art_url IS NULL AND spotify_uri LIKE 'spotify:track:%'`,
+		)
+		.all(roundId) as { id: number; spotify_uri: string }[];
+	const found = await Promise.all(rows.map((r) => oembedCover(r.spotify_uri.split(':').pop()!, fetchImpl)));
+	const upd = db.prepare('UPDATE ml_submissions SET album_art_url = ? WHERE id = ?');
+	rows.forEach((r, i) => {
+		if (found[i]) upd.run(found[i]!.artUrl, r.id);
+	});
+}
+
+export async function listRoundSongs(db: Database.Database, roundId: number, fetchImpl: FetchLike = fetch): Promise<RoundSong[]> {
+	try {
+		await ensureAlbumArt(db, roundId);
+	} catch {
+		// Best-effort, as ensureAlbumArt documents: e.g. Spotify Web API 403. Songs must still list.
+		await fillArtFromOembed(db, roundId, fetchImpl);
+	}
 	const rows = db
 		.prepare(
 			`SELECT s.id, s.title, s.artists, s.album_art_url AS artUrl,
@@ -57,10 +92,18 @@ export async function listRoundSongs(db: Database.Database, roundId: number): Pr
 
 export async function resolveSpotifyCover(
 	url: string,
+	fetchImpl: FetchLike = fetch,
 ): Promise<{ title: string; artists: string; artUrl: string; spotifyUri: string }> {
 	const parsed = parseSpotifyUrl(url);
 	if (!parsed || parsed.kind !== 'track') throw new Error('not a Spotify track link');
-	const t = await fetchTrack(parsed.id);
+	let t;
+	try {
+		t = await fetchTrack(parsed.id);
+	} catch (e) {
+		const o = await oembedCover(parsed.id, fetchImpl);
+		if (!o) throw e;
+		return { title: o.title, artists: '', artUrl: o.artUrl, spotifyUri: `spotify:track:${parsed.id}` };
+	}
 	if (!t.albumArtUrl) throw new Error('Spotify track has no album art');
 	return { title: t.title, artists: t.artist, artUrl: t.albumArtUrl, spotifyUri: t.uri };
 }

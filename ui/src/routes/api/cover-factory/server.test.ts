@@ -119,6 +119,20 @@ describe('cover-factory API', () => {
 		expect(JSON.parse(proj.identities_json).jon).toBeTruthy();
 	});
 
+	it('project state gives each version its own generate cost + latency, and the submitter', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		const ok = (await post({ action: 'generate', projectId: id, treatments: [], modelId: 'img/gen' })).json.version.id;
+		const bad = (await post({ action: 'generate', projectId: id, treatments: [], modelId: 'img/nogen' })).json.version.id;
+		const s = (await get(`?project=${id}`)).json;
+		const v = (vid: number) => s.versions.find((x: { id: number }) => x.id === vid);
+		expect(v(ok).cost_usd).toBeCloseTo(0.07);
+		expect(typeof v(ok).latency_ms).toBe('number');
+		expect(v(bad).status).toBe('failed');
+		expect(v(bad).cost_usd).not.toBeCloseTo(0.07);
+		expect(s.submitter).toBeNull();
+	});
+
 	it('rate out of range is 400', async () => {
 		const id = await seed();
 		await post({ action: 'read', projectId: id });
@@ -203,6 +217,12 @@ describe('cover-factory API', () => {
 			INSERT INTO competitors (id, ml_competitor_id, name) VALUES (5, 'c5', 'Jon Doe');
 			INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at, album_art_url)
 			  VALUES (21, 11, 5, 'spotify:track:zzz', 'Tune', 'Band', '2026-01-01', 'https://i.example/z.jpg');`);
+		db.exec(`INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (12, 3, 'mlr2', 'Empty', '2026-01-02');`);
+		const lr = (await get('?league=second-best')).json.rounds;
+		expect(lr).toEqual([
+			{ id: 12, name: 'Empty', number: 12, songCount: 0 },
+			{ id: 11, name: 'R', number: 11, songCount: 1 },
+		]);
 		const c = await post({ action: 'create', source: 'round', roundId: 11, submissionId: 21 });
 		expect(c.status).toBe(200);
 		expect(c.json.project).toMatchObject({ league_slug: 'second-best', round_id: 11, title: 'Tune — Band' });

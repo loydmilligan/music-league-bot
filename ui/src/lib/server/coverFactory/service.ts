@@ -106,6 +106,21 @@ export function validateTreatments(raw: unknown): Treatment[] {
 
 // ---------- GET ----------
 
+/** Attach each version's generate-call cost and latency (from cover_requests) for the version strip. */
+function withGenerateCost(db: DB, projectId: number, versions: CoverVersion[]) {
+	const rows = db
+		.prepare(
+			`SELECT version_id, SUM(cost_usd) AS cost_usd, MAX(cost_estimated) AS cost_estimated, SUM(latency_ms) AS latency_ms
+			 FROM cover_requests WHERE project_id = ? AND step = 'generate' AND version_id IS NOT NULL GROUP BY version_id`,
+		)
+		.all(projectId) as { version_id: number; cost_usd: number | null; cost_estimated: number; latency_ms: number }[];
+	const by = new Map(rows.map((r) => [r.version_id, r]));
+	return versions.map((v) => {
+		const r = by.get(v.id);
+		return { ...v, cost_usd: r?.cost_usd ?? null, cost_estimated: r?.cost_estimated ?? 0, latency_ms: r?.latency_ms ?? null };
+	});
+}
+
 export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 	const projectParam = q.get('project');
 	if (projectParam) {
@@ -114,9 +129,10 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 			project,
 			breakdown: parseJson<Breakdown | null>(project.breakdown_json, null),
 			treatments: parseJson<Treatment[]>(project.treatments_json, []),
-			versions: listVersions(db, project.id),
+			versions: withGenerateCost(db, project.id, listVersions(db, project.id)),
 			stats: projectStats(db, project.id),
 			players: playersFor(project),
+			submitter: (await submitterFor(db, project)) ?? null,
 		};
 	}
 	const league = q.get('league');
@@ -125,13 +141,17 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 		if (round) return { songs: await listRoundSongs(db, num(round, 'round')) };
 		const rounds = db
 			.prepare(
-				`SELECT r.id, r.name FROM rounds r
-				 JOIN seasons s ON s.id = r.season_id JOIN leagues l ON l.id = s.league_id
+				`SELECT r.id, r.name, (SELECT COUNT(*) FROM ml_submissions m WHERE m.round_id = r.id) AS songCount
+				 FROM rounds r JOIN seasons s ON s.id = r.season_id JOIN leagues l ON l.id = s.league_id
 				 WHERE l.slug = ? ORDER BY r.id DESC LIMIT 100`,
 			)
-			.all(league) as { id: number; name: string }[];
+			.all(league) as { id: number; name: string; songCount: number }[];
 		// rounds has no per-league number column; the round id is the number used everywhere else (R182 etc.).
-		return { players: listPlayers(league), rounds: rounds.map((r) => ({ id: r.id, name: r.name, number: r.id })) };
+		// songCount lets the picker skip future/in-progress rounds that have no submissions yet.
+		return {
+			players: listPlayers(league),
+			rounds: rounds.map((r) => ({ id: r.id, name: r.name, number: r.id, songCount: r.songCount })),
+		};
 	}
 	return {
 		projects: listProjects(db),
@@ -186,7 +206,7 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		}
 		const rel = await saveCoverUpload(await fetchCover(t.artUrl));
 		const project = createProject(db, {
-			title: `${t.title} — ${t.artists}`, source: 'spotify', round_id: null, spotify_uri: t.spotifyUri,
+			title: t.artists ? `${t.title} — ${t.artists}` : t.title || 'Spotify cover', source: 'spotify', round_id: null, spotify_uri: t.spotifyUri,
 			league_slug: null, cover_rel: rel, cover_url: t.artUrl,
 		});
 		return { project };

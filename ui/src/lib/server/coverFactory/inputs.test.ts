@@ -14,6 +14,7 @@ vi.mock('$lib/spotify/client.js', async (orig) => ({
 }));
 
 import { ensureAlbumArt } from '$lib/digest/albumArt.js';
+import { fetchTrack } from '$lib/spotify/client.js';
 import {
 	listRoundSongs, resolveSpotifyCover, fetchCoverBytes, listPlayers, loadHeadshot,
 	saveHeadshotUpload, saveCoverUpload,
@@ -65,6 +66,51 @@ describe('listRoundSongs', () => {
 		expect(songs).toEqual([
 			{ submissionId: 1, title: 'Song', artists: 'Band', playerName: 'Ann Lee', playerSlug: 'ann-lee', artUrl: 'https://i.scdn.co/a.jpg' },
 		]);
+	});
+});
+
+describe('Spotify Web API down: oEmbed fallback', () => {
+	const oembed = vi.fn(async (u: unknown) => {
+		const url = String(u);
+		if (!url.startsWith('https://open.spotify.com/oembed?url=')) throw new Error(`unexpected ${url}`);
+		return new Response(
+			JSON.stringify({ title: 'Dancing Queen', thumbnail_url: 'https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02abc' }),
+			{ status: 200, headers: { 'content-type': 'application/json' } },
+		);
+	});
+	beforeEach(() => {
+		oembed.mockClear();
+	});
+
+	it('listRoundSongs fills missing art from oEmbed (640 px) and caches it when ensureAlbumArt throws', async () => {
+		const db = fixture();
+		db.exec(`INSERT INTO ml_submissions VALUES (2,7,1,'spotify:track:nope','S2','B2',NULL);`);
+		vi.mocked(ensureAlbumArt).mockRejectedValueOnce(new Error('Spotify 403'));
+		const songs = await listRoundSongs(db, 7, oembed);
+		const art = 'https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273abc';
+		expect(songs.find((s) => s.submissionId === 2)!.artUrl).toBe(art);
+		expect(songs.find((s) => s.submissionId === 1)!.artUrl).toBe('https://i.scdn.co/a.jpg');
+		expect(oembed).toHaveBeenCalledTimes(1);
+		expect(String(oembed.mock.calls[0][0])).toContain(encodeURIComponent('https://open.spotify.com/track/nope'));
+		expect((db.prepare('SELECT album_art_url AS a FROM ml_submissions WHERE id = 2').get() as { a: string }).a).toBe(art);
+	});
+
+	it('listRoundSongs still lists songs when ensureAlbumArt and oEmbed both fail', async () => {
+		const db = fixture();
+		db.exec(`INSERT INTO ml_submissions VALUES (2,7,1,'spotify:track:nope','S2','B2',NULL);`);
+		vi.mocked(ensureAlbumArt).mockRejectedValueOnce(new Error('Spotify 403'));
+		const songs = await listRoundSongs(db, 7, async () => new Response('x', { status: 500 }));
+		expect(songs.map((s) => [s.submissionId, s.artUrl])).toEqual([[2, null], [1, 'https://i.scdn.co/a.jpg']]);
+	});
+
+	it('resolveSpotifyCover falls back to oEmbed when the Web API fails', async () => {
+		vi.mocked(fetchTrack).mockRejectedValueOnce(new Error('Spotify 403'));
+		const r = await resolveSpotifyCover('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=1', oembed);
+		expect(r).toEqual({
+			title: 'Dancing Queen', artists: '',
+			artUrl: 'https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273abc',
+			spotifyUri: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+		});
 	});
 });
 
