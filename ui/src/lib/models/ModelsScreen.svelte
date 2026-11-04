@@ -9,6 +9,8 @@
   import { DEFAULT_PIPELINE, type Pipeline, type Cover, type SectionKind } from '../digest/pipeline.js';
   import { solveClientEPs, type ClientEP, type ArchivePipelineInput } from './pipelineSolver.js';
   import RolloutTab from '../rollout/RolloutTab.svelte';
+  import { MODEL_KINDS, parseKinds, type ModelKind } from './kinds.js';
+  import { modelsForJob } from './jobs.js';
 
   // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
   type SectionState = {
@@ -101,6 +103,7 @@
     cap_vision: number;
     cap_tools: number;
     cap_json: number;
+    kinds: string; // JSON array text
     description: string;
     fabricated?: boolean;
   };
@@ -138,10 +141,7 @@
   // Image-capable models from the roster, favorites first. Matches the manual
   // 'image' model_type or an OpenRouter modality that outputs image.
   const imageModels = $derived(
-    [...models]
-      .filter((m) => m.model_type === 'image' || /->.*image/.test(m.model_type ?? ''))
-      .sort((a, b) => b.favorite - a.favorite || a.model_id.localeCompare(b.model_id)),
-  );
+  modelsForJob(models, 'generator'));
 
   async function loadAvatarImage() {
     try {
@@ -344,6 +344,7 @@
             cap_vision: m.cap_vision ?? 0,
             cap_tools: m.cap_tools ?? 1,
             cap_json: m.cap_json ?? 1,
+            kinds: m.kinds ?? '[]',
             description: m.description ?? '',
             fabricated: d.estimated ?? false,
           };
@@ -406,6 +407,7 @@
       cap_vision: m.cap_vision,
       cap_tools: m.cap_tools,
       cap_json: m.cap_json,
+      kinds: m.kinds ?? '[]',
       description: m.description,
     };
   }
@@ -475,6 +477,13 @@
     const key = `cap_${c}` as keyof Draft;
     const cur = draft[key] as number;
     draft = { ...draft, [key]: cur ? 0 : 1 };
+  }
+
+  function toggleDraftKind(k: ModelKind) {
+    if (!draft) return;
+    const cur = parseKinds(draft.kinds);
+    const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
+    draft = { ...draft, kinds: JSON.stringify(next) };
   }
 
   // ---- pipeline API -------------------------------------------------------
@@ -840,6 +849,9 @@
               <div class="mlm-name-row">
                 <span class="mlm-name">{m.nickname}</span>
                 <span class="mlm-type">{m.model_type}</span>
+                {#each parseKinds(m.kinds) as k}
+                  <span class="mlm-type">{k}</span>
+                {/each}
               </div>
               <div class="mlm-id-row">
                 <span class="mlm-id">{m.model_id}</span>
@@ -977,6 +989,23 @@
                 >
                   <span>{CAP_META[c].g}</span>
                   <span style="font-size:10px;letter-spacing:0.04em;">{CAP_META[c].short}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="mlm-field mlm-field-full">
+            <label>Kinds (what it can do — toggle to correct)</label>
+            <div class="mlm-caps" style="gap:8px;">
+              {#each MODEL_KINDS as k}
+                {@const on = parseKinds(draft.kinds).includes(k)}
+                <button
+                  class="mlm-cap {on ? '' : 'is-off'}"
+                  style="width:auto;padding:0 9px;height:26px;display:inline-flex;cursor:pointer;"
+                  onclick={() => toggleDraftKind(k)}
+                  title={k}
+                >
+                  <span style="font-size:10px;letter-spacing:0.04em;">{k}</span>
                 </button>
               {/each}
             </div>
