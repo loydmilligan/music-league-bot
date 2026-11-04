@@ -14,7 +14,7 @@ import { getPinnedCoverModel } from './models.js';
 import { coverFile } from './paths.js';
 import { loadProfileExcerpt } from './profiles.js';
 import type { Treatment } from './prompt.js';
-import { getProject, logRequest } from './repo.js';
+import { getProject, logRequest, updateProject } from './repo.js';
 
 export type ConceptMove = 'morph' | 'signature' | 'recast';
 export interface Concept {
@@ -245,4 +245,81 @@ export function applyConcept(b: Breakdown, current: Treatment[], c: Concept): { 
 		breakdown: { ...b, subjects, no_subjects: subjects.filter((s) => s.kind !== 'object').length === 0 },
 		treatments: merged,
 	};
+}
+
+const IDEA_MAX = 6;
+const IDEA_WORDS = 8;
+
+export function cleanIdeas(raw: unknown): string[] {
+	const list = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as { ideas?: unknown }).ideas : raw;
+	if (!Array.isArray(list)) return [];
+	const out: string[] = [];
+	for (const x of list) {
+		const t = str(x).replace(/\s+/g, ' ');
+		if (!t || t.split(' ').length > IDEA_WORDS || out.includes(t)) continue;
+		out.push(t);
+		if (out.length >= IDEA_MAX) break;
+	}
+	return out;
+}
+
+/** Short wearable / prop / pose gag ideas drawn from one player's profile; cached in identities_json["ideas:<slug>"]. */
+export async function playerIdeas(
+	db: Database.Database, projectId: number, slug: string, o: { fetchImpl?: FetchLike } = {},
+): Promise<string[]> {
+	assertGenerationAllowed(); // paid call
+	const project = getProject(db, projectId);
+	if (!project) throw new Error(`cover project ${projectId} not found`);
+	const readCache = (): Record<string, unknown> => {
+		try {
+			const v = JSON.parse(project.identities_json ?? '{}');
+			return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+		} catch { return {}; }
+	};
+	const key = `ideas:${slug}`;
+	const hit = readCache()[key];
+	if (Array.isArray(hit) && hit.every((x) => typeof x === 'string')) return hit as string[];
+
+	const player = playersOf(project.league_slug, project.id).find((r) => r.slug === slug);
+	if (!player) throw new Error(`unknown player ${slug}`);
+	const profile = loadProfileExcerpt(db, { slug, name: player.name }).text;
+	if (!profile.trim()) return [];
+	const model = getPinnedCoverModel(db, 'pitch');
+	if (!model) throw new Error('No pitch model available: pin or add a text model for concept pitches');
+
+	const prompt = [
+		`You write gag ideas for doctoring album covers of a private music league. List up to ${IDEA_MAX} short ideas (at most ${IDEA_WORDS} words each) for things ${player.name} could be shown wearing, holding, or doing in a cover.`,
+		`Each must be concrete, visual and specific to THIS player, drawn from how the others see him/her and his/her running jokes in the profile. No generic props (no sunglasses, no guitar, no trophy) and no cheap literal mashups.`,
+		`Examples of the shape: "jean shorts", "holding a pocket bidet".`,
+		`Reply with JSON only: {"ideas": ["...", "..."]}`,
+		`\nProfile excerpt for ${player.name}:\n${profile}`,
+	].join('\n');
+
+	const base = { project_id: projectId, version_id: null, step: 'pitch' as const, model_id: model, provider: 'openrouter', cost_estimated: 0 };
+	const t0 = Date.now();
+	let r;
+	try {
+		r = await chatWithImages({ model, prompt, imageDataUrls: [], fetchImpl: o.fetchImpl, timeoutMs: TIMEOUT_MS });
+	} catch (e) {
+		logRequest(db, {
+			...base, latency_ms: Date.now() - t0,
+			cost_usd: e instanceof ProviderError ? (e.failedCostUsd ?? null) : null,
+			outcome: 'error',
+			error_reason: e instanceof ProviderError ? e.reason : e instanceof Error ? e.message.slice(0, 200) : 'error',
+		});
+		throw e;
+	}
+	const ideas = cleanIdeas(parseModelJson(r.text));
+	logRequest(db, {
+		...base, latency_ms: r.latencyMs, cost_usd: r.costUsd,
+		outcome: ideas.length ? 'ok' : 'error', error_reason: ideas.length ? null : 'no usable ideas',
+	});
+	if (!ideas.length) throw new Error('no usable ideas');
+	// Re-read so concurrent identity writes since the model call survive.
+	const fresh = getProject(db, projectId);
+	let cur: Record<string, unknown> = {};
+	try { cur = JSON.parse(fresh?.identities_json ?? '{}') ?? {}; } catch { /* start clean */ }
+	cur[key] = ideas;
+	updateProject(db, projectId, { identities_json: JSON.stringify(cur) });
+	return ideas;
 }

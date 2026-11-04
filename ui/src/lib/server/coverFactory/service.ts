@@ -18,7 +18,7 @@ import {
 	type PlayerOption,
 } from './inputs.js';
 import { getPinnedCoverModel, isUsablePin } from './models.js';
-import { applyConcept, cleanTreatments, pitchConcepts, type Concept, type ConceptMove } from './pitch.js';
+import { applyConcept, cleanTreatments, pitchConcepts, playerIdeas, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
@@ -336,6 +336,15 @@ async function actPitch(db: DB, b: Record<string, unknown>) {
 	return { concepts: await pitchConcepts(db, project.id, { playerSlugs: slugs, count: b.count as number | undefined }) };
 }
 
+async function actIdeas(db: DB, b: Record<string, unknown>) {
+	assertGenerationAllowed(); // paid call
+	const project = need(db, num(b.projectId, 'projectId'));
+	if (typeof b.slug !== 'string' || !/^[a-z0-9-]+$/.test(b.slug)) bad('invalid player slug');
+	const slug = b.slug as string;
+	if (!playersFor(project).some((p) => p.slug === slug)) bad(`unknown player ${slug}`);
+	return { ideas: await playerIdeas(db, project.id, slug) };
+}
+
 const MOVES: ConceptMove[] = ['morph', 'signature', 'recast'];
 
 function actApplyConcept(db: DB, b: Record<string, unknown>) {
@@ -404,6 +413,7 @@ export async function runAction(db: DB, b: Record<string, unknown>): Promise<unk
 		case 'preview-prompt': return actPreview(db, b);
 		case 'generate': return actGenerate(db, b);
 		case 'pitch': return actPitch(db, b);
+		case 'ideas': return actIdeas(db, b);
 		case 'apply-concept': return actApplyConcept(db, b);
 		case 'rate': return actRate(db, b);
 		case 'keeper': return actKeeper(db, b);

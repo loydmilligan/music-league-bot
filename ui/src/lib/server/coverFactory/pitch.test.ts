@@ -25,7 +25,7 @@ vi.mock('./inputs.js', async (orig) => {
 import { createProject, updateProject } from './repo.js';
 import { COVER_JOB_KEYS } from './models.js';
 import { coverFile } from './paths.js';
-import { applyConcept, pitchConcepts, PITCH_PROMPT, type Concept } from './pitch.js';
+import { applyConcept, pitchConcepts, playerIdeas, PITCH_PROMPT, type Concept } from './pitch.js';
 import type { Breakdown } from './breakdown.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 
@@ -255,5 +255,38 @@ describe('cover_requests migration', () => {
 		const d4 = new Database(path);
 		expect(d4.prepare("SELECT name FROM sqlite_master WHERE name='marker_only_if_not_rebuilt'").get()).toBeTruthy();
 		d4.close();
+	});
+});
+
+describe('playerIdeas', () => {
+	const IDEAS = { ideas: ['jean shorts', 'holding a pocket bidet', 'one two three four five six seven eight nine', '', 'sourdough starter jar', 'a', 'b', 'c'] };
+	const cached = () => JSON.parse((db.prepare('SELECT identities_json j FROM cover_projects WHERE id=?').get(pid) as { j: string }).j);
+
+	it('returns <=6 items of <=8 words, caches, and keeps identity entries', async () => {
+		updateProject(db, pid, { identities_json: JSON.stringify({ shane: 'tall, beard' }) });
+		const { f, calls } = fakeFetch(IDEAS);
+		const a = await playerIdeas(db, pid, 'shane', { fetchImpl: f });
+		expect(a.length).toBeLessThanOrEqual(6);
+		expect(a).toEqual(['jean shorts', 'holding a pocket bidet', 'sourdough starter jar', 'a', 'b', 'c']);
+		expect(a.every((x) => x.split(/\s+/).length <= 8)).toBe(true);
+		expect(JSON.stringify(calls[0])).toMatch(/sourdough/);
+		const b = await playerIdeas(db, pid, 'shane', { fetchImpl: f });
+		expect(b).toEqual(a);
+		expect(f).toHaveBeenCalledTimes(1);
+		expect(cached()).toEqual({ shane: 'tall, beard', 'ideas:shane': a });
+		expect(rows().map((r) => r.step)).toEqual(['pitch']);
+	});
+
+	it('empty profile -> [] with no model call', async () => {
+		const { f } = fakeFetch(IDEAS);
+		expect(await playerIdeas(db, pid, 'berto', { fetchImpl: f })).toEqual([]);
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('respects the pause gate', async () => {
+		process.env.AVATAR_FACTORY_GEN_PAUSED = '1';
+		const { f } = fakeFetch(IDEAS);
+		await expect(playerIdeas(db, pid, 'shane', { fetchImpl: f })).rejects.toThrow();
+		expect(f).not.toHaveBeenCalled();
 	});
 });
