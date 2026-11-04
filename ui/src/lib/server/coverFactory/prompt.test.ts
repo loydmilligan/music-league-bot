@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SEAMLESS_GOAL, buildSwapPrompt, defaultTreatments, type Treatment } from './prompt';
+import { SEAMLESS_GOAL, buildSwapPrompt, defaultTreatments, placementPhrase, type Treatment } from './prompt';
 import type { Breakdown, Subject } from './breakdown';
 
 const subj = (label: string, role: Subject['role'], kind: Subject['kind'] = 'person'): Subject => ({
@@ -123,5 +123,20 @@ describe('defaultTreatments (9a)', () => {
 		const t = defaultTreatments(bd([subj('A', 'main', 'animal'), subj('B', 'background', 'object')]), { slug: 'koz', name: 'Koz' });
 		expect(t[0]).toMatchObject({ label: 'A', mode: 'player', playerSlug: 'koz' });
 		expect(t[1]).toEqual({ label: 'B', mode: 'keep' });
+	});
+});
+
+describe('placement text', () => {
+	it('placementPhrase describes region and percentages', () => {
+		expect(placementPhrase([0.1, 0.2, 0.35, 0.7])).toBe('occupying roughly the left-center of the frame (x 10–45%, y 20–90%)');
+	});
+	it('buildSwapPrompt includes placement for boxed player subject', () => {
+		const s = { ...subj('A', 'main'), box: [0.1, 0.2, 0.3, 0.7] as [number, number, number, number] };
+		const t: Treatment[] = [{ label: 'A', mode: 'player', playerSlug: 'berto', playerName: 'Berto' }];
+		expect(buildSwapPrompt(bd([s]), t, ids).prompt).toContain('x 10–40%');
+	});
+	it('omits placement without a box', () => {
+		const t: Treatment[] = [{ label: 'A', mode: 'player', playerSlug: 'berto', playerName: 'Berto' }];
+		expect(buildSwapPrompt(bd([subj('A', 'main')]), t, ids).prompt).not.toContain('occupying roughly');
 	});
 });

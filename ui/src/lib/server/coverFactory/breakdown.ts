@@ -25,7 +25,8 @@ export interface Breakdown {
 export const READ_PROMPT = `You are analysing an album cover so an image model can recreate it exactly with one person swapped.
 Return ONLY JSON: {"style": "...medium, rendering, era, texture/grain", "composition": "...layout, framing, camera angle, where text/logos sit",
 "palette_lighting": "...", "text_elements": ["exact visible text and where"],
-"subjects": [{"label":"A","kind":"person|animal|object","role":"main|secondary|background","position":"...","pose":"...","gaze":"...","clothing":"...","expression":"...","color_treatment":"...","focus":"sharp|soft|blurred"}]}
+"subjects": [{"label":"A","kind":"person|animal|object","role":"main|secondary|background","position":"...","pose":"...","gaze":"...","clothing":"...","expression":"...","color_treatment":"...","focus":"sharp|soft|blurred","box":[x,y,w,h]}]}
+Each subject's "box" is a tight bounding box around that subject as fractions 0-1 of the image width/height, top-left origin: [x, y, width, height].
 Role guidance: main = the obvious focal person; if several people share focus, mark them all secondary. Use background for incidental figures. If the cover has no people or animals, return an empty subjects list.`;
 
 export const IDENTITY_PROMPT =
@@ -57,7 +58,27 @@ function letter(i: number): string {
 	return s;
 }
 
-export function normalizeBreakdown(raw: unknown): Breakdown {
+const r3 = (n: number): number => Math.round(n * 1000) / 1000;
+
+export function normalizeBox(
+	raw: unknown, size?: { width: number; height: number },
+): [number, number, number, number] | undefined {
+	if (!Array.isArray(raw) || raw.length !== 4) return undefined;
+	if (!raw.every((x) => typeof x === 'number' && Number.isFinite(x))) return undefined;
+	let [x, y, w, h] = raw as number[];
+	if (raw.some((v: number) => v > 1)) {
+		if (!size || !(size.width > 0) || !(size.height > 0)) return undefined;
+		x /= size.width; w /= size.width; y /= size.height; h /= size.height;
+	}
+	const MIN = 0.02;
+	x = Math.min(Math.max(x, 0), 1 - MIN);
+	y = Math.min(Math.max(y, 0), 1 - MIN);
+	w = Math.min(Math.max(w, MIN), 1 - x);
+	h = Math.min(Math.max(h, MIN), 1 - y);
+	return [r3(x), r3(y), r3(w), r3(h)];
+}
+
+export function normalizeBreakdown(raw: unknown, size?: { width: number; height: number }): Breakdown {
 	const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 	const rawSubjects = Array.isArray(r.subjects) ? r.subjects : [];
 	const used = new Set<string>();
@@ -77,10 +98,8 @@ export function normalizeBreakdown(raw: unknown): Breakdown {
 			position: str(s.position), pose: str(s.pose), gaze: str(s.gaze), clothing: str(s.clothing),
 			expression: str(s.expression), color_treatment: str(s.color_treatment), focus: str(s.focus),
 		};
-		const b = s.box;
-		if (Array.isArray(b) && b.length === 4 && b.every((x) => typeof x === 'number' && Number.isFinite(x))) {
-			out.box = b as [number, number, number, number];
-		}
+		const box = normalizeBox(s.box, size);
+		if (box) out.box = box;
 		return out;
 	});
 	return {

@@ -29,6 +29,16 @@ export function defaultTreatments(b: Breakdown, submitter?: { slug: string; name
 	return b.subjects.map(keep);
 }
 
+export function placementPhrase(box: [number, number, number, number]): string {
+	const [x, y, w, h] = box;
+	const pct = (n: number) => Math.round(n * 100);
+	const cx = x + w / 2, cy = y + h / 2;
+	const hz = cx < 1 / 3 ? 'left' : cx > 2 / 3 ? 'right' : 'center';
+	const vt = cy < 1 / 3 ? 'top' : cy > 2 / 3 ? 'bottom' : 'center';
+	const region = hz === 'center' && vt === 'center' ? 'center' : `${hz}-${vt}`;
+	return `occupying roughly the ${region} of the frame (x ${pct(x)}–${pct(x + w)}%, y ${pct(y)}–${pct(y + h)}%)`;
+}
+
 function playerParagraph(s: Subject, t: Treatment, n: number, name: string, features: string): string {
 	const who = `the person in image ${n} (${name})`;
 	const keeps: string[] = [];
@@ -43,7 +53,8 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	if (t.gender) changes.push(`gender presentation: ${t.gender}`);
 	if (t.styleMatch) changes.push(`style: ${t.styleMatch}`);
 	if (t.notes) changes.push(t.notes);
-	let p = `Subject ${s.label} (${s.position}) becomes ${who}: `;
+	const where = s.box ? `${s.position}, ${placementPhrase(s.box)}` : s.position;
+	let p = `Subject ${s.label} (${where}) becomes ${who}: `;
 	const parts: string[] = [];
 	if (keeps.length) {
 		// "keep the original pose/gaze, clothing and headwear from the cover unless told otherwise"

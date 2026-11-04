@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import type Database from 'better-sqlite3';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { ProviderError } from '../avatarFactory/errors.js';
@@ -46,10 +47,24 @@ async function run<T>(
 	}
 }
 
-export function readCover(
-	db: Database.Database, projectId: number, coverDataUrl: string, o?: { fetchImpl?: FetchLike },
+async function dataUrlSize(dataUrl: string): Promise<{ width: number; height: number } | undefined> {
+	try {
+		const m = /^data:[^;,]*(;base64)?,(.*)$/s.exec(dataUrl);
+		if (!m) return undefined;
+		const bytes = m[1] ? Buffer.from(m[2], 'base64') : Buffer.from(decodeURIComponent(m[2]));
+		const meta = await sharp(bytes).metadata();
+		return meta.width && meta.height ? { width: meta.width, height: meta.height } : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+export async function readCover(
+	db: Database.Database, projectId: number, coverDataUrl: string,
+	o?: { fetchImpl?: FetchLike; size?: { width: number; height: number } },
 ): Promise<Breakdown> {
-	return run(db, projectId, 'read', READ_PROMPT, coverDataUrl, o, (t) => normalizeBreakdown(parseModelJson(t)));
+	const size = o?.size ?? (await dataUrlSize(coverDataUrl));
+	return run(db, projectId, 'read', READ_PROMPT, coverDataUrl, o, (t) => normalizeBreakdown(parseModelJson(t), size));
 }
 
 export function describeIdentity(
