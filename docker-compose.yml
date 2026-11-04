@@ -52,6 +52,7 @@ services:
       # Survey round sync: read-only view of the mlsurvey admin's data files.
       - SURVEY_DATA_DIR=/app/survey-data
       - AVATAR_SOURCES_DIR=/app/avatar-sources
+      - COVER_PROFILES_DIR=/app/profiles
     extra_hosts:
       # Lets the container reach host-side daemons (e.g. the ML auth trigger
       # on localhost:7679) via host.docker.internal.
@@ -77,6 +78,8 @@ services:
       # Avatar Factory v1 — READ-ONLY player photo library. Picker lists only
       # under AVATAR_SOURCES_DIR. Originals are never modified.
       - ${HOME}/Pictures/boarz-players:/app/avatar-sources/boarz-players:ro
+      # Cover Factory — read-only personify profiles (joke material for pitches).
+      - ./.planning/spikes/digest-comedy-media/personify/profiles:/app/profiles:ro
       - ${HOME}/Pictures/hip-jammers-players:/app/avatar-sources/hip-jammers-players:ro
       - ${HOME}/Pictures/second-best-players:/app/avatar-sources/second-best-players:ro
     restart: unless-stopped
