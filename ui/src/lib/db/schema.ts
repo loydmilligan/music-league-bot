@@ -818,6 +818,59 @@ CREATE TABLE IF NOT EXISTS portal_admin_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_portal_admin_runs_league
   ON portal_admin_runs(league_id, created_at);
+
+CREATE TABLE IF NOT EXISTS cover_projects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  source TEXT NOT NULL CHECK(source IN ('round','spotify','upload')),
+  round_id INTEGER,
+  spotify_uri TEXT,
+  league_slug TEXT,
+  cover_rel TEXT NOT NULL,
+  cover_url TEXT,
+  breakdown_json TEXT,
+  identities_json TEXT,
+  treatments_json TEXT,
+  keeper_version_id INTEGER,
+  share_dir TEXT,
+  share_version_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS cover_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES cover_projects(id) ON DELETE CASCADE,
+  try_no INTEGER NOT NULL,
+  model_id TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  image_rel TEXT,
+  status TEXT NOT NULL CHECK(status IN ('ok','failed')),
+  error_reason TEXT,
+  rating_likeness INTEGER,
+  rating_seamlessness INTEGER,
+  rating_gag INTEGER,
+  rating_instructions INTEGER,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(project_id, try_no)
+);
+CREATE TABLE IF NOT EXISTS cover_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES cover_projects(id) ON DELETE CASCADE,
+  version_id INTEGER,
+  step TEXT NOT NULL CHECK(step IN ('read','identity','generate')),
+  model_id TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  cost_usd REAL,
+  cost_estimated INTEGER NOT NULL DEFAULT 0,
+  outcome TEXT NOT NULL CHECK(outcome IN ('ok','no_image','error')),
+  error_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_cover_versions_project ON cover_versions(project_id, try_no);
+CREATE INDEX IF NOT EXISTS idx_cover_requests_project ON cover_requests(project_id);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',
