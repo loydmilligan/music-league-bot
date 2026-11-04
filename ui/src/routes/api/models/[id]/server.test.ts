@@ -11,11 +11,12 @@ vi.mock('$lib/db/client.js', async (orig) => {
 });
 
 let DELETE: typeof import('./+server.js').DELETE;
+let PATCH: typeof import('./+server.js').PATCH;
 
 beforeEach(async () => {
 	db.prepare('DELETE FROM ai_models').run();
 	db.prepare("DELETE FROM settings WHERE key IN ('predict_model', 'digest_model')").run();
-	({ DELETE } = await import('./+server.js'));
+	({ DELETE, PATCH } = await import('./+server.js'));
 });
 
 function mkModel(modelId: string): number {
@@ -76,5 +77,16 @@ describe('DELETE /api/models/:id', () => {
 
 	it('404s for an unknown id', async () => {
 		await expect(DELETE(delEvt(99999))).rejects.toMatchObject({ status: 404 });
+	});
+});
+
+describe('PATCH /api/models/:id', () => {
+	it('persists a $ cost_override', async () => {
+		const id = mkModel('a/b');
+		const res = await PATCH({
+			params: { id: String(id) },
+			request: new Request('http://x', { method: 'PATCH', body: JSON.stringify({ cost_override: '$' }) }),
+		} as unknown as Parameters<typeof PATCH>[0]);
+		expect((await res.json()).cost_override).toBe('$');
 	});
 });

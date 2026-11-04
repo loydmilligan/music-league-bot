@@ -10,7 +10,8 @@ export interface AiModelRow {
   price_in: number | null;
   price_out: number | null;
   is_free: number;
-  cost_override: number | null;
+  cost_override: string | null; // null | '$' | '$$' | '$$$'
+  kinds: string | null; // JSON array text, e.g. '["image","multimodal"]'
   cap_reason: number;
   cap_stream: number;
   cap_vision: number;
@@ -21,7 +22,7 @@ export interface AiModelRow {
   created_at: string;
 }
 
-export type AiModelInsert = Omit<AiModelRow, 'id' | 'created_at'>;
+export type AiModelInsert = Omit<AiModelRow, 'id' | 'created_at' | 'kinds'> & { kinds?: string | null };
 export type AiModelPatch = Partial<AiModelInsert>;
 
 export function listModels(db: Database.Database): AiModelRow[] {
@@ -46,10 +47,10 @@ export function insertModel(db: Database.Database, data: AiModelInsert): AiModel
     .prepare(
       `INSERT INTO ai_models
          (model_id, nickname, description, model_type, context_len,
-          price_in, price_out, is_free, cost_override,
+          price_in, price_out, is_free, cost_override, kinds,
           cap_reason, cap_stream, cap_vision, cap_tools, cap_json,
           favorite, sort_order)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     .run(
       data.model_id,
@@ -61,6 +62,7 @@ export function insertModel(db: Database.Database, data: AiModelInsert): AiModel
       data.price_out ?? null,
       data.is_free ? 1 : 0,
       data.cost_override ?? null,
+      data.kinds ?? null,
       data.cap_reason ? 1 : 0,
       data.cap_stream ? 1 : 0,
       data.cap_vision ? 1 : 0,
@@ -90,6 +92,7 @@ export function patchModel(db: Database.Database, id: number, patch: AiModelPatc
   if (patch.price_out !== undefined) add('price_out', patch.price_out);
   if (patch.is_free !== undefined) add('is_free', patch.is_free ? 1 : 0);
   if (patch.cost_override !== undefined) add('cost_override', patch.cost_override);
+  if (patch.kinds !== undefined) add('kinds', patch.kinds);
   if (patch.cap_reason !== undefined) add('cap_reason', patch.cap_reason ? 1 : 0);
   if (patch.cap_stream !== undefined) add('cap_stream', patch.cap_stream ? 1 : 0);
   if (patch.cap_vision !== undefined) add('cap_vision', patch.cap_vision ? 1 : 0);

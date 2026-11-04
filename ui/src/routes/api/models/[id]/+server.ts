@@ -2,6 +2,10 @@ import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { getModelById, patchModel, deleteModel } from '$lib/db/aiModels.js';
+import { parseKinds } from '$lib/models/kinds.js';
+
+const COST_TIERS = ['$', '$$', '$$$'];
+const kindsToJson = (raw: string) => JSON.stringify(parseKinds(raw));
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const id = parseInt(params.id, 10);
@@ -22,7 +26,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     price_in: body.price_in !== undefined ? (typeof body.price_in === 'number' ? body.price_in : null) : undefined,
     price_out: body.price_out !== undefined ? (typeof body.price_out === 'number' ? body.price_out : null) : undefined,
     is_free: body.is_free !== undefined ? (body.is_free ? 1 : 0) : undefined,
-    cost_override: body.cost_override !== undefined ? (typeof body.cost_override === 'number' ? body.cost_override : null) : undefined,
+    cost_override: body.cost_override !== undefined ? (COST_TIERS.includes(body.cost_override as string) ? (body.cost_override as string) : null) : undefined,
+    kinds: body.kinds !== undefined ? (typeof body.kinds === 'string' ? kindsToJson(body.kinds) : null) : undefined,
     cap_reason: body.cap_reason !== undefined ? (body.cap_reason ? 1 : 0) : undefined,
     cap_stream: body.cap_stream !== undefined ? (body.cap_stream ? 1 : 0) : undefined,
     cap_vision: body.cap_vision !== undefined ? (body.cap_vision ? 1 : 0) : undefined,

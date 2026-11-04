@@ -24,6 +24,7 @@ export type Model = {
   price_out: number | null;
   is_free: number;          // 0|1 SQLite boolean
   cost_override: string | null; // null | '$' | '$$' | '$$$'
+  kinds?: string | null; // JSON array text
   cap_reason: number;
   cap_stream: number;
   cap_vision: number;

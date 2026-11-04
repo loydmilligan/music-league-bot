@@ -622,6 +622,10 @@ export function openLeagueDb(path?: string): Database.Database {
 	if (aiModelCols.length && !aiModelCols.some(c => c.name === 'cap_image_gen')) {
 		db.exec("ALTER TABLE ai_models ADD COLUMN cap_image_gen INTEGER NOT NULL DEFAULT 0");
 	}
+	// cover-factory 1: kinds (JSON array text of model kinds) on ai_models.
+	if (aiModelCols.length && !aiModelCols.some(c => c.name === 'kinds')) {
+		db.exec("ALTER TABLE ai_models ADD COLUMN kinds TEXT");
+	}
 	// sprint-28 avatar system Task 1: avatar_age_shift setting — global offset
 	// (in years) applied when prompting image generation, allowing the operator
 	// to skew all avatars younger or older than the stored player age.

@@ -2,6 +2,10 @@ import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import { getDb } from '$lib/db/client.js';
 import { listModels, insertModel } from '$lib/db/aiModels.js';
+import { parseKinds } from '$lib/models/kinds.js';
+
+const COST_TIERS = ['$', '$$', '$$$'];
+const kindsToJson = (raw: string) => JSON.stringify(parseKinds(raw));
 
 export const GET: RequestHandler = async () => {
   const db = getDb();
@@ -26,7 +30,8 @@ export const POST: RequestHandler = async ({ request }) => {
       price_in: typeof body.price_in === 'number' ? body.price_in : null,
       price_out: typeof body.price_out === 'number' ? body.price_out : null,
       is_free: body.is_free ? 1 : 0,
-      cost_override: typeof body.cost_override === 'number' ? body.cost_override : null,
+      cost_override: COST_TIERS.includes(body.cost_override as string) ? (body.cost_override as string) : null,
+      kinds: typeof body.kinds === 'string' ? kindsToJson(body.kinds) : null,
       cap_reason: body.cap_reason ? 1 : 0,
       cap_stream: body.cap_stream ? 1 : 0,
       cap_vision: body.cap_vision ? 1 : 0,

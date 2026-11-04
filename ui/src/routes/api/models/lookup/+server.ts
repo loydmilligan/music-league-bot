@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types.js';
 import { json, error } from '@sveltejs/kit';
 import type { AiModelInsert } from '$lib/db/aiModels.js';
+import { parseModelId, kindsFromArchitecture } from '$lib/models/kinds.js';
 
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -14,7 +15,7 @@ interface OpenRouterModel {
   description?: string;
   context_length?: number;
   pricing?: { prompt?: string; completion?: string };
-  architecture?: { modality?: string };
+  architecture?: { modality?: string; input_modalities?: string[]; output_modalities?: string[] };
 }
 
 const FETCH_TIMEOUT_MS = 25_000;
@@ -70,7 +71,8 @@ function orModelToDraft(m: OpenRouterModel): Partial<AiModelInsert> {
   const priceIn = parseFloat(m.pricing?.prompt ?? '') || null;
   const priceOut = parseFloat(m.pricing?.completion ?? '') || null;
   const isFree = priceIn === 0 && priceOut === 0 ? 1 : 0;
-  const hasVision = (m.architecture?.modality ?? '').includes('image');
+  const kinds = kindsFromArchitecture(m.architecture);
+  const hasVision = kinds.includes('vision') || kinds.includes('multimodal');
 
   return {
     model_id: m.id,
@@ -82,6 +84,7 @@ function orModelToDraft(m: OpenRouterModel): Partial<AiModelInsert> {
     price_out: priceOut,
     is_free: isFree,
     cost_override: null,
+    kinds: JSON.stringify(kinds),
     cap_reason: 0,
     cap_stream: 1,
     cap_vision: hasVision ? 1 : 0,
@@ -95,8 +98,10 @@ function orModelToDraft(m: OpenRouterModel): Partial<AiModelInsert> {
 // GET /api/models/lookup?id=<model_id>
 // Returns { found: boolean, estimated: boolean, draft: Partial<AiModelInsert> }
 export const GET: RequestHandler = async ({ url }) => {
-  const modelId = url.searchParams.get('id');
-  if (!modelId?.trim()) throw error(400, 'id query param required');
+  const raw = url.searchParams.get('id');
+  if (!raw?.trim()) throw error(400, 'id query param required');
+  const modelId = parseModelId(raw);
+  if (!modelId) throw error(400, 'could not parse a model id (use provider/model or an openrouter.ai URL)');
 
   let models: OpenRouterModel[];
   try {
@@ -105,7 +110,7 @@ export const GET: RequestHandler = async ({ url }) => {
     throw error(502, `OpenRouter lookup failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const match = models.find((m) => m.id === modelId.trim());
+  const match = models.find((m) => m.id === modelId);
 
   if (match) {
     return json({ found: true, estimated: false, draft: orModelToDraft(match) });
@@ -113,7 +118,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
   // Not found in OpenRouter list — return an estimated draft from the model_id itself.
   const estimated: Partial<AiModelInsert> = {
-    model_id: modelId.trim(),
+    model_id: modelId,
     nickname: null,
     description: null,
     model_type: null,
@@ -122,6 +127,7 @@ export const GET: RequestHandler = async ({ url }) => {
     price_out: null,
     is_free: 0,
     cost_override: null,
+    kinds: '[]',
     cap_reason: 0,
     cap_stream: 0,
     cap_vision: 0,

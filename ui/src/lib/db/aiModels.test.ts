@@ -97,3 +97,21 @@ describe('deleteModel', () => {
     expect(deleteModel(db, 9999)).toBe(false);
   });
 });
+
+describe('kinds column', () => {
+  const base = { nickname: null, description: null, model_type: null, context_len: null, price_in: null, price_out: null, is_free: 0, cost_override: null, cap_reason: 0, cap_stream: 0, cap_vision: 0, cap_tools: 0, cap_json: 0, favorite: 0, sort_order: 0 };
+  it('insertModel persists kinds', () => {
+    const row = insertModel(db, { ...base, model_id: 'k/one', kinds: '["image"]' });
+    expect(getModelById(db, row.id)!.kinds).toBe('["image"]');
+  });
+  it('kinds defaults to null', () => {
+    const row = insertModel(db, { ...base, model_id: 'k/two' });
+    expect(row.kinds).toBeNull();
+  });
+  it('patchModel persists kinds and a $ cost_override', () => {
+    const row = insertModel(db, { ...base, model_id: 'k/three' });
+    const p = patchModel(db, row.id, { kinds: '["vision","text"]', cost_override: '$$' });
+    expect(p!.kinds).toBe('["vision","text"]');
+    expect(p!.cost_override).toBe('$$');
+  });
+});
