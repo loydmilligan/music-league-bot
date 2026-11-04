@@ -78,7 +78,7 @@ describe('loadProfileExcerpt', () => {
 		const r = loadProfileExcerpt(db, { slug: 'shane-farkas', name: 'Shane Farkas' });
 		expect(r.text.length).toBeLessThanOrEqual(6000);
 		expect(r.text.length).toBeGreaterThan(4000);
-		expect(r.text.endsWith('x'.repeat(45))).toBe(true);
+		for (const l of r.text.split('\n').filter((l) => l.startsWith('para '))) expect(l.endsWith('x'.repeat(45))).toBe(true);
 	});
 	it('adds db notes/tags; db-only and both', () => {
 		db.exec(`INSERT INTO players VALUES (1,'No Body'),(2,'Shane Farkas');
@@ -95,6 +95,41 @@ describe('loadProfileExcerpt', () => {
 	it('empty db row is none', () => {
 		db.exec(`INSERT INTO players VALUES (1,'No Body'); INSERT INTO player_profiles VALUES (1,'','[]');`);
 		expect(loadProfileExcerpt(db, { slug: 'nobody', name: 'No Body' }).source).toBe('none');
+	});
+});
+
+describe('fix round 1', () => {
+	const paras = (tag: string) => Array.from({ length: 80 }, (_, i) => `${tag}${i} ${'y'.repeat(90)}`).join('\n\n');
+	it('matches suffixed headings', () => {
+		writeFileSync(
+			join(dir, 'Shane_Farkas.md'),
+			'## 3. Humor style — the funny bit\nHUMS\n## 4. How the others see them — **most reliable**\nSEENS\n## 1. Topics & themes\nTOPS\n## 6. Imitation kit\nKIT',
+		);
+		const r = loadProfileExcerpt(db, { slug: 'shane-farkas', name: 'Shane Farkas' });
+		for (const w of ['HUMS', 'SEENS', 'TOPS']) expect(r.text).toContain(w);
+		expect(r.text).not.toContain('KIT');
+	});
+	it('every section survives the cap, in seen > humor > topics order', () => {
+		writeFileSync(
+			join(dir, 'Shane_Farkas.md'),
+			`## 1. Topics\n${paras('TOP')}\n## 3. Humor style\n${paras('HUM')}\n## 4. How the others see him\n${paras('SEE')}\n`,
+		);
+		const r = loadProfileExcerpt(db, { slug: 'shane-farkas', name: 'Shane Farkas' });
+		expect(r.text.length).toBeLessThanOrEqual(6000);
+		const [s, h, t] = ['SEE0', 'HUM0', 'TOP0'].map((k) => r.text.indexOf(k));
+		expect(s).toBeGreaterThanOrEqual(0);
+		expect(h).toBeGreaterThan(s);
+		expect(t).toBeGreaterThan(h);
+		// seen gets the biggest share
+		const cnt = (k: string) => (r.text.match(new RegExp(k + '\\d+ ', 'g')) ?? []).length;
+		expect(cnt('SEE')).toBeGreaterThan(cnt('HUM'));
+		expect(cnt('HUM')).toBeGreaterThan(cnt('TOP'));
+	});
+	it('unused share flows to the others', () => {
+		writeFileSync(join(dir, 'Shane_Farkas.md'), `## 1. Topics\nTINY\n## 3. Humor style\n${paras('HUM')}\n`);
+		const r = loadProfileExcerpt(db, { slug: 'shane-farkas', name: 'Shane Farkas' });
+		expect(r.text).toContain('TINY');
+		expect(r.text.length).toBeGreaterThan(5000);
 	});
 });
 

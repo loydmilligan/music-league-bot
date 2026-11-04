@@ -4,11 +4,11 @@ import type Database from 'better-sqlite3';
 import { slugify } from '../avatarFactory/filenames.js';
 
 const MAX_CHARS = 6000;
-/** Priority order: if the cap bites, Topics is cut first. */
-const SECTIONS: { key: string; re: RegExp }[] = [
-	{ key: 'humor', re: /^humor style$/i },
-	{ key: 'seen', re: /^how the others see (him|her|them)$/i },
-	{ key: 'topics', re: /^topics$/i },
+/** Priority order and share of the budget; the output follows this order too. */
+const SECTIONS: { key: string; re: RegExp; share: number }[] = [
+	{ key: 'seen', re: /^how the others see\b/i, share: 0.45 },
+	{ key: 'humor', re: /^humor style\b/i, share: 0.35 },
+	{ key: 'topics', re: /^topics\b/i, share: 0.2 },
 ];
 
 export function profilesRoot(): string {
@@ -45,7 +45,7 @@ function findFile(p: { slug: string; name: string }): string | null {
 }
 
 /** Pull `## N. <title>` sections (with their ### subsections) whose title matches. */
-function extractSections(md: string): string {
+function extractSections(md: string): Map<string, string> {
 	const lines = md.split('\n');
 	const found = new Map<string, string[]>();
 	let cur: string | null = null;
@@ -62,9 +62,28 @@ function extractSections(md: string): string {
 		}
 		if (cur) found.get(cur)!.push(line);
 	}
-	return SECTIONS.filter((s) => found.has(s.key))
-		.map((s) => found.get(s.key)!.join('\n').trim())
-		.join('\n\n');
+	return new Map([...found].map(([k, v]) => [k, v.join('\n').trim()]));
+}
+
+/** Split `budget` across sections by share; unused share flows to sections still over their allotment. */
+function allocate(lens: Map<string, number>, budget: number): Map<string, number> {
+	const alloc = new Map<string, number>();
+	let open = SECTIONS.filter((s) => lens.has(s.key));
+	let left = budget;
+	while (open.length) {
+		const total = open.reduce((n, s) => n + s.share, 0);
+		const fits = open.filter((s) => lens.get(s.key)! <= (left * s.share) / total);
+		if (!fits.length) {
+			for (const s of open) alloc.set(s.key, Math.floor((left * s.share) / total));
+			break;
+		}
+		for (const s of fits) {
+			alloc.set(s.key, lens.get(s.key)!);
+			left -= lens.get(s.key)!;
+		}
+		open = open.filter((s) => !fits.includes(s));
+	}
+	return alloc;
 }
 
 function capAtParagraph(text: string, max: number): string {
@@ -101,11 +120,15 @@ function dbNotes(db: Database.Database, name: string): string {
 
 export function loadProfileExcerpt(db: Database.Database, p: { slug: string; name: string }): ProfileExcerpt {
 	const path = findFile(p);
-	const fileText = path ? extractSections(readFileSync(path, 'utf8')) : '';
+	const secs = path ? extractSections(readFileSync(path, 'utf8')) : new Map<string, string>();
 	const dbText = dbNotes(db, p.name);
-	const source = fileText && dbText ? 'both' : fileText ? 'file' : dbText ? 'db' : 'none';
-	// Reserve room for db notes so the file excerpt can't push them past the cap.
 	const room = MAX_CHARS - (dbText ? dbText.length + 2 : 0);
-	const text = [capAtParagraph(fileText, Math.max(0, room)), dbText].filter(Boolean).join('\n\n');
+	const alloc = allocate(new Map([...secs].map(([k, v]) => [k, v.length])), Math.max(0, room));
+	const fileText = SECTIONS.filter((x) => secs.has(x.key))
+		.map((x) => capAtParagraph(secs.get(x.key)!, alloc.get(x.key) ?? 0))
+		.filter(Boolean)
+		.join('\n\n');
+	const source = fileText && dbText ? 'both' : fileText ? 'file' : dbText ? 'db' : 'none';
+	const text = [fileText, dbText].filter(Boolean).join('\n\n');
 	return { slug: p.slug, name: p.name, text: text.slice(0, MAX_CHARS), source };
 }
