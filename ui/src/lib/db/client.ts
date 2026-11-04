@@ -686,6 +686,37 @@ export function openLeagueDb(path?: string): Database.Database {
 			db.pragma('foreign_keys = ON');
 		}
 	}
+	// Widen cover_requests.step to allow 'pitch' (concept pitches). SQLite cannot
+	// ALTER a CHECK, so rebuild once when the current CHECK lacks it. Nothing
+	// references cover_requests, so the swap cannot cascade.
+	const crSql = (db.prepare(
+		"SELECT sql FROM sqlite_master WHERE type='table' AND name='cover_requests'",
+	).get() as { sql?: string } | undefined)?.sql ?? '';
+	if (crSql && !crSql.includes("'pitch'")) {
+		db.transaction(() => {
+			db.exec(`
+				CREATE TABLE cover_requests_new (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					project_id INTEGER NOT NULL REFERENCES cover_projects(id) ON DELETE CASCADE,
+					version_id INTEGER,
+					step TEXT NOT NULL CHECK(step IN ('read','identity','generate','pitch')),
+					model_id TEXT NOT NULL,
+					provider TEXT NOT NULL,
+					latency_ms INTEGER NOT NULL,
+					cost_usd REAL,
+					cost_estimated INTEGER NOT NULL DEFAULT 0,
+					outcome TEXT NOT NULL CHECK(outcome IN ('ok','no_image','error')),
+					error_reason TEXT,
+					created_at TEXT NOT NULL DEFAULT (datetime('now'))
+				);
+				INSERT INTO cover_requests_new (id, project_id, version_id, step, model_id, provider, latency_ms, cost_usd, cost_estimated, outcome, error_reason, created_at)
+					SELECT id, project_id, version_id, step, model_id, provider, latency_ms, cost_usd, cost_estimated, outcome, error_reason, created_at FROM cover_requests;
+				DROP TABLE cover_requests;
+				ALTER TABLE cover_requests_new RENAME TO cover_requests;
+				CREATE INDEX IF NOT EXISTS idx_cover_requests_project ON cover_requests(project_id);
+			`);
+		})();
+	}
 	// digest approval gate: approval_token/decision/decided_at/review_url +
 	// attempts retry counter on digest_jobs.
 	const digestJobsCols = db.prepare("PRAGMA table_info(digest_jobs)").all() as { name: string }[];

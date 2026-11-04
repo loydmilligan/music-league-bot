@@ -43,7 +43,7 @@ export interface CoverRequest {
 	id: number;
 	project_id: number;
 	version_id: number | null;
-	step: 'read' | 'identity' | 'generate';
+	step: 'read' | 'identity' | 'generate' | 'pitch';
 	model_id: string;
 	provider: string;
 	latency_ms: number;

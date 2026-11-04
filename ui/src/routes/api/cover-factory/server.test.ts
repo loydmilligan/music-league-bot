@@ -34,6 +34,10 @@ const BREAKDOWN = JSON.stringify({
 	style: 's', composition: 'c', palette_lighting: 'p',
 	subjects: [{ label: 'A', kind: 'person', role: 'main', position: 'center' }],
 });
+const PITCH = JSON.stringify({
+	concepts: [{ move: 'recast', title: 'Roadie', plan: 'Jon as the roadie hauling the singer', addSubjects: [{ label: 'N1', kind: 'person', role: 'secondary', position: 'left', box: [0, 0.4, 0.3, 0.6] }],
+		treatments: [{ label: 'N1', mode: 'player', playerSlug: 'jon' }, { label: 'A', mode: 'keep' }] }],
+});
 const IMG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 let chatCalls = 0;
 const fakeFetch = vi.fn(async (_u: unknown, init?: { body?: string }) => {
@@ -45,6 +49,9 @@ const fakeFetch = vi.fn(async (_u: unknown, init?: { body?: string }) => {
 		return new Response(JSON.stringify({ choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${IMG}` } }] } }], usage: { cost: 0.07 } }), { status: 200 });
 	}
 	chatCalls++;
+	if (String(body.messages?.[0]?.content?.[0]?.text ?? '').includes('gag writer')) {
+		return new Response(JSON.stringify({ choices: [{ message: { content: PITCH } }], usage: { cost: 0.003 } }), { status: 200 });
+	}
 	return new Response(JSON.stringify({ choices: [{ message: { content: BREAKDOWN } }], usage: { cost: 0.001 } }), { status: 200 });
 });
 
@@ -294,5 +301,48 @@ describe('cover-factory API', () => {
 		const ok = await upload('c.png', png);
 		expect(ok.status).toBe(200);
 		expect(ok.json.project.source).toBe('upload');
+	});
+
+	it('pitch needs a player when there is no submitter, then returns concepts and logs step pitch', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		const none = await post({ action: 'pitch', projectId: id });
+		expect(none.status).toBe(400);
+		expect(none.json.error).toBe('choose a player');
+		const stranger = await post({ action: 'pitch', projectId: id, playerSlugs: ['nobody'] });
+		expect(stranger.status).toBe(400);
+		const r = await post({ action: 'pitch', projectId: id, playerSlugs: ['jon'], count: 1 });
+		expect(r.status).toBe(200);
+		expect(r.json.concepts).toHaveLength(1);
+		expect(r.json.concepts[0]).toMatchObject({ move: 'recast', addSubjects: [{ label: 'N1' }] });
+		const steps = db.prepare("SELECT step, outcome, cost_usd FROM cover_requests WHERE step = 'pitch'").all();
+		expect(steps).toEqual([{ step: 'pitch', outcome: 'ok', cost_usd: 0.003 }]);
+	});
+
+	it('pitch while paused is 409 and makes no provider calls', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		fakeFetch.mockClear();
+		process.env.AVATAR_FACTORY_GEN_PAUSED = '1';
+		const r = await post({ action: 'pitch', projectId: id, playerSlugs: ['jon'] });
+		expect(r.status).toBe(409);
+		expect(fakeFetch).not.toHaveBeenCalled();
+	});
+
+	it('apply-concept saves breakdown + treatments, idempotently', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		const { concepts } = (await post({ action: 'pitch', projectId: id, playerSlugs: ['jon'] })).json;
+		const a1 = await post({ action: 'apply-concept', projectId: id, concept: concepts[0] });
+		expect(a1.status).toBe(200);
+		expect(a1.json.breakdown.subjects.map((s: { label: string }) => s.label)).toEqual(['A', 'B']);
+		expect(a1.json.treatments.find((t: { label: string }) => t.label === 'B')).toMatchObject({ mode: 'player', playerSlug: 'jon' });
+		const a2 = await post({ action: 'apply-concept', projectId: id, concept: concepts[0] });
+		expect(a2.json.breakdown.subjects).toHaveLength(2);
+		const s = await get(`?project=${id}`);
+		expect(s.json.breakdown.subjects[1]).toMatchObject({ label: 'B', conceptId: concepts[0].id, box: [0, 0.4, 0.3, 0.6] });
+		expect(s.json.treatments).toEqual(a2.json.treatments);
+		const badC = await post({ action: 'apply-concept', projectId: id, concept: { id: 'x', move: 'alternate', addSubjects: [], treatments: [] } });
+		expect(badC.status).toBe(400);
 	});
 });

@@ -18,6 +18,7 @@ import {
 	type PlayerOption,
 } from './inputs.js';
 import { getPinnedCoverModel, isUsablePin } from './models.js';
+import { applyConcept, pitchConcepts, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
@@ -54,7 +55,7 @@ export function toApiError(e: unknown): { status: number; body: { error: string;
 	const msg = e instanceof Error ? e.message : 'error';
 	if (/paused/i.test(msg)) return { status: 409, body: { error: msg, reason: 'paused' } };
 	if (/not found/i.test(msg)) return { status: 404, body: { error: msg } };
-	if (/no generator model|no reader model|missing headshot|rating .* must be/i.test(msg)) {
+	if (/no generator model|no reader model|no pitch model|missing headshot|rating .* must be/i.test(msg)) {
 		return { status: /rating/i.test(msg) ? 400 : 409, body: { error: msg } };
 	}
 	return { status: 500, body: { error: msg } };
@@ -314,6 +315,53 @@ async function actGenerate(db: DB, b: Record<string, unknown>) {
 	return { version, stats: projectStats(db, project.id) };
 }
 
+async function actPitch(db: DB, b: Record<string, unknown>) {
+	assertGenerationAllowed(); // paid call: gate before any validation that could reach the provider
+	const project = need(db, num(b.projectId, 'projectId'));
+	breakdownOf(project);
+	let slugs: string[];
+	if (b.playerSlugs !== undefined) {
+		if (!Array.isArray(b.playerSlugs) || !b.playerSlugs.every((x) => typeof x === 'string')) bad('playerSlugs must be an array of strings');
+		slugs = [...new Set(b.playerSlugs as string[])];
+	} else {
+		const sub = submitterFor(db, project);
+		slugs = sub ? [sub.slug] : [];
+	}
+	if (!slugs.length) bad('choose a player');
+	const players = playersFor(project);
+	for (const slug of slugs) if (!players.some((p) => p.slug === slug)) bad(`unknown player ${slug}`);
+	if (b.count !== undefined && (typeof b.count !== 'number' || !Number.isInteger(b.count) || b.count < 1 || b.count > 12)) {
+		bad('count must be an integer 1-12');
+	}
+	return { concepts: await pitchConcepts(db, project.id, { playerSlugs: slugs, count: b.count as number | undefined }) };
+}
+
+const MOVES: ConceptMove[] = ['morph', 'signature', 'recast'];
+
+function actApplyConcept(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
+	const breakdown = breakdownOf(project);
+	const c = b.concept as Record<string, unknown> | undefined;
+	if (!c || typeof c !== 'object' || typeof c.id !== 'string' || !c.id.trim()) return bad('concept required');
+	if (!MOVES.includes(c.move as ConceptMove)) bad('invalid concept move');
+	if (!Array.isArray(c.addSubjects)) bad('concept.addSubjects must be an array');
+	const concept: Concept = {
+		id: c.id,
+		move: c.move as ConceptMove,
+		title: String(c.title ?? ''),
+		plan: String(c.plan ?? ''),
+		addSubjects: normalizeBreakdown({ subjects: c.addSubjects }).subjects.map(({ conceptId: _drop, ...s }) => s),
+		treatments: validateTreatments(c.treatments),
+	};
+	const current = parseJson<Treatment[]>(project.treatments_json, []);
+	const out = applyConcept(breakdown, current, concept);
+	updateProject(db, project.id, {
+		breakdown_json: JSON.stringify(out.breakdown),
+		treatments_json: JSON.stringify(out.treatments),
+	});
+	return out;
+}
+
 function actRate(db: DB, b: Record<string, unknown>) {
 	const id = num(b.versionId, 'versionId');
 	const r = b.ratings;
@@ -350,6 +398,8 @@ export async function runAction(db: DB, b: Record<string, unknown>): Promise<unk
 		case 'save': return actSave(db, b);
 		case 'preview-prompt': return actPreview(db, b);
 		case 'generate': return actGenerate(db, b);
+		case 'pitch': return actPitch(db, b);
+		case 'apply-concept': return actApplyConcept(db, b);
 		case 'rate': return actRate(db, b);
 		case 'keeper': return actKeeper(db, b);
 		case 'share': return actShare(db, b);

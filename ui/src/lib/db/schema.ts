@@ -859,7 +859,7 @@ CREATE TABLE IF NOT EXISTS cover_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES cover_projects(id) ON DELETE CASCADE,
   version_id INTEGER,
-  step TEXT NOT NULL CHECK(step IN ('read','identity','generate')),
+  step TEXT NOT NULL CHECK(step IN ('read','identity','generate','pitch')),
   model_id TEXT NOT NULL,
   provider TEXT NOT NULL,
   latency_ms INTEGER NOT NULL,

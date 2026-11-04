@@ -12,6 +12,8 @@ export interface Subject {
 	color_treatment: string;
 	focus: string;
 	box?: [number, number, number, number];
+	/** Set on subjects added by an applied concept pitch; ignored by the prompt builders. */
+	conceptId?: string;
 }
 export interface Breakdown {
 	style: string;
@@ -49,7 +51,8 @@ function textItem(v: unknown): string {
 const ROLES: SubjectRole[] = ['main', 'secondary', 'background'];
 const KINDS = ['person', 'animal', 'object'] as const;
 
-function letter(i: number): string {
+/** 0 → A, 25 → Z, 26 → AA, … */
+export function letter(i: number): string {
 	let n = i, s = '';
 	do {
 		s = String.fromCharCode(65 + (n % 26)) + s;
@@ -100,6 +103,7 @@ export function normalizeBreakdown(raw: unknown, size?: { width: number; height:
 		};
 		const box = normalizeBox(s.box, size);
 		if (box) out.box = box;
+		if (typeof s.conceptId === 'string' && s.conceptId.trim()) out.conceptId = s.conceptId.trim();
 		return out;
 	});
 	return {
