@@ -17,7 +17,7 @@ import {
 	saveHeadshotUpload,
 	type PlayerOption,
 } from './inputs.js';
-import { getPinnedCoverModel } from './models.js';
+import { getPinnedCoverModel, isUsablePin } from './models.js';
 import { coverFile } from './paths.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
@@ -230,6 +230,7 @@ async function coverDataUrl(project: CoverProject): Promise<string> {
 }
 
 async function actRead(db: DB, b: Record<string, unknown>) {
+	assertGenerationAllowed(); // the reader is a paid call too
 	const project = need(db, num(b.projectId, 'projectId'));
 	const breakdown = await readCover(db, project.id, await coverDataUrl(project));
 	const treatments = defaultTreatments(breakdown, submitterFor(db, project));
@@ -284,6 +285,9 @@ async function actGenerate(db: DB, b: Record<string, unknown>) {
 	breakdownOf(project);
 	if (b.modelId !== undefined && typeof b.modelId !== 'string') bad('modelId must be a string');
 	if (b.promptOverride !== undefined && typeof b.promptOverride !== 'string') bad('promptOverride must be a string');
+	if (typeof b.promptOverride === 'string' && b.promptOverride.length > 8000) bad('promptOverride too long (max 8000 characters)');
+	// Only roster models that fit the generator job may reach the provider (no arbitrary/fal-ai ids).
+	if (typeof b.modelId === 'string' && !isUsablePin(db, 'generator', b.modelId)) bad('modelId is not a usable generator model');
 
 	const players = playersFor(project);
 	const cache = parseJson<Record<string, string>>(project.identities_json, {});

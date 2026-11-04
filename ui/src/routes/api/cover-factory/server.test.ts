@@ -72,6 +72,7 @@ beforeEach(() => {
 	const base = { nickname: null, description: null, model_type: null, context_len: null, price_in: null, price_out: null, is_free: 0, cost_override: null, cap_reason: 0, cap_stream: 1, cap_vision: 0, cap_tools: 0, cap_json: 1, favorite: 0, sort_order: 0 };
 	insertModel(db, { ...base, model_id: 'vis/reader', kinds: '["vision","text"]', cap_vision: 1 });
 	insertModel(db, { ...base, model_id: 'img/gen', kinds: '["image"]' });
+	insertModel(db, { ...base, model_id: 'img/nogen', kinds: '["image"]' });
 });
 
 const post = async (body: unknown) => {
@@ -198,6 +199,31 @@ describe('cover-factory API', () => {
 		const r = await post({ action: 'generate', projectId: id, treatments: t, modelId: 'img/gen' });
 		expect(r.status).toBe(409);
 		expect(fakeFetch).not.toHaveBeenCalled();
+	});
+
+	it('read while paused is 409 and makes no provider calls', async () => {
+		const id = await seed();
+		fakeFetch.mockClear();
+		process.env.AVATAR_FACTORY_GEN_PAUSED = '1';
+		const r = await post({ action: 'read', projectId: id });
+		expect(r.status).toBe(409);
+		expect(fakeFetch).not.toHaveBeenCalled();
+	});
+
+	it('generate validates modelId against the generator roster and caps promptOverride', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		fakeFetch.mockClear();
+		for (const modelId of ['vis/reader', 'fal-ai/whatever', 'nope/unknown']) {
+			const r = await post({ action: 'generate', projectId: id, treatments: [], modelId });
+			expect(r.status).toBe(400);
+		}
+		const long = await post({ action: 'generate', projectId: id, treatments: [], modelId: 'img/gen', promptOverride: 'x'.repeat(8001) });
+		expect(long.status).toBe(400);
+		expect(fakeFetch).not.toHaveBeenCalled();
+		const ok = await post({ action: 'generate', projectId: id, treatments: [], modelId: 'img/gen', promptOverride: 'x'.repeat(8000) });
+		expect(ok.status).toBe(200);
+		expect(ok.json.version.status).toBe('ok');
 	});
 
 	it('a no-image generation is 200 with a failed version and reason', async () => {
