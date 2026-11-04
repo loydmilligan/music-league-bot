@@ -21,6 +21,7 @@ const LEAGUE_FOLDERS: Record<string, string> = {
 	'hip-jammers': HIP_JAMMERS_PLAYERS_SUB,
 };
 
+const OEMBED_CONCURRENCY = 4;
 const MAX_COVER_BYTES = 10 * 1024 * 1024;
 const HEADSHOT_NAMES = ['headshot.png', 'headshot.jpg', 'headshot.jpeg'] as const;
 
@@ -56,11 +57,52 @@ async function fillArtFromOembed(db: Database.Database, roundId: number, fetchIm
 			 WHERE round_id = ? AND album_art_url IS NULL AND spotify_uri LIKE 'spotify:track:%'`,
 		)
 		.all(roundId) as { id: number; spotify_uri: string }[];
-	const found = await Promise.all(rows.map((r) => oembedCover(r.spotify_uri.split(':').pop()!, fetchImpl)));
+	// Simple worker pool: at most OEMBED_CONCURRENCY requests in flight.
+	const found: ({ title: string; artUrl: string } | null)[] = new Array(rows.length).fill(null);
+	let next = 0;
+	const worker = async () => {
+		while (next < rows.length) {
+			const i = next++;
+			found[i] = await oembedCover(rows[i].spotify_uri.split(':').pop()!, fetchImpl);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(OEMBED_CONCURRENCY, rows.length) }, worker));
 	const upd = db.prepare('UPDATE ml_submissions SET album_art_url = ? WHERE id = ?');
 	rows.forEach((r, i) => {
 		if (found[i]) upd.run(found[i]!.artUrl, r.id);
 	});
+}
+
+type PlayerLookup = { get(arg: string): unknown };
+
+/** Shared submitter rule: players row by ml_competitor_id, then by name; slug = BOARZ id map or slugify. */
+function resolveSubmitter(
+	byMl: PlayerLookup,
+	byName: PlayerLookup,
+	mlId: string | null,
+	cname: string | null,
+): { playerName: string | null; playerSlug: string | null } {
+	let p: { id: number; name: string } | undefined;
+	if (mlId) p = byMl.get(mlId) as typeof p;
+	if (!p && cname) p = byName.get(cname) as typeof p;
+	const playerName = p?.name ?? cname ?? null;
+	const playerSlug = p ? (BOARZ_PLAYER_IDS[p.id] ?? slugify(p.name)) : playerName ? slugify(playerName) : null;
+	return { playerName, playerSlug };
+}
+
+/** One direct query for a submission's submitter: no album-art fill, no network. */
+export function submitterOfSubmission(db: Database.Database, submissionId: number): { slug: string; name: string } | undefined {
+	const r = db
+		.prepare(
+			`SELECT c.name AS cname, c.ml_competitor_id AS mlId
+			 FROM ml_submissions s LEFT JOIN competitors c ON c.id = s.competitor_id WHERE s.id = ?`,
+		)
+		.get(submissionId) as { cname: string | null; mlId: string | null } | undefined;
+	if (!r) return undefined;
+	const byMl = db.prepare('SELECT id, name FROM players WHERE ml_competitor_id = ? LIMIT 1');
+	const byName = db.prepare('SELECT id, name FROM players WHERE name = ? LIMIT 1');
+	const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname);
+	return playerSlug && playerName ? { slug: playerSlug, name: playerName } : undefined;
 }
 
 export async function listRoundSongs(db: Database.Database, roundId: number, fetchImpl: FetchLike = fetch): Promise<RoundSong[]> {
@@ -81,11 +123,7 @@ export async function listRoundSongs(db: Database.Database, roundId: number, fet
 	const byMl = db.prepare('SELECT id, name FROM players WHERE ml_competitor_id = ? LIMIT 1');
 	const byName = db.prepare('SELECT id, name FROM players WHERE name = ? LIMIT 1');
 	return rows.map((r) => {
-		let p: { id: number; name: string } | undefined;
-		if (r.mlId) p = byMl.get(r.mlId) as typeof p;
-		if (!p && r.cname) p = byName.get(r.cname) as typeof p;
-		const playerName = p?.name ?? r.cname ?? null;
-		const playerSlug = p ? (BOARZ_PLAYER_IDS[p.id] ?? slugify(p.name)) : playerName ? slugify(playerName) : null;
+		const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname);
 		return { submissionId: r.id, title: r.title, artists: r.artists, playerName, playerSlug, artUrl: r.artUrl };
 	});
 }
@@ -191,7 +229,10 @@ export function listPlayers(leagueSlug: string, projectId?: number): PlayerOptio
 	const roster = readRoster(leagueSlug);
 	const folder = LEAGUE_FOLDERS[leagueSlug];
 	if (!roster || !folder) return [];
-	return roster.members.map((m) => {
+	const seen = new Set<string>();
+	// Dedupe by slug (keep first) so Svelte {#each} keys cannot collide.
+	const members = roster.members.filter((m) => (seen.has(m.slug) ? false : (seen.add(m.slug), true)));
+	return members.map((m) => {
 		const up = projectId !== undefined ? latestUploadRel(projectId, m.slug) : null;
 		if (up) {
 			return { slug: m.slug, name: m.name, leagueSlug, headshotRel: up, lowRes: minEdge(coverFile(up)) < 256, missing: false };

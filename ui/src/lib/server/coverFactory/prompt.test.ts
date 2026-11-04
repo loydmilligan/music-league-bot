@@ -80,3 +80,42 @@ describe('defaultTreatments', () => {
 		expect(t.every((x) => x.mode === 'keep')).toBe(true);
 	});
 });
+
+describe('buildSwapPrompt wording (9a)', () => {
+	const one = (extra: Partial<Treatment>, identities = ids) =>
+		buildSwapPrompt(bd([subj('A', 'main')]), [{ label: 'A', mode: 'player', playerSlug: 'berto', playerName: 'Berto', ...extra }], identities).prompt;
+	it('"unless told otherwise" never attaches to an override clause', () => {
+		const p = one({ clothing: 'jean shorts' });
+		expect(p).not.toContain('jean shorts unless told otherwise');
+		expect(p).toMatch(/keep the original [^;]*unless told otherwise; apply these changes: .*jean shorts/);
+	});
+	it('clothing override keeps headwear unless notes mention headwear', () => {
+		expect(one({ clothing: 'jean shorts' })).toContain('headwear from the cover');
+		expect(one({ clothing: 'jean shorts', notes: 'swap the hat for a beanie' })).not.toContain('headwear from the cover');
+		expect(one({ clothing: 'jean shorts', notes: 'no cap' })).not.toContain('headwear from the cover');
+	});
+	it('omits the identifying-features sentence when the identity is missing or empty', () => {
+		for (const identities of [[], [{ slug: 'berto', name: 'Berto', features: '' }]]) {
+			const p = one({}, identities);
+			expect(p).toContain('the person in image 2 (Berto)');
+			expect(p).not.toContain('identifying features');
+			expect(p).not.toMatch(/exactly: \./);
+		}
+	});
+	it('age, gender, styleMatch and notes overrides each appear', () => {
+		const p = one({ age: 'elderly', gender: 'feminine', styleMatch: 'woodcut', notes: 'holding a fish' });
+		for (const x of ['apparent age: elderly', 'gender presentation: feminine', 'style: woodcut', 'holding a fish']) expect(p).toContain(x);
+	});
+});
+
+describe('defaultTreatments (9a)', () => {
+	it('without a submitter, player treatments carry no slug', () => {
+		const t = defaultTreatments(bd([subj('A', 'main')]));
+		expect(t).toEqual([{ label: 'A', mode: 'player', playerSlug: undefined, playerName: undefined }]);
+	});
+	it('an animal main subject is swapped for the player', () => {
+		const t = defaultTreatments(bd([subj('A', 'main', 'animal'), subj('B', 'background', 'object')]), { slug: 'koz', name: 'Koz' });
+		expect(t[0]).toMatchObject({ label: 'A', mode: 'player', playerSlug: 'koz' });
+		expect(t[1]).toEqual({ label: 'B', mode: 'keep' });
+	});
+});

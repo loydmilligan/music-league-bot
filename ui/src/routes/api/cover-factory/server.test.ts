@@ -129,7 +129,7 @@ describe('cover-factory API', () => {
 		expect(v(ok).cost_usd).toBeCloseTo(0.07);
 		expect(typeof v(ok).latency_ms).toBe('number');
 		expect(v(bad).status).toBe('failed');
-		expect(v(bad).cost_usd).not.toBeCloseTo(0.07);
+		expect(v(bad).cost_usd).toBeNull(); // failed generation: no cost was logged for that version
 		expect(s.submitter).toBeNull();
 	});
 
@@ -228,6 +228,25 @@ describe('cover-factory API', () => {
 		expect(c.json.project).toMatchObject({ league_slug: 'second-best', round_id: 11, title: 'Tune — Band' });
 		const rd = await post({ action: 'read', projectId: c.json.project.id });
 		expect(rd.json.treatments[0]).toMatchObject({ mode: 'player', playerSlug: slugify('Jon Doe'), playerName: 'Jon Doe' });
+	});
+
+	it('project state load for a round project makes zero fetch calls', async () => {
+		db.exec(`DELETE FROM ml_submissions; DELETE FROM rounds; DELETE FROM seasons; DELETE FROM leagues; DELETE FROM competitors;
+			INSERT INTO leagues (id, slug, name) VALUES (7, 'second-best', 'Second Best');
+			INSERT INTO seasons (id, league_id, season_number, status) VALUES (3, 7, 1, 'active');
+			INSERT INTO rounds (id, season_id, ml_round_id, name, created_at) VALUES (11, 3, 'mlr', 'R', '2026-01-01');
+			INSERT INTO competitors (id, ml_competitor_id, name) VALUES (5, 'c5', 'Jon Doe');
+			INSERT INTO ml_submissions (id, round_id, competitor_id, spotify_uri, title, artists, created_at, album_art_url)
+			  VALUES (21, 11, 5, 'spotify:track:zzz', 'Tune', 'Band', '2026-01-01', 'https://i.example/z.jpg');`);
+		const c = await post({ action: 'create', source: 'round', roundId: 11, submissionId: 21 });
+		const id = c.json.project.id;
+		// Art goes missing after creation: the old path would refill it over the network on every load.
+		db.exec('UPDATE ml_submissions SET album_art_url = NULL WHERE id = 21');
+		fakeFetch.mockClear();
+		const s = await get(`?project=${id}`);
+		expect(s.status).toBe(200);
+		expect(s.json.submitter).toEqual({ slug: slugify('Jon Doe'), name: 'Jon Doe' });
+		expect(fakeFetch).not.toHaveBeenCalled();
 	});
 
 	const upload = async (name: string, bytes: Buffer) => {

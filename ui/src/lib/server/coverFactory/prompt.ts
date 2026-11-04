@@ -37,6 +37,8 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	else keeps.push('pose/gaze');
 	if (t.clothing) changes.push(`wearing ${t.clothing}`);
 	else keeps.push('clothing and headwear from the cover');
+	// A clothing override must not silently drop the hat/cap, unless the notes talk about headwear.
+	if (t.clothing && !/\b(hat|cap|headwear|beanie)\b/i.test(t.notes ?? '')) keeps.push('headwear from the cover');
 	if (t.age) changes.push(`apparent age: ${t.age}`);
 	if (t.gender) changes.push(`gender presentation: ${t.gender}`);
 	if (t.styleMatch) changes.push(`style: ${t.styleMatch}`);
@@ -44,12 +46,13 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	let p = `Subject ${s.label} (${s.position}) becomes ${who}: `;
 	const parts: string[] = [];
 	if (keeps.length) {
-		// "keep the original pose/gaze, clothing and headwear from the cover"
-		parts.push(`keep the original ${keeps.join(', ')}`);
+		// "keep the original pose/gaze, clothing and headwear from the cover unless told otherwise"
+		parts.push(`keep the original ${keeps.join(', ')} unless told otherwise`);
 	}
 	if (changes.length) parts.push(`apply these changes: ${changes.join('; ')}`);
-	p += parts.join('; ') + (keeps.length ? ' unless told otherwise' : '') + '. ';
-	p += `Keep these identifying features exactly: ${features}. Render them in the cover's style, with the face clearly visible and recognizable.`;
+	p += parts.join('; ') + '. ';
+	if (features.trim()) p += `Keep these identifying features exactly: ${features.trim()}. Render them in the cover's style, with the face clearly visible and recognizable.`;
+	else p += `Render the person in the cover's style, with the face clearly visible and recognizable.`;
 	return p;
 }
 

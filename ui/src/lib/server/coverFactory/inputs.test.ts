@@ -17,7 +17,7 @@ import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { fetchTrack } from '$lib/spotify/client.js';
 import {
 	listRoundSongs, resolveSpotifyCover, fetchCoverBytes, listPlayers, loadHeadshot,
-	saveHeadshotUpload, saveCoverUpload,
+	saveHeadshotUpload, saveCoverUpload, submitterOfSubmission,
 } from './inputs.js';
 
 const img = (n: number) =>
@@ -111,6 +111,39 @@ describe('Spotify Web API down: oEmbed fallback', () => {
 			artUrl: 'https://image-cdn-ak.spotifycdn.com/image/ab67616d0000b273abc',
 			spotifyUri: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
 		});
+	});
+});
+
+describe('9a: oEmbed concurrency + listPlayers dedupe + submitterOfSubmission', () => {
+	it('oEmbed fallback never runs more than 4 requests at once', async () => {
+		const db = fixture();
+		for (let i = 10; i < 22; i++) db.exec(`INSERT INTO ml_submissions VALUES (${i},7,1,'spotify:track:t${i}','S','B',NULL);`);
+		vi.mocked(ensureAlbumArt).mockRejectedValueOnce(new Error('Spotify 403'));
+		let inFlight = 0, peak = 0;
+		const f = (async () => {
+			inFlight++; peak = Math.max(peak, inFlight);
+			await new Promise((r) => setTimeout(r, 5));
+			inFlight--;
+			return new Response(JSON.stringify({ title: 't', thumbnail_url: 'https://x.test/ab67616d00001e02q' }), { status: 200 });
+		}) as any;
+		const songs = await listRoundSongs(db, 7, f);
+		expect(songs.every((s) => s.artUrl)).toBe(true);
+		expect(peak).toBe(4);
+	});
+
+	it('listPlayers dedupes by slug, keeping the first', () => {
+		const db = fixture();
+		db.exec(`INSERT INTO players VALUES (104,'Ann Lee','mlA2'); INSERT INTO season_players VALUES (1,104);`);
+		db.close();
+		const slugs = listPlayers('second-best').map((p) => p.slug);
+		expect(slugs.filter((x) => x === 'ann-lee')).toHaveLength(1);
+		expect(new Set(slugs).size).toBe(slugs.length);
+	});
+
+	it('submitterOfSubmission resolves with no network and undefined for unknown ids', () => {
+		const db = fixture();
+		expect(submitterOfSubmission(db, 1)).toEqual({ slug: 'ann-lee', name: 'Ann Lee' });
+		expect(submitterOfSubmission(db, 999)).toBeUndefined();
 	});
 });
 

@@ -40,6 +40,7 @@
 	);
 
 	async function loadRounds(slug: string) {
+		const stale = () => league !== slug;
 		loadingRounds = true;
 		err = '';
 		rounds = [];
@@ -47,13 +48,14 @@
 		roundId = null;
 		try {
 			const r = await cfGet<{ rounds: typeof rounds }>(`?league=${encodeURIComponent(slug)}`);
+			if (stale()) return; // league changed while this request was in flight
 			rounds = r.rounds;
 			const first = rounds.find((r) => r.songCount > 0) ?? rounds[0];
 			if (first) await loadSongs(first.id);
 		} catch (e) {
-			err = e instanceof Error ? e.message : 'could not load rounds';
+			if (!stale()) err = e instanceof Error ? e.message : 'could not load rounds';
 		} finally {
-			loadingRounds = false;
+			if (!stale()) loadingRounds = false;
 		}
 	}
 
@@ -70,6 +72,16 @@
 		} finally {
 			loadingSongs = false;
 		}
+	}
+
+	function onTabKey(e: KeyboardEvent) {
+		const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+		if (!dir) return;
+		e.preventDefault();
+		const i = TABS.findIndex((t) => t.id === tab);
+		const next = TABS[(i + dir + TABS.length) % TABS.length];
+		tab = next.id;
+		document.getElementById(`cp-tab-${next.id}`)?.focus();
 	}
 
 	$effect(() => {
@@ -120,7 +132,11 @@
 			<button
 				type="button"
 				role="tab"
+				id="cp-tab-{t.id}"
 				aria-selected={tab === t.id}
+				aria-controls="cp-panel"
+				tabindex={tab === t.id ? 0 : -1}
+				onkeydown={onTabKey}
 				class="px-3 py-2 -mb-px border-b-2 font-mono text-xs uppercase tracking-wider transition-colors {tab === t.id
 					? 'border-accent text-accent'
 					: 'border-transparent text-fg-dim hover:text-fg'}"
@@ -133,6 +149,7 @@
 		<p class="rounded-md border border-ember/40 bg-ember-bg px-3 py-2 text-sm text-fg" role="alert">{err}</p>
 	{/if}
 
+	<div id="cp-panel" role="tabpanel" aria-labelledby="cp-tab-{tab}" class="space-y-4">
 	{#if tab === 'round'}
 		<div class="flex flex-wrap gap-3 items-end">
 			<label class={lbl}>
@@ -257,4 +274,5 @@
 			</label>
 		</form>
 	{/if}
+	</div>
 </div>

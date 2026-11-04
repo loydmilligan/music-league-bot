@@ -478,8 +478,8 @@
 						<li>
 							<button
 								type="button"
-								class="w-full text-left flex items-center gap-2.5 p-1.5 rounded-sm border-l-2 transition-colors {active
-									? 'border-accent bg-accent-bg'
+								class="w-full text-left flex items-center gap-2.5 p-1.5 rounded-sm border transition-colors {active
+									? 'border-accent/60 bg-accent-bg'
 									: 'border-transparent hover:bg-surface'}"
 								aria-current={active ? 'true' : undefined}
 								onclick={() => openProject(p.id)}

@@ -10,6 +10,7 @@ import {
 	fetchCoverBytes,
 	listPlayers,
 	listRoundSongs,
+	submitterOfSubmission,
 	loadHeadshot,
 	resolveSpotifyCover,
 	saveCoverUpload,
@@ -132,7 +133,7 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 			versions: withGenerateCost(db, project.id, listVersions(db, project.id)),
 			stats: projectStats(db, project.id),
 			players: playersFor(project),
-			submitter: (await submitterFor(db, project)) ?? null,
+			submitter: submitterFor(db, project) ?? null,
 		};
 	}
 	const league = q.get('league');
@@ -214,14 +215,14 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 	return bad('source must be round or spotify');
 }
 
-async function submitterFor(db: DB, project: CoverProject): Promise<{ slug: string; name: string } | undefined> {
+/** Cheap: one DB lookup, never touches album art or the network (runs on every project-state load). */
+function submitterFor(db: DB, project: CoverProject): { slug: string; name: string } | undefined {
 	if (project.round_id == null || !project.spotify_uri) return undefined;
 	const sub = db
 		.prepare('SELECT id FROM ml_submissions WHERE round_id = ? AND spotify_uri = ? LIMIT 1')
 		.get(project.round_id, project.spotify_uri) as { id: number } | undefined;
 	if (!sub) return undefined;
-	const song = (await listRoundSongs(db, project.round_id)).find((s) => s.submissionId === sub.id);
-	return song?.playerSlug && song.playerName ? { slug: song.playerSlug, name: song.playerName } : undefined;
+	return submitterOfSubmission(db, sub.id);
 }
 
 async function coverDataUrl(project: CoverProject): Promise<string> {
@@ -231,7 +232,7 @@ async function coverDataUrl(project: CoverProject): Promise<string> {
 async function actRead(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
 	const breakdown = await readCover(db, project.id, await coverDataUrl(project));
-	const treatments = defaultTreatments(breakdown, await submitterFor(db, project));
+	const treatments = defaultTreatments(breakdown, submitterFor(db, project));
 	updateProject(db, project.id, {
 		breakdown_json: JSON.stringify(breakdown),
 		treatments_json: JSON.stringify(treatments),
