@@ -27,6 +27,12 @@ describe('buildSwapPrompt', () => {
 		expect(r.prompt).toContain('headwear from the cover');
 		expect(r.imageOrder).toEqual(['cover', 'berto']);
 	});
+	it('names the cover subject\'s clothing and forbids copying clothing from the headshot (live Blackalicious plaid-shirt bug)', () => {
+		const t: Treatment[] = [{ label: 'A', mode: 'player', playerSlug: 'berto', playerName: 'Berto' }];
+		const p = buildSwapPrompt(bd([subj('A', 'main')]), t, ids).prompt;
+		expect(p).toContain('clothing and headwear from the cover (a red cap and tee)');
+		expect(p).toContain('Use image 2 only for the face and identity: never copy its clothing, background or lighting');
+	});
 	it('clothing override replaces keep-original clothing', () => {
 		const t: Treatment[] = [{ label: 'A', mode: 'player', playerSlug: 'berto', playerName: 'Berto', clothing: 'jean shorts' }];
 		const p = buildSwapPrompt(bd([subj('A', 'main')]), t, ids).prompt;

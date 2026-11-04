@@ -36,7 +36,7 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	if (t.poseGaze) changes.push(`pose and gaze: ${t.poseGaze}`);
 	else keeps.push('pose/gaze');
 	if (t.clothing) changes.push(`wearing ${t.clothing}`);
-	else keeps.push('clothing and headwear from the cover');
+	else keeps.push(s.clothing.trim() ? `clothing and headwear from the cover (${s.clothing.trim()})` : 'clothing and headwear from the cover');
 	// A clothing override must not silently drop the hat/cap, unless the notes talk about headwear.
 	if (t.clothing && !/\b(hat|cap|headwear|beanie)\b/i.test(t.notes ?? '')) keeps.push('headwear from the cover');
 	if (t.age) changes.push(`apparent age: ${t.age}`);
@@ -53,6 +53,8 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	p += parts.join('; ') + '. ';
 	if (features.trim()) p += `Keep these identifying features exactly: ${features.trim()}. Render them in the cover's style, with the face clearly visible and recognizable.`;
 	else p += `Render the person in the cover's style, with the face clearly visible and recognizable.`;
+	// Live 2026-11-04: without this the model copied the headshot's plaid shirt onto the cover subject.
+	p += ` Use image ${n} only for the face and identity: never copy its clothing, background or lighting into the cover.`;
 	return p;
 }
 
