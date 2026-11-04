@@ -8,6 +8,8 @@ import { normalizeImage } from '../avatarFactory/normalize.js';
 import { letter, normalizeBreakdown, parseModelJson, type Breakdown, type Subject } from './breakdown.js';
 import { chatWithImages } from './chat.js';
 import { listPlayers, type PlayerOption } from './inputs.js';
+import { getModelByModelId } from '$lib/db/aiModels.js';
+import { parseKinds } from '$lib/models/kinds.js';
 import { getPinnedCoverModel } from './models.js';
 import { coverFile } from './paths.js';
 import { loadProfileExcerpt } from './profiles.js';
@@ -35,7 +37,7 @@ const LEAGUES = ['boarz-ii-men', 'second-best', 'hip-jammers'];
 
 export const PITCH_PROMPT = `You are the gag writer for a private music league's weekly digest. Each round, a player's song gets its album cover doctored so that player is slipped into it; the digest shows a wipe from the real cover (image 1, described by the breakdown JSON below) to the doctored one. Pitch concrete gag plans for THIS cover starring the listed player(s).
 
-TASTE BAR: the gag must be funny for that player. It should land because of who they are (their running jokes, reputation, habits, how the others see them, from the profile excerpts below) or because the role they take on the cover says something about them. A cheap literal mashup (a face pasted onto butt cheeks, a head stuck on an object for no reason) is a failure even if it would render cleanly. If a plan would be just as funny with any other player's name in it, it is not good enough, unless it is a morph.
+TASTE BAR: the gag must be funny for that player. It should land because of who they are (their running jokes, reputation, habits, how the others see them, from the profile excerpts below) or because the role they take on the cover says something about them. A cheap literal mashup (a face pasted onto butt cheeks, a head stuck on an object for no reason) is a failure even if it would render cleanly. If a plan would be just as funny with any other player's name in it, it is not good enough; a morph is acceptable when the profile is thin.
 
 THE MOVES (use these exact strings in "move"):
 - "morph": something already on the cover becomes the player: an object, animal or shape turns into their face or body, rendered in the cover's own style. This is the fallback: always possible, even on a cover with no people. When the profiles give you nothing real to build on, pitch more morphs rather than inventing traits.
@@ -88,7 +90,7 @@ function buildPrompt(b: Breakdown, players: { slug: string; name: string; profil
 	].join('\n');
 }
 
-function cleanTreatment(raw: unknown, valid: Set<string>, names: Map<string, string>, remap: Map<string, string>): Treatment | null {
+function cleanTreatment(raw: unknown, valid: Set<string>, names: Map<string, string>, remap: Map<string, string> = new Map()): Treatment | null {
 	if (!raw || typeof raw !== 'object') return null;
 	const o = raw as Record<string, unknown>;
 	const rawLabel = str(o.label);
@@ -108,6 +110,23 @@ function cleanTreatment(raw: unknown, valid: Set<string>, names: Map<string, str
 		if (v) t[k] = v;
 	}
 	return t;
+}
+
+/**
+ * Keep only treatments for a known label (`validLabels`) with a valid mode; a playerSlug must be a key of
+ * `names` (slug -> display name), and playerName is refilled from it. Used for model output and client-sent concepts.
+ */
+export function cleanTreatments(raw: unknown, validLabels: Iterable<string>, names: Map<string, string>): Treatment[] {
+	const valid = new Set(validLabels);
+	return (Array.isArray(raw) ? raw : []).map((t) => cleanTreatment(t, valid, names)).filter((t): t is Treatment => t !== null);
+}
+
+/** True when the ai_models row says the model takes image input. */
+function acceptsImages(db: Database.Database, model: string): boolean {
+	const row = getModelByModelId(db, model);
+	if (!row) return false;
+	const kinds = parseKinds(row.kinds);
+	return row.cap_vision === 1 || kinds.includes('vision') || kinds.includes('multimodal');
 }
 
 function cleanConcepts(raw: unknown, b: Breakdown, names: Map<string, string>, count: number): Concept[] {
@@ -162,13 +181,16 @@ export async function pitchConcepts(
 	});
 	const names = new Map(players.map((p) => [p.slug, p.name]));
 	const prompt = buildPrompt(breakdown, players, count);
-	const cover = (await normalizeImage(readFileSync(coverFile(project.cover_rel)), 'cover.jpg')).dataUrl;
+	// Text-only pitch models get the breakdown alone (the prompt describes the cover in JSON either way).
+	const images = acceptsImages(db, model)
+		? [(await normalizeImage(readFileSync(coverFile(project.cover_rel)), 'cover.jpg')).dataUrl]
+		: [];
 
 	const base = { project_id: projectId, version_id: null, step: 'pitch' as const, model_id: model, provider: 'openrouter', cost_estimated: 0 };
 	const t0 = Date.now();
 	let r;
 	try {
-		r = await chatWithImages({ model, prompt, imageDataUrls: [cover], fetchImpl: o.fetchImpl, timeoutMs: TIMEOUT_MS });
+		r = await chatWithImages({ model, prompt, imageDataUrls: images, fetchImpl: o.fetchImpl, timeoutMs: TIMEOUT_MS });
 	} catch (e) {
 		logRequest(db, {
 			...base, latency_ms: Date.now() - t0,

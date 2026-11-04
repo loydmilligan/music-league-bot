@@ -342,6 +342,21 @@ describe('cover-factory API', () => {
 		const s = await get(`?project=${id}`);
 		expect(s.json.breakdown.subjects[1]).toMatchObject({ label: 'B', conceptId: concepts[0].id, box: [0, 0.4, 0.3, 0.6] });
 		expect(s.json.treatments).toEqual(a2.json.treatments);
+		const forged = {
+			id: 'forged', move: 'signature', title: 'F', plan: 'p', addSubjects: [],
+			treatments: [
+				{ label: 'A', mode: 'player', playerSlug: 'stranger', playerName: 'Stranger' },
+				{ label: 'B', mode: 'player', playerSlug: 'jon', playerName: 'Wrong Name', notes: 'ok' },
+				{ label: 'Z', mode: 'player', playerSlug: 'jon' },
+			],
+		};
+		const a3 = await post({ action: 'apply-concept', projectId: id, concept: forged });
+		expect(a3.status).toBe(200);
+		const saved = (await get(`?project=${id}`)).json.treatments as { label: string; playerSlug?: string; playerName?: string }[];
+		expect(saved.some((t) => t.playerSlug === 'stranger')).toBe(false);
+		expect(saved.some((t) => t.label === 'Z')).toBe(false);
+		expect(saved.find((t) => t.label === 'B')).toEqual({ label: 'B', mode: 'player', playerSlug: 'jon', playerName: 'Jon', notes: 'ok' });
+		expect(saved.find((t) => t.label === 'A')).toEqual(a2.json.treatments.find((t: { label: string }) => t.label === 'A'));
 		const badC = await post({ action: 'apply-concept', projectId: id, concept: { id: 'x', move: 'alternate', addSubjects: [], treatments: [] } });
 		expect(badC.status).toBe(400);
 	});

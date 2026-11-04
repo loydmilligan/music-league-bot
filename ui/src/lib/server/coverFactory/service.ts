@@ -18,7 +18,7 @@ import {
 	type PlayerOption,
 } from './inputs.js';
 import { getPinnedCoverModel, isUsablePin } from './models.js';
-import { applyConcept, pitchConcepts, type Concept, type ConceptMove } from './pitch.js';
+import { applyConcept, cleanTreatments, pitchConcepts, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
@@ -351,8 +351,13 @@ function actApplyConcept(db: DB, b: Record<string, unknown>) {
 		title: String(c.title ?? ''),
 		plan: String(c.plan ?? ''),
 		addSubjects: normalizeBreakdown({ subjects: c.addSubjects }).subjects.map(({ conceptId: _drop, ...s }) => s),
-		treatments: validateTreatments(c.treatments),
+		treatments: [],
 	};
+	if (!Array.isArray(c.treatments)) bad('concept.treatments must be an array');
+	// The concept comes from the client: same cleaning as a model pitch, against the project's roster.
+	const names = new Map(playersFor(project).map((p) => [p.slug, p.name]));
+	const labels = [...breakdown.subjects.map((s) => s.label), ...concept.addSubjects.map((s) => s.label)];
+	concept.treatments = cleanTreatments(c.treatments, labels, names);
 	const current = parseJson<Treatment[]>(project.treatments_json, []);
 	const out = applyConcept(breakdown, current, concept);
 	updateProject(db, project.id, {

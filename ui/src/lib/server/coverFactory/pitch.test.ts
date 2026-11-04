@@ -141,6 +141,22 @@ describe('pitchConcepts', () => {
 		expect(cs[0].treatments).toEqual([{ label: 'A', mode: 'player', playerSlug: 'shane', playerName: 'Shane Smith' }]);
 	});
 
+	it('sends no image to a text-only pitch model', async () => {
+		db.exec('DELETE FROM ai_models');
+		insertModel(db, {
+			model_id: 'txt/blind', nickname: null, description: null, model_type: null, context_len: null,
+			price_in: null, price_out: null, is_free: 0, cost_override: null, cap_reason: 0, cap_stream: 1,
+			cap_vision: 0, cap_tools: 0, cap_json: 1, favorite: 0, sort_order: 0, kinds: '["text"]',
+		});
+		db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(COVER_JOB_KEYS.pitch, 'txt/blind');
+		const { f, calls } = fakeFetch(GOOD);
+		await pitchConcepts(db, pid, { playerSlugs: ['shane', 'berto'], fetchImpl: f });
+		expect(calls[0].model).toBe('txt/blind');
+		const content = calls[0].messages[0].content as { type: string }[];
+		expect(content.map((p) => p.type)).toEqual(['text']);
+		expect(JSON.stringify(calls[0])).not.toContain('image_url');
+	});
+
 	it('while paused throws and makes no provider call', async () => {
 		process.env.AVATAR_FACTORY_GEN_PAUSED = '1';
 		const { f } = fakeFetch(GOOD);
@@ -222,9 +238,22 @@ describe('cover_requests migration', () => {
 		const idx = d2.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_cover_requests_project'").get();
 		expect(idx).toBeTruthy();
 		d2.close();
-		// a reopened, already-migrated DB is left alone
+		// a reopened, already-migrated DB is left alone: a rebuild would give the table a new rootpage
+		// (CREATE _new allocates a fresh page) and drop the marker index below.
+		const page = () => {
+			const d = new Database(path);
+			const r = d.prepare("SELECT rootpage FROM sqlite_master WHERE type='table' AND name='cover_requests'").get() as { rootpage: number };
+			d.close();
+			return r.rootpage;
+		};
 		const d3 = new Database(path);
-		expect((d3.prepare("SELECT sql FROM sqlite_master WHERE name='cover_requests'").get() as { sql: string }).sql).toContain("'pitch'");
+		d3.exec('CREATE INDEX marker_only_if_not_rebuilt ON cover_requests(model_id)');
 		d3.close();
+		const before = page();
+		openLeagueDb(path).close();
+		expect(page()).toBe(before);
+		const d4 = new Database(path);
+		expect(d4.prepare("SELECT name FROM sqlite_master WHERE name='marker_only_if_not_rebuilt'").get()).toBeTruthy();
+		d4.close();
 	});
 });
