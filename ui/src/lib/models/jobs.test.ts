@@ -11,6 +11,24 @@ function mk(o: Partial<JobModel> = {}): JobModel {
 }
 
 describe('modelFitsJob', () => {
+  it('image+multimodal (no text/vision) with cap_vision does NOT fit reader', () => {
+    expect(modelFitsJob(mk({ kinds: '["image","multimodal"]', cap_vision: 1 }), 'reader')).toBe(false);
+  });
+  it('legacy image-type with cap_vision does NOT fit reader', () => {
+    expect(modelFitsJob(mk({ kinds: null, model_type: 'image', cap_vision: 1 }), 'reader')).toBe(false);
+  });
+  it('legacy image-only-output modality with cap_vision does NOT fit reader', () => {
+    expect(modelFitsJob(mk({ kinds: null, model_type: 'text+image->image', cap_vision: 1 }), 'reader')).toBe(false);
+  });
+  it('multimodal+text fits reader', () => {
+    expect(modelFitsJob(mk({ kinds: '["multimodal","text"]' }), 'reader')).toBe(true);
+  });
+  it('legacy text+image->image does NOT fit pitch; ->text fits', () => {
+    expect(modelFitsJob(mk({ kinds: null, model_type: 'text+image->image' }), 'pitch')).toBe(false);
+    expect(modelFitsJob(mk({ kinds: null, model_type: 'text+image->text' }), 'pitch')).toBe(true);
+    expect(modelFitsJob(mk({ kinds: null, model_type: 'text+image->text+image' }), 'pitch')).toBe(true);
+  });
+
   it('legacy image type fits generator, not pitch', () => {
     const m = mk({ kinds: null, model_type: 'image' });
     expect(modelFitsJob(m, 'generator')).toBe(true);

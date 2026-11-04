@@ -138,10 +138,8 @@
   let avatarAgeShift = $state(0);
   let avatarSaving = $state(false);
 
-  // Image-capable models from the roster, favorites first. Matches the manual
-  // 'image' model_type or an OpenRouter modality that outputs image.
-  const imageModels = $derived(
-  modelsForJob(models, 'generator'));
+  // Generator-capable (image-output) models from the roster, favorites first.
+  const imageModels = $derived(modelsForJob(models, 'generator'));
 
   // ---- cover factory pinned models -----------------------------------------
   type CoverSlot = { pinned: string | null; missing: boolean; resolved: string | null };
@@ -173,6 +171,7 @@
         body: JSON.stringify({ job, model_id: modelId || null }),
       });
       if (r.ok) coverSlots = await r.json();
+      else await loadCoverModels();
     } catch { /* ignore */ } finally {
       coverSaving = false;
     }
@@ -1341,13 +1340,16 @@
               onchange={(e) => saveCoverModel(row.job, (e.currentTarget as HTMLSelectElement).value)}
             >
               <option value="">Auto (top model)</option>
+              {#if coverSlots[row.job].missing && coverSlots[row.job].pinned}
+                <option value={coverSlots[row.job].pinned} disabled>{coverSlots[row.job].pinned} (unavailable)</option>
+              {/if}
               {#each opts as m (m.id)}
                 <option value={m.model_id}>{jobOptionLabel(m)}</option>
               {/each}
             </select>
           {/if}
           {#if coverSlots[row.job].missing}
-            <span class="mlm-av-hint">⚠ pinned model no longer in roster ({coverSlots[row.job].pinned}); using {coverSlots[row.job].resolved ?? 'nothing'}</span>
+            <span class="mlm-av-hint">⚠ pinned model unavailable (removed or no longer fits this job): {coverSlots[row.job].pinned}. Using {coverSlots[row.job].resolved ?? 'nothing'}</span>
           {/if}
         </label>
       {/each}

@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3';
 import { logLlmCall } from '$lib/digest/llm.js';
 import { appBaseUrl } from '$lib/config/urls.js';
+import { listModels } from '$lib/db/aiModels.js';
+import { modelsForJob } from '$lib/models/jobs.js';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // A real OpenRouter image-output model (verified present in /api/v1/models).
@@ -243,9 +245,8 @@ export function buildBasePrompt(
  * Resolve the model to use for avatar image generation.
  * Priority:
  *   1. settings['avatar_image_model'] — explicit override (no UI yet, kept for compat)
- *   2. an image-capable model from the Models screen (ai_models) — favorite first, so the
- *      operator picks which one by starring it. Matches the manual 'image' model_type or an
- *      OpenRouter modality that outputs image (e.g. 'text+image->text+image').
+ *   2. the top generator-capable model from the Models screen (ai_models) — same rule as the
+ *      Cover Factory generator Auto pick (kinds include 'image', or legacy image model_type).
  *   3. env OPENROUTER_AVATAR_IMAGE_MODEL
  *   4. hardcoded valid default
  */
@@ -257,15 +258,8 @@ export function modelForAvatar(db: Database.Database): string {
 
   // ai_models may not exist on a fresh DB — guard the lookup.
   try {
-    const model = db
-      .prepare(
-        `SELECT model_id FROM ai_models
-         WHERE model_type = 'image' OR model_type LIKE '%->%image%'
-         ORDER BY favorite DESC, sort_order ASC, id ASC
-         LIMIT 1`,
-      )
-      .get() as { model_id: string } | undefined;
-    if (model?.model_id) return model.model_id;
+    const model_id = modelsForJob(listModels(db), 'generator')[0]?.model_id;
+    if (model_id) return model_id;
   } catch {
     // table absent — fall through to env/default
   }

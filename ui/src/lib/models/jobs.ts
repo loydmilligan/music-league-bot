@@ -16,6 +16,13 @@ export type JobModel = {
   cost_override: string | null;
 };
 
+/** True when the legacy model_type says the model outputs image but not text. */
+function imageOnlyOutput(type: string): boolean {
+  if (type === 'image') return true;
+  const m = type.match(/->(.*)$/);
+  return !!m && m[1].includes('image') && !m[1].includes('text');
+}
+
 export function modelFitsJob(m: JobModel, job: CoverJob): boolean {
   const kinds = parseKinds(m.kinds);
   const type = m.model_type ?? '';
@@ -23,9 +30,13 @@ export function modelFitsJob(m: JobModel, job: CoverJob): boolean {
     case 'generator':
       return kinds.includes('image') || type === 'image' || /->.*image/.test(type);
     case 'reader':
-      return kinds.includes('vision') || kinds.includes('multimodal') || m.cap_vision === 1;
+      return (
+        kinds.includes('vision') ||
+        (kinds.includes('multimodal') && kinds.includes('text')) ||
+        (kinds.length === 0 && m.cap_vision === 1 && !imageOnlyOutput(type))
+      );
     case 'pitch':
-      return kinds.includes('text') || (kinds.length === 0 && type !== 'image');
+      return kinds.includes('text') || (kinds.length === 0 && !imageOnlyOutput(type));
   }
 }
 
