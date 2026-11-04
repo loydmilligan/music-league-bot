@@ -91,7 +91,46 @@ describe('spotify + cover bytes', () => {
 	});
 });
 
+describe('fetchCoverBytes hardening', () => {
+	it('caps streamed body without content-length', async () => {
+		const chunk = new Uint8Array(1024 * 1024);
+		let n = 0;
+		const body = new ReadableStream({ pull(c) { n++; if (n > 12) c.close(); else c.enqueue(chunk); } });
+		const f = (async () => new Response(body, { headers: { 'content-type': 'image/jpeg' } })) as any;
+		await expect(fetchCoverBytes('https://x.test/a', f)).rejects.toThrow(/large/);
+		expect(n).toBeLessThan(13);
+	});
+	it('rejects redirect to http, follows redirect to https', async () => {
+		const to = (loc: string) => (async (u: string) =>
+			u === 'https://x.test/a'
+				? new Response(null, { status: 302, headers: { location: loc } })
+				: new Response(await img(8), { headers: { 'content-type': 'image/png' } })) as any;
+		await expect(fetchCoverBytes('https://x.test/a', to('http://internal/x'))).rejects.toThrow(/https/);
+		expect((await fetchCoverBytes('https://x.test/a', to('https://y.test/b'))).length).toBeGreaterThan(0);
+	});
+});
+
 describe('players + headshots', () => {
+	it('Boarz ids map to roster slugs in songs and players', async () => {
+		const db = fixture();
+		db.exec(`INSERT INTO leagues VALUES (2,'boarz-ii-men','Boarz'); INSERT INTO seasons VALUES (2,2,1);
+		INSERT INTO players VALUES (1,'Matthew Mariani','mlM'); INSERT INTO season_players VALUES (2,1);
+		INSERT INTO competitors VALUES (2,'mlM','Matthew Mariani');
+		INSERT INTO ml_submissions VALUES (2,7,2,'spotify:track:y','S2','B2',NULL);`);
+		const songs = await listRoundSongs(db, 7);
+		expect(songs.find((s) => s.submissionId === 2)!.playerSlug).toBe('matt-mariani');
+		expect(listPlayers('boarz-ii-men')[0].slug).toBe('matt-mariani');
+	});
+	it('listPlayers reflects project upload', async () => {
+		fixture();
+		const dir = join(process.env.AVATAR_SOURCES_DIR!, 'second-best-players', 'ann-lee');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'headshot.png'), await img(96));
+		await saveHeadshotUpload(9, 'ann-lee', await img(600));
+		const ann = (l: any[]) => l.find((p) => p.slug === 'ann-lee');
+		expect(ann(listPlayers('second-best'))).toMatchObject({ lowRes: true });
+		expect(ann(listPlayers('second-best', 9))).toMatchObject({ lowRes: false, missing: false });
+	});
 	it('flags lowRes and missing', async () => {
 		fixture();
 		const dir = join(process.env.AVATAR_SOURCES_DIR!, 'second-best-players');

@@ -66,16 +66,39 @@ export async function resolveSpotifyCover(
 }
 
 export async function fetchCoverBytes(artUrl: string, fetchImpl: FetchLike = fetch): Promise<Buffer> {
-	if (!/^https:\/\//i.test(artUrl)) throw new Error('cover URL must be https');
-	const res = await fetchImpl(artUrl);
-	if (!res.ok) throw new Error(`cover fetch failed: ${res.status}`);
+	let url = artUrl;
+	let res: Response | null = null;
+	for (let hop = 0; hop <= 3; hop++) {
+		if (!/^https:\/\//i.test(url)) throw new Error('cover URL must be https');
+		res = await fetchImpl(url, { redirect: 'manual' });
+		if (res.status >= 300 && res.status < 400) {
+			const loc = res.headers.get('location');
+			if (!loc) throw new Error('cover redirect without location');
+			if (hop === 3) throw new Error('too many cover redirects');
+			url = new URL(loc, url).toString();
+			continue;
+		}
+		break;
+	}
+	if (!res || !res.ok) throw new Error(`cover fetch failed: ${res?.status}`);
 	const type = res.headers.get('content-type') ?? '';
 	if (!type.toLowerCase().startsWith('image/')) throw new Error('cover URL is not an image');
-	const len = Number(res.headers.get('content-length') ?? 0);
-	if (len > MAX_COVER_BYTES) throw new Error('cover image too large (>10 MB)');
-	const buf = Buffer.from(await res.arrayBuffer());
-	if (buf.length > MAX_COVER_BYTES) throw new Error('cover image too large (>10 MB)');
-	return buf;
+	if (Number(res.headers.get('content-length') ?? 0) > MAX_COVER_BYTES) throw new Error('cover image too large (>10 MB)');
+	if (!res.body) throw new Error('cover response has no body');
+	const reader = res.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > MAX_COVER_BYTES) {
+			await reader.cancel().catch(() => {});
+			throw new Error('cover image too large (>10 MB)');
+		}
+		chunks.push(value);
+	}
+	return Buffer.concat(chunks);
 }
 
 export interface PlayerOption {
@@ -114,11 +137,22 @@ function minEdge(abs: string): number {
 	return Infinity;
 }
 
-export function listPlayers(leagueSlug: string): PlayerOption[] {
+function latestUploadRel(projectId: number, slug: string): string | null {
+	const dir = coverFile(`uploads/${projectId}`);
+	if (!existsSync(dir)) return null;
+	const hits = readdirSync(dir).filter((f) => f.startsWith(`${slug}.`)).sort();
+	return hits.length ? `uploads/${projectId}/${hits[hits.length - 1]}` : null;
+}
+
+export function listPlayers(leagueSlug: string, projectId?: number): PlayerOption[] {
 	const roster = readRoster(leagueSlug);
 	const folder = LEAGUE_FOLDERS[leagueSlug];
 	if (!roster || !folder) return [];
 	return roster.members.map((m) => {
+		const up = projectId !== undefined ? latestUploadRel(projectId, m.slug) : null;
+		if (up) {
+			return { slug: m.slug, name: m.name, leagueSlug, headshotRel: up, lowRes: minEdge(coverFile(up)) < 256, missing: false };
+		}
 		const headshotRel = findHeadshotRel(folder, m.slug);
 		const lowRes = headshotRel ? minEdge(join(sourcesRoot(), headshotRel)) < 256 : false;
 		return { slug: m.slug, name: m.name, leagueSlug, headshotRel, lowRes, missing: !headshotRel };
