@@ -10,7 +10,7 @@
   import { solveClientEPs, type ClientEP, type ArchivePipelineInput } from './pipelineSolver.js';
   import RolloutTab from '../rollout/RolloutTab.svelte';
   import { MODEL_KINDS, parseKinds, type ModelKind } from './kinds.js';
-  import { modelsForJob } from './jobs.js';
+  import { modelsForJob, jobOptionLabel, type CoverJob } from './jobs.js';
 
   // ---- sprint-41 SectionState contract (mirrors Lane A API shape) -----------
   type SectionState = {
@@ -142,6 +142,41 @@
   // 'image' model_type or an OpenRouter modality that outputs image.
   const imageModels = $derived(
   modelsForJob(models, 'generator'));
+
+  // ---- cover factory pinned models -----------------------------------------
+  type CoverSlot = { pinned: string | null; missing: boolean; resolved: string | null };
+  const COVER_JOB_ROWS: { job: CoverJob; label: string }[] = [
+    { job: 'reader', label: 'Cover reader — reads the album cover' },
+    { job: 'generator', label: 'Cover generator — makes the new cover' },
+    { job: 'pitch', label: 'Concept pitches — writes gag ideas' },
+  ];
+  let coverSlots = $state<Record<CoverJob, CoverSlot>>({
+    reader: { pinned: null, missing: false, resolved: null },
+    generator: { pinned: null, missing: false, resolved: null },
+    pitch: { pinned: null, missing: false, resolved: null },
+  });
+  let coverSaving = $state(false);
+
+  async function loadCoverModels() {
+    try {
+      const r = await fetch('/api/settings/cover-factory-models');
+      if (r.ok) coverSlots = await r.json();
+    } catch { /* backend not ready */ }
+  }
+
+  async function saveCoverModel(job: CoverJob, modelId: string) {
+    coverSaving = true;
+    try {
+      const r = await fetch('/api/settings/cover-factory-models', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ job, model_id: modelId || null }),
+      });
+      if (r.ok) coverSlots = await r.json();
+    } catch { /* ignore */ } finally {
+      coverSaving = false;
+    }
+  }
 
   async function loadAvatarImage() {
     try {
@@ -292,6 +327,7 @@
     loadSections();
     loadPipeline();
     loadAvatarImage();
+    loadCoverModels();
   });
 
   // ---- key management -------------------------------------------------------
@@ -1275,6 +1311,46 @@
         />
         <span class="mlm-av-hint">Skews every avatar younger (negative) or older (positive) than the stored player age.</span>
       </label>
+    </div>
+  </article>
+
+  <!-- ===== Cover Factory card (pinned model per job) ===== -->
+  <article class="ml-card ml-card--accent">
+    <header class="ml-card-head">
+      <div>
+        <h3 class="ml-card-title">Cover Factory</h3>
+        <p class="ml-card-sub">
+          Pin a model for each Cover Factory job. Each dropdown lists roster models that fit the job
+          (favorites first). Leave on Auto to use the top fitting model.
+        </p>
+      </div>
+      {#if coverSaving}<span class="mlm-av-saving">saving…</span>{/if}
+    </header>
+
+    <div class="mlm-av-grid">
+      {#each COVER_JOB_ROWS as row (row.job)}
+        {@const opts = modelsForJob(models, row.job)}
+        <label class="mlm-av-field">
+          <span class="mlm-av-label">{row.label}</span>
+          {#if opts.length === 0}
+            <span class="mlm-av-empty">No fitting models in the roster — add one above.</span>
+          {:else}
+            <select
+              class="mlm-av-select"
+              value={coverSlots[row.job].pinned ?? ''}
+              onchange={(e) => saveCoverModel(row.job, (e.currentTarget as HTMLSelectElement).value)}
+            >
+              <option value="">Auto (top model)</option>
+              {#each opts as m (m.id)}
+                <option value={m.model_id}>{jobOptionLabel(m)}</option>
+              {/each}
+            </select>
+          {/if}
+          {#if coverSlots[row.job].missing}
+            <span class="mlm-av-hint">⚠ pinned model no longer in roster ({coverSlots[row.job].pinned}); using {coverSlots[row.job].resolved ?? 'nothing'}</span>
+          {/if}
+        </label>
+      {/each}
     </div>
   </article>
 
