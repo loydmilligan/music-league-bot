@@ -81,27 +81,39 @@ function resolveSubmitter(
 	byName: PlayerLookup,
 	mlId: string | null,
 	cname: string | null,
+	byId?: PlayerLookup,
+	playerId?: number | null,
 ): { playerName: string | null; playerSlug: string | null } {
 	let p: { id: number; name: string } | undefined;
-	if (mlId) p = byMl.get(mlId) as typeof p;
+	// ml_submissions.player_id is the authoritative link; the ML display name
+	// (e.g. "queen0reno") often matches no players.name.
+	if (byId && playerId != null) p = byId.get(playerId) as typeof p;
+	if (!p && mlId) p = byMl.get(mlId) as typeof p;
 	if (!p && cname) p = byName.get(cname) as typeof p;
 	const playerName = p?.name ?? cname ?? null;
 	const playerSlug = p ? (BOARZ_PLAYER_IDS[p.id] ?? slugify(p.name)) : playerName ? slugify(playerName) : null;
 	return { playerName, playerSlug };
 }
 
+/** Older/fixture schemas lack ml_submissions.player_id; select it only when present. */
+function playerIdExpr(db: Database.Database): string {
+	const cols = db.prepare('PRAGMA table_info(ml_submissions)').all() as { name: string }[];
+	return cols.some((c) => c.name === 'player_id') ? 's.player_id' : 'NULL';
+}
+
 /** One direct query for a submission's submitter: no album-art fill, no network. */
 export function submitterOfSubmission(db: Database.Database, submissionId: number): { slug: string; name: string } | undefined {
 	const r = db
 		.prepare(
-			`SELECT c.name AS cname, c.ml_competitor_id AS mlId
+			`SELECT c.name AS cname, c.ml_competitor_id AS mlId, ${playerIdExpr(db)} AS playerId
 			 FROM ml_submissions s LEFT JOIN competitors c ON c.id = s.competitor_id WHERE s.id = ?`,
 		)
-		.get(submissionId) as { cname: string | null; mlId: string | null } | undefined;
+		.get(submissionId) as { cname: string | null; mlId: string | null; playerId: number | null } | undefined;
 	if (!r) return undefined;
 	const byMl = db.prepare('SELECT id, name FROM players WHERE ml_competitor_id = ? LIMIT 1');
 	const byName = db.prepare('SELECT id, name FROM players WHERE name = ? LIMIT 1');
-	const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname);
+	const byId = db.prepare('SELECT id, name FROM players WHERE id = ? LIMIT 1');
+	const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname, byId, r.playerId);
 	return playerSlug && playerName ? { slug: playerSlug, name: playerName } : undefined;
 }
 
@@ -115,15 +127,16 @@ export async function listRoundSongs(db: Database.Database, roundId: number, fet
 	const rows = db
 		.prepare(
 			`SELECT s.id, s.title, s.artists, s.album_art_url AS artUrl,
-			        c.name AS cname, c.ml_competitor_id AS mlId
+			        c.name AS cname, c.ml_competitor_id AS mlId, ${playerIdExpr(db)} AS playerId
 			 FROM ml_submissions s LEFT JOIN competitors c ON c.id = s.competitor_id
 			 WHERE s.round_id = ? ORDER BY s.spotify_uri`,
 		)
-		.all(roundId) as { id: number; title: string; artists: string; artUrl: string | null; cname: string | null; mlId: string | null }[];
+		.all(roundId) as { id: number; title: string; artists: string; artUrl: string | null; cname: string | null; mlId: string | null; playerId: number | null }[];
+	const byId = db.prepare('SELECT id, name FROM players WHERE id = ? LIMIT 1');
 	const byMl = db.prepare('SELECT id, name FROM players WHERE ml_competitor_id = ? LIMIT 1');
 	const byName = db.prepare('SELECT id, name FROM players WHERE name = ? LIMIT 1');
 	return rows.map((r) => {
-		const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname);
+		const { playerName, playerSlug } = resolveSubmitter(byMl, byName, r.mlId, r.cname, byId, r.playerId);
 		return { submissionId: r.id, title: r.title, artists: r.artists, playerName, playerSlug, artUrl: r.artUrl };
 	});
 }

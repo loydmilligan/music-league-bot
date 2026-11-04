@@ -145,6 +145,16 @@ describe('9a: oEmbed concurrency + listPlayers dedupe + submitterOfSubmission', 
 		expect(submitterOfSubmission(db, 1)).toEqual({ slug: 'ann-lee', name: 'Ann Lee' });
 		expect(submitterOfSubmission(db, 999)).toBeUndefined();
 	});
+
+	it('prefers ml_submissions.player_id over an ML display name that matches no player (live R139 bug)', async () => {
+		const db = fixture();
+		db.exec(`ALTER TABLE ml_submissions ADD COLUMN player_id INT;
+		         INSERT INTO competitors VALUES (2,'mlZ','queen0reno');
+		         INSERT INTO ml_submissions VALUES (2,7,2,'spotify:track:y','Song2','Band2','https://i.scdn.co/b.jpg',102);`);
+		expect(submitterOfSubmission(db, 2)).toEqual({ slug: 'bob-ray', name: 'Bob Ray' });
+		const songs = await listRoundSongs(db, 7);
+		expect(songs.find((s) => s.submissionId === 2)).toMatchObject({ playerSlug: 'bob-ray', playerName: 'Bob Ray' });
+	});
 });
 
 describe('spotify + cover bytes', () => {
