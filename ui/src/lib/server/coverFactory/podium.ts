@@ -175,6 +175,8 @@ export function applyCoverKeepers(db: DB, roundId: number, content: any): any {
 		const url = slotCoverUrl(db, slot);
 		if (url) out.items[ref.index].coverUrl = url;
 	}
+	// For a round with slots these keys are owned by the slots: rebuilt from them on every apply,
+	// so a stale note/project link disappears once its slot no longer carries one.
 	if (Object.keys(notes).length) out._coverNotes = notes;
 	else delete out._coverNotes;
 	if (Object.keys(projects).length) out._coverProjects = projects;
@@ -183,14 +185,25 @@ export function applyCoverKeepers(db: DB, roundId: number, content: any): any {
 }
 
 /**
- * Re-apply keepers to the round's active draft podium and persist when it changed.
- * No slot rows for the round → returns false without reading or writing the draft.
+ * Re-apply keepers to the round's podium (the given draft, else the active one) and persist when it
+ * changed. No slot rows for the round → returns false without reading or writing the draft.
+ * Never throws: it runs on hot digest paths after a paid draft/regen is already saved, so any
+ * failure is logged and reported as "unchanged".
  */
-export function writePodiumCover(db: DB, roundId: number): boolean {
+export function writePodiumCover(db: DB, roundId: number, draftId?: string): boolean {
+	try {
+		return writePodiumCoverUnsafe(db, roundId, draftId);
+	} catch (e) {
+		console.error(`[cover-factory] writePodiumCover(round ${roundId}) failed:`, (e as Error).message);
+		return false;
+	}
+}
+
+function writePodiumCoverUnsafe(db: DB, roundId: number, draftId?: string): boolean {
 	if (!db.prepare('SELECT 1 FROM cover_podium_slots WHERE round_id = ? LIMIT 1').get(roundId)) return false;
-	const draft = getActiveDraftForRound(db, roundId);
-	if (!draft) return false;
-	const row = db.prepare(`SELECT id, content_json FROM digest_sections WHERE draft_id = ? AND kind = 'podium'`).get(draft.id) as
+	const id = draftId ?? getActiveDraftForRound(db, roundId)?.id;
+	if (!id) return false;
+	const row = db.prepare(`SELECT id, content_json FROM digest_sections WHERE draft_id = ? AND kind = 'podium'`).get(id) as
 		{ id: string; content_json: string } | undefined;
 	if (!row) return false;
 	let content: unknown;

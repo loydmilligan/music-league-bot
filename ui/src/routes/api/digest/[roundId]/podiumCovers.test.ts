@@ -103,6 +103,26 @@ describe('draft route', () => {
 	});
 });
 
+describe('hook failure never breaks a saved draft', () => {
+	it('draft route still 200 with unchanged sections when the slots table is gone', async () => {
+		await call(DRAFT, { roundId: String(on) }, { force: true });
+		db.prepare(`UPDATE digest_sections SET content_json = ? WHERE kind = 'podium' AND draft_id IN (SELECT id FROM digest_drafts WHERE round_id = ?)`).run(ENRICHED, on);
+		db.exec('DROP TABLE cover_podium_slots');
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const cached = await call(DRAFT, { roundId: String(on) }, null);
+		expect(cached.status).toBe(200);
+		expect(podium(on)).toBe(ENRICHED);
+		const fresh = await call(DRAFT, { roundId: String(on) }, { force: true });
+		expect(fresh.status).toBe(200);
+		expect((await fresh.json()).sections.find((s: { kind: string }) => s.kind === 'podium').content_json).toBe(ENRICHED);
+		const regen = await call(REGEN, { roundId: String(on) });
+		expect(regen.status).toBe(200);
+		expect(podium(on)).toBe(ENRICHED);
+		expect(err.mock.calls.some((c) => String(c[0]).startsWith('[cover-factory]'))).toBe(true);
+		err.mockRestore();
+	});
+});
+
 describe('regenerate routes', () => {
 	it('whole regen re-applies the keeper; OFF round gets plain enriched art', async () => {
 		await call(DRAFT, { roundId: String(on) }, { force: true });
@@ -115,8 +135,12 @@ describe('regenerate routes', () => {
 	it('single-section podium regen re-applies the keeper', async () => {
 		await call(DRAFT, { roundId: String(on) }, { force: true });
 		const id = (db.prepare(`SELECT s.id FROM digest_sections s JOIN digest_drafts d ON d.id = s.draft_id WHERE d.round_id = ? AND s.kind = 'podium'`).get(on) as { id: string }).id;
+		// A newer draft exists for the round: the hook must act on the draft whose section changed.
+		db.prepare(`INSERT INTO digest_drafts (id, round_id, rel_context, prep_checks, generated_at) VALUES ('newer', ?, '', '', '2999-01-01T00:00:00Z')`).run(on);
+		db.prepare(`INSERT INTO digest_sections (id, draft_id, kind, position, state, content_json) VALUES ('newer-podium', 'newer', 'podium', 0, 'default', '{"items":[]}')`).run();
 		const res = await call(REGEN_ONE, { roundId: String(on), id });
-		expect(JSON.parse(podium(on)).items[0].coverUrl).toBe(GIF);
+		const stored = (db.prepare('SELECT content_json FROM digest_sections WHERE id = ?').get(id) as { content_json: string }).content_json;
+		expect(JSON.parse(stored).items[0].coverUrl).toBe(GIF);
 		expect(JSON.parse((await res.json()).section.content_json).items[0].coverUrl).toBe(GIF);
 	});
 });

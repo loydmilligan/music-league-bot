@@ -81,7 +81,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
   let updated = replaceSectionContent(db, section, newContent, chips, instructions);
   // Re-apply Cover Factory keepers; no-op (no write) for rounds without podium slots.
-  if (section.kind === 'podium' && writePodiumCover(db, roundId)) {
+  if (section.kind === 'podium' && writePodiumCover(db, roundId, section.draft_id)) {
     updated = db.prepare('SELECT * FROM digest_sections WHERE id = ?').get(section.id) as DigestSectionRow;
   }
   addDraftCost(db, section.draft_id, costUsd);
