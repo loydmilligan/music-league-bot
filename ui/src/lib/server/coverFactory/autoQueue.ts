@@ -5,8 +5,9 @@ import { getActiveDraftForRound } from '$lib/digest/llm.js';
 import type { Notification } from '$lib/digest/ntfy.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { buildStyleHilNotification, mintHilToken, publishStyleHil } from '../avatarFactory/hil.js';
-import { HARD_CAP_USD, STALE_RUN_MS, STEP_ESTIMATE_USD, roundSpend, runSlot, type AutoDeps, type SlotOutcome } from './autoRun.js';
+import { HARD_CAP_USD, STALE_RUN_MS, STEP_ESTIMATE_USD, reclaimStaleSlots, roundSpend, runSlot, type AutoDeps, type SlotOutcome } from './autoRun.js';
 import { isAutoLeague, isHandMade, matchSubmission, medalItems, writePodiumCover } from './podium.js';
+import { ApiError } from './service.js';
 
 type DB = Database.Database;
 
@@ -19,6 +20,7 @@ export const APPROVAL_TIMEOUT_MS = 24 * 60 * 60_000;
 export const NEXT_COVER_ESTIMATE_USD = STEP_ESTIMATE_USD.read + STEP_ESTIMATE_USD.identity + STEP_ESTIMATE_USD.pitch + STEP_ESTIMATE_USD.generate;
 export const BUDGET_DENIED_NOTE = 'budget not approved';
 export const HAND_MADE_NOTE = 'hand-made cover kept';
+export const NOTIFY_FAILED_NOTE = 'approval notification failed';
 
 export type JobStatus = 'queued' | 'running' | 'awaiting_approval' | 'done' | 'failed';
 export interface CoverAutoJob {
@@ -102,6 +104,16 @@ export function enqueueCoverAuto(
 	return { job: getAutoJob(db, roundId)!, created };
 }
 
+/** Operator "run now" (POST /api/cover-factory `{action:'run-auto', roundId}`): queue the round, failed slots retried; the poller runs it. */
+export function runAutoAction(db: DB, b: Record<string, unknown>): { job: CoverAutoJob; created: number } {
+	const roundId = Number(b.roundId);
+	if (!Number.isInteger(roundId) || roundId <= 0) throw new ApiError(400, 'roundId required');
+	if (!isAutoLeague(db, roundId)) throw new ApiError(400, 'automatic covers are off for this league');
+	const r = enqueueCoverAuto(db, roundId, { retryFailed: true });
+	if (!r) throw new ApiError(400, 'no podium on the active draft');
+	return r;
+}
+
 /** Publish to `mlb-alert` via the avatar HIL helpers, overriding only the topic for this call. */
 export function publishCoverAutoAlert(
 	n: Notification, opts: { env?: Record<string, string | undefined>; fetchImpl?: FetchLike } = {},
@@ -131,10 +143,10 @@ function setJob(db: DB, id: number, fields: Partial<Omit<CoverAutoJob, 'id' | 'r
 	db.prepare(`UPDATE cover_auto_jobs SET ${sets} WHERE id = @id`).run({ ...fields, updated_at: iso(now), id });
 }
 
-/** Deny / timeout: every still-pending slot fails "budget not approved"; the job is done. */
-function closeUnapproved(db: DB, job: CoverAutoJob, now: number): void {
+/** Deny / timeout / undeliverable ntfy: every still-pending slot fails with `note`; the job is done. */
+function closeUnapproved(db: DB, job: CoverAutoJob, now: number, note = BUDGET_DENIED_NOTE): void {
 	db.prepare(`UPDATE cover_podium_slots SET status = 'failed', note = ?, updated_at = ? WHERE round_id = ? AND status = 'pending'`)
-		.run(BUDGET_DENIED_NOTE, iso(now), job.round_id);
+		.run(note, iso(now), job.round_id);
 	setJob(db, job.id, { status: 'done', hil_token: null }, now);
 	writePodiumCover(db, job.round_id);
 }
@@ -144,7 +156,10 @@ export function resolveCoverAutoApproval(
 	db: DB, token: string, decision: 'approve' | 'deny', now = Date.now(),
 ): { ok: true; job: CoverAutoJob } | { ok: false; reason: string } {
 	if (!token) return { ok: false, reason: 'invalid token' };
-	const job = db.prepare(`SELECT * FROM cover_auto_jobs WHERE hil_token = ? AND status = 'awaiting_approval'`).get(token) as
+	// Past the 24 h deadline the token is dead even if no tick has timed the job out yet.
+	const job = db
+		.prepare(`SELECT * FROM cover_auto_jobs WHERE hil_token = ? AND status = 'awaiting_approval' AND notified_at >= ?`)
+		.get(token, iso(now - APPROVAL_TIMEOUT_MS)) as
 		CoverAutoJob | undefined;
 	if (!job) return { ok: false, reason: 'invalid token' };
 	if (decision === 'approve') setJob(db, job.id, { status: 'queued', cap_usd: APPROVED_CAP_USD, hil_token: null }, now);
@@ -190,6 +205,8 @@ async function tick(db: DB, deps: TickDeps): Promise<{ roundId: number; status: 
 	}
 	const run = deps.runSlot ?? runSlot;
 	const roundId = job.round_id;
+	// runSlot only reclaims inside a claim of a pending slot; a crashed run's slot must be freed first.
+	reclaimStaleSlots(db, roundId, STALE_RUN_MS, t);
 	const nextPending = () =>
 		db.prepare(`SELECT id FROM cover_podium_slots WHERE round_id = ? AND status = 'pending' ORDER BY rank, id LIMIT 1`).get(roundId) as
 			{ id: number } | undefined;
@@ -205,6 +222,11 @@ async function tick(db: DB, deps: TickDeps): Promise<{ roundId: number; status: 
 				setJob(db, job.id, { status: 'queued' }, now()); // retry on a later tick
 				return { roundId, status: 'queued' };
 			}
+		}
+		// A slot still running (fresh heartbeat, e.g. another process) is not finished: retry later.
+		if (db.prepare(`SELECT 1 FROM cover_podium_slots WHERE round_id = ? AND status = 'running' LIMIT 1`).get(roundId)) {
+			setJob(db, job.id, { status: 'queued' }, now());
+			return { roundId, status: 'queued' };
 		}
 		setJob(db, job.id, { status: 'done' }, now());
 		writePodiumCover(db, roundId);
@@ -222,11 +244,17 @@ async function park(db: DB, job: CoverAutoJob, deps: TickDeps, now: number): Pro
 	const token = mintHilToken();
 	setJob(db, job.id, { status: 'awaiting_approval', hil_token: token, notified_at: iso(now) }, now);
 	const n = buildBudgetNotification(job.round_id, roundSpend(db, job.round_id), token, { bearer: process.env.NTFY_TOKEN });
+	let sent = false;
 	try {
-		const sent = await (deps.notify ?? ((x: Notification) => publishCoverAutoAlert(x)))(n);
-		if (!sent) console.error(`[cover-auto] round ${job.round_id}: budget ntfy not delivered (times out in 24 h)`);
+		sent = await (deps.notify ?? ((x: Notification) => publishCoverAutoAlert(x)))(n);
 	} catch (e) {
 		console.error(`[cover-auto] round ${job.round_id}: budget ntfy failed:`, e instanceof Error ? e.message : e);
+	}
+	if (!sent) {
+		// Nobody can approve without the ntfy: close the round now (operator run-now can retry).
+		console.error(`[cover-auto] round ${job.round_id}: budget ntfy not delivered; remaining slots failed`);
+		closeUnapproved(db, { ...job, status: 'awaiting_approval' }, now, NOTIFY_FAILED_NOTE);
+		return { roundId: job.round_id, status: 'done' };
 	}
 	return { roundId: job.round_id, status: 'awaiting_approval' };
 }

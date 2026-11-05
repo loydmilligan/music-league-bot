@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { getDb } from '$lib/db/client.js';
 import { getState, runAction, runUpload, toApiError } from '$lib/server/coverFactory/service.js';
+import { runAutoAction } from '$lib/server/coverFactory/autoQueue.js';
 
 function fail(e: unknown): Response {
 	const { status, body } = toApiError(e);
@@ -28,7 +29,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: 'invalid JSON body' }, { status: 400 });
 		}
 		if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'JSON object required' }, { status: 400 });
-		return json(await runAction(getDb(), body as Record<string, unknown>));
+		const b = body as Record<string, unknown>;
+		// 'run-auto' lives in autoQueue (service.ts must not import it: autoQueue → autoRun → service).
+		if (b.action === 'run-auto') return json(runAutoAction(getDb(), b));
+		return json(await runAction(getDb(), b));
 	} catch (e) {
 		return fail(e);
 	}

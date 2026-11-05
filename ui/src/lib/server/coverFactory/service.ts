@@ -22,7 +22,7 @@ import {
 import { getPinnedCoverModel, isUsablePin } from './models.js';
 import { applyConcept, cleanTreatments, pitchConcepts, playerIdeas, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
-import { isAutoLeague, writePodiumCover } from './podium.js';
+import { writePodiumCover } from './podium.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
 import {
@@ -583,17 +583,6 @@ async function actShare(db: DB, b: Record<string, unknown>) {
 	return shareKeeper(db, project.id);
 }
 
-/** Operator "run now": queue the round's automatic covers (failed slots retried); the poller runs it. */
-async function actRunAuto(db: DB, b: Record<string, unknown>) {
-	const roundId = num(b.roundId, 'roundId');
-	if (!isAutoLeague(db, roundId)) bad('automatic covers are off for this league');
-	// Dynamic: autoQueue → autoRun → service would otherwise be a load-order cycle.
-	const { enqueueCoverAuto } = await import('./autoQueue.js');
-	const r = enqueueCoverAuto(db, roundId, { retryFailed: true });
-	if (!r) bad('no podium on the active draft');
-	return r;
-}
-
 export async function runAction(db: DB, b: Record<string, unknown>): Promise<unknown> {
 	switch (String(b.action ?? '')) {
 		case 'create': return actCreate(db, b);
@@ -610,7 +599,6 @@ export async function runAction(db: DB, b: Record<string, unknown>): Promise<unk
 		case 'rate': return actRate(db, b);
 		case 'keeper': return actKeeper(db, b);
 		case 'share': return actShare(db, b);
-		case 'run-auto': return actRunAuto(db, b);
 		default: return bad('unknown action');
 	}
 }

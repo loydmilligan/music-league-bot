@@ -12,12 +12,12 @@ vi.mock('$lib/db/client.js', async (orig) => {
 });
 
 import {
-	APPROVAL_TIMEOUT_MS, BUDGET_DENIED_NOTE, COVER_AUTO_TOPIC, enqueueCoverAuto, getAutoJob, publishCoverAutoAlert,
+	APPROVAL_TIMEOUT_MS, BUDGET_DENIED_NOTE, COVER_AUTO_TOPIC, NOTIFY_FAILED_NOTE, enqueueCoverAuto, getAutoJob, publishCoverAutoAlert,
 	resolveCoverAutoApproval, startCoverAutoRunner, stopCoverAutoRunner, tickCoverAuto, type TickDeps,
 } from './autoQueue.js';
 import { createProject, logRequest } from './repo.js';
 import { setAutoLeague } from './podium.js';
-import { runAction } from './service.js';
+import { POST as CF_POST } from '../../../routes/api/cover-factory/+server.js';
 import { POST as APPROVE } from '../../../routes/api/cover-factory/auto/approve/+server.js';
 import { POST as DENY } from '../../../routes/api/cover-factory/auto/deny/+server.js';
 
@@ -82,8 +82,11 @@ beforeEach(() => {
 });
 afterEach(() => {
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 	vi.useRealTimers();
 	stopCoverAutoRunner();
+	delete process.env.COVER_AUTO_POLL_MS;
+	process.env.NTFY_TOKEN = 'secret';
 });
 
 describe('enqueueCoverAuto', () => {
@@ -216,6 +219,55 @@ describe('tickCoverAuto', () => {
 		expect(JSON.parse(podiumJson(roundId))._coverNotes).toMatchObject({ '1': BUDGET_DENIED_NOTE, '3': BUDGET_DENIED_NOTE });
 	});
 
+	it('a stale running slot (crashed run) is reclaimed and run', async () => {
+		const t0 = Date.parse('2026-11-04T12:00:00Z');
+		enqueueCoverAuto(db, roundId, { now: t0 });
+		db.prepare(`UPDATE cover_podium_slots SET status = 'done' WHERE title = 'Linoleum'`).run();
+		db.prepare(`UPDATE cover_podium_slots SET status = 'running', updated_at = ? WHERE title = 'Third'`).run(new Date(t0 - 20 * 60_000).toISOString());
+		const run = fakeRun();
+		expect(await tickCoverAuto(db, { runSlot: run.fn, now: () => t0 })).toEqual({ roundId, status: 'done' });
+		expect(run.calls.map((c) => slots().find((s) => s.id === c.slotId)!.title)).toEqual(['Third']);
+		expect(slots().find((s) => s.title === 'Third')!.status).toBe('done');
+	});
+
+	it('a freshly running slot keeps the job queued, never done', async () => {
+		const t0 = Date.parse('2026-11-04T12:00:00Z');
+		enqueueCoverAuto(db, roundId, { now: t0 });
+		db.prepare(`UPDATE cover_podium_slots SET status = 'done' WHERE title = 'Linoleum'`).run();
+		db.prepare(`UPDATE cover_podium_slots SET status = 'running', updated_at = ? WHERE title = 'Third'`).run(new Date(t0 - 60_000).toISOString());
+		const run = fakeRun();
+		expect(await tickCoverAuto(db, { runSlot: run.fn, now: () => t0 })).toEqual({ roundId, status: 'queued' });
+		expect(run.calls).toEqual([]);
+		expect(getAutoJob(db, roundId)!.status).toBe('queued');
+		expect(slots().find((s) => s.title === 'Third')!.status).toBe('running');
+	});
+
+	for (const [label, notify] of [
+		['returns false', async () => false],
+		['throws', async () => { throw new Error('ntfy down'); }],
+	] as const) {
+		it(`a budget ntfy that ${label}: remaining slots fail "approval notification failed", job done`, async () => {
+			enqueueCoverAuto(db, roundId);
+			const run = fakeRun({ Linoleum: 'needs_approval' });
+			expect(await tickCoverAuto(db, { runSlot: run.fn, notify })).toEqual({ roundId, status: 'done' });
+			expect(getAutoJob(db, roundId)).toMatchObject({ status: 'done', hil_token: null });
+			expect(slots().map((s) => [s.title, s.status, s.note])).toEqual([
+				['Linoleum', 'failed', NOTIFY_FAILED_NOTE], ['Handy', 'skipped', 'hand-made cover kept'], ['Third', 'failed', NOTIFY_FAILED_NOTE],
+			]);
+			expect(run.calls).toHaveLength(1);
+		});
+	}
+
+	it('approval after the 24 h deadline is rejected even before a tick times it out', async () => {
+		const t0 = Date.parse('2026-11-04T12:00:00Z');
+		enqueueCoverAuto(db, roundId, { now: t0 });
+		await tickCoverAuto(db, { runSlot: fakeRun({ Linoleum: 'needs_approval' }).fn, notify: async () => true, now: () => t0 });
+		const token = getAutoJob(db, roundId)!.hil_token!;
+		expect(resolveCoverAutoApproval(db, token, 'approve', t0 + APPROVAL_TIMEOUT_MS + 1000)).toEqual({ ok: false, reason: 'invalid token' });
+		expect(getAutoJob(db, roundId)).toMatchObject({ status: 'awaiting_approval', cap_usd: 1 });
+		expect(resolveCoverAutoApproval(db, token, 'approve', t0 + APPROVAL_TIMEOUT_MS - 1000)).toMatchObject({ ok: true });
+	});
+
 	it('paused: the job goes back to the queue with its slot still pending', async () => {
 		enqueueCoverAuto(db, roundId);
 		const run = fakeRun({ 'Linoleum#1': 'paused' });
@@ -267,6 +319,14 @@ describe('approve / deny routes', () => {
 		expect((await call(APPROVE, token, 'Bearer secret')).status).toBe(400);
 	});
 
+	it('approve: 401 when NTFY_TOKEN is unset, even with a bearer', async () => {
+		const token = await parked();
+		delete process.env.NTFY_TOKEN;
+		expect((await call(APPROVE, token, 'Bearer secret')).status).toBe(401);
+		expect((await call(APPROVE, token, 'Bearer ')).status).toBe(401);
+		expect(getAutoJob(db, roundId)!.status).toBe('awaiting_approval');
+	});
+
 	it('deny: remaining slots failed "budget not approved", job done', async () => {
 		const token = await parked();
 		expect((await call(DENY, token, 'Bearer nope')).status).toBe(401);
@@ -277,18 +337,24 @@ describe('approve / deny routes', () => {
 	});
 });
 
-describe('run-auto action', () => {
+describe('run-auto action (POST /api/cover-factory)', () => {
+	const post = async (b: unknown) => {
+		const res = (await CF_POST({ request: new Request('http://x/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }) } as never)) as Response;
+		return { status: res.status, body: await res.json() };
+	};
 	it('enqueues for an ON league (retrying failed slots) and refuses an OFF league', async () => {
-		const r = (await runAction(db, { action: 'run-auto', roundId })) as { job: { status: string } };
-		expect(r.job.status).toBe('queued');
+		const r = await post({ action: 'run-auto', roundId });
+		expect(r.status).toBe(200);
+		expect(r.body.job.status).toBe('queued');
 		expect(slots()).toHaveLength(3);
 		db.prepare(`UPDATE cover_podium_slots SET status = 'failed' WHERE title = 'Third'`).run();
 		db.prepare(`UPDATE cover_auto_jobs SET status = 'done'`).run();
-		await runAction(db, { action: 'run-auto', roundId });
+		expect((await post({ action: 'run-auto', roundId })).status).toBe(200);
 		expect(slots().find((s) => s.title === 'Third')!.status).toBe('pending');
 		expect(getAutoJob(db, roundId)!.status).toBe('queued');
-		await expect(runAction(db, { action: 'run-auto', roundId: offRoundId })).rejects.toMatchObject({ status: 400 });
+		expect(await post({ action: 'run-auto', roundId: offRoundId })).toEqual({ status: 400, body: { error: 'automatic covers are off for this league' } });
 		expect(slots(offRoundId)).toEqual([]);
+		expect((await post({ action: 'run-auto' })).status).toBe(400);
 	});
 });
 
@@ -301,6 +367,5 @@ describe('startCoverAutoRunner', () => {
 		expect(unref.mock.calls[0][1]).toBe(5000);
 		const t = unref.mock.results[0].value as { hasRef?: () => boolean };
 		expect(t.hasRef?.()).toBe(false);
-		delete process.env.COVER_AUTO_POLL_MS;
 	});
 });
