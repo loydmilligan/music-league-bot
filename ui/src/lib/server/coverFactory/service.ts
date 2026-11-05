@@ -194,10 +194,9 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		const sub = db.prepare('SELECT spotify_uri, title, artists, album FROM ml_submissions WHERE id = ?').get(submissionId) as
 			| { spotify_uri: string; title: string; artists: string; album: string | null }
 			| undefined;
-		const uri = sub;
 		const project = createProject(db, {
 			title: `${song.title} — ${song.artists}`, source: 'round', round_id: roundId,
-			spotify_uri: uri?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
+			spotify_uri: sub?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
 			cover_rel: rel, cover_url: song.artUrl,
 			song_title: sub?.title ?? song.title, song_artist: sub?.artists ?? song.artists, song_album: sub?.album ?? null,
 		});
@@ -355,10 +354,17 @@ async function actIdeas(db: DB, b: Record<string, unknown>) {
 
 const MOVES: ConceptMove[] = ['morph', 'signature', 'recast', 'alternate'];
 
-/** "song — artist" (em dash, en dash or hyphen with spaces) -> terms. */
-function parseSongQuery(q: string): { title: string; artist: string } | null {
-	const m = /^(.+?)\s+[—–-]\s+(.+)$/.exec(q.trim());
-	return m ? { title: m[1].trim(), artist: m[2].trim() } : null;
+/**
+ * "song — artist" -> terms. Splits on the LAST spaced em/en dash (titles can hold "Part 2 — ..."
+ * and hyphens), else on the last spaced hyphen ("Song - Remix - Artist").
+ */
+export function parseSongQuery(q: string): { title: string; artist: string } | null {
+	const s = q.trim();
+	const m = /^(.+)\s+[—–]\s+(.+)$/.exec(s) ?? /^(.+)\s+-\s+(.+)$/.exec(s);
+	if (!m) return null;
+	const title = m[1].trim();
+	const artist = m[2].trim();
+	return title && artist ? { title, artist } : null;
 }
 
 async function actAlternates(db: DB, b: Record<string, unknown>) {
@@ -371,6 +377,8 @@ async function actAlternates(db: DB, b: Record<string, unknown>) {
 		if (!terms) bad('search as "song — artist"');
 	} else if (project.song_title && project.song_artist) {
 		terms = { title: project.song_title, artist: project.song_artist, album: project.song_album };
+	} else {
+		terms = parseSongQuery(project.title); // e.g. an upload titled "song — artist"
 	}
 	if (!terms) return bad('search for the song');
 	const found = await findAlternateCovers(db, terms);
@@ -431,7 +439,9 @@ function pickAlternate(db: DB, project: CoverProject, id: unknown): AltCover {
 async function actUseAlternate(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
 	const alt = pickAlternate(db, project, b.alternateId);
-	return { project: await switchCover(db, project, alt) };
+	// Already on this edition: keep the cover file and the read.
+	if (currentAlternateId(db, project) === alt.id) return { project, unchanged: true };
+	return { project: await switchCover(db, project, alt), unchanged: false };
 }
 
 async function actRestoreOriginal(db: DB, b: Record<string, unknown>) {
@@ -456,8 +466,15 @@ async function actApplyConcept(db: DB, b: Record<string, unknown>) {
 	if (c.move === 'alternate') {
 		// Free: no model call. The new cover needs a fresh read before anything can be generated.
 		const alt = pickAlternate(db, project, c.alternateId);
+		if (currentAlternateId(db, project) === alt.id) {
+			return {
+				project, unchanged: true, needsRead: !project.breakdown_json,
+				breakdown: parseJson<Breakdown | null>(project.breakdown_json, null),
+				treatments: parseJson<Treatment[]>(project.treatments_json, []),
+			};
+		}
 		const updated = await switchCover(db, project, alt);
-		return { project: updated, needsRead: true, breakdown: null, treatments: [] };
+		return { project: updated, unchanged: false, needsRead: true, breakdown: null, treatments: [] };
 	}
 	const breakdown = breakdownOf(project);
 	if (!Array.isArray(c.addSubjects)) bad('concept.addSubjects must be an array');
@@ -571,7 +588,8 @@ export async function runUpload(db: DB, form: FormData): Promise<unknown> {
 /** Download variants built on the fly: still JPEG or wipe GIF for one version. */
 export async function buildExport(db: DB, versionId: number, ext: 'gif' | 'jpg'): Promise<Buffer> {
 	const row = db
-		.prepare('SELECT v.image_rel, v.status, p.cover_rel FROM cover_versions v JOIN cover_projects p ON p.id = v.project_id WHERE v.id = ?')
+		// The version's own source cover; older rows (before it was recorded) fall back to the project's.
+		.prepare('SELECT v.image_rel, v.status, COALESCE(v.cover_rel, p.cover_rel) AS cover_rel FROM cover_versions v JOIN cover_projects p ON p.id = v.project_id WHERE v.id = ?')
 		.get(versionId) as { image_rel: string | null; status: string; cover_rel: string } | undefined;
 	if (!row) throw new ApiError(404, 'version not found');
 	if (row.status !== 'ok' || !row.image_rel) throw new ApiError(404, 'version has no image');

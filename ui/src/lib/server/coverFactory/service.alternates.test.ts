@@ -21,7 +21,7 @@ vi.mock('./inputs.js', async (orig) => {
 	};
 });
 
-import { runAction, ApiError } from './service.js';
+import { runAction, ApiError, buildExport, parseSongQuery } from './service.js';
 import { createProject, getProject, updateProject, insertVersion, listVersions } from './repo.js';
 import { COVER_JOB_KEYS } from './models.js';
 import { coverFile } from './paths.js';
@@ -164,7 +164,53 @@ describe('alternates vs the current cover', () => {
 	});
 });
 
+describe('song terms', () => {
+	it('parseSongQuery splits on the last em dash first, then the last hyphen', () => {
+		expect(parseSongQuery('A - B — C')).toEqual({ title: 'A - B', artist: 'C' });
+		expect(parseSongQuery('Pays imaginaire - Remix - Polo & Pan')).toEqual({ title: 'Pays imaginaire - Remix', artist: 'Polo & Pan' });
+		expect(parseSongQuery('Song — Part 2 — Artist')).toEqual({ title: 'Song — Part 2', artist: 'Artist' });
+		expect(parseSongQuery('justatitle')).toBeNull();
+	});
+	it('a project with no song terms falls back to its "song — artist" title', async () => {
+		const up = createProject(db, { title: 'Juicy — Notorious B.I.G.', source: 'upload', round_id: null, spotify_uri: null, league_slug: null, cover_rel: 'covers/p.png', cover_url: null });
+		const mb = vi.fn();
+		vi.stubGlobal('fetch', async (u: string | URL) => { mb(String(u)); return new Response(JSON.stringify({ 'release-groups': [], recordings: [] }), { status: 200 }); });
+		await runAction(db, { action: 'alternates', projectId: up.id });
+		expect(decodeURIComponent(mb.mock.calls.map((c) => c[0]).join(' '))).toContain('recording:"Juicy"');
+	});
+});
+
+describe('per-version source cover', () => {
+	it("export of a version made on cover A still wipes from A after switching to B", async () => {
+		const v = insertVersion(db, { project_id: pid, model_id: 'm', provider: 'p', prompt: 'x', image_rel: 'covers/p.png', status: 'ok', error_reason: null, cover_rel: 'covers/p.png' });
+		seed(pid);
+		const sw = (await runAction(db, { action: 'use-alternate', projectId: pid, alternateId: 'rel-1' })) as { project: { cover_rel: string } };
+		// Make B unreadable: an export that used the project's current cover would throw.
+		updateProject(db, pid, { cover_rel: 'covers/gone.png' });
+		expect(sw.project.cover_rel).not.toBe('covers/p.png');
+		expect((await buildExport(db, v.id, 'gif')).length).toBeGreaterThan(0);
+	});
+});
+
 describe('use-alternate / restore-original', () => {
+	it('using the alternate already in use is a no-op: no download, read kept', async () => {
+		seed(pid);
+		await runAction(db, { action: 'use-alternate', projectId: pid, alternateId: 'rel-1' });
+		updateProject(db, pid, { breakdown_json: JSON.stringify(BREAKDOWN) });
+		const before = getProject(db, pid)!;
+		fetchCalls.length = 0;
+		const r = (await runAction(db, { action: 'use-alternate', projectId: pid, alternateId: 'rel-1' })) as { project: { cover_rel: string; breakdown_json: string | null }; unchanged: boolean };
+		expect(r.unchanged).toBe(true);
+		expect(fetchCalls).toEqual([]);
+		expect(r.project.cover_rel).toBe(before.cover_rel);
+		expect(getProject(db, pid)!.breakdown_json).not.toBeNull();
+		const c = (await runAction(db, { action: 'apply-concept', projectId: pid, concept: { id: 'c-9', move: 'alternate', alternateId: 'rel-1', title: 't', plan: 'p', addSubjects: [], treatments: [] } })) as { unchanged: boolean; needsRead: boolean };
+		expect(c.unchanged).toBe(true);
+		expect(c.needsRead).toBe(false);
+		expect(fetchCalls).toEqual([]);
+		expect(getProject(db, pid)!.breakdown_json).not.toBeNull();
+	});
+
 	it('sets cover_rel, keeps the first original, clears read state, leaves versions alone', async () => {
 		seed(pid);
 		updateProject(db, pid, { breakdown_json: '{"x":1}', treatments_json: '[]' });

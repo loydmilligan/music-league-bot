@@ -41,6 +41,8 @@ export interface CoverVersion {
 	rating_instructions: number | null;
 	note: string | null;
 	created_at: string;
+	/** The cover sent to the generator; null on versions made before this was recorded. */
+	cover_rel: string | null;
 }
 
 export interface CoverRequest {
@@ -155,7 +157,8 @@ export function insertVersion(
 		| 'rating_gag'
 		| 'rating_instructions'
 		| 'note'
-	>
+		| 'cover_rel'
+	> & { cover_rel?: string | null }
 ): CoverVersion {
 	const tx = db.transaction(() => {
 		const max = db
@@ -163,10 +166,10 @@ export function insertVersion(
 			.get(v.project_id) as { m: number };
 		const r = db
 			.prepare(
-				`INSERT INTO cover_versions (project_id, try_no, model_id, provider, prompt, image_rel, status, error_reason)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+				`INSERT INTO cover_versions (project_id, try_no, model_id, provider, prompt, image_rel, status, error_reason, cover_rel)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 			)
-			.run(v.project_id, max.m + 1, v.model_id, v.provider, v.prompt, v.image_rel, v.status, v.error_reason);
+			.run(v.project_id, max.m + 1, v.model_id, v.provider, v.prompt, v.image_rel, v.status, v.error_reason, v.cover_rel ?? null);
 		return Number(r.lastInsertRowid);
 	});
 	return getVersion(db, tx())!;

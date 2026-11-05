@@ -260,7 +260,12 @@ export async function findAlternateCovers(
 		}
 
 		const alternates = kept.map((k) => ({ ...k.alt, hash: k.hash }));
-		if (!alternates.length) return { alternates: [], message: EMPTY_MESSAGE };
+		if (!alternates.length) {
+			// Editions exist but no thumbnail could be fetched: the archive is down, not empty. Not cached.
+			const anyHash = (await Promise.all([...hashes.values()])).some(Boolean);
+			if (candidates.length && !anyHash) return { alternates: [], message: BUSY_MESSAGE };
+			return { alternates: [], message: EMPTY_MESSAGE };
+		}
 		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
 			.run(key, JSON.stringify(alternates), new Date(now()).toISOString());
 		return { alternates, message: null };

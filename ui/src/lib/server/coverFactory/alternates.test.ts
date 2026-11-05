@@ -60,6 +60,17 @@ describe('averageHash', () => {
 	});
 });
 
+describe('findAlternateCovers thumbnails', () => {
+	it('every thumbnail fetch failing is "busy", not "none found", and is not cached', async () => {
+		const h = await harness();
+		const fetchImpl = async (u: string | URL) => (String(u).startsWith('https://coverartarchive.org/') ? new Response('down', { status: 503 }) : h.fetchImpl(u));
+		const r = await findAlternateCovers(db, { title: 'Linoleum', artist: 'NOFX', album: 'Punk in Drublic' }, { ...o(h), fetchImpl });
+		expect(r.alternates).toEqual([]);
+		expect(r.message).toMatch(/busy/i);
+		expect(db.prepare("SELECT COUNT(*) AS n FROM cover_alt_cache").get()).toEqual({ n: 0 });
+	});
+});
+
 describe('findAlternateCovers', () => {
 	it('dedupes 8 releases with 2 distinct images, keeping the earliest, with https urls', async () => {
 		const h = await harness();

@@ -105,9 +105,9 @@
 		switching = a.id;
 		error = '';
 		try {
-			const r = await cfPost<{ project: Project }>({ action: 'use-alternate', projectId: project.id, alternateId: a.id });
+			const r = await cfPost<{ project: Project; unchanged?: boolean }>({ action: 'use-alternate', projectId: project.id, alternateId: a.id });
 			currentId = a.id;
-			onchanged(r.project, 'alternate');
+			if (!r.unchanged) onchanged(r.project, 'alternate');
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'could not switch the cover';
 		} finally {

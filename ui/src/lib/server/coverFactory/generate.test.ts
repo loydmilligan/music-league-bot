@@ -71,6 +71,7 @@ describe('generateVersion', () => {
 		const r = db.prepare('SELECT * FROM cover_requests WHERE version_id = ?').get(v.id) as any;
 		expect(r).toMatchObject({ outcome: 'ok', cost_usd: 0.07, step: 'generate', project_id: projectId });
 		expect(getProject(db, projectId)!.treatments_json).toBe('[]');
+		expect(v.cover_rel).toBe(getProject(db, projectId)!.cover_rel);
 	});
 
 	it('no image -> failed version, no_image request', async () => {

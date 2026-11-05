@@ -46,6 +46,8 @@ export interface Version {
 	cost_usd?: number | null;
 	cost_estimated?: number;
 	latency_ms?: number | null;
+	/** The cover this try was generated from (null on older tries: use the project's cover). */
+	cover_rel?: string | null;
 }
 export interface Player {
 	slug: string;

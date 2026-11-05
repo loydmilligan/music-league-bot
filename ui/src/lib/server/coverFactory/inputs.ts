@@ -159,12 +159,25 @@ export async function resolveSpotifyCover(
 	return { title: t.title, artists: t.artist, artUrl: t.albumArtUrl, spotifyUri: t.uri };
 }
 
-export async function fetchCoverBytes(artUrl: string, fetchImpl: FetchLike = fetch): Promise<Buffer> {
+const COVER_TIMEOUT_MS = 10_000;
+
+/** One deadline for the whole download (every redirect hop and the body). */
+export async function fetchCoverBytes(artUrl: string, fetchImpl: FetchLike = fetch, timeoutMs = COVER_TIMEOUT_MS): Promise<Buffer> {
+	const signal = AbortSignal.timeout(timeoutMs);
+	// Race as well as pass the signal: a fetch implementation that ignores it must still give up.
+	const timeoutError = () => new Error(`cover fetch timed out after ${timeoutMs / 1000}s`);
+	const timedOut = new Promise<never>((_, rej) => signal.addEventListener('abort', () => rej(timeoutError()), { once: true }));
+	timedOut.catch(() => {});
+	// A fetch that honours the signal rejects with its own AbortError: report both the same way.
+	const within = <T>(p: Promise<T>): Promise<T> =>
+		Promise.race([p, timedOut]).catch((e) => {
+			throw signal.aborted ? timeoutError() : e;
+		});
 	let url = artUrl;
 	let res: Response | null = null;
 	for (let hop = 0; hop <= 3; hop++) {
 		if (!/^https:\/\//i.test(url)) throw new Error('cover URL must be https');
-		res = await fetchImpl(url, { redirect: 'manual' });
+		res = await within(fetchImpl(url, { redirect: 'manual', signal }));
 		if (res.status >= 300 && res.status < 400) {
 			const loc = res.headers.get('location');
 			if (!loc) throw new Error('cover redirect without location');
@@ -183,7 +196,14 @@ export async function fetchCoverBytes(artUrl: string, fetchImpl: FetchLike = fet
 	const chunks: Uint8Array[] = [];
 	let total = 0;
 	for (;;) {
-		const { done, value } = await reader.read();
+		let step: ReadableStreamReadResult<Uint8Array>;
+		try {
+			step = await within(reader.read());
+		} catch (e) {
+			await reader.cancel().catch(() => {});
+			throw e;
+		}
+		const { done, value } = step;
 		if (done) break;
 		total += value.byteLength;
 		if (total > MAX_COVER_BYTES) {

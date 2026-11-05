@@ -58,6 +58,13 @@ describe('shareKeeper', () => {
 		expect(existsSync(join(digests, '_media/covers', dir, 'cover.jpg'))).toBe(true);
 		expect(existsSync(join(digests, '_media/covers', dir, 'wipe.gif'))).toBe(true);
 	});
+	it("wipes from the version's own source cover, not the project's current one", async () => {
+		const v = insertVersion(db, { project_id: pid, model_id: 'm', provider: 'openrouter', prompt: 'p', status: 'ok', error_reason: null, image_rel: 'versions/a.png', cover_rel: 'covers/o.png' }).id;
+		// The project moved to another cover whose file is gone: reading it would throw.
+		updateProject(db, pid, { keeper_version_id: v, cover_rel: 'covers/gone.png' });
+		const r = await shareKeeper(db, pid, digests);
+		expect(r.gifUrl).toMatch(/wipe\.gif$/);
+	});
 	it('uses a new directory when the keeper changes', async () => {
 		updateProject(db, pid, { keeper_version_id: v1 });
 		const a = await shareKeeper(db, pid, digests);

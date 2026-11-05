@@ -853,7 +853,7 @@
 								{#each versionsNewest as v (v.id)}
 									<VersionCard
 										{v}
-										coverRel={project.cover_rel}
+										coverRel={v.cover_rel ?? project.cover_rel}
 										isKeeper={v.id === project.keeper_version_id}
 										busy={busy === 'keeper'}
 										onrate={(k, val) => rate(v, k, val)}

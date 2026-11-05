@@ -101,8 +101,10 @@
 		try {
 			if (c.move === 'alternate') {
 				// Free: swaps the cover only. The page drops the read, so this panel unmounts.
-				const r = await cfPost<{ project: Project }>({ action: 'apply-concept', projectId, concept: $state.snapshot(c) });
-				oncover(r.project);
+				const r = await cfPost<{ project: Project; unchanged?: boolean }>({ action: 'apply-concept', projectId, concept: $state.snapshot(c) });
+				// Already on that edition: the server kept the read, so nothing to reset.
+				if (r.unchanged) applied = c.id;
+				else oncover(r.project);
 				return;
 			}
 			// Sent exactly as pitched: the concept id makes re-applying idempotent.

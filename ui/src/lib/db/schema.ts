@@ -857,6 +857,7 @@ CREATE TABLE IF NOT EXISTS cover_versions (
   rating_instructions INTEGER,
   note TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  cover_rel TEXT,
   UNIQUE(project_id, try_no)
 );
 CREATE TABLE IF NOT EXISTS cover_requests (
