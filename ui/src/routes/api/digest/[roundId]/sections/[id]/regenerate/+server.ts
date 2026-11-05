@@ -13,6 +13,7 @@ import {
   type SectionKind,
 } from '$lib/digest/llm.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
+import { writePodiumCover } from '$lib/server/coverFactory/podium.js';
 
 // POST /api/digest/:roundId/sections/:id/regenerate
 export const POST: RequestHandler = async ({ params, request }) => {
@@ -78,7 +79,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
   // Re-attach album art if the podium was regenerated (LLM output lacks it).
   if (section.kind === 'podium') enrichPodiumArt(newContent, data.submissions);
 
-  const updated = replaceSectionContent(db, section, newContent, chips, instructions);
+  let updated = replaceSectionContent(db, section, newContent, chips, instructions);
+  // Re-apply Cover Factory keepers; no-op (no write) for rounds without podium slots.
+  if (section.kind === 'podium' && writePodiumCover(db, roundId)) {
+    updated = db.prepare('SELECT * FROM digest_sections WHERE id = ?').get(section.id) as DigestSectionRow;
+  }
   addDraftCost(db, section.draft_id, costUsd);
 
   // a3: stamp the PRIOR section ledger row as rejected after regen succeeds

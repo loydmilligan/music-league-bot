@@ -1110,7 +1110,8 @@ export function getSectionsForDraft(db: Database.Database, draftId: string): Dig
     .all(draftId) as DigestSectionRow[];
 }
 
-const normTitle = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+/** Title key used to match podium items to submissions (shared with coverFactory/podium.ts). */
+export const normTitle = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 /**
  * Inject album-art URLs into a podium section's items so AlbumPodium renders

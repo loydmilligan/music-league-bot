@@ -881,6 +881,21 @@ CREATE TABLE IF NOT EXISTS cover_alt_cache (
   json TEXT NOT NULL,
   fetched_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS cover_podium_slots (
+  id INTEGER PRIMARY KEY,
+  round_id INTEGER NOT NULL,
+  rank INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  submission_id INTEGER,
+  project_id INTEGER REFERENCES cover_projects(id) ON DELETE SET NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending','running','done','failed','skipped')),
+  note TEXT,
+  public_url TEXT,
+  gif_rel TEXT,
+  updated_at TEXT NOT NULL,
+  UNIQUE(round_id, rank, title)
+);
+CREATE INDEX IF NOT EXISTS idx_cover_podium_slots_project ON cover_podium_slots(project_id);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',

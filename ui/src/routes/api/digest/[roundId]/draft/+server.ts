@@ -21,6 +21,7 @@ import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { recomputePopularityProxies } from '$lib/lastfm.js';
 import { coerceTopSectionVariant, coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 import { storylinesSectionEnabledFor } from '$lib/digest/storylinesSection.js';
+import { writePodiumCover } from '$lib/server/coverFactory/podium.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -61,7 +62,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
   if (cached && !regenerate) {
     // Backfill album art into an already-generated podium (older drafts predate
     // podium-thumbnails) without regenerating prose — additive coverUrl only.
-    const sections = backfillPodiumArt(db, roundId, getSectionsForDraft(db, cached.id));
+    let sections = backfillPodiumArt(db, roundId, getSectionsForDraft(db, cached.id));
+    // Cover Factory keepers win over Spotify art; no-op (no write) for rounds without podium slots.
+    if (writePodiumCover(db, roundId)) sections = getSectionsForDraft(db, cached.id);
     return json({
       cached: true,
       draft: cached,
@@ -99,9 +102,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
     db.prepare('DELETE FROM digest_drafts WHERE round_id = ?').run(roundId);
   }
 
-  const { draft, sections } = writeDraft(
+  const written = writeDraft(
     db, roundId, data, output, { generated_via: 'POST /draft', genParams: effectiveGenParams ?? null }, effectiveGenParams ?? undefined,
   );
+  const draft = written.draft;
+  // Re-apply Cover Factory keepers; no-op (no write) for rounds without podium slots.
+  const sections = writePodiumCover(db, roundId) ? getSectionsForDraft(db, draft.id) : written.sections;
 
   return json({
     cached: false,

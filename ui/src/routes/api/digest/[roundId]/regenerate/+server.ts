@@ -14,6 +14,7 @@ import {
   type SectionKind,
 } from '$lib/digest/llm.js';
 import { gatherSeasonData } from '$lib/db/seasonData.js';
+import { writePodiumCover } from '$lib/server/coverFactory/podium.js';
 
 // POST /api/digest/:roundId/regenerate — whole-draft regen.
 // Runs non-locked sections in parallel; locked sections are skipped entirely.
@@ -73,6 +74,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
       failures.push(`${regenerable[i].kind}: ${(r.reason as Error).message}`);
     }
   });
+
+  // Re-apply Cover Factory keepers; no-op (no write) for rounds without podium slots.
+  writePodiumCover(db, roundId);
 
   incrementWholeRegenCount(db, draft.id);
 

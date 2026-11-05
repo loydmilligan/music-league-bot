@@ -21,6 +21,7 @@ import {
 import { getPinnedCoverModel, isUsablePin } from './models.js';
 import { applyConcept, cleanTreatments, pitchConcepts, playerIdeas, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
+import { writePodiumCover } from './podium.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
 import {
@@ -520,7 +521,26 @@ function actKeeper(db: DB, b: Record<string, unknown>) {
 	const v = listVersions(db, project.id).find((x) => x.id === num(b.versionId, 'versionId'));
 	if (!v) throw new ApiError(404, 'version not found in project');
 	if (v.status !== 'ok' || !v.image_rel) bad('a failed version cannot be the keeper');
-	return { project: updateProject(db, project.id, { keeper_version_id: v.id }) };
+	const updated = updateProject(db, project.id, { keeper_version_id: v.id });
+	syncPodiumSlots(db, project.id, project.keeper_version_id !== v.id);
+	return { project: updated };
+}
+
+/**
+ * A keeper on a project linked to podium slots makes those slots done and re-applies the cover to the
+ * round's draft. A changed keeper drops the stale pre-rendered GIF / public share so the draft shows the
+ * new keeper (promotePodiumCovers re-shares at finalize). Unlinked projects touch nothing.
+ */
+function syncPodiumSlots(db: DB, projectId: number, keeperChanged: boolean): void {
+	const rounds = db.prepare('SELECT DISTINCT round_id FROM cover_podium_slots WHERE project_id = ?').all(projectId) as { round_id: number }[];
+	if (rounds.length === 0) return;
+	db.prepare(
+		`UPDATE cover_podium_slots SET status = 'done', updated_at = ?,
+		   gif_rel = CASE WHEN ? THEN NULL ELSE gif_rel END,
+		   public_url = CASE WHEN ? THEN NULL ELSE public_url END
+		 WHERE project_id = ?`,
+	).run(new Date().toISOString(), keeperChanged ? 1 : 0, keeperChanged ? 1 : 0, projectId);
+	for (const r of rounds) writePodiumCover(db, r.round_id);
 }
 
 async function actShare(db: DB, b: Record<string, unknown>) {
