@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { ProviderError } from '../avatarFactory/errors.js';
+import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { assertGenerationAllowed } from '../avatarFactory/pause.js';
 import { normalizeImage } from '../avatarFactory/normalize.js';
 import { listLeaguesReadonly } from '../avatarFactory/roster.js';
@@ -92,7 +93,7 @@ function parseJson<T>(s: string | null, fallback: T): T {
 	}
 }
 
-function playersFor(project: CoverProject): PlayerOption[] {
+export function playersFor(project: CoverProject): PlayerOption[] {
 	if (project.league_slug) return listPlayers(project.league_slug, project.id);
 	return LEAGUES.flatMap((l) => listPlayers(l, project.id));
 }
@@ -167,9 +168,9 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 
 // ---------- POST ----------
 
-async function fetchCover(url: string): Promise<Buffer> {
+async function fetchCover(url: string, fetchImpl?: FetchLike): Promise<Buffer> {
 	try {
-		return await fetchCoverBytes(url);
+		return await fetchCoverBytes(url, fetchImpl);
 	} catch (e) {
 		throw new ApiError(400, e instanceof Error ? e.message : 'cover fetch failed');
 	}
@@ -184,24 +185,28 @@ function roundLeague(db: DB, roundId: number): string | null {
 	return r?.slug ?? null;
 }
 
+/** New project from a round submission's album art (the factory's "create from round"; also used by the auto run). */
+export async function createRoundProject(db: DB, roundId: number, submissionId: number, fetchImpl?: FetchLike): Promise<CoverProject> {
+	const song = (await listRoundSongs(db, roundId, fetchImpl)).find((s) => s.submissionId === submissionId);
+	if (!song) throw new ApiError(404, 'submission not found in round');
+	if (!song.artUrl) bad('submission has no album art');
+	const rel = await saveCoverUpload(await fetchCover(song.artUrl!, fetchImpl));
+	const sub = db.prepare('SELECT spotify_uri, title, artists, album FROM ml_submissions WHERE id = ?').get(submissionId) as
+		| { spotify_uri: string; title: string; artists: string; album: string | null }
+		| undefined;
+	return createProject(db, {
+		title: `${song.title} — ${song.artists}`, source: 'round', round_id: roundId,
+		spotify_uri: sub?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
+		cover_rel: rel, cover_url: song.artUrl,
+		song_title: sub?.title ?? song.title, song_artist: sub?.artists ?? song.artists, song_album: sub?.album ?? null,
+	});
+}
+
 async function actCreate(db: DB, b: Record<string, unknown>) {
 	if (b.source === 'round') {
 		const roundId = num(b.roundId, 'roundId');
 		const submissionId = num(b.submissionId, 'submissionId');
-		const song = (await listRoundSongs(db, roundId)).find((s) => s.submissionId === submissionId);
-		if (!song) throw new ApiError(404, 'submission not found in round');
-		if (!song.artUrl) bad('submission has no album art');
-		const rel = await saveCoverUpload(await fetchCover(song.artUrl!));
-		const sub = db.prepare('SELECT spotify_uri, title, artists, album FROM ml_submissions WHERE id = ?').get(submissionId) as
-			| { spotify_uri: string; title: string; artists: string; album: string | null }
-			| undefined;
-		const project = createProject(db, {
-			title: `${song.title} — ${song.artists}`, source: 'round', round_id: roundId,
-			spotify_uri: sub?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
-			cover_rel: rel, cover_url: song.artUrl,
-			song_title: sub?.title ?? song.title, song_artist: sub?.artists ?? song.artists, song_album: sub?.album ?? null,
-		});
-		return { project };
+		return { project: await createRoundProject(db, roundId, submissionId) };
 	}
 	if (b.source === 'spotify') {
 		const url = typeof b.url === 'string' ? b.url : bad('url required');
@@ -224,7 +229,7 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 }
 
 /** Cheap: one DB lookup, never touches album art or the network (runs on every project-state load). */
-function submitterFor(db: DB, project: CoverProject): { slug: string; name: string } | undefined {
+export function submitterFor(db: DB, project: CoverProject): { slug: string; name: string } | undefined {
 	if (project.round_id == null || !project.spotify_uri) return undefined;
 	const sub = db
 		.prepare('SELECT id FROM ml_submissions WHERE round_id = ? AND spotify_uri = ? LIMIT 1')
@@ -237,16 +242,21 @@ async function coverDataUrl(project: CoverProject): Promise<string> {
 	return (await normalizeImage(readFileSync(coverFile(project.cover_rel)), 'cover.jpg')).dataUrl;
 }
 
-async function actRead(db: DB, b: Record<string, unknown>) {
+/** Read the project's cover (paid) and store the breakdown with default treatments for its submitter. */
+export async function readProject(db: DB, projectId: number, fetchImpl?: FetchLike): Promise<{ breakdown: Breakdown; treatments: Treatment[] }> {
 	assertGenerationAllowed(); // the reader is a paid call too
-	const project = need(db, num(b.projectId, 'projectId'));
-	const breakdown = await readCover(db, project.id, await coverDataUrl(project));
+	const project = need(db, projectId);
+	const breakdown = await readCover(db, project.id, await coverDataUrl(project), { fetchImpl });
 	const treatments = defaultTreatments(breakdown, submitterFor(db, project));
 	updateProject(db, project.id, {
 		breakdown_json: JSON.stringify(breakdown),
 		treatments_json: JSON.stringify(treatments),
 	});
 	return { breakdown, treatments };
+}
+
+async function actRead(db: DB, b: Record<string, unknown>) {
+	return readProject(db, num(b.projectId, 'projectId'));
 }
 
 function actSave(db: DB, b: Record<string, unknown>) {
@@ -285,18 +295,14 @@ function actPreview(db: DB, b: Record<string, unknown>) {
 	return { prompt: buildSwapPrompt(breakdownOf(project), treatments, ids).prompt };
 }
 
-async function actGenerate(db: DB, b: Record<string, unknown>) {
-	// Before any paid call (identity description runs ahead of generateVersion's own gate).
-	assertGenerationAllowed();
-	const project = need(db, num(b.projectId, 'projectId'));
-	const treatments = validateTreatments(b.treatments);
-	breakdownOf(project);
-	if (b.modelId !== undefined && typeof b.modelId !== 'string') bad('modelId must be a string');
-	if (b.promptOverride !== undefined && typeof b.promptOverride !== 'string') bad('promptOverride must be a string');
-	if (typeof b.promptOverride === 'string' && b.promptOverride.length > 8000) bad('promptOverride too long (max 8000 characters)');
-	// Only roster models that fit the generator job may reach the provider (no arbitrary/fal-ai ids).
-	if (typeof b.modelId === 'string' && !isUsablePin(db, 'generator', b.modelId)) bad('modelId is not a usable generator model');
-
+/**
+ * Headshots + identity descriptions for the treatments' players. A missing description is a paid
+ * reader call (cached on the project); `beforeDescribe` runs right before each such call.
+ */
+export async function loadIdentities(
+	db: DB, project: CoverProject, treatments: Treatment[],
+	o: { fetchImpl?: FetchLike; beforeDescribe?: (slug: string) => void } = {},
+): Promise<{ identities: Identity[]; headshots: Record<string, Buffer> }> {
 	const players = playersFor(project);
 	const cache = parseJson<Record<string, string>>(project.identities_json, {});
 	const identities: Identity[] = [];
@@ -309,12 +315,29 @@ async function actGenerate(db: DB, b: Record<string, unknown>) {
 		headshots[slug] = bytes!;
 		let features = cache[slug];
 		if (!features) {
-			features = await describeIdentity(db, project.id, (await normalizeImage(bytes!, `${slug}.jpg`)).dataUrl);
+			o.beforeDescribe?.(slug);
+			features = await describeIdentity(db, project.id, (await normalizeImage(bytes!, `${slug}.jpg`)).dataUrl, { fetchImpl: o.fetchImpl });
 			cache[slug] = features;
 			updateProject(db, project.id, { identities_json: JSON.stringify(cache) });
 		}
 		identities.push({ slug, name: player!.name, features });
 	}
+	return { identities, headshots };
+}
+
+async function actGenerate(db: DB, b: Record<string, unknown>) {
+	// Before any paid call (identity description runs ahead of generateVersion's own gate).
+	assertGenerationAllowed();
+	const project = need(db, num(b.projectId, 'projectId'));
+	const treatments = validateTreatments(b.treatments);
+	breakdownOf(project);
+	if (b.modelId !== undefined && typeof b.modelId !== 'string') bad('modelId must be a string');
+	if (b.promptOverride !== undefined && typeof b.promptOverride !== 'string') bad('promptOverride must be a string');
+	if (typeof b.promptOverride === 'string' && b.promptOverride.length > 8000) bad('promptOverride too long (max 8000 characters)');
+	// Only roster models that fit the generator job may reach the provider (no arbitrary/fal-ai ids).
+	if (typeof b.modelId === 'string' && !isUsablePin(db, 'generator', b.modelId)) bad('modelId is not a usable generator model');
+
+	const { identities, headshots } = await loadIdentities(db, project, treatments);
 	const version = await generateVersion(db, {
 		projectId: project.id, treatments, identities, headshots,
 		modelId: b.modelId as string | undefined, promptOverride: b.promptOverride as string | undefined,
@@ -418,8 +441,8 @@ function currentAlternateId(db: DB, project: CoverProject): string | null {
 }
 
 /** Download the chosen edition as a new cover file and reset everything derived from the old cover. */
-async function switchCover(db: DB, project: CoverProject, alt: AltCover) {
-	const rel = await saveCoverUpload(await fetchCover(alt.fullUrl));
+async function switchCover(db: DB, project: CoverProject, alt: AltCover, fetchImpl?: FetchLike) {
+	const rel = await saveCoverUpload(await fetchCover(alt.fullUrl, fetchImpl));
 	const original = project.original_cover_rel ?? project.cover_rel;
 	db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
 		.run(currentKey(project.id), JSON.stringify(alt.id), new Date().toISOString());
@@ -437,12 +460,17 @@ function pickAlternate(db: DB, project: CoverProject, id: unknown): AltCover {
 	return alt;
 }
 
-async function actUseAlternate(db: DB, b: Record<string, unknown>) {
-	const project = need(db, num(b.projectId, 'projectId'));
-	const alt = pickAlternate(db, project, b.alternateId);
+/** Switch the project to a stored alternate edition (free; the new cover needs a fresh read). */
+export async function useAlternate(db: DB, projectId: number, alternateId: unknown, fetchImpl?: FetchLike): Promise<{ project: CoverProject; unchanged: boolean }> {
+	const project = need(db, projectId);
+	const alt = pickAlternate(db, project, alternateId);
 	// Already on this edition: keep the cover file and the read.
 	if (currentAlternateId(db, project) === alt.id) return { project, unchanged: true };
-	return { project: await switchCover(db, project, alt), unchanged: false };
+	return { project: await switchCover(db, project, alt, fetchImpl), unchanged: false };
+}
+
+async function actUseAlternate(db: DB, b: Record<string, unknown>) {
+	return useAlternate(db, num(b.projectId, 'projectId'), b.alternateId);
 }
 
 async function actRestoreOriginal(db: DB, b: Record<string, unknown>) {
@@ -516,14 +544,20 @@ function actRate(db: DB, b: Record<string, unknown>) {
 	return { version: rateVersion(db, id, ratings, b.note as string | null | undefined) };
 }
 
-function actKeeper(db: DB, b: Record<string, unknown>) {
-	const project = need(db, num(b.projectId, 'projectId'));
-	const v = listVersions(db, project.id).find((x) => x.id === num(b.versionId, 'versionId'));
+/** Set the project's keeper; linked podium slots become done and the round's draft is re-applied. */
+export function setKeeper(db: DB, projectId: number, versionId: number): CoverProject {
+	const project = need(db, projectId);
+	const v = listVersions(db, project.id).find((x) => x.id === versionId);
 	if (!v) throw new ApiError(404, 'version not found in project');
 	if (v.status !== 'ok' || !v.image_rel) bad('a failed version cannot be the keeper');
 	const updated = updateProject(db, project.id, { keeper_version_id: v.id });
 	syncPodiumSlots(db, project.id, project.keeper_version_id !== v.id);
-	return { project: updated };
+	return updated;
+}
+
+function actKeeper(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId')); // 404 before a bad versionId, as before
+	return { project: setKeeper(db, project.id, num(b.versionId, 'versionId')) };
 }
 
 /**
