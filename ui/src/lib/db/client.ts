@@ -717,6 +717,14 @@ export function openLeagueDb(path?: string): Database.Database {
 			`);
 		})();
 	}
+	// Cover Factory alternates: the project's song terms and the first cover (to restore).
+	const coverProjectCols = db.prepare("PRAGMA table_info(cover_projects)").all() as { name: string }[];
+	for (const col of ['original_cover_rel', 'song_title', 'song_artist', 'song_album']) {
+		if (!coverProjectCols.some((c) => c.name === col)) db.exec(`ALTER TABLE cover_projects ADD COLUMN ${col} TEXT`);
+	}
+	// Cover Factory: the cover each version was generated from (the project's cover can change later).
+	const coverVersionCols = db.prepare("PRAGMA table_info(cover_versions)").all() as { name: string }[];
+	if (!coverVersionCols.some((c) => c.name === 'cover_rel')) db.exec('ALTER TABLE cover_versions ADD COLUMN cover_rel TEXT');
 	// digest approval gate: approval_token/decision/decided_at/review_url +
 	// attempts retry counter on digest_jobs.
 	const digestJobsCols = db.prepare("PRAGMA table_info(digest_jobs)").all() as { name: string }[];

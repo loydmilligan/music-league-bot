@@ -181,6 +181,23 @@ describe('spotify + cover bytes', () => {
 });
 
 describe('fetchCoverBytes hardening', () => {
+	it('times out a fetch that never answers', async () => {
+		const hang = (() => new Promise<Response>(() => {})) as any;
+		const t0 = Date.now();
+		await expect(fetchCoverBytes('https://x.test/a', hang, 30)).rejects.toThrow(/timed out/);
+		expect(Date.now() - t0).toBeLessThan(2000);
+	});
+	it('times out a body that stalls', async () => {
+		const body = new ReadableStream({ pull() { return new Promise(() => {}); } });
+		const stall = (async () => new Response(body, { headers: { 'content-type': 'image/jpeg' } })) as any;
+		await expect(fetchCoverBytes('https://x.test/a', stall, 30)).rejects.toThrow(/timed out/);
+	});
+	it('passes an abort signal to fetch', async () => {
+		let sig: unknown;
+		const f = (async (_u: string, init: RequestInit) => { sig = init.signal; return new Response(await img(8), { headers: { 'content-type': 'image/png' } }); }) as any;
+		await fetchCoverBytes('https://x.test/a', f);
+		expect(sig).toBeInstanceOf(AbortSignal);
+	});
 	it('caps streamed body without content-length', async () => {
 		const chunk = new Uint8Array(1024 * 1024);
 		let n = 0;

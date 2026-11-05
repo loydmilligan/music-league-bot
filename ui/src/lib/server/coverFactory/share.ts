@@ -45,7 +45,7 @@ export async function shareKeeper(
 		return urls(project.share_dir);
 	}
 
-	const original = readFileSync(coverFile(project.cover_rel));
+	const original = readFileSync(coverFile(keeper.cover_rel ?? project.cover_rel));
 	const swapped = readFileSync(coverFile(keeper.image_rel));
 	const [still, gif] = await Promise.all([makeStill(swapped), makeWipeGif(original, swapped)]);
 	const dir = randomBytes(12).toString('hex');

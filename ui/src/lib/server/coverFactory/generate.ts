@@ -49,7 +49,8 @@ export async function generateVersion(db: Database.Database, input: GenerateInpu
 		imageDataUrls.push((await normalizeImage(bytes, `${key}.png`)).dataUrl);
 	}
 
-	const base = { project_id: project.id, model_id: modelId, provider: providerId, prompt };
+	// The cover actually sent: the project's cover may be switched to another edition later.
+	const base = { project_id: project.id, model_id: modelId, provider: providerId, prompt, cover_rel: project.cover_rel };
 	const t0 = Date.now();
 	try {
 		const res = await generateFactoryImage(provider, {

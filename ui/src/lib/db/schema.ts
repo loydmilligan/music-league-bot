@@ -828,6 +828,10 @@ CREATE TABLE IF NOT EXISTS cover_projects (
   league_slug TEXT,
   cover_rel TEXT NOT NULL,
   cover_url TEXT,
+  original_cover_rel TEXT,
+  song_title TEXT,
+  song_artist TEXT,
+  song_album TEXT,
   breakdown_json TEXT,
   identities_json TEXT,
   treatments_json TEXT,
@@ -853,6 +857,7 @@ CREATE TABLE IF NOT EXISTS cover_versions (
   rating_instructions INTEGER,
   note TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  cover_rel TEXT,
   UNIQUE(project_id, try_no)
 );
 CREATE TABLE IF NOT EXISTS cover_requests (
@@ -871,6 +876,11 @@ CREATE TABLE IF NOT EXISTS cover_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_cover_versions_project ON cover_versions(project_id, try_no);
 CREATE INDEX IF NOT EXISTS idx_cover_requests_project ON cover_requests(project_id);
+CREATE TABLE IF NOT EXISTS cover_alt_cache (
+  key TEXT PRIMARY KEY,
+  json TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
+);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',

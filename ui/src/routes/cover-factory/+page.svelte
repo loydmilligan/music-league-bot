@@ -8,6 +8,7 @@
 	import SubjectCard from '$lib/coverFactory/SubjectCard.svelte';
 	import SubjectMarkup from '$lib/coverFactory/SubjectMarkup.svelte';
 	import ConceptPitches from '$lib/coverFactory/ConceptPitches.svelte';
+	import AlternateCovers from '$lib/coverFactory/AlternateCovers.svelte';
 	import { boxPhrase, nextLetter, type Box } from '$lib/coverFactory/markup';
 	import VersionCard from '$lib/coverFactory/VersionCard.svelte';
 	import {
@@ -68,6 +69,9 @@
 	// Subject markup: the selected subject label, and whether the next drag replaces its box.
 	let selLabel = $state<string | null>(null);
 	let redrawing = $state(false);
+	// Alternate covers: panel open (unsticks the cover column) and "the cover changed, read it again".
+	let altOpen = $state(false);
+	let coverChanged = $state(false);
 
 	const leagues = $derived(home?.leagues ?? []);
 	const projects = $derived(home?.projects ?? []);
@@ -83,6 +87,8 @@
 	const pinnedGenerator = $derived(home?.models.generator ?? null);
 	const elapsed = $derived(busy && startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0);
 
+	const onAlternate = $derived(!!project?.original_cover_rel && project.cover_rel !== project.original_cover_rel);
+	const noPeople = $derived(!!bd && !bd.subjects.some((s) => s.kind === 'person'));
 	const playerTreatments = $derived(tr.filter((t) => t.mode === 'player'));
 	const generateBlocker = $derived.by(() => {
 		if (!bd) return 'Read the cover first.';
@@ -174,6 +180,7 @@
 		quickSlug = '';
 		selLabel = null;
 		redrawing = false;
+		coverChanged = false;
 		notice = null;
 		loadingProject = true;
 		try {
@@ -214,6 +221,7 @@
 			tr = syncTreatments(bd, plain(r.treatments));
 			selLabel = null;
 			redrawing = false;
+			coverChanged = false;
 			await loadProject(project.id);
 			promptText = '';
 			promptEdited = false;
@@ -306,6 +314,22 @@
 		promptEdited = false;
 		if (promptOpen) void loadPreview();
 		notice = { tone: 'health', text: 'Concept applied. Check the subjects below, then generate.' };
+	}
+
+	/** An alternate edition (or the original) replaced the cover: the old read no longer applies. */
+	function coverSwitched(p: Project, to: 'alternate' | 'original') {
+		if (!ps) return;
+		ps.project = { ...ps.project, ...p };
+		bd = null;
+		tr = [];
+		selLabel = null;
+		redrawing = false;
+		promptOpen = false;
+		promptText = '';
+		promptEdited = false;
+		coverChanged = true;
+		notice = { tone: 'health', text: to === 'original' ? 'Original cover restored. Re-read it before generating.' : 'Cover changed. Re-read it before generating.' };
+		void refreshHome();
 	}
 
 	async function fetchIdeas(slug: string): Promise<string[]> {
@@ -623,33 +647,42 @@
 					</div>
 
 					<div class="grid lg:grid-cols-[260px_minmax(0,1fr)] gap-5 items-start">
-						{#if bd}
-							<div class="lg:sticky lg:top-4">
-								<SubjectMarkup
-									src={mediaUrl(project.cover_rel)}
-									alt="Original cover: {project.title}"
-									subjects={bd.subjects}
-									selected={selLabel}
-									{redrawing}
-									disabled={busy === 'read'}
-									onselect={(l) => selectSubject(l, true)}
-									ondraw={drawBox}
-									onredraw={(on) => (redrawing = on)}
-								/>
-							</div>
-						{:else}
-							<figure class="space-y-2 lg:sticky lg:top-4">
-								<img src={mediaUrl(project.cover_rel)} alt="Original cover: {project.title}" class="w-full aspect-square object-cover rounded-md border border-border bg-bg" />
-								<figcaption class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">Original</figcaption>
-							</figure>
-						{/if}
+						<div class="space-y-3 min-w-0 {altOpen ? '' : 'lg:sticky lg:top-4'}">
+							{#if bd}
+								<div>
+									<SubjectMarkup
+										src={mediaUrl(project.cover_rel)}
+										alt="{onAlternate ? 'Alternate' : 'Original'} cover: {project.title}"
+										caption={onAlternate ? 'Alternate edition' : 'Original'}
+										subjects={bd.subjects}
+										selected={selLabel}
+										{redrawing}
+										disabled={busy === 'read'}
+										onselect={(l) => selectSubject(l, true)}
+										ondraw={drawBox}
+										onredraw={(on) => (redrawing = on)}
+									/>
+								</div>
+							{:else}
+								<figure class="space-y-2">
+									<img src={mediaUrl(project.cover_rel)} alt="{onAlternate ? 'Alternate' : 'Original'} cover: {project.title}" class="w-full aspect-square object-cover rounded-md border border-border bg-bg" />
+									<figcaption class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">{onAlternate ? 'Alternate edition' : 'Original'}</figcaption>
+								</figure>
+							{/if}
+							<AlternateCovers {project} {noPeople} disabled={!!busy} bind:open={altOpen} onchanged={coverSwitched} />
+						</div>
 
 						{#if !bd}
 							<div class="rounded-md border border-dashed border-border p-6 text-center space-y-3 min-h-60 grid place-items-center">
 								<div class="space-y-3">
-									<p class="text-sm text-fg-muted">The reader describes the style, layout, text and every subject so the generator can rebuild the cover faithfully.</p>
+									{#if coverChanged || onAlternate}
+										<p class="font-display text-lg text-fg">Cover changed</p>
+										<p class="text-sm text-fg-muted">The old read and subjects were for the previous cover. Read this one before generating (one reader call).</p>
+									{:else}
+										<p class="text-sm text-fg-muted">The reader describes the style, layout, text and every subject so the generator can rebuild the cover faithfully.</p>
+									{/if}
 									<button type="button" class={btnSolid} disabled={!!busy || !home?.models.reader} onclick={readCover}>
-										{#if busy === 'read'}{@render spinner()} Reading cover… {elapsed}s{:else}Read cover{/if}
+										{#if busy === 'read'}{@render spinner()} Reading cover… {elapsed}s{:else}{coverChanged || onAlternate ? 'Re-read cover' : 'Read cover'}{/if}
 									</button>
 									{#if !home?.models.reader}
 										<p class="text-xs text-ember">No reader model pinned. <a class="underline" href="/settings/models">Pin one in Models</a>.</p>
@@ -685,6 +718,7 @@
 									{paused}
 									onfail={markPaused}
 									onapplied={conceptApplied}
+									oncover={(p) => coverSwitched(p, 'alternate')}
 									onspent={refreshStats}
 								/>
 
@@ -819,7 +853,7 @@
 								{#each versionsNewest as v (v.id)}
 									<VersionCard
 										{v}
-										coverRel={project.cover_rel}
+										coverRel={v.cover_rel ?? project.cover_rel}
 										isKeeper={v.id === project.keeper_version_id}
 										busy={busy === 'keeper'}
 										onrate={(k, val) => rate(v, k, val)}

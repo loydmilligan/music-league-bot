@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { cfPost, type Breakdown, type Concept, type ConceptMove, type Player, type Treatment } from './api';
+	import { altThumbUrl, cfPost, type Breakdown, type Concept, type ConceptMove, type Player, type Project, type Treatment } from './api';
 
 	let {
 		projectId,
@@ -11,6 +11,7 @@
 		paused = false,
 		onfail,
 		onapplied,
+		oncover,
 		onspent,
 	}: {
 		projectId: number;
@@ -24,6 +25,8 @@
 		/** Returns true when the page handled the error itself (the pause banner); then no inline error. */
 		onfail?: (e: unknown) => boolean;
 		onapplied: (r: { breakdown: Breakdown; treatments: Treatment[] }, c: Concept) => void | Promise<void>;
+		/** An "alternate" concept switched the cover (free); the page asks for a re-read. */
+		oncover: (p: Project) => void;
 		/** A paid call finished (ok or not): refresh the spend line. */
 		onspent: () => void;
 	} = $props();
@@ -32,6 +35,7 @@
 		morph: { label: 'Morph', tone: 'text-sky border-sky/40 bg-sky-bg', hint: 'Something on the cover becomes the player' },
 		signature: { label: 'Signature', tone: 'text-amber border-amber/40 bg-amber/10', hint: "The player's known thing, placed in the scene" },
 		recast: { label: 'Recast', tone: 'text-accent border-accent-deep bg-accent-bg', hint: 'The player takes an unexpected role' },
+		alternate: { label: 'Alternate', tone: 'text-health border-health/40 bg-health-bg', hint: 'Another edition of this song enables the gag' },
 	};
 
 	let picked = $state<string[]>([]);
@@ -95,6 +99,14 @@
 		applying = c.id;
 		error = '';
 		try {
+			if (c.move === 'alternate') {
+				// Free: swaps the cover only. The page drops the read, so this panel unmounts.
+				const r = await cfPost<{ project: Project; unchanged?: boolean }>({ action: 'apply-concept', projectId, concept: $state.snapshot(c) });
+				// Already on that edition: the server kept the read, so nothing to reset.
+				if (r.unchanged) applied = c.id;
+				else oncover(r.project);
+				return;
+			}
 			// Sent exactly as pitched: the concept id makes re-applying idempotent.
 			const r = await cfPost<{ breakdown: Breakdown; treatments: Treatment[] }>({ action: 'apply-concept', projectId, concept: $state.snapshot(c) });
 			await onapplied(r, c);
@@ -107,6 +119,7 @@
 	}
 
 	function summary(c: Concept): string {
+		if (c.move === 'alternate') return 'switches the cover · free · needs a re-read';
 		const swaps = c.treatments.filter((t) => t.mode === 'player').length;
 		const removes = c.treatments.filter((t) => t.mode === 'remove').length;
 		return [
@@ -192,7 +205,14 @@
 						<span class="rounded-sm border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider {m.tone}" title={m.hint}>{m.label}</span>
 						<h4 class="text-sm font-medium text-fg leading-tight line-clamp-2" title={c.title}>{c.title}</h4>
 					</div>
-					<p class="text-sm text-fg-muted leading-snug">{c.plan}</p>
+					{#if c.move === 'alternate' && c.alternateId}
+						<div class="flex items-start gap-2">
+							<img src={altThumbUrl(c.alternateId)} alt="Alternate edition for {c.title}" loading="lazy" class="w-16 h-16 shrink-0 rounded-sm border border-border-muted object-cover bg-bg" />
+							<p class="text-sm text-fg-muted leading-snug">{c.plan}</p>
+						</div>
+					{:else}
+						<p class="text-sm text-fg-muted leading-snug">{c.plan}</p>
+					{/if}
 					<div class="mt-auto flex items-center justify-between gap-2">
 						<span class="font-mono text-[10px] text-fg-faint">{summary(c)}</span>
 						<button
@@ -204,7 +224,7 @@
 							title={isApplied ? "Re-applying resets this concept's treatments" : undefined}
 							onclick={() => use(c)}
 						>
-							{applying === c.id ? 'Applying…' : isApplied ? 'Re-apply' : 'Use this'}
+							{applying === c.id ? 'Applying…' : c.move === 'alternate' ? 'Use this cover' : isApplied ? 'Re-apply' : 'Use this'}
 						</button>
 					</div>
 				</li>

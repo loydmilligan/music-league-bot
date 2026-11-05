@@ -5,6 +5,7 @@ import { assertGenerationAllowed } from '../avatarFactory/pause.js';
 import { normalizeImage } from '../avatarFactory/normalize.js';
 import { listLeaguesReadonly } from '../avatarFactory/roster.js';
 import { normalizeBreakdown, type Breakdown } from './breakdown.js';
+import { averageHash, findAlternateCovers, looksSame, readProjectAlternates, storeProjectAlternates, type AltCover } from './alternates.js';
 import { generateVersion } from './generate.js';
 import {
 	fetchCoverBytes,
@@ -190,11 +191,14 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		if (!song) throw new ApiError(404, 'submission not found in round');
 		if (!song.artUrl) bad('submission has no album art');
 		const rel = await saveCoverUpload(await fetchCover(song.artUrl!));
-		const uri = db.prepare('SELECT spotify_uri FROM ml_submissions WHERE id = ?').get(submissionId) as { spotify_uri: string } | undefined;
+		const sub = db.prepare('SELECT spotify_uri, title, artists, album FROM ml_submissions WHERE id = ?').get(submissionId) as
+			| { spotify_uri: string; title: string; artists: string; album: string | null }
+			| undefined;
 		const project = createProject(db, {
 			title: `${song.title} — ${song.artists}`, source: 'round', round_id: roundId,
-			spotify_uri: uri?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
+			spotify_uri: sub?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
 			cover_rel: rel, cover_url: song.artUrl,
+			song_title: sub?.title ?? song.title, song_artist: sub?.artists ?? song.artists, song_album: sub?.album ?? null,
 		});
 		return { project };
 	}
@@ -211,6 +215,7 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		const project = createProject(db, {
 			title: t.artists ? `${t.title} — ${t.artists}` : t.title || 'Spotify cover', source: 'spotify', round_id: null, spotify_uri: t.spotifyUri,
 			league_slug: null, cover_rel: rel, cover_url: t.artUrl,
+			song_title: t.title || null, song_artist: t.artists || null, song_album: null,
 		});
 		return { project };
 	}
@@ -347,14 +352,131 @@ async function actIdeas(db: DB, b: Record<string, unknown>) {
 	return { ideas: await playerIdeas(db, project.id, slug) };
 }
 
-const MOVES: ConceptMove[] = ['morph', 'signature', 'recast'];
+const MOVES: ConceptMove[] = ['morph', 'signature', 'recast', 'alternate'];
 
-function actApplyConcept(db: DB, b: Record<string, unknown>) {
+/**
+ * "song — artist" -> terms. Splits on the LAST spaced em/en dash (titles can hold "Part 2 — ..."
+ * and hyphens), else on the last spaced hyphen ("Song - Remix - Artist").
+ */
+export function parseSongQuery(q: string): { title: string; artist: string } | null {
+	const s = q.trim();
+	const m = /^(.+)\s+[—–]\s+(.+)$/.exec(s) ?? /^(.+)\s+-\s+(.+)$/.exec(s);
+	if (!m) return null;
+	const title = m[1].trim();
+	const artist = m[2].trim();
+	return title && artist ? { title, artist } : null;
+}
+
+async function actAlternates(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
-	const breakdown = breakdownOf(project);
+	if (b.q !== undefined && typeof b.q !== 'string') bad('q must be a string');
+	const q = typeof b.q === 'string' ? b.q.trim() : '';
+	let terms: { title: string; artist: string; album?: string | null } | null = null;
+	if (q) {
+		terms = parseSongQuery(q);
+		if (!terms) bad('search as "song — artist"');
+	} else if (project.song_title && project.song_artist) {
+		terms = { title: project.song_title, artist: project.song_artist, album: project.song_album };
+	} else {
+		terms = parseSongQuery(project.title); // e.g. an upload titled "song — artist"
+	}
+	if (!terms) return bad('search for the song');
+	const found = await findAlternateCovers(db, terms);
+	const currentId = currentAlternateId(db, project);
+	// A busy / no-match answer must not wipe the list the user last saw (use-alternate validates against it).
+	if (found.message) return { ...found, currentId };
+	// The song-keyed cache stays cover-independent; the edition that IS the current cover is dropped here
+	// (unless it is the alternate in use, which stays listed as current).
+	const coverHash = await currentCoverHash(db, project);
+	const alternates = found.alternates.filter((a) => a.id === currentId || !a.hash || !coverHash || !looksSame(a.hash, coverHash));
+	storeProjectAlternates(db, project.id, alternates);
+	return { alternates, message: null, currentId };
+}
+
+/** Average hash of the project's cover file, cached per project + cover file. Null if unreadable. */
+async function currentCoverHash(db: DB, project: CoverProject): Promise<string | null> {
+	const key = `coverhash:${project.id}:${project.cover_rel}`;
+	const row = db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(key) as { json: string } | undefined;
+	if (row) return parseJson<string | null>(row.json, null);
+	try {
+		const hash = await averageHash(readFileSync(coverFile(project.cover_rel)));
+		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)').run(key, JSON.stringify(hash), new Date().toISOString());
+		return hash;
+	} catch {
+		return null;
+	}
+}
+
+const currentKey = (projectId: number) => `current:${projectId}`;
+
+/** Which alternate the project's cover came from (null on the original cover). */
+function currentAlternateId(db: DB, project: CoverProject): string | null {
+	if (!project.original_cover_rel || project.cover_rel === project.original_cover_rel) return null;
+	const row = db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(currentKey(project.id)) as { json: string } | undefined;
+	return row ? (parseJson<string | null>(row.json, null)) : null;
+}
+
+/** Download the chosen edition as a new cover file and reset everything derived from the old cover. */
+async function switchCover(db: DB, project: CoverProject, alt: AltCover) {
+	const rel = await saveCoverUpload(await fetchCover(alt.fullUrl));
+	const original = project.original_cover_rel ?? project.cover_rel;
+	db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
+		.run(currentKey(project.id), JSON.stringify(alt.id), new Date().toISOString());
+	return updateProject(db, project.id, {
+		cover_rel: rel,
+		original_cover_rel: original,
+		breakdown_json: null,
+		treatments_json: null,
+	});
+}
+
+function pickAlternate(db: DB, project: CoverProject, id: unknown): AltCover {
+	const alt = typeof id === 'string' ? readProjectAlternates(db, project.id).find((a) => a.id === id) : undefined;
+	if (!alt) return bad('unknown alternate: search the alternates again');
+	return alt;
+}
+
+async function actUseAlternate(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
+	const alt = pickAlternate(db, project, b.alternateId);
+	// Already on this edition: keep the cover file and the read.
+	if (currentAlternateId(db, project) === alt.id) return { project, unchanged: true };
+	return { project: await switchCover(db, project, alt), unchanged: false };
+}
+
+async function actRestoreOriginal(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
+	if (!project.original_cover_rel) bad('no original cover to restore');
+	db.prepare('DELETE FROM cover_alt_cache WHERE key = ?').run(currentKey(project.id));
+	return {
+		project: updateProject(db, project.id, {
+			cover_rel: project.original_cover_rel!,
+			original_cover_rel: project.original_cover_rel,
+			breakdown_json: null,
+			treatments_json: null,
+		}),
+	};
+}
+
+async function actApplyConcept(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
 	const c = b.concept as Record<string, unknown> | undefined;
 	if (!c || typeof c !== 'object' || typeof c.id !== 'string' || !c.id.trim()) return bad('concept required');
 	if (!MOVES.includes(c.move as ConceptMove)) bad('invalid concept move');
+	if (c.move === 'alternate') {
+		// Free: no model call. The new cover needs a fresh read before anything can be generated.
+		const alt = pickAlternate(db, project, c.alternateId);
+		if (currentAlternateId(db, project) === alt.id) {
+			return {
+				project, unchanged: true, needsRead: !project.breakdown_json,
+				breakdown: parseJson<Breakdown | null>(project.breakdown_json, null),
+				treatments: parseJson<Treatment[]>(project.treatments_json, []),
+			};
+		}
+		const updated = await switchCover(db, project, alt);
+		return { project: updated, unchanged: false, needsRead: true, breakdown: null, treatments: [] };
+	}
+	const breakdown = breakdownOf(project);
 	if (!Array.isArray(c.addSubjects)) bad('concept.addSubjects must be an array');
 	const concept: Concept = {
 		id: c.id,
@@ -417,6 +539,9 @@ export async function runAction(db: DB, b: Record<string, unknown>): Promise<unk
 		case 'pitch': return actPitch(db, b);
 		case 'ideas': return actIdeas(db, b);
 		case 'apply-concept': return actApplyConcept(db, b);
+		case 'alternates': return actAlternates(db, b);
+		case 'use-alternate': return actUseAlternate(db, b);
+		case 'restore-original': return actRestoreOriginal(db, b);
 		case 'rate': return actRate(db, b);
 		case 'keeper': return actKeeper(db, b);
 		case 'share': return actShare(db, b);
@@ -463,7 +588,8 @@ export async function runUpload(db: DB, form: FormData): Promise<unknown> {
 /** Download variants built on the fly: still JPEG or wipe GIF for one version. */
 export async function buildExport(db: DB, versionId: number, ext: 'gif' | 'jpg'): Promise<Buffer> {
 	const row = db
-		.prepare('SELECT v.image_rel, v.status, p.cover_rel FROM cover_versions v JOIN cover_projects p ON p.id = v.project_id WHERE v.id = ?')
+		// The version's own source cover; older rows (before it was recorded) fall back to the project's.
+		.prepare('SELECT v.image_rel, v.status, COALESCE(v.cover_rel, p.cover_rel) AS cover_rel FROM cover_versions v JOIN cover_projects p ON p.id = v.project_id WHERE v.id = ?')
 		.get(versionId) as { image_rel: string | null; status: string; cover_rel: string } | undefined;
 	if (!row) throw new ApiError(404, 'version not found');
 	if (row.status !== 'ok' || !row.image_rel) throw new ApiError(404, 'version has no image');
