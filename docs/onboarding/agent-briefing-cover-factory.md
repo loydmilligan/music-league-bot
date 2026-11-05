@@ -78,9 +78,9 @@ Live at `<app host>/cover-factory` (nav: "Cover Factory", after Avatar Factory).
 |---|---|---|
 | 1 | Model inventory: OpenRouter id/URL lookup, auto "kinds", $ tier override, per-job pinned models (reader / generator / pitch) | Live, pushed |
 | 2 | Factory core: cover → read → treatments → prompt → generate → versions, ratings, keeper → still + wipe GIF + share link | Live, pushed |
-| 3 | Subject box overlay, profile excerpts, concept pitches (morph/signature/recast, incl. covers with no people), idea chips | Live, **not pushed** at time of writing |
-| 4 | Alternate covers (Cover Art Archive / other editions) as an option on every cover | Not started |
-| 5 | Automatic round-end run into digest drafts | Not started |
+| 3 | Subject box overlay, profile excerpts, concept pitches (morph/signature/recast, incl. covers with no people), idea chips | Live, pushed |
+| 4 | Alternate covers: MusicBrainz + Cover Art Archive lookup (aHash dedupe, cached, ~7–12 s), switch/restore, pitch `alternate` move; versions remember their source cover | Live 2026-11-05 |
+| 5 | Automatic round-end run: podium medal songs (ranks 1–3, ≤5) for ON leagues; budget $1 free / $1–$2 via ntfy `mlb-alert` / hard stop $2; retries + fal; covers promoted to public URLs at finalize, d2 publish, 1.0 html share and send-claim | Live 2026-11-05 |
 
 ### The user flow
 
@@ -139,11 +139,21 @@ Reuses Avatar Factory (`ui/src/lib/server/avatarFactory/`): providers, `normaliz
 
 Projects 1–2 (Boarz R145: Shane/Juanes, Conor/Bocelli), 5–6 (Second Best R139: Sarah Black/IZ, Tommy/Blackalicious, v2 fixed the shirt), 9 (Matt/Polo & Pan "Matt is the sun", excellent), 10 (Jon/Kino). None rated or marked keeper; that's Matt's call.
 
-### What's next (pieces 4–5) and Matt's decisions that bind them
+### Pieces 4–5 (now live) — how they work and the decisions that bound them
 
 - **Piece 4, alternate covers:** offered on every cover, not only no-person ones. Cover Art Archive (MusicBrainz) is the obvious free source. Example of why: on NOFX, the alternate cover with young Fat Mike and his father made the Jon gag easy.
 - **Piece 5, automatic round-end run:** for podium songs in **Boarz, Second Best and Hip Jammers** only (per-league on/off setting). Writes straight into the digest draft's podium `coverUrl`; the unfinalized draft is the review step. Budget per round: up to **$1** spent freely; **$1–$2** needs approval via an ntfy message to topic `mlb-alert` on `https://ntfy.mattmariani.com` (reuse Avatar Factory's ntfy approve/deny, `avatarFactory/hil.ts`); **hard stop at $2**. On failure (no headshot, provider error, no image, over budget) keep the real cover and leave a visible note on the draft. Outputs stay private until the draft is finalized or shared. The factory keeper per podium slot is the source of truth and is re-applied after draft regeneration; punch-up scripts (`scripts/digest-qa/punchup_r18x.py`, which hardcode `_media` URLs today) should read it.
 - Switching models between tries is enough; no side-by-side multi-model generation.
+
+### Piece 5 operating notes
+
+- Trigger: a FRESH digest draft build (not a cached load) in an ON league enqueues a job; the in-process poller (`startCoverAutoRunner`, `COVER_AUTO_POLL_MS`, default 60 s) runs it. Operator "Run auto now" lives in the round slot panel on `/cover-factory` (re-run asks for confirmation).
+- Per-league toggles: "Auto-run" menu on `/cover-factory` (settings key `cover_factory_auto_leagues`).
+- Hand-made podium covers (any non-Spotify, non-factory URL, e.g. `_media/r182/*.gif`) are never overwritten — the slot is `skipped`.
+- Operator notes (`_coverNotes`) and "Open in Cover Factory" links show only in the app (`data-export-hide`), stripped from share/export page data and d2 HTML.
+- Private draft URLs (`/api/cover-factory/media/...`) are promoted to `digests/_media/covers/<24hex>/` before finalize / publish / share; a guard refuses to publish any page still containing `/api/cover-factory/`.
+- Punch-up scripts: `python3 scripts/digest-qa/cover_keepers.py --round N` prints `{rank: public_url}` (read-only DB).
+- Spend accounting counts unreported/0-cost calls at step estimates (generate $0.10, pitch $0.07, read $0.02, identity $0.01).
 
 ### Known open items
 
