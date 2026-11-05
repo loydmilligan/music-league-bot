@@ -21,7 +21,8 @@ import { ensureAlbumArt } from '$lib/digest/albumArt.js';
 import { recomputePopularityProxies } from '$lib/lastfm.js';
 import { coerceTopSectionVariant, coerceTopSectionVisuals } from '$lib/digest/topSectionVariants.js';
 import { storylinesSectionEnabledFor } from '$lib/digest/storylinesSection.js';
-import { writePodiumCover } from '$lib/server/coverFactory/podium.js';
+import { isAutoLeague, writePodiumCover } from '$lib/server/coverFactory/podium.js';
+import { enqueueCoverAuto } from '$lib/server/coverFactory/autoQueue.js';
 
 // POST /api/digest/:roundId/draft
 // No body / empty body  → cached: returns the existing draft if one exists,
@@ -106,6 +107,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
     db, roundId, data, output, { generated_via: 'POST /draft', genParams: effectiveGenParams ?? null }, effectiveGenParams ?? undefined,
   );
   const draft = written.draft;
+  // Fresh build only: queue the round's automatic covers (ON leagues). Never breaks the response.
+  try {
+    if (isAutoLeague(db, roundId)) enqueueCoverAuto(db, roundId);
+  } catch (e) {
+    console.error('[draft] enqueueCoverAuto failed:', (e as Error).message);
+  }
   // Re-apply Cover Factory keepers; no-op (no write) for rounds without podium slots.
   const sections = writePodiumCover(db, roundId) ? getSectionsForDraft(db, draft.id) : written.sections;
 

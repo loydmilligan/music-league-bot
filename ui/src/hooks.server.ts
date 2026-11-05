@@ -4,6 +4,7 @@ import { getDb } from '$lib/db/client.js';
 import { runStartupImport } from '$lib/import/startupScan.js';
 import { startQueueWorker } from '$lib/queueWorker.js';
 import { startDigestRunner } from '$lib/digest/runnerLoop.js';
+import { startCoverAutoRunner } from '$lib/server/coverFactory/autoQueue.js';
 import { startMlAuthHeartbeat } from '$lib/mlAuth.js';
 import { startRolloutAppExecutor } from '$lib/rollout/appExecutor.js';
 import { startSurveySync } from '$lib/surveySync/runner.js';
@@ -26,6 +27,7 @@ if (!STATS_ONLY) {
 
 	startQueueWorker();
 	startDigestRunner();
+	startCoverAutoRunner(); // own unref()d interval (COVER_AUTO_POLL_MS, default 60 s)
 	startRolloutAppExecutor();
 	startMlAuthHeartbeat();
 	startSurveySync();

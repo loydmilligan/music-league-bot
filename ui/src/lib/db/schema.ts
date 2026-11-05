@@ -896,6 +896,16 @@ CREATE TABLE IF NOT EXISTS cover_podium_slots (
   UNIQUE(round_id, rank, title)
 );
 CREATE INDEX IF NOT EXISTS idx_cover_podium_slots_project ON cover_podium_slots(project_id);
+CREATE TABLE IF NOT EXISTS cover_auto_jobs (
+  id INTEGER PRIMARY KEY,
+  round_id INTEGER NOT NULL UNIQUE,
+  status TEXT NOT NULL CHECK(status IN ('queued','running','awaiting_approval','done','failed')),
+  cap_usd REAL NOT NULL DEFAULT 1.0,
+  hil_token TEXT,
+  notified_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',
