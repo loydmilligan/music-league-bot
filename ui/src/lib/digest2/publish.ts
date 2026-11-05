@@ -6,6 +6,7 @@ import { appBaseUrl } from '$lib/config/urls.js';
 import { getActiveDraftForRound } from '$lib/digest/llm.js';
 import { peekDigest2Slug, newDigest2Slug, recordDigest2Share, touchDigest2Share, digest2ShareUrl } from './shares.js';
 import { transformDigest2Html, findLeaks, missingAppAssets } from './publishHtml.js';
+import { promotePodiumCovers } from '$lib/server/coverFactory/podium.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 export const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
@@ -116,13 +117,24 @@ export async function publishDigest2(
 		capture?: (roundId: number) => Promise<Digest2Capture>;
 		localizeFonts?: (html: string, assets: Map<string, Buffer>) => Promise<string | null>;
 	} = {}
-): Promise<{ slug: string; url: string; files: number; bytes: number }> {
+): Promise<{ slug: string; url: string; files: number; bytes: number; coverWarning?: string }> {
 	const db = getDb();
 	if (!getActiveDraftForRound(db, roundId)) throw new Digest2PublishError(409, 'No story draft yet — press Generate first.');
 	// No DB write until the publish has fully succeeded: a failed attempt must leave no share row.
 	const slug = peekDigest2Slug(db, roundId) ?? newDigest2Slug();
 	const finalDir = join(DIGESTS_DIR, 'd2', slug);
 	const tmpDir = join(DIGESTS_DIR, 'd2', `.${slug}.tmp`);
+
+	// Cover Factory: auto podium covers become public digest-host URLs before the capture renders the
+	// page. No slot rows (OFF leagues) → no-op. On failure we still capture: if a podium cover is still
+	// an app-relative URL the leak gate below blocks the publish (and its message says why).
+	let coverWarning: string | undefined;
+	try {
+		await promotePodiumCovers(db, roundId, DIGESTS_DIR);
+	} catch (e) {
+		coverWarning = e instanceof Error ? e.message : String(e);
+		console.warn('[digest2] podium cover promotion failed', coverWarning);
+	}
 
 	const { rawHtml, assets } = await (deps.capture ?? capturePuppeteer)(roundId);
 
@@ -136,7 +148,10 @@ export async function publishDigest2(
 		textAssets,
 		forbiddenHosts: [new URL(appBaseUrl()).host, new URL(APP_INTERNAL_URL).host]
 	});
-	if (leaks.length) throw new Digest2PublishError(422, `Publish blocked — admin links found:\n${leaks.slice(0, 5).join('\n')}`);
+	if (leaks.length) {
+		const why = coverWarning ? `\n(${coverWarning} — a podium cover may still be a private app URL)` : '';
+		throw new Digest2PublishError(422, `Publish blocked — admin links found:\n${leaks.slice(0, 5).join('\n')}${why}`);
+	}
 
 	const missing = missingAppAssets(indexHtml, assets);
 	if (missing.length) throw new Digest2PublishError(500, `Publish blocked — missing assets: ${missing.slice(0, 10).join(', ')}`);
@@ -157,5 +172,6 @@ export async function publishDigest2(
 	await swapDirAtomically(tmpDir, finalDir);
 	const finalSlug = recordDigest2Share(db, roundId, slug);
 	touchDigest2Share(db, roundId);
-	return { slug: finalSlug, url: digest2ShareUrl(finalSlug), files, bytes };
+	const result = { slug: finalSlug, url: digest2ShareUrl(finalSlug), files, bytes };
+	return coverWarning ? { ...result, coverWarning } : result;
 }

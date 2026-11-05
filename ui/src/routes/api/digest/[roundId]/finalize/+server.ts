@@ -9,6 +9,7 @@ import {
   upsertRelContext,
   proposeRelContextUpdate,
 } from '$lib/digest/relContext.js';
+import { promotePodiumCovers } from '$lib/server/coverFactory/podium.js';
 
 // POST /api/digest/:roundId/finalize — render the digest in the chosen format
 // (mobile/wide PNG · pdf · png-sections), set finalized_at (idempotent first-set),
@@ -36,6 +37,15 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const draft = getActiveDraftForRound(db, roundId);
   if (!draft) throw error(409, 'no draft for this round — call /draft first');
 
+  const warnings: string[] = [];
+  // Cover Factory: share the round's auto podium covers and point the podium at the public URLs
+  // before the export renders. No slot rows (OFF leagues) → no-op; a failure is a warning only.
+  try {
+    await promotePodiumCovers(db, roundId);
+  } catch (e) {
+    warnings.push(e instanceof Error ? e.message : String(e));
+  }
+
   let files;
   try {
     files = await runDigestExport(roundId, format);
@@ -55,7 +65,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
   // Rel-context update — failure-isolated. The PNG export is the primary product; if the
   // LLM call fails (no key, model error, parse fail), the finalize call still succeeds.
   let relContext: { previous: string; proposed: string; updatedAt: string; leagueId: number } | null = null;
-  const warnings: string[] = [];
   try {
     const leagueId = getLeagueIdForRound(db, roundId);
     if (leagueId == null) {

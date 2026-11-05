@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { getActiveDraftForRound, normTitle } from '$lib/digest/llm.js';
+import { shareKeeper } from './share.js';
 
 type DB = Database.Database;
 
@@ -217,4 +218,34 @@ function writePodiumCoverUnsafe(db: DB, roundId: number, draftId?: string): bool
 	if (after === before) return false;
 	db.prepare('UPDATE digest_sections SET content_json = ? WHERE id = ?').run(after, row.id);
 	return true;
+}
+
+/**
+ * Make the round's auto covers public before an export/share: every done slot's project keeper is
+ * shared (`shareKeeper` reuses its dir while the keeper is unchanged), the slot's `public_url` is
+ * stored and the podium is re-applied so `coverUrl` is the digest-host GIF instead of the private
+ * app route. Returns how many slots got a new `public_url`.
+ * No slot rows for the round → returns 0 without writing anything (OFF leagues are untouched).
+ * A slot that cannot be shared does not stop the others; after the rest are written it throws one
+ * error naming every failed slot, so callers can surface it as a warning.
+ */
+export async function promotePodiumCovers(db: DB, roundId: number, digestsRoot?: string): Promise<number> {
+	const slots = listSlots(db, roundId).filter((s) => s.status === 'done' && s.project_id != null);
+	if (slots.length === 0) return 0;
+	let promoted = 0;
+	const errors: string[] = [];
+	for (const slot of slots) {
+		try {
+			const { gifUrl } = await shareKeeper(db, slot.project_id as number, digestsRoot);
+			if (slot.public_url !== gifUrl) {
+				db.prepare('UPDATE cover_podium_slots SET public_url = ?, updated_at = ? WHERE id = ?').run(gifUrl, new Date().toISOString(), slot.id);
+				promoted++;
+			}
+		} catch (e) {
+			errors.push(`rank ${slot.rank} "${slot.title}": ${e instanceof Error ? e.message : String(e)}`);
+		}
+	}
+	writePodiumCover(db, roundId);
+	if (errors.length) throw new Error(`podium cover promotion failed for ${errors.join('; ')}`);
+	return promoted;
 }
