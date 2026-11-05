@@ -97,6 +97,8 @@ export function buildSwapPrompt(b: Breakdown, treatments: Treatment[], ids: Iden
 			continue;
 		}
 		if (!t || t.mode === 'keep') continue;
+		// A removed concept prop was never on the cover: there is nothing to erase.
+		if (t.mode === 'remove' && s.conceptId) continue;
 		if (t.mode === 'remove') { lines.push(`Remove subject ${s.label} and fill naturally.`); continue; }
 		const id = ids.find((i) => i.slug === t.playerSlug);
 		if (!t.playerSlug) continue;

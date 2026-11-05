@@ -16,6 +16,7 @@
 		onupload,
 		onselect,
 		onideas,
+		ideasPaused = false,
 	}: {
 		subject: Subject;
 		treatment: Treatment;
@@ -30,6 +31,8 @@
 		onselect?: () => void;
 		/** Gag ideas from the player's profile (one paid call, cached server-side). */
 		onideas?: (slug: string) => Promise<string[]>;
+		/** Paid calls are paused: the ideas button is off. */
+		ideasPaused?: boolean;
 	} = $props();
 
 	const MODES: { id: Treatment['mode']; label: string; hint: string }[] = [
@@ -225,7 +228,8 @@
 				<button
 					type="button"
 					class="inline-flex items-center gap-1.5 rounded-md border border-border text-fg-muted font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 hover:text-fg hover:bg-surface transition-colors disabled:opacity-50"
-					disabled={ideasLoading}
+					disabled={ideasLoading || ideasPaused}
+					title={ideasPaused ? 'Paid calls are paused' : undefined}
 					onclick={loadIdeas}
 				>
 					{#if ideasLoading}<span class="inline-block h-2.5 w-2.5 rounded-full border-2 border-current border-r-transparent animate-spin" aria-hidden="true"></span>{/if}

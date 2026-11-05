@@ -156,4 +156,15 @@ describe('concept props', () => {
 		expect(prompt).not.toContain('ignored');
 		expect(prompt).not.toMatch(/Add object at pos A/);
 	});
+	it('a removed concept prop emits nothing, while a removed cover subject is still erased', () => {
+		const cover = subj('A', 'main');
+		const prop = { ...subj('B', 'secondary', 'object'), position: 'bottom left', conceptId: 'c1' };
+		const { prompt } = buildSwapPrompt(b([cover, prop]), [
+			{ label: 'A', mode: 'remove' },
+			{ label: 'B', mode: 'remove', notes: 'a jar' },
+		], []);
+		expect(prompt).toContain('Remove subject A and fill naturally.');
+		expect(prompt).not.toContain('subject B');
+		expect(prompt).not.toMatch(/Add object/);
+	});
 });

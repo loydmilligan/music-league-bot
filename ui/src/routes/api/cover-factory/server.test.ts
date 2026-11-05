@@ -360,4 +360,24 @@ describe('cover-factory API', () => {
 		const badC = await post({ action: 'apply-concept', projectId: id, concept: { id: 'x', move: 'alternate', addSubjects: [], treatments: [] } });
 		expect(badC.status).toBe(400);
 	});
+
+	it('pitch caps the cast at 4 players and makes no provider call', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		fakeFetch.mockClear();
+		const r = await post({ action: 'pitch', projectId: id, playerSlugs: ['jon', 'a', 'b', 'c', 'd'] });
+		expect(r.status).toBe(400);
+		expect(r.json.error).toBe('at most 4 players per pitch');
+		expect(fakeFetch).not.toHaveBeenCalled();
+	});
+
+	it('ideas for a slug off the project roster is 400 and makes no provider call', async () => {
+		const id = await seed();
+		await post({ action: 'read', projectId: id });
+		fakeFetch.mockClear();
+		const r = await post({ action: 'ideas', projectId: id, slug: 'not-on-roster' });
+		expect(r.status).toBe(400);
+		expect(r.json.error).toBe('unknown player not-on-roster');
+		expect(fakeFetch).not.toHaveBeenCalled();
+	});
 });

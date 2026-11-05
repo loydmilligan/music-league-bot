@@ -126,12 +126,16 @@
 		return b.subjects.map((s) => saved.find((t) => t.label === s.label) ?? { label: s.label, mode: 'keep' });
 	}
 
+	/** A 409 "paused" from any paid call raises the page's pause banner. True when it was one. */
+	function markPaused(e: unknown): boolean {
+		if (!(e instanceof ApiFailure && e.status === 409 && e.reason === 'paused')) return false;
+		paused = true;
+		notice = { tone: 'warn', text: e.message };
+		return true;
+	}
+
 	function fail(e: unknown, fallback: string) {
-		if (e instanceof ApiFailure && e.status === 409 && e.reason === 'paused') {
-			paused = true;
-			notice = { tone: 'warn', text: e.message };
-			return;
-		}
+		if (markPaused(e)) return;
 		notice = { tone: 'ember', text: e instanceof Error ? e.message : fallback };
 	}
 
@@ -308,6 +312,9 @@
 		if (!project) return [];
 		try {
 			return (await cfPost<{ ideas: string[] }>({ action: 'ideas', projectId: project.id, slug })).ideas;
+		} catch (e) {
+			markPaused(e);
+			throw e;
 		} finally {
 			void refreshStats();
 		}
@@ -535,7 +542,7 @@
 
 	{#if paused}
 		<div class="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn" role="status">
-			Image generation is paused. Reading, rating, keeper and share still work.
+			Paid calls are paused (read, generate, pitches, ideas). Editing, rating, keeper and share still work.
 		</div>
 	{/if}
 	{#if notice}
@@ -674,7 +681,9 @@
 									players={uniquePlayers}
 									submitterSlug={ps.submitter?.slug ?? null}
 									noSubjects={bd.no_subjects}
-									disabled={!!busy || paused}
+									disabled={!!busy}
+									{paused}
+									onfail={markPaused}
 									onapplied={conceptApplied}
 									onspent={refreshStats}
 								/>
@@ -721,6 +730,7 @@
 												onupload={uploadHeadshot}
 												onselect={() => selectSubject(bd!.subjects[i].label)}
 												onideas={fetchIdeas}
+												ideasPaused={paused}
 											/>
 										{/if}
 									{/each}

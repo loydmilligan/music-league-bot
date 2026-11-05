@@ -63,6 +63,7 @@ export function toApiError(e: unknown): { status: number; body: { error: string;
 
 const LEAGUES = ['boarz-ii-men', 'second-best', 'hip-jammers'];
 const MODES = new Set(['player', 'keep', 'remove']);
+export const MAX_PITCH_PLAYERS = 4;
 
 const bad = (msg: string): never => {
 	throw new ApiError(400, msg);
@@ -323,6 +324,7 @@ async function actPitch(db: DB, b: Record<string, unknown>) {
 	if (b.playerSlugs !== undefined) {
 		if (!Array.isArray(b.playerSlugs) || !b.playerSlugs.every((x) => typeof x === 'string')) bad('playerSlugs must be an array of strings');
 		slugs = [...new Set(b.playerSlugs as string[])];
+		if (slugs.length > MAX_PITCH_PLAYERS) bad(`at most ${MAX_PITCH_PLAYERS} players per pitch`);
 	} else {
 		const sub = submitterFor(db, project);
 		slugs = sub ? [sub.slug] : [];

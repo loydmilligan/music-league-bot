@@ -8,6 +8,8 @@
 		submitterSlug = null,
 		noSubjects = false,
 		disabled = false,
+		paused = false,
+		onfail,
 		onapplied,
 		onspent,
 	}: {
@@ -17,6 +19,10 @@
 		submitterSlug?: string | null;
 		noSubjects?: boolean;
 		disabled?: boolean;
+		/** Paid calls are paused: the pitch button is off; applying a concept (free) still works. */
+		paused?: boolean;
+		/** Returns true when the page handled the error itself (the pause banner); then no inline error. */
+		onfail?: (e: unknown) => boolean;
 		onapplied: (r: { breakdown: Breakdown; treatments: Treatment[] }, c: Concept) => void | Promise<void>;
 		/** A paid call finished (ok or not): refresh the spend line. */
 		onspent: () => void;
@@ -59,10 +65,12 @@
 	});
 
 	const nameOf = (slug: string) => players.find((p) => p.slug === slug)?.name ?? slug;
+	const MAX_PLAYERS = 4; // mirrors MAX_PITCH_PLAYERS in the server service
 	const addable = $derived(players.filter((p) => !picked.includes(p.slug)));
+	const full = $derived(picked.length >= MAX_PLAYERS);
 
 	function add(slug: string) {
-		if (slug && !picked.includes(slug)) picked = [...picked, slug];
+		if (slug && !picked.includes(slug) && !full) picked = [...picked, slug];
 		addSlug = '';
 	}
 
@@ -76,7 +84,7 @@
 			const r = await cfPost<{ concepts: Concept[] }>({ action: 'pitch', projectId, playerSlugs: picked });
 			concepts = r.concepts;
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'pitch failed';
+			if (!onfail?.(e)) error = e instanceof Error ? e.message : 'pitch failed';
 		} finally {
 			loading = false;
 			onspent();
@@ -124,7 +132,7 @@
 				{noSubjects ? 'No people on this cover — pitch a gag.' : 'Gag plans from the players’ profiles: morph, signature or recast.'}
 			</p>
 		</div>
-		<button type="button" class={noSubjects ? btnSolid : btn} disabled={disabled || loading || !picked.length} onclick={pitch}>
+		<button type="button" class={noSubjects ? btnSolid : btn} disabled={disabled || paused || loading || !picked.length} onclick={pitch}>
 			{#if loading}
 				<span class="inline-block h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin" aria-hidden="true"></span>
 				Pitching… {elapsed}s
@@ -153,10 +161,11 @@
 			class="bg-bg border border-border-muted rounded-sm px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-fg-dim focus:border-accent focus:outline-none"
 			aria-label="Add a player to the pitch"
 			bind:value={addSlug}
-			disabled={loading || !addable.length}
+			disabled={loading || !addable.length || full}
+			title={full ? `At most ${MAX_PLAYERS} players per pitch` : undefined}
 			onchange={() => add(addSlug)}
 		>
-			<option value="">+ Add player</option>
+			<option value="">{full ? `Max ${MAX_PLAYERS} players` : '+ Add player'}</option>
 			{#each addable as p (p.slug)}
 				<option value={p.slug}>{p.name}</option>
 			{/each}
@@ -192,9 +201,10 @@
 								? 'border-health/40 bg-health-bg text-health'
 								: 'border-accent-deep bg-accent-bg text-accent hover:bg-accent-bg-strong'}"
 							disabled={disabled || loading || !!applying}
+							title={isApplied ? "Re-applying resets this concept's treatments" : undefined}
 							onclick={() => use(c)}
 						>
-							{applying === c.id ? 'Applying…' : isApplied ? 'Applied ✓' : 'Use this'}
+							{applying === c.id ? 'Applying…' : isApplied ? 'Re-apply' : 'Use this'}
 						</button>
 					</div>
 				</li>
