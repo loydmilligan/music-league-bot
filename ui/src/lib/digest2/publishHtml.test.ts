@@ -21,6 +21,16 @@ describe('transformDigest2Html', () => {
 		expect(out).not.toContain('fonts.googleapis.com');
 		expect(out).toContain('href="./_app/fonts.css"');
 	});
+	it('removes [data-export-hide="1"] elements (operator-only chrome) with their contents', () => {
+		const html =
+			'<head></head><body><div class="apod"><p class="apod-cf" data-export-hide="1">note <a href="/cover-factory?project=7">Open</a> <span><b>x</b></span></p>' +
+			"<span data-export-hide='1'><span>inner</span></span><img data-export-hide=\"1\" src=\"/x.png\"><br data-export-hide=\"1\" />" +
+			'<p class="keep">kept <span>this</span></p></div></body>';
+		const out = transformDigest2Html(html, { hasLocalFonts: false });
+		expect(out).not.toMatch(/data-export-hide|cover-factory|note|inner|x\.png/);
+		expect(out).toContain('<div class="apod"><p class="keep">kept <span>this</span></p></div>');
+		expect(findLeaks({ html: out, textAssets: new Map(), forbiddenHosts: HOSTS })).toEqual([]);
+	});
 	it('injects the /api/ml-auth fetch guard', () => {
 		expect(transformDigest2Html('<head></head>', { hasLocalFonts: false })).toContain('/api/ml-auth');
 	});

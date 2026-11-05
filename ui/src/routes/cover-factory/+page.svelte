@@ -11,6 +11,8 @@
 	import AlternateCovers from '$lib/coverFactory/AlternateCovers.svelte';
 	import { boxPhrase, nextLetter, type Box } from '$lib/coverFactory/markup';
 	import VersionCard from '$lib/coverFactory/VersionCard.svelte';
+	import AutoRunMenu from '$lib/coverFactory/AutoRunMenu.svelte';
+	import AutoRoundPanel from '$lib/coverFactory/AutoRoundPanel.svelte';
 	import {
 		ApiFailure,
 		cfGet,
@@ -72,6 +74,8 @@
 	// Alternate covers: panel open (unsticks the cover column) and "the cover changed, read it again".
 	let altOpen = $state(false);
 	let coverChanged = $state(false);
+	// Automatic round-end run: the round whose podium slot panel is open (null = closed).
+	let autoRound = $state<number | null>(null);
 
 	const leagues = $derived(home?.leagues ?? []);
 	const projects = $derived(home?.projects ?? []);
@@ -545,6 +549,7 @@
 		</div>
 		<div class="flex flex-col items-end gap-1.5 text-right">
 			<div class="flex flex-wrap justify-end gap-1.5">
+				<AutoRunMenu onround={(id) => (autoRound = id)} />
 				<a href="/settings/models" class="group inline-flex items-center gap-1.5 rounded-sm border border-border-muted bg-surface px-2 py-1 hover:border-border" title="Reader model: {home?.models.reader ?? 'none pinned'}">
 					<span class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">Reader</span>
 					<span class="font-mono text-[11px] {home?.models.reader ? 'text-sky' : 'text-ember'}">{shortModel(home?.models.reader)}</span>
@@ -574,6 +579,15 @@
 			<span>{notice.text}</span>
 			<button type="button" class="font-mono text-xs opacity-70 hover:opacity-100" aria-label="Dismiss" onclick={() => (notice = null)}>✕</button>
 		</div>
+	{/if}
+
+	{#if autoRound}
+		<AutoRoundPanel
+			roundId={autoRound}
+			currentProjectId={selectedId}
+			onopen={(id) => openProject(id)}
+			onclose={() => (autoRound = null)}
+		/>
 	{/if}
 
 	<section class="grid md:grid-cols-[200px_minmax(0,1fr)] gap-6 items-start">
@@ -638,6 +652,17 @@
 								{project.title}
 								<span class="font-mono text-[10px] uppercase tracking-wider text-fg-faint ml-1">{project.source}{project.league_slug ? ` · ${project.league_slug}` : ''}</span>
 							</p>
+							{#if ps.podiumSlot}
+								{@const slot = ps.podiumSlot}
+								<button
+									type="button"
+									class="inline-flex items-center gap-1.5 rounded-sm border border-amber/40 bg-amber/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber hover:border-amber"
+									title="This cover fills a digest podium slot ({slot.status}). Show the round's slots."
+									onclick={() => (autoRound = slot.round_id)}
+								>
+									Podium R{slot.round_id} #{slot.rank}
+								</button>
+							{/if}
 						</div>
 						{#if bd}
 							<button type="button" class={btnGhost} disabled={!!busy} onclick={readCover}>

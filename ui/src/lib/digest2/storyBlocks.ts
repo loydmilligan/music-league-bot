@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { getActiveDraftForRound, getSectionsForDraft } from '$lib/digest/llm.js';
+import { stripCoverOps } from '$lib/digest/coverOps.js';
 
 /** The auto story section kinds digest 2.0 reuses from the 1.0 draft. */
 export const AUTO_STORY_KINDS = ['podium', 'villain', 'chat', 'storylines'] as const;
@@ -49,4 +50,9 @@ export function buildDigest2StoryBlocks(db: Database.Database, roundId: number):
 	const stats = safeParse(draft.stats_content_json) as { phrase?: unknown } | null;
 	const coinage = stats?.phrase ?? null;
 	return { blocks, coinage };
+}
+
+/** The story for a share render: Cover Factory operator notes/links removed from every block. */
+export function shareSafeStory(story: Digest2Story): Digest2Story {
+	return { ...story, blocks: story.blocks.map((b) => ({ ...b, content: stripCoverOps(b.content) })) };
 }

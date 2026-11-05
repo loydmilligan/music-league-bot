@@ -120,7 +120,8 @@ export async function publishDigest2(
 ): Promise<{ slug: string; url: string; files: number; bytes: number; coverWarning?: string }> {
 	const db = getDb();
 	if (!getActiveDraftForRound(db, roundId)) throw new Digest2PublishError(409, 'No story draft yet — press Generate first.');
-	// No DB write until the publish has fully succeeded: a failed attempt must leave no share row.
+	// Share rows are written only once the publish has fully succeeded: a failed attempt leaves no share
+	// row. (Cover promotion below does write slot public_url + the podium row before the capture.)
 	const slug = peekDigest2Slug(db, roundId) ?? newDigest2Slug();
 	const finalDir = join(DIGESTS_DIR, 'd2', slug);
 	const tmpDir = join(DIGESTS_DIR, 'd2', `.${slug}.tmp`);

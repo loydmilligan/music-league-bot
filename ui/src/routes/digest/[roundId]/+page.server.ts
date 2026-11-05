@@ -20,6 +20,7 @@ import { gatherStorylineEvidence } from '$lib/digest/storylineEvidence.js';
 import { gatherPrepMaterial, type MaterialRow } from '$lib/digest/prepMaterial.js';
 import { digestBaseUrl } from '$lib/config/urls.js';
 import { attachPlayerCardClips, listBoarzPlayerCards, type PlayerCardMedia } from '$lib/digest/playerCardRoster.js';
+import { stripCoverOps } from '$lib/digest/coverOps.js';
 
 // Same base the content/b-side endpoints use — see api/content/leagues/+server.ts.
 const B_SIDE_BASE = digestBaseUrl();
@@ -245,14 +246,22 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
   const draft = getActiveDraftForRound(db, roundId);
   if (draft) {
-    const sections = getSectionsForDraft(db, draft.id).map((s) => ({
-      ...s,
-      content: parseContent(s.content_json),
-      variant: ((s as DigestSectionRow & { variant?: string }).variant ?? 'textual') as
-        | 'textual'
-        | 'visual'
-        | 'both',
-    }));
+    // Share / export renders: Cover Factory operator notes + project links (podium `_coverNotes` /
+    // `_coverProjects`) never reach the captured page data — only the app view shows them.
+    const operatorView = !share && url.searchParams.get('export') !== '1';
+    const sections = getSectionsForDraft(db, draft.id).map((row) => {
+      const s = operatorView || !row.content_json.includes('"_cover')
+        ? row
+        : { ...row, content_json: JSON.stringify(stripCoverOps(parseContent(row.content_json))) };
+      return {
+        ...s,
+        content: parseContent(s.content_json),
+        variant: ((s as DigestSectionRow & { variant?: string }).variant ?? 'textual') as
+          | 'textual'
+          | 'visual'
+          | 'both',
+      };
+    });
     // ── Carry the seed motif onto each storylines cast member ──────────────
     // The Regulars strip shows "name · motif" pills, but the LLM only writes
     // { name, headline, evidence } — motif lives on the seed. Re-derive it

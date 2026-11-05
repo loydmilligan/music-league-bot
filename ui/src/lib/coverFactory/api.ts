@@ -76,7 +76,63 @@ export interface ProjectState {
 	stats: Stats;
 	players: Player[];
 	submitter: { slug: string; name: string } | null;
+	/** The digest podium slot this project fills (auto run); null when unlinked. */
+	podiumSlot: { round_id: number; rank: number; status: SlotStatus } | null;
 }
+
+// ---------- automatic round-end run ----------
+export type SlotStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+export type AutoJobStatus = 'queued' | 'running' | 'awaiting_approval' | 'done' | 'failed';
+export interface AutoLeague {
+	slug: string;
+	name: string;
+	on: boolean;
+}
+export interface AutoJobRow {
+	round_id: number;
+	status: AutoJobStatus;
+	updated_at: string;
+	roundName: string | null;
+	leagueSlug: string | null;
+}
+export interface AutoLeaguesState {
+	leagues: AutoLeague[];
+	jobs: AutoJobRow[];
+}
+export interface AutoSlot {
+	id: number;
+	rank: number;
+	title: string;
+	project_id: number | null;
+	project_title: string | null;
+	status: SlotStatus;
+	note: string | null;
+	public_url: string | null;
+	updated_at: string;
+}
+export interface AutoRoundState {
+	round: { id: number; name: string; leagueSlug: string; leagueName: string; autoOn: boolean };
+	job: { status: AutoJobStatus; cap_usd: number; updated_at: string } | null;
+	slots: AutoSlot[];
+	spendUsd: number;
+}
+
+export const JOB_LABEL: Record<AutoJobStatus, string> = {
+	queued: 'Queued',
+	running: 'Running',
+	awaiting_approval: 'Awaiting budget OK',
+	done: 'Done',
+	failed: 'Failed',
+};
+export const SLOT_TONE: Record<SlotStatus, 'muted' | 'sky' | 'health' | 'ember' | 'amber'> = {
+	pending: 'muted',
+	running: 'sky',
+	done: 'health',
+	failed: 'ember',
+	skipped: 'amber',
+};
+/** A job still moving: the panel keeps polling while this is true. */
+export const jobActive = (s: AutoJobStatus | undefined | null) => s === 'queued' || s === 'running';
 export interface AlternatesResult {
 	alternates: AltCover[];
 	/** MusicBrainz busy / no match; null when the list is good. */

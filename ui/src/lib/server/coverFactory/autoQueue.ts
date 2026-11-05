@@ -6,7 +6,7 @@ import type { Notification } from '$lib/digest/ntfy.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { buildStyleHilNotification, mintHilToken, publishStyleHil } from '../avatarFactory/hil.js';
 import { HARD_CAP_USD, STALE_RUN_MS, STEP_ESTIMATE_USD, reclaimStaleSlots, roundSpend, runSlot, type AutoDeps, type SlotOutcome } from './autoRun.js';
-import { isAutoLeague, isHandMade, matchSubmission, medalItems, writePodiumCover } from './podium.js';
+import { autoLeagues, isAutoLeague, isHandMade, matchSubmission, medalItems, setAutoLeague, writePodiumCover, type PodiumSlot } from './podium.js';
 import { ApiError } from './service.js';
 
 type DB = Database.Database;
@@ -275,4 +275,68 @@ export function startCoverAutoRunner(): () => void {
 export function stopCoverAutoRunner(): void {
 	if (timer) clearInterval(timer);
 	timer = null;
+}
+
+// ---------- operator UI (GET /api/cover-factory?autoLeagues=1 | ?autoRound=<id>, POST 'auto-leagues') ----------
+
+export interface AutoLeagueRow { slug: string; name: string; on: boolean }
+export interface AutoJobRow { round_id: number; status: JobStatus; updated_at: string; roundName: string | null; leagueSlug: string | null }
+export interface AutoSlotRow extends PodiumSlot { project_title: string | null }
+
+const ROUND_LEAGUE_SQL = `SELECT r.id, r.name, l.slug AS leagueSlug, l.name AS leagueName FROM rounds r
+	JOIN seasons s ON s.id = r.season_id JOIN leagues l ON l.id = s.league_id WHERE r.id = ?`;
+
+/** Every league with its auto-run toggle, plus the most recent auto jobs (newest first). */
+export function autoLeaguesState(db: DB): { leagues: AutoLeagueRow[]; jobs: AutoJobRow[] } {
+	const on = autoLeagues(db);
+	const leagues = (db.prepare('SELECT slug, name FROM leagues ORDER BY name').all() as { slug: string; name: string }[])
+		.map((l) => ({ ...l, on: on[l.slug] === true }));
+	const jobs = db
+		.prepare(
+			`SELECT j.round_id, j.status, j.updated_at, r.name AS roundName, l.slug AS leagueSlug
+			 FROM cover_auto_jobs j LEFT JOIN rounds r ON r.id = j.round_id
+			 LEFT JOIN seasons s ON s.id = r.season_id LEFT JOIN leagues l ON l.id = s.league_id
+			 ORDER BY j.updated_at DESC, j.id DESC LIMIT 20`,
+		)
+		.all() as AutoJobRow[];
+	return { leagues, jobs };
+}
+
+/** One round's auto run: its league toggle, job, slots (with the linked project's title) and spend so far. */
+export function autoRoundState(db: DB, roundId: number) {
+	const r = db.prepare(ROUND_LEAGUE_SQL).get(roundId) as { id: number; name: string; leagueSlug: string; leagueName: string } | undefined;
+	if (!r) throw new ApiError(404, 'round not found');
+	const slots = db
+		.prepare(
+			`SELECT s.*, p.title AS project_title FROM cover_podium_slots s LEFT JOIN cover_projects p ON p.id = s.project_id
+			 WHERE s.round_id = ? ORDER BY s.rank, s.id`,
+		)
+		.all(roundId) as AutoSlotRow[];
+	return {
+		round: { ...r, autoOn: autoLeagues(db)[r.leagueSlug] === true },
+		job: getAutoJob(db, roundId) ?? null,
+		slots,
+		spendUsd: roundSpend(db, roundId),
+	};
+}
+
+/** GET query handled here (not in service.getState); undefined when the query is not an auto one. */
+export function getAutoState(db: DB, q: URLSearchParams): unknown {
+	if (q.has('autoLeagues')) return autoLeaguesState(db);
+	const raw = q.get('autoRound');
+	if (raw == null) return undefined;
+	const roundId = Number(raw);
+	if (!Number.isInteger(roundId) || roundId <= 0) throw new ApiError(400, 'autoRound must be a round id');
+	return autoRoundState(db, roundId);
+}
+
+/** POST actions handled here: 'run-auto' and 'auto-leagues'. undefined for any other action. */
+export function runAutoUiAction(db: DB, b: Record<string, unknown>): unknown {
+	if (b.action === 'run-auto') return runAutoAction(db, b);
+	if (b.action !== 'auto-leagues') return undefined;
+	const slug = typeof b.slug === 'string' ? b.slug : '';
+	if (!slug || !db.prepare('SELECT 1 FROM leagues WHERE slug = ?').get(slug)) throw new ApiError(400, 'unknown league');
+	if (typeof b.on !== 'boolean') throw new ApiError(400, 'on must be true or false');
+	setAutoLeague(db, slug, b.on);
+	return autoLeaguesState(db);
 }

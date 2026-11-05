@@ -43,6 +43,7 @@
   // lands in the published artifact and 404s when someone taps Share.
   import { toPng } from 'html-to-image';
   import type { VisualComponentProps } from './variants.js';
+  import { coverOpAt } from './coverOps.js';
 
   let { content }: VisualComponentProps = $props();
 
@@ -79,6 +80,14 @@
   // Static export (PNG/PDF) can't open a dialog, and hover doesn't exist there —
   // detected the same way ChatMoments does it, from the URL the export path sets.
   const isExport = $derived(page?.url?.searchParams?.get('export') === '1');
+
+  // Cover Factory operator notes + project links (content._coverNotes/_coverProjects, written by
+  // the auto run). App only: never in an export render or a share render (page.data.share), and
+  // tagged data-export-hide="1" so every export/share pipeline drops them as well.
+  const operator = $derived(!isExport && !(page?.data as { share?: boolean } | undefined)?.share);
+  // By the item's index in content.items (_i): the server keys by rank|place|position, which can
+  // differ from the display rank above (place is not read there).
+  const opOf = (s: { _i: number }) => (operator ? coverOpAt(content, s._i) : null);
 
   // Detail card. Any entry carrying a `fact` or `song` opens the full card;
   // otherwise it degrades to a plain artwork lightbox. null = closed.
@@ -178,6 +187,16 @@
   }
 </script>
 
+{#snippet coverOp(s: { _i: number })}
+  {@const op = opOf(s)}
+  {#if op?.note}
+    <p class="apod-cf-note" data-export-hide="1">{op.note}</p>
+  {/if}
+  {#if op?.projectId}
+    <a class="apod-cf-link" data-export-hide="1" href={`/cover-factory?project=${op.projectId}`}>Open in Cover Factory ↗</a>
+  {/if}
+{/snippet}
+
 <div class="apod" data-component="album-podium">
   {#if shelf.length}
     <div class="apod-shelf" class:is-two={shelf.length === 2} class:is-one={shelf.length === 1}>
@@ -219,6 +238,7 @@
               >
             {/if}
           </div>
+          {@render coverOp(s)}
         </article>
       {/each}
     </div>
@@ -265,6 +285,7 @@
           {#if pts !== undefined}
             <span class="apod-row-pts">{pts}<span class="apod-pts-unit">pt</span></span>
           {/if}
+          {@render coverOp(s)}
         </li>
       {/each}
     </ol>
@@ -477,6 +498,30 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* Cover Factory operator note + link (app only, data-export-hide). */
+  .apod-cf-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 4px 6px;
+    border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
+    border-radius: var(--r-2, 4px);
+    background: color-mix(in srgb, var(--amber) 10%, transparent);
+    color: var(--amber);
+    font: 500 10.5px/1.35 var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+  .apod-cf-link {
+    grid-column: 1 / -1;
+    justify-self: start;
+    font: 600 10px/1.2 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-decoration: none;
+  }
+  .apod-cf-link:hover {
+    text-decoration: underline;
   }
   .apod-meta {
     display: flex;

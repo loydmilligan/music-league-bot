@@ -29,7 +29,7 @@
 			const body = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(body.message ?? `publish failed (${res.status})`);
 			url = body.url;
-			warn = body.portalWarning ?? '';
+			warn = [body.portalWarning, body.coverWarning].filter(Boolean).join(' · ');
 			await invalidateAll();
 		} catch (e) { err = String(e instanceof Error ? e.message : e); }
 		finally { busy = ''; }

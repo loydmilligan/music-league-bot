@@ -62,3 +62,18 @@ describe('buildDigest2StoryBlocks', () => {
 		expect(story.coinage).toBeNull();
 	});
 });
+
+import { shareSafeStory } from './storyBlocks.js';
+describe('shareSafeStory', () => {
+	it('drops Cover Factory operator keys from every block, leaves the rest untouched', () => {
+		const podium = { items: [{ rank: 1, title: 'A' }], _coverNotes: { '1': 'n' }, _coverProjects: { '1': 3 } };
+		const chat = { moments: [] };
+		const story = { blocks: [{ kind: 'podium' as const, content: podium, variant: 'both' }, { kind: 'chat' as const, content: chat, variant: 'visual' }], coinage: null };
+		const out = shareSafeStory(story);
+		expect(out.blocks[0].content).toEqual({ items: [{ rank: 1, title: 'A' }] });
+		expect(out.blocks[1].content).toBe(chat);
+		expect(JSON.stringify(out)).not.toMatch(/_cover/);
+		expect(story.blocks[0].content).toBe(podium); // input not mutated
+		expect(podium._coverNotes).toEqual({ '1': 'n' });
+	});
+});

@@ -7,9 +7,42 @@ const FETCH_GUARD =
 	`if(s.indexOf("/api/ml-auth")!==-1)return Promise.resolve(new Response(null,{status:204}));` +
 	`}catch(e){}return f.apply(this,arguments);};})();</script>`;
 
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const EXPORT_HIDE_OPEN = /<([a-zA-Z][\w-]*)\b[^>]*\bdata-export-hide\s*=\s*["']?1["']?[^>]*>/;
+
+/**
+ * Drop every `[data-export-hide="1"]` element (with its contents): operator-only chrome such as the
+ * podium's Cover Factory notes and links. 1.0 exports only hide these with CSS; the static share must
+ * not carry them at all (their app links would also trip the root-relative leak gate).
+ */
+export function stripExportHidden(html: string): string {
+	let h = html;
+	for (let m = EXPORT_HIDE_OPEN.exec(h); m; m = EXPORT_HIDE_OPEN.exec(h)) {
+		const start = m.index;
+		const openEnd = start + m[0].length;
+		const tag = m[1].toLowerCase();
+		let end = openEnd;
+		if (!m[0].endsWith('/>') && !VOID_TAGS.has(tag)) {
+			const re = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+			re.lastIndex = openEnd;
+			let depth = 1;
+			for (let t = re.exec(h); t; t = re.exec(h)) {
+				if (t[1]) depth--;
+				else if (!t[0].endsWith('/>')) depth++;
+				if (depth === 0) {
+					end = t.index + t[0].length;
+					break;
+				}
+			}
+		}
+		h = h.slice(0, start) + h.slice(end);
+	}
+	return h;
+}
+
 /** Rewrite a captured SSR document so it works from digests/d2/<slug>/ on a dumb static host. */
 export function transformDigest2Html(html: string, opts: { hasLocalFonts: boolean }): string {
-	let h = html;
+	let h = stripExportHidden(html);
 	// ./ prefix is mandatory — a bare "_app/…" specifier is illegal for dynamic import().
 	h = h.replaceAll('../_app/', './_app/').replaceAll('"/_app/', '"./_app/');
 	h = h.replace(/[ \t]*<link\b[^>]*\brel="(?:icon|apple-touch-icon|manifest)"[^>]*>\n?/g, '');

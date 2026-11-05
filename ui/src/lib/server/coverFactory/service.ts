@@ -139,6 +139,10 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 			stats: projectStats(db, project.id),
 			players: playersFor(project),
 			submitter: submitterFor(db, project) ?? null,
+			// The podium slot this project fills (auto run), for the header chip.
+			podiumSlot:
+				(db.prepare('SELECT round_id, rank, status FROM cover_podium_slots WHERE project_id = ? ORDER BY id LIMIT 1').get(project.id) as
+					{ round_id: number; rank: number; status: string } | undefined) ?? null,
 		};
 	}
 	const league = q.get('league');
