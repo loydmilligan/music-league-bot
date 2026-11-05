@@ -106,6 +106,13 @@ describe('isHandMade', () => {
 		expect(isHandMade('https://digest.mattmariani.com/_media/covers/0123abcd/wipe.gif', 182)).toBe(false);
 		expect(isHandMade(null, 182)).toBe(false);
 	});
+	it('Spotify art on *.spotifycdn.com and *.scdn.co is not hand-made', () => {
+		expect(isHandMade('https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02', 182)).toBe(false);
+		expect(isHandMade('https://image-cdn-fa.spotifycdn.com/image/x', 182)).toBe(false);
+		expect(isHandMade('https://mosaic.scdn.co/640/x', 182)).toBe(false);
+		expect(isHandMade('https://spotifycdn.com.evil.example/x.jpg', 182)).toBe(true);
+		expect(isHandMade('https://notspotifycdn.com/x.jpg', 182)).toBe(true);
+	});
 });
 
 describe('applyCoverKeepers', () => {
@@ -139,7 +146,7 @@ describe('applyCoverKeepers', () => {
 		const c = structuredClone(PODIUM);
 		c.items[1].coverUrl = 'https://digest.mattmariani.com/_media/r182/hand.gif';
 		const out = applyCoverKeepers(db, roundId, c);
-		expect(out.items[0].coverUrl).toBe(`/api/cover-factory/media/export/${v.id}.gif`);
+		expect(out.items[0].coverUrl).toBe(`/api/cover-factory/media/export/${v.id}.jpg`); // still until the GIF is pre-rendered
 		expect(out.items[1].coverUrl).toBe('https://digest.mattmariani.com/_media/r182/hand.gif');
 	});
 });
@@ -173,7 +180,7 @@ describe('keeper action re-applies to the draft', () => {
 		await runAction(db, { action: 'keeper', projectId: pid, versionId: v2.id });
 		const s = db.prepare('SELECT status, gif_rel, public_url FROM cover_podium_slots WHERE id = ?').get(sid);
 		expect(s).toEqual({ status: 'done', gif_rel: null, public_url: null });
-		expect(JSON.parse(podiumJson(roundId)).items[0].coverUrl).toBe(`/api/cover-factory/media/export/${v2.id}.gif`);
+		expect(JSON.parse(podiumJson(roundId)).items[0].coverUrl).toBe(`/api/cover-factory/media/export/${v2.id}.jpg`);
 	});
 	it('leaves unlinked projects and drafts alone', async () => {
 		const pid = createProject(db, { title: 'T', source: 'upload', round_id: null, spotify_uri: null, league_slug: null, cover_rel: 'c.png', cover_url: null }).id;

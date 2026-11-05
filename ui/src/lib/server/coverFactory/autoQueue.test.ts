@@ -153,6 +153,24 @@ describe('tickCoverAuto', () => {
 		expect(await tickCoverAuto(db, { runSlot: run.fn })).toBeNull(); // nothing queued
 	});
 
+	it('a slot put back to pending mid-tick (operator run-now) leaves the job queued, not done', async () => {
+		enqueueCoverAuto(db, roundId);
+		let reset = false;
+		const fn = (async (d: Database.Database, _r: number, slotId: number) => {
+			const title = (d.prepare('SELECT title FROM cover_podium_slots WHERE id = ?').get(slotId) as { title: string }).title;
+			d.prepare('UPDATE cover_podium_slots SET status = ? WHERE id = ?').run(title === 'Linoleum' ? 'failed' : 'done', slotId);
+			if (title === 'Third' && !reset) {
+				reset = true;
+				// run-now while the tick is still inside the loop: the failed slot goes back to pending
+				enqueueCoverAuto(d, roundId, { retryFailed: true });
+			}
+			return title === 'Linoleum' ? 'failed' : 'done';
+		}) as unknown as NonNullable<TickDeps['runSlot']>;
+		expect(await tickCoverAuto(db, { runSlot: fn })).toEqual({ roundId, status: 'queued' });
+		expect(getAutoJob(db, roundId)!.status).toBe('queued');
+		expect(slots().find((s) => s.title === 'Linoleum')!.status).toBe('pending');
+	});
+
 	it('one job at a time overall: a concurrent tick with another queued round returns null', async () => {
 		const other = round('second-best', 'r-sb');
 		draft(other, PODIUM);

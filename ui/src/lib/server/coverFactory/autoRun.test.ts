@@ -151,6 +151,32 @@ afterEach(() => vi.unstubAllGlobals());
 
 const CAP1 = { capUsd: 1.0 };
 
+describe('roundSpend: unreported costs count at their step estimates', () => {
+	const row = (pid: number, step: string, cost: number | null, estimated = 0, provider = 'openrouter', outcome = 'ok') =>
+		logRequest(db, { project_id: pid, version_id: null, step: step as 'generate', model_id: 'm', provider, latency_ms: 1, cost_usd: cost, cost_estimated: estimated, outcome: outcome as 'ok', error_reason: null });
+	const linked = () => {
+		const p = createProject(db, { title: 'x', source: 'upload', round_id: roundId, spotify_uri: null, league_slug: null, cover_rel: 'covers/x.png', cover_url: null });
+		addSlot({ rank: 3, title: `S${p.id}`, submission: null, status: 'done', project: p.id });
+		return p.id;
+	};
+	it('a NULL-cost generate (timed out / aborted) counts 0.10', () => {
+		row(linked(), 'generate', null, 0, 'openrouter', 'error');
+		expect(roundSpend(db, roundId)).toBeCloseTo(0.1, 6);
+	});
+	it('a fal generate logged at 0 with cost_estimated=1 counts 0.10', () => {
+		row(linked(), 'generate', 0, 1, 'fal');
+		expect(roundSpend(db, roundId)).toBeCloseTo(0.1, 6);
+	});
+	it('read / identity / pitch rows without a cost count at their estimates; reported costs count as-is', () => {
+		const pid = linked();
+		row(pid, 'read', null);
+		row(pid, 'identity', 0);
+		row(pid, 'pitch', null);
+		row(pid, 'generate', 0.0689);
+		expect(roundSpend(db, roundId)).toBeCloseTo(0.02 + 0.01 + 0.07 + 0.0689, 6);
+	});
+});
+
 describe('runSlot', () => {
 	it('person cover: submitter replaces the main subject, keeper set, private GIF on the draft, slot done', async () => {
 		const id = addSlot();
@@ -192,6 +218,33 @@ describe('runSlot', () => {
 		expect(slotRow(id).note).toMatch(/fal/);
 		// read 0.01 + identity 0.002 + 3 failed openrouter 0.01 + fal 0.04
 		expect(roundSpend(db, roundId)).toBeCloseTo(0.01 + 0.002 + 0.03 + 0.04, 6);
+	});
+
+	it('an operator keeper set while the run was generating is kept (slot done, "operator keeper kept")', async () => {
+		const id = addSlot();
+		let opVersion = 0;
+		const base = fakeFetch({ breakdown: PERSON });
+		// The operator picks their own keeper on the project while the auto generate is in flight.
+		const racing = (async (u: string | URL, init?: RequestInit) => {
+			const body = String(u) === 'https://openrouter.ai/api/v1/chat/completions' ? JSON.parse(String(init?.body ?? '{}')) : {};
+			if (body.model === 'img/gen') {
+				const pid = slotRow(id).project_id!;
+				const { insertVersion, updateProject } = await import('./repo.js');
+				const { mkdirSync, writeFileSync } = await import('node:fs');
+				mkdirSync(join(coverFile('versions/op/hand.png'), '..'), { recursive: true });
+				writeFileSync(coverFile('versions/op/hand.png'), png);
+				opVersion = insertVersion(db, { project_id: pid, model_id: 'hand', provider: 'openrouter', prompt: 'p', image_rel: 'versions/op/hand.png', status: 'ok', error_reason: null }).id;
+				updateProject(db, pid, { keeper_version_id: opVersion });
+			}
+			return base(u, init);
+		}) as FetchLike;
+		const outcome = await runSlot(db, roundId, id, CAP1, { fetchImpl: racing });
+		expect(outcome).toBe("done");
+		const s = slotRow(id);
+		expect(getProject(db, s.project_id!)!.keeper_version_id).toBe(opVersion);
+		expect(s.status).toBe('done');
+		expect(s.note).toMatch(/operator keeper kept/);
+		expect(s.gif_rel).toMatch(new RegExp(`^exports/${opVersion}-`));
 	});
 
 	it('a retry that succeeds stops the attempts', async () => {
@@ -352,3 +405,43 @@ describe('runSlot', () => {
 		expect(seen).toBe('running');
 	});
 });
+
+describe('keeper change pre-renders the wipe GIF in the background', () => {
+	async function linkedProject() {
+		const { insertVersion } = await import('./repo.js');
+		const { mkdirSync, writeFileSync } = await import('node:fs');
+		mkdirSync(join(coverFile('versions/k/x'), '..'), { recursive: true });
+		for (const f of ['covers/k.png', 'versions/k/a.png', 'versions/k/b.png']) {
+			mkdirSync(join(coverFile(f), '..'), { recursive: true });
+			writeFileSync(coverFile(f), png);
+		}
+		const p = createProject(db, { title: 'K', source: 'round', round_id: roundId, spotify_uri: null, league_slug: 'boarz-ii-men', cover_rel: 'covers/k.png', cover_url: null });
+		const base = { project_id: p.id, model_id: 'm', provider: 'openrouter', prompt: 'x', status: 'ok' as const, error_reason: null };
+		const a = insertVersion(db, { ...base, image_rel: 'versions/k/a.png' });
+		const b = insertVersion(db, { ...base, image_rel: 'versions/k/b.png' });
+		const sid = addSlot({ project: p.id, status: 'done' });
+		return { pid: p.id, a: a.id, b: b.id, sid };
+	}
+	it('the draft shows the keeper still at once, then the pre-rendered GIF', async () => {
+		const { runAction } = await import('./service.js');
+		const { pid, b, sid } = await linkedProject();
+		await runAction(db, { action: 'keeper', projectId: pid, versionId: b });
+		expect(podium().items[0].coverUrl).toBe(`/api/cover-factory/media/export/${b}.jpg`);
+		await vi.waitFor(() => expect(slotRow(sid).gif_rel).toMatch(new RegExp(`^exports/${b}-[0-9a-f]{6}\\.gif$`)), { timeout: 4000 });
+		expect(existsSync(coverFile(slotRow(sid).gif_rel!))).toBe(true);
+		await vi.waitFor(() => expect(podium().items[0].coverUrl).toBe(`/api/cover-factory/media/${slotRow(sid).gif_rel}`), { timeout: 2000 });
+	});
+	it('a render for a keeper that has since changed is discarded', async () => {
+		const { prerenderSlotGif } = await import('./podium.js');
+		const { updateProject } = await import('./repo.js');
+		const { pid, a, b, sid } = await linkedProject();
+		updateProject(db, pid, { keeper_version_id: a }); // the keeper is a; a late render for b arrives
+		expect(await prerenderSlotGif(db, pid, b)).toBeNull();
+		expect(slotRow(sid).gif_rel).toBeNull();
+		const rel = await prerenderSlotGif(db, pid, a);
+		expect(rel).toMatch(new RegExp(`^exports/${a}-`));
+		expect(slotRow(sid).gif_rel).toBe(rel);
+		expect(podium().items[0].coverUrl).toBe(`/api/cover-factory/media/${rel}`);
+	});
+});
+

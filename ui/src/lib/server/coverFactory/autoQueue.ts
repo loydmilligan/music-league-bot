@@ -223,8 +223,9 @@ async function tick(db: DB, deps: TickDeps): Promise<{ roundId: number; status: 
 				return { roundId, status: 'queued' };
 			}
 		}
-		// A slot still running (fresh heartbeat, e.g. another process) is not finished: retry later.
-		if (db.prepare(`SELECT 1 FROM cover_podium_slots WHERE round_id = ? AND status = 'running' LIMIT 1`).get(roundId)) {
+		// Not finished: a slot still running (fresh heartbeat, e.g. another process), or one put back to
+		// pending after this tick already passed it (operator run-now mid-tick). Retry on a later tick.
+		if (db.prepare(`SELECT 1 FROM cover_podium_slots WHERE round_id = ? AND status IN ('running', 'pending') LIMIT 1`).get(roundId)) {
 			setJob(db, job.id, { status: 'queued' }, now());
 			return { roundId, status: 'queued' };
 		}

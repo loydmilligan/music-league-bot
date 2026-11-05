@@ -94,6 +94,21 @@ describe('generateVersion', () => {
 		expect(v.prompt).toBe('custom prompt');
 	});
 
+	it('a failure after the provider returned (file write) still logs the request with its cost, then throws', async () => {
+		const { chmodSync, mkdirSync } = await import('node:fs');
+		const dir = coverFile(`versions/${projectId}`);
+		mkdirSync(dir, { recursive: true });
+		chmodSync(dir, 0o500); // read-only: writeFileSync throws EACCES
+		try {
+			await expect(generateVersion(db, input())).rejects.toThrow();
+		} finally {
+			chmodSync(dir, 0o700);
+		}
+		const rows = db.prepare('SELECT step, cost_usd, outcome, error_reason FROM cover_requests WHERE project_id = ?').all(projectId) as
+			{ step: string; cost_usd: number; outcome: string; error_reason: string }[];
+		expect(rows).toEqual([expect.objectContaining({ step: 'generate', cost_usd: 0.07, outcome: 'error' })]);
+		expect(rows[0].error_reason).toMatch(/after generate/);
+	});
 	it('throws when no model resolves', async () => {
 		await expect(generateVersion(db, input({ modelId: undefined }))).rejects.toThrow(/model/i);
 	});

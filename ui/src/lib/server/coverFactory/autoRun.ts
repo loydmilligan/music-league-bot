@@ -1,7 +1,4 @@
 import type Database from 'better-sqlite3';
-import { randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { ProviderError } from '../avatarFactory/errors.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { PAUSED_MESSAGE, assertGenerationAllowed } from '../avatarFactory/pause.js';
@@ -10,11 +7,10 @@ import { generateVersion } from './generate.js';
 import { loadHeadshot } from './inputs.js';
 import { applyConcept, pitchConcepts } from './pitch.js';
 import { coverFile } from './paths.js';
-import { writePodiumCover, type PodiumSlot } from './podium.js';
+import { writeKeeperGif, writePodiumCover, type PodiumSlot } from './podium.js';
 import { defaultTreatments, type Treatment } from './prompt.js';
 import { getProject, listVersions, updateProject, type CoverProject, type CoverVersion } from './repo.js';
 import { createRoundProject, loadIdentities, playersFor, readProject, setKeeper, submitterFor, useAlternate } from './service.js';
-import { makeWipeGif } from './wipe.js';
 
 type DB = Database.Database;
 
@@ -51,16 +47,21 @@ class Stop extends Error {
 }
 
 /**
- * Sum of cover_requests.cost_usd for projects linked to the round's slots. runSlot links a new
+ * Spend on the round: cover_requests for projects linked to the round's slots. runSlot links a new
  * project to its slot right after creating it, so the project being worked on is always counted.
+ * Strict: a row whose cost is unknown (NULL: timed-out / aborted call) or reported as 0 (fal logs 0
+ * when it reports no cost) counts at its step estimate, so the budget gate never undercounts.
  */
 export function roundSpend(db: DB, roundId: number): number {
 	const r = db
 		.prepare(
-			`SELECT COALESCE(SUM(cost_usd), 0) AS s FROM cover_requests
-			 WHERE project_id IN (SELECT project_id FROM cover_podium_slots WHERE round_id = ? AND project_id IS NOT NULL)`,
+			`SELECT COALESCE(SUM(CASE WHEN cost_usd IS NULL OR cost_usd <= 0 THEN
+			     CASE step WHEN 'read' THEN @read WHEN 'identity' THEN @identity WHEN 'pitch' THEN @pitch WHEN 'generate' THEN @generate ELSE 0 END
+			   ELSE cost_usd END), 0) AS s
+			 FROM cover_requests
+			 WHERE project_id IN (SELECT project_id FROM cover_podium_slots WHERE round_id = @roundId AND project_id IS NOT NULL)`,
 		)
-		.get(roundId) as { s: number };
+		.get({ roundId, ...STEP_ESTIMATE_USD }) as { s: number };
 	return Math.round(r.s * 1e6) / 1e6;
 }
 
@@ -182,6 +183,7 @@ async function work(
 	if (!player || !(await loadHeadshot(projectId, player))) throw new Stop('failed', `no headshot for ${submitter.name}`);
 
 	let keeper = keeperOf(db, project);
+	let keptOperator = false;
 	if (!keeper) {
 		// 3. Read, then plan.
 		if (!project.breakdown_json) {
@@ -222,20 +224,24 @@ async function work(
 			const reason = lastError ?? (lastFailed ? `${lastFailed.provider === 'fal' ? 'fal: ' : ''}${lastFailed.error_reason}` : 'no image');
 			throw new Stop('failed', `generation failed: ${reason}`);
 		}
-		setKeeper(db, projectId, keeper.id); // slots linked to the project → done, draft re-applied
+		// The operator may have picked a keeper in the factory while this run was generating: theirs wins.
+		const operatorKeeper = keeperOf(db, fresh());
+		if (operatorKeeper && operatorKeeper.id !== keeper.id) {
+			keeper = operatorKeeper;
+			keptOperator = true;
+		} else {
+			// Slots linked to the project → done, draft re-applied; the GIF is pre-rendered just below.
+			setKeeper(db, projectId, keeper.id, { prerender: false });
+		}
 	}
 
 	// 5. Pre-render the private wipe GIF once (never overwrite) and point the draft at it.
 	let gifRel: string | null = null;
-	let note = `auto: try ${keeper.try_no} via ${keeper.provider}${keeper.provider === 'fal' ? ' fallback' : ''}`;
+	let note = keptOperator
+		? 'operator keeper kept'
+		: `auto: try ${keeper.try_no} via ${keeper.provider}${keeper.provider === 'fal' ? ' fallback' : ''}`;
 	try {
-		const source = keeper.cover_rel ?? fresh().cover_rel;
-		const gif = await makeWipeGif(readFileSync(coverFile(source)), readFileSync(coverFile(keeper.image_rel!)));
-		const rel = `exports/${keeper.id}-${randomBytes(3).toString('hex')}.gif`;
-		const abs = coverFile(rel);
-		mkdirSync(dirname(abs), { recursive: true });
-		writeFileSync(abs, gif, { flag: 'wx' });
-		gifRel = rel;
+		gifRel = await writeKeeperGif(keeper, fresh().cover_rel);
 	} catch (e) {
 		note += ` (GIF pre-render failed: ${reasonOf(e)})`;
 	}

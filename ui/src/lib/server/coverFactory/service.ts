@@ -22,7 +22,7 @@ import {
 import { getPinnedCoverModel, isUsablePin } from './models.js';
 import { applyConcept, cleanTreatments, pitchConcepts, playerIdeas, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
-import { writePodiumCover, type SlotStatus } from './podium.js';
+import { prerenderSlotGif, writePodiumCover, type SlotStatus } from './podium.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
 import {
@@ -549,13 +549,13 @@ function actRate(db: DB, b: Record<string, unknown>) {
 }
 
 /** Set the project's keeper; linked podium slots become done and the round's draft is re-applied. */
-export function setKeeper(db: DB, projectId: number, versionId: number): CoverProject {
+export function setKeeper(db: DB, projectId: number, versionId: number, opts: { prerender?: boolean } = {}): CoverProject {
 	const project = need(db, projectId);
 	const v = listVersions(db, project.id).find((x) => x.id === versionId);
 	if (!v) throw new ApiError(404, 'version not found in project');
 	if (v.status !== 'ok' || !v.image_rel) bad('a failed version cannot be the keeper');
 	const updated = updateProject(db, project.id, { keeper_version_id: v.id });
-	syncPodiumSlots(db, project.id, project.keeper_version_id !== v.id);
+	syncPodiumSlots(db, project.id, project.keeper_version_id !== v.id, opts.prerender ?? true);
 	return updated;
 }
 
@@ -567,9 +567,11 @@ function actKeeper(db: DB, b: Record<string, unknown>) {
 /**
  * A keeper on a project linked to podium slots makes those slots done and re-applies the cover to the
  * round's draft. A changed keeper drops the stale pre-rendered GIF / public share so the draft shows the
- * new keeper (promotePodiumCovers re-shares at finalize). Unlinked projects touch nothing.
+ * new keeper (promotePodiumCovers re-shares at finalize). The draft shows the keeper's still at once and
+ * its wipe GIF is pre-rendered in the background (fire-and-forget, logged; `prerender: false` when the
+ * caller renders it itself, as the auto run does). Unlinked projects touch nothing.
  */
-function syncPodiumSlots(db: DB, projectId: number, keeperChanged: boolean): void {
+function syncPodiumSlots(db: DB, projectId: number, keeperChanged: boolean, prerender: boolean): void {
 	const rounds = db.prepare('SELECT DISTINCT round_id FROM cover_podium_slots WHERE project_id = ?').all(projectId) as { round_id: number }[];
 	if (rounds.length === 0) return;
 	db.prepare(
@@ -579,6 +581,13 @@ function syncPodiumSlots(db: DB, projectId: number, keeperChanged: boolean): voi
 		 WHERE project_id = ?`,
 	).run(new Date().toISOString(), keeperChanged ? 1 : 0, keeperChanged ? 1 : 0, projectId);
 	for (const r of rounds) writePodiumCover(db, r.round_id);
+	// Until the GIF exists the draft shows the keeper still; render it once in the background.
+	if (prerender && db.prepare('SELECT 1 FROM cover_podium_slots WHERE project_id = ? AND gif_rel IS NULL LIMIT 1').get(projectId)) {
+		const versionId = (getProject(db, projectId) as CoverProject).keeper_version_id as number;
+		void prerenderSlotGif(db, projectId, versionId).catch((e: unknown) =>
+			console.error(`[cover-factory] wipe GIF pre-render for project ${projectId} failed:`, e instanceof Error ? e.message : e),
+		);
+	}
 }
 
 async function actShare(db: DB, b: Record<string, unknown>) {

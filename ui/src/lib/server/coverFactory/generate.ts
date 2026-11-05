@@ -60,19 +60,32 @@ export async function generateVersion(db: Database.Database, input: GenerateInpu
 			fetchImpl: input.fetchImpl,
 			timeoutMs: GENERATE_TIMEOUT_MS,
 		});
-		// No awaits from here to insertVersion: the try number guess below is exact in-process.
-		const nextTry = Math.max(0, ...listVersions(db, project.id).map((v) => v.try_no)) + 1;
-		const rel = `versions/${project.id}/${nextTry}-${randomBytes(3).toString('hex')}.png`;
-		const abs = coverFile(rel);
-		mkdirSync(dirname(abs), { recursive: true });
-		writeFileSync(abs, res.bytes, { flag: 'wx' });
-		const version = insertVersion(db, { ...base, image_rel: rel, status: 'ok', error_reason: null });
-		logRequest(db, {
-			project_id: project.id, version_id: version.id, step: 'generate', model_id: modelId,
-			provider: providerId, latency_ms: res.latencyMs, cost_usd: res.costUsd,
-			cost_estimated: res.costEstimated ? 1 : 0, outcome: 'ok', error_reason: null,
-		});
-		return version;
+		const paid = {
+			project_id: project.id, step: 'generate' as const, model_id: modelId, provider: providerId,
+			latency_ms: res.latencyMs, cost_usd: res.costUsd, cost_estimated: res.costEstimated ? 1 : 0,
+		};
+		let logged = false;
+		try {
+			// No awaits from here to insertVersion: the try number guess below is exact in-process.
+			const nextTry = Math.max(0, ...listVersions(db, project.id).map((v) => v.try_no)) + 1;
+			const rel = `versions/${project.id}/${nextTry}-${randomBytes(3).toString('hex')}.png`;
+			const abs = coverFile(rel);
+			mkdirSync(dirname(abs), { recursive: true });
+			writeFileSync(abs, res.bytes, { flag: 'wx' });
+			const version = insertVersion(db, { ...base, image_rel: rel, status: 'ok', error_reason: null });
+			logRequest(db, { ...paid, version_id: version.id, outcome: 'ok', error_reason: null });
+			logged = true;
+			return version;
+		} catch (e) {
+			// The provider already charged for this image: record it before rethrowing, so spend stays exact.
+			if (!logged) {
+				logRequest(db, {
+					...paid, version_id: null, outcome: 'error',
+					error_reason: `after generate: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`,
+				});
+			}
+			throw e;
+		}
 	} catch (e) {
 		if (!(e instanceof ProviderError)) throw e;
 		const version = insertVersion(db, { ...base, image_rel: null, status: 'failed', error_reason: e.reason });

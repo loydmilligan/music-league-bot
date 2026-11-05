@@ -1,6 +1,11 @@
 import type Database from 'better-sqlite3';
 import { getActiveDraftForRound, normTitle } from '$lib/digest/llm.js';
+import { randomBytes } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { shareKeeper } from './share.js';
+import { coverFile } from './paths.js';
+import { makeWipeGif } from './wipe.js';
 import { medalItems, slotKey, type PodiumItemRef } from '$lib/coverFactory/podiumKeys.js';
 
 // Medal-slot rules are shared with the digest client (coverOps.ts); re-exported for server callers.
@@ -81,7 +86,9 @@ function isFactoryUrl(url: string): boolean {
 
 function isSpotifyCdn(url: string): boolean {
 	try {
-		return new URL(url).hostname === 'i.scdn.co';
+		// Spotify album art: i.scdn.co / mosaic.scdn.co and image-cdn-*.spotifycdn.com.
+		const host = new URL(url).hostname.toLowerCase();
+		return host.endsWith('.scdn.co') || host.endsWith('.spotifycdn.com');
 	} catch {
 		return false;
 	}
@@ -98,14 +105,15 @@ export function listSlots(db: DB, roundId: number): PodiumSlot[] {
 	return db.prepare('SELECT * FROM cover_podium_slots WHERE round_id = ? ORDER BY rank, id').all(roundId) as PodiumSlot[];
 }
 
-/** Draft URL for a done slot: public share once promoted, else the pre-rendered private GIF, else the keeper export. */
+/** Draft URL for a done slot: public share once promoted, else the pre-rendered private GIF, else the keeper still. */
 function slotCoverUrl(db: DB, slot: PodiumSlot): string | null {
 	if (slot.public_url) return slot.public_url;
 	if (slot.gif_rel) return `/api/cover-factory/media/${slot.gif_rel}`;
 	if (slot.project_id == null) return null;
 	const p = db.prepare('SELECT keeper_version_id FROM cover_projects WHERE id = ?').get(slot.project_id) as
 		{ keeper_version_id: number | null } | undefined;
-	return p?.keeper_version_id != null ? `/api/cover-factory/media/export/${p.keeper_version_id}.gif` : null;
+	// The keeper's still until its wipe GIF is pre-rendered (the on-the-fly .gif route costs ~1 s a view).
+	return p?.keeper_version_id != null ? `/api/cover-factory/media/export/${p.keeper_version_id}.jpg` : null;
 }
 
 /**
@@ -205,4 +213,40 @@ export async function promotePodiumCovers(db: DB, roundId: number, digestsRoot?:
 	writePodiumCover(db, roundId);
 	if (errors.length) throw new Error(`podium cover promotion failed for ${errors.join('; ')}`);
 	return promoted;
+}
+
+/**
+ * Write the private wipe GIF for a keeper version (original cover → keeper) as
+ * `exports/<versionId>-<hex>.gif` (never overwrites) and return its cover-root-relative path.
+ */
+export async function writeKeeperGif(
+	v: { id: number; cover_rel?: string | null; image_rel: string | null }, projectCoverRel: string,
+): Promise<string> {
+	if (!v.image_rel) throw new Error(`version ${v.id} has no image`);
+	const gif = await makeWipeGif(readFileSync(coverFile(v.cover_rel ?? projectCoverRel)), readFileSync(coverFile(v.image_rel)));
+	const rel = `exports/${v.id}-${randomBytes(3).toString('hex')}.gif`;
+	const abs = coverFile(rel);
+	mkdirSync(dirname(abs), { recursive: true });
+	writeFileSync(abs, gif, { flag: 'wx' });
+	return rel;
+}
+
+/**
+ * Pre-render the wipe GIF for a project's keeper and point its podium slots + drafts at it. Applied
+ * only while `versionId` is still the keeper (a render for a keeper changed meanwhile is discarded).
+ * Returns the GIF path, or null when it was not applied.
+ */
+export async function prerenderSlotGif(db: DB, projectId: number, versionId: number): Promise<string | null> {
+	const v = db.prepare(`SELECT id, cover_rel, image_rel FROM cover_versions WHERE id = ? AND project_id = ? AND status = 'ok'`).get(versionId, projectId) as
+		{ id: number; cover_rel: string | null; image_rel: string | null } | undefined;
+	const p = db.prepare('SELECT cover_rel FROM cover_projects WHERE id = ?').get(projectId) as { cover_rel: string } | undefined;
+	if (!v || !p) return null;
+	const rel = await writeKeeperGif(v, p.cover_rel);
+	const still = db.prepare('SELECT keeper_version_id FROM cover_projects WHERE id = ?').get(projectId) as { keeper_version_id: number | null } | undefined;
+	if (still?.keeper_version_id !== versionId) return null;
+	db.prepare(`UPDATE cover_podium_slots SET gif_rel = ?, updated_at = ? WHERE project_id = ? AND status = 'done'`)
+		.run(rel, new Date().toISOString(), projectId);
+	const rounds = db.prepare('SELECT DISTINCT round_id FROM cover_podium_slots WHERE project_id = ?').all(projectId) as { round_id: number }[];
+	for (const r of rounds) writePodiumCover(db, r.round_id);
+	return rel;
 }
