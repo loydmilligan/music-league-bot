@@ -445,3 +445,95 @@ describe('keeper change pre-renders the wipe GIF in the background', () => {
 	});
 });
 
+
+describe('auto run reuses manual projects', () => {
+	async function manual(o: { keeper: boolean; uri?: string | null; songTitle?: string }) {
+		const { insertVersion, updateProject } = await import('./repo.js');
+		const { mkdirSync, writeFileSync } = await import('node:fs');
+		const tag = Math.random().toString(36).slice(2, 8);
+		for (const f of [`covers/m${tag}.png`, `versions/m${tag}/a.png`]) {
+			mkdirSync(join(coverFile(f), '..'), { recursive: true });
+			writeFileSync(coverFile(f), png);
+		}
+		const p = createProject(db, { title: 'Manual', source: 'round', round_id: roundId, spotify_uri: o.uri === undefined ? 'spotify:track:a' : o.uri, league_slug: 'boarz-ii-men', cover_rel: `covers/m${tag}.png`, cover_url: null, song_title: o.songTitle ?? 'Linoleum', song_artist: 'NOFX', song_album: null });
+		const v = insertVersion(db, { project_id: p.id, model_id: 'hand', provider: 'openrouter', prompt: 'x', image_rel: `versions/m${tag}/a.png`, status: 'ok', error_reason: null });
+		if (o.keeper) updateProject(db, p.id, { keeper_version_id: v.id });
+		return { pid: p.id, vid: v.id };
+	}
+	const projectCount = () => (db.prepare('SELECT COUNT(*) AS n FROM cover_projects').get() as { n: number }).n;
+
+	it('manual project with a keeper: zero paid calls, linked, GIF rendered, "manual keeper kept"', async () => {
+		const m = await manual({ keeper: true });
+		const before = projectCount();
+		const id = addSlot();
+		expect(await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({}) })).toBe('done');
+		expect(calls).toEqual([]);
+		expect(projectCount()).toBe(before);
+		const s = slotRow(id);
+		expect(s.project_id).toBe(m.pid);
+		expect(s.status).toBe('done');
+		expect(s.note).toBe('manual keeper kept');
+		expect(s.gif_rel).toMatch(new RegExp(`^exports/${m.vid}-`));
+		expect(existsSync(coverFile(s.gif_rel!))).toBe(true);
+	});
+	it('matches by normalized title when the manual project has no spotify_uri; prefers the one with a keeper', async () => {
+		await manual({ keeper: false, uri: null, songTitle: 'Linoleum' });
+		const k = await manual({ keeper: true, uri: null, songTitle: 'LINOLEUM!' });
+		const id = addSlot();
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({}) });
+		expect(slotRow(id).project_id).toBe(k.pid);
+		expect(paid()).toEqual([]);
+	});
+	it('a different song is not reused', async () => {
+		const m = await manual({ keeper: true, uri: 'spotify:track:zzz', songTitle: 'Linoleum' }); // same title, different track
+		const id = addSlot();
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON }) });
+		expect(slotRow(id).project_id).not.toBe(m.pid);
+	});
+	it('an exact spotify_uri match beats a keeper-bearing title-only match', async () => {
+		await manual({ keeper: true, uri: null, songTitle: 'Linoleum' });
+		const exact = await manual({ keeper: false, uri: 'spotify:track:a', songTitle: 'Different Name' });
+		const id = addSlot();
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON }) });
+		expect(slotRow(id).project_id).toBe(exact.pid);
+	});
+	it('manual project without a keeper: reused (no second project), normal plan runs on it', async () => {
+		const m = await manual({ keeper: false });
+		const before = projectCount();
+		const id = addSlot();
+		expect(await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON }) })).toBe('done');
+		expect(projectCount()).toBe(before);
+		const s = slotRow(id);
+		expect(s.project_id).toBe(m.pid);
+		expect(getProject(db, m.pid)!.keeper_version_id).not.toBeNull();
+		expect(getProject(db, m.pid)!.keeper_version_id).not.toBe(m.vid);
+		expect(s.note).toMatch(/auto: try/);
+	});
+	it('operator relinks the slot to their project mid-run: slot keeps their project and GIF', async () => {
+		const id = addSlot();
+		const m = await manual({ keeper: true, uri: 'spotify:track:other', songTitle: 'Other' });
+		const base = fakeFetch({ breakdown: PERSON });
+		let opGif = '';
+		const racing = (async (u: string | URL, init?: RequestInit) => {
+			const body = String(u) === 'https://openrouter.ai/api/v1/chat/completions' ? JSON.parse(String(init?.body ?? '{}')) : {};
+			if (body.model === 'img/gen') {
+				opGif = 'exports/operator.gif';
+				db.prepare(`UPDATE cover_podium_slots SET project_id = ?, gif_rel = ?, status = 'done', note = 'relinked' WHERE id = ?`).run(m.pid, opGif, id);
+			}
+			return base(u, init);
+		}) as FetchLike;
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: racing });
+		const s = slotRow(id);
+		expect(s.project_id).toBe(m.pid);
+		expect(s.gif_rel).toBe(opGif);
+		expect(s.note).toBe('relinked');
+	});
+	it('same-keeper re-pick on a slot with null gif_rel still pre-renders the GIF', async () => {
+		const { runAction } = await import('./service.js');
+		const m = await manual({ keeper: true });
+		const sid = addSlot({ project: m.pid, status: 'done' });
+		expect(slotRow(sid).gif_rel).toBeNull();
+		await runAction(db, { action: 'keeper', projectId: m.pid, versionId: m.vid });
+		await vi.waitFor(() => expect(slotRow(sid).gif_rel).toMatch(new RegExp(`^exports/${m.vid}-`)), { timeout: 4000 });
+	});
+});
