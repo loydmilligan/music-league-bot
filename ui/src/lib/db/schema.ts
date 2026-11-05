@@ -871,6 +871,11 @@ CREATE TABLE IF NOT EXISTS cover_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_cover_versions_project ON cover_versions(project_id, try_no);
 CREATE INDEX IF NOT EXISTS idx_cover_requests_project ON cover_requests(project_id);
+CREATE TABLE IF NOT EXISTS cover_alt_cache (
+  key TEXT PRIMARY KEY,
+  json TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
+);
 `;
 export const DEFAULT_SETTINGS: Record<string, string> = {
 	weight_discovery: '35',
