@@ -1,7 +1,7 @@
 <script lang="ts">
 	// One round's automatic podium covers: job status, spend, each medal slot, and "Run auto now".
 	import StatusChip from '$lib/components/StatusChip.svelte';
-	import { cfGet, cfPost, jobActive, JOB_LABEL, SLOT_TONE, usd, type AutoRoundState } from './api';
+	import { cfGet, cfPost, jobActive, JOB_LABEL, needsRerunConfirm, RERUN_PROMPT, SLOT_TONE, usd, type AutoRoundState } from './api';
 
 	let {
 		roundId,
@@ -51,6 +51,7 @@
 	});
 
 	async function runNow() {
+		if (needsRerunConfirm(st?.job) && !confirm(RERUN_PROMPT)) return;
 		running = true;
 		err = '';
 		try {

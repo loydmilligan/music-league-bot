@@ -33,8 +33,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
   // and returns its STABLE public URL (re-export overwrites in place, same slug).
   if (requested === 'html') {
     try {
-      const { slug, url } = await renderDigestHtml(roundId);
-      return json({ ok: true, roundId, format: 'html', slug, url });
+      const { slug, url, coverWarning } = await renderDigestHtml(roundId);
+      return json({ ok: true, roundId, format: 'html', slug, url, ...(coverWarning ? { coverWarning } : {}) });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       throw error(502, `digest html export failed: ${msg}`);

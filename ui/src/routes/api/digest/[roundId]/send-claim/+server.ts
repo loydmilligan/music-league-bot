@@ -37,8 +37,9 @@ export const POST: RequestHandler = async ({ params }) => {
   }
 
   try {
-    const { url } = await renderDigestHtml(roundId);
-    return json({ claimed: true, url });
+    // Promotes podium auto covers first; throws (claim released) if a private cover URL would go public.
+    const { url, coverWarning } = await renderDigestHtml(roundId);
+    return json({ claimed: true, url, ...(coverWarning ? { coverWarning } : {}) });
   } catch (e) {
     releaseClaim(db, roundId);
     const msg = e instanceof Error ? e.message : String(e);

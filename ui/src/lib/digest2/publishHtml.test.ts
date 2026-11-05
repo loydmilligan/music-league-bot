@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformDigest2Html, findLeaks } from './publishHtml.js';
+import { transformDigest2Html, findLeaks, stripExportHidden } from './publishHtml.js';
 
 const HOSTS = ['mlb13.example.com', 'localhost:3002'];
 const clean = '<html><head></head><body><a href="https://open.spotify.com/x">s</a><script src="./_app/a.js"></script></body></html>';
@@ -30,6 +30,18 @@ describe('transformDigest2Html', () => {
 		expect(out).not.toMatch(/data-export-hide|cover-factory|note|inner|x\.png/);
 		expect(out).toContain('<div class="apod"><p class="keep">kept <span>this</span></p></div>');
 		expect(findLeaks({ html: out, textAssets: new Map(), forbiddenHosts: HOSTS })).toEqual([]);
+	});
+	it('an export-hidden element without its close tag fails closed (throws), never publishes the rest', () => {
+		const html = '<head></head><body><div data-export-hide="1"><a href="/cover-factory?project=7">x</a></body>';
+		expect(() => transformDigest2Html(html, { hasLocalFonts: false })).toThrow(/data-export-hide.*<div> has no closing tag/);
+	});
+	it('matches only the exact value 1 (quoted or bare), not 10 / "1x" / data-export-hide-x', () => {
+		for (const keep of ['<p data-export-hide="10">k</p>', "<p data-export-hide='1x'>k</p>", '<p data-export-hide=12>k</p>', '<p data-export-hide-x="1">k</p>']) {
+			expect(stripExportHidden(keep), keep).toBe(keep);
+		}
+		for (const drop of ['<p data-export-hide="1">d</p>', "<p data-export-hide='1'>d</p>", '<p data-export-hide=1>d</p>', '<p data-export-hide = "1" class="x">d</p>']) {
+			expect(stripExportHidden(`a${drop}b`), drop).toBe('ab');
+		}
 	});
 	it('injects the /api/ml-auth fetch guard', () => {
 		expect(transformDigest2Html('<head></head>', { hasLocalFonts: false })).toContain('/api/ml-auth');

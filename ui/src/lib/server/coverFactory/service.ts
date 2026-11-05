@@ -22,7 +22,7 @@ import {
 import { getPinnedCoverModel, isUsablePin } from './models.js';
 import { applyConcept, cleanTreatments, pitchConcepts, playerIdeas, type Concept, type ConceptMove } from './pitch.js';
 import { coverFile } from './paths.js';
-import { writePodiumCover } from './podium.js';
+import { writePodiumCover, type SlotStatus } from './podium.js';
 import { buildSwapPrompt, defaultTreatments, type Identity, type Treatment } from './prompt.js';
 import { describeIdentity, readCover } from './reader.js';
 import {
@@ -142,7 +142,7 @@ export async function getState(db: DB, q: URLSearchParams): Promise<unknown> {
 			// The podium slot this project fills (auto run), for the header chip.
 			podiumSlot:
 				(db.prepare('SELECT round_id, rank, status FROM cover_podium_slots WHERE project_id = ? ORDER BY id LIMIT 1').get(project.id) as
-					{ round_id: number; rank: number; status: string } | undefined) ?? null,
+					{ round_id: number; rank: number; status: SlotStatus } | undefined) ?? null,
 		};
 	}
 	const league = q.get('league');

@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { getDb } from '$lib/db/client.js';
 import { digestBaseUrl } from '$lib/config/urls.js';
+import { promotePodiumCovers } from '$lib/server/coverFactory/podium.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 const APP_INTERNAL_URL = process.env.DIGEST_EXPORT_INTERNAL_URL || `http://localhost:${process.env.PORT || 3002}`;
@@ -221,6 +222,8 @@ export interface HtmlShareResult {
   dir: string;
   bytes: number;
   files: number;
+  /** Podium cover promotion failed (the share still rendered: no private cover URL was left in it). */
+  coverWarning?: string;
 }
 
 const CHROME_UA =
@@ -276,8 +279,20 @@ async function localizeFonts(html: string, assets: Map<string, Buffer>): Promise
   }
 }
 
+/** App-private Cover Factory URLs: never allowed in a public share. */
+const PRIVATE_COVER_URL = '/api/cover-factory/';
+
 // Pure HTML transforms applied to the captured SSR document.
-function transformShareHtml(html: string, opts: { hasLocalFonts: boolean }): string {
+// Last-line guard: throws (nothing is published) if a private Cover Factory URL is still in the page.
+export function transformShareHtml(html: string, opts: { hasLocalFonts: boolean }, coverWarning?: string): string {
+  const at = html.indexOf(PRIVATE_COVER_URL);
+  if (at !== -1) {
+    const near = html.slice(Math.max(0, at - 40), at + 80).replace(/\s+/g, ' ');
+    throw new Error(
+      `share blocked: a private Cover Factory URL is still in the page (${near})` +
+        (coverWarning ? ` — podium cover promotion failed: ${coverWarning}` : ''),
+    );
+  }
   let h = html;
   // 1. page→entry refs: ../_app → ./_app. The ./ prefix is MANDATORY — a bare
   //    "_app/…" specifier is illegal for dynamic import() (packaging-spike).
@@ -312,11 +327,14 @@ function transformShareHtml(html: string, opts: { hasLocalFonts: boolean }): str
   return h;
 }
 
-export async function renderDigestHtml(roundId: number): Promise<HtmlShareResult> {
-  const slug = getOrCreateShareSlug(roundId);
-  const outDir = join(DIGESTS_DIR, 'd', slug);
-  const origin = new URL(APP_INTERNAL_URL).origin;
+/** The captured ?share=1 document and its same-origin /_app/ asset closure (Puppeteer by default). */
+export interface ShareCapture {
+  rawHtml: string;
+  assets: Map<string, Buffer>;
+}
 
+async function captureShareHtml(roundId: number): Promise<ShareCapture> {
+  const origin = new URL(APP_INTERNAL_URL).origin;
   const browser = await launch();
   try {
     const page = await browser.newPage();
@@ -347,39 +365,65 @@ export async function renderDigestHtml(roundId: number): Promise<HtmlShareResult
     // a round has no tastemaker section).
     await page.waitForSelector('[data-component="tastemaker"]', { timeout: 8_000 }).catch(() => {});
 
-    const rawHtml = await resp.text();
-    const fontCss = await localizeFonts(rawHtml, assets);
-    await browser.close();
-
-    // Overwrite in place (stable slug → shared links never break).
-    await rm(outDir, { recursive: true, force: true });
-    await mkdir(outDir, { recursive: true });
-
-    let bytes = 0;
-    let files = 0;
-    for (const [pathname, buf] of assets) {
-      const dest = join(outDir, pathname.replace(/^\//, ''));
-      await mkdir(dirname(dest), { recursive: true });
-      await writeFile(dest, buf);
-      bytes += buf.length;
-      files += 1;
-    }
-    if (fontCss) {
-      await writeFile(join(outDir, '_app', 'fonts.css'), fontCss, 'utf8');
-      bytes += Buffer.byteLength(fontCss);
-      files += 1;
-    }
-
-    const indexHtml = transformShareHtml(rawHtml, { hasLocalFonts: !!fontCss });
-    await writeFile(join(outDir, 'index.html'), indexHtml, 'utf8');
-    bytes += Buffer.byteLength(indexHtml);
-    files += 1;
-
-    touchShare(roundId);
-    return { slug, url: `${PUBLIC_DIGEST_BASE}/d/${slug}`, dir: outDir, bytes, files };
+    return { rawHtml: await resp.text(), assets };
   } finally {
     await browser.close().catch(() => {});
   }
+}
+
+/**
+ * Render the round's PUBLIC 1.0 html share (digests/d/<slug>). Used by the html export, the manual
+ * render and the bot's send-claim. Cover Factory podium covers are promoted to public digest-host
+ * URLs first (no slot rows → no-op); a promotion failure is returned as `coverWarning`, and if a
+ * private cover URL is still in the page the share transform throws before anything is written.
+ */
+export async function renderDigestHtml(
+  roundId: number,
+  deps: {
+    capture?: (roundId: number) => Promise<ShareCapture>;
+    localizeFonts?: (html: string, assets: Map<string, Buffer>) => Promise<string | null>;
+  } = {},
+): Promise<HtmlShareResult> {
+  let coverWarning: string | undefined;
+  try {
+    await promotePodiumCovers(getDb(), roundId, DIGESTS_DIR);
+  } catch (e) {
+    coverWarning = e instanceof Error ? e.message : String(e);
+    console.warn('[digest] podium cover promotion failed', coverWarning);
+  }
+
+  const slug = getOrCreateShareSlug(roundId);
+  const outDir = join(DIGESTS_DIR, 'd', slug);
+  const { rawHtml, assets } = await (deps.capture ?? captureShareHtml)(roundId);
+  const fontCss = await (deps.localizeFonts ?? localizeFonts)(rawHtml, assets);
+  // Transform (and its private-URL guard) BEFORE touching the existing artifact on disk.
+  const indexHtml = transformShareHtml(rawHtml, { hasLocalFonts: !!fontCss }, coverWarning);
+
+  // Overwrite in place (stable slug → shared links never break).
+  await rm(outDir, { recursive: true, force: true });
+  await mkdir(outDir, { recursive: true });
+
+  let bytes = 0;
+  let files = 0;
+  for (const [pathname, buf] of assets) {
+    const dest = join(outDir, pathname.replace(/^\//, ''));
+    await mkdir(dirname(dest), { recursive: true });
+    await writeFile(dest, buf);
+    bytes += buf.length;
+    files += 1;
+  }
+  if (fontCss) {
+    await writeFile(join(outDir, '_app', 'fonts.css'), fontCss, 'utf8');
+    bytes += Buffer.byteLength(fontCss);
+    files += 1;
+  }
+
+  await writeFile(join(outDir, 'index.html'), indexHtml, 'utf8');
+  bytes += Buffer.byteLength(indexHtml);
+  files += 1;
+
+  touchShare(roundId);
+  return { slug, url: `${PUBLIC_DIGEST_BASE}/d/${slug}`, dir: outDir, bytes, files, ...(coverWarning ? { coverWarning } : {}) };
 }
 
 export function isExportFormat(v: unknown): v is DigestExportFormat {

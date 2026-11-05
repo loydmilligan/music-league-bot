@@ -3,6 +3,7 @@ import type { Breakdown } from '$lib/server/coverFactory/breakdown';
 import type { Treatment } from '$lib/server/coverFactory/prompt';
 import type { Concept, ConceptMove } from '$lib/server/coverFactory/pitch';
 import type { AltCover } from '$lib/server/coverFactory/alternates';
+import type { SlotStatus } from '$lib/server/coverFactory/podium';
 
 export type { AltCover, Breakdown, Concept, ConceptMove, Treatment };
 export type Subject = Breakdown['subjects'][number];
@@ -81,7 +82,7 @@ export interface ProjectState {
 }
 
 // ---------- automatic round-end run ----------
-export type SlotStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+export type { SlotStatus };
 export type AutoJobStatus = 'queued' | 'running' | 'awaiting_approval' | 'done' | 'failed';
 export interface AutoLeague {
 	slug: string;
@@ -131,6 +132,11 @@ export const SLOT_TONE: Record<SlotStatus, 'muted' | 'sky' | 'health' | 'ember' 
 	failed: 'ember',
 	skipped: 'amber',
 };
+/** Asked before re-running a round whose job already finished: it can cost money again. */
+export const RERUN_PROMPT = 'Run again? This can spend up to $1 more and may ask for approval.';
+/** "Run auto now" on a finished (done) job needs the operator's confirmation first. */
+export const needsRerunConfirm = (job: { status: AutoJobStatus } | null | undefined) => job?.status === 'done';
+
 /** A job still moving: the panel keeps polling while this is true. */
 export const jobActive = (s: AutoJobStatus | undefined | null) => s === 'queued' || s === 'running';
 export interface AlternatesResult {

@@ -7,38 +7,28 @@ export interface CoverOp {
 	projectId: number | null;
 }
 
+import { medalItems, slotKey } from '$lib/coverFactory/podiumKeys.js';
+
 type OpsContent = { _coverNotes?: unknown; _coverProjects?: unknown };
 
 const asMap = (v: unknown): Record<string, unknown> =>
 	v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 
-/** Same rank rule as the server's podium.ts (rank | place | position, else list position). */
-function slotRank(item: unknown, idx: number): number {
-	const it = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
-	for (const k of ['rank', 'place', 'position']) {
-		const v = it[k];
-		const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN;
-		if (Number.isFinite(n)) return n;
-	}
-	return idx + 1;
-}
-
 /**
  * The operator note + factory project for the podium item at `index` of `content.items`. Keys follow
- * the server: the item's rank, or its title when another item shares that rank. Null when the
- * content carries neither for the item.
+ * the server exactly (shared podiumKeys: medal items only, ranks 1–3, at most MAX_SLOTS, tie = same
+ * rank among those slots → keyed by title). Null for non-medal items or when the content carries
+ * neither a note nor a project for the item.
  */
 export function coverOpAt(content: unknown, index: number): CoverOp | null {
-	const c = (content && typeof content === 'object' ? content : {}) as OpsContent & { items?: unknown };
-	if (!Array.isArray(c.items) || !c.items[index]) return null;
+	const c = (content && typeof content === 'object' ? content : {}) as OpsContent;
 	const notes = asMap(c._coverNotes);
 	const projects = asMap(c._coverProjects);
 	if (!Object.keys(notes).length && !Object.keys(projects).length) return null;
-	const ranks = c.items.map(slotRank);
-	const rank = ranks[index];
-	const tied = ranks.filter((r) => r === rank).length > 1;
-	const title = (c.items[index] as { title?: unknown }).title;
-	const key = tied ? (typeof title === 'string' ? title : '') : String(rank);
+	const medals = medalItems(content);
+	const ref = medals.find((m) => m.index === index);
+	if (!ref) return null;
+	const key = slotKey(ref, medals);
 	const note = notes[key];
 	const project = projects[key];
 	const op: CoverOp = {

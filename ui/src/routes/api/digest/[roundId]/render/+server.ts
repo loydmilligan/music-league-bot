@@ -22,8 +22,9 @@ export const POST: RequestHandler = async ({ params }) => {
   }
 
   try {
-    const { url } = await renderDigestHtml(roundId);
-    return json({ roundId, name: round.name, url });
+    // renderDigestHtml promotes podium auto covers first and refuses to publish a private cover URL.
+    const { url, coverWarning } = await renderDigestHtml(roundId);
+    return json({ roundId, name: round.name, url, ...(coverWarning ? { coverWarning } : {}) });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw error(502, `digest render failed: ${msg}`);

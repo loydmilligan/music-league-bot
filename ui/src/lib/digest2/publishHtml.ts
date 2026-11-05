@@ -8,12 +8,13 @@ const FETCH_GUARD =
 	`}catch(e){}return f.apply(this,arguments);};})();</script>`;
 
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
-const EXPORT_HIDE_OPEN = /<([a-zA-Z][\w-]*)\b[^>]*\bdata-export-hide\s*=\s*["']?1["']?[^>]*>/;
+const EXPORT_HIDE_OPEN = /<([a-zA-Z][\w-]*)\b[^>]*\bdata-export-hide\s*=\s*(?:"1"|'1'|1\b)[^>]*>/;
 
 /**
  * Drop every `[data-export-hide="1"]` element (with its contents): operator-only chrome such as the
  * podium's Cover Factory notes and links. 1.0 exports only hide these with CSS; the static share must
  * not carry them at all (their app links would also trip the root-relative leak gate).
+ * Throws when such an element has no closing tag (fail closed, nothing is published).
  */
 export function stripExportHidden(html: string): string {
 	let h = html;
@@ -23,6 +24,7 @@ export function stripExportHidden(html: string): string {
 		const tag = m[1].toLowerCase();
 		let end = openEnd;
 		if (!m[0].endsWith('/>') && !VOID_TAGS.has(tag)) {
+			end = -1;
 			const re = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
 			re.lastIndex = openEnd;
 			let depth = 1;
@@ -34,6 +36,8 @@ export function stripExportHidden(html: string): string {
 					break;
 				}
 			}
+			// Fail closed: an unclosed operator element could swallow or leak the rest of the page.
+			if (end === -1) throw new Error(`publish blocked: data-export-hide <${tag}> has no closing tag`);
 		}
 		h = h.slice(0, start) + h.slice(end);
 	}

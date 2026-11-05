@@ -32,6 +32,14 @@ describe('coverOpFor / stripCoverOps', () => {
 		expect(coverOpAt({ items }, 0)).toBeNull();
 		expect(coverOpAt({ items, _coverProjects: { '1': 'x' } }, 0)).toBeNull();
 	});
+	it('ties are counted over the medal slots the server keeps (ranks 1,1,1,1,2,2 → five slots)', () => {
+		const t = {
+			items: ['a', 'b', 'c', 'd'].map((x) => ({ rank: 1, title: `One ${x}` })).concat([{ rank: 2, title: 'Two a' }, { rank: 2, title: 'Two b' }]),
+			// what the server writes: four 1s keyed by title, the single kept 2 keyed by rank
+			_coverNotes: { 'One a': 'n1', 'One b': 'n2', 'One c': 'n3', 'One d': 'n4', '2': 'n5', 'Two a': 'WRONG', 'Two b': 'WRONG' },
+		};
+		expect([0, 1, 2, 3, 4, 5].map((i) => coverOpAt(t, i)?.note ?? null)).toEqual(['n1', 'n2', 'n3', 'n4', 'n5', null]);
+	});
 	it('reads place like the server: a place-tie is keyed by title even though the display rank differs', () => {
 		const placed = {
 			items: [{ place: 1, title: 'P1' }, { place: 3, title: 'Third A' }, { place: 3, title: 'Third B' }],
