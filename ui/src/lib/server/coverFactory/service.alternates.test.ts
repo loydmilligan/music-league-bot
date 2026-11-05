@@ -26,6 +26,7 @@ import { createProject, getProject, updateProject, insertVersion, listVersions }
 import { COVER_JOB_KEYS } from './models.js';
 import { coverFile } from './paths.js';
 import { cleanConcepts } from './pitch.js';
+import { averageHash } from './alternates.js';
 import type { Breakdown } from './breakdown.js';
 
 const db = openLeagueDb(':memory:');
@@ -124,6 +125,42 @@ describe('alternates action', () => {
 		await runAction(db, { action: 'restore-original', projectId: pid });
 		const r2 = (await runAction(db, { action: 'alternates', projectId: pid })) as { currentId: string | null };
 		expect(r2.currentId).toBeNull();
+	});
+});
+
+describe('alternates vs the current cover', () => {
+	const SONG_KEY = 'alt:nofx|linoleum|punk in drublic';
+	let split: Buffer;
+	beforeAll(async () => {
+		// Left half black, right half white: an average hash far from the flat test cover.
+		const half = await sharp({ create: { width: 8, height: 16, channels: 3, background: '#fff' } }).png().toBuffer();
+		split = await sharp({ create: { width: 16, height: 16, channels: 3, background: '#000' } }).composite([{ input: half, left: 8, top: 0 }]).png().toBuffer();
+	});
+	const seedSong = async () => {
+		const alts = [{ ...ALTS[0], hash: await averageHash(png) }, { ...ALTS[1], hash: await averageHash(split) }];
+		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)').run(SONG_KEY, JSON.stringify(alts), new Date().toISOString());
+	};
+	it('drops the edition that looks like the current cover, and keeps the current alternate listed after a switch', async () => {
+		await seedSong();
+		const r1 = (await runAction(db, { action: 'alternates', projectId: pid })) as { alternates: { id: string }[]; currentId: string | null };
+		expect(r1.alternates.map((a) => a.id)).toEqual(['rel-2']);
+		expect(r1.currentId).toBeNull();
+		vi.stubGlobal('fetch', async (u: string | URL) => {
+			fetchCalls.push(String(u));
+			return new Response(new Uint8Array(String(u).includes('rel-2') ? split : png), { status: 200, headers: { 'content-type': 'image/png' } });
+		});
+		await runAction(db, { action: 'use-alternate', projectId: pid, alternateId: 'rel-2' });
+		const r2 = (await runAction(db, { action: 'alternates', projectId: pid })) as { alternates: { id: string }[]; currentId: string | null };
+		expect(r2.alternates.map((a) => a.id)).toEqual(['rel-1', 'rel-2']);
+		expect(r2.currentId).toBe('rel-2');
+	});
+	it('an applied alternate concept is reported as current by the next listing', async () => {
+		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)').run(SONG_KEY, JSON.stringify(ALTS), new Date().toISOString());
+		seed(pid);
+		updateProject(db, pid, { breakdown_json: JSON.stringify(BREAKDOWN) });
+		await runAction(db, { action: 'apply-concept', projectId: pid, concept: { id: 'c-1', move: 'alternate', alternateId: 'rel-2', title: 't', plan: 'p', addSubjects: [], treatments: [] } });
+		const r = (await runAction(db, { action: 'alternates', projectId: pid })) as { currentId: string | null };
+		expect(r.currentId).toBe('rel-2');
 	});
 });
 

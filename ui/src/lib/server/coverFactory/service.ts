@@ -5,7 +5,7 @@ import { assertGenerationAllowed } from '../avatarFactory/pause.js';
 import { normalizeImage } from '../avatarFactory/normalize.js';
 import { listLeaguesReadonly } from '../avatarFactory/roster.js';
 import { normalizeBreakdown, type Breakdown } from './breakdown.js';
-import { findAlternateCovers, readProjectAlternates, storeProjectAlternates, type AltCover } from './alternates.js';
+import { averageHash, findAlternateCovers, looksSame, readProjectAlternates, storeProjectAlternates, type AltCover } from './alternates.js';
 import { generateVersion } from './generate.js';
 import {
 	fetchCoverBytes,
@@ -374,9 +374,29 @@ async function actAlternates(db: DB, b: Record<string, unknown>) {
 	}
 	if (!terms) return bad('search for the song');
 	const found = await findAlternateCovers(db, terms);
+	const currentId = currentAlternateId(db, project);
 	// A busy / no-match answer must not wipe the list the user last saw (use-alternate validates against it).
-	if (!found.message) storeProjectAlternates(db, project.id, found.alternates);
-	return { ...found, currentId: currentAlternateId(db, project) };
+	if (found.message) return { ...found, currentId };
+	// The song-keyed cache stays cover-independent; the edition that IS the current cover is dropped here
+	// (unless it is the alternate in use, which stays listed as current).
+	const coverHash = await currentCoverHash(db, project);
+	const alternates = found.alternates.filter((a) => a.id === currentId || !a.hash || !coverHash || !looksSame(a.hash, coverHash));
+	storeProjectAlternates(db, project.id, alternates);
+	return { alternates, message: null, currentId };
+}
+
+/** Average hash of the project's cover file, cached per project + cover file. Null if unreadable. */
+async function currentCoverHash(db: DB, project: CoverProject): Promise<string | null> {
+	const key = `coverhash:${project.id}:${project.cover_rel}`;
+	const row = db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(key) as { json: string } | undefined;
+	if (row) return parseJson<string | null>(row.json, null);
+	try {
+		const hash = await averageHash(readFileSync(coverFile(project.cover_rel)));
+		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)').run(key, JSON.stringify(hash), new Date().toISOString());
+		return hash;
+	} catch {
+		return null;
+	}
 }
 
 const currentKey = (projectId: number) => `current:${projectId}`;

@@ -26,6 +26,8 @@
 	let error = $state('');
 	let switching = $state('');
 	let q = $state('');
+	// The search the shown list came from, so a refresh asks the same question.
+	let lastQ = '';
 
 	const hasTerms = $derived(!!(project.song_title && project.song_artist));
 	const switched = $derived(!!project.original_cover_rel && project.cover_rel !== project.original_cover_rel);
@@ -45,6 +47,20 @@
 			message = '';
 			error = '';
 			q = '';
+			lastQ = '';
+		});
+	});
+
+	// The cover changed from outside this panel too (a pitched alternate concept): re-list
+	// (song-keyed cache hit, free) so the "Current" badge and the hidden-original edition follow it.
+	const coverKey = $derived(`${project.cover_rel}|${project.original_cover_rel ?? ''}`);
+	let seenCover = '';
+	$effect(() => {
+		const k = coverKey;
+		untrack(() => {
+			const changed = seenCover !== '' && seenCover !== k;
+			seenCover = k;
+			if (changed && loaded && !loading && (hasTerms || lastQ)) void load(lastQ || undefined);
 		});
 	});
 
@@ -66,7 +82,10 @@
 		try {
 			const r = await cfPost<AlternatesResult>({ action: 'alternates', projectId: project.id, ...(search ? { q: search } : {}) });
 			// Busy / no match: keep what is on screen (the server kept it too).
-			if (!r.message) alternates = r.alternates;
+			if (!r.message) {
+				alternates = r.alternates;
+				lastQ = search ?? '';
+			}
 			currentId = r.currentId;
 			message = r.message ?? '';
 			loaded = true;

@@ -13,6 +13,8 @@ export interface AltCover {
 	country: string | null;
 	thumbUrl: string;
 	fullUrl: string;
+	/** Average hash of the thumbnail (absent on lists cached before it was recorded). */
+	hash?: string;
 }
 
 const MB_BASE = 'https://musicbrainz.org/ws/2/';
@@ -96,6 +98,11 @@ export async function averageHash(bytes: Buffer): Promise<string> {
 		hex += nib.toString(16);
 	}
 	return hex;
+}
+
+/** Two average hashes close enough to be the same artwork. */
+export function looksSame(a: string, b: string): boolean {
+	return a.length === b.length && hamming(a, b) <= HAMMING_LIMIT;
 }
 
 function hamming(a: string, b: string): number {
@@ -252,7 +259,7 @@ export async function findAlternateCovers(
 			kept.push({ alt: toAlt(c), hash });
 		}
 
-		const alternates = kept.map((k) => k.alt);
+		const alternates = kept.map((k) => ({ ...k.alt, hash: k.hash }));
 		if (!alternates.length) return { alternates: [], message: EMPTY_MESSAGE };
 		db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
 			.run(key, JSON.stringify(alternates), new Date(now()).toISOString());
