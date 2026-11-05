@@ -22,7 +22,7 @@ export const FAL_FALLBACK_MODEL = 'fal-ai/nano-banana/edit';
 /** Never start a paid call once the round's spend would pass this, approved or not. */
 export const HARD_CAP_USD = 2.0;
 /** Pre-call estimate per paid step (generate: per attempt). */
-export const STEP_ESTIMATE_USD = { read: 0.02, identity: 0.01, pitch: 0.05, generate: 0.1 } as const;
+export const STEP_ESTIMATE_USD = { read: 0.02, identity: 0.01, pitch: 0.07, generate: 0.1 } as const;
 /** Generator attempt + 2 retries, before the one fal fallback. */
 const PRIMARY_ATTEMPTS = 3;
 
@@ -82,16 +82,39 @@ function parseTreatments(p: CoverProject): Treatment[] {
 	}
 }
 
+/** A run whose slot has not been touched (claim / heartbeat) for this long is treated as crashed. */
+export const STALE_RUN_MS = 15 * 60_000;
+
+/**
+ * Reset `running` slots (of one round, or all) whose updated_at is older than the threshold back to
+ * `pending`, so a crashed run does not hold its slot forever. Live runs heartbeat at every paid step.
+ */
+export function reclaimStaleSlots(db: DB, roundId?: number, olderThanMs = STALE_RUN_MS, now = Date.now()): number {
+	const cutoff = new Date(now - olderThanMs).toISOString();
+	const stamp = new Date(now).toISOString();
+	const sql = `UPDATE cover_podium_slots SET status = 'pending', note = 'reclaimed after interrupted run', updated_at = ?
+		 WHERE status = 'running' AND updated_at < ?`;
+	const r = roundId == null
+		? db.prepare(sql).run(stamp, cutoff)
+		: db.prepare(`${sql} AND round_id = ?`).run(stamp, cutoff, roundId);
+	return r.changes;
+}
+
 /**
  * Make the automatic cover for one podium slot. Claims the slot (pending → running), creates or
  * reuses its project, reads the cover, plans the swap, generates with retries + fal fallback, sets
  * the keeper and pre-renders the private wipe GIF. Every paid step is budget-checked first.
+ *
+ * NOT safe to run concurrently for slots of the same round: the budget gate is check-then-spend
+ * (roundSpend is read, then the paid call runs), so two runs could each pass the gate and together
+ * overshoot the cap. The caller (Task 3's queue) must serialize slots per round.
  */
 export async function runSlot(
 	db: DB, roundId: number, slotId: number, budget: { capUsd: number }, deps: AutoDeps = {},
 ): Promise<SlotOutcome> {
 	const now = deps.now ?? Date.now;
 	const stamp = () => new Date(now()).toISOString();
+	reclaimStaleSlots(db, roundId, STALE_RUN_MS, now());
 	const claim = db
 		.prepare(`UPDATE cover_podium_slots SET status = 'running', updated_at = ? WHERE id = ? AND round_id = ? AND status = 'pending'`)
 		.run(stamp(), slotId, roundId);
@@ -135,6 +158,8 @@ async function work(
 			if (spend >= HARD_CAP_USD || cap >= HARD_CAP_USD) throw new Stop('failed', 'budget cap reached');
 			throw new Stop('needs_approval', 'waiting for budget approval');
 		}
+		// Heartbeat: a long run is not mistaken for a crashed one by reclaimStaleSlots.
+		db.prepare('UPDATE cover_podium_slots SET updated_at = ? WHERE id = ?').run(stamp(), slotId);
 	};
 
 	assertGenerationAllowed(); // a pause leaves the slot pending before anything is created
@@ -240,7 +265,13 @@ async function plan(
 		return defaults;
 	}
 	gate('pitch');
-	const [first] = await pitchConcepts(db, project.id, { playerSlugs: [submitter.slug], count: 3, fetchImpl });
+	const concepts = await pitchConcepts(db, project.id, { playerSlugs: [submitter.slug], count: 3, fetchImpl }).catch((e: unknown) => {
+		// pitchConcepts throws when the model's answer cleans down to nothing.
+		if (e instanceof Error && e.message === 'no usable concepts') return [];
+		throw e;
+	});
+	const first = concepts[0];
+	if (!first) throw new Stop('failed', 'pitch returned no concepts');
 	if (first.move === 'alternate') {
 		await useAlternate(db, project.id, first.alternateId, fetchImpl);
 		gate('read');

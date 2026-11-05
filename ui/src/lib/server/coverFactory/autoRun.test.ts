@@ -31,13 +31,12 @@ vi.mock('./inputs.js', async (orig) => {
 	};
 });
 
-import { runSlot, roundSpend } from './autoRun.js';
+import { runSlot, roundSpend, reclaimStaleSlots } from './autoRun.js';
 import { createProject, getProject, listVersions, logRequest } from './repo.js';
 import { COVER_JOB_KEYS } from './models.js';
 import { coverFile } from './paths.js';
 import { IDENTITY_PROMPT } from './breakdown.js';
 
-const PNG_1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 const SPOT = 'https://i.scdn.co/image/abc';
 const subj = (o: Record<string, unknown>) => ({ position: 'center', pose: '', gaze: '', clothing: '', expression: '', color_treatment: '', focus: 'sharp', ...o });
 const PERSON = { style: 's', composition: 'c', palette_lighting: 'p', text_elements: [], subjects: [subj({ label: 'A', kind: 'person', role: 'main' }), subj({ label: 'B', kind: 'object', role: 'background' })] };
@@ -54,7 +53,7 @@ let db: Database.Database;
 let roundId: number;
 let prev: Record<string, string | undefined> = {};
 
-interface Fake { breakdown?: unknown; gen?: ('ok' | 'fail')[]; fal?: 'ok' | 'fail' }
+interface Fake { breakdown?: unknown; gen?: ('ok' | 'fail')[]; fal?: 'ok' | 'fail'; readCost?: number; concepts?: unknown }
 let calls: { kind: string; model?: string }[] = [];
 
 function fakeFetch(o: Fake): FetchLike {
@@ -78,9 +77,9 @@ function fakeFetch(o: Fake): FetchLike {
 			if (body.model === 'vis/reader') {
 				if (text === IDENTITY_PROMPT) { calls.push({ kind: 'identity' }); return chat('short brown hair, beard', 0.002); }
 				calls.push({ kind: 'read' });
-				return chat(o.breakdown ?? PERSON, 0.01);
+				return chat(o.breakdown ?? PERSON, o.readCost ?? 0.01);
 			}
-			if (body.model === 'txt/pitch') { calls.push({ kind: 'pitch' }); return chat(CONCEPTS, 0.004); }
+			if (body.model === 'txt/pitch') { calls.push({ kind: 'pitch' }); return chat(o.concepts ?? CONCEPTS, 0.004); }
 			if (body.model === 'img/gen') {
 				calls.push({ kind: 'generate' });
 				const r = gen.shift() ?? 'fail';
@@ -97,7 +96,7 @@ function fakeFetch(o: Fake): FetchLike {
 
 const paid = () => calls.filter((c) => c.kind !== 'art');
 const slotRow = (id: number) => db.prepare('SELECT * FROM cover_podium_slots WHERE id = ?').get(id) as {
-	status: string; note: string | null; project_id: number | null; gif_rel: string | null;
+	status: string; note: string | null; project_id: number | null; gif_rel: string | null; updated_at: string;
 };
 function addSlot(o: { submission?: number | null; status?: string; rank?: number; title?: string; project?: number | null } = {}): number {
 	return Number(db.prepare(
@@ -121,7 +120,6 @@ beforeAll(async () => {
 	process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'cf-auto-'));
 	process.env.OPENROUTER_API_KEY = 'test-key';
 	png = await sharp({ create: { width: 16, height: 16, channels: 3, background: '#c9a' } }).png().toBuffer();
-	void PNG_1x1;
 });
 afterAll(() => {
 	for (const [k, v] of Object.entries(prev)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
@@ -192,6 +190,8 @@ describe('runSlot', () => {
 		expect(vs.map((v) => `${v.provider}:${v.status}`)).toEqual(['openrouter:failed', 'openrouter:failed', 'openrouter:failed', 'fal:ok']);
 		expect(p.keeper_version_id).toBe(vs[3].id);
 		expect(slotRow(id).note).toMatch(/fal/);
+		// read 0.01 + identity 0.002 + 3 failed openrouter 0.01 + fal 0.04
+		expect(roundSpend(db, roundId)).toBeCloseTo(0.01 + 0.002 + 0.03 + 0.04, 6);
 	});
 
 	it('a retry that succeeds stops the attempts', async () => {
@@ -263,6 +263,52 @@ describe('runSlot', () => {
 		const out = await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ gen: ['fail', 'fail', 'fail'] }) });
 		expect(out).toBe('needs_approval');
 		expect(paid().filter((c) => c.kind === 'generate')).toHaveLength(1);
+	});
+
+	it('over-cap gate fires at the pitch step', async () => {
+		seedSpend(0.93); // read 0.95 fits; after read 0.94 + pitch 0.07 > $1.00 (0.05 would still fit)
+		const id = addSlot();
+		expect(await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: OBJECT }) })).toBe('needs_approval');
+		expect(paid().map((c) => c.kind)).toEqual(['read']);
+	});
+
+	it('over-cap gate fires at the identity step', async () => {
+		seedSpend(0.975); // read 0.995 fits; after read (0.02) 0.995 + identity 0.01 > $1.00
+		const id = addSlot();
+		expect(await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON, readCost: 0.02 }) })).toBe('needs_approval');
+		expect(paid().map((c) => c.kind)).toEqual(['read']);
+	});
+
+	it('a pitch with zero concepts fails the slot', async () => {
+		const id = addSlot();
+		expect(await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: OBJECT, concepts: { concepts: [] } }) })).toBe('failed');
+		expect(slotRow(id).note).toBe('pitch returned no concepts');
+		expect(paid().some((c) => c.kind === 'generate')).toBe(false);
+	});
+
+	it('a slot stuck running for 20 min is reclaimed and runs; one touched 1 min ago is left alone', async () => {
+		const stale = addSlot({ status: 'running' });
+		const live = addSlot({ rank: 2, title: 'Headless', submission: 2, status: 'running' });
+		const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+		db.prepare('UPDATE cover_podium_slots SET updated_at = ? WHERE id = ?').run(ago(20), stale);
+		db.prepare('UPDATE cover_podium_slots SET updated_at = ? WHERE id = ?').run(ago(1), live);
+		expect(await runSlot(db, roundId, live, CAP1, { fetchImpl: fakeFetch({}) })).toBe('running');
+		expect(slotRow(live).status).toBe('running');
+		// That call already reclaimed the stale slot of the same round.
+		expect(slotRow(stale)).toMatchObject({ status: 'pending', note: 'reclaimed after interrupted run' });
+		expect(await runSlot(db, roundId, stale, CAP1, { fetchImpl: fakeFetch({}) })).toBe('done');
+		expect(reclaimStaleSlots(db, roundId)).toBe(0);
+	});
+
+	it('heartbeats updated_at at each paid step', async () => {
+		const id = addSlot();
+		let t = Date.parse('2026-11-04T10:00:00Z');
+		const stamps: string[] = [];
+		const f = fakeFetch({});
+		const spy = (async (u: string | URL, i?: RequestInit) => { stamps.push(slotRow(id).updated_at); return f(u, i); }) as FetchLike;
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: spy, now: () => (t += 60_000) });
+		const paidStamps = stamps.slice(1); // first fetch is the album art
+		expect(new Set(paidStamps).size).toBe(paidStamps.length);
 	});
 
 	it('pause gate: slot stays pending, outcome paused, no calls', async () => {
