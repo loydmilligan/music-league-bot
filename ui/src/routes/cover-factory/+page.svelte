@@ -6,6 +6,9 @@
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import CoverPicker from '$lib/coverFactory/CoverPicker.svelte';
 	import SubjectCard from '$lib/coverFactory/SubjectCard.svelte';
+	import SubjectMarkup from '$lib/coverFactory/SubjectMarkup.svelte';
+	import ConceptPitches from '$lib/coverFactory/ConceptPitches.svelte';
+	import { boxPhrase, nextLetter, type Box } from '$lib/coverFactory/markup';
 	import VersionCard from '$lib/coverFactory/VersionCard.svelte';
 	import {
 		ApiFailure,
@@ -62,6 +65,9 @@
 	let copied = $state('');
 	let gifReady = $state(false);
 	let quickSlug = $state('');
+	// Subject markup: the selected subject label, and whether the next drag replaces its box.
+	let selLabel = $state<string | null>(null);
+	let redrawing = $state(false);
 
 	const leagues = $derived(home?.leagues ?? []);
 	const projects = $derived(home?.projects ?? []);
@@ -162,6 +168,8 @@
 		promptText = '';
 		promptEdited = false;
 		quickSlug = '';
+		selLabel = null;
+		redrawing = false;
 		notice = null;
 		loadingProject = true;
 		try {
@@ -181,6 +189,8 @@
 		ps = null;
 		bd = null;
 		tr = [];
+		selLabel = null;
+		redrawing = false;
 		notice = null;
 		replaceState('?', {});
 	}
@@ -198,6 +208,8 @@
 			const r = await cfPost<{ breakdown: Breakdown; treatments: Treatment[] }>({ action: 'read', projectId: project.id });
 			bd = plain(r.breakdown);
 			tr = syncTreatments(bd, plain(r.treatments));
+			selLabel = null;
+			redrawing = false;
 			await loadProject(project.id);
 			promptText = '';
 			promptEdited = false;
@@ -232,7 +244,73 @@
 		const t = tr.find((x) => x.label === oldLabel);
 		if (s) s.label = next;
 		if (t) t.label = next;
+		if (selLabel === oldLabel) selLabel = next;
 		void save();
+	}
+
+	function selectSubject(label: string, scroll = false) {
+		if (selLabel !== label) redrawing = false;
+		selLabel = label;
+		if (!scroll || !bd) return;
+		const i = bd.subjects.findIndex((s) => s.label === label);
+		if (i >= 0) document.getElementById(`cf-subject-${i}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+	}
+
+	/** A finished drag on the cover: redraw the selected subject's box, or add a new subject there. */
+	function drawBox(box: Box) {
+		if (!bd) return;
+		const sel = redrawing ? bd.subjects.find((s) => s.label === selLabel) : undefined;
+		if (sel) {
+			// Keep the reader's own position text; refresh only text this overlay wrote.
+			if (!sel.position.trim() || (sel.box && sel.position === boxPhrase(sel.box))) sel.position = boxPhrase(box);
+			sel.box = box;
+			redrawing = false;
+			void save();
+			return;
+		}
+		redrawing = false;
+		const label = nextLetter(bd.subjects.map((s) => s.label));
+		bd.subjects.push({
+			label, kind: 'person', role: 'secondary', position: boxPhrase(box), pose: '', gaze: '',
+			clothing: '', expression: '', color_treatment: '', focus: '', box,
+		});
+		bd.no_subjects = false;
+		tr.push({ label, mode: 'keep' });
+		void save();
+		selectSubject(label);
+		// The new card mounts on the next frame; then bring it into view.
+		requestAnimationFrame(() => selectSubject(label, true));
+	}
+
+	async function refreshStats() {
+		if (!ps) return;
+		const id = ps.project.id;
+		try {
+			const j = await cfGet<ProjectState>(`?project=${id}`);
+			if (ps && ps.project.id === id) ps.stats = j.stats;
+		} catch {
+			/* the spend line stays stale */
+		}
+	}
+
+	async function conceptApplied(r: { breakdown: Breakdown; treatments: Treatment[] }) {
+		bd = plain(r.breakdown);
+		tr = syncTreatments(bd, plain(r.treatments));
+		selLabel = null;
+		redrawing = false;
+		promptText = '';
+		promptEdited = false;
+		if (promptOpen) void loadPreview();
+		notice = { tone: 'health', text: 'Concept applied. Check the subjects below, then generate.' };
+	}
+
+	async function fetchIdeas(slug: string): Promise<string[]> {
+		if (!project) return [];
+		try {
+			return (await cfPost<{ ideas: string[] }>({ action: 'ideas', projectId: project.id, slug })).ideas;
+		} finally {
+			void refreshStats();
+		}
 	}
 
 	function addSubject() {
@@ -247,6 +325,7 @@
 		bd.no_subjects = false;
 		tr.push({ label, mode: 'keep' });
 		void save();
+		selectSubject(label);
 	}
 
 	function assign(scope: 'main' | 'all') {
@@ -537,10 +616,26 @@
 					</div>
 
 					<div class="grid lg:grid-cols-[260px_minmax(0,1fr)] gap-5 items-start">
-						<figure class="space-y-2 lg:sticky lg:top-4">
-							<img src={mediaUrl(project.cover_rel)} alt="Original cover: {project.title}" class="w-full aspect-square object-cover rounded-md border border-border bg-bg" />
-							<figcaption class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">Original</figcaption>
-						</figure>
+						{#if bd}
+							<div class="lg:sticky lg:top-4">
+								<SubjectMarkup
+									src={mediaUrl(project.cover_rel)}
+									alt="Original cover: {project.title}"
+									subjects={bd.subjects}
+									selected={selLabel}
+									{redrawing}
+									disabled={busy === 'read'}
+									onselect={(l) => selectSubject(l, true)}
+									ondraw={drawBox}
+									onredraw={(on) => (redrawing = on)}
+								/>
+							</div>
+						{:else}
+							<figure class="space-y-2 lg:sticky lg:top-4">
+								<img src={mediaUrl(project.cover_rel)} alt="Original cover: {project.title}" class="w-full aspect-square object-cover rounded-md border border-border bg-bg" />
+								<figcaption class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">Original</figcaption>
+							</figure>
+						{/if}
 
 						{#if !bd}
 							<div class="rounded-md border border-dashed border-border p-6 text-center space-y-3 min-h-60 grid place-items-center">
@@ -573,6 +668,16 @@
 										></textarea>
 									</label>
 								</div>
+
+								<ConceptPitches
+									projectId={project.id}
+									players={uniquePlayers}
+									submitterSlug={ps.submitter?.slug ?? null}
+									noSubjects={bd.no_subjects}
+									disabled={!!busy || paused}
+									onapplied={conceptApplied}
+									onspent={refreshStats}
+								/>
 
 								<div class="flex flex-wrap items-end justify-between gap-3 border-t border-border-muted pt-4">
 									<SectionLabel>Subjects ({bd.subjects.length})</SectionLabel>
@@ -608,10 +713,14 @@
 												bind:treatment={tr[i]}
 												{players}
 												index={i}
+												domId="cf-subject-{i}"
+												selected={bd.subjects[i].label === selLabel}
 												uploading={busy === `upload:${tr[i].playerSlug}`}
 												onchange={save}
 												onlabel={renameSubject}
 												onupload={uploadHeadshot}
+												onselect={() => selectSubject(bd!.subjects[i].label)}
+												onideas={fetchIdeas}
 											/>
 										{/if}
 									{/each}

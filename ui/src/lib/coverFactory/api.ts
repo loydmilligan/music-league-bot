@@ -1,8 +1,10 @@
 // Client-side helpers for the /cover-factory page. No server imports (types only).
 import type { Breakdown } from '$lib/server/coverFactory/breakdown';
 import type { Treatment } from '$lib/server/coverFactory/prompt';
+import type { Concept, ConceptMove } from '$lib/server/coverFactory/pitch';
 
-export type { Breakdown, Treatment };
+export type { Breakdown, Concept, ConceptMove, Treatment };
+export type Subject = Breakdown['subjects'][number];
 
 export interface Project {
 	id: number;
