@@ -22,8 +22,9 @@ const MB_GAP_MS = 1100;
 const MB_MAX_REQUESTS = 6;
 const MAX_GROUPS = 4;
 const MAX_ALTERNATES = 12;
-const MAX_CANDIDATES = 30;
+const PER_GROUP_CANDIDATES = 10;
 const HAMMING_LIMIT = 6;
+const HASH_CONCURRENCY = 6;
 const TTL_MS = 7 * 86400_000;
 const TIMEOUT_MS = 10_000;
 const BUSY_MESSAGE = 'MusicBrainz is busy right now. Try again in a minute.';
@@ -53,7 +54,7 @@ async function getJson(ctx: Ctx, url: string): Promise<any> {
 }
 
 function mbGet(ctx: Ctx, path: string, params: Record<string, string>): Promise<any> {
-	if (ctx.mbCount >= MB_MAX_REQUESTS) return Promise.reject(new Error('MusicBrainz request budget exhausted'));
+	if (ctx.mbCount >= MB_MAX_REQUESTS) return Promise.reject(new MusicBrainzBusy());
 	ctx.mbCount++;
 	const url = `${MB_BASE}${path}?${new URLSearchParams({ ...params, fmt: 'json' })}`;
 	const run = async () => {
@@ -109,12 +110,26 @@ interface Group { id: string; title: string; kind: string }
 
 async function groupsFromAlbum(ctx: Ctx, album: string, artist: string): Promise<Group[]> {
 	const j = await mbGet(ctx, 'release-group', { query: `releasegroup:"${album}" AND artist:"${artist}"`, limit: '5' });
-	return (j['release-groups'] ?? []).map((g: any): Group => ({ id: g.id, title: g.title, kind: g['primary-type'] ?? 'Release' }));
+	const want = normTitle(album);
+	return (j['release-groups'] ?? [])
+		.filter((g: any) => Number(g.score) >= 90 && looseMatch(normTitle(g.title ?? ''), want))
+		.map((g: any): Group => ({ id: g.id, title: g.title, kind: g['primary-type'] ?? 'Release' }));
+}
+
+function normTitle(s: string): string {
+	return s
+		.toLowerCase()
+		.replace(/[\(\[][^)\]]*[\)\]]/g, ' ')
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim();
+}
+function looseMatch(group: string, album: string): boolean {
+	return !!group && !!album && (group === album || group.startsWith(album));
 }
 
 async function groupsFromRecording(ctx: Ctx, title: string, artist: string): Promise<Group[]> {
 	const j = await mbGet(ctx, 'recording', { query: `recording:"${title}" AND artist:"${artist}" AND status:official`, limit: '25' });
-	const tally = new Map<string, { g: Group; n: number; live: boolean; preferred: boolean }>();
+	const tally = new Map<string, { g: Group; n: number; live: boolean; plain: boolean; preferred: boolean }>();
 	for (const rec of j.recordings ?? []) {
 		for (const rel of rec.releases ?? []) {
 			const rg = rel['release-group'];
@@ -124,6 +139,7 @@ async function groupsFromRecording(ctx: Ctx, title: string, artist: string): Pro
 				g: { id: rg.id, title: rg.title ?? rel.title ?? '', kind },
 				n: 0,
 				live: (rg['secondary-types'] ?? []).includes('Live'),
+				plain: !(rg['secondary-types'] ?? []).length,
 				preferred: ['Album', 'Single', 'EP'].includes(kind),
 			};
 			e.n++;
@@ -133,8 +149,25 @@ async function groupsFromRecording(ctx: Ctx, title: string, artist: string): Pro
 	const all = [...tally.values()];
 	let pool = all.filter((e) => !e.live);
 	if (!pool.length) pool = all;
-	pool.sort((a, b) => Number(b.preferred) - Number(a.preferred) || b.n - a.n);
+	const rank = (e: { g: Group; preferred: boolean; plain: boolean }) => (e.g.kind === 'Single' || e.g.kind === 'EP' ? 0 : e.preferred && e.plain ? 1 : 2);
+	pool.sort((a, b) => rank(a) - rank(b) || b.n - a.n);
 	return pool.map((e) => e.g);
+}
+
+function byDate(a: Candidate, b: Candidate): number {
+	const da = a.rel.date || '9999', db = b.rel.date || '9999';
+	return da < db ? -1 : da > db ? 1 : 0;
+}
+
+function makeLimiter(max: number) {
+	let active = 0;
+	const queue: (() => void)[] = [];
+	const next = () => { active--; queue.shift()?.(); };
+	return <T>(fn: () => Promise<T>): Promise<T> =>
+		new Promise<T>((resolve, reject) => {
+			const run = () => { active++; fn().then(resolve, reject).finally(next); };
+			if (active < max) run(); else queue.push(run);
+		});
 }
 
 interface Candidate { rel: any; group: Group }
@@ -183,35 +216,39 @@ export async function findAlternateCovers(
 	if (cached) return { alternates: cached, message: cached.length ? null : EMPTY_MESSAGE };
 
 	try {
-		let groups: Group[] = [];
-		if (album) groups = await groupsFromAlbum(ctx, album, artist);
-		if (!groups.length) groups = await groupsFromRecording(ctx, title, artist);
-		groups = groups.slice(0, MAX_GROUPS);
+		const albumGroups = album ? await groupsFromAlbum(ctx, album, artist) : [];
+		const recGroups = await groupsFromRecording(ctx, title, artist);
+		const seen = new Set<string>();
+		const groups = [...albumGroups, ...recGroups].filter((g) => !seen.has(g.id) && seen.add(g.id)).slice(0, MAX_GROUPS);
 
+		// Thumbnails are fetched + hashed as soon as each browse returns, overlapping the 1.1 s
+		// MusicBrainz spacing; the dedupe below still runs in date order so results are deterministic.
+		const limiter = makeLimiter(HASH_CONCURRENCY);
+		const hashes = new Map<string, Promise<string | null>>();
 		const candidates: Candidate[] = [];
 		for (const group of groups) {
 			const j = await mbGet(ctx, 'release', { 'release-group': group.id, limit: '50' });
-			for (const rel of j.releases ?? []) {
-				if (rel?.id && rel['cover-art-archive']?.front === true) candidates.push({ rel, group });
+			const mine: Candidate[] = (j.releases ?? [])
+				.filter((rel: any) => rel?.id && rel['cover-art-archive']?.front === true)
+				.map((rel: any) => ({ rel, group }));
+			mine.sort(byDate);
+			for (const c of mine.slice(0, PER_GROUP_CANDIDATES)) {
+				candidates.push(c);
+				const url = toAlt(c).thumbUrl;
+				hashes.set(c.rel.id, limiter(async () => {
+					try { return await averageHash(await fetchCoverBytes(url, ctx.fetchImpl)); } catch { return null; }
+				}));
 			}
 		}
-		candidates.sort((a, b) => {
-			const da = a.rel.date || '9999', db_ = b.rel.date || '9999';
-			return da < db_ ? -1 : da > db_ ? 1 : 0;
-		});
+		candidates.sort(byDate);
 
 		const kept: { alt: AltCover; hash: string }[] = [];
-		for (const c of candidates.slice(0, MAX_CANDIDATES)) {
+		for (const c of candidates) {
 			if (kept.length >= MAX_ALTERNATES) break;
-			const alt = toAlt(c);
-			let hash: string;
-			try {
-				hash = await averageHash(await fetchCoverBytes(alt.thumbUrl, ctx.fetchImpl));
-			} catch {
-				continue;
-			}
+			const hash = await hashes.get(c.rel.id)!;
+			if (!hash) continue;
 			if (kept.some((k) => hamming(k.hash, hash) <= HAMMING_LIMIT)) continue;
-			kept.push({ alt, hash });
+			kept.push({ alt: toAlt(c), hash });
 		}
 
 		const alternates = kept.map((k) => k.alt);

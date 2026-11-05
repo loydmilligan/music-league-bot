@@ -42,7 +42,7 @@ async function harness(opts: { mbStatus?: number; noGroups?: boolean } = {}): Pr
 		}
 		if (url.startsWith('https://coverartarchive.org/release/')) {
 			const n = Number(/rel-(\d)/.exec(url)![1]);
-			return new Response(n % 2 === 0 ? a : b, { status: 200, headers: { 'content-type': 'image/png' } });
+			return new Response(new Uint8Array(n % 2 === 0 ? a : b), { status: 200, headers: { 'content-type': 'image/png' } });
 		}
 		return new Response('nope', { status: 404 });
 	};
@@ -121,5 +121,92 @@ describe('findAlternateCovers', () => {
 		expect(q).toContain('recording:"Juicy"');
 		expect(q).not.toMatch(/Remaster/i);
 		expect(q).toContain('status:official');
+	});
+});
+
+async function bits(k: number): Promise<Buffer> {
+	const raw = Buffer.alloc(64 * 3);
+	for (let i = 0; i < k; i++) raw.fill(255, i * 3, i * 3 + 3);
+	return sharp(raw, { raw: { width: 8, height: 8, channels: 3 } }).png().toBuffer();
+}
+
+function custom(o: {
+	albumGroups?: any[]; recordings?: any[]; releases: Record<string, any[]>;
+	thumb: (mbid: string) => Promise<Buffer | null>;
+}) {
+	const clock = { t: 5_000_000 };
+	const calls: string[] = [];
+	const fetchImpl = async (u: string | URL) => {
+		const url = String(u);
+		calls.push(url);
+		if (url.includes('/release-group?query=')) return json({ 'release-groups': o.albumGroups ?? [] });
+		if (url.includes('/recording?query=')) return json({ recordings: o.recordings ?? [] });
+		const m = /release\?release-group=([^&]+)/.exec(url);
+		if (m) return json({ releases: o.releases[m[1]] ?? [] });
+		const t = /release\/([^/]+)\/front-250/.exec(url);
+		if (t) {
+			const b = await o.thumb(t[1]);
+			return b ? new Response(new Uint8Array(b), { status: 200, headers: { 'content-type': 'image/png' } }) : new Response('x', { status: 404 });
+		}
+		return new Response('nope', { status: 404 });
+	};
+	return { calls, opts: { fetchImpl, now: () => clock.t, sleep: async (ms: number) => { clock.t += ms; } } };
+}
+const rel = (id: string, date: string) => ({ id, date, country: 'US', 'cover-art-archive': { front: true } });
+
+describe('findAlternateCovers edge cases', () => {
+	it('a CAA thumbnail 404 skips only that candidate', async () => {
+		const [a, b] = [await bits(5), await bits(40)];
+		const h = custom({
+			albumGroups: [{ id: 'g', title: 'Alb', 'primary-type': 'Album', score: 100 }],
+			releases: { g: [rel('r1', '2000'), rel('r2', '2001'), rel('r3', '2002')] },
+			thumb: async (id) => (id === 'r2' ? null : id === 'r1' ? a : b),
+		});
+		const r = await findAlternateCovers(db, { title: 't', artist: 'a', album: 'Alb' }, h.opts);
+		expect(r.alternates.map((x) => x.releaseMbid)).toEqual(['r1', 'r3']);
+	});
+
+	it('Hamming distance 6 is a duplicate, 7 is distinct', async () => {
+		const [base, d6, d7] = [await bits(10), await bits(16), await bits(17)];
+		const h = custom({
+			albumGroups: [{ id: 'g', title: 'Alb', 'primary-type': 'Album', score: 100 }],
+			releases: { g: [rel('base', '2000'), rel('d6', '2001'), rel('d7', '2002')] },
+			thumb: async (id) => (id === 'base' ? base : id === 'd6' ? d6 : d7),
+		});
+		const r = await findAlternateCovers(db, { title: 't', artist: 'a', album: 'Alb' }, h.opts);
+		expect(r.alternates.map((x) => x.releaseMbid)).toEqual(['base', 'd7']);
+	});
+
+	it('a low-score album group is not browsed', async () => {
+		const h = custom({
+			albumGroups: [
+				{ id: 'lo', title: 'Alb', 'primary-type': 'Album', score: 60 },
+				{ id: 'other', title: 'Totally Different', 'primary-type': 'Album', score: 100 },
+			],
+			releases: { lo: [rel('x', '2000')], other: [rel('y', '2000')] },
+			thumb: async () => bits(20),
+		});
+		const r = await findAlternateCovers(db, { title: 't', artist: 'a', album: 'Alb' }, h.opts);
+		expect(h.calls.some((c) => c.includes('release-group=lo'))).toBe(false);
+		expect(h.calls.some((c) => c.includes('release-group=other'))).toBe(false);
+		expect(r.alternates).toEqual([]);
+	});
+
+	it('merges the album group first, then a Single group from the recording search', async () => {
+		const [a, b] = [await bits(5), await bits(40)];
+		const h = custom({
+			albumGroups: [{ id: 'alb', title: 'Ready to Die (Deluxe Edition)', 'primary-type': 'Album', score: 100 }],
+			recordings: [{ releases: [
+				{ title: 'Ready to Die', 'release-group': { id: 'alb', 'primary-type': 'Album' } },
+				{ title: 'Juicy', 'release-group': { id: 'sing', title: 'Juicy', 'primary-type': 'Single' } },
+				{ title: 'Live', 'release-group': { id: 'live', 'primary-type': 'Album', 'secondary-types': ['Live'] } },
+			] }],
+			releases: { alb: [rel('ra', '1994')], sing: [rel('rs', '1994-08')], live: [rel('rl', '2000')] },
+			thumb: async (id) => (id === 'ra' ? a : b),
+		});
+		const r = await findAlternateCovers(db, { title: 'Juicy', artist: 'B', album: 'Ready to Die' }, h.opts);
+		expect(r.alternates.map((x) => [x.releaseMbid, x.kind])).toEqual([['ra', 'Album'], ['rs', 'Single']]);
+		expect(h.calls.some((c) => c.includes('release-group=live'))).toBe(false);
+		expect(h.calls.filter((c) => c.includes('musicbrainz.org')).length).toBeLessThanOrEqual(6);
 	});
 });
