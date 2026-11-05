@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { ProviderError } from '../avatarFactory/errors.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 import { PAUSED_MESSAGE, assertGenerationAllowed } from '../avatarFactory/pause.js';
+import { normTitle } from '../../digest/llm.js';
 import { normalizeBreakdown } from './breakdown.js';
 import { generateVersion } from './generate.js';
 import { loadHeadshot } from './inputs.js';
@@ -169,22 +170,30 @@ async function work(
 
 	// 1. Project: reuse the slot's (a resumed run), else create from the round submission and link it now.
 	let project = slot.project_id != null ? getProject(db, slot.project_id) : null;
+	let reused = false;
 	if (!project) {
-		project = await createRoundProject(db, roundId, slot.submission_id, fetchImpl);
+		// An operator's own project for this round + song (keeper preferred) beats a new one.
+		project = findManualProject(db, roundId, slot.submission_id);
+		reused = project != null;
+		project ??= await createRoundProject(db, roundId, slot.submission_id, fetchImpl);
 		db.prepare('UPDATE cover_podium_slots SET project_id = ?, updated_at = ? WHERE id = ?').run(project.id, stamp(), slotId);
 	}
 	const projectId = project.id;
 	const fresh = () => getProject(db, projectId)!;
 
-	// 2. The submitter goes in: no usable headshot → fail before spending anything.
-	const submitter = submitterFor(db, project);
-	if (!submitter) throw new Stop('failed', 'no submitter for this song');
-	const player = playersFor(project).find((p) => p.slug === submitter.slug);
-	if (!player || !(await loadHeadshot(projectId, player))) throw new Stop('failed', `no headshot for ${submitter.name}`);
-
 	let keeper = keeperOf(db, project);
+	const manualKeeper = reused && keeper != null; // an existing manual keeper needs no submitter / headshot
+	if (!manualKeeper) {
+		// 2. The submitter goes in: no usable headshot → fail before spending anything.
+		const submitter = submitterFor(db, project);
+		if (!submitter) throw new Stop('failed', 'no submitter for this song');
+		const player = playersFor(project).find((p) => p.slug === submitter.slug);
+		if (!player || !(await loadHeadshot(projectId, player))) throw new Stop('failed', `no headshot for ${submitter.name}`);
+	}
+
 	let keptOperator = false;
 	if (!keeper) {
+		const submitter = submitterFor(db, project)!;
 		// 3. Read, then plan.
 		if (!project.breakdown_json) {
 			gate('read');
@@ -237,7 +246,9 @@ async function work(
 
 	// 5. Pre-render the private wipe GIF once (never overwrite) and point the draft at it.
 	let gifRel: string | null = null;
-	let note = keptOperator
+	let note = manualKeeper
+		? 'manual keeper kept'
+		: keptOperator
 		? 'operator keeper kept'
 		: `auto: try ${keeper.try_no} via ${keeper.provider}${keeper.provider === 'fal' ? ' fallback' : ''}`;
 	try {
@@ -245,8 +256,29 @@ async function work(
 	} catch (e) {
 		note += ` (GIF pre-render failed: ${reasonOf(e)})`;
 	}
-	db.prepare(`UPDATE cover_podium_slots SET status = 'done', gif_rel = ?, note = ?, updated_at = ? WHERE id = ?`).run(gifRel, note, stamp(), slotId);
+	// Guarded: the GIF was rendered for this project's keeper. If the operator relinked the slot or changed
+	// the keeper meanwhile, leave the slot exactly as they set it.
+	db.prepare(
+		`UPDATE cover_podium_slots SET status = 'done', gif_rel = ?, note = ?, updated_at = ?
+		 WHERE id = ? AND project_id = ? AND (SELECT keeper_version_id FROM cover_projects WHERE id = ?) = ?`,
+	).run(gifRel, note, stamp(), slotId, projectId, projectId, keeper.id);
 	writePodiumCover(db, roundId);
+}
+
+/** The round's existing project for the same song as the submission (spotify_uri or normalized title); keeper first, then newest. */
+function findManualProject(db: DB, roundId: number, submissionId: number): CoverProject | null {
+	const sub = db.prepare('SELECT spotify_uri, title FROM ml_submissions WHERE id = ?').get(submissionId) as
+		| { spotify_uri: string | null; title: string }
+		| undefined;
+	if (!sub) return null;
+	const want = normTitle(sub.title);
+	const rows = db.prepare('SELECT id FROM cover_projects WHERE round_id = ? ORDER BY (keeper_version_id IS NOT NULL) DESC, id DESC').all(roundId) as { id: number }[];
+	for (const { id } of rows) {
+		const p = getProject(db, id)!;
+		const same = (sub.spotify_uri && p.spotify_uri === sub.spotify_uri) || (want !== '' && normTitle(p.song_title ?? '') === want);
+		if (same) return p;
+	}
+	return null;
 }
 
 function keeperOf(db: DB, project: CoverProject): CoverVersion | null {
