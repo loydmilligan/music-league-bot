@@ -9,6 +9,7 @@
 		selected = null,
 		redrawing = false,
 		disabled = false,
+		caption = 'Original',
 		onselect,
 		ondraw,
 		onredraw,
@@ -16,6 +17,7 @@
 		src: string;
 		alt: string;
 		subjects: Subject[];
+		caption?: string;
 		selected?: string | null;
 		redrawing?: boolean;
 		disabled?: boolean;
@@ -110,7 +112,7 @@
 		</div>
 
 		<figcaption class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-			<span class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">Original</span>
+			<span class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">{caption}</span>
 			<span class="text-[11px] text-fg-dim">{redrawing ? `Drag on the cover to redraw ${selected}` : 'Click a box to select · drag to add'}</span>
 		</figcaption>
 	</figure>

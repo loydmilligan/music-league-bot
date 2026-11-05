@@ -2,8 +2,9 @@
 import type { Breakdown } from '$lib/server/coverFactory/breakdown';
 import type { Treatment } from '$lib/server/coverFactory/prompt';
 import type { Concept, ConceptMove } from '$lib/server/coverFactory/pitch';
+import type { AltCover } from '$lib/server/coverFactory/alternates';
 
-export type { Breakdown, Concept, ConceptMove, Treatment };
+export type { AltCover, Breakdown, Concept, ConceptMove, Treatment };
 export type Subject = Breakdown['subjects'][number];
 
 export interface Project {
@@ -13,6 +14,11 @@ export interface Project {
 	round_id: number | null;
 	league_slug: string | null;
 	cover_rel: string;
+	/** Set once an alternate edition has replaced the cover; the cover to go back to. */
+	original_cover_rel: string | null;
+	song_title: string | null;
+	song_artist: string | null;
+	song_album: string | null;
 	keeper_version_id: number | null;
 	share_dir: string | null;
 	share_version_id: number | null;
@@ -69,6 +75,19 @@ export interface ProjectState {
 	players: Player[];
 	submitter: { slug: string; name: string } | null;
 }
+export interface AlternatesResult {
+	alternates: AltCover[];
+	/** MusicBrainz busy / no match; null when the list is good. */
+	message: string | null;
+	/** The alternate the current cover came from; null on the original. */
+	currentId: string | null;
+}
+
+/** An alternate's id is its MusicBrainz release id: its Cover Art Archive thumbnail is derivable. */
+export function altThumbUrl(id: string): string {
+	return `https://coverartarchive.org/release/${encodeURIComponent(id)}/front-250`;
+}
+
 export interface RoundSong {
 	submissionId: number;
 	title: string;

@@ -94,14 +94,36 @@ describe('alternates action', () => {
 		const up = createProject(db, { title: 'u', source: 'upload', round_id: null, spotify_uri: null, league_slug: null, cover_rel: 'covers/p.png', cover_url: null });
 		await rejects400(runAction(db, { action: 'alternates', projectId: up.id }), /search for the song/i);
 	});
-	it('stores the shown list under project:<id> and q overrides the terms', async () => {
+	const stored = () => JSON.parse((db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(`project:${pid}`) as { json: string }).json);
+	it('q overrides the terms; a no-match result keeps the previously shown list', async () => {
+		seed(pid);
 		const mb = vi.fn();
 		vi.stubGlobal('fetch', async (u: string | URL) => { mb(String(u)); return new Response(JSON.stringify({ 'release-groups': [], recordings: [] }), { status: 200 }); });
 		const r = (await runAction(db, { action: 'alternates', projectId: pid, q: 'Juicy — Notorious B.I.G.' })) as { alternates: unknown[]; message: string | null };
 		expect(r.alternates).toEqual([]);
+		expect(r.message).toMatch(/no alternate/i);
 		expect(decodeURIComponent(mb.mock.calls.map((c) => c[0]).join(' '))).toContain('recording:"Juicy"');
-		const row = db.prepare("SELECT json FROM cover_alt_cache WHERE key = ?").get(`project:${pid}`) as { json: string };
-		expect(JSON.parse(row.json)).toEqual([]);
+		expect(stored().map((a: { id: string }) => a.id)).toEqual(['rel-1', 'rel-2']);
+	});
+	it('a busy MusicBrainz keeps the previously shown list', async () => {
+		seed(pid);
+		vi.stubGlobal('fetch', async () => new Response('slow down', { status: 503 }));
+		const r = (await runAction(db, { action: 'alternates', projectId: pid })) as { alternates: unknown[]; message: string | null };
+		expect(r.message).toMatch(/busy/i);
+		expect(stored().map((a: { id: string }) => a.id)).toEqual(['rel-1', 'rel-2']);
+	});
+	it('a found list replaces the stored one and reports which alternate is the current cover', async () => {
+		const key = 'alt:nofx|linoleum|punk in drublic';
+		db.prepare('INSERT INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)').run(key, JSON.stringify([ALTS[1]]), new Date().toISOString());
+		seed(pid);
+		await runAction(db, { action: 'use-alternate', projectId: pid, alternateId: 'rel-2' });
+		const r = (await runAction(db, { action: 'alternates', projectId: pid })) as { alternates: { id: string }[]; currentId: string | null };
+		expect(r.alternates.map((a) => a.id)).toEqual(['rel-2']);
+		expect(r.currentId).toBe('rel-2');
+		expect(stored().map((a: { id: string }) => a.id)).toEqual(['rel-2']);
+		await runAction(db, { action: 'restore-original', projectId: pid });
+		const r2 = (await runAction(db, { action: 'alternates', projectId: pid })) as { currentId: string | null };
+		expect(r2.currentId).toBeNull();
 	});
 });
 

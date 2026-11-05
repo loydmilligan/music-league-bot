@@ -374,13 +374,26 @@ async function actAlternates(db: DB, b: Record<string, unknown>) {
 	}
 	if (!terms) return bad('search for the song');
 	const found = await findAlternateCovers(db, terms);
-	storeProjectAlternates(db, project.id, found.alternates);
-	return found;
+	// A busy / no-match answer must not wipe the list the user last saw (use-alternate validates against it).
+	if (!found.message) storeProjectAlternates(db, project.id, found.alternates);
+	return { ...found, currentId: currentAlternateId(db, project) };
+}
+
+const currentKey = (projectId: number) => `current:${projectId}`;
+
+/** Which alternate the project's cover came from (null on the original cover). */
+function currentAlternateId(db: DB, project: CoverProject): string | null {
+	if (!project.original_cover_rel || project.cover_rel === project.original_cover_rel) return null;
+	const row = db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(currentKey(project.id)) as { json: string } | undefined;
+	return row ? (parseJson<string | null>(row.json, null)) : null;
 }
 
 /** Download the chosen edition as a new cover file and reset everything derived from the old cover. */
-async function switchCover(db: DB, project: CoverProject, url: string, original: string | null) {
-	const rel = await saveCoverUpload(await fetchCover(url));
+async function switchCover(db: DB, project: CoverProject, alt: AltCover) {
+	const rel = await saveCoverUpload(await fetchCover(alt.fullUrl));
+	const original = project.original_cover_rel ?? project.cover_rel;
+	db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
+		.run(currentKey(project.id), JSON.stringify(alt.id), new Date().toISOString());
 	return updateProject(db, project.id, {
 		cover_rel: rel,
 		original_cover_rel: original,
@@ -398,12 +411,13 @@ function pickAlternate(db: DB, project: CoverProject, id: unknown): AltCover {
 async function actUseAlternate(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
 	const alt = pickAlternate(db, project, b.alternateId);
-	return { project: await switchCover(db, project, alt.fullUrl, project.original_cover_rel ?? project.cover_rel) };
+	return { project: await switchCover(db, project, alt) };
 }
 
 async function actRestoreOriginal(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
 	if (!project.original_cover_rel) bad('no original cover to restore');
+	db.prepare('DELETE FROM cover_alt_cache WHERE key = ?').run(currentKey(project.id));
 	return {
 		project: updateProject(db, project.id, {
 			cover_rel: project.original_cover_rel!,
@@ -422,7 +436,7 @@ async function actApplyConcept(db: DB, b: Record<string, unknown>) {
 	if (c.move === 'alternate') {
 		// Free: no model call. The new cover needs a fresh read before anything can be generated.
 		const alt = pickAlternate(db, project, c.alternateId);
-		const updated = await switchCover(db, project, alt.fullUrl, project.original_cover_rel ?? project.cover_rel);
+		const updated = await switchCover(db, project, alt);
 		return { project: updated, needsRead: true, breakdown: null, treatments: [] };
 	}
 	const breakdown = breakdownOf(project);
