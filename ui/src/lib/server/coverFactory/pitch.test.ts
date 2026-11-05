@@ -27,6 +27,7 @@ import { COVER_JOB_KEYS } from './models.js';
 import { coverFile } from './paths.js';
 import { applyConcept, pitchConcepts, playerIdeas, PITCH_PROMPT, type Concept } from './pitch.js';
 import type { Breakdown } from './breakdown.js';
+import { buildSwapPrompt } from './prompt.js';
 import type { FetchLike } from '../avatarFactory/openrouter.js';
 
 const db = openLeagueDb(':memory:');
@@ -131,14 +132,42 @@ describe('pitchConcepts', () => {
 					treatments: [
 						{ label: 'A', mode: 'player', playerSlug: 'shane' },
 						{ label: 'A', mode: 'player', playerSlug: 'stranger' },
-						{ label: 'Q', mode: 'player', playerSlug: 'shane' },
+						{ label: 'Q', mode: 'keep', notes: 'unknown label, not a player target' },
 					], addSubjects: [] },
+				{ move: 'recast', title: 'Keeps only', plan: 'A hat on the cube',
+					treatments: [{ label: 'A', mode: 'keep', notes: 'add a hat' }, { label: 'N1', mode: 'keep', notes: 'a hat' }],
+					addSubjects: [{ label: 'N1', kind: 'object', position: 'top' }] },
 			],
 		});
 		const cs = await pitchConcepts(db, pid, { playerSlugs: ['shane'], fetchImpl: f });
 		expect(cs).toHaveLength(1);
 		expect(cs[0].move).toBe('morph');
 		expect(cs[0].treatments).toEqual([{ label: 'A', mode: 'player', playerSlug: 'shane', playerName: 'Shane Smith' }]);
+	});
+
+	it('repairs a no-subject pitch: unknown player label becomes an added subject; props get a keep note; prompt adds both', async () => {
+		updateProject(db, pid, { breakdown_json: JSON.stringify({ ...BREAKDOWN, subjects: [], no_subjects: true }) });
+		// Live shape (Pays imaginaire): treatment aimed at "A" = the sun, which the reader never listed; plus an untreated prop.
+		const { f, calls } = fakeFetch({
+			concepts: [{ move: 'morph', title: 'Sun Shane', plan: "Shane's face as the setting sun",
+				treatments: [{ label: 'A', mode: 'player', playerSlug: 'shane', notes: 'the setting sun, upper left, is his squinting face' }],
+				addSubjects: [{ label: 'N1', kind: 'object', role: 'secondary', position: 'bottom right', pose: 'a sourdough jar on the sand', box: [0.7, 0.7, 0.2, 0.2] }] }],
+		});
+		const cs = await pitchConcepts(db, pid, { playerSlugs: ['shane'], fetchImpl: f });
+		expect(calls[0].messages[0].content[0].text).toContain('EXISTING SUBJECTS are exactly: none');
+		expect(cs).toHaveLength(1);
+		const c = cs[0];
+		expect(c.addSubjects.map((s) => [s.label, s.kind])).toEqual([['N1', 'object'], ['N2', 'object']]);
+		expect(c.addSubjects[1].position).toBe('the setting sun, upper left, is his squinting face');
+		expect(c.treatments).toContainEqual(expect.objectContaining({ label: 'N2', mode: 'player', playerSlug: 'shane' }));
+		expect(c.treatments).toContainEqual({ label: 'N1', mode: 'keep', notes: 'a sourdough jar on the sand' });
+
+		const empty: Breakdown = { ...BREAKDOWN, subjects: [], no_subjects: true };
+		const applied = applyConcept(empty, [], c);
+		const { prompt, imageOrder } = buildSwapPrompt(applied.breakdown, applied.treatments, [{ slug: 'shane', name: 'Shane Smith', features: 'round face' }]);
+		expect(imageOrder).toEqual(['cover', 'shane']);
+		expect(prompt).toMatch(/Subject B \(the setting sun.*becomes the person in image 2 \(Shane Smith\)/);
+		expect(prompt).toMatch(/Add object at bottom right, occupying roughly the right-bottom .*: a sourdough jar on the sand, rendered in the cover's style\./);
 	});
 
 	it('sends no image to a text-only pitch model', async () => {

@@ -69,6 +69,12 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	return p;
 }
 
+function addParagraph(s: Subject, notes?: string): string {
+	const where = s.box ? `${s.position || 'the frame'}, ${placementPhrase(s.box)}` : s.position || 'a natural spot in the composition';
+	const desc = notes?.trim() || [s.pose, s.clothing, s.expression, s.color_treatment].filter((x) => x.trim()).join(', ') || `a ${s.kind}`;
+	return `Add ${s.kind} at ${where}: ${desc}, rendered in the cover's style.`;
+}
+
 export function buildSwapPrompt(b: Breakdown, treatments: Treatment[], ids: Identity[]): { prompt: string; imageOrder: string[] } {
 	const imageOrder = ['cover'];
 	const byLabel = new Map(treatments.map((t) => [t.label, t]));
@@ -85,6 +91,11 @@ export function buildSwapPrompt(b: Breakdown, treatments: Treatment[], ids: Iden
 	];
 	for (const s of b.subjects) {
 		const t = byLabel.get(s.label);
+		if (s.conceptId && (!t || t.mode === 'keep')) {
+			// A prop added by a concept pitch is not on the original cover, so "keep" must still add it.
+			lines.push(addParagraph(s, t?.notes));
+			continue;
+		}
 		if (!t || t.mode === 'keep') continue;
 		if (t.mode === 'remove') { lines.push(`Remove subject ${s.label} and fill naturally.`); continue; }
 		const id = ids.find((i) => i.slug === t.playerSlug);

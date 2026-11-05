@@ -140,3 +140,20 @@ describe('placement text', () => {
 		expect(buildSwapPrompt(bd([subj('A', 'main')]), t, ids).prompt).not.toContain('occupying roughly');
 	});
 });
+
+describe('concept props', () => {
+	const b = (subjects: Subject[]): Breakdown => ({ style: 's', composition: 'c', palette_lighting: 'p', text_elements: [], subjects, no_subjects: false });
+	it('adds concept props (keep with notes, or untreated) and leaves plain keep subjects out', () => {
+		const plain = { ...subj('A', 'secondary', 'object'), pose: 'a lamp' };
+		const prop = { ...subj('B', 'secondary', 'object'), position: 'bottom left', conceptId: 'c1', box: [0, 0.7, 0.2, 0.2] as [number, number, number, number] };
+		const bare = { ...subj('C', 'background', 'animal'), position: 'top', pose: 'a crow', conceptId: 'c1' };
+		const { prompt } = buildSwapPrompt(b([plain, prop, bare]), [
+			{ label: 'A', mode: 'keep', notes: 'ignored' },
+			{ label: 'B', mode: 'keep', notes: 'a jar of sourdough starter' },
+		], []);
+		expect(prompt).toContain("Add object at bottom left, occupying roughly the left-bottom of the frame (x 0–20%, y 70–90%): a jar of sourdough starter, rendered in the cover's style.");
+		expect(prompt).toMatch(/Add animal at top: a crow/);
+		expect(prompt).not.toContain('ignored');
+		expect(prompt).not.toMatch(/Add object at pos A/);
+	});
+});

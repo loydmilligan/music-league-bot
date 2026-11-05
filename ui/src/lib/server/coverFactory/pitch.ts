@@ -59,10 +59,15 @@ OUTPUT: return ONLY JSON:
  "treatments":[{"label":"A","mode":"player|keep|remove","playerSlug":"...","clothing":"...","poseGaze":"...","notes":"..."}],
  "addSubjects":[{"label":"N1","kind":"person|animal|object","role":"main|secondary|background","position":"...","pose":"...","gaze":"...","clothing":"...","expression":"...","color_treatment":"...","focus":"sharp|soft|blurred","box":[x,y,w,h]}]}]}
 JSON rules:
-- "treatments" refer to existing subjects by their breakdown label (A, B, ...) or to subjects you add as "N1", "N2", ... in "addSubjects" order. Only list subjects the plan changes; everything else is kept.
-- mode "player" puts a player into that subject: "playerSlug" must be one of the slugs listed below; say what the image model must do in "notes" (plus "clothing" / "poseGaze" when they change). An object or animal can take mode "player" too: that is how a morph works (the notes say how it becomes the player).
-- mode "remove" deletes a subject; "keep" leaves it as it is.
-- "addSubjects" lists things the plan must introduce that are not on the cover (the player's figure, a prop). Describe each in the cover's style and give a "box" ([x, y, width, height] as fractions 0-1 of the image, top-left origin) when you can place it. Leave it empty when the plan only changes existing subjects.`;
+- "treatments" may target ONLY the existing subjects listed under EXISTING SUBJECTS below (by their label) or subjects you add in "addSubjects" (labels "N1", "N2", ... in order). Never target a label that is not in one of those two lists.
+- To use anything else on the cover that is not an existing subject (an object, the sun, a building, a shape) or to introduce something new (the player's figure, a prop), put it in "addSubjects" with a provisional label N1, N2, ... ("kind" object|person|animal, "position", and "box" [x, y, width, height] as fractions 0-1 of the image, top-left origin, when you can place it) and target that label.
+- Every concept MUST contain at least one treatment with mode "player" for one of the listed players ("playerSlug" must be one of the slugs below). Say what the image model must do in "notes" (plus "clothing" / "poseGaze" when they change). An object or animal can take mode "player": that is how a morph works (the notes say how it becomes the player).
+- mode "remove" deletes a subject; "keep" leaves it as it is. A prop you add that is not the player gets a "keep" treatment whose "notes" describe it.
+- Only list subjects the plan changes; everything else is kept.
+Example concept for a cover with no existing subjects:
+{"move":"morph","title":"Sun Face","plan":"The setting sun is Matt's face, squinting",
+ "addSubjects":[{"label":"N1","kind":"object","role":"main","position":"the setting sun, upper left","box":[0.05,0.05,0.3,0.3]}],
+ "treatments":[{"label":"N1","mode":"player","playerSlug":"matt","notes":"the sun is Matt's face, squinting into the haze, same glow and colors as the sun"}]}`;
 
 const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 
@@ -84,6 +89,8 @@ function buildPrompt(b: Breakdown, players: { slug: string; name: string; profil
 		'',
 		'PLAYERS:',
 		who,
+		'',
+		`EXISTING SUBJECTS are exactly: ${b.subjects.length ? b.subjects.map((x) => `${x.label} (${x.kind}, ${x.position || 'unplaced'})`).join('; ') : 'none'}. Anything else goes in addSubjects.`,
 		'',
 		'COVER BREAKDOWN (image 1):',
 		JSON.stringify(b),
@@ -152,9 +159,34 @@ function cleanConcepts(raw: unknown, b: Breakdown, names: Map<string, string>, c
 			delete s.conceptId;
 		});
 		const valid = new Set([...existing, ...adds.map((s) => s.label)]);
-		const treatments = (Array.isArray(c.treatments) ? c.treatments : [])
+		// Repair: a player treatment aimed at a label that is neither existing nor provisional (live: "A" meaning
+		// the sun on a cover whose breakdown had no subjects) becomes a synthesized added object subject.
+		const synth = new Map<string, string>();
+		const rawTs = (Array.isArray(c.treatments) ? c.treatments : []).map((t) => {
+			if (!t || typeof t !== 'object') return t;
+			const o = t as Record<string, unknown>;
+			const given = str(o.label);
+			const label = remap.get(given) ?? given;
+			if (!given || valid.has(label) || o.mode !== 'player' || !names.has(str(o.playerSlug))) return t;
+			let prov = synth.get(given);
+			if (!prov) {
+				prov = `N${adds.length + 1}`;
+				synth.set(given, prov);
+				adds.push(normalizeBreakdown({ subjects: [{ label: prov, kind: 'object', role: 'main', position: str(o.notes) || plan }] }).subjects[0]);
+				valid.add(prov);
+			}
+			return { ...o, label: prov };
+		});
+		const treatments = rawTs
 			.map((t) => cleanTreatment(t, valid, names, remap))
 			.filter((t): t is Treatment => t !== null);
+		if (!treatments.some((t) => t.mode === 'player')) continue; // a pitch must put a player on the cover
+		// Props with no treatment still have to reach the generation prompt: describe them with a keep note.
+		for (const a of adds) {
+			if (treatments.some((t) => t.label === a.label)) continue;
+			const desc = [a.pose, a.clothing, a.expression, a.color_treatment].filter((x) => x.trim()).join(', ');
+			treatments.push({ label: a.label, mode: 'keep', notes: desc || plan });
+		}
 		out.push({ id: `c-${randomUUID().slice(0, 8)}`, move: c.move as ConceptMove, title: str(c.title) || plan.slice(0, 40), plan, addSubjects: adds, treatments });
 		if (out.length >= count) break;
 	}
