@@ -21,6 +21,7 @@ const USER_AGENT = 'music-league-bot/1.0 (https://github.com/loydmilligan/music-
 const MB_GAP_MS = 1100;
 const MB_MAX_REQUESTS = 6;
 const MAX_GROUPS = 4;
+const MAX_ALBUM_GROUPS = 2;
 const MAX_ALTERNATES = 12;
 const PER_GROUP_CANDIDATES = 10;
 const HAMMING_LIMIT = 6;
@@ -219,7 +220,7 @@ export async function findAlternateCovers(
 		const albumGroups = album ? await groupsFromAlbum(ctx, album, artist) : [];
 		const recGroups = await groupsFromRecording(ctx, title, artist);
 		const seen = new Set<string>();
-		const groups = [...albumGroups, ...recGroups].filter((g) => !seen.has(g.id) && seen.add(g.id)).slice(0, MAX_GROUPS);
+		const groups = [...albumGroups.slice(0, MAX_ALBUM_GROUPS), ...recGroups].filter((g) => !seen.has(g.id) && seen.add(g.id)).slice(0, MAX_GROUPS);
 
 		// Thumbnails are fetched + hashed as soon as each browse returns, overlapping the 1.1 s
 		// MusicBrainz spacing; the dedupe below still runs in date order so results are deterministic.
@@ -260,4 +261,19 @@ export async function findAlternateCovers(
 		if (e instanceof MusicBrainzBusy) return { alternates: [], message: BUSY_MESSAGE };
 		throw e;
 	}
+}
+
+/** The list the user was last shown for a project; use-alternate and the pitch `alternate` move validate against it. */
+export function storeProjectAlternates(db: Database.Database, projectId: number, alternates: AltCover[], now: number = Date.now()): void {
+	db.prepare('INSERT OR REPLACE INTO cover_alt_cache (key, json, fetched_at) VALUES (?, ?, ?)')
+		.run(`project:${projectId}`, JSON.stringify(alternates), new Date(now).toISOString());
+}
+
+export function readProjectAlternates(db: Database.Database, projectId: number): AltCover[] {
+	const row = db.prepare('SELECT json FROM cover_alt_cache WHERE key = ?').get(`project:${projectId}`) as { json: string } | undefined;
+	if (!row) return [];
+	try {
+		const v = JSON.parse(row.json);
+		return Array.isArray(v) ? (v as AltCover[]) : [];
+	} catch { return []; }
 }

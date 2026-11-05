@@ -5,6 +5,7 @@ import { assertGenerationAllowed } from '../avatarFactory/pause.js';
 import { normalizeImage } from '../avatarFactory/normalize.js';
 import { listLeaguesReadonly } from '../avatarFactory/roster.js';
 import { normalizeBreakdown, type Breakdown } from './breakdown.js';
+import { findAlternateCovers, readProjectAlternates, storeProjectAlternates, type AltCover } from './alternates.js';
 import { generateVersion } from './generate.js';
 import {
 	fetchCoverBytes,
@@ -190,11 +191,15 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		if (!song) throw new ApiError(404, 'submission not found in round');
 		if (!song.artUrl) bad('submission has no album art');
 		const rel = await saveCoverUpload(await fetchCover(song.artUrl!));
-		const uri = db.prepare('SELECT spotify_uri FROM ml_submissions WHERE id = ?').get(submissionId) as { spotify_uri: string } | undefined;
+		const sub = db.prepare('SELECT spotify_uri, title, artists, album FROM ml_submissions WHERE id = ?').get(submissionId) as
+			| { spotify_uri: string; title: string; artists: string; album: string | null }
+			| undefined;
+		const uri = sub;
 		const project = createProject(db, {
 			title: `${song.title} — ${song.artists}`, source: 'round', round_id: roundId,
 			spotify_uri: uri?.spotify_uri ?? null, league_slug: roundLeague(db, roundId),
 			cover_rel: rel, cover_url: song.artUrl,
+			song_title: sub?.title ?? song.title, song_artist: sub?.artists ?? song.artists, song_album: sub?.album ?? null,
 		});
 		return { project };
 	}
@@ -211,6 +216,7 @@ async function actCreate(db: DB, b: Record<string, unknown>) {
 		const project = createProject(db, {
 			title: t.artists ? `${t.title} — ${t.artists}` : t.title || 'Spotify cover', source: 'spotify', round_id: null, spotify_uri: t.spotifyUri,
 			league_slug: null, cover_rel: rel, cover_url: t.artUrl,
+			song_title: t.title || null, song_artist: t.artists || null, song_album: null,
 		});
 		return { project };
 	}
@@ -347,14 +353,79 @@ async function actIdeas(db: DB, b: Record<string, unknown>) {
 	return { ideas: await playerIdeas(db, project.id, slug) };
 }
 
-const MOVES: ConceptMove[] = ['morph', 'signature', 'recast'];
+const MOVES: ConceptMove[] = ['morph', 'signature', 'recast', 'alternate'];
 
-function actApplyConcept(db: DB, b: Record<string, unknown>) {
+/** "song — artist" (em dash, en dash or hyphen with spaces) -> terms. */
+function parseSongQuery(q: string): { title: string; artist: string } | null {
+	const m = /^(.+?)\s+[—–-]\s+(.+)$/.exec(q.trim());
+	return m ? { title: m[1].trim(), artist: m[2].trim() } : null;
+}
+
+async function actAlternates(db: DB, b: Record<string, unknown>) {
 	const project = need(db, num(b.projectId, 'projectId'));
-	const breakdown = breakdownOf(project);
+	if (b.q !== undefined && typeof b.q !== 'string') bad('q must be a string');
+	const q = typeof b.q === 'string' ? b.q.trim() : '';
+	let terms: { title: string; artist: string; album?: string | null } | null = null;
+	if (q) {
+		terms = parseSongQuery(q);
+		if (!terms) bad('search as "song — artist"');
+	} else if (project.song_title && project.song_artist) {
+		terms = { title: project.song_title, artist: project.song_artist, album: project.song_album };
+	}
+	if (!terms) return bad('search for the song');
+	const found = await findAlternateCovers(db, terms);
+	storeProjectAlternates(db, project.id, found.alternates);
+	return found;
+}
+
+/** Download the chosen edition as a new cover file and reset everything derived from the old cover. */
+async function switchCover(db: DB, project: CoverProject, url: string, original: string | null) {
+	const rel = await saveCoverUpload(await fetchCover(url));
+	return updateProject(db, project.id, {
+		cover_rel: rel,
+		original_cover_rel: original,
+		breakdown_json: null,
+		treatments_json: null,
+	});
+}
+
+function pickAlternate(db: DB, project: CoverProject, id: unknown): AltCover {
+	const alt = typeof id === 'string' ? readProjectAlternates(db, project.id).find((a) => a.id === id) : undefined;
+	if (!alt) return bad('unknown alternate: search the alternates again');
+	return alt;
+}
+
+async function actUseAlternate(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
+	const alt = pickAlternate(db, project, b.alternateId);
+	return { project: await switchCover(db, project, alt.fullUrl, project.original_cover_rel ?? project.cover_rel) };
+}
+
+async function actRestoreOriginal(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
+	if (!project.original_cover_rel) bad('no original cover to restore');
+	return {
+		project: updateProject(db, project.id, {
+			cover_rel: project.original_cover_rel!,
+			original_cover_rel: project.original_cover_rel,
+			breakdown_json: null,
+			treatments_json: null,
+		}),
+	};
+}
+
+async function actApplyConcept(db: DB, b: Record<string, unknown>) {
+	const project = need(db, num(b.projectId, 'projectId'));
 	const c = b.concept as Record<string, unknown> | undefined;
 	if (!c || typeof c !== 'object' || typeof c.id !== 'string' || !c.id.trim()) return bad('concept required');
 	if (!MOVES.includes(c.move as ConceptMove)) bad('invalid concept move');
+	if (c.move === 'alternate') {
+		// Free: no model call. The new cover needs a fresh read before anything can be generated.
+		const alt = pickAlternate(db, project, c.alternateId);
+		const updated = await switchCover(db, project, alt.fullUrl, project.original_cover_rel ?? project.cover_rel);
+		return { project: updated, needsRead: true, breakdown: null, treatments: [] };
+	}
+	const breakdown = breakdownOf(project);
 	if (!Array.isArray(c.addSubjects)) bad('concept.addSubjects must be an array');
 	const concept: Concept = {
 		id: c.id,
@@ -417,6 +488,9 @@ export async function runAction(db: DB, b: Record<string, unknown>): Promise<unk
 		case 'pitch': return actPitch(db, b);
 		case 'ideas': return actIdeas(db, b);
 		case 'apply-concept': return actApplyConcept(db, b);
+		case 'alternates': return actAlternates(db, b);
+		case 'use-alternate': return actUseAlternate(db, b);
+		case 'restore-original': return actRestoreOriginal(db, b);
 		case 'rate': return actRate(db, b);
 		case 'keeper': return actKeeper(db, b);
 		case 'share': return actShare(db, b);

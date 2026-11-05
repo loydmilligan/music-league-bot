@@ -209,4 +209,17 @@ describe('findAlternateCovers edge cases', () => {
 		expect(h.calls.some((c) => c.includes('release-group=live'))).toBe(false);
 		expect(h.calls.filter((c) => c.includes('musicbrainz.org')).length).toBeLessThanOrEqual(6);
 	});
+
+	it('caps album groups at 2 so a Single group keeps a slot within the 4 browses', async () => {
+		const h = custom({
+			albumGroups: [1, 2, 3].map((n) => ({ id: `alb${n}`, title: 'Alb', 'primary-type': 'Album', score: 100 })),
+			recordings: [{ releases: [{ title: 'S', 'release-group': { id: 'sing', title: 'S', 'primary-type': 'Single' } }] }],
+			releases: { alb1: [rel('a1', '1990')], alb2: [rel('a2', '1991')], alb3: [rel('a3', '1992')], sing: [rel('s1', '1993')] },
+			thumb: async (id) => bits(({ a1: 3, a2: 15, a3: 30, s1: 45 } as Record<string, number>)[id]),
+		});
+		const r = await findAlternateCovers(db, { title: 't', artist: 'a', album: 'Alb' }, h.opts);
+		expect(h.calls.some((c) => c.includes('release-group=alb3'))).toBe(false);
+		expect(h.calls.some((c) => c.includes('release-group=sing'))).toBe(true);
+		expect(r.alternates.map((x) => x.kind)).toContain('Single');
+	});
 });

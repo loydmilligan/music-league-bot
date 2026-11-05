@@ -11,6 +11,10 @@ export interface CoverProject {
 	league_slug: string | null;
 	cover_rel: string;
 	cover_url: string | null;
+	original_cover_rel: string | null;
+	song_title: string | null;
+	song_artist: string | null;
+	song_album: string | null;
 	breakdown_json: string | null;
 	identities_json: string | null;
 	treatments_json: string | null;
@@ -56,10 +60,13 @@ export interface CoverRequest {
 
 type DB = Database.Database;
 
+type SongFields = 'original_cover_rel' | 'song_title' | 'song_artist' | 'song_album';
+
 export function createProject(
 	db: DB,
 	p: Omit<
 		CoverProject,
+		| SongFields
 		| 'id'
 		| 'created_at'
 		| 'updated_at'
@@ -69,14 +76,18 @@ export function createProject(
 		| 'breakdown_json'
 		| 'identities_json'
 		| 'treatments_json'
-	>
+	> &
+		Partial<Pick<CoverProject, 'song_title' | 'song_artist' | 'song_album'>>
 ): CoverProject {
 	const r = db
 		.prepare(
-			`INSERT INTO cover_projects (title, source, round_id, spotify_uri, league_slug, cover_rel, cover_url)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO cover_projects (title, source, round_id, spotify_uri, league_slug, cover_rel, cover_url, song_title, song_artist, song_album)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
-		.run(p.title, p.source, p.round_id, p.spotify_uri, p.league_slug, p.cover_rel, p.cover_url);
+		.run(
+			p.title, p.source, p.round_id, p.spotify_uri, p.league_slug, p.cover_rel, p.cover_url,
+			p.song_title ?? null, p.song_artist ?? null, p.song_album ?? null
+		);
 	return getProject(db, Number(r.lastInsertRowid))!;
 }
 
@@ -103,6 +114,8 @@ export function listProjects(
 
 const PATCHABLE = [
 	'title',
+	'cover_rel',
+	'original_cover_rel',
 	'breakdown_json',
 	'identities_json',
 	'treatments_json',

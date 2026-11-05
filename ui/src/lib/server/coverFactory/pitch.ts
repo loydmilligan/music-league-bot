@@ -15,8 +15,9 @@ import { coverFile } from './paths.js';
 import { loadProfileExcerpt } from './profiles.js';
 import type { Treatment } from './prompt.js';
 import { getProject, logRequest, updateProject } from './repo.js';
+import { readProjectAlternates, type AltCover } from './alternates.js';
 
-export type ConceptMove = 'morph' | 'signature' | 'recast';
+export type ConceptMove = 'morph' | 'signature' | 'recast' | 'alternate';
 export interface Concept {
 	id: string;
 	move: ConceptMove;
@@ -27,9 +28,11 @@ export interface Concept {
 	addSubjects: Subject[];
 	/** Keyed by existing subject labels or by the addSubjects' provisional labels. */
 	treatments: Treatment[];
+	/** Only for move 'alternate': an id from the project's stored alternate-cover list. */
+	alternateId?: string;
 }
 
-const MOVES: ConceptMove[] = ['morph', 'signature', 'recast'];
+const MOVES: ConceptMove[] = ['morph', 'signature', 'recast', 'alternate'];
 const MODES = new Set(['player', 'keep', 'remove']);
 const TIMEOUT_MS = 120_000;
 // Same league fallback as service.ts playersFor (kept local: service imports this module).
@@ -50,7 +53,7 @@ STYLE ANCHORS (plans Matt actually liked; one concrete line each, naming the pla
 - "Berto's butt in jean shorts" (signature)
 Write every "plan" like these: short, specific, visual, no hedging, no explanation of why it is funny.
 
-NEVER suggest an alternate cover, a different edition or replacing the artwork. Every plan works on this exact cover and keeps its art style, composition, palette and text.
+Unless an ALTERNATE COVERS list appears below, NEVER suggest an alternate cover, a different edition or replacing the artwork: every plan works on this exact cover and keeps its art style, composition, palette and text.
 
 If the cover has no people ("no_subjects": true), the player still goes in: morph an object, or add them as a new subject.
 
@@ -61,7 +64,7 @@ OUTPUT: return ONLY JSON:
 JSON rules:
 - "treatments" may target ONLY the existing subjects listed under EXISTING SUBJECTS below (by their label) or subjects you add in "addSubjects" (labels "N1", "N2", ... in order). Never target a label that is not in one of those two lists.
 - To use anything else on the cover that is not an existing subject (an object, the sun, a building, a shape) or to introduce something new (the player's figure, a prop), put it in "addSubjects" with a provisional label N1, N2, ... ("kind" object|person|animal, "position", and "box" [x, y, width, height] as fractions 0-1 of the image, top-left origin, when you can place it) and target that label.
-- Every concept MUST contain at least one treatment with mode "player" for one of the listed players ("playerSlug" must be one of the slugs below). Say what the image model must do in "notes" (plus "clothing" / "poseGaze" when they change). An object or animal can take mode "player": that is how a morph works (the notes say how it becomes the player).
+- Every concept EXCEPT an \"alternate\" one MUST contain at least one treatment with mode "player" for one of the listed players ("playerSlug" must be one of the slugs below). Say what the image model must do in "notes" (plus "clothing" / "poseGaze" when they change). An object or animal can take mode "player": that is how a morph works (the notes say how it becomes the player).
 - mode "remove" deletes a subject; "keep" leaves it as it is. A prop you add that is not the player gets a "keep" treatment whose "notes" describe it.
 - Only list subjects the plan changes; everything else is kept.
 Example concept for a cover with no existing subjects:
@@ -76,7 +79,9 @@ function playersOf(leagueSlug: string | null, projectId: number): PlayerOption[]
 	return LEAGUES.flatMap((l) => listPlayers(l, projectId));
 }
 
-function buildPrompt(b: Breakdown, players: { slug: string; name: string; profile: string }[], count: number): string {
+const ALTERNATE_RULES = `ALTERNATE COVERS: this song also has the editions listed below. You may pitch a concept with "move":"alternate" and "alternateId" set to exactly one listed id, when switching to that edition enables a gag the current cover cannot. Its "plan" is one line describing the gag the alternate enables (for example "Jon as Fat Mike's dad on the Ribbed-era cover"). An alternate concept needs no treatments or addSubjects. Pitch at most two alternates; every other concept keeps the current cover.`;
+
+function buildPrompt(b: Breakdown, players: { slug: string; name: string; profile: string }[], count: number, alternates: AltCover[] = []): string {
 	const spread = count >= 3 ? ', at least one of each move' : '';
 	const who = players
 		.map((p) => `- ${p.name} (slug: ${p.slug})\n  Profile excerpt:\n${p.profile ? p.profile.replace(/^/gm, '    ') : '    (no profile on file)'}`)
@@ -92,6 +97,9 @@ function buildPrompt(b: Breakdown, players: { slug: string; name: string; profil
 		'',
 		`EXISTING SUBJECTS are exactly: ${b.subjects.length ? b.subjects.map((x) => `${x.label} (${x.kind}, ${x.position || 'unplaced'})`).join('; ') : 'none'}. Anything else goes in addSubjects.`,
 		'',
+		...(alternates.length
+			? [ALTERNATE_RULES, ...alternates.map((a) => `- id: ${a.id} | ${a.title} | ${a.kind} | ${a.date ?? 'undated'}`), '']
+			: []),
 		'COVER BREAKDOWN (image 1):',
 		JSON.stringify(b),
 	].join('\n');
@@ -136,7 +144,7 @@ function acceptsImages(db: Database.Database, model: string): boolean {
 	return row.cap_vision === 1 || kinds.includes('vision') || kinds.includes('multimodal');
 }
 
-function cleanConcepts(raw: unknown, b: Breakdown, names: Map<string, string>, count: number): Concept[] {
+export function cleanConcepts(raw: unknown, b: Breakdown, names: Map<string, string>, count: number, alternates: AltCover[] = []): Concept[] {
 	const list = raw && typeof raw === 'object' ? (raw as Record<string, unknown>).concepts : undefined;
 	if (!Array.isArray(list)) return [];
 	const existing = b.subjects.map((s) => s.label);
@@ -147,6 +155,14 @@ function cleanConcepts(raw: unknown, b: Breakdown, names: Map<string, string>, c
 		if (!MOVES.includes(c.move as ConceptMove)) continue;
 		const plan = str(c.plan);
 		if (!plan) continue;
+		if (c.move === 'alternate') {
+			// No player treatment needed: the gag is the edition itself. Only ids from the shown list survive.
+			const alternateId = str(c.alternateId);
+			if (!alternateId || !alternates.some((a) => a.id === alternateId)) continue;
+			out.push({ id: `c-${randomUUID().slice(0, 8)}`, move: 'alternate', title: str(c.title) || plan.slice(0, 40), plan, addSubjects: [], treatments: [], alternateId });
+			if (out.length >= count) break;
+			continue;
+		}
 		const rawAdds = Array.isArray(c.addSubjects) ? c.addSubjects : [];
 		// normalizeBreakdown applies the subject rules (role/kind/box); then force provisional labels N1, N2, …
 		const adds = normalizeBreakdown({ subjects: rawAdds }).subjects;
@@ -212,7 +228,8 @@ export async function pitchConcepts(
 		return { slug, name: p.name, profile: loadProfileExcerpt(db, { slug, name: p.name }).text };
 	});
 	const names = new Map(players.map((p) => [p.slug, p.name]));
-	const prompt = buildPrompt(breakdown, players, count);
+	const alternates = readProjectAlternates(db, projectId);
+	const prompt = buildPrompt(breakdown, players, count, alternates);
 	// Text-only pitch models get the breakdown alone (the prompt describes the cover in JSON either way).
 	const images = acceptsImages(db, model)
 		? [(await normalizeImage(readFileSync(coverFile(project.cover_rel)), 'cover.jpg')).dataUrl]
@@ -233,7 +250,7 @@ export async function pitchConcepts(
 		throw e;
 	}
 	try {
-		const concepts = cleanConcepts(parseModelJson(r.text), breakdown, names, count);
+		const concepts = cleanConcepts(parseModelJson(r.text), breakdown, names, count, alternates);
 		if (!concepts.length) throw new Error('no usable concepts');
 		logRequest(db, { ...base, latency_ms: r.latencyMs, cost_usd: r.costUsd, outcome: 'ok', error_reason: null });
 		return concepts;
