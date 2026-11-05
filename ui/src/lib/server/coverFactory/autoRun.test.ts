@@ -485,10 +485,17 @@ describe('auto run reuses manual projects', () => {
 		expect(paid()).toEqual([]);
 	});
 	it('a different song is not reused', async () => {
-		const m = await manual({ keeper: true, uri: 'spotify:track:zzz', songTitle: 'Something Else' });
+		const m = await manual({ keeper: true, uri: 'spotify:track:zzz', songTitle: 'Linoleum' }); // same title, different track
 		const id = addSlot();
 		await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON }) });
 		expect(slotRow(id).project_id).not.toBe(m.pid);
+	});
+	it('an exact spotify_uri match beats a keeper-bearing title-only match', async () => {
+		await manual({ keeper: true, uri: null, songTitle: 'Linoleum' });
+		const exact = await manual({ keeper: false, uri: 'spotify:track:a', songTitle: 'Different Name' });
+		const id = addSlot();
+		await runSlot(db, roundId, id, CAP1, { fetchImpl: fakeFetch({ breakdown: PERSON }) });
+		expect(slotRow(id).project_id).toBe(exact.pid);
 	});
 	it('manual project without a keeper: reused (no second project), normal plan runs on it', async () => {
 		const m = await manual({ keeper: false });

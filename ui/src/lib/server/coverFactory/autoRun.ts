@@ -273,11 +273,14 @@ function findManualProject(db: DB, roundId: number, submissionId: number): Cover
 	if (!sub) return null;
 	const want = normTitle(sub.title);
 	const rows = db.prepare('SELECT id FROM cover_projects WHERE round_id = ? ORDER BY (keeper_version_id IS NOT NULL) DESC, id DESC').all(roundId) as { id: number }[];
-	for (const { id } of rows) {
-		const p = getProject(db, id)!;
-		const same = (sub.spotify_uri && p.spotify_uri === sub.spotify_uri) || (want !== '' && normTitle(p.song_title ?? '') === want);
-		if (same) return p;
-	}
+	const projects = rows.map((r) => getProject(db, r.id)!);
+	// Exact spotify_uri first; then a title match, unless both sides carry URIs that differ. Keeper-first within each.
+	const exact = projects.find((p) => sub.spotify_uri && p.spotify_uri === sub.spotify_uri);
+	if (exact) return exact;
+	const titled = projects.find(
+		(p) => want !== '' && normTitle(p.song_title ?? '') === want && !(sub.spotify_uri && p.spotify_uri && p.spotify_uri !== sub.spotify_uri),
+	);
+	if (titled) return titled;
 	return null;
 }
 
