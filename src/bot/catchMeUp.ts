@@ -14,9 +14,10 @@ import path from 'node:path';
  */
 
 export const CMU_FAILURE_TEXT = "Couldn't build your catch-up just now. Try again in a few minutes.";
-export const CMU_TIMEOUT_MS = 60_000;
+/** companelist refreshes take 22-89 s before the brief call; its idle timeout is 5 min. */
+export const CMU_TIMEOUT_MS = 240_000;
 /** Whole request, fetch included: a hung screenshot or send must not leave the requester with nothing. */
-export const CMU_DEADLINE_MS = 120_000;
+export const CMU_DEADLINE_MS = 270_000;
 /** The failure DM is best effort and gets its own bound. */
 export const CMU_FAILURE_DM_TIMEOUT_MS = 15_000;
 
@@ -61,6 +62,11 @@ export interface CmuDeps {
   sendImage(chatId: string, filePath: string): Promise<void>;
   sendText(chatId: string, text: string): Promise<void>;
   log(line: string): void;
+  /**
+   * The id WhatsApp delivers to for `id` (an @c.us author swapped for its LID).
+   * Used for the requester's limits key; absent or failing, msg.author is used.
+   */
+  dmTarget?(id: string): Promise<string>;
   /** Overrides for tests; default CMU_DEADLINE_MS / CMU_FAILURE_DM_TIMEOUT_MS. */
   deadlineMs?: number;
   failureDmTimeoutMs?: number;
@@ -119,6 +125,16 @@ async function resolveNotifyName(msg: CmuMessage): Promise<string> {
   }
 }
 
+/** The requester's stable WhatsApp id (LID when known): companelist's limits key. Never logged. */
+async function resolveRequesterKey(msg: CmuMessage, deps: CmuDeps): Promise<string> {
+  if (!deps.dmTarget) return msg.author;
+  try {
+    return (await deps.dmTarget(msg.author)) || msg.author;
+  } catch {
+    return msg.author;
+  }
+}
+
 async function react(msg: CmuMessage, emoji: string, deps: CmuDeps): Promise<void> {
   try {
     await msg.react?.(emoji);
@@ -131,6 +147,11 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
   const group = msg.from;
   if (!deps.groups.has(group)) {
     deps.log(`[cmu] unsupported group ${group}; ignored`);
+    return;
+  }
+  // The author is the only DM target: never DM a group, or the chat the request came from.
+  if (!msg.author || msg.author.endsWith('@g.us') || msg.author === msg.from) {
+    deps.log(`[cmu] no DM target in ${group}; ignored`);
     return;
   }
 
@@ -169,10 +190,12 @@ async function deliver(
 ): Promise<void> {
   const group = msg.from;
   const notifyName = await resolveNotifyName(msg);
+  const requesterKey = await resolveRequesterKey(msg, deps);
+  const league = deps.groups.get(group);
   const res = await deps.fetchFn(deps.url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ notifyName, requestAt: msg.capturedAt }),
+    body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey }),
     signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
   });
 

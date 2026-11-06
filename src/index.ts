@@ -6,7 +6,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import {
   createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
-  makeScreenshotHtml, makeSendImageTo, makeSendTextTo,
+  makeDmTarget, makeScreenshotHtml, makeSendImageTo, makeSendTextTo,
 } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
@@ -72,6 +72,7 @@ const catchMeUp = cmuUrl && cmuToken
         screenshot: makeScreenshotHtml(client),
         sendImage: makeSendImageTo(client),
         sendText: makeSendTextTo(client),
+        dmTarget: makeDmTarget(client),
         log: (line) => console.log(line),
       })
   : undefined;

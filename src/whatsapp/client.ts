@@ -417,6 +417,11 @@ async function dmTarget(client: ClientType, chatId: string): Promise<string> {
   }
 }
 
+/** dmTarget bound to a client: the id a DM to `chatId` is actually sent to. */
+export function makeDmTarget(client: ClientType): (chatId: string) => Promise<string> {
+  return (chatId) => dmTarget(client, chatId);
+}
+
 /** DM an image file to one chat id (the requester). */
 export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string) => Promise<void> {
   return async (chatId, filePath) => {

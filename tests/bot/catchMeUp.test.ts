@@ -7,6 +7,8 @@ import {
   parseCmuGroups,
   runCatchMeUp,
   CMU_FAILURE_TEXT,
+  CMU_TIMEOUT_MS,
+  CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
@@ -45,6 +47,7 @@ interface FakeDeps {
   sendImage: AnyMock;
   sendText: AnyMock;
   log: AnyMock;
+  dmTarget?: AnyMock;
   deadlineMs?: number;
   failureDmTimeoutMs?: number;
 }
@@ -139,7 +142,7 @@ describe('runCatchMeUp', () => {
     expect(url).toBe(deps.url);
     expect(init.method).toBe('POST');
     expect(init.headers).toMatchObject({ Authorization: 'Bearer sekret', 'content-type': 'application/json' });
-    expect(JSON.parse(init.body)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT });
+    expect(JSON.parse(init.body)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: AUTHOR });
     expect(init.signal).toBeInstanceOf(AbortSignal);
 
     expect(deps.screenshot).toHaveBeenCalledWith('<html>card</html>', screenshots[0]);
@@ -189,7 +192,42 @@ describe('runCatchMeUp', () => {
     expect(CMU_FAILURE_TEXT).toBe("Couldn't build your catch-up just now. Try again in a few minutes.");
   });
 
-  it('failure: a 60 s timeout aborts the fetch and sends the failure DM', async () => {
+  it.each([
+    ['missing', ''],
+    ['a group id', '999@g.us'],
+    ['the group itself', GROUP],
+  ])('no DM target (author %s): no reaction, no fetch, no send, logged', async (_label, author) => {
+    const msg = makeMsg({ author });
+    const { deps } = makeDeps();
+    await runCatchMeUp(msg, deps);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.log).toHaveBeenCalledTimes(1);
+  });
+
+  it('requesterKey: the dmTarget (LID) id when available, else the author; never logged', async () => {
+    const cus = '15551234567@c.us';
+    const { deps } = makeDeps({ dmTarget: vi.fn().mockResolvedValue('999888777@lid') });
+    await runCatchMeUp(makeMsg({ author: cus }), deps);
+    expect(deps.dmTarget).toHaveBeenCalledWith(cus);
+    expect(JSON.parse(deps.fetchFn.mock.calls[0][1].body).requesterKey).toBe('999888777@lid');
+
+    const failing = makeDeps({ dmTarget: vi.fn().mockRejectedValue(new Error('lookup')) }).deps;
+    await runCatchMeUp(makeMsg({ author: cus }), failing);
+    expect(JSON.parse(failing.fetchFn.mock.calls[0][1].body).requesterKey).toBe(cus);
+    const logged = [...deps.log.mock.calls, ...failing.log.mock.calls].map((c) => String(c[0])).join('\n');
+    expect(logged).not.toContain('999888777');
+    expect(logged).not.toContain('15551234567');
+  });
+
+  it('timeouts: fetch 240 s, overall deadline 270 s', () => {
+    expect(CMU_TIMEOUT_MS).toBe(240_000);
+    expect(CMU_DEADLINE_MS).toBe(270_000);
+  });
+
+  it('failure: a 240 s timeout aborts the fetch and sends the failure DM', async () => {
     const realTimeout = AbortSignal.timeout.bind(AbortSignal);
     const spy = vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => realTimeout(5));
     const fetchFn = vi.fn((_u: string, init: RequestInit) => new Promise<Response>((_res, rej) => {
@@ -198,7 +236,7 @@ describe('runCatchMeUp', () => {
     const msg = makeMsg();
     const { deps } = makeDeps({ fetchFn });
     await runCatchMeUp(msg, deps);
-    expect(spy).toHaveBeenCalledWith(60_000);
+    expect(spy).toHaveBeenCalledWith(240_000);
     expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
   });
 
@@ -236,7 +274,7 @@ describe('runCatchMeUp', () => {
     expect(deps.log.mock.calls.map((c: unknown[]) => String(c[0])).join('\n')).toContain('Deadline');
   });
 
-  it('deadline: the default overall budget is 120 s and the failure DM is bounded to 15 s', async () => {
+  it('deadline: the default overall budget is 270 s and the failure DM is bounded to 15 s', async () => {
     vi.useFakeTimers();
     try {
       const msg = makeMsg();
@@ -247,7 +285,7 @@ describe('runCatchMeUp', () => {
       });
       let done = false;
       void runCatchMeUp(msg, deps).then(() => { done = true; });
-      await vi.advanceTimersByTimeAsync(119_000);
+      await vi.advanceTimersByTimeAsync(269_000);
       expect(deps.sendText).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1_000);
       expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
