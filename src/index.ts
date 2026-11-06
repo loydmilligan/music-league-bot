@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config/loader.js';
 import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
-import { createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber } from './whatsapp/client.js';
+import {
+  createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
+  makeScreenshotHtml, makeSendImageTo, makeSendTextTo,
+} from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
 import { createLoginCodeService, lookupPlayerNumber } from './whatsapp/loginCode.js';
@@ -19,6 +22,7 @@ import { startControlServer } from './control/server.js';
 import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
+import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -53,6 +57,25 @@ if (process.env.WHATSAPP_JEV_ENABLED === '1' && !jevRespond) {
   console.warn('[jev-chat] WHATSAPP_JEV_ENABLED=1 but OPENROUTER_API_KEY is missing; feature disabled');
 }
 
+// "@bot catch me up": off unless CMU_URL and CMU_TOKEN are set. Groups not in
+// CMU_GROUPS get no reaction and one log line.
+const cmuGroups = parseCmuGroups(process.env.CMU_GROUPS);
+const cmuUrl = process.env.CMU_URL;
+const cmuToken = process.env.CMU_TOKEN;
+const catchMeUp = cmuUrl && cmuToken
+  ? (msg: Parameters<typeof runCatchMeUp>[0]) =>
+      runCatchMeUp(msg, {
+        fetchFn: fetch,
+        groups: cmuGroups,
+        url: cmuUrl,
+        token: cmuToken,
+        screenshot: makeScreenshotHtml(client),
+        sendImage: makeSendImageTo(client),
+        sendText: makeSendTextTo(client),
+        log: (line) => console.log(line),
+      })
+  : undefined;
+
 const client = createClient(async (msg) => {
   await handleMessage(msg, {
     config,
@@ -63,6 +86,7 @@ const client = createClient(async (msg) => {
     masterPlaylistName,
     sendDm: makeSendDm(client),
     jevRespond,
+    catchMeUp,
   });
 });
 

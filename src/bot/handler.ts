@@ -13,6 +13,7 @@ import { insertChatCapture } from '../storage/chatDb.js';
 import { interpretMessage } from '../chat/prompts/engine.js';
 import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
 import { extractJevPrompt, type JevChatRequest } from '../chat/jevResponder.js';
+import { isCatchMeUpRequest } from './catchMeUp.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -28,8 +29,12 @@ export interface WhatsAppMessage {
   quotedText?: string;
   /** True when WhatsApp's plain message payload says the bot account was @mentioned. */
   mentionsBot?: boolean;
+  /** The sender's WhatsApp display name, from the plain message payload. */
+  notifyName?: string;
   reply(text: string): Promise<void>;
   getContact(): Promise<{ pushname: string }>;
+  /** React to this message with an emoji. */
+  react?(emoji: string): Promise<void>;
 }
 
 export interface BotConfig {
@@ -41,6 +46,8 @@ export interface BotConfig {
   masterPlaylistName: string;
   sendDm(phone: string, text: string): Promise<void>;
   jevRespond?: (request: JevChatRequest) => Promise<string>;
+  /** "@bot catch me up" (src/bot/catchMeUp.ts). Unwired = the phrase falls through to Jev. */
+  catchMeUp?: (msg: WhatsAppMessage) => Promise<void>;
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
@@ -58,6 +65,14 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // the bot acting in groups it was not invited to reason about.
   if (!msg.from.endsWith('@g.us')) {
     await handlePromptAnswer(msg, botConfig, true);
+    return;
+  }
+
+  // Catch-me-up runs before every other path (C2) and before the capture log
+  // below, so the request's text is never logged. It is gated by its own
+  // CMU_GROUPS map rather than the song-capture allowlist.
+  if (botConfig.catchMeUp && isCatchMeUpRequest(msg.body, msg.mentionsBot ?? false)) {
+    await botConfig.catchMeUp(msg);
     return;
   }
 

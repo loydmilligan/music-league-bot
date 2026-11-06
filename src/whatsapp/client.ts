@@ -190,8 +190,10 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       }),
       capturedAt: new Date(timeMs).toISOString(),
       priorMessages: priors,
+      notifyName: (raw as { _data?: { notifyName?: string } })._data?.notifyName || undefined,
       reply: (text) => raw.reply(text).then(() => undefined),
       getContact: () => raw.getContact(),
+      react: (emoji) => raw.react(emoji).then(() => undefined),
     };
 
     try {
@@ -287,5 +289,57 @@ export function makeSay(
   return async (chatId, text, pinSeconds) => {
     const sent = await client.sendMessage(chatId, text);
     await tryPin(sent, pinSeconds);
+  };
+}
+
+/**
+ * Screenshot a standalone HTML document to a PNG at 1080 px wide, full page.
+ * Uses the whatsapp-web.js client's own Chromium (no new dependency) on a NEW
+ * page that is always closed; the WhatsApp page itself is never touched.
+ */
+export function makeScreenshotHtml(
+  client: ClientType,
+): (html: string, outPath: string) => Promise<void> {
+  return async (html, outPath) => {
+    const browser = client.pupBrowser;
+    if (!browser) throw new Error('browser not ready');
+    const page = await browser.newPage();
+    try {
+      await page.setViewport({ width: 1080, height: 800, deviceScaleFactor: 1 });
+      await page.setContent(html, { waitUntil: 'load', timeout: 20_000 });
+      await page.screenshot({ path: outPath as `${string}.png`, fullPage: true, type: 'png' });
+    } finally {
+      await page.close().catch(() => undefined);
+    }
+  };
+}
+
+/**
+ * A DM target WhatsApp will deliver to. A group author is usually already a
+ * LID; an @c.us id is swapped for its LID when WhatsApp knows one, because
+ * sending straight to @c.us hangs for LID-migrated contacts (see
+ * makeSendToNumber). Same person either way.
+ */
+async function dmTarget(client: ClientType, chatId: string): Promise<string> {
+  if (!chatId.endsWith('@c.us')) return chatId;
+  try {
+    const [ids] = await client.getContactLidAndPhone([chatId]);
+    return ids?.lid || chatId;
+  } catch {
+    return chatId;
+  }
+}
+
+/** DM an image file to one chat id (the requester). */
+export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string) => Promise<void> {
+  return async (chatId, filePath) => {
+    await client.sendMessage(await dmTarget(client, chatId), MessageMedia.fromFilePath(filePath));
+  };
+}
+
+/** DM plain text to one chat id (the requester). */
+export function makeSendTextTo(client: ClientType): (chatId: string, text: string) => Promise<void> {
+  return async (chatId, text) => {
+    await client.sendMessage(await dmTarget(client, chatId), text);
   };
 }

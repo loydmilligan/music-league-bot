@@ -10,6 +10,9 @@ services:
       - ./.wwebjs_cache:/app/.wwebjs_cache
       # Player WhatsApp opt-in (Settings toggle). /dm fail-closes unless enabled.
       - ../boarz-season-2-survey/data:/app/survey-data:ro
+    # Catch-me-up calls the companelist review server on the host (CMU_URL).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       # Host-side survey reveal worker. Loopback only: the control API can send WhatsApp messages.
       - "127.0.0.1:3003:3003"
