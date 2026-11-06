@@ -15,6 +15,10 @@ import path from 'node:path';
 
 export const CMU_FAILURE_TEXT = "Couldn't build your catch-up just now. Try again in a few minutes.";
 export const CMU_TIMEOUT_MS = 60_000;
+/** Whole request, fetch included: a hung screenshot or send must not leave the requester with nothing. */
+export const CMU_DEADLINE_MS = 120_000;
+/** The failure DM is best effort and gets its own bound. */
+export const CMU_FAILURE_DM_TIMEOUT_MS = 15_000;
 
 const TRIGGER = /^\s*(catch\s*(me)?\s*up|cmu|what did i miss)\b/i;
 
@@ -57,11 +61,30 @@ export interface CmuDeps {
   sendImage(chatId: string, filePath: string): Promise<void>;
   sendText(chatId: string, text: string): Promise<void>;
   log(line: string): void;
+  /** Overrides for tests; default CMU_DEADLINE_MS / CMU_FAILURE_DM_TIMEOUT_MS. */
+  deadlineMs?: number;
+  failureDmTimeoutMs?: number;
 }
 
 type CmuResult =
   | { kind: 'card'; html: string; links: string[] }
   | { kind: 'quiet'; text: string };
+
+class CmuDeadlineError extends Error {
+  constructor() {
+    super('deadline');
+    this.name = 'Deadline';
+  }
+}
+
+/** Resolve/reject with `work`, or reject with CmuDeadlineError after `ms`. */
+function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_res, rej) => {
+    timer = setTimeout(() => rej(new CmuDeadlineError()), ms);
+  });
+  return Promise.race([work, expired]).finally(() => clearTimeout(timer));
+}
 
 class CmuHttpError extends Error {
   constructor(readonly status: number) {
@@ -113,46 +136,71 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
 
   await react(msg, '👍', deps);
 
+  // Set once the image DM lands. After that the requester has their catch-up,
+  // so a failed or hung links DM is logged, never answered with "Couldn't build".
+  const state = { imageSent: false, pngPath: null as string | null };
   try {
-    const notifyName = await resolveNotifyName(msg);
-    const res = await deps.fetchFn(deps.url, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ notifyName, requestAt: msg.capturedAt }),
-      signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
-    });
-
-    if (res.status === 429) {
-      await react(msg, '⏳', deps);
-      deps.log(`[cmu] limit in ${group}`);
-      return;
-    }
-    if (!res.ok) throw new CmuHttpError(res.status);
-
-    const result = parseResult(await res.json());
-    if (!result) throw new Error('BadResponse');
-
-    if (result.kind === 'quiet') {
-      await deps.sendText(msg.author, result.text);
-      deps.log(`[cmu] quiet sent in ${group}`);
-      return;
-    }
-
-    const pngPath = path.join(os.tmpdir(), `cmu-${randomUUID()}.png`);
-    try {
-      await deps.screenshot(result.html, pngPath);
-      await deps.sendImage(msg.author, pngPath);
-      if (result.links.length) await deps.sendText(msg.author, result.links.join('\n'));
-    } finally {
-      await rm(pngPath, { force: true }).catch(() => undefined);
-    }
-    deps.log(`[cmu] card sent in ${group}`);
+    await withDeadline(deliver(msg, deps, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
   } catch (err) {
+    if (state.imageSent) {
+      deps.log(`[cmu] image sent, links failed in ${group}: ${describeError(err)}`);
+      return;
+    }
     deps.log(`[cmu] failed in ${group}: ${describeError(err)}`);
     try {
-      await deps.sendText(msg.author, CMU_FAILURE_TEXT);
+      await withDeadline(
+        deps.sendText(msg.author, CMU_FAILURE_TEXT),
+        deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
+      );
     } catch (dmErr) {
       deps.log(`[cmu] failure DM failed in ${group}: ${describeError(dmErr)}`);
     }
+  } finally {
+    // deliver() deletes the PNG itself; this covers a deadline that fired
+    // while a screenshot or send was still hanging.
+    if (state.pngPath) await rm(state.pngPath, { force: true }).catch(() => undefined);
   }
+}
+
+async function deliver(
+  msg: CmuMessage,
+  deps: CmuDeps,
+  state: { imageSent: boolean; pngPath: string | null },
+): Promise<void> {
+  const group = msg.from;
+  const notifyName = await resolveNotifyName(msg);
+  const res = await deps.fetchFn(deps.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ notifyName, requestAt: msg.capturedAt }),
+    signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
+  });
+
+  if (res.status === 429) {
+    await react(msg, '⏳', deps);
+    deps.log(`[cmu] limit in ${group}`);
+    return;
+  }
+  if (!res.ok) throw new CmuHttpError(res.status);
+
+  const result = parseResult(await res.json());
+  if (!result) throw new Error('BadResponse');
+
+  if (result.kind === 'quiet') {
+    await deps.sendText(msg.author, result.text);
+    deps.log(`[cmu] quiet sent in ${group}`);
+    return;
+  }
+
+  const pngPath = path.join(os.tmpdir(), `cmu-${randomUUID()}.png`);
+  state.pngPath = pngPath;
+  try {
+    await deps.screenshot(result.html, pngPath);
+    await deps.sendImage(msg.author, pngPath);
+    state.imageSent = true;
+    if (result.links.length) await deps.sendText(msg.author, result.links.join('\n'));
+  } finally {
+    await rm(pngPath, { force: true }).catch(() => undefined);
+  }
+  deps.log(`[cmu] card sent in ${group}`);
 }

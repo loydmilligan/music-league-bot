@@ -45,6 +45,8 @@ interface FakeDeps {
   sendImage: AnyMock;
   sendText: AnyMock;
   log: AnyMock;
+  deadlineMs?: number;
+  failureDmTimeoutMs?: number;
 }
 
 function makeDeps(over: Partial<FakeDeps> = {}) {
@@ -218,6 +220,71 @@ describe('runCatchMeUp', () => {
     const logged = deps.log.mock.calls.map((c) => String(c[0])).join('\n');
     expect(logged).not.toContain('Secret Person');
     expect(logged).toContain(GROUP);
+  });
+
+  it('deadline: a never-resolving screenshot still sends the failure DM and resolves', async () => {
+    const msg = makeMsg();
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>', links: ['l'] })),
+      screenshot: vi.fn(() => new Promise<void>(() => {})),
+      deadlineMs: 20,
+    });
+    await expect(runCatchMeUp(msg, deps)).resolves.toBeUndefined();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.sendText).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
+    expect(deps.log.mock.calls.map((c: unknown[]) => String(c[0])).join('\n')).toContain('Deadline');
+  });
+
+  it('deadline: the default overall budget is 120 s and the failure DM is bounded to 15 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const msg = makeMsg();
+      const { deps } = makeDeps({
+        fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>', links: [] })),
+        screenshot: vi.fn(() => new Promise<void>(() => {})),
+        sendText: vi.fn(() => new Promise<void>(() => {})),
+      });
+      let done = false;
+      void runCatchMeUp(msg, deps).then(() => { done = true; });
+      await vi.advanceTimersByTimeAsync(119_000);
+      expect(deps.sendText).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(15_000);
+      vi.useRealTimers(); // the PNG cleanup in finally is real fs I/O
+      await vi.waitFor(() => expect(done).toBe(true));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('partial success: image sent but links DM failed → no failure DM, logged', async () => {
+    const msg = makeMsg();
+    const { deps, screenshots } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>', links: ['l1', 'l2'] })),
+      sendText: vi.fn().mockRejectedValue(new Error('links failed')),
+    });
+    await expect(runCatchMeUp(msg, deps)).resolves.toBeUndefined();
+    expect(deps.sendImage).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, 'l1\nl2');
+    expect(deps.sendText).not.toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
+    expect(existsSync(screenshots[0])).toBe(false);
+    expect(deps.log.mock.calls.map((c: unknown[]) => String(c[0])).join('\n')).toContain('links failed in');
+  });
+
+  it('partial success: a hung links DM past the deadline sends no failure DM', async () => {
+    const msg = makeMsg();
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>', links: ['l1'] })),
+      sendText: vi.fn(() => new Promise<void>(() => {})),
+      deadlineMs: 20,
+    });
+    await expect(runCatchMeUp(msg, deps)).resolves.toBeUndefined();
+    expect(deps.sendText).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).not.toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
   });
 
   it('a failing failure-DM does not throw', async () => {
