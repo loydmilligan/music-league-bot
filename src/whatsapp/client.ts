@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Client as ClientType, Message, Chat } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { formatEnvelope } from './listGroups.js';
@@ -49,9 +51,20 @@ function pushToBuffer(chatId: string, msg: BufferedMsg) {
 
 export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>): ClientType {
   const puppeteerArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
+  // One-shot relinking without a camera: put the bot account's phone number
+  // (digits only) in data/wa-pair-phone; the client then asks WhatsApp for an
+  // 8-character code ("Link with phone number instead" on the phone). Delete
+  // the file once linked.
+  const pairFile = path.join(process.cwd(), 'data', 'wa-pair-phone');
+  const pairPhone = (process.env.WA_PAIR_PHONE || (fs.existsSync(pairFile) ? fs.readFileSync(pairFile, 'utf8') : '')).replace(/\D/g, '');
   const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: { executablePath: process.env.CHROMIUM_PATH || undefined, args: puppeteerArgs },
+    ...(pairPhone ? { pairWithPhoneNumber: { phoneNumber: pairPhone, showNotification: true } } : {}),
+  });
+
+  client.on('code', (code: string) => {
+    console.log(`[whatsapp] Pairing code: ${code} (WhatsApp > Linked devices > Link a device > Link with phone number instead)`);
   });
 
   client.on('qr', (qr) => {
