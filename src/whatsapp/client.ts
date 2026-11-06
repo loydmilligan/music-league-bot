@@ -38,6 +38,70 @@ export function serializeMsgId(id: unknown): string | null {
   return `${Boolean(o.fromMe)}_${remote}_${o.id}${participant ? `_${participant}` : ''}`;
 }
 
+/**
+ * A WhatsApp user id (wid) as "user@server". Ids arrive as strings or as
+ * objects whose serialized form is `_serialized`, or `$1` in this minified
+ * build, or only `user` + `server` parts.
+ */
+export function serializeWid(id: unknown): string | null {
+  if (typeof id === 'string') return id || null;
+  if (!id || typeof id !== 'object') return null;
+  const o = id as Record<string, unknown>;
+  if (typeof o._serialized === 'string' && o._serialized) return o._serialized;
+  if (typeof o.$1 === 'string' && o.$1) return o.$1;
+  if (typeof o.user === 'string' && o.user && typeof o.server === 'string' && o.server) {
+    return `${o.user}@${o.server}`;
+  }
+  return null;
+}
+
+/**
+ * Does this message @mention the bot? True when any mentioned id is one of our
+ * own ids, or (belt and braces) when the body carries "@<digits>" for the user
+ * part of any of our ids, since WhatsApp writes a mention as "@<number>".
+ */
+export function mentionsSelf(mentionedIds: unknown[] | undefined, body: string, ids: Set<string>): boolean {
+  if ((mentionedIds ?? []).some((id) => {
+    const wid = serializeWid(id);
+    return !!wid && ids.has(wid);
+  })) return true;
+  for (const id of ids) {
+    const user = id.split('@')[0];
+    if (/^\d+$/.test(user) && new RegExp(`@${user}(?!\\d)`).test(body)) return true;
+  }
+  return false;
+}
+
+/**
+ * Learn this account's own ids at 'ready': the phone wid from client.info and,
+ * best effort, the LID it appears as in groups. Without this, selfIds stays
+ * empty after every restart until the bot sends something, so @mentions of the
+ * bot go unrecognised.
+ */
+export async function seedSelfIds(
+  client: Pick<ClientType, 'getContactLidAndPhone'> & { info?: { wid?: unknown } },
+  ids: Set<string> = selfIds,
+  log: (line: string) => void = console.log,
+): Promise<void> {
+  const learn = (id: string) => {
+    if (!ids.has(id)) log(`[self] learned own id ${id}`);
+    ids.add(id);
+  };
+  const wid = serializeWid(client.info?.wid);
+  if (!wid) {
+    log('[self] no wid in client.info');
+    return;
+  }
+  learn(wid);
+  try {
+    const [found] = await client.getContactLidAndPhone([wid]);
+    if (found?.lid) learn(found.lid);
+    if (found?.pn) learn(found.pn);
+  } catch (err) {
+    log(`[self] lid lookup failed (${err instanceof Error ? err.name : 'error'})`);
+  }
+}
+
 interface BufferedMsg { sender: string; timeMs: number; text: string; }
 const chatBuffer = new Map<string, BufferedMsg[]>();
 const BUFFER_SIZE = 5;
@@ -74,6 +138,7 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
 
   client.on('ready', () => {
     console.log('[whatsapp] Client ready');
+    void seedSelfIds(client).catch(() => undefined);
     if (process.env.LOG_GROUPS === '1') {
       console.log('[groups] LOG_GROUPS on — post a message in a chat to see its real id here');
     }
@@ -197,10 +262,7 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       chatName,
       author: raw.author ?? raw.from,
       fromMe: raw.fromMe,
-      mentionsBot: raw.mentionedIds.some((id) => {
-        const serialized = typeof id === 'string' ? id : (id as { _serialized?: string })._serialized;
-        return !!serialized && selfIds.has(serialized);
-      }),
+      mentionsBot: mentionsSelf(raw.mentionedIds as unknown[], raw.body ?? '', selfIds),
       capturedAt: new Date(timeMs).toISOString(),
       priorMessages: priors,
       notifyName: (raw as { _data?: { notifyName?: string } })._data?.notifyName || undefined,
