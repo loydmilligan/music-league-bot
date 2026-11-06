@@ -131,6 +131,18 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     console.log(`[whatsapp] Pairing code: ${code} (WhatsApp > Linked devices > Link a device > Link with phone number instead)`);
   });
 
+  // Startup stages between "Starting WhatsApp client" and "Client ready", so a
+  // silent hang shows where it stopped (no message content is logged).
+  let lastLoading = -1;
+  client.on('loading_screen', (percent: number | string) => {
+    const p = Number(percent);
+    if (p !== lastLoading) console.log(`[whatsapp] loading ${p}%`);
+    lastLoading = p;
+  });
+  client.on('authenticated', () => console.log('[whatsapp] authenticated (saved login restored)'));
+  client.on('auth_failure', (msg: string) => console.error('[whatsapp] auth failure:', String(msg).slice(0, 120)));
+  client.on('change_state', (state: string) => console.log(`[whatsapp] state ${state}`));
+
   client.on('qr', (qr) => {
     console.log('[whatsapp] Scan this QR code to authenticate:');
     qrcode.generate(qr, { small: true });
