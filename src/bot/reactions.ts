@@ -23,6 +23,7 @@ export interface ReactionDeps {
   now?(): number;
   random?(): number;
   guard?: BurstGuard;
+  cap?: ReactionCap;
 }
 
 type FallbackReason = 'no-key' | 'forced-off' | 'error' | 'timeout' | 'bad-answer' | 'burst' | 'send-failed';
@@ -56,6 +57,48 @@ export class BurstGuard {
 }
 
 const DEFAULT_GUARD = new BurstGuard();
+
+export const REACTION_PER_AUTHOR_WINDOW_MS = 60_000;
+export const REACTION_PER_GROUP_PER_HOUR = 30;
+const HOUR_MS = 3_600_000;
+
+/**
+ * Hard send cap protecting the bot account: one reaction per author per window, N per group per hour.
+ * Sliding windows, in memory, keyed by id (never logged). Only an allowed call is recorded.
+ */
+export class ReactionCap {
+  private readonly authorWindowMs: number;
+  private readonly perGroupPerHour: number;
+  private readonly lastByAuthor = new Map<string, number>();
+  private readonly byGroup = new Map<string, number[]>();
+
+  constructor(o: { perAuthorWindowMs?: number; perGroupPerHour?: number } = {}) {
+    this.authorWindowMs = o.perAuthorWindowMs ?? REACTION_PER_AUTHOR_WINDOW_MS;
+    this.perGroupPerHour = o.perGroupPerHour ?? REACTION_PER_GROUP_PER_HOUR;
+  }
+
+  /** Why a call is over the cap, or undefined when allowed (and then recorded). */
+  check(author: string, group: string, now: number): 'author' | 'group' | undefined {
+    const last = this.lastByAuthor.get(author);
+    if (last !== undefined && now - last >= this.authorWindowMs) this.lastByAuthor.delete(author);
+    if (this.lastByAuthor.has(author)) return 'author';
+    const hour = (this.byGroup.get(group) ?? []).filter((t) => t > now - HOUR_MS);
+    if (hour.length >= this.perGroupPerHour) {
+      this.byGroup.set(group, hour);
+      return 'group';
+    }
+    hour.push(now);
+    this.byGroup.set(group, hour);
+    this.lastByAuthor.set(author, now);
+    return undefined;
+  }
+
+  allow(author: string, group: string, now: number): boolean {
+    return this.check(author, group, now) === undefined;
+  }
+}
+
+const DEFAULT_CAP = new ReactionCap();
 
 function safeCall<T>(fn: () => T): T | undefined {
   try {
@@ -108,10 +151,17 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
       deps.log('[react] disabled');
       return;
     }
+    const now = (deps.now ?? Date.now)();
+    const over = (deps.cap ?? DEFAULT_CAP).check(msg.author, msg.from, now);
+    if (over) {
+      step('cap', { ok: true, scope: over });
+      end('reaction-capped');
+      safeCall(() => deps.log('[react] reaction-capped'));
+      return;
+    }
     const random = deps.random ?? Math.random;
     const pool = deps.palette.fallbackPool;
     const fallbackEmoji = () => pool[Math.floor(random() * pool.length)];
-    const now = (deps.now ?? Date.now)();
 
     let reason: FallbackReason | undefined;
     let emoji: string | undefined;
