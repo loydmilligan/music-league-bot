@@ -25,7 +25,7 @@ export interface ReactionDeps {
   guard?: BurstGuard;
 }
 
-type FallbackReason = 'no-key' | 'forced-off' | 'error' | 'timeout' | 'bad-answer' | 'burst';
+type FallbackReason = 'no-key' | 'forced-off' | 'error' | 'timeout' | 'bad-answer' | 'burst' | 'send-failed';
 
 /** Sliding-window limiter; only an allowed call is recorded (in both windows). */
 export class BurstGuard {
@@ -89,6 +89,10 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
   const step = (name: string, f: { ok: boolean; ms?: number } & Record<string, string | number | boolean>) =>
     void safeCall(() => raw.step(name, f));
   const end = (outcome: string) => void safeCall(() => raw.end(outcome));
+  const fail = () => {
+    end('failed');
+    safeCall(() => deps.log('[react] failed'));
+  };
   safeCall(() =>
     raw.start({
       group: msg.from,
@@ -131,11 +135,11 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
       return;
     }
     // Send failed: one retry with a safe emoji.
-    if (!reason) step('fallback', { ok: true, reason: 'error' });
+    if (!reason) step('fallback', { ok: true, reason: 'send-failed' });
     if (await send(msg, fallbackEmoji(), step, true)) end('fallback');
-    else end('failed');
+    else fail();
   } catch {
-    end('failed');
+    fail();
   }
 }
 
@@ -178,17 +182,29 @@ async function jevEmoji(
   const catInstructions =
     INTRO + 'First choose the kind of reaction. The options are:\n' + cats.map((c) => `${c.id} — ${c.describe}`).join('\n');
   let t0 = performance.now();
-  const c = await picker.pick(catInstructions, cats.map((x) => x.id), state);
+  let c: Awaited<ReturnType<JevPicker['pick']>>;
+  try {
+    c = await picker.pick(catInstructions, cats.map((x) => x.id), state);
+  } catch (err) {
+    step('pick-category', { ok: false, ms: ms(t0) });
+    throw err;
+  }
   const category = cats.find((x) => x.id === c.choice);
   step('pick-category', { ok: !!category, ms: ms(t0), cost: c.cost, category: category?.id ?? '' });
   if (!category) throw new PickFailure('bad-answer');
 
   t0 = performance.now();
-  const e = await picker.pick(
-    INTRO + `Now choose the single emoji from the "${category.id}" kind (${category.describe}) that fits best.`,
-    category.emojis,
-    state,
-  );
+  let e: Awaited<ReturnType<JevPicker['pick']>>;
+  try {
+    e = await picker.pick(
+      INTRO + `Now choose the single emoji from the "${category.id}" kind (${category.describe}) that fits best.`,
+      category.emojis,
+      state,
+    );
+  } catch (err) {
+    step('pick-emoji', { ok: false, ms: ms(t0) });
+    throw err;
+  }
   const emoji = category.emojis.find((x) => x === e.choice);
   step('pick-emoji', { ok: !!emoji, ms: ms(t0), cost: e.cost, emoji: emoji ?? '' });
   if (!emoji) throw new PickFailure('bad-answer');

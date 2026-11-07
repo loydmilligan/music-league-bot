@@ -150,11 +150,44 @@ describe('runReaction', () => {
     expect(a.react).toHaveBeenCalledTimes(2);
     expect(a.react).toHaveBeenLastCalledWith('😂');
     expect(a.t.steps('react')[1]).toMatchObject({ ok: true, retry: true, emoji: '😂' });
-    expect(a.t.steps('fallback')[0]).toMatchObject({ reason: 'error' });
+    expect(a.t.steps('fallback')[0]).toMatchObject({ reason: 'send-failed' });
     expect(a.t.outcome()).toBe('fallback');
     const b = setup();
     b.react.mockRejectedValue(new Error('send'));
     await expect(runReaction(b.msg, b.deps)).resolves.toBeUndefined();
+    expect(b.t.outcome()).toBe('failed');
+  });
+
+  it('a pick that throws or times out still writes a failed pick step with ms and no cost', async () => {
+    const a = setup();
+    a.pick.mockRejectedValueOnce(new Error('boom'));
+    await runReaction(a.msg, a.deps);
+    const c = a.t.steps('pick-category')[0];
+    expect(c).toMatchObject({ ok: false });
+    expect(typeof c.ms).toBe('number');
+    expect(c).not.toHaveProperty('cost');
+    expect(c).not.toHaveProperty('category');
+    const b = setup();
+    b.pick.mockResolvedValueOnce({ choice: 'hype', cost: 0.001 }).mockRejectedValueOnce(Object.assign(new Error('x'), { name: 'TimeoutError' }));
+    await runReaction(b.msg, b.deps);
+    const e = b.t.steps('pick-emoji')[0];
+    expect(e).toMatchObject({ ok: false });
+    expect(typeof e.ms).toBe('number');
+    expect(e).not.toHaveProperty('cost');
+    expect(e).not.toHaveProperty('emoji');
+    expect(b.t.steps('fallback')[0]).toMatchObject({ reason: 'timeout' });
+  });
+
+  it('outcome failed logs a bare line, and a throwing logger cannot add a second end', async () => {
+    const log = vi.fn();
+    const a = setup({ log });
+    a.react.mockRejectedValue(new Error('send'));
+    await runReaction(a.msg, a.deps);
+    expect(log).toHaveBeenCalledWith('[react] failed');
+    const b = setup({ log: () => { throw new Error('log'); } });
+    b.react.mockRejectedValue(new Error('send'));
+    await expect(runReaction(b.msg, b.deps)).resolves.toBeUndefined();
+    expect(b.t.calls.filter((c) => c[0] === 'end')).toHaveLength(1);
     expect(b.t.outcome()).toBe('failed');
   });
 

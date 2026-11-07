@@ -28,10 +28,10 @@ const PREFIX_PHRASES: readonly string[] = [
   'fill me in', 'recap me',
 ];
 
-/** Bare words that must be the whole text (B2), so "summary of round 3" is Jev's. */
 /** Owner-only command words: exact match, no typo tolerance. */
 const RECAP_PHRASES: readonly string[] = ['recap-bot-calls', 'recap bot calls', 'recapbotcalls'];
 
+/** Bare words that must be the whole text (B2), so "summary of round 3" is Jev's. */
 const EXACT_PHRASES: readonly string[] = ['recap', 'summary', 'summarize'];
 
 /** Damerau edit distance (insert, delete, substitute, adjacent swap) is exactly 1. */
