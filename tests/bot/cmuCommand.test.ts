@@ -20,6 +20,14 @@ describe('parseCmuCommand', () => {
     ['full', { kind: 'full' }],
     ['forget', { kind: 'forget', target: 'self' }],
     ['forget all', { kind: 'forget', target: 'all' }],
+    ['off', { kind: 'off' }],
+    ['Off!', { kind: 'off' }],
+    ['on', { kind: 'on' }],
+    ['on.', { kind: 'on' }],
+    ['tldr', { kind: 'tldr' }],
+    ['TL;DR', { kind: 'tldr' }],
+    ['tl dr', { kind: 'tldr' }],
+    ['pls tldr?', { kind: 'tldr' }],
   ];
   it.each(matches)('matches %j', (body, expected) => {
     expect(run(body)).toEqual(expected);
@@ -41,6 +49,7 @@ describe('parseCmuCommand', () => {
     'recap the scores', "hey what's up", 'can you play something',
     'please please please please catch me up', 'cat me up', 'catches up',
     'match me up', 'patch me up', 'batch up',
+    'on it', 'off topic', 'tldr of round 3', 'turn off', 'tl;dr please explain',
   ];
   it.each(nonMatches)('does not match %j', (body) => {
     expect(run(body)).toBeNull();

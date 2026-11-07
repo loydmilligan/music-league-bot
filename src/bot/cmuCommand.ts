@@ -8,7 +8,10 @@ export type CmuCommand =
   | { kind: 'catchup' }
   | { kind: 'full' }
   | { kind: 'forget'; target: 'self' | 'all' | { id: string } }
-  | { kind: 'help' };
+  | { kind: 'help' }
+  | { kind: 'off' }
+  | { kind: 'on' }
+  | { kind: 'tldr' };
 
 /** Up to 3 of these may lead the text (spec M1). */
 export const FILLER_WORDS: readonly string[] = [
@@ -80,6 +83,9 @@ export function parseCmuCommand(
 
   if (text === 'help') return { kind: 'help' };
   if (text === 'full') return { kind: 'full' };
+  if (text === 'off') return { kind: 'off' };
+  if (text === 'on') return { kind: 'on' };
+  if (text === 'tldr' || text === 'tl;dr' || text === 'tl dr') return { kind: 'tldr' };
   if (text === 'forget' || text.startsWith('forget ')) {
     const arg = text.slice('forget'.length).trim();
     if (arg === '') return { kind: 'forget', target: 'self' };

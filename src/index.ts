@@ -24,6 +24,7 @@ import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
+import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,6 +68,8 @@ const cmuToken = process.env.CMU_TOKEN;
 // Admin "Bot" tab log: steps + outcome per request, 30-day retention (no message text).
 const interactionLog = openInteractionLog({ dir: process.env.INTERACTIONS_DIR ?? 'data/interactions' });
 interactionLog.prune();
+// "@bot off" / "@bot on" (owner): global, kept in ${DATA_DIR ?? 'data'}/cmu-switch.json across restarts.
+const cmuSwitch = openCmuSwitch();
 const catchMeUp = cmuUrl && cmuToken
   ? (msg: Parameters<typeof runCatchMeUp>[0], cmd: Parameters<typeof runCatchMeUp>[2]) =>
       runCatchMeUp(msg, {
@@ -84,6 +87,7 @@ const catchMeUp = cmuUrl && cmuToken
         isOwner: makeIsOwner(makeDmTarget(client), ownerPhone),
         contactName: makeContactName(client),
         botName: () => client.info?.pushname || DEFAULT_BOT_NAME,
+        cmuSwitch,
       }, cmd)
   : undefined;
 

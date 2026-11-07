@@ -11,7 +11,8 @@ import {
   CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
-import { helpText, makeIsOwner, FORGET_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
 import { openDb } from '../../src/storage/db.js';
@@ -643,8 +644,10 @@ function flowDeps(over: Partial<FakeDeps> & {
   helpThrottle?: Map<string, number>;
   helpCooldown?: { min: number };
   now?: () => number;
+  cmuSwitch?: CmuSwitch;
+  tldrThrottle?: Map<string, number>;
 } = {}) {
-  const { owner = true, contactName, helpThrottle, helpCooldown, now, ...rest } = over;
+  const { owner = true, contactName, helpThrottle, helpCooldown, now, cmuSwitch, tldrThrottle, ...rest } = over;
   const t = fakeTrace();
   const base = makeDeps({ trace: t.factory, ...rest });
   const deps = Object.assign(base.deps, {
@@ -655,9 +658,16 @@ function flowDeps(over: Partial<FakeDeps> & {
     botName: () => BOT,
     helpThrottle: helpThrottle ?? new Map<string, number>(),
     helpCooldown: helpCooldown ?? { min: 5 },
+    cmuSwitch: cmuSwitch ?? memSwitch(),
+    tldrThrottle: tldrThrottle ?? new Map<string, number>(),
     ...(now ? { now } : {}),
   });
   return { deps, t, screenshots: base.screenshots };
+}
+
+function memSwitch(enabled = true): CmuSwitch & { sets: boolean[] } {
+  const sets: boolean[] = [];
+  return { sets, isEnabled: () => enabled, set: (e) => { enabled = e; sets.push(e); } };
 }
 
 const ownerMsg = (over: Partial<CmuMessage> = {}) => makeMsg({ author: OWNER, notifyName: 'Owen', ...over });
@@ -1086,5 +1096,284 @@ describe('handleMessage passes mentioned and self ids to the parser', () => {
     });
     expect(catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', target: { id: PLAYER } });
     expect(jevRespond).not.toHaveBeenCalled();
+  });
+});
+
+// ── Owner off/on switch and the group tldr ─────────────────────────────────
+
+const OFF_DM = `Catch-up bot is off. Nobody gets reactions or DMs from catch-me-up commands until you send "@${BOT} on" in any group.`;
+const ON_DM = 'Catch-up bot is back on.';
+
+describe('tldrText', () => {
+  it('is the K7 copy, verbatim', () => {
+    expect(tldrText({ botName: BOT, limit: 3, cooldownMin: 5 })).toBe([
+      "👋 Quick reminder: I'm the catch-up bot.",
+      '',
+      "Been away and the chat ran a few hundred messages deep? Skip the scroll. Tag me and I'll DM you what you missed.",
+      '',
+      '@Music League Bot catch me up',
+      '  A picture of everything since your last post (up to 48 hours), plus links to the top topics. "what did I miss", "cmu" and "recap" work too.',
+      '',
+      '@Music League Bot help',
+      '  The full list, sent to you privately.',
+      '',
+      'You get 3 a day, reset at midnight LA time. Everything comes by DM; nothing gets posted here but this.',
+    ].join('\n'));
+  });
+
+  it('uses limit for the daily count', () => {
+    expect(tldrText({ botName: 'B', limit: 5, cooldownMin: 5 })).toContain('\nYou get 5 a day,');
+  });
+});
+
+describe('helpText owner switch lines', () => {
+  it('the owner section ends with off, on and tldr after forget all', () => {
+    const text = helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: true });
+    expect(text.split('\n').slice(-4)).toEqual([
+      `  @${BOT} forget all — the same for every player.`,
+      `  @${BOT} off — turn catch-me-up off everywhere (no reactions, no DMs).`,
+      `  @${BOT} on — turn it back on.`,
+      `  @${BOT} tldr — post a short how-to in this group.`,
+    ]);
+  });
+
+  it('the player copy has none of them', () => {
+    const text = helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: false });
+    expect(text).not.toMatch(/ (off|on|tldr) —/);
+  });
+});
+
+describe('runCatchMeUp off/on/tldr from a non-owner', () => {
+  it.each([
+    ['off', { kind: 'off' }],
+    ['on', { kind: 'on' }],
+    ['tldr', { kind: 'tldr' }],
+  ] as const)('%s: not-allowed, no react, DM, post or fetch, switch untouched', async (command, cmd) => {
+    const sw = memSwitch();
+    const { deps, t } = flowDeps({ owner: false, cmuSwitch: sw });
+    const msg = makeMsg();
+    await runCatchMeUp(msg, deps, cmd);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(sw.sets).toEqual([]);
+    expect(sequence(t)).toEqual(['start', 'owner ok:false', 'end not-allowed']);
+    expect(t.events[0].f).toMatchObject({ command });
+  });
+});
+
+describe('runCatchMeUp off/on (owner)', () => {
+  it('off: disables, DMs the owner K5, no reaction, no fetch; trace switch + confirm-dm, end off', async () => {
+    const sw = memSwitch();
+    const { deps, t } = flowDeps({ cmuSwitch: sw });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'off' });
+    expect(sw.isEnabled()).toBe(false);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, OFF_DM]]);
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'switch', 'confirm-dm', 'end off']);
+    expect(t.step('switch')).toMatchObject({ ok: true, enabled: false });
+    expect(t.events[0].f).toMatchObject({ command: 'off' });
+  });
+
+  it('off while already off: the same DM, end off', async () => {
+    const sw = memSwitch(false);
+    const { deps, t } = flowDeps({ cmuSwitch: sw });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'off' });
+    expect(sw.isEnabled()).toBe(false);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, OFF_DM]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['off']);
+  });
+
+  it('on (while off): enables, DMs K6, no reaction; the next catch-up works', async () => {
+    const sw = memSwitch(false);
+    const { deps, t } = flowDeps({ cmuSwitch: sw });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'on' });
+    expect(sw.isEnabled()).toBe(true);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, ON_DM]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['on']);
+    expect(t.events[0].f).toMatchObject({ command: 'on' });
+
+    const next = flowDeps({ owner: false, cmuSwitch: sw });
+    const player = makeMsg();
+    await runCatchMeUp(player, next.deps, { kind: 'catchup' });
+    expect(player.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(next.deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(next.t.ends().map((e) => e.name)).toEqual(['quiet']);
+  });
+
+  it('on while already on: the same DM, end on', async () => {
+    const { deps, t } = flowDeps({ cmuSwitch: memSwitch(true) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'on' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, ON_DM]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['on']);
+  });
+
+  it('a switch that fails to save: switch ok:false, no DM, end failed', async () => {
+    const sw: CmuSwitch = { isEnabled: () => true, set: () => { throw new Error('EACCES'); } };
+    const { deps, t } = flowDeps({ cmuSwitch: sw });
+    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'off' })).resolves.toBeUndefined();
+    expect(t.step('switch')).toMatchObject({ ok: false });
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  it('the file switch: owner off, then a fresh switch over the same file (restart) is still off', async () => {
+    const file = path.join(os.tmpdir(), `cmu-switch-test-${process.pid}-${Date.now()}.json`);
+    try {
+      const { deps } = flowDeps({ cmuSwitch: openCmuSwitch(file) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'off' });
+      expect(openCmuSwitch(file).isEnabled()).toBe(false);
+    } finally {
+      if (existsSync(file)) (await import('node:fs')).rmSync(file);
+    }
+  });
+});
+
+describe('runCatchMeUp while off', () => {
+  it.each([
+    ['catch me up', { kind: 'catchup' }, false],
+    ['full', { kind: 'full' }, true],
+    ['forget', { kind: 'forget', target: 'self' }, true],
+    ['forget all', { kind: 'forget', target: 'all' }, true],
+    ['forget @', { kind: 'forget', target: { id: PLAYER } }, true],
+    ['help', { kind: 'help' }, false],
+    ['help', { kind: 'help' }, true],
+    ['tldr', { kind: 'tldr' }, true],
+  ] as const)('%s (owner %s): start + end disabled, nothing sent, no fetch, no owner step', async (command, cmd, owner) => {
+    const { deps, t } = flowDeps({ owner, cmuSwitch: memSwitch(false) });
+    const msg = owner ? ownerMsg() : makeMsg();
+    await runCatchMeUp(msg, deps, cmd);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.isOwner).not.toHaveBeenCalled();
+    expect(sequence(t)).toEqual(['start', 'end disabled']);
+    expect(t.events[0].f).toMatchObject({ command });
+  });
+});
+
+describe('runCatchMeUp tldr (owner)', () => {
+  it('👍 then posts tldrText in the group, no fetch, no DM; trace group-post, end tldr', async () => {
+    const { deps, t } = flowDeps();
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'tldr' });
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(deps.sendText.mock.calls).toEqual([[GROUP, tldrText({ botName: BOT, limit: 3, cooldownMin: 5 })]]);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'react', 'group-post', 'end tldr']);
+    expect(t.events[0].f).toMatchObject({ command: 'tldr' });
+  });
+
+  it('a second tldr in the same group within 30 minutes: ⏳, no post, end tldr-throttled; another group and 30 minutes later work', async () => {
+    let clock = 5_000_000;
+    const tldrThrottle = new Map<string, number>();
+    const OTHER = '120363000000000002@g.us';
+    const groups = new Map([[GROUP, 'boarz-ii-men'], [OTHER, 'other']]);
+    const first = flowDeps({ tldrThrottle, groups, now: () => clock });
+    await runCatchMeUp(ownerMsg(), first.deps, { kind: 'tldr' });
+    expect(first.deps.sendText).toHaveBeenCalledTimes(1);
+
+    clock += 29 * 60_000 + 59_000;
+    const second = flowDeps({ tldrThrottle, groups, now: () => clock });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, second.deps, { kind: 'tldr' });
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['⏳']);
+    expect(second.deps.sendText).not.toHaveBeenCalled();
+    expect(second.deps.fetchFn).not.toHaveBeenCalled();
+    expect(second.t.ends().map((e) => e.name)).toEqual(['tldr-throttled']);
+
+    const other = flowDeps({ tldrThrottle, groups, now: () => clock });
+    await runCatchMeUp(ownerMsg({ from: OTHER }), other.deps, { kind: 'tldr' });
+    expect(other.deps.sendText.mock.calls[0][0]).toBe(OTHER);
+
+    clock += 2_000;
+    const third = flowDeps({ tldrThrottle, groups, now: () => clock });
+    await runCatchMeUp(ownerMsg(), third.deps, { kind: 'tldr' });
+    expect(third.deps.sendText).toHaveBeenCalledTimes(1);
+    expect(third.t.ends().map((e) => e.name)).toEqual(['tldr']);
+  });
+
+  it('a failed group post: group-post ok:false, end failed, not counted by the throttle', async () => {
+    const tldrThrottle = new Map<string, number>();
+    const failing = flowDeps({ tldrThrottle, sendText: vi.fn().mockRejectedValue(new Error('send')) });
+    await expect(runCatchMeUp(ownerMsg(), failing.deps, { kind: 'tldr' })).resolves.toBeUndefined();
+    expect(failing.t.step('group-post')).toMatchObject({ ok: false });
+    expect(failing.t.ends().map((e) => e.name)).toEqual(['failed']);
+    const retry = flowDeps({ tldrThrottle });
+    await runCatchMeUp(ownerMsg(), retry.deps, { kind: 'tldr' });
+    expect(retry.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('no message text in the trace or the log', async () => {
+    const { deps, t } = flowDeps();
+    await runCatchMeUp(ownerMsg({ notifyName: SENTINEL_NAME }), deps, { kind: 'tldr' });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'off' });
+    const all = JSON.stringify(t.events) + deps.log.mock.calls.flat().join('\n');
+    expect(all).not.toContain('Quick reminder');
+    expect(all).not.toContain('Catch-up bot is off');
+  });
+});
+
+describe('handleMessage with the switch off', () => {
+  it('owner off, then a player catch me up and owner help: disabled, nothing sent, no fetch, Jev not called; owner on restores', async () => {
+    const sw = memSwitch();
+    const t = fakeTrace();
+    const { deps } = makeDeps({ trace: t.factory });
+    const fullDeps = Object.assign(deps, {
+      isOwner: vi.fn(async (a: string) => a === OWNER),
+      botName: () => BOT,
+      helpThrottle: new Map<string, number>(),
+      helpCooldown: { min: 5 },
+      cmuSwitch: sw,
+      tldrThrottle: new Map<string, number>(),
+    });
+    const catchMeUp = (msg: WhatsAppMessage, cmd: Parameters<typeof runCatchMeUp>[2]) => runCatchMeUp(msg, fullDeps, cmd);
+    const jevRespond = vi.fn().mockResolvedValue('jev');
+    const db = openDb(':memory:');
+    createPromptTables(db);
+    const cfg: BotConfig = {
+      config: rulesConfigSchema.parse({ defaults: { requireCommandPrefix: true, commandPrefix: '!song' }, rules: [] }),
+      spotify: { searchTrack: vi.fn(), getTrackById: vi.fn(), findOrCreatePlaylist: vi.fn(), isTrackInPlaylist: vi.fn(), addTrackToPlaylist: vi.fn() },
+      db, allowedGroupIds: ['120363000000000001'], ownerPhone: '1@c.us', masterPlaylistName: 'M', sendDm: vi.fn(),
+      catchMeUp, jevRespond,
+    };
+    const wa = (body: string, author: string): WhatsAppMessage => ({
+      body, from: GROUP, chatName: 'G', author, fromMe: false, capturedAt: REQUEST_AT,
+      priorMessages: [], mentionsBot: true,
+      reply: vi.fn().mockResolvedValue(undefined),
+      getContact: vi.fn().mockResolvedValue({ pushname: 'X' }),
+      react: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const off = wa('@12134198455 off', OWNER);
+    await handleMessage(off, cfg);
+    expect(sw.isEnabled()).toBe(false);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, OFF_DM]]);
+    expect(off.react).not.toHaveBeenCalled();
+    deps.sendText.mockClear();
+
+    const player = wa('@12134198455 catch me up', AUTHOR);
+    const help = wa('@12134198455 help', OWNER);
+    await handleMessage(player, cfg);
+    await handleMessage(help, cfg);
+    for (const m of [player, help]) {
+      expect(m.react).not.toHaveBeenCalled();
+      expect(m.reply).not.toHaveBeenCalled();
+    }
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(jevRespond).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['off', 'disabled', 'disabled']);
+
+    await handleMessage(wa('@12134198455 on', OWNER), cfg);
+    expect(sw.isEnabled()).toBe(true);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, ON_DM]]);
   });
 });

@@ -4,7 +4,8 @@ import { performance } from 'node:perf_hooks';
 import os from 'node:os';
 import path from 'node:path';
 import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
-import { runForget, runHelp } from './cmuFlows.js';
+import { runForget, runHelp, runSwitch, runTldr } from './cmuFlows.js';
+import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
 /**
@@ -86,7 +87,14 @@ export interface CmuDeps {
   helpCooldown?: { min: number };
   /** Clock override for tests. Default: Date.now. */
   now?(): number;
+  /** K3: the owner's global off/on switch. Default: an in-memory switch (enabled). */
+  cmuSwitch?: CmuSwitch;
+  /** Group id → last tldr post (ms). Default: a module-level map. */
+  tldrThrottle?: Map<string, number>;
 }
+
+/** Used when no switch is wired: on, and `@bot off` lasts until a restart. */
+const DEFAULT_SWITCH = memoryCmuSwitch();
 
 export const CMU_COMMAND = 'catch me up';
 
@@ -96,6 +104,9 @@ export function commandLabel(cmd: CmuCommand): string {
     case 'catchup': return CMU_COMMAND;
     case 'full': return 'full';
     case 'help': return 'help';
+    case 'off': return 'off';
+    case 'on': return 'on';
+    case 'tldr': return 'tldr';
     case 'forget': return cmd.target === 'self' ? 'forget' : cmd.target === 'all' ? 'forget all' : 'forget @';
   }
 }
@@ -285,8 +296,16 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   // `who` is the payload name; a getContact() fallback runs later, inside the
   // deadline, so it can never hold up the 👍 (C3) or the outcome (I14).
   start(msg.notifyName ?? '');
+  const cmuSwitch = deps.cmuSwitch ?? DEFAULT_SWITCH;
+  // K4: while off, every command but the owner's off/on is swallowed: no reaction, DM, post or fetch.
+  if (cmd.kind !== 'off' && cmd.kind !== 'on' && safeCall(() => cmuSwitch.isEnabled()) === false) {
+    safeCall(() => raw.end('disabled'));
+    deps.log(`[cmu] disabled in ${group}`);
+    return;
+  }
   // M3: an owner command from anyone else gets nothing at all, and is not passed on.
-  if ((cmd.kind === 'full' || cmd.kind === 'forget') && !(await checkOwner(msg, deps, trace))) {
+  const ownerOnly = cmd.kind === 'full' || cmd.kind === 'forget' || cmd.kind === 'off' || cmd.kind === 'on' || cmd.kind === 'tldr';
+  if (ownerOnly && !(await checkOwner(msg, deps, trace))) {
     safeCall(() => raw.end('not-allowed'));
     deps.log(`[cmu] not-allowed in ${group}`);
     return;
@@ -295,6 +314,8 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
 
   const end = (outcome: string, error?: string) => void safeCall(() => raw.end(outcome, error ? { error } : undefined));
   if (cmd.kind === 'help') return runHelp(msg, deps, trace, end);
+  if (cmd.kind === 'off' || cmd.kind === 'on') return runSwitch(msg, deps, cmuSwitch, cmd.kind === 'on', trace, end);
+  if (cmd.kind === 'tldr') return runTldr(msg, deps, trace, end);
   if (cmd.kind === 'forget') return runForget(msg, deps, cmd.target, trace, end);
 
   let outcome: Outcome = 'failed';

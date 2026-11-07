@@ -17,6 +17,7 @@ import {
   type CmuMessage,
   type SafeTrace,
 } from './catchMeUp.js';
+import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
  * The forget (owner only) and help flows of "@bot ...", split out of
@@ -71,10 +72,40 @@ export function helpText(o: { botName: string; used?: number; limit: number; coo
       `  ${at} forget — forget your last catch-up and reset your count.`,
       `  ${at} forget @Player — the same for that player.`,
       `  ${at} forget all — the same for every player.`,
+      `  ${at} off — turn catch-me-up off everywhere (no reactions, no DMs).`,
+      `  ${at} on — turn it back on.`,
+      `  ${at} tldr — post a short how-to in this group.`,
     );
   }
   return lines.join('\n');
 }
+
+/** K7, verbatim: the group reminder `@bot tldr` posts. `cooldownMin` is not in the copy yet. */
+export function tldrText(o: { botName: string; limit: number; cooldownMin?: number }): string {
+  const at = `@${o.botName}`;
+  return [
+    "👋 Quick reminder: I'm the catch-up bot.",
+    '',
+    "Been away and the chat ran a few hundred messages deep? Skip the scroll. Tag me and I'll DM you what you missed.",
+    '',
+    `${at} catch me up`,
+    '  A picture of everything since your last post (up to 48 hours), plus links to the top topics. "what did I miss", "cmu" and "recap" work too.',
+    '',
+    `${at} help`,
+    '  The full list, sent to you privately.',
+    '',
+    `You get ${o.limit} a day, reset at midnight LA time. Everything comes by DM; nothing gets posted here but this.`,
+  ].join('\n');
+}
+
+/** K5 / K6, verbatim. */
+export const switchOffText = (botName: string): string =>
+  `Catch-up bot is off. Nobody gets reactions or DMs from catch-me-up commands until you send "@${botName} on" in any group.`;
+export const SWITCH_ON_TEXT = 'Catch-up bot is back on.';
+
+/** K7: at most one tldr per group per 30 minutes. */
+export const TLDR_COOLDOWN_MS = 30 * 60_000;
+const TLDR_THROTTLE = new Map<string, number>();
 
 /**
  * M4: is `author` the owner? True when the raw ids match or both map to the
@@ -274,4 +305,69 @@ async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, cooldown: 
   }
   const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner });
   await timed(trace, 'help-dm', () => deps.sendText(msg.author, text));
+}
+
+/**
+ * Owner only (K5, K6): flip the global switch, then confirm by DM. No reaction,
+ * so the group sees nothing. Repeating the current state sends the same DM.
+ */
+export async function runSwitch(msg: CmuMessage, deps: CmuDeps, sw: CmuSwitch, enabled: boolean, trace: SafeTrace, end: End): Promise<void> {
+  const label = enabled ? 'on' : 'off';
+  try {
+    sw.set(enabled, new Date((deps.now ?? Date.now)()));
+  } catch (err) {
+    trace.step('switch', { ok: false, enabled });
+    const error = describeError(err);
+    deps.log(`[cmu] switch ${label} failed in ${msg.from}: ${error}`);
+    end('failed', error);
+    return;
+  }
+  trace.step('switch', { ok: true, enabled });
+  deps.log(`[cmu] switched ${label} in ${msg.from}`);
+  const text = enabled ? SWITCH_ON_TEXT : switchOffText(deps.botName?.() || DEFAULT_BOT_NAME);
+  try {
+    await withDeadline(
+      timed(trace, 'confirm-dm', () => deps.sendText(msg.author, text)),
+      deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
+    );
+  } catch (err) {
+    // The switch itself took; only the confirmation failed.
+    deps.log(`[cmu] switch confirm failed in ${msg.from}: ${describeError(err)}`);
+  }
+  end(label);
+}
+
+/**
+ * Owner only (K7): 👍, then a short how-to posted in the group itself. At most
+ * once per group per 30 minutes; a throttled tldr gets ⏳ and no post. No
+ * companelist call, and it counts toward no one's daily limit.
+ */
+export async function runTldr(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, end: End): Promise<void> {
+  const throttle = deps.tldrThrottle ?? TLDR_THROTTLE;
+  const now = deps.now ?? Date.now;
+  const last = throttle.get(msg.from);
+  if (last !== undefined && now() - last < TLDR_COOLDOWN_MS) {
+    await react(msg, '⏳', deps, trace);
+    end('tldr-throttled');
+    return;
+  }
+  let outcome = 'failed';
+  let error: string | undefined;
+  try {
+    await react(msg, '👍', deps, trace);
+    const cooldown = deps.helpCooldown ?? HELP_COOLDOWN;
+    const text = tldrText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, limit: CMU_DAILY_LIMIT, cooldownMin: cooldown.min });
+    // The one message catch-me-up ever sends to a group, on the owner's say-so.
+    await withDeadline(timed(trace, 'group-post', () => deps.sendText(msg.from, text)), deps.deadlineMs ?? CMU_DEADLINE_MS);
+    outcome = 'tldr';
+    const t = now();
+    for (const [k, at] of throttle) if (t - at >= TLDR_COOLDOWN_MS) throttle.delete(k);
+    throttle.set(msg.from, t);
+    deps.log(`[cmu] tldr posted in ${msg.from}`);
+  } catch (err) {
+    error = describeError(err);
+    deps.log(`[cmu] tldr failed in ${msg.from}: ${error}`);
+  } finally {
+    end(outcome, error);
+  }
 }
