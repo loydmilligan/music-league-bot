@@ -528,6 +528,14 @@ describe('handleMessage', () => {
       expect(t.spotify.addTrackToPlaylist).toHaveBeenCalled();
     });
 
+    it('preview song-capture group: a mention with a !song command takes the !song path, no reaction', async () => {
+      const t = setup({ preview: [SONG] });
+      const msg = plain(SONG, '!song Test Artist - Test Title');
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(t.spotify.searchTrack).toHaveBeenCalled();
+    });
+
     it('preview song-capture group: a prompt-answer mention takes the prompt path, no reaction', async () => {
       const t = setup({ preview: [SONG] });
       createPromptTables(t.db);

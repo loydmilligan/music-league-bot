@@ -109,7 +109,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   if (await handlePromptAnswer(msg, botConfig)) return;
 
   // Preview groups: a mention with no music URL gets a reaction instead of Jev's text reply.
-  if (inPreview && msg.mentionsBot && detectMusicUrls(msg.body).length === 0) {
+  if (inPreview && msg.mentionsBot && detectMusicUrls(msg.body).length === 0 && parseMessage(msg.body) === null) {
     await botConfig.reactToMention?.(msg);
     return;
   }
