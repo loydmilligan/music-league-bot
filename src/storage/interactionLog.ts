@@ -90,7 +90,12 @@ export function openInteractionLog(o: { dir: string; now?: () => Date; log?: (l:
   function append(file: string, line: string): void {
     try {
       ensureDir(o.dir);
+      const created = !existsSync(file);
       appendFileSync(file, line + '\n', { mode: 0o644 });
+      // The umask can narrow the create mode; readers run as another user.
+      if (created) {
+        try { chmodSync(file, 0o644); } catch (e) { reportError('chmod failed', e); }
+      }
     } catch (e) {
       reportError('write failed', e);
     }

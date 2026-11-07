@@ -120,4 +120,16 @@ describe('interactionLog', () => {
     expect(statSync(join(dir, 'img')).mode & 0o777).toBe(0o755);
     expect(statSync(join(dir, '2026-11-06.jsonl')).mode & 0o777).toBe(0o644);
   });
+
+  it('keeps day files 0644 even under a restrictive umask', () => {
+    const old = process.umask(0o077);
+    try {
+      const tr = openInteractionLog({ dir, now }).begin('cmu');
+      tr.start(START);
+      tr.end('card');
+      expect(statSync(join(dir, '2026-11-06.jsonl')).mode & 0o777).toBe(0o644);
+    } finally {
+      process.umask(old);
+    }
+  });
 });
