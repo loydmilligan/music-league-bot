@@ -48,7 +48,8 @@ function matchesPrefixPhrase(text: string): boolean {
   }
   // Typo in the first word of a "catch ..." phrase.
   const space = text.indexOf(' ');
-  if (space > 0 && withinOneEdit(text.slice(0, space), 'catch')) {
+  const first = text.slice(0, space);
+  if (space > 0 && first.startsWith('c') && withinOneEdit(first, 'catch')) {
     const rest = text.slice(space + 1);
     return ['me up', 'up'].some((p) => rest === p || rest.startsWith(p + ' '));
   }

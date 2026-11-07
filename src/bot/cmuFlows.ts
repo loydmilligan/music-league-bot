@@ -147,11 +147,18 @@ async function safeContactName(deps: CmuDeps, id: string): Promise<string> {
 export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trace: SafeTrace, end: End): Promise<void> {
   let outcome = 'failed';
   let error: string | undefined;
+  const state = { posted: false };
   try {
     await react(msg, '👍', deps, trace);
     try {
-      outcome = await withDeadline(forget(msg, deps, target, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      outcome = await withDeadline(forget(msg, deps, target, trace, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
+      if (state.posted) {
+        // The forget itself succeeded; only the confirm DM (or the deadline) failed. No contradictory DM.
+        outcome = 'forgot';
+        deps.log(`[cmu] forget confirm failed in ${msg.from}: ${describeError(err)}`);
+        return;
+      }
       outcome = 'failed';
       error = describeError(err);
       deps.log(`[cmu] forget failed in ${msg.from}: ${error}`);
@@ -169,7 +176,7 @@ export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTa
   }
 }
 
-async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trace: SafeTrace): Promise<'forgot'> {
+async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trace: SafeTrace, state: { posted: boolean }): Promise<'forgot'> {
   const player = typeof target === 'object';
   const contactName = player ? await safeContactName(deps, target.id) : '';
   const wireTarget = player ? { key: await resolveKey(target.id, deps), name: contactName } : target;
@@ -186,6 +193,7 @@ async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trac
     throw err;
   }
   // P3: `forget @` keeps only whether the player was resolved; never the id or a name.
+  state.posted = true;
   trace.step('forget', { ok: true, ms: msSince(t0), status: 200, ...(player ? { resolved: result.resolved } : {}) });
 
   const reply = forgetReply(result, contactName);
@@ -200,6 +208,12 @@ export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   const now = deps.now ?? Date.now;
   const last = throttle.get(msg.author);
   if (last !== undefined && now() - last < HELP_THROTTLE_MS) {
+    // The help message is still a chat message: tell companelist so it is not taken for a real post.
+    try {
+      await post(deps, { ...(await baseBody(msg, deps)), mode: 'status' }, CMU_COMMAND_TIMEOUT_MS);
+    } catch (err) {
+      deps.log(`[cmu] throttled help status failed in ${msg.from}: ${describeError(err)}`);
+    }
     end('help-throttled');
     return;
   }

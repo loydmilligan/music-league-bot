@@ -40,6 +40,7 @@ describe('parseCmuCommand', () => {
     'help me pick a song', 'full of it', 'forget it, never mind', 'summary of round 3',
     'recap the scores', "hey what's up", 'can you play something',
     'please please please please catch me up', 'cat me up', 'catches up',
+    'match me up', 'patch me up', 'batch up',
   ];
   it.each(nonMatches)('does not match %j', (body) => {
     expect(run(body)).toBeNull();

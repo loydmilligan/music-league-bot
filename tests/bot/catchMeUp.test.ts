@@ -771,6 +771,28 @@ describe('runCatchMeUp forget (owner)', () => {
     expect(deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
     expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'http 500' } }]);
   });
+
+  it.each([
+    ['a network error', () => vi.fn().mockRejectedValue(new TypeError('fetch failed'))],
+    ['a bad body', () => vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card' }))],
+  ])('forget: a POST failure (%s) sends the failure DM', async (_l, fetchFn) => {
+    const { deps, t } = flowDeps({ fetchFn: fetchFn() });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  it('forget: the POST succeeded but the confirm DM failed: ends forgot, no contradictory failure DM', async () => {
+    const { deps, t } = flowDeps({
+      fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: true })),
+      sendText: vi.fn().mockRejectedValue(new Error('send')),
+    });
+    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' })).resolves.toBeUndefined();
+    expect(deps.sendText).toHaveBeenCalledTimes(1);
+    expect(deps.sendText.mock.calls[0][1]).not.toBe(FORGET_FAILURE_TEXT);
+    expect(t.step('confirm-dm')).toMatchObject({ ok: false });
+    expect(t.ends().map((e) => e.name)).toEqual(['forgot']);
+  });
 });
 
 describe('helpText', () => {
@@ -852,7 +874,9 @@ describe('runCatchMeUp help', () => {
     const msg = makeMsg();
     await runCatchMeUp(msg, second.deps, { kind: 'help' });
     expect(msg.react).not.toHaveBeenCalled();
-    expect(second.deps.fetchFn).not.toHaveBeenCalled();
+    // One silent status POST keeps the help message out of the sender's window; nothing else is sent.
+    expect(second.deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(sentBody(second.deps)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: AUTHOR, mode: 'status' });
     expect(second.deps.sendText).not.toHaveBeenCalled();
     expect(second.t.ends().map((e) => e.name)).toEqual(['help-throttled']);
 
@@ -865,6 +889,18 @@ describe('runCatchMeUp help', () => {
     const third = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
     await runCatchMeUp(makeMsg(), third.deps, { kind: 'help' });
     expect(third.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('a throttled help whose status POST fails still ends help-throttled, no DM, error logged without names', async () => {
+    const helpThrottle = new Map<string, number>([[AUTHOR, 1_000_000]]);
+    const { deps, t } = flowDeps({ owner: false, helpThrottle, now: () => 1_000_000 + 60_000, fetchFn: vi.fn().mockRejectedValue(new TypeError('fetch failed')) });
+    const msg = makeMsg();
+    await expect(runCatchMeUp(msg, deps, { kind: 'help' })).resolves.toBeUndefined();
+    expect(deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['help-throttled']);
+    expect(deps.log.mock.calls.flat().join('\n')).not.toContain('Alice');
   });
 
   it('a help DM that fails is not counted by the throttle', async () => {
