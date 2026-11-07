@@ -11,7 +11,8 @@ export type CmuCommand =
   | { kind: 'help' }
   | { kind: 'off' }
   | { kind: 'on' }
-  | { kind: 'tldr' };
+  | { kind: 'tldr' }
+  | { kind: 'recap' };
 
 /** Up to 3 of these may lead the text (spec M1). */
 export const FILLER_WORDS: readonly string[] = [
@@ -28,6 +29,9 @@ const PREFIX_PHRASES: readonly string[] = [
 ];
 
 /** Bare words that must be the whole text (B2), so "summary of round 3" is Jev's. */
+/** Owner-only command words: exact match, no typo tolerance. */
+const RECAP_PHRASES: readonly string[] = ['recap-bot-calls', 'recap bot calls', 'recapbotcalls'];
+
 const EXACT_PHRASES: readonly string[] = ['recap', 'summary', 'summarize'];
 
 /** Damerau edit distance (insert, delete, substitute, adjacent swap) is exactly 1. */
@@ -97,6 +101,7 @@ export function parseCmuCommand(
     return null;
   }
 
+  if (RECAP_PHRASES.includes(text)) return { kind: 'recap' };
   if (EXACT_PHRASES.includes(text) || matchesPrefixPhrase(text)) return { kind: 'catchup' };
   return null;
 }

@@ -11,7 +11,7 @@ import {
   CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
-import { helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
@@ -1423,5 +1423,78 @@ describe('handleMessage with the switch off', () => {
     await handleMessage(wa('@12134198455 on', OWNER), cfg);
     expect(sw.isEnabled()).toBe(true);
     expect(deps.sendText.mock.calls).toEqual([[OWNER, ON_DM]]);
+  });
+});
+
+describe('runCatchMeUp recap-bot-calls', () => {
+  const RECAP_TEXT = 'Synthetic recap line.';
+  const recapRes = () => jsonResponse(200, { kind: 'recap', text: RECAP_TEXT });
+
+  it('owner, mapped group: POSTs mode recap, DMs the text, no react; steps owner, companelist, confirm-dm', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(recapRes()) });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'recap' });
+    expect(sentBody(deps)).toMatchObject({ mode: 'recap', league: 'boarz-ii-men' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_TEXT]]);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'companelist', 'confirm-dm', 'end recap']);
+    expect(t.events[0].f).toMatchObject({ command: 'recap' });
+  });
+
+  it('owner, group not in groups: still POSTs without league and DMs', async () => {
+    const { deps, t } = flowDeps({ groups: new Map(), fetchFn: vi.fn().mockResolvedValue(recapRes()) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+    const body = sentBody(deps);
+    expect(body.mode).toBe('recap');
+    expect(body.league).toBeUndefined();
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_TEXT]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['recap']);
+  });
+
+  it('owner, switch off: still runs', async () => {
+    const { deps, t } = flowDeps({ cmuSwitch: memSwitch(false), fetchFn: vi.fn().mockResolvedValue(recapRes()) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_TEXT]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['recap']);
+  });
+
+  it('non-owner: no POST, no DM, no react; not-allowed', async () => {
+    const { deps, t } = flowDeps({ owner: false });
+    const msg = makeMsg();
+    await runCatchMeUp(msg, deps, { kind: 'recap' });
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(sequence(t)).toEqual(['start', 'owner ok:false', 'end not-allowed']);
+  });
+
+  it.each([
+    ['a 500', () => vi.fn().mockResolvedValue(jsonResponse(500, { error: 'boom' }))],
+    ['a bad body', () => vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>' }))],
+    ['a non-string text', () => vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'recap', text: 5 }))],
+    ['a network error', () => vi.fn().mockRejectedValue(new TypeError('fetch failed'))],
+  ])('%s: DMs the fixed failure line; recap-failed', async (_l, mk) => {
+    const { deps, t } = flowDeps({ fetchFn: mk() });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'recap' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_FAILURE_TEXT]]);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['recap-failed']);
+  });
+
+  it('timeout: the aborted fetch DMs the failure line', async () => {
+    const fetchFn = vi.fn((_u: string, init: RequestInit) => new Promise<Response>((_res, rej) => {
+      init.signal!.addEventListener('abort', () => rej(new Error('aborted')));
+    }));
+    const { deps, t } = flowDeps({ fetchFn, deadlineMs: 50 });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_FAILURE_TEXT]]);
+    expect(t.ends().map((e) => e.name)).toEqual(['recap-failed']);
+  });
+
+  it('keeps message text, ids and DM text out of the trace', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(recapRes()) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+    expect(JSON.stringify(t.events)).not.toContain(RECAP_TEXT);
   });
 });

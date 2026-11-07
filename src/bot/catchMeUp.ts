@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import os from 'node:os';
 import path from 'node:path';
 import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
-import { runForget, runHelp, runSwitch, runTldr } from './cmuFlows.js';
+import { runForget, runHelp, runRecap, runSwitch, runTldr } from './cmuFlows.js';
 import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
@@ -112,6 +112,7 @@ export function commandLabel(cmd: CmuCommand): string {
     case 'off': return 'off';
     case 'on': return 'on';
     case 'tldr': return 'tldr';
+    case 'recap': return 'recap';
     case 'forget': return cmd.target === 'self' ? 'forget' : cmd.target === 'all' ? 'forget all' : 'forget @';
   }
 }
@@ -286,7 +287,8 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   }));
 
   // The owner's off/on works from any group (its DM says so); the reply is a DM only, never to the group.
-  const isSwitch = cmd.kind === 'off' || cmd.kind === 'on';
+  // recap-bot-calls joins them: owner tools skip the group map and the off switch.
+  const isSwitch = cmd.kind === 'off' || cmd.kind === 'on' || cmd.kind === 'recap';
   if (!isSwitch && !deps.groups.has(group)) {
     start(msg.notifyName ?? '');
     trace.step('trigger', { ok: true, mapped: false });
@@ -311,7 +313,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     return;
   }
   // M3: an owner command from anyone else gets nothing at all, and is not passed on.
-  const ownerOnly = cmd.kind === 'full' || cmd.kind === 'forget' || cmd.kind === 'off' || cmd.kind === 'on' || cmd.kind === 'tldr';
+  const ownerOnly = cmd.kind === 'full' || cmd.kind === 'forget' || cmd.kind === 'off' || cmd.kind === 'on' || cmd.kind === 'tldr' || cmd.kind === 'recap';
   if (ownerOnly && !(await checkOwner(msg, deps, trace))) {
     safeCall(() => raw.end('not-allowed'));
     deps.log(`[cmu] not-allowed in ${group}`);
@@ -323,6 +325,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   if (cmd.kind === 'help') return runHelp(msg, deps, trace, end);
   if (cmd.kind === 'off' || cmd.kind === 'on') return runSwitch(msg, deps, cmuSwitch, cmd.kind === 'on', trace, end);
   if (cmd.kind === 'tldr') return runTldr(msg, deps, trace, end);
+  if (cmd.kind === 'recap') return runRecap(msg, deps, trace, end);
   if (cmd.kind === 'forget') return runForget(msg, deps, cmd.target, trace, end);
 
   let outcome: Outcome = 'failed';

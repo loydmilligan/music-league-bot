@@ -84,7 +84,9 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // below, so the request's text is never logged. It is gated by its own
   // CMU_GROUPS map rather than the song-capture allowlist.
   if (botConfig.catchMeUp) {
-    const cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, msg.mentionedIds ?? [], new Set(msg.selfIds ?? []));
+    let cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, msg.mentionedIds ?? [], new Set(msg.selfIds ?? []));
+    // recap-bot-calls is a preview-group command; elsewhere it is an ordinary mention.
+    if (cmd?.kind === 'recap' && !preview.isPreview(msg.from)) cmd = null;
     if (cmd) {
       await botConfig.catchMeUp(msg, cmd);
       return;

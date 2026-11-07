@@ -28,6 +28,11 @@ describe('parseCmuCommand', () => {
     ['TL;DR', { kind: 'tldr' }],
     ['tl dr', { kind: 'tldr' }],
     ['pls tldr?', { kind: 'tldr' }],
+    ['recap-bot-calls', { kind: 'recap' }],
+    ['recap bot calls', { kind: 'recap' }],
+    ['recapbotcalls', { kind: 'recap' }],
+    ['hey recap-bot-calls!', { kind: 'recap' }],
+    ['recap', CATCHUP],
   ];
   it.each(matches)('matches %j', (body, expected) => {
     expect(run(body)).toEqual(expected);
@@ -50,6 +55,7 @@ describe('parseCmuCommand', () => {
     'please please please please catch me up', 'cat me up', 'catches up',
     'match me up', 'patch me up', 'batch up',
     'on it', 'off topic', 'tldr of round 3', 'turn off', 'tl;dr please explain',
+    'recap-bot-calls please now', 'recap-bot-cals', 'recap bot call',
   ];
   it.each(nonMatches)('does not match %j', (body) => {
     expect(run(body)).toBeNull();

@@ -36,6 +36,8 @@ export const DEFAULT_HELP_COOLDOWN_MIN = 5;
 export const CMU_COMMAND_TIMEOUT_MS = 15_000;
 export const FORGET_FAILURE_TEXT = "Couldn't reach the catch-up service, so nothing was forgotten. Try again in a few minutes.";
 
+export const RECAP_FAILURE_TEXT = "Couldn't build the recap just now.";
+
 const HELP_THROTTLE = new Map<string, number>();
 /** The live cooldown, learned from companelist's status responses. Deps may override the holder (tests). */
 const HELP_COOLDOWN = { min: DEFAULT_HELP_COOLDOWN_MIN };
@@ -388,6 +390,48 @@ export async function runTldr(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   } catch (err) {
     error = describeError(err);
     deps.log(`[cmu] tldr failed in ${msg.from}: ${error}`);
+  } finally {
+    end(outcome, error);
+  }
+}
+
+/**
+ * Owner only: ask companelist for a one-screen summary of the last 24 h of bot activity and DM it
+ * to the requester. No reaction and nothing in the group. Any failure DMs a fixed one-liner.
+ * No message text, id or DM text reaches the trace or the log.
+ */
+export async function runRecap(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, end: End): Promise<void> {
+  let outcome = 'recap-failed';
+  let error: string | undefined;
+  try {
+    const t0 = performance.now();
+    let text: string;
+    try {
+      const { status, data } = await withDeadline(
+        (async () => post(deps, { ...(await baseBody(msg, deps)), mode: 'recap' }, CMU_COMMAND_TIMEOUT_MS))(),
+        deps.deadlineMs ?? CMU_COMMAND_TIMEOUT_MS,
+      );
+      const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+      if (d.kind !== 'recap' || typeof d.text !== 'string') throw new Error('BadResponse');
+      text = d.text;
+      trace.step('companelist', { ok: true, ms: msSince(t0), status });
+    } catch (err) {
+      trace.step('companelist', { ok: false, ms: msSince(t0), status: err instanceof CmuHttpError ? err.status : undefined });
+      throw err;
+    }
+    await withDeadline(timed(trace, 'confirm-dm', () => deps.sendText(msg.author, text)), deps.deadlineMs ?? CMU_DEADLINE_MS);
+    outcome = 'recap';
+  } catch (err) {
+    error = describeError(err);
+    deps.log(`[cmu] recap failed in ${msg.from}: ${error}`);
+    try {
+      await withDeadline(
+        timed(trace, 'failure-dm', () => deps.sendText(msg.author, RECAP_FAILURE_TEXT)),
+        deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
+      );
+    } catch (dmErr) {
+      deps.log(`[cmu] recap failure DM failed in ${msg.from}: ${describeError(dmErr)}`);
+    }
   } finally {
     end(outcome, error);
   }

@@ -598,6 +598,21 @@ describe('handleMessage', () => {
       expect(t.jevRespond).toHaveBeenCalledTimes(1);
     });
 
+    it('recap-bot-calls: a non-preview group never reaches catchMeUp and keeps the old mention path', async () => {
+      const t = setup({ preview: [CMU_ONLY] });
+      await handleMessage(plain(SONG, '@bot recap-bot-calls'), t.cfg);
+      expect(t.catchMeUp).not.toHaveBeenCalled();
+      expect(t.jevRespond).toHaveBeenCalledTimes(1);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+    });
+
+    it('recap-bot-calls: a preview group routes to catchMeUp with kind recap', async () => {
+      const t = setup({ preview: [CMU_ONLY] });
+      const msg = plain(CMU_ONLY, '@bot recap-bot-calls');
+      await handleMessage(msg, t.cfg);
+      expect(t.catchMeUp).toHaveBeenCalledWith(msg, { kind: 'recap' });
+    });
+
     it('group in neither list: nothing called; catch-me-up still routes in either kind of group', async () => {
       const t = setup({ preview: [OTHER, CMU_ONLY] });
       const msg = plain(OTHER);
