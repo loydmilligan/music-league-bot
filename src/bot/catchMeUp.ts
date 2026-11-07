@@ -125,7 +125,7 @@ function authorKind(author: string): 'lid' | 'c.us' | 'other' {
   return 'other';
 }
 
-/** Topic ids from `share-<id>.html` links; the link text itself is never kept. */
+/** Fallback topic ids from older `share-<id>.html` links; the link text itself is never kept. */
 function topicIds(links: string[]): string[] {
   const ids: string[] = [];
   for (const l of links) for (const m of l.matchAll(/share-([A-Za-z0-9_-]+)\.html/g)) ids.push(m[1]);
@@ -139,7 +139,7 @@ type CmuResult =
 type Outcome = 'card' | 'card-partial' | 'quiet' | 'limit' | 'failed' | 'unsupported';
 
 /** Optional display fields companelist adds to a 200 (Task 1); absent on older versions. */
-function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null } {
+function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null; topicIds?: string[] } {
   const m = data && typeof data === 'object' ? (data as Record<string, unknown>).meta : undefined;
   if (!m || typeof m !== 'object') return {};
   const r = m as Record<string, unknown>;
@@ -148,6 +148,7 @@ function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; win
     windowStart: typeof r.windowStart === 'string' ? r.windowStart : undefined,
     windowReason: typeof r.windowReason === 'string' ? r.windowReason : undefined,
     person: typeof r.person === 'string' || r.person === null ? (r.person as string | null) : undefined,
+    topicIds: Array.isArray(r.topicIds) && r.topicIds.every((t) => typeof t === 'string') ? (r.topicIds as string[]) : undefined,
   };
 }
 
@@ -382,7 +383,8 @@ async function deliver(
     return 'limit';
   }
   if (!result) throw new Error('BadResponse'); // unreachable: narrowed above
-  trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: result.kind, ...parseMeta(data) });
+  const { topicIds: metaTopicIds, ...displayMeta } = parseMeta(data);
+  trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: result.kind, ...displayMeta });
 
   if (result.kind === 'quiet') {
     await timed(trace, 'quiet-dm', () => deps.sendText(msg.author, result.text));
@@ -415,7 +417,7 @@ async function deliver(
     if (card.links.length) {
       await timed(trace, 'links', () => deps.sendText(msg.author, card.links.join('\n')), {
         count: card.links.length,
-        topics: topicIds(card.links),
+        topics: metaTopicIds ?? topicIds(card.links),
       });
     }
   } finally {

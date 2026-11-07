@@ -572,6 +572,29 @@ describe('runCatchMeUp interaction trace', () => {
     expect(card.t.step('links')).toMatchObject({ topics: ['g1'] });
   });
 
+  it('links step takes topic ids from meta.topicIds for markup- links', async () => {
+    const run = makeFakeRun({
+      kind: 'card', html: '<p/>',
+      links: ['Gear https://x/markup-m1.html', 'Food https://x/markup-m2.html'],
+      meta: { topicIds: ['t3', 't9'] },
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.t.step('links')).toMatchObject({ ok: true, count: 2, topics: ['t3', 't9'] });
+    expect(run.t.step('companelist')).not.toHaveProperty('topicIds');
+    const recorded = JSON.stringify(run.t.events);
+    expect(recorded).not.toContain('markup-');
+    expect(recorded).not.toContain('https://x');
+    expect(recorded).not.toContain('Gear');
+  });
+
+  it('links step falls back to share- links when meta.topicIds is absent or malformed', async () => {
+    for (const meta of [undefined, { topicIds: 'nope' }, { topicIds: [1, 2] }]) {
+      const run = makeFakeRun({ kind: 'card', html: '<p/>', links: ['https://x/share-a1.html'], meta });
+      await runCatchMeUp(makeMsg(), run.deps);
+      expect(run.t.step('links')).toMatchObject({ topics: ['a1'] });
+    }
+  });
+
   it('who is the notifyName; authorKind comes from the author suffix', async () => {
     for (const [author, kind] of [['15551234567@c.us', 'c.us'], [AUTHOR, 'lid'], ['weird-id', 'other']] as const) {
       const t = fakeTrace();
