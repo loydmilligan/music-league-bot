@@ -11,7 +11,7 @@ import { join } from 'node:path';
 // given; the 512-char value cap and 8 KB line cap are only a safety net.
 // Nothing in this module may throw into callers.
 
-export type InteractionKind = 'cmu' | 'song' | 'prompt';
+export type InteractionKind = 'cmu' | 'song' | 'prompt' | 'react';
 type Scalar = string | number | boolean | string[] | null | undefined;
 
 export interface InteractionTrace {
