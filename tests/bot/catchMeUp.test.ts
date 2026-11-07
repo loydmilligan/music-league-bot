@@ -582,8 +582,21 @@ describe('runCatchMeUp interaction trace', () => {
     const t = fakeTrace();
     const { deps } = makeDeps({ trace: t.factory });
     await runCatchMeUp(makeMsg({ notifyName: undefined, getContact: vi.fn().mockResolvedValue({ pushname: 'Bob' }) }), deps);
-    expect(t.events[0].f).toMatchObject({ who: 'Bob' });
-    expect(t.step('name')).toMatchObject({ source: 'contact' });
+    expect(t.events[0].f).toMatchObject({ who: '' });
+    expect(t.step('name')).toMatchObject({ ok: true, source: 'contact', who: 'Bob' });
+  });
+
+  it('a hung getContact() still reacts 👍 first, then hits the deadline: failure DM, end failed Deadline', async () => {
+    const t = fakeTrace();
+    const msg = makeMsg({ notifyName: undefined, getContact: vi.fn(() => new Promise<{ pushname: string }>(() => {})) });
+    const { deps } = makeDeps({ deadlineMs: 20, trace: t.factory });
+    await expect(runCatchMeUp(msg, deps)).resolves.toBeUndefined();
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, CMU_FAILURE_TEXT);
+    expect(t.step('react')).toMatchObject({ ok: true, emoji: '👍' });
+    expect(t.step('failure-dm')).toMatchObject({ ok: true });
+    expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'Deadline' } }]);
   });
 });
 

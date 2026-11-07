@@ -240,24 +240,21 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
     return;
   }
 
-  // Resolved first so `start` carries the display name (I3); usually from the payload, no I/O.
-  const nameT0 = performance.now();
-  const name = await resolveNotifyName(msg);
-  const nameMs = msSince(nameT0);
-  start(name.name);
+  // `who` is the payload name; a getContact() fallback runs later, inside the
+  // deadline, so it can never hold up the 👍 (C3) or the outcome (I14).
+  start(msg.notifyName ?? '');
   trace.step('trigger', { ok: true, mapped: true });
 
   let outcome: Outcome = 'failed';
   let error: string | undefined;
   try {
     await react(msg, '👍', deps, trace);
-    trace.step('name', { ok: name.source !== 'none', ms: nameMs, source: name.source });
 
     // Set once the image DM lands. After that the requester has their catch-up,
     // so a failed or hung links DM is logged, never answered with "Couldn't build".
     const state = { imageSent: false, pngPath: null as string | null };
     try {
-      outcome = await withDeadline(deliver(msg, deps, state, name.name, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      outcome = await withDeadline(deliver(msg, deps, state, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
       if (state.imageSent) {
         outcome = 'card-partial';
@@ -292,10 +289,13 @@ async function deliver(
   msg: CmuMessage,
   deps: CmuDeps,
   state: { imageSent: boolean; pngPath: string | null },
-  notifyName: string,
   trace: SafeTrace,
 ): Promise<'card' | 'quiet' | 'limit'> {
   const group = msg.from;
+  const nameT0 = performance.now();
+  const { name: notifyName, source } = await resolveNotifyName(msg);
+  // A display name may be stored (I6); only the contact fallback adds one here, since `start` lacked it.
+  trace.step('name', { ok: source !== 'none', ms: msSince(nameT0), source, who: source === 'contact' ? notifyName : undefined });
   const requesterKey = await resolveRequesterKey(msg, deps);
   const league = deps.groups.get(group);
 
