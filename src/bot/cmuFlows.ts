@@ -1,8 +1,10 @@
 import { performance } from 'node:perf_hooks';
 import type { CmuCommand } from './cmuCommand.js';
 import {
+  CMU_ACK_EMOJI,
   CMU_DEADLINE_MS,
   CMU_FAILURE_DM_TIMEOUT_MS,
+  CMU_WAIT_EMOJI,
   CmuHttpError,
   checkOwner,
   describeError,
@@ -196,7 +198,7 @@ export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTa
   let error: string | undefined;
   const state = { posted: false };
   try {
-    await react(msg, '👍', deps, trace);
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
     try {
       outcome = await withDeadline(forget(msg, deps, target, trace, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
@@ -259,7 +261,7 @@ export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   const cooldown = deps.helpCooldown ?? HELP_COOLDOWN;
   const last = throttle.get(msg.author);
   if (last !== undefined && now() - last < cooldown.min * 60_000) {
-    await react(msg, '⏳', deps, trace);
+    await react(msg, CMU_WAIT_EMOJI, deps, trace);
     // The help message is still a chat message: tell companelist so it is not taken for a real post.
     try {
       const { data } = await post(deps, { ...(await baseBody(msg, deps)), mode: 'status' }, CMU_COMMAND_TIMEOUT_MS);
@@ -274,7 +276,7 @@ export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   let outcome = 'failed';
   let error: string | undefined;
   try {
-    await react(msg, '👍', deps, trace);
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
     await withDeadline(help(msg, deps, trace, cooldown), deps.deadlineMs ?? CMU_DEADLINE_MS);
     outcome = 'help';
     const t = now();
@@ -366,14 +368,14 @@ export async function runTldr(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   const now = deps.now ?? Date.now;
   const last = throttle.get(msg.from);
   if (last !== undefined && now() - last < TLDR_COOLDOWN_MS) {
-    await react(msg, '⏳', deps, trace);
+    await react(msg, CMU_WAIT_EMOJI, deps, trace);
     end('tldr-throttled');
     return;
   }
   let outcome = 'failed';
   let error: string | undefined;
   try {
-    await react(msg, '👍', deps, trace);
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
     const cooldown = deps.helpCooldown ?? HELP_COOLDOWN;
     const text = tldrText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, limit: CMU_DAILY_LIMIT, cooldownMin: cooldown.min });
     // The one message catch-me-up ever sends to a group, on the owner's say-so.

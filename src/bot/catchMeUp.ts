@@ -96,6 +96,11 @@ export interface CmuDeps {
 /** Used when no switch is wired: on, and `@bot off` lasts until a restart. */
 const DEFAULT_SWITCH = memoryCmuSwitch();
 
+/** Reactions the bot uses as catch-up signals; reserved, never part of the reaction palette. */
+export const CMU_ACK_EMOJI = '👍';
+export const CMU_WAIT_EMOJI = '⏳';
+export const CMU_SIGNAL_EMOJIS: readonly string[] = [CMU_ACK_EMOJI, CMU_WAIT_EMOJI];
+
 export const CMU_COMMAND = 'catch me up';
 
 /** P3: the interaction log's `command` field. Never carries the target id. */
@@ -323,7 +328,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   let outcome: Outcome = 'failed';
   let error: string | undefined;
   try {
-    await react(msg, '👍', deps, trace);
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
 
     // Set once the image DM lands. After that the requester has their catch-up,
     // so a failed or hung links DM is logged, never answered with "Couldn't build".
@@ -403,7 +408,7 @@ async function deliver(
   if (status === 429) {
     trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: 'limit' });
     trace.step('limit', { ok: true, gate: parseGate(data) });
-    await react(msg, '⏳', deps, trace);
+    await react(msg, CMU_WAIT_EMOJI, deps, trace);
     deps.log(`[cmu] limit in ${group}`);
     return 'limit';
   }
