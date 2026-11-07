@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { serializeWid, mentionsSelf, seedSelfIds } from '../src/whatsapp/client.js';
+import { serializeWid, mentionsSelf, seedSelfIds, isOwnReaction } from '../src/whatsapp/client.js';
 
 const WID = '12134198455@c.us';
 const LID = '186428122255581@lid';
@@ -79,5 +79,23 @@ describe('seedSelfIds', () => {
     await seedSelfIds({ info: {}, getContactLidAndPhone: lookup } as never, ids, vi.fn());
     expect(ids.size).toBe(0);
     expect(lookup).not.toHaveBeenCalled();
+  });
+});
+
+describe('isOwnReaction', () => {
+  it('is true when the reaction id is fromMe, even with no known self ids', () => {
+    expect(isOwnReaction({ id: { fromMe: true }, senderId: 'a@lid' }, new Set())).toBe(true);
+  });
+
+  it('is true when fromMe is false but the sender is a learned self id', () => {
+    expect(isOwnReaction({ id: { fromMe: false }, senderId: LID }, new Set([LID]))).toBe(true);
+  });
+
+  it('is false for someone else', () => {
+    expect(isOwnReaction({ id: { fromMe: false }, senderId: 'other@lid' }, new Set([LID]))).toBe(false);
+  });
+
+  it('is false when id and senderId are missing', () => {
+    expect(isOwnReaction({}, new Set([LID]))).toBe(false);
   });
 });

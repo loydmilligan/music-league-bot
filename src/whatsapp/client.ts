@@ -21,6 +21,15 @@ const qrcode = _require('qrcode-terminal') as { generate(qr: string, opts?: { sm
  */
 const selfIds = new Set<string>();
 
+/** True when a reaction was made by the bot itself. `fromMe` is primary; selfIds (learned lazily) is the backup. */
+export function isOwnReaction(
+  r: { id?: { fromMe?: boolean }; senderId?: string },
+  ids: Set<string>,
+): boolean {
+  if (r.id?.fromMe === true) return true;
+  return r.senderId !== undefined && ids.has(r.senderId);
+}
+
 /**
  * A message id's serialized form. This wwebjs build leaves `_serialized`
  * undefined and stores it under a minified `$1` key, so fall back to that, then
@@ -164,6 +173,7 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
   // Every emoji reaction in the bot's groups (the relay phone can't see these).
   client.on('message_reaction', (reaction) => {
     try {
+      if (isOwnReaction(reaction as { id?: { fromMe?: boolean }; senderId?: string }, selfIds)) return;
       const remote = reaction.msgId?.remote as unknown;
       const chatId = typeof remote === 'string' ? remote : (remote as { _serialized?: string } | undefined)?._serialized;
       if (!chatId || !chatId.endsWith('@g.us')) return;
