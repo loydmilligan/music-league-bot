@@ -157,6 +157,9 @@ describe('cmuPreview', () => {
       expect(m.isPreview(B)).toBe(false);
       expect(m.isPreviewPerson(P)).toBe(true);
       expect(m.isPreviewPerson(Q)).toBe(false);
+      expect(m.defaultCmuPreview()).toBe(m.defaultCmuPreview());
+      expect(m.defaultCmuPreview().isPreview(A)).toBe(m.isPreview(A));
+      expect(m.defaultCmuPreview().isPreviewPerson(P)).toBe(m.isPreviewPerson(P));
     } finally {
       if (prev === undefined) delete process.env.DATA_DIR;
       else process.env.DATA_DIR = prev;

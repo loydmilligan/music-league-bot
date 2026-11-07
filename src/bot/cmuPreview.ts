@@ -75,14 +75,14 @@ export function memoryCmuPreview(groups: string[] = [], people: string[] = []): 
 }
 
 let shared: CmuPreview | undefined;
-function sharedPreview(): CmuPreview {
+/** The default gate over `cmuPreviewPath()`, created on first use. */
+export function defaultCmuPreview(): CmuPreview {
   return (shared ??= openCmuPreview());
 }
 
-/** The default gate over `cmuPreviewPath()`, created on first use. */
 export function isPreview(groupId: string): boolean {
-  return sharedPreview().isPreview(groupId);
+  return defaultCmuPreview().isPreview(groupId);
 }
 export function isPreviewPerson(authorId: string): boolean {
-  return sharedPreview().isPreviewPerson(authorId);
+  return defaultCmuPreview().isPreviewPerson(authorId);
 }
