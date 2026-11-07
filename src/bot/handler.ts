@@ -13,7 +13,7 @@ import { insertChatCapture } from '../storage/chatDb.js';
 import { interpretMessage } from '../chat/prompts/engine.js';
 import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
 import { extractJevPrompt, type JevChatRequest } from '../chat/jevResponder.js';
-import { isCatchMeUpRequest } from './catchMeUp.js';
+import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -47,7 +47,7 @@ export interface BotConfig {
   sendDm(phone: string, text: string): Promise<void>;
   jevRespond?: (request: JevChatRequest) => Promise<string>;
   /** "@bot catch me up" (src/bot/catchMeUp.ts). Unwired = the phrase falls through to Jev. */
-  catchMeUp?: (msg: WhatsAppMessage) => Promise<void>;
+  catchMeUp?: (msg: WhatsAppMessage, cmd: CmuCommand) => Promise<void>;
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
@@ -71,9 +71,14 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // Catch-me-up runs before every other path (C2) and before the capture log
   // below, so the request's text is never logged. It is gated by its own
   // CMU_GROUPS map rather than the song-capture allowlist.
-  if (botConfig.catchMeUp && isCatchMeUpRequest(msg.body, msg.mentionsBot ?? false)) {
-    await botConfig.catchMeUp(msg);
-    return;
+  if (botConfig.catchMeUp) {
+    // selfIds is private to the WhatsApp client; an empty set is fine until
+    // Task 4 adds mentionedIds, and mentionsBot already says the bot was named.
+    const cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, [], new Set());
+    if (cmd) {
+      await botConfig.catchMeUp(msg, cmd);
+      return;
+    }
   }
 
   if (!allowedGroupIds.some((id) => msg.from.includes(id))) return;

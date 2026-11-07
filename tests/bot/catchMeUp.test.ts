@@ -78,14 +78,14 @@ afterEach(() => {
 });
 
 describe('isCatchMeUpRequest', () => {
-  it.each(['catch me up', 'Catch up!', 'cmu', 'what did i miss?', '@12134198455 catch me up', '@Bot  CMU please'])(
+  it.each(['catch me up', 'Catch up!', 'cmu', 'what did i miss?', '@12134198455 catch me up', '@Bot  CMU please', 'please catch me up'])(
     'is true for %j when the bot is mentioned',
     (text) => {
       expect(isCatchMeUpRequest(text, true)).toBe(true);
     },
   );
 
-  it.each(["what's the theme", '@12134198455 what is the theme', 'cmuffin time', 'please catch me up'])(
+  it.each(["what's the theme", '@12134198455 what is the theme', 'cmuffin time'])(
     'is false for %j',
     (text) => {
       expect(isCatchMeUpRequest(text, true)).toBe(false);
@@ -376,7 +376,7 @@ describe('handleMessage catch-me-up routing', () => {
     const jevRespond = vi.fn().mockResolvedValue('jev');
     const msg = waMsg('@12134198455 catch me up', true);
     await handleMessage(msg, botConfig({ catchMeUp, jevRespond }));
-    expect(catchMeUp).toHaveBeenCalledWith(msg);
+    expect(catchMeUp).toHaveBeenCalledWith(msg, { kind: 'catchup' });
     expect(jevRespond).not.toHaveBeenCalled();
     expect(msg.reply).not.toHaveBeenCalled();
   });

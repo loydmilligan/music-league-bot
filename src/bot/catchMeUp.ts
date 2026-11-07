@@ -3,6 +3,7 @@ import { rm, stat } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import os from 'node:os';
 import path from 'node:path';
+import { parseCmuCommand } from './cmuCommand.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
 /**
@@ -23,14 +24,9 @@ export const CMU_DEADLINE_MS = 270_000;
 /** The failure DM is best effort and gets its own bound. */
 export const CMU_FAILURE_DM_TIMEOUT_MS = 15_000;
 
-const TRIGGER = /^\s*(catch\s*(me)?\s*up|cmu|what did i miss)\b/i;
-
 /** C1: a bot mention whose text after the mention starts with a catch-up phrase. */
 export function isCatchMeUpRequest(text: string, mentionsBot: boolean): boolean {
-  if (!mentionsBot) return false;
-  // The body carries the mention as a leading "@<id>" token; strip it.
-  const rest = text.replace(/^\s*@\S+\s*/u, '');
-  return TRIGGER.test(rest);
+  return parseCmuCommand(text, mentionsBot, [], new Set())?.kind === 'catchup';
 }
 
 /** CMU_GROUPS="<groupId>@g.us=<instance>,..." → Map(groupId → instance). */
