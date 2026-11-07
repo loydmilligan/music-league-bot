@@ -82,6 +82,8 @@ export interface CmuDeps {
   botName?(): string;
   /** Author id → last sent help DM (ms). Default: a module-level map. */
   helpThrottle?: Map<string, number>;
+  /** The help cooldown in minutes, as companelist last said. Default: a module-level holder (5). */
+  helpCooldown?: { min: number };
   /** Clock override for tests. Default: Date.now. */
   now?(): number;
 }

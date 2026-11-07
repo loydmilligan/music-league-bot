@@ -641,9 +641,10 @@ function flowDeps(over: Partial<FakeDeps> & {
   owner?: boolean | 'reject';
   contactName?: AnyMock;
   helpThrottle?: Map<string, number>;
+  helpCooldown?: { min: number };
   now?: () => number;
 } = {}) {
-  const { owner = true, contactName, helpThrottle, now, ...rest } = over;
+  const { owner = true, contactName, helpThrottle, helpCooldown, now, ...rest } = over;
   const t = fakeTrace();
   const base = makeDeps({ trace: t.factory, ...rest });
   const deps = Object.assign(base.deps, {
@@ -653,6 +654,7 @@ function flowDeps(over: Partial<FakeDeps> & {
     contactName: contactName ?? vi.fn().mockResolvedValue(SENTINEL_NAME),
     botName: () => BOT,
     helpThrottle: helpThrottle ?? new Map<string, number>(),
+    helpCooldown: helpCooldown ?? { min: 5 },
     ...(now ? { now } : {}),
   });
   return { deps, t, screenshots: base.screenshots };
@@ -818,9 +820,75 @@ describe('runCatchMeUp forget (owner)', () => {
   });
 });
 
+describe('help cooldown', () => {
+  const res = (extra: Record<string, unknown>) => jsonResponse(200, { kind: 'status', used: 0, limit: 3, ...extra });
+  const at = (clock: { t: number }) => ({ now: () => clock.t });
+
+  it('a throttled help reacts ⏳ with no DM and one status fetch; a failing react is logged and never throws', async () => {
+    const helpThrottle = new Map<string, number>([[AUTHOR, 1_000_000]]);
+    const { deps, t } = flowDeps({ owner: false, helpThrottle, now: () => 1_000_000 + 60_000, fetchFn: vi.fn().mockResolvedValue(res({})) });
+    const msg = makeMsg();
+    msg.react.mockRejectedValue(new Error('react'));
+    await expect(runCatchMeUp(msg, deps, { kind: 'help' })).resolves.toBeUndefined();
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['⏳']);
+    expect(t.step('react')).toMatchObject({ ok: false, emoji: '⏳' });
+    expect(deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['help-throttled']);
+    expect(deps.log.mock.calls.flat().join('\n')).not.toContain('Alice');
+  });
+
+  it('the default is 5 minutes: throttled at +4m59s, not at +5m01s', async () => {
+    const helpThrottle = new Map<string, number>([[AUTHOR, 1_000_000]]);
+    const early = flowDeps({ owner: false, helpThrottle, now: () => 1_000_000 + 299_000, fetchFn: vi.fn().mockResolvedValue(res({})) });
+    await runCatchMeUp(makeMsg(), early.deps, { kind: 'help' });
+    expect(early.deps.sendText).not.toHaveBeenCalled();
+    const late = flowDeps({ owner: false, helpThrottle, now: () => 1_000_000 + 301_000, fetchFn: vi.fn().mockResolvedValue(res({})) });
+    await runCatchMeUp(makeMsg(), late.deps, { kind: 'help' });
+    expect(late.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('helpCooldownMin: 2 from a status response sets the window for the next help, and the DM says 2', async () => {
+    const clock = { t: 1_000_000 };
+    const helpThrottle = new Map<string, number>();
+    const helpCooldown = { min: 5 };
+    const first = flowDeps({ owner: false, helpThrottle, helpCooldown, ...at(clock), fetchFn: vi.fn().mockResolvedValue(res({ helpCooldownMin: 2 })) });
+    await runCatchMeUp(makeMsg(), first.deps, { kind: 'help' });
+    expect(first.deps.sendText.mock.calls[0][1]).toContain('Once every 2 minutes;');
+    clock.t += 119_000;
+    const second = flowDeps({ owner: false, helpThrottle, helpCooldown, ...at(clock), fetchFn: vi.fn().mockResolvedValue(res({})) });
+    await runCatchMeUp(makeMsg(), second.deps, { kind: 'help' });
+    expect(second.deps.sendText).not.toHaveBeenCalled();
+    clock.t += 2_000;
+    const third = flowDeps({ owner: false, helpThrottle, helpCooldown, ...at(clock), fetchFn: vi.fn().mockResolvedValue(res({})) });
+    await runCatchMeUp(makeMsg(), third.deps, { kind: 'help' });
+    expect(third.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('the silent status of a throttled help also updates the cooldown', async () => {
+    const helpThrottle = new Map<string, number>([[AUTHOR, 1_000_000]]);
+    const helpCooldown = { min: 5 };
+    const { deps } = flowDeps({ owner: false, helpThrottle, helpCooldown, now: () => 1_000_000 + 60_000, fetchFn: vi.fn().mockResolvedValue(res({ helpCooldownMin: 9 })) });
+    await runCatchMeUp(makeMsg(), deps, { kind: 'help' });
+    expect(helpCooldown.min).toBe(9);
+  });
+
+  it.each([[0], [61], ['x'], [2.5], [null]])('an invalid helpCooldownMin (%s) is ignored', async (bad) => {
+    const helpCooldown = { min: 7 };
+    const { deps } = flowDeps({ owner: false, helpCooldown, fetchFn: vi.fn().mockResolvedValue(res({ helpCooldownMin: bad })) });
+    await runCatchMeUp(makeMsg(), deps, { kind: 'help' });
+    expect(helpCooldown.min).toBe(7);
+  });
+});
+
 describe('helpText', () => {
+  it('shows the cooldown N, singular for 1', () => {
+    expect(helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 12, owner: false })).toContain('\n  This message. Once every 12 minutes; ask again sooner and you get ⏳.');
+    expect(helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 1, owner: false })).toContain('Once every 1 minute; ask again');
+  });
+
   it('is the H2 copy, with the count', () => {
-    expect(helpText({ botName: BOT, used: 2, limit: 3, owner: false })).toBe([
+    expect(helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })).toBe([
       'Catch-up bot — what you can ask',
       '',
       '@Music League Bot catch me up',
@@ -831,21 +899,21 @@ describe('helpText', () => {
       "You've used 2 of 3 today. Resets at midnight (LA time).",
       '',
       '@Music League Bot help',
-      '  This message.',
+      '  This message. Once every 5 minutes; ask again sooner and you get ⏳.',
     ].join('\n'));
   });
 
   it('an unknown count reads "3 a day (couldn\'t check your count just now)"', () => {
-    const text = helpText({ botName: 'Bot', limit: 3, owner: false });
+    const text = helpText({ botName: 'Bot', limit: 3, cooldownMin: 5, owner: false });
     expect(text).toContain("\n3 a day (couldn't check your count just now)\n");
     expect(text).not.toContain("You've used");
     expect(text).toContain('@Bot catch me up');
   });
 
   it('the owner copy adds one line each for full and the three forget forms', () => {
-    const text = helpText({ botName: BOT, used: 0, limit: 3, owner: true });
-    expect(text.startsWith(helpText({ botName: BOT, used: 0, limit: 3, owner: false }))).toBe(true);
-    const extra = text.slice(helpText({ botName: BOT, used: 0, limit: 3, owner: false }).length);
+    const text = helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: true });
+    expect(text.startsWith(helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: false }))).toBe(true);
+    const extra = text.slice(helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: false }).length);
     expect(extra).toContain('Owner only');
     for (const c of ['full', 'forget', 'forget @Player', 'forget all']) {
       expect(extra.split('\n').filter((l) => l.includes(`@${BOT} ${c} —`))).toHaveLength(1);
@@ -862,7 +930,7 @@ describe('runCatchMeUp help', () => {
     await runCatchMeUp(msg, deps, { kind: 'help' });
     expect(sentBody(deps)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: AUTHOR, mode: 'status' });
     expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
-    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, used: 2, limit: 3, owner: false })]]);
+    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })]]);
     expect(sequence(t)).toEqual(['start', 'trigger', 'react', 'status', 'help-dm', 'end help']);
     expect(t.events[0].f).toMatchObject({ command: 'help' });
   });
@@ -870,7 +938,7 @@ describe('runCatchMeUp help', () => {
   it('the owner gets the owner copy', async () => {
     const { deps } = flowDeps({ owner: true, fetchFn: vi.fn().mockResolvedValue(statusRes(1)) });
     await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
-    expect(deps.sendText.mock.calls).toEqual([[OWNER, helpText({ botName: BOT, used: 1, limit: 3, owner: true })]]);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, helpText({ botName: BOT, used: 1, limit: 3, cooldownMin: 5, owner: true })]]);
   });
 
   it.each([
@@ -880,23 +948,24 @@ describe('runCatchMeUp help', () => {
   ])('a status failure (%s) still sends help with no count', async (_l, fetchFn) => {
     const { deps, t } = flowDeps({ owner: false, fetchFn: fetchFn() });
     await runCatchMeUp(makeMsg(), deps, { kind: 'help' });
-    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, limit: 3, owner: false })]]);
+    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, limit: 3, cooldownMin: 5, owner: false })]]);
     expect(t.step('status')).toMatchObject({ ok: false });
     expect(t.ends().map((e) => e.name)).toEqual(['help']);
   });
 
-  it('a second help within 10 minutes: no react, no fetch, no DM, end help-throttled; after 10 minutes it works again', async () => {
+  it('a second help within 5 minutes: ⏳ only, one status fetch, no DM, end help-throttled; after 5 minutes it works again', async () => {
     let clock = 1_000_000;
     const helpThrottle = new Map<string, number>();
     const first = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
     await runCatchMeUp(makeMsg(), first.deps, { kind: 'help' });
     expect(first.deps.sendText).toHaveBeenCalledTimes(1);
 
-    clock += 9 * 60_000;
+    clock += 4 * 60_000 + 59_000;
     const second = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
     const msg = makeMsg();
     await runCatchMeUp(msg, second.deps, { kind: 'help' });
-    expect(msg.react).not.toHaveBeenCalled();
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['⏳']);
+    expect(second.t.step('react')).toMatchObject({ ok: true, emoji: '⏳' });
     // One silent status POST keeps the help message out of the sender's window; nothing else is sent.
     expect(second.deps.fetchFn).toHaveBeenCalledTimes(1);
     expect(sentBody(second.deps)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: AUTHOR, mode: 'status' });
@@ -908,7 +977,7 @@ describe('runCatchMeUp help', () => {
     await runCatchMeUp(makeMsg({ author: '999@lid' }), other.deps, { kind: 'help' });
     expect(other.deps.sendText).toHaveBeenCalledTimes(1);
 
-    clock += 61_000;
+    clock += 2_000;
     const third = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
     await runCatchMeUp(makeMsg(), third.deps, { kind: 'help' });
     expect(third.deps.sendText).toHaveBeenCalledTimes(1);
@@ -920,7 +989,7 @@ describe('runCatchMeUp help', () => {
     const msg = makeMsg();
     await expect(runCatchMeUp(msg, deps, { kind: 'help' })).resolves.toBeUndefined();
     expect(deps.fetchFn).toHaveBeenCalledTimes(1);
-    expect(msg.react).not.toHaveBeenCalled();
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['⏳']);
     expect(deps.sendText).not.toHaveBeenCalled();
     expect(t.ends().map((e) => e.name)).toEqual(['help-throttled']);
     expect(deps.log.mock.calls.flat().join('\n')).not.toContain('Alice');
@@ -940,7 +1009,7 @@ describe('runCatchMeUp help', () => {
   it('a failing isOwner gives the player copy', async () => {
     const { deps } = flowDeps({ owner: 'reject', fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
     await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
-    expect(deps.sendText.mock.calls[0][1]).toBe(helpText({ botName: BOT, used: 0, limit: 3, owner: false }));
+    expect(deps.sendText.mock.calls[0][1]).toBe(helpText({ botName: BOT, used: 0, limit: 3, cooldownMin: 5, owner: false }));
   });
 
   it('unmapped group: help does nothing', async () => {

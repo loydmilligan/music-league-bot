@@ -27,19 +27,25 @@ import {
 
 export const DEFAULT_BOT_NAME = 'Music League Bot';
 export const CMU_DAILY_LIMIT = 3;
-/** H4: at most one help DM per person per 10 minutes. */
-export const HELP_THROTTLE_MS = 10 * 60_000;
+/** H4: at most one help DM per person per cooldown (configurable in companelist's admin, default 5 minutes). */
+export const DEFAULT_HELP_COOLDOWN_MIN = 5;
 /** Status and forget never build; their companelist call gets a short bound of its own. */
 export const CMU_COMMAND_TIMEOUT_MS = 15_000;
 export const FORGET_FAILURE_TEXT = "Couldn't reach the catch-up service, so nothing was forgotten. Try again in a few minutes.";
 
 const HELP_THROTTLE = new Map<string, number>();
+/** The live cooldown, learned from companelist's status responses. Deps may override the holder (tests). */
+const HELP_COOLDOWN = { min: DEFAULT_HELP_COOLDOWN_MIN };
+
+/** A cooldown companelist sent: an integer 1-60, else undefined (ignored). */
+const validCooldown = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 60 ? v : undefined;
 
 type End = (outcome: string, error?: string) => void;
 type ForgetTarget = Extract<CmuCommand, { kind: 'forget' }>['target'];
 
 /** H2, verbatim. `used` undefined means companelist couldn't be asked (H3). */
-export function helpText(o: { botName: string; used?: number; limit: number; owner: boolean }): string {
+export function helpText(o: { botName: string; used?: number; limit: number; cooldownMin: number; owner: boolean }): string {
   const at = `@${o.botName}`;
   const count = o.used === undefined
     ? `${o.limit} a day (couldn't check your count just now)`
@@ -55,7 +61,7 @@ export function helpText(o: { botName: string; used?: number; limit: number; own
     count,
     '',
     `${at} help`,
-    '  This message.',
+    `  This message. Once every ${o.cooldownMin} ${o.cooldownMin === 1 ? 'minute' : 'minutes'}; ask again sooner and you get ⏳.`,
   ];
   if (o.owner) {
     lines.push(
@@ -202,15 +208,21 @@ async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trac
   return 'forgot';
 }
 
-/** Anyone (H1–H5): a help DM with today's count, at most once per person per 10 minutes. */
+/**
+ * Anyone (H1–H5): a help DM with today's count, at most once per person per cooldown (configurable
+ * in companelist's admin, default 5 minutes). A throttled help gets a ⏳ reaction and no DM.
+ */
 export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, end: End): Promise<void> {
   const throttle = deps.helpThrottle ?? HELP_THROTTLE;
   const now = deps.now ?? Date.now;
+  const cooldown = deps.helpCooldown ?? HELP_COOLDOWN;
   const last = throttle.get(msg.author);
-  if (last !== undefined && now() - last < HELP_THROTTLE_MS) {
+  if (last !== undefined && now() - last < cooldown.min * 60_000) {
+    await react(msg, '⏳', deps, trace);
     // The help message is still a chat message: tell companelist so it is not taken for a real post.
     try {
-      await post(deps, { ...(await baseBody(msg, deps)), mode: 'status' }, CMU_COMMAND_TIMEOUT_MS);
+      const { data } = await post(deps, { ...(await baseBody(msg, deps)), mode: 'status' }, CMU_COMMAND_TIMEOUT_MS);
+      learnCooldown(cooldown, data);
     } catch (err) {
       deps.log(`[cmu] throttled help status failed in ${msg.from}: ${describeError(err)}`);
     }
@@ -222,10 +234,10 @@ export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   let error: string | undefined;
   try {
     await react(msg, '👍', deps, trace);
-    await withDeadline(help(msg, deps, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
+    await withDeadline(help(msg, deps, trace, cooldown), deps.deadlineMs ?? CMU_DEADLINE_MS);
     outcome = 'help';
     const t = now();
-    for (const [k, at] of throttle) if (t - at >= HELP_THROTTLE_MS) throttle.delete(k);
+    for (const [k, at] of throttle) if (t - at >= cooldown.min * 60_000) throttle.delete(k);
     throttle.set(msg.author, t);
   } catch (err) {
     error = describeError(err);
@@ -235,7 +247,12 @@ export async function runHelp(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
   }
 }
 
-async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace): Promise<void> {
+function learnCooldown(cooldown: { min: number }, data: unknown): void {
+  const v = validCooldown(data && typeof data === 'object' ? (data as Record<string, unknown>).helpCooldownMin : undefined);
+  if (v !== undefined) cooldown.min = v;
+}
+
+async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, cooldown: { min: number }): Promise<void> {
   const owner = await checkOwner(msg, deps, null);
   let used: number | undefined;
   let limit = CMU_DAILY_LIMIT;
@@ -249,11 +266,12 @@ async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace): Promise<v
     if (d.kind !== 'status' || typeof d.used !== 'number') throw new Error('BadResponse');
     used = d.used;
     if (typeof d.limit === 'number') limit = d.limit;
+    learnCooldown(cooldown, d);
     trace.step('status', { ok: true, ms: msSince(t0), status, used, limit });
   } catch (err) {
     trace.step('status', { ok: false, ms: msSince(t0), status: err instanceof CmuHttpError ? err.status : undefined });
     deps.log(`[cmu] status failed in ${msg.from}: ${describeError(err)}`);
   }
-  const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, owner });
+  const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner });
   await timed(trace, 'help-dm', () => deps.sendText(msg.author, text));
 }
