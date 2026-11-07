@@ -6,7 +6,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import {
   createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
-  makeDmTarget, makeScreenshotHtml, makeSendImageTo, makeSendTextTo,
+  makeDmTarget, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName,
 } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
@@ -23,6 +23,7 @@ import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
+import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openInteractionLog } from './storage/interactionLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,7 +68,7 @@ const cmuToken = process.env.CMU_TOKEN;
 const interactionLog = openInteractionLog({ dir: process.env.INTERACTIONS_DIR ?? 'data/interactions' });
 interactionLog.prune();
 const catchMeUp = cmuUrl && cmuToken
-  ? (msg: Parameters<typeof runCatchMeUp>[0]) =>
+  ? (msg: Parameters<typeof runCatchMeUp>[0], cmd: Parameters<typeof runCatchMeUp>[2]) =>
       runCatchMeUp(msg, {
         fetchFn: fetch,
         groups: cmuGroups,
@@ -79,7 +80,11 @@ const catchMeUp = cmuUrl && cmuToken
         dmTarget: makeDmTarget(client),
         log: (line) => console.log(line),
         trace: () => interactionLog.begin('cmu'),
-      })
+        // M4: the author and OWNER_PHONE_NUMBER compared through the LID mapping; fails closed.
+        isOwner: makeIsOwner(makeDmTarget(client), ownerPhone),
+        contactName: makeContactName(client),
+        botName: () => client.info?.pushname || DEFAULT_BOT_NAME,
+      }, cmd)
   : undefined;
 
 const client = createClient(async (msg) => {

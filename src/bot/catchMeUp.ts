@@ -3,7 +3,8 @@ import { rm, stat } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import os from 'node:os';
 import path from 'node:path';
-import { parseCmuCommand } from './cmuCommand.js';
+import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
+import { runForget, runHelp } from './cmuFlows.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
 /**
@@ -48,6 +49,7 @@ export interface CmuMessage {
   capturedAt: string;    // ISO timestamp of the request message
   notifyName?: string;   // WhatsApp display name from the message payload
   chatName?: string;     // human-readable group name (interaction log only)
+  mentionedIds?: string[]; // serialized wids the message @mentions
   getContact(): Promise<{ pushname: string }>;
   react?(emoji: string): Promise<void>;
 }
@@ -72,15 +74,35 @@ export interface CmuDeps {
   failureDmTimeoutMs?: number;
   /** Interaction-log trace factory, called once per request. Default: NOOP_TRACE. */
   trace?: () => InteractionTrace;
+  /** M4: is `author` the owner? Absent or failing means no (fail closed). */
+  isOwner?(author: string): Promise<boolean>;
+  /** A contact's display name, for `forget @Player`. Absent or failing means ''. */
+  contactName?(id: string): Promise<string>;
+  /** The bot's WhatsApp display name, for the help DM. Default "Music League Bot". */
+  botName?(): string;
+  /** Author id → last sent help DM (ms). Default: a module-level map. */
+  helpThrottle?: Map<string, number>;
+  /** Clock override for tests. Default: Date.now. */
+  now?(): number;
 }
 
 export const CMU_COMMAND = 'catch me up';
+
+/** P3: the interaction log's `command` field. Never carries the target id. */
+export function commandLabel(cmd: CmuCommand): string {
+  switch (cmd.kind) {
+    case 'catchup': return CMU_COMMAND;
+    case 'full': return 'full';
+    case 'help': return 'help';
+    case 'forget': return cmd.target === 'self' ? 'forget' : cmd.target === 'all' ? 'forget all' : 'forget @';
+  }
+}
 
 /**
  * The interaction trace as used here: every call is swallowed, so a broken
  * log can never change what the requester gets. Steps carry no message text.
  */
-interface SafeTrace {
+export interface SafeTrace {
   step(name: string, f: { ok: boolean; ms?: number } & Record<string, string | number | boolean | string[] | null | undefined>): void;
   thumbPath(): string | undefined;
 }
@@ -93,7 +115,7 @@ function safeCall<T>(fn: () => T): T | undefined {
   }
 }
 
-function msSince(t0: number): number {
+export function msSince(t0: number): number {
   return Math.round(performance.now() - t0);
 }
 
@@ -143,7 +165,7 @@ class CmuDeadlineError extends Error {
 }
 
 /** Resolve/reject with `work`, or reject with CmuDeadlineError after `ms`. */
-function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+export function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<never>((_res, rej) => {
     timer = setTimeout(() => rej(new CmuDeadlineError()), ms);
@@ -151,7 +173,7 @@ function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   return Promise.race([work, expired]).finally(() => clearTimeout(timer));
 }
 
-class CmuHttpError extends Error {
+export class CmuHttpError extends Error {
   constructor(readonly status: number) {
     super(`http ${status}`);
   }
@@ -169,13 +191,13 @@ function parseResult(data: unknown): CmuResult | null {
 }
 
 /** Redacted error summary: a class of failure, never a message body. */
-function describeError(err: unknown): string {
+export function describeError(err: unknown): string {
   if (err instanceof CmuHttpError) return err.message;
   if (err instanceof Error) return err.name;
   return 'error';
 }
 
-async function resolveNotifyName(msg: CmuMessage): Promise<{ name: string; source: 'payload' | 'contact' | 'none' }> {
+export async function resolveNotifyName(msg: CmuMessage): Promise<{ name: string; source: 'payload' | 'contact' | 'none' }> {
   if (msg.notifyName) return { name: msg.notifyName, source: 'payload' };
   try {
     const name = (await msg.getContact()).pushname || '';
@@ -186,16 +208,37 @@ async function resolveNotifyName(msg: CmuMessage): Promise<{ name: string; sourc
 }
 
 /** The requester's stable WhatsApp id (LID when known): companelist's limits key. Never logged. */
-async function resolveRequesterKey(msg: CmuMessage, deps: CmuDeps): Promise<string> {
-  if (!deps.dmTarget) return msg.author;
+export async function resolveRequesterKey(msg: CmuMessage, deps: CmuDeps): Promise<string> {
+  return resolveKey(msg.author, deps);
+}
+
+/** `id` as the limits key companelist hashes: its dmTarget (LID) when known, else `id`. */
+export async function resolveKey(id: string, deps: CmuDeps): Promise<string> {
+  if (!deps.dmTarget) return id;
   try {
-    return (await deps.dmTarget(msg.author)) || msg.author;
+    return (await deps.dmTarget(id)) || id;
   } catch {
-    return msg.author;
+    return id;
   }
 }
 
-async function react(msg: CmuMessage, emoji: string, deps: CmuDeps, trace: SafeTrace): Promise<void> {
+/** The owner check's own bound (it is a LID lookup at most). */
+export const CMU_OWNER_TIMEOUT_MS = 15_000;
+
+/** M4, bounded: the owner check never hangs a request, and any failure means "not the owner". */
+export async function checkOwner(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace | null): Promise<boolean> {
+  const t0 = performance.now();
+  let owner = false;
+  try {
+    owner = deps.isOwner ? (await withDeadline(deps.isOwner(msg.author), CMU_OWNER_TIMEOUT_MS)) === true : false;
+  } catch {
+    owner = false;
+  }
+  trace?.step('owner', { ok: owner, ms: msSince(t0) });
+  return owner;
+}
+
+export async function react(msg: CmuMessage, emoji: string, deps: CmuDeps, trace: SafeTrace): Promise<void> {
   const t0 = performance.now();
   let ok = true;
   try {
@@ -207,7 +250,7 @@ async function react(msg: CmuMessage, emoji: string, deps: CmuDeps, trace: SafeT
   trace.step('react', { ok, ms: msSince(t0), emoji });
 }
 
-export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void> {
+export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuCommand = { kind: 'catchup' }): Promise<void> {
   const group = msg.from;
   const raw = safeCall(() => deps.trace?.()) ?? NOOP_TRACE;
   const trace: SafeTrace = {
@@ -220,7 +263,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
     instance: deps.groups.get(group),
     who,
     authorKind: authorKind(msg.author ?? ''),
-    command: CMU_COMMAND,
+    command: commandLabel(cmd),
   }));
 
   if (!deps.groups.has(group)) {
@@ -239,7 +282,17 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
   // `who` is the payload name; a getContact() fallback runs later, inside the
   // deadline, so it can never hold up the 👍 (C3) or the outcome (I14).
   start(msg.notifyName ?? '');
+  // M3: an owner command from anyone else gets nothing at all, and is not passed on.
+  if ((cmd.kind === 'full' || cmd.kind === 'forget') && !(await checkOwner(msg, deps, trace))) {
+    safeCall(() => raw.end('not-allowed'));
+    deps.log(`[cmu] not-allowed in ${group}`);
+    return;
+  }
   trace.step('trigger', { ok: true, mapped: true });
+
+  const end = (outcome: string, error?: string) => void safeCall(() => raw.end(outcome, error ? { error } : undefined));
+  if (cmd.kind === 'help') return runHelp(msg, deps, trace, end);
+  if (cmd.kind === 'forget') return runForget(msg, deps, cmd.target, trace, end);
 
   let outcome: Outcome = 'failed';
   let error: string | undefined;
@@ -250,7 +303,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
     // so a failed or hung links DM is logged, never answered with "Couldn't build".
     const state = { imageSent: false, pngPath: null as string | null };
     try {
-      outcome = await withDeadline(deliver(msg, deps, state, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      outcome = await withDeadline(deliver(msg, deps, state, trace, cmd.kind === 'full'), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
       if (state.imageSent) {
         outcome = 'card-partial';
@@ -286,6 +339,7 @@ async function deliver(
   deps: CmuDeps,
   state: { imageSent: boolean; pngPath: string | null },
   trace: SafeTrace,
+  full = false,
 ): Promise<'card' | 'quiet' | 'limit'> {
   const group = msg.from;
   const nameT0 = performance.now();
@@ -303,7 +357,7 @@ async function deliver(
     const res = await deps.fetchFn(deps.url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey }),
+      body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey, ...(full ? { mode: 'full' } : {}) }),
       signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
     });
     status = res.status;
@@ -372,7 +426,7 @@ async function deliver(
 }
 
 /** Run one send as a traced step: ok + ms either way, rethrowing on failure. */
-async function timed(
+export async function timed(
   trace: SafeTrace,
   name: string,
   work: () => Promise<void>,

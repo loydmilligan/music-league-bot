@@ -275,6 +275,8 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       author: raw.author ?? raw.from,
       fromMe: raw.fromMe,
       mentionsBot: mentionsSelf(raw.mentionedIds as unknown[], raw.body ?? '', selfIds),
+      mentionedIds: ((raw.mentionedIds ?? []) as unknown[]).map(serializeWid).filter((id): id is string => !!id),
+      selfIds: [...selfIds],
       capturedAt: new Date(timeMs).toISOString(),
       priorMessages: priors,
       notifyName: (raw as { _data?: { notifyName?: string } })._data?.notifyName || undefined,
@@ -428,6 +430,14 @@ async function dmTarget(client: ClientType, chatId: string): Promise<string> {
   } catch {
     return chatId;
   }
+}
+
+/** A contact's WhatsApp display name (pushname, else saved name), '' when it has none. */
+export function makeContactName(client: ClientType): (id: string) => Promise<string> {
+  return async (id) => {
+    const c = await client.getContactById(id);
+    return c.pushname || c.name || '';
+  };
 }
 
 /** dmTarget bound to a client: the id a DM to `chatId` is actually sent to. */

@@ -31,6 +31,10 @@ export interface WhatsAppMessage {
   mentionsBot?: boolean;
   /** The sender's WhatsApp display name, from the plain message payload. */
   notifyName?: string;
+  /** Serialized wids ("user@server") this message @mentions. */
+  mentionedIds?: string[];
+  /** Every id the bot account is known by, so a mention of the bot is told apart from a player. */
+  selfIds?: string[];
   reply(text: string): Promise<void>;
   getContact(): Promise<{ pushname: string }>;
   /** React to this message with an emoji. */
@@ -72,9 +76,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // below, so the request's text is never logged. It is gated by its own
   // CMU_GROUPS map rather than the song-capture allowlist.
   if (botConfig.catchMeUp) {
-    // selfIds is private to the WhatsApp client; an empty set is fine until
-    // Task 4 adds mentionedIds, and mentionsBot already says the bot was named.
-    const cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, [], new Set());
+    const cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, msg.mentionedIds ?? [], new Set(msg.selfIds ?? []));
     if (cmd) {
       await botConfig.catchMeUp(msg, cmd);
       return;

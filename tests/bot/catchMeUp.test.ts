@@ -11,6 +11,7 @@ import {
   CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
+import { helpText, makeIsOwner, FORGET_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
 import { openDb } from '../../src/storage/db.js';
@@ -605,3 +606,357 @@ function makeFakeRun(result: unknown) {
   const { deps } = makeDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, result)), trace: t.factory });
   return { t, deps };
 }
+
+// ── Task 4: owner check, full, forget and help ─────────────────────────────
+
+const OWNER = '111222333@lid';
+const PLAYER = '456@lid';
+const BOT = 'Music League Bot';
+const SENTINEL_NAME = 'ZZNAMEZZ';
+
+function flowDeps(over: Partial<FakeDeps> & {
+  owner?: boolean | 'reject';
+  contactName?: AnyMock;
+  helpThrottle?: Map<string, number>;
+  now?: () => number;
+} = {}) {
+  const { owner = true, contactName, helpThrottle, now, ...rest } = over;
+  const t = fakeTrace();
+  const base = makeDeps({ trace: t.factory, ...rest });
+  const deps = Object.assign(base.deps, {
+    isOwner: owner === 'reject'
+      ? vi.fn().mockRejectedValue(new Error('lookup'))
+      : vi.fn().mockResolvedValue(owner),
+    contactName: contactName ?? vi.fn().mockResolvedValue(SENTINEL_NAME),
+    botName: () => BOT,
+    helpThrottle: helpThrottle ?? new Map<string, number>(),
+    ...(now ? { now } : {}),
+  });
+  return { deps, t, screenshots: base.screenshots };
+}
+
+const ownerMsg = (over: Partial<CmuMessage> = {}) => makeMsg({ author: OWNER, notifyName: 'Owen', ...over });
+const sequence = (t: ReturnType<typeof fakeTrace>) =>
+  t.events.map((e) => (e.ev === 'step' ? `${e.name}${e.name === 'owner' ? ` ok:${e.f!.ok}` : ''}` : e.ev === 'end' ? `end ${e.name}` : e.ev));
+const sentBody = (deps: { fetchFn: AnyMock }, i = 0) => JSON.parse(deps.fetchFn.mock.calls[i][1].body);
+const forgotRes = (o: Record<string, unknown>) => jsonResponse(200, { kind: 'forgot', left: 3, ...o });
+
+describe('runCatchMeUp owner-only commands from a non-owner', () => {
+  it.each([
+    ['full', { kind: 'full' }, 'full'],
+    ['forget all', { kind: 'forget', target: 'all' }, 'forget all'],
+    ['forget', { kind: 'forget', target: 'self' }, 'forget'],
+    ['forget @', { kind: 'forget', target: { id: PLAYER } }, 'forget @'],
+  ] as const)('%s: no react, no fetch, no DM; start, owner ok:false, end not-allowed', async (_l, cmd, command) => {
+    const { deps, t } = flowDeps({ owner: false });
+    const msg = makeMsg();
+    await expect(runCatchMeUp(msg, deps, cmd)).resolves.toBeUndefined();
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendImage).not.toHaveBeenCalled();
+    expect(deps.isOwner).toHaveBeenCalledWith(AUTHOR);
+    expect(sequence(t)).toEqual(['start', 'owner ok:false', 'end not-allowed']);
+    expect(t.events[0].f).toMatchObject({ command });
+  });
+
+  it('fails closed: an isOwner that rejects is not-allowed', async () => {
+    const { deps, t } = flowDeps({ owner: 'reject' });
+    const msg = ownerMsg();
+    await expect(runCatchMeUp(msg, deps, { kind: 'full' })).resolves.toBeUndefined();
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['not-allowed']);
+  });
+
+  it('fails closed: no isOwner dep at all is not-allowed', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({ trace: t.factory });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' });
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['not-allowed']);
+  });
+});
+
+describe('runCatchMeUp full (owner)', () => {
+  it('sends mode:"full", runs the card path with 👍, command full', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['https://x/share-f1.html']))) });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'full' });
+    expect(sentBody(deps)).toEqual({ notifyName: 'Owen', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: OWNER, mode: 'full' });
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(deps.sendImage).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).toHaveBeenCalledWith(OWNER, 'https://x/share-f1.html');
+    expect(t.events[0].f).toMatchObject({ command: 'full' });
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'react', 'name', 'companelist', 'screenshot', 'thumb', 'image', 'links', 'end card']);
+  });
+
+  it('a plain catch-up never sends a mode and never asks isOwner', async () => {
+    const { deps } = flowDeps();
+    await runCatchMeUp(makeMsg(), deps, { kind: 'catchup' });
+    expect(sentBody(deps)).not.toHaveProperty('mode');
+    expect(deps.isOwner).not.toHaveBeenCalled();
+  });
+});
+
+describe('runCatchMeUp forget (owner)', () => {
+  it('naked forget: mode forget, target self; 👍 then one DM; ends forgot', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: true, person: 'Owen B' })) });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, { kind: 'forget', target: 'self' });
+    expect(sentBody(deps)).toEqual({ notifyName: 'Owen', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: OWNER, mode: 'forget', target: 'self' });
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Forgot your last catch-up. You have 3 left today.']]);
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'react', 'forget', 'confirm-dm', 'end forgot']);
+    expect(t.events[0].f).toMatchObject({ command: 'forget' });
+  });
+
+  it('naked forget with nothing to forget: resets the count', async () => {
+    const { deps } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: false })) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Reset your count; no recent catch-up to forget.']]);
+  });
+
+  it('forget all: the everyone DM', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'all', resolved: true, forgotten: true })) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' });
+    expect(sentBody(deps)).toMatchObject({ mode: 'forget', target: 'all' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, "Forgot everyone's last catch-up and reset today's counts."]]);
+    expect(t.events[0].f).toMatchObject({ command: 'forget all' });
+    expect(t.ends().map((e) => e.name)).toEqual(['forgot']);
+  });
+
+  it.each([
+    [{ resolved: true, forgotten: true, person: 'Pat Q' }, "Forgot Pat Q's last catch-up. They have 3 left today."],
+    [{ resolved: true, forgotten: true }, `Forgot ${SENTINEL_NAME}'s last catch-up. They have 3 left today.`],
+    [{ resolved: false, forgotten: false }, `Couldn't tell who ${SENTINEL_NAME} is; reset their count only.`],
+    [{ resolved: true, forgotten: false, person: 'Pat Q' }, "Reset Pat Q's count; no recent catch-up to forget."],
+  ])('forget @Player %j → the right owner DM; the id and name stay out of the trace', async (res, dm) => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', ...res })) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: PLAYER } });
+    expect(deps.contactName).toHaveBeenCalledWith(PLAYER);
+    expect(sentBody(deps)).toMatchObject({ mode: 'forget', target: { key: PLAYER, name: SENTINEL_NAME } });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, dm]]);
+    expect(t.events[0].f).toMatchObject({ command: 'forget @' });
+    expect(t.step('forget')).toMatchObject({ ok: true, resolved: res.resolved });
+    expect(t.ends().map((e) => e.name)).toEqual(['forgot']);
+    const recorded = JSON.stringify(t.events);
+    expect(recorded).not.toContain('456');
+    expect(recorded).not.toContain(SENTINEL_NAME);
+    expect(recorded).not.toContain('Pat Q');
+    expect(deps.log.mock.calls.map((c) => String(c[0])).join('\n')).not.toMatch(/456|ZZNAMEZZ|Pat Q/);
+  });
+
+  it('forget @Player: the target key goes through dmTarget like requesterKey', async () => {
+    const dmTarget = vi.fn(async (id: string) => (id === '15550001111@c.us' ? '777@lid' : id));
+    const { deps } = flowDeps({ dmTarget, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: true, forgotten: true })) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: '15550001111@c.us' } });
+    expect(sentBody(deps).target).toEqual({ key: '777@lid', name: SENTINEL_NAME });
+  });
+
+  it('forget @Player: a failing contactName sends an empty name and still resets', async () => {
+    const { deps } = flowDeps({
+      contactName: vi.fn().mockRejectedValue(new Error('nope')),
+      fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: false, forgotten: false })),
+    });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: PLAYER } });
+    expect(sentBody(deps).target).toEqual({ key: PLAYER, name: '' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, "Couldn't tell who that player is; reset their count only."]]);
+  });
+
+  it('forget: a companelist failure ends failed and DMs the owner a short failure line', async () => {
+    const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, { error: 'boom' })) });
+    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' })).resolves.toBeUndefined();
+    expect(t.step('forget')).toMatchObject({ ok: false, status: 500 });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
+    expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'http 500' } }]);
+  });
+});
+
+describe('helpText', () => {
+  it('is the H2 copy, with the count', () => {
+    expect(helpText({ botName: BOT, used: 2, limit: 3, owner: false })).toBe([
+      'Catch-up bot — what you can ask',
+      '',
+      '@Music League Bot catch me up',
+      '  A picture of what you missed since your last post (up to 48 hours),',
+      '  plus links to the top topics. Also works: "what did I miss", "cmu",',
+      '  "fill me in", "recap".',
+      '',
+      "You've used 2 of 3 today. Resets at midnight (LA time).",
+      '',
+      '@Music League Bot help',
+      '  This message.',
+    ].join('\n'));
+  });
+
+  it('an unknown count reads "3 a day (couldn\'t check your count just now)"', () => {
+    const text = helpText({ botName: 'Bot', limit: 3, owner: false });
+    expect(text).toContain("\n3 a day (couldn't check your count just now)\n");
+    expect(text).not.toContain("You've used");
+    expect(text).toContain('@Bot catch me up');
+  });
+
+  it('the owner copy adds one line each for full and the three forget forms', () => {
+    const text = helpText({ botName: BOT, used: 0, limit: 3, owner: true });
+    expect(text.startsWith(helpText({ botName: BOT, used: 0, limit: 3, owner: false }))).toBe(true);
+    const extra = text.slice(helpText({ botName: BOT, used: 0, limit: 3, owner: false }).length);
+    expect(extra).toContain('Owner only');
+    for (const c of ['full', 'forget', 'forget @Player', 'forget all']) {
+      expect(extra.split('\n').filter((l) => l.includes(`@${BOT} ${c} —`))).toHaveLength(1);
+    }
+  });
+});
+
+describe('runCatchMeUp help', () => {
+  const statusRes = (used: number) => jsonResponse(200, { kind: 'status', used, limit: 3 });
+
+  it('anyone: mode status, 👍, then the help DM with their count', async () => {
+    const { deps, t } = flowDeps({ owner: false, fetchFn: vi.fn().mockResolvedValue(statusRes(2)) });
+    const msg = makeMsg();
+    await runCatchMeUp(msg, deps, { kind: 'help' });
+    expect(sentBody(deps)).toEqual({ notifyName: 'Alice', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: AUTHOR, mode: 'status' });
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, used: 2, limit: 3, owner: false })]]);
+    expect(sequence(t)).toEqual(['start', 'trigger', 'react', 'status', 'help-dm', 'end help']);
+    expect(t.events[0].f).toMatchObject({ command: 'help' });
+  });
+
+  it('the owner gets the owner copy', async () => {
+    const { deps } = flowDeps({ owner: true, fetchFn: vi.fn().mockResolvedValue(statusRes(1)) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, helpText({ botName: BOT, used: 1, limit: 3, owner: true })]]);
+  });
+
+  it.each([
+    ['a 500', () => vi.fn().mockResolvedValue(jsonResponse(500, {}))],
+    ['a network error', () => vi.fn().mockRejectedValue(new TypeError('fetch failed'))],
+    ['a bad body', () => vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card' }))],
+  ])('a status failure (%s) still sends help with no count', async (_l, fetchFn) => {
+    const { deps, t } = flowDeps({ owner: false, fetchFn: fetchFn() });
+    await runCatchMeUp(makeMsg(), deps, { kind: 'help' });
+    expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, limit: 3, owner: false })]]);
+    expect(t.step('status')).toMatchObject({ ok: false });
+    expect(t.ends().map((e) => e.name)).toEqual(['help']);
+  });
+
+  it('a second help within 10 minutes: no react, no fetch, no DM, end help-throttled; after 10 minutes it works again', async () => {
+    let clock = 1_000_000;
+    const helpThrottle = new Map<string, number>();
+    const first = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await runCatchMeUp(makeMsg(), first.deps, { kind: 'help' });
+    expect(first.deps.sendText).toHaveBeenCalledTimes(1);
+
+    clock += 9 * 60_000;
+    const second = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    const msg = makeMsg();
+    await runCatchMeUp(msg, second.deps, { kind: 'help' });
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(second.deps.fetchFn).not.toHaveBeenCalled();
+    expect(second.deps.sendText).not.toHaveBeenCalled();
+    expect(second.t.ends().map((e) => e.name)).toEqual(['help-throttled']);
+
+    // Another person is not throttled by Alice's help.
+    const other = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await runCatchMeUp(makeMsg({ author: '999@lid' }), other.deps, { kind: 'help' });
+    expect(other.deps.sendText).toHaveBeenCalledTimes(1);
+
+    clock += 61_000;
+    const third = flowDeps({ owner: false, helpThrottle, now: () => clock, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await runCatchMeUp(makeMsg(), third.deps, { kind: 'help' });
+    expect(third.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('a help DM that fails is not counted by the throttle', async () => {
+    const helpThrottle = new Map<string, number>();
+    const failing = flowDeps({ owner: false, helpThrottle, sendText: vi.fn().mockRejectedValue(new Error('send')), fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await expect(runCatchMeUp(makeMsg(), failing.deps, { kind: 'help' })).resolves.toBeUndefined();
+    expect(failing.t.step('help-dm')).toMatchObject({ ok: false });
+    expect(failing.t.ends()[0].name).toBe('failed');
+    const retry = flowDeps({ owner: false, helpThrottle, fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await runCatchMeUp(makeMsg(), retry.deps, { kind: 'help' });
+    expect(retry.deps.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failing isOwner gives the player copy', async () => {
+    const { deps } = flowDeps({ owner: 'reject', fetchFn: vi.fn().mockResolvedValue(statusRes(0)) });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
+    expect(deps.sendText.mock.calls[0][1]).toBe(helpText({ botName: BOT, used: 0, limit: 3, owner: false }));
+  });
+
+  it('unmapped group: help does nothing', async () => {
+    const { deps, t } = flowDeps({ owner: false });
+    const msg = makeMsg({ from: '555@g.us' });
+    await runCatchMeUp(msg, deps, { kind: 'help' });
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(t.ends().map((e) => e.name)).toEqual(['unsupported']);
+  });
+});
+
+describe('runCatchMeUp privacy across the new flows', () => {
+  it('the display name and target id appear in no trace field except who, and in no log line', async () => {
+    const cases: Array<[Parameters<typeof runCatchMeUp>[2], unknown]> = [
+      [{ kind: 'full' }, cardBody([])],
+      [{ kind: 'forget', target: 'self' }, { kind: 'forgot', target: 'self', resolved: true, forgotten: true, person: SENTINEL_NAME, left: 3 }],
+      [{ kind: 'forget', target: 'all' }, { kind: 'forgot', target: 'all', resolved: true, forgotten: true, left: 3 }],
+      [{ kind: 'forget', target: { id: PLAYER } }, { kind: 'forgot', target: 'player', resolved: false, forgotten: false, left: 3 }],
+      [{ kind: 'help' }, { kind: 'status', used: 1, limit: 3 }],
+    ];
+    for (const owner of [true, false]) {
+      for (const [cmd, res] of cases) {
+        const { deps, t } = flowDeps({ owner, fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, res)) });
+        await runCatchMeUp(ownerMsg({ notifyName: SENTINEL_NAME }), deps, cmd);
+        expect(t.events[0].f!.who).toBe(SENTINEL_NAME);
+        const rest = JSON.stringify([{ ...t.events[0].f, who: undefined }, ...t.events.slice(1)]);
+        expect(rest).not.toContain(SENTINEL_NAME);
+        expect(rest).not.toContain('456');
+        expect(rest).not.toContain('111222333');
+        expect(deps.log.mock.calls.map((c) => String(c[0])).join('\n')).not.toMatch(/ZZNAMEZZ|456|111222333/);
+      }
+    }
+  });
+});
+
+describe('makeIsOwner', () => {
+  const ownerPhone = '15550009999@c.us';
+  it('matches the raw id or the dmTarget of both sides', async () => {
+    const dmTarget = vi.fn(async (id: string) => (id === ownerPhone ? OWNER : id));
+    const isOwner = makeIsOwner(dmTarget, ownerPhone);
+    expect(await isOwner(OWNER)).toBe(true);
+    expect(await isOwner(ownerPhone)).toBe(true);
+    expect(await isOwner(AUTHOR)).toBe(false);
+    expect(await isOwner('')).toBe(false);
+  });
+
+  it('fails closed when the mapping rejects or the owner has no LID', async () => {
+    expect(await makeIsOwner(vi.fn().mockRejectedValue(new Error('x')), ownerPhone)(OWNER)).toBe(false);
+    expect(await makeIsOwner(async (id) => id, ownerPhone)(OWNER)).toBe(false);
+  });
+});
+
+describe('handleMessage passes mentioned and self ids to the parser', () => {
+  it('forget @Player reaches catchMeUp with the first non-bot mentioned id', async () => {
+    const catchMeUp = vi.fn().mockResolvedValue(undefined);
+    const jevRespond = vi.fn();
+    const db = openDb(':memory:');
+    createPromptTables(db);
+    const msg: WhatsAppMessage = {
+      body: '@12134198455 forget @456', from: GROUP, chatName: 'G', author: OWNER, fromMe: false, capturedAt: REQUEST_AT,
+      priorMessages: [], mentionsBot: true,
+      mentionedIds: ['186428122255581@lid', PLAYER],
+      selfIds: ['12134198455@c.us', '186428122255581@lid'],
+      reply: vi.fn().mockResolvedValue(undefined),
+      getContact: vi.fn().mockResolvedValue({ pushname: 'Owen' }),
+    };
+    await handleMessage(msg, {
+      config: rulesConfigSchema.parse({ defaults: { requireCommandPrefix: true, commandPrefix: '!song' }, rules: [] }),
+      spotify: { searchTrack: vi.fn(), getTrackById: vi.fn(), findOrCreatePlaylist: vi.fn(), isTrackInPlaylist: vi.fn(), addTrackToPlaylist: vi.fn() },
+      db, allowedGroupIds: ['120363000000000001'], ownerPhone: '1@c.us', masterPlaylistName: 'M', sendDm: vi.fn(),
+      catchMeUp, jevRespond,
+    });
+    expect(catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', target: { id: PLAYER } });
+    expect(jevRespond).not.toHaveBeenCalled();
+  });
+});
