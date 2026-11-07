@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { rm, stat } from 'node:fs/promises';
+import { performance } from 'node:perf_hooks';
 import os from 'node:os';
 import path from 'node:path';
+import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
 /**
  * "@bot catch me up": DM the requester a picture of what they missed.
@@ -49,6 +51,7 @@ export interface CmuMessage {
   author: string;        // requester id (@lid or @c.us); the only DM target
   capturedAt: string;    // ISO timestamp of the request message
   notifyName?: string;   // WhatsApp display name from the message payload
+  chatName?: string;     // human-readable group name (interaction log only)
   getContact(): Promise<{ pushname: string }>;
   react?(emoji: string): Promise<void>;
 }
@@ -58,7 +61,8 @@ export interface CmuDeps {
   groups: Map<string, string>;
   url: string;
   token: string;
-  screenshot(html: string, outPath: string): Promise<void>;
+  /** PNG to outPath; when thumbPath is given, also a best-effort JPEG thumbnail there. */
+  screenshot(html: string, outPath: string, thumbPath?: string): Promise<{ thumbBytes?: number } | void>;
   sendImage(chatId: string, filePath: string): Promise<void>;
   sendText(chatId: string, text: string): Promise<void>;
   log(line: string): void;
@@ -70,11 +74,70 @@ export interface CmuDeps {
   /** Overrides for tests; default CMU_DEADLINE_MS / CMU_FAILURE_DM_TIMEOUT_MS. */
   deadlineMs?: number;
   failureDmTimeoutMs?: number;
+  /** Interaction-log trace factory, called once per request. Default: NOOP_TRACE. */
+  trace?: () => InteractionTrace;
+}
+
+export const CMU_COMMAND = 'catch me up';
+
+/**
+ * The interaction trace as used here: every call is swallowed, so a broken
+ * log can never change what the requester gets. Steps carry no message text.
+ */
+interface SafeTrace {
+  step(name: string, f: { ok: boolean; ms?: number } & Record<string, string | number | boolean | string[] | null | undefined>): void;
+  thumbPath(): string | undefined;
+}
+
+function safeCall<T>(fn: () => T): T | undefined {
+  try {
+    return fn();
+  } catch {
+    return undefined;
+  }
+}
+
+function msSince(t0: number): number {
+  return Math.round(performance.now() - t0);
+}
+
+function authorKind(author: string): 'lid' | 'c.us' | 'other' {
+  if (author.endsWith('@lid')) return 'lid';
+  if (author.endsWith('@c.us')) return 'c.us';
+  return 'other';
+}
+
+/** Topic ids from `share-<id>.html` links; the link text itself is never kept. */
+function topicIds(links: string[]): string[] {
+  const ids: string[] = [];
+  for (const l of links) for (const m of l.matchAll(/share-([A-Za-z0-9_-]+)\.html/g)) ids.push(m[1]);
+  return ids;
 }
 
 type CmuResult =
   | { kind: 'card'; html: string; links: string[] }
   | { kind: 'quiet'; text: string };
+
+type Outcome = 'card' | 'card-partial' | 'quiet' | 'limit' | 'failed' | 'unsupported';
+
+/** Optional display fields companelist adds to a 200 (Task 1); absent on older versions. */
+function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null } {
+  const m = data && typeof data === 'object' ? (data as Record<string, unknown>).meta : undefined;
+  if (!m || typeof m !== 'object') return {};
+  const r = m as Record<string, unknown>;
+  return {
+    costUsd: typeof r.costUsd === 'number' ? r.costUsd : undefined,
+    windowStart: typeof r.windowStart === 'string' ? r.windowStart : undefined,
+    windowReason: typeof r.windowReason === 'string' ? r.windowReason : undefined,
+    person: typeof r.person === 'string' || r.person === null ? (r.person as string | null) : undefined,
+  };
+}
+
+/** The 429 body's `gate`, when companelist sends one. */
+function parseGate(data: unknown): 'limit' | 'busy' | undefined {
+  const g = data && typeof data === 'object' ? (data as Record<string, unknown>).gate : undefined;
+  return g === 'limit' || g === 'busy' ? g : undefined;
+}
 
 class CmuDeadlineError extends Error {
   constructor() {
@@ -116,12 +179,13 @@ function describeError(err: unknown): string {
   return 'error';
 }
 
-async function resolveNotifyName(msg: CmuMessage): Promise<string> {
-  if (msg.notifyName) return msg.notifyName;
+async function resolveNotifyName(msg: CmuMessage): Promise<{ name: string; source: 'payload' | 'contact' | 'none' }> {
+  if (msg.notifyName) return { name: msg.notifyName, source: 'payload' };
   try {
-    return (await msg.getContact()).pushname || '';
+    const name = (await msg.getContact()).pushname || '';
+    return { name, source: name ? 'contact' : 'none' };
   } catch {
-    return ''; // companelist treats an unknown name as "last 24h" (C6)
+    return { name: '', source: 'none' }; // companelist treats an unknown name as "last 24h" (C6)
   }
 }
 
@@ -135,17 +199,38 @@ async function resolveRequesterKey(msg: CmuMessage, deps: CmuDeps): Promise<stri
   }
 }
 
-async function react(msg: CmuMessage, emoji: string, deps: CmuDeps): Promise<void> {
+async function react(msg: CmuMessage, emoji: string, deps: CmuDeps, trace: SafeTrace): Promise<void> {
+  const t0 = performance.now();
+  let ok = true;
   try {
     await msg.react?.(emoji);
   } catch (err) {
+    ok = false;
     deps.log(`[cmu] react failed in ${msg.from}: ${describeError(err)}`);
   }
+  trace.step('react', { ok, ms: msSince(t0), emoji });
 }
 
 export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void> {
   const group = msg.from;
+  const raw = safeCall(() => deps.trace?.()) ?? NOOP_TRACE;
+  const trace: SafeTrace = {
+    step: (name, f) => void safeCall(() => raw.step(name, f)),
+    thumbPath: () => safeCall(() => raw.thumbPath()) || undefined,
+  };
+  const start = (who: string) => safeCall(() => raw.start({
+    group,
+    groupName: msg.chatName,
+    instance: deps.groups.get(group),
+    who,
+    authorKind: authorKind(msg.author ?? ''),
+    command: CMU_COMMAND,
+  }));
+
   if (!deps.groups.has(group)) {
+    start(msg.notifyName ?? '');
+    trace.step('trigger', { ok: true, mapped: false });
+    safeCall(() => raw.end('unsupported'));
     deps.log(`[cmu] unsupported group ${group}; ignored`);
     return;
   }
@@ -155,31 +240,51 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps): Promise<void
     return;
   }
 
-  await react(msg, '👍', deps);
+  // Resolved first so `start` carries the display name (I3); usually from the payload, no I/O.
+  const nameT0 = performance.now();
+  const name = await resolveNotifyName(msg);
+  const nameMs = msSince(nameT0);
+  start(name.name);
+  trace.step('trigger', { ok: true, mapped: true });
 
-  // Set once the image DM lands. After that the requester has their catch-up,
-  // so a failed or hung links DM is logged, never answered with "Couldn't build".
-  const state = { imageSent: false, pngPath: null as string | null };
+  let outcome: Outcome = 'failed';
+  let error: string | undefined;
   try {
-    await withDeadline(deliver(msg, deps, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
-  } catch (err) {
-    if (state.imageSent) {
-      deps.log(`[cmu] image sent, links failed in ${group}: ${describeError(err)}`);
-      return;
-    }
-    deps.log(`[cmu] failed in ${group}: ${describeError(err)}`);
+    await react(msg, '👍', deps, trace);
+    trace.step('name', { ok: name.source !== 'none', ms: nameMs, source: name.source });
+
+    // Set once the image DM lands. After that the requester has their catch-up,
+    // so a failed or hung links DM is logged, never answered with "Couldn't build".
+    const state = { imageSent: false, pngPath: null as string | null };
     try {
-      await withDeadline(
-        deps.sendText(msg.author, CMU_FAILURE_TEXT),
-        deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
-      );
-    } catch (dmErr) {
-      deps.log(`[cmu] failure DM failed in ${group}: ${describeError(dmErr)}`);
+      outcome = await withDeadline(deliver(msg, deps, state, name.name, trace), deps.deadlineMs ?? CMU_DEADLINE_MS);
+    } catch (err) {
+      if (state.imageSent) {
+        outcome = 'card-partial';
+        deps.log(`[cmu] image sent, links failed in ${group}: ${describeError(err)}`);
+        return;
+      }
+      outcome = 'failed';
+      error = describeError(err);
+      deps.log(`[cmu] failed in ${group}: ${error}`);
+      const t0 = performance.now();
+      try {
+        await withDeadline(
+          deps.sendText(msg.author, CMU_FAILURE_TEXT),
+          deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
+        );
+        trace.step('failure-dm', { ok: true, ms: msSince(t0) });
+      } catch (dmErr) {
+        trace.step('failure-dm', { ok: false, ms: msSince(t0) });
+        deps.log(`[cmu] failure DM failed in ${group}: ${describeError(dmErr)}`);
+      }
+    } finally {
+      // deliver() deletes the PNG itself; this covers a deadline that fired
+      // while a screenshot or send was still hanging.
+      if (state.pngPath) await rm(state.pngPath, { force: true }).catch(() => undefined);
     }
   } finally {
-    // deliver() deletes the PNG itself; this covers a deadline that fired
-    // while a screenshot or send was still hanging.
-    if (state.pngPath) await rm(state.pngPath, { force: true }).catch(() => undefined);
+    safeCall(() => raw.end(outcome, error ? { error } : undefined));
   }
 }
 
@@ -187,43 +292,102 @@ async function deliver(
   msg: CmuMessage,
   deps: CmuDeps,
   state: { imageSent: boolean; pngPath: string | null },
-): Promise<void> {
+  notifyName: string,
+  trace: SafeTrace,
+): Promise<'card' | 'quiet' | 'limit'> {
   const group = msg.from;
-  const notifyName = await resolveNotifyName(msg);
   const requesterKey = await resolveRequesterKey(msg, deps);
   const league = deps.groups.get(group);
-  const res = await deps.fetchFn(deps.url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey }),
-    signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
-  });
 
-  if (res.status === 429) {
-    await react(msg, '⏳', deps);
-    deps.log(`[cmu] limit in ${group}`);
-    return;
+  const fetchT0 = performance.now();
+  let status: number | undefined;
+  let data: unknown;
+  let result: CmuResult | null = null;
+  try {
+    const res = await deps.fetchFn(deps.url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey }),
+      signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
+    });
+    status = res.status;
+    if (res.status === 429) {
+      data = await res.json().catch(() => undefined);
+    } else {
+      if (!res.ok) throw new CmuHttpError(res.status);
+      data = await res.json();
+      result = parseResult(data);
+      if (!result) throw new Error('BadResponse');
+    }
+  } catch (err) {
+    trace.step('companelist', { ok: false, ms: msSince(fetchT0), status });
+    throw err;
   }
-  if (!res.ok) throw new CmuHttpError(res.status);
 
-  const result = parseResult(await res.json());
-  if (!result) throw new Error('BadResponse');
+  if (status === 429) {
+    trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: 'limit' });
+    trace.step('limit', { ok: true, gate: parseGate(data) });
+    await react(msg, '⏳', deps, trace);
+    deps.log(`[cmu] limit in ${group}`);
+    return 'limit';
+  }
+  if (!result) throw new Error('BadResponse'); // unreachable: narrowed above
+  trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: result.kind, ...parseMeta(data) });
 
   if (result.kind === 'quiet') {
-    await deps.sendText(msg.author, result.text);
+    await timed(trace, 'quiet-dm', () => deps.sendText(msg.author, result.text));
     deps.log(`[cmu] quiet sent in ${group}`);
-    return;
+    return 'quiet';
   }
 
+  const card = result;
   const pngPath = path.join(os.tmpdir(), `cmu-${randomUUID()}.png`);
   state.pngPath = pngPath;
   try {
-    await deps.screenshot(result.html, pngPath);
-    await deps.sendImage(msg.author, pngPath);
+    const thumbPath = trace.thumbPath();
+    const shotT0 = performance.now();
+    let shot: { thumbBytes?: number } | void;
+    try {
+      shot = thumbPath ? await deps.screenshot(card.html, pngPath, thumbPath) : await deps.screenshot(card.html, pngPath);
+    } catch (err) {
+      trace.step('screenshot', { ok: false, ms: msSince(shotT0) });
+      throw err;
+    }
+    const shotMs = msSince(shotT0);
+    const bytes = await stat(pngPath).then((st) => st.size, () => undefined);
+    trace.step('screenshot', { ok: true, ms: shotMs, bytes });
+    if (thumbPath) {
+      const thumbBytes = shot && typeof shot.thumbBytes === 'number' ? shot.thumbBytes : undefined;
+      trace.step('thumb', { ok: thumbBytes !== undefined, bytes: thumbBytes });
+    }
+    await timed(trace, 'image', () => deps.sendImage(msg.author, pngPath));
     state.imageSent = true;
-    if (result.links.length) await deps.sendText(msg.author, result.links.join('\n'));
+    if (card.links.length) {
+      await timed(trace, 'links', () => deps.sendText(msg.author, card.links.join('\n')), {
+        count: card.links.length,
+        topics: topicIds(card.links),
+      });
+    }
   } finally {
     await rm(pngPath, { force: true }).catch(() => undefined);
   }
   deps.log(`[cmu] card sent in ${group}`);
+  return 'card';
+}
+
+/** Run one send as a traced step: ok + ms either way, rethrowing on failure. */
+async function timed(
+  trace: SafeTrace,
+  name: string,
+  work: () => Promise<void>,
+  extra: Record<string, number | string[]> = {},
+): Promise<void> {
+  const t0 = performance.now();
+  try {
+    await work();
+  } catch (err) {
+    trace.step(name, { ok: false, ms: msSince(t0), ...extra });
+    throw err;
+  }
+  trace.step(name, { ok: true, ms: msSince(t0), ...extra });
 }

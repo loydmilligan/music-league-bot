@@ -380,14 +380,15 @@ export function makeSay(
 }
 
 /**
- * Screenshot a standalone HTML document to a PNG at 1080 px wide, full page.
+ * Screenshot a standalone HTML document to a PNG at 1080 px wide, full page,
+ * plus an optional half-scale JPEG thumbnail at thumbPath.
  * Uses the whatsapp-web.js client's own Chromium (no new dependency) on a NEW
  * page that is always closed; the WhatsApp page itself is never touched.
  */
 export function makeScreenshotHtml(
   client: ClientType,
-): (html: string, outPath: string) => Promise<void> {
-  return async (html, outPath) => {
+): (html: string, outPath: string, thumbPath?: string) => Promise<{ thumbBytes?: number }> {
+  return async (html, outPath, thumbPath) => {
     const browser = client.pupBrowser;
     if (!browser) throw new Error('browser not ready');
     const page = await browser.newPage();
@@ -395,6 +396,18 @@ export function makeScreenshotHtml(
       await page.setViewport({ width: 1080, height: 800, deviceScaleFactor: 1 });
       await page.setContent(html, { waitUntil: 'load', timeout: 20_000 });
       await page.screenshot({ path: outPath as `${string}.png`, fullPage: true, type: 'png' });
+      if (!thumbPath) return {};
+      // Best-effort 540 px JPEG for the admin interaction log; a failure here
+      // never fails the catch-up. 0644 so the host user can read it (root container).
+      try {
+        await page.setViewport({ width: 1080, height: 800, deviceScaleFactor: 0.5 });
+        const buf = await page.screenshot({ path: thumbPath as `${string}.jpeg`, fullPage: true, type: 'jpeg', quality: 70 });
+        fs.chmodSync(thumbPath, 0o644);
+        return { thumbBytes: buf.length };
+      } catch (err) {
+        console.warn(`[cmu] thumbnail failed: ${err instanceof Error ? err.name : 'error'}`);
+        return {};
+      }
     } finally {
       await page.close().catch(() => undefined);
     }

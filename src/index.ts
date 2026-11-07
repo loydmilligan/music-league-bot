@@ -23,6 +23,7 @@ import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
+import { openInteractionLog } from './storage/interactionLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -62,6 +63,9 @@ if (process.env.WHATSAPP_JEV_ENABLED === '1' && !jevRespond) {
 const cmuGroups = parseCmuGroups(process.env.CMU_GROUPS);
 const cmuUrl = process.env.CMU_URL;
 const cmuToken = process.env.CMU_TOKEN;
+// Admin "Bot" tab log: steps + outcome per request, 30-day retention (no message text).
+const interactionLog = openInteractionLog({ dir: process.env.INTERACTIONS_DIR ?? 'data/interactions' });
+interactionLog.prune();
 const catchMeUp = cmuUrl && cmuToken
   ? (msg: Parameters<typeof runCatchMeUp>[0]) =>
       runCatchMeUp(msg, {
@@ -74,6 +78,7 @@ const catchMeUp = cmuUrl && cmuToken
         sendText: makeSendTextTo(client),
         dmTarget: makeDmTarget(client),
         log: (line) => console.log(line),
+        trace: () => interactionLog.begin('cmu'),
       })
   : undefined;
 

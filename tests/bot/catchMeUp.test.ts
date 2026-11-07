@@ -11,6 +11,7 @@ import {
   CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
+import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
 import { openDb } from '../../src/storage/db.js';
 import { createPromptTables } from '../../src/chat/prompts/store.js';
@@ -50,6 +51,7 @@ interface FakeDeps {
   dmTarget?: AnyMock;
   deadlineMs?: number;
   failureDmTimeoutMs?: number;
+  trace?: () => InteractionTrace;
 }
 
 function makeDeps(over: Partial<FakeDeps> = {}) {
@@ -395,3 +397,198 @@ describe('handleMessage catch-me-up routing', () => {
     expect(catchMeUp).not.toHaveBeenCalled();
   });
 });
+
+type Ev = { ev: 'start' | 'step' | 'end'; name?: string; f?: Record<string, unknown> };
+
+function fakeTrace() {
+  const events: Ev[] = [];
+  const trace: InteractionTrace = {
+    id: 'abcdef012345',
+    start: (f) => { events.push({ ev: 'start', f: { ...f } }); },
+    step: (name, f) => { events.push({ ev: 'step', name, f: { ...f } }); },
+    end: (outcome, f) => { events.push({ ev: 'end', name: outcome, f: f ? { ...f } : undefined }); },
+    thumbPath: () => path.join(os.tmpdir(), 'abcdef012345.jpg'),
+  };
+  const steps = () => events.filter((e) => e.ev === 'step');
+  const step = (name: string) => steps().find((e) => e.name === name)?.f;
+  const ends = () => events.filter((e) => e.ev === 'end');
+  return { trace, events, steps, step, ends, factory: vi.fn(() => trace) };
+}
+
+const cardBody = (links: string[]) => ({
+  kind: 'card',
+  html: '<html>card</html>',
+  links,
+  meta: { costUsd: 0.0123, windowStart: '2026-11-06T04:40:00.000Z', windowReason: 'last-post', person: 'Alice B' },
+});
+
+describe('runCatchMeUp interaction trace', () => {
+  it('card: start, trigger, react 👍, name, companelist, screenshot, thumb, image, links, end card', async () => {
+    const t = fakeTrace();
+    const msg = makeMsg({ chatName: 'Test Group' });
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['🎸 Gear: https://x/share-t1.html', 'Food https://x/share-t2.html', 'https://x/']))),
+      trace: t.factory,
+    });
+    deps.screenshot.mockImplementation(async (_h: string, p: string) => { writeFileSync(p, 'png!'); return { thumbBytes: 4321 }; });
+
+    await runCatchMeUp(msg, deps);
+
+    expect(t.factory).toHaveBeenCalledTimes(1);
+    expect(t.events[0]).toEqual({ ev: 'start', f: {
+      group: GROUP, groupName: 'Test Group', instance: 'boarz-ii-men', who: 'Alice', authorKind: 'lid', command: 'catch me up',
+    } });
+    expect(t.events.map((e) => (e.ev === 'step' && e.name === 'react' ? `react ${e.f!.emoji}` : e.ev === 'step' ? e.name : e.ev === 'end' ? `end ${e.name}` : e.ev)))
+      .toEqual(['start', 'trigger', 'react 👍', 'name', 'companelist', 'screenshot', 'thumb', 'image', 'links', 'end card']);
+    expect(t.step('trigger')).toMatchObject({ ok: true, mapped: true });
+    expect(t.step('react')).toMatchObject({ ok: true, emoji: '👍' });
+    expect(t.step('name')).toMatchObject({ ok: true, source: 'payload' });
+    expect(t.step('companelist')).toMatchObject({
+      ok: true, status: 200, result: 'card', costUsd: 0.0123, windowStart: '2026-11-06T04:40:00.000Z', windowReason: 'last-post', person: 'Alice B',
+    });
+    expect(typeof t.step('companelist')!.ms).toBe('number');
+    expect(t.step('screenshot')).toMatchObject({ ok: true, bytes: 4 });
+    expect(t.step('thumb')).toEqual({ ok: true, bytes: 4321 });
+    expect(t.step('image')).toMatchObject({ ok: true });
+    expect(t.step('links')).toMatchObject({ ok: true, count: 3, topics: ['t1', 't2'] });
+    expect(t.ends()).toHaveLength(1);
+    expect(t.ends()[0].f).toBeUndefined();
+    expect(deps.screenshot.mock.calls[0][2]).toBe(path.join(os.tmpdir(), 'abcdef012345.jpg'));
+  });
+
+  it('card: an old companelist (no meta) and a screenshot without a thumbnail still trace', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card', html: '<p/>', links: [] })),
+      trace: t.factory,
+    });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('companelist')).toMatchObject({ ok: true, status: 200, result: 'card' });
+    expect(t.step('companelist')).not.toHaveProperty('costUsd', expect.anything());
+    expect(t.step('thumb')).toMatchObject({ ok: false });
+    expect(t.step('links')).toBeUndefined();
+    expect(t.ends()[0].name).toBe('card');
+  });
+
+  it('unmapped group: start + end unsupported, no react or fetch', async () => {
+    const t = fakeTrace();
+    const msg = makeMsg({ from: '555@g.us' });
+    const { deps } = makeDeps({ trace: t.factory });
+    await runCatchMeUp(msg, deps);
+    expect(t.events[0].ev).toBe('start');
+    expect(t.events[0].f).toMatchObject({ group: '555@g.us', who: 'Alice', command: 'catch me up' });
+    expect(t.step('trigger')).toMatchObject({ mapped: false });
+    expect(t.step('react')).toBeUndefined();
+    expect(t.ends().map((e) => e.name)).toEqual(['unsupported']);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('429 gate busy: companelist limit, limit step, react ⏳, end limit', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(429, { error: 'busy', gate: 'busy' })), trace: t.factory });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('companelist')).toMatchObject({ ok: true, status: 429, result: 'limit' });
+    expect(t.step('limit')).toMatchObject({ gate: 'busy' });
+    expect(t.steps().filter((e) => e.name === 'react').map((e) => e.f!.emoji)).toEqual(['👍', '⏳']);
+    expect(t.ends().map((e) => e.name)).toEqual(['limit']);
+  });
+
+  it('500: companelist ok:false status 500, failure-dm ok, end failed with error "http 500"', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, { error: 'boom' })), trace: t.factory });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('companelist')).toMatchObject({ ok: false, status: 500 });
+    expect(t.step('failure-dm')).toMatchObject({ ok: true });
+    expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'http 500' } }]);
+  });
+
+  it('links DM throws after the image: end card-partial', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['l1']))),
+      sendText: vi.fn().mockRejectedValue(new Error('links failed')),
+      trace: t.factory,
+    });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('image')).toMatchObject({ ok: true });
+    expect(t.step('links')).toMatchObject({ ok: false, count: 1 });
+    expect(t.ends().map((e) => e.name)).toEqual(['card-partial']);
+  });
+
+  it('quiet: quiet-dm then end quiet', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({ trace: t.factory });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('companelist')).toMatchObject({ ok: true, result: 'quiet' });
+    expect(t.step('quiet-dm')).toMatchObject({ ok: true });
+    expect(t.ends().map((e) => e.name)).toEqual(['quiet']);
+  });
+
+  it('deadline during a hung screenshot: end failed with error Deadline', async () => {
+    const t = fakeTrace();
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['l']))),
+      screenshot: vi.fn(() => new Promise<void>(() => {})),
+      deadlineMs: 20,
+      trace: t.factory,
+    });
+    await runCatchMeUp(makeMsg(), deps);
+    expect(t.step('failure-dm')).toMatchObject({ ok: true });
+    expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'Deadline' } }]);
+  });
+
+  it('a trace that throws on every call still delivers the image and links', async () => {
+    const boom = () => { throw new Error('log broken'); };
+    const broken: InteractionTrace = { id: 'x', start: boom, step: boom, end: boom, thumbPath: boom };
+    const { deps } = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['https://x/share-a.html']))),
+      trace: () => broken,
+    });
+    await expect(runCatchMeUp(makeMsg(), deps)).resolves.toBeUndefined();
+    expect(deps.sendImage).toHaveBeenCalledTimes(1);
+    expect(deps.sendText).toHaveBeenCalledWith(AUTHOR, 'https://x/share-a.html');
+
+    const throwingFactory = makeDeps({
+      fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, cardBody(['l']))),
+      trace: boom as () => InteractionTrace,
+    }).deps;
+    await runCatchMeUp(makeMsg(), throwingFactory);
+    expect(throwingFactory.sendImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('never records the request text, DM text or link text', async () => {
+    const SENTINEL = 'ZZSENTINELZZ';
+    const body = { body: `@bot catch me up ${SENTINEL}` };
+    const card = makeFakeRun({ kind: 'card', html: `<p>${SENTINEL}</p>`, links: [`${SENTINEL} Gear https://x/share-g1.html`] });
+    const quiet = makeFakeRun({ kind: 'quiet', text: `${SENTINEL} quiet` });
+    for (const run of [card, quiet]) {
+      await runCatchMeUp(makeMsg(body as Partial<CmuMessage>), run.deps);
+      const recorded = JSON.stringify(run.t.events);
+      expect(recorded).not.toContain(SENTINEL);
+      expect(recorded).not.toContain(AUTHOR);
+    }
+    expect(card.t.step('links')).toMatchObject({ topics: ['g1'] });
+  });
+
+  it('who is the notifyName; authorKind comes from the author suffix', async () => {
+    for (const [author, kind] of [['15551234567@c.us', 'c.us'], [AUTHOR, 'lid'], ['weird-id', 'other']] as const) {
+      const t = fakeTrace();
+      const { deps } = makeDeps({ trace: t.factory });
+      await runCatchMeUp(makeMsg({ author, notifyName: 'Zed' }), deps);
+      expect(t.events[0].f).toMatchObject({ who: 'Zed', authorKind: kind });
+      expect(JSON.stringify(t.events)).not.toContain('15551234567');
+    }
+    const t = fakeTrace();
+    const { deps } = makeDeps({ trace: t.factory });
+    await runCatchMeUp(makeMsg({ notifyName: undefined, getContact: vi.fn().mockResolvedValue({ pushname: 'Bob' }) }), deps);
+    expect(t.events[0].f).toMatchObject({ who: 'Bob' });
+    expect(t.step('name')).toMatchObject({ source: 'contact' });
+  });
+});
+
+function makeFakeRun(result: unknown) {
+  const t = fakeTrace();
+  const { deps } = makeDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, result)), trace: t.factory });
+  return { t, deps };
+}
