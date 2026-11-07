@@ -280,7 +280,9 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     command: commandLabel(cmd),
   }));
 
-  if (!deps.groups.has(group)) {
+  // The owner's off/on works from any group (its DM says so); the reply is a DM only, never to the group.
+  const isSwitch = cmd.kind === 'off' || cmd.kind === 'on';
+  if (!isSwitch && !deps.groups.has(group)) {
     start(msg.notifyName ?? '');
     trace.step('trigger', { ok: true, mapped: false });
     safeCall(() => raw.end('unsupported'));
@@ -298,7 +300,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   start(msg.notifyName ?? '');
   const cmuSwitch = deps.cmuSwitch ?? DEFAULT_SWITCH;
   // K4: while off, every command but the owner's off/on is swallowed: no reaction, DM, post or fetch.
-  if (cmd.kind !== 'off' && cmd.kind !== 'on' && safeCall(() => cmuSwitch.isEnabled()) === false) {
+  if (!isSwitch && safeCall(() => cmuSwitch.isEnabled()) === false) {
     safeCall(() => raw.end('disabled'));
     deps.log(`[cmu] disabled in ${group}`);
     return;
@@ -310,7 +312,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     deps.log(`[cmu] not-allowed in ${group}`);
     return;
   }
-  trace.step('trigger', { ok: true, mapped: true });
+  trace.step('trigger', { ok: true, mapped: deps.groups.has(group) });
 
   const end = (outcome: string, error?: string) => void safeCall(() => raw.end(outcome, error ? { error } : undefined));
   if (cmd.kind === 'help') return runHelp(msg, deps, trace, end);

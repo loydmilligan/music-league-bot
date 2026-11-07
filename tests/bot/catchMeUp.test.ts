@@ -1213,13 +1213,61 @@ describe('runCatchMeUp off/on (owner)', () => {
     expect(t.ends().map((e) => e.name)).toEqual(['on']);
   });
 
-  it('a switch that fails to save: switch ok:false, no DM, end failed', async () => {
-    const sw: CmuSwitch = { isEnabled: () => true, set: () => { throw new Error('EACCES'); } };
+  it.each([
+    ['off', true, 'on'],
+    ['on', false, 'off'],
+  ] as const)('a switch that fails to save (%s): switch ok:false, owner told the current state, end failed', async (kind, enabled, still) => {
+    const sw: CmuSwitch = { isEnabled: () => enabled, set: () => { throw new Error('EACCES'); } };
     const { deps, t } = flowDeps({ cmuSwitch: sw });
-    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'off' })).resolves.toBeUndefined();
+    const msg = ownerMsg();
+    await expect(runCatchMeUp(msg, deps, { kind })).resolves.toBeUndefined();
     expect(t.step('switch')).toMatchObject({ ok: false });
-    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, `Couldn't change the catch-up switch; it's still ${still}.`]]);
+    expect(msg.react).not.toHaveBeenCalled();
     expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  describe('from a group outside CMU_GROUPS', () => {
+    const UNMAPPED = '555@g.us';
+
+    it('owner off: K5 DM to the owner only, switch off, nothing to the group', async () => {
+      const sw = memSwitch();
+      const { deps, t } = flowDeps({ cmuSwitch: sw });
+      const msg = ownerMsg({ from: UNMAPPED });
+      await runCatchMeUp(msg, deps, { kind: 'off' });
+      expect(sw.isEnabled()).toBe(false);
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, OFF_DM]]);
+      expect(msg.react).not.toHaveBeenCalled();
+      expect(deps.fetchFn).not.toHaveBeenCalled();
+      expect(t.ends().map((e) => e.name)).toEqual(['off']);
+    });
+
+    it('owner on: K6 DM', async () => {
+      const sw = memSwitch(false);
+      const { deps, t } = flowDeps({ cmuSwitch: sw });
+      await runCatchMeUp(ownerMsg({ from: UNMAPPED }), deps, { kind: 'on' });
+      expect(sw.isEnabled()).toBe(true);
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, ON_DM]]);
+      expect(t.ends().map((e) => e.name)).toEqual(['on']);
+    });
+
+    it('non-owner off: not-allowed, nothing sent, switch untouched', async () => {
+      const sw = memSwitch();
+      const { deps, t } = flowDeps({ owner: false, cmuSwitch: sw });
+      const msg = makeMsg({ from: UNMAPPED });
+      await runCatchMeUp(msg, deps, { kind: 'off' });
+      expect(sw.sets).toEqual([]);
+      expect(msg.react).not.toHaveBeenCalled();
+      expect(deps.sendText).not.toHaveBeenCalled();
+      expect(sequence(t)).toEqual(['start', 'owner ok:false', 'end not-allowed']);
+    });
+
+    it.each([['tldr', { kind: 'tldr' }], ['help', { kind: 'help' }]] as const)('owner %s there is still unsupported', async (_l, cmd) => {
+      const { deps, t } = flowDeps();
+      await runCatchMeUp(ownerMsg({ from: UNMAPPED }), deps, cmd);
+      expect(deps.sendText).not.toHaveBeenCalled();
+      expect(t.ends().map((e) => e.name)).toEqual(['unsupported']);
+    });
   });
 
   it('the file switch: owner off, then a fresh switch over the same file (restart) is still off', async () => {

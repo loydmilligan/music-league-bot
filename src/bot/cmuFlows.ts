@@ -102,6 +102,16 @@ export function tldrText(o: { botName: string; limit: number; cooldownMin?: numb
 export const switchOffText = (botName: string): string =>
   `Catch-up bot is off. Nobody gets reactions or DMs from catch-me-up commands until you send "@${botName} on" in any group.`;
 export const SWITCH_ON_TEXT = 'Catch-up bot is back on.';
+export const switchFailureText = (still: 'on' | 'off'): string => `Couldn't change the catch-up switch; it's still ${still}.`;
+
+/** A switch that can't even be read counts as on, like a missing file. */
+function safeIsEnabled(sw: CmuSwitch): boolean {
+  try {
+    return sw.isEnabled() !== false;
+  } catch {
+    return true;
+  }
+}
 
 /** K7: at most one tldr per group per 30 minutes. */
 export const TLDR_COOLDOWN_MS = 30 * 60_000;
@@ -319,6 +329,15 @@ export async function runSwitch(msg: CmuMessage, deps: CmuDeps, sw: CmuSwitch, e
     trace.step('switch', { ok: false, enabled });
     const error = describeError(err);
     deps.log(`[cmu] switch ${label} failed in ${msg.from}: ${error}`);
+    const still = safeIsEnabled(sw) ? 'on' : 'off';
+    try {
+      await withDeadline(
+        timed(trace, 'failure-dm', () => deps.sendText(msg.author, switchFailureText(still))),
+        deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
+      );
+    } catch (dmErr) {
+      deps.log(`[cmu] switch failure DM failed in ${msg.from}: ${describeError(dmErr)}`);
+    }
     end('failed', error);
     return;
   }
