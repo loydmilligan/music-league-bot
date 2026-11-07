@@ -14,6 +14,7 @@ import { interpretMessage } from '../chat/prompts/engine.js';
 import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
 import { extractJevPrompt, type JevChatRequest } from '../chat/jevResponder.js';
 import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
+import { memoryCmuPreview, type CmuPreview } from './cmuPreview.js';
 
 export interface WhatsAppMessage {
   body: string;
@@ -52,10 +53,17 @@ export interface BotConfig {
   jevRespond?: (request: JevChatRequest) => Promise<string>;
   /** "@bot catch me up" (src/bot/catchMeUp.ts). Unwired = the phrase falls through to Jev. */
   catchMeUp?: (msg: WhatsAppMessage, cmd: CmuCommand) => Promise<void>;
+  /** Emoji reaction to a non-command @-mention. Acts only in preview groups. */
+  reactToMention?: (msg: WhatsAppMessage) => Promise<void>;
+  /** The CMU_GROUPS group ids (matched exactly): groups with no song capture that still get reactions. */
+  reactGroupIds?: Set<string>;
+  /** Preview gate; default is empty, so every group keeps today's behaviour. */
+  preview?: CmuPreview;
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
   const { config, spotify, db, allowedGroupIds, ownerPhone, sendDm } = botConfig;
+  const preview = botConfig.preview ?? memoryCmuPreview();
 
   // Never react to ourselves. Previously implicit — our own messages carry our
   // LID in `from`, so the @g.us allowlist below dropped them — but the direct
@@ -83,7 +91,16 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
     }
   }
 
-  if (!allowedGroupIds.some((id) => msg.from.includes(id))) return;
+  const inPreview = preview.isPreview(msg.from);
+  const inAllowlist = allowedGroupIds.some((id) => msg.from.includes(id));
+
+  // Preview CMU-only group (not a song-capture group): a plain mention gets a reaction.
+  if (inPreview && msg.mentionsBot && botConfig.reactGroupIds?.has(msg.from) && !inAllowlist) {
+    await botConfig.reactToMention?.(msg);
+    return;
+  }
+
+  if (!inAllowlist) return;
 
   console.log('[bot] captured from group:', msg.from, '|', msg.body.slice(0, 80));
 
@@ -91,9 +108,15 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // is never also scanned for song URLs, and returns early when it lands.
   if (await handlePromptAnswer(msg, botConfig)) return;
 
+  // Preview groups: a mention with no music URL gets a reaction instead of Jev's text reply.
+  if (inPreview && msg.mentionsBot && detectMusicUrls(msg.body).length === 0) {
+    await botConfig.reactToMention?.(msg);
+    return;
+  }
+
   // Path J: explicitly ask the bot for a compact Jev read. Disabled unless a
   // responder is wired at startup; ordinary chat never causes an AI call.
-  const jevPrompt = extractJevPrompt(msg.body, msg.mentionsBot);
+  const jevPrompt = inPreview ? null : extractJevPrompt(msg.body, msg.mentionsBot);
   if (jevPrompt && botConfig.jevRespond) {
     let authorName: string | undefined;
     try {

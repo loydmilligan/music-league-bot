@@ -26,6 +26,10 @@ import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
+import { defaultCmuPreview } from './bot/cmuPreview.js';
+import { BurstGuard, runReaction } from './bot/reactions.js';
+import { PALETTE } from './bot/reactionPalette.js';
+import { createJevPicker } from './chat/jevPick.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, '../config/rules.json');
@@ -91,6 +95,34 @@ const catchMeUp = cmuUrl && cmuToken
       }, cmd)
   : undefined;
 
+// Emoji reactions to non-command mentions: preview groups only (the same gate sprint 2 uses).
+const cmuPreview = defaultCmuPreview();
+const reactionGuard = new BurstGuard();
+const reactionPicker = process.env.OPENROUTER_API_KEY
+  ? createJevPicker({ apiKey: process.env.OPENROUTER_API_KEY, model: process.env.WHATSAPP_JEV_MODEL })
+  : null;
+const reactToMention = (msg: Parameters<typeof handleMessage>[0]) =>
+  runReaction(
+    {
+      from: msg.from,
+      author: msg.author,
+      body: msg.body,
+      chatName: msg.chatName,
+      notifyName: msg.notifyName,
+      priorMessages: msg.priorMessages,
+      react: msg.react?.bind(msg),
+    },
+    {
+      palette: PALETTE,
+      picker: reactionPicker,
+      forceFallback: process.env.REACTIONS_JEV === '0',
+      cmuSwitch,
+      trace: () => interactionLog.begin('react'),
+      log: (line) => console.log(line),
+      guard: reactionGuard,
+    },
+  );
+
 const client = createClient(async (msg) => {
   await handleMessage(msg, {
     config,
@@ -102,6 +134,9 @@ const client = createClient(async (msg) => {
     sendDm: makeSendDm(client),
     jevRespond,
     catchMeUp,
+    reactToMention,
+    reactGroupIds: new Set(cmuGroups.keys()),
+    preview: cmuPreview,
   });
 });
 

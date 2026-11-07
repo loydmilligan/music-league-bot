@@ -5,6 +5,8 @@ import { openDb } from '../src/storage/db.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../src/bot/handler.js';
 import { rulesConfigSchema } from '../src/config/types.js';
 import type { ISpotifyAdapter } from '../src/music/types.js';
+import { memoryCmuPreview } from '../src/bot/cmuPreview.js';
+import { createPromptTables, insertPrompt } from '../src/chat/prompts/store.js';
 
 // A real track for use in tests
 const sampleTrack = {
@@ -472,5 +474,134 @@ describe('handleMessage', () => {
     }));
     expect(msg.reply).toHaveBeenCalledWith('🧠 Jev read: friendly knife fight.');
     expect(spotify.searchTrack).not.toHaveBeenCalled();
+  });
+
+  describe('mention reactions behind the preview gate', () => {
+    const SONG = 'BmCQHGE3k0a0ST5ZDPFmqW@g.us';
+    const CMU_ONLY = 'CmuOnlyGroup1@g.us';
+    const OTHER = 'NeitherGroup9@g.us';
+    const plain = (from: string, body = 'hey @bot what a day', o: Partial<WhatsAppMessage> = {}) =>
+      makeMockMsg(body, { from, mentionsBot: true, ...o });
+
+    function setup(o: { preview?: string[]; unsetPreview?: boolean } = {}) {
+      const reactToMention = vi.fn().mockResolvedValue(undefined);
+      const jevRespond = vi.fn().mockResolvedValue('jev says hi');
+      const catchMeUp = vi.fn().mockResolvedValue(undefined);
+      const spotify = makeMockSpotify();
+      const db = openDb(':memory:');
+      const cfg = makeBotConfig({
+        spotify,
+        jevRespond,
+        catchMeUp,
+        reactToMention,
+        reactGroupIds: new Set([CMU_ONLY, SONG]),
+        ...(o.unsetPreview ? {} : { preview: memoryCmuPreview(o.preview ?? []) }),
+      }, db);
+      return { reactToMention, jevRespond, catchMeUp, spotify, db, cfg };
+    }
+
+    it('preview CMU-only group: plain mention reacts once, no Jev, nothing captured', async () => {
+      const t = setup({ preview: [CMU_ONLY] });
+      const msg = plain(CMU_ONLY);
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+      expect(t.reactToMention).toHaveBeenCalledWith(msg);
+      expect(t.jevRespond).not.toHaveBeenCalled();
+      expect(msg.reply).not.toHaveBeenCalled();
+      expect(t.db.prepare('SELECT * FROM submissions').all()).toHaveLength(0);
+    });
+
+    it('preview song-capture group: plain mention reacts, no Jev text reply', async () => {
+      const t = setup({ preview: [SONG] });
+      const msg = plain(SONG);
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+      expect(t.jevRespond).not.toHaveBeenCalled();
+      expect(msg.reply).not.toHaveBeenCalled();
+    });
+
+    it('preview song-capture group: a mention with a Spotify URL is captured, no reaction', async () => {
+      const t = setup({ preview: [SONG] });
+      const msg = plain(SONG, '@bot https://open.spotify.com/track/abc123');
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(t.spotify.addTrackToPlaylist).toHaveBeenCalled();
+    });
+
+    it('preview song-capture group: a prompt-answer mention takes the prompt path, no reaction', async () => {
+      const t = setup({ preview: [SONG] });
+      createPromptTables(t.db);
+      insertPrompt(t.db, {
+        id: 'p1',
+        chatId: SONG,
+        options: [{ id: 'a', label: 'Koziol' }],
+        templates: { matched: ['got {name}'], ambiguous: ['which?'], unmatched: ['no idea'] },
+        acceptInline: true,
+      });
+      const msg = plain(SONG, 'Koziol');
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(msg.reply).toHaveBeenCalled();
+      expect(t.jevRespond).not.toHaveBeenCalled();
+    });
+
+    it('preview: !jev without a mention is ordinary chat (no reply, no reaction)', async () => {
+      const t = setup({ preview: [SONG] });
+      const msg = makeMockMsg('!jev read the room', { from: SONG });
+      await handleMessage(msg, t.cfg);
+      expect(t.jevRespond).not.toHaveBeenCalled();
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(msg.reply).not.toHaveBeenCalled();
+    });
+
+    it('group in both lists (preview): song-capture branch, reaction exactly once', async () => {
+      const t = setup({ preview: [SONG] });
+      await handleMessage(plain(SONG, '@bot https://open.spotify.com/track/abc123'), t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      const t2 = setup({ preview: [SONG] });
+      await handleMessage(plain(SONG), t2.cfg);
+      expect(t2.reactToMention).toHaveBeenCalledTimes(1);
+    });
+
+    it('non-preview song-capture group: Jev text reply as today, no reaction', async () => {
+      const t = setup();
+      const msg = plain(SONG);
+      await handleMessage(msg, t.cfg);
+      expect(t.jevRespond).toHaveBeenCalledTimes(1);
+      expect(msg.reply).toHaveBeenCalledWith('jev says hi');
+      expect(t.reactToMention).not.toHaveBeenCalled();
+    });
+
+    it('non-preview CMU-only group: nothing is called', async () => {
+      const t = setup();
+      const msg = plain(CMU_ONLY);
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(t.jevRespond).not.toHaveBeenCalled();
+      expect(msg.reply).not.toHaveBeenCalled();
+    });
+
+    it('preview unset behaves as non-preview everywhere', async () => {
+      const t = setup({ unsetPreview: true });
+      await handleMessage(plain(CMU_ONLY), t.cfg);
+      const msg = plain(SONG);
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(t.jevRespond).toHaveBeenCalledTimes(1);
+    });
+
+    it('group in neither list: nothing called; catch-me-up still routes in either kind of group', async () => {
+      const t = setup({ preview: [OTHER, CMU_ONLY] });
+      const msg = plain(OTHER);
+      await handleMessage(msg, t.cfg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+      expect(t.jevRespond).not.toHaveBeenCalled();
+      expect(msg.reply).not.toHaveBeenCalled();
+      for (const g of [OTHER, CMU_ONLY, SONG]) {
+        await handleMessage(plain(g, '@bot catch me up'), t.cfg);
+      }
+      expect(t.catchMeUp).toHaveBeenCalledTimes(3);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+    });
   });
 });
