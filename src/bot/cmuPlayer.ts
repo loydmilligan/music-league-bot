@@ -21,6 +21,7 @@ import {
   type SafeTrace,
 } from './catchMeUp.js';
 import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
+import { isRecapKind, runRecapCommand } from './recapSubs.js';
 
 /**
  * Player command flows (R5, R7, R8, L9/L9a, W1, W3, W4): top lists, pick one, list/show topics and the
@@ -84,11 +85,8 @@ function parseReply(cmd: PlayerCmd, data: unknown): PlayerReply {
 }
 
 export async function runPlayer(msg: CmuMessage, deps: CmuDeps, cmd: PlayerCmd, trace: SafeTrace, end: End): Promise<void> {
-  // Recap subscription commands belong to the recap flow (Task 12).
-  if (cmd.kind === 'recap-sub' || cmd.kind === 'recap-unsub' || cmd.kind === 'recap-time' || cmd.kind === 'recap-time-bad') {
-    end('unsupported');
-    return;
-  }
+  // Recap subscription commands have their own flow (M2/M3): no player cooldown, no companelist call.
+  if (isRecapKind(cmd)) return runRecapCommand(msg, deps, cmd, trace, end);
   // K4: while the owner's switch is off, nothing at all.
   let enabled = true;
   try {

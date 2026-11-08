@@ -3,7 +3,8 @@ import type { RecapSub } from './recapSubs.js';
 
 const CHANGE = 'Change: morning-recap unsub · morning-recap 7:30';
 
-function formatTime(time: string | undefined): string | undefined {
+/** "07:30" → "7:30 AM"; undefined when not HH:MM. */
+export function formatTime(time: string | undefined): string | undefined {
   const m = /^(\d{1,2}):(\d{2})$/.exec(time ?? '');
   if (!m) return undefined;
   const h = Number(m[1]);

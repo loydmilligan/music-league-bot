@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { recapLine, followUpText } from '../../src/bot/cmuFollowUp.js';
-import { recapSubscription } from '../../src/bot/recapSubs.js';
+import { memoryRecapSubs, recapSubscription, setRecapSubsForTest } from '../../src/bot/recapSubs.js';
 import { MENU_HEADING, PLAYER_MENU } from '../../src/bot/cmuMenu.js';
 
 const TAIL = 'Change: morning-recap unsub · morning-recap 7:30';
@@ -61,7 +61,12 @@ describe('seed values', () => {
     expect(MENU_HEADING).toBe('Send any of these as @bot <command> in the group:');
     expect(PLAYER_MENU).toHaveLength(2);
   });
-  it('recap stub returns undefined', () => {
-    expect(recapSubscription('anyone')).toBeUndefined();
+  it('recapSubscription over an empty store reads not subscribed', () => {
+    setRecapSubsForTest(memoryRecapSubs());
+    try {
+      expect(recapSubscription('anyone')).toEqual({ subscribed: false });
+    } finally {
+      setRecapSubsForTest(undefined);
+    }
   });
 });

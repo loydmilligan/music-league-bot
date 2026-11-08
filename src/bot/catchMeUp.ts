@@ -11,7 +11,7 @@ import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js'
 import type { CmuPreview } from './cmuPreview.js';
 import { followUpText } from './cmuFollowUp.js';
 import { PLAYER_MENU } from './cmuMenu.js';
-import type { RecapSub } from './recapSubs.js';
+import type { RecapSub, RecapSubs } from './recapSubs.js';
 
 /**
  * "@bot catch me up": DM the requester a picture of what they missed.
@@ -106,6 +106,8 @@ export interface CmuDeps {
   preview?: CmuPreview;
   /** The requester's morning-recap subscription, for the follow-up. Absent means no recap line. */
   recapSubscription?: (dmTarget: string) => RecapSub;
+  /** M3: the morning-recap store. Default: the process-wide file store. */
+  recapSubs?: RecapSubs;
   /** Override for tests; default CMU_FOLLOWUP_TIMEOUT_MS. */
   followUpTimeoutMs?: number;
   /** CMU_CAPTION switch: false ignores the caption even in preview (image then links). Default true. */
