@@ -20,7 +20,18 @@ function getDb(): Database.Database {
   if (_db) return _db;
   _db = new Database(resolve(process.env.DATA_DIR ?? 'data', 'league.db'));
   _db.pragma('journal_mode = WAL');
-  _db.exec(`
+  ensureSeenTables(_db);
+  return _db;
+}
+
+/** The league.db handle this module writes to; the DM router reads wa_messages through it. */
+export function seenMessagesDb(): Database.Database {
+  return getDb();
+}
+
+/** Create wa_messages / chat_reactions when missing (idempotent). */
+export function ensureSeenTables(db: Database.Database): void {
+  db.exec(`
     CREATE TABLE IF NOT EXISTS wa_messages (
       msg_id      TEXT PRIMARY KEY,
       chat_id     TEXT NOT NULL,
@@ -47,7 +58,25 @@ function getDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_chat_reactions_group_ts ON chat_reactions(group_name, ts);
   `);
-  return _db;
+}
+
+/**
+ * Read only: the chat of the latest message by any of `authorIds` in any of `chatIds` at or after
+ * `sinceIso` (ts is an ISO string, so text order is time order). Undefined when none.
+ */
+export function latestSeenChat(
+  db: Pick<Database.Database, 'prepare'>,
+  authorIds: string[],
+  chatIds: string[],
+  sinceIso: string,
+): string | undefined {
+  if (authorIds.length === 0 || chatIds.length === 0) return undefined;
+  const a = authorIds.map(() => '?').join(', ');
+  const c = chatIds.map(() => '?').join(', ');
+  const row = db
+    .prepare(`SELECT chat_id FROM wa_messages WHERE author_id IN (${a}) AND chat_id IN (${c}) AND ts >= ? ORDER BY ts DESC LIMIT 1`)
+    .get(...authorIds, ...chatIds, sinceIso) as { chat_id: string } | undefined;
+  return row?.chat_id;
 }
 
 export interface SeenMessage {

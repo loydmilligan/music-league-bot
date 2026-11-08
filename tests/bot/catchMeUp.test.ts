@@ -445,7 +445,7 @@ describe('runCatchMeUp interaction trace', () => {
 
     expect(t.factory).toHaveBeenCalledTimes(1);
     expect(t.events[0]).toEqual({ ev: 'start', f: {
-      group: GROUP, groupName: 'Test Group', instance: 'boarz-ii-men', who: 'Alice', authorKind: 'lid', command: 'catch me up',
+      group: GROUP, groupName: 'Test Group', instance: 'boarz-ii-men', who: 'Alice', authorKind: 'lid', command: 'catch me up', via: 'group',
     } });
     expect(t.events.map((e) => (e.ev === 'step' && e.name === 'react' ? `react ${e.f!.emoji}` : e.ev === 'step' ? e.name : e.ev === 'end' ? `end ${e.name}` : e.ev)))
       .toEqual(['start', 'trigger', 'react 👍', 'name', 'companelist', 'screenshot', 'thumb', 'image', 'links', 'end card']);

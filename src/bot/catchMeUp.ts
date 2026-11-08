@@ -10,7 +10,7 @@ import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 import type { CmuPreview } from './cmuPreview.js';
 import { followUpText } from './cmuFollowUp.js';
-import { playerMenu } from './cmuMenu.js';
+import { menuHeading, playerMenu } from './cmuMenu.js';
 import type { RecapSub, RecapSubs } from './recapSubs.js';
 
 /**
@@ -62,6 +62,8 @@ export interface CmuMessage {
   react?(emoji: string): Promise<void>;
   /** Set by the DM router when the requester is a preview person; opens the D19 gate. */
   previewPerson?: boolean;
+  /** 'dm' when the DM router dispatched it (from = the resolved group, author = the DM chat). Default 'group'. */
+  via?: 'group' | 'dm';
 }
 
 export interface CmuDeps {
@@ -336,6 +338,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     who,
     authorKind: authorKind(msg.author ?? ''),
     command: commandLabel(cmd),
+    via: msg.via ?? 'group',
   }));
 
   // The owner's off/on works from any group (its DM says so); the reply is a DM only, never to the group.
@@ -457,6 +460,8 @@ async function deliver(
         notifyName, requestAt: msg.capturedAt, league, requesterKey,
         ...(full ? { mode: 'full' } : {}),
         ...(inPreview ? { accepts: ['followUp'] } : {}),
+        // C-DM2: companelist records a DM catch-up as its own request kind.
+        ...(msg.via === 'dm' ? { via: 'dm' } : {}),
       }),
       signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
     });
@@ -542,12 +547,12 @@ async function deliver(
 async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string, followUp: FollowUp, trace: SafeTrace): Promise<void> {
   const t0 = performance.now();
   let ok = true;
+  let dmOk = false;
   try {
-    // G5: the recap line names a player command, so only a preview person sees it.
-    const sub = safeCall(() => deps.preview?.isPreviewPerson(requesterKey)) === true
-      ? safeCall(() => deps.recapSubscription?.(requesterKey))
-      : undefined;
-    const text = followUpText({ lines: followUp.lines, sub });
+    // G5: the recap line and the DM menu name player commands, so only a preview person sees them.
+    dmOk = safeCall(() => deps.preview?.isPreviewPerson(requesterKey)) === true;
+    const sub = dmOk ? safeCall(() => deps.recapSubscription?.(requesterKey)) : undefined;
+    const text = followUpText({ lines: followUp.lines, sub, heading: menuHeading(dmOk), menu: playerMenu(dmOk) });
     await withDeadline(
       Promise.resolve().then(() => deps.sendText(msg.author, text)),
       deps.followUpTimeoutMs ?? CMU_FOLLOWUP_TIMEOUT_MS,
@@ -556,7 +561,7 @@ async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string
     ok = false;
     deps.log(`[cmu] follow-up failed in ${msg.from}: ${describeError(err)}`);
   }
-  trace.step('followup', { ok, ms: msSince(t0), stats: followUp.lines.length > 0, menu: playerMenu(false).length });
+  trace.step('followup', { ok, ms: msSince(t0), stats: followUp.lines.length > 0, menu: playerMenu(dmOk).length });
 }
 
 /** Run one send as a traced step: ok + ms either way, rethrowing on failure. */

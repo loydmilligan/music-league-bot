@@ -16,7 +16,7 @@ type Scalar = string | number | boolean | string[] | null | undefined;
 
 export interface InteractionTrace {
   readonly id: string;
-  start(f: { group: string; groupName?: string; instance?: string; who: string; authorKind: 'lid' | 'c.us' | 'other'; command: string }): void;
+  start(f: { group: string; groupName?: string; instance?: string; who: string; authorKind: 'lid' | 'c.us' | 'other'; command: string; via?: 'group' | 'dm' }): void;
   step(step: string, f: { ok: boolean; ms?: number } & Record<string, Scalar>): void;
   end(outcome: string, f?: { error?: string }): void;
   /** Absolute path for this interaction's thumbnail; creates img/ if needed. */

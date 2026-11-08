@@ -324,7 +324,16 @@ async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, cooldown: 
     trace.step('status', { ok: false, ms: msSince(t0), status: err instanceof CmuHttpError ? err.status : undefined });
     deps.log(`[cmu] status failed in ${msg.from}: ${describeError(err)}`);
   }
-  const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner });
+  // G5 / H-DM: the DM list only for a preview person; by DM the router has already checked that.
+  let dmOk = msg.via === 'dm';
+  if (!dmOk) {
+    try {
+      dmOk = deps.preview?.isPreviewPerson(await resolveKey(msg.author, deps)) === true;
+    } catch {
+      dmOk = false;
+    }
+  }
+  const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner, dmOk });
   await timed(trace, 'help-dm', () => deps.sendText(msg.author, text));
 }
 
