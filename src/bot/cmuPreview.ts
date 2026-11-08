@@ -4,7 +4,9 @@ import path from 'node:path';
 /**
  * The preview allowlist: new catch-me-up features act only in these groups.
  * Persisted as `{ "groups": [...], "people": [...] }` (people are DM-target ids,
- * matched exactly; callers normalise; the literal entry `"owner"` matches the known owner ids), re-read when the file's
+ * matched exactly; callers normalise; the literal entry `"owner"` matches the known owner ids,
+ * and the literal entry `"*"` matches every non-empty person id; `"owner"` and `"*"` mean nothing in
+ * `groups`), re-read when the file's
  * mtime or size changes so promoting a group needs no restart. A missing,
  * unreadable or misshapen file means nothing is in preview. Never throws.
  */
@@ -30,6 +32,7 @@ function strings(v: unknown): Set<string> {
 
 function noOwner(s: Set<string>): Set<string> {
   s.delete('owner');
+  s.delete('*');
   return s;
 }
 
@@ -77,6 +80,7 @@ function defaultOwnerIds(): Iterable<string> {
 
 function personMatch(people: Set<string>, id: string, owners: Iterable<string>): boolean {
   if (id === '') return false;
+  if (people.has('*')) return true;
   if (id !== OWNER && people.has(id)) return true;
   if (!people.has(OWNER)) return false;
   for (const o of owners) if (o !== '' && o === id) return true;
@@ -121,6 +125,7 @@ export function memoryCmuPreview(
 ): CmuPreview {
   const g = new Set(groups);
   g.delete(OWNER);
+  g.delete('*');
   const p = new Set(people);
   return { isPreview: (id) => g.has(id), isPreviewPerson: (id) => personMatch(p, id, ownerIds), hasPeople: () => p.size > 0 };
 }

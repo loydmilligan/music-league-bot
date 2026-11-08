@@ -166,6 +166,50 @@ describe('cmuPreview', () => {
     }
   });
 
+  describe('"*" entry in people means everyone', () => {
+    const fileGate = (people: unknown[], groups: unknown[] = []) => {
+      const file = tmpFile();
+      write(file, JSON.stringify({ groups, people }), 1000);
+      return openCmuPreview(file, { ownerIds: () => [] });
+    };
+    const gates: Array<[string, (people: string[], groups?: string[]) => ReturnType<typeof memoryCmuPreview>]> = [
+      ['file-backed', (p, g = []) => fileGate(p, g)],
+      ['memory', (p, g = []) => memoryCmuPreview(g, p)],
+    ];
+
+    it.each(gates)('%s: people ["*"] matches any non-empty id, never the empty id', (_n, mk) => {
+      const p = mk(['*']);
+      expect(p.isPreviewPerson(P)).toBe(true);
+      expect(p.isPreviewPerson(Q)).toBe(true);
+      expect(p.isPreviewPerson('15550000009@c.us')).toBe(true);
+      expect(p.isPreviewPerson('')).toBe(false);
+      expect(p.hasPeople?.()).toBe(true);
+      expect(p.isPreview(A)).toBe(false);
+    });
+
+    it.each(gates)('%s: groups ["*"] matches nothing', (_n, mk) => {
+      const p = mk([], ['*', A]);
+      expect(p.isPreview('*')).toBe(false);
+      expect(p.isPreview(B)).toBe(false);
+      expect(p.isPreview(P)).toBe(false);
+      expect(p.isPreview(A)).toBe(true);
+      expect(mk([], ['*']).isPreview(A)).toBe(false);
+    });
+
+    it.each(gates)('%s: people ["owner","*"] still works', (_n, mk) => {
+      const p = mk(['owner', '*']);
+      expect(p.isPreviewPerson(P)).toBe(true);
+      expect(p.isPreviewPerson('')).toBe(false);
+      expect(p.hasPeople?.()).toBe(true);
+    });
+
+    it('memory gate: "owner" with "*" and an owner id matches both', () => {
+      const m = memoryCmuPreview([], ['owner', '*'], [P]);
+      expect(m.isPreviewPerson(P)).toBe(true);
+      expect(m.isPreviewPerson(Q)).toBe(true);
+    });
+  });
+
   it('defaults to ${DATA_DIR ?? "data"}/cmu-preview.json', () => {
     const prev = process.env.DATA_DIR;
     try {
