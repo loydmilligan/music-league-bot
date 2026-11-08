@@ -250,6 +250,9 @@ describe('handleCmuDm', () => {
     expect(await handleCmuDm(msg, s.deps)).toBe(true);
     expect(s.bodies()[0]).toMatchObject({ mode: 'recap', requesterKey: PERSON_LID });
     expect(s.sendText).toHaveBeenCalledWith(PERSON_CUS, 'SYNTHETIC-RECAP');
+    expect(msg.react).toHaveBeenCalledTimes(1);
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    expect(msg.react.mock.invocationCallOrder[0]).toBeLessThan(s.sendText.mock.invocationCallOrder[0]);
     expect(s.ends()).toEqual(['recap']);
   });
 

@@ -413,13 +413,15 @@ export async function runTldr(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, 
 
 /**
  * Owner only: ask companelist for a one-screen summary of the last 24 h of bot activity and DM it
- * to the requester. No reaction and nothing in the group. Any failure DMs a fixed one-liner.
+ * to the requester. Reacts with the ack emoji on the command message first (as catch me up and help do),
+ * then DMs; nothing is posted in the group. Any failure DMs a fixed one-liner.
  * No message text, id or DM text reaches the trace or the log.
  */
 export async function runRecap(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, end: End): Promise<void> {
   let outcome = 'recap-failed';
   let error: string | undefined;
   try {
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
     const t0 = performance.now();
     let text: string;
     try {

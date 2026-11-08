@@ -1437,14 +1437,16 @@ describe('runCatchMeUp recap-bot-calls', () => {
   const RECAP_TEXT = 'Synthetic recap line.';
   const recapRes = () => jsonResponse(200, { kind: 'recap', text: RECAP_TEXT });
 
-  it('owner, mapped group: POSTs mode recap, DMs the text, no react; steps owner, companelist, confirm-dm', async () => {
+  it('owner, mapped group: POSTs mode recap, reacts 👍 before the DM; steps owner, react, companelist, confirm-dm', async () => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(recapRes()) });
     const msg = ownerMsg();
     await runCatchMeUp(msg, deps, { kind: 'recap' });
     expect(sentBody(deps)).toMatchObject({ mode: 'recap', league: 'boarz-ii-men' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_TEXT]]);
-    expect(msg.react).not.toHaveBeenCalled();
-    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'companelist', 'confirm-dm', 'end recap']);
+    expect(msg.react).toHaveBeenCalledTimes(1);
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    expect(msg.react.mock.invocationCallOrder[0]).toBeLessThan(deps.sendText.mock.invocationCallOrder[0]);
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'react', 'companelist', 'confirm-dm', 'end recap']);
     expect(t.events[0].f).toMatchObject({ command: 'recap' });
   });
 
@@ -1485,7 +1487,9 @@ describe('runCatchMeUp recap-bot-calls', () => {
     const msg = ownerMsg();
     await runCatchMeUp(msg, deps, { kind: 'recap' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, RECAP_FAILURE_TEXT]]);
-    expect(msg.react).not.toHaveBeenCalled();
+    expect(msg.react).toHaveBeenCalledTimes(1);
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    expect(msg.react.mock.invocationCallOrder[0]).toBeLessThan(deps.sendText.mock.invocationCallOrder[0]);
     expect(t.ends().map((e) => e.name)).toEqual(['recap-failed']);
   });
 
