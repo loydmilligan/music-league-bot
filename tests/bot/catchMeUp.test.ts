@@ -658,8 +658,9 @@ function flowDeps(over: Partial<FakeDeps> & {
   now?: () => number;
   cmuSwitch?: CmuSwitch;
   tldrThrottle?: Map<string, number>;
+  briefSampleThrottle?: Map<string, number>;
 } = {}) {
-  const { owner = true, contactName, helpThrottle, helpCooldown, now, cmuSwitch, tldrThrottle, ...rest } = over;
+  const { owner = true, contactName, helpThrottle, helpCooldown, now, cmuSwitch, tldrThrottle, briefSampleThrottle, ...rest } = over;
   const t = fakeTrace();
   const base = makeDeps({ trace: t.factory, ...rest });
   const deps = Object.assign(base.deps, {
@@ -672,6 +673,7 @@ function flowDeps(over: Partial<FakeDeps> & {
     helpCooldown: helpCooldown ?? { min: 5 },
     cmuSwitch: cmuSwitch ?? memSwitch(),
     tldrThrottle: tldrThrottle ?? new Map<string, number>(),
+    briefSampleThrottle: briefSampleThrottle ?? new Map<string, number>(),
     ...(now ? { now } : {}),
   });
   return { deps, t, screenshots: base.screenshots };
@@ -1007,6 +1009,7 @@ describe('helpMessage (framed, reorganised)', () => {
     '   neither = both',
     '• *off* / *on* — silence or restore the whole bot',
     '• *tldr* — post a short how-to in the group',
+    '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)',
     '• *recap-bot-calls* — last 24 h of bot activity and spend (also by DM)',
   ];
   const tail = [D, "You've used 1 of 3 catch-ups today · resets at midnight LA time"];
@@ -2169,5 +2172,171 @@ describe('sprint 4 owner DMs and help framing', () => {
     const { deps } = flowDeps({ preview: FORMAT });
     await runCatchMeUp(ownerMsg(), deps, { kind: 'tldr' });
     expect(deps.sendText.mock.calls).toEqual([[GROUP, tldrText({ botName: BOT, limit: 3, cooldownMin: 5 })]]);
+  });
+});
+
+// ── Owner morning-brief sample ─────────────────────────────────────────────
+
+describe('runCatchMeUp morning-brief sample', () => {
+  const SAMPLE_NOW = Date.parse('2026-11-07T18:00:00.000Z'); // Sat Nov 7, 10:00 LA
+  const SAMPLE = { kind: 'brief-sample' } as CmuCommand;
+  const URL_ = 'https://live.test/recap-2026-11-07.html';
+  const briefRes = (o: Record<string, unknown> = {}) => jsonResponse(200, {
+    kind: 'recap-today', ymd: '2026-11-07', status: 'sent', dryRun: false, sendable: true,
+    text: `Morning recap · Sat, Nov 7\n\nQuiet night, one big debate.\n\n${URL_}`, ...o,
+  });
+  const FOOT = "Want this in your DMs every morning? DM me *morning-brief sub* (change the time with *morning-brief 7:30*, stop with *morning-brief unsub*).";
+  const todayFramed = ['── Morning Brief (sample) ──', 'Sat, Nov 7', '', 'Quiet night, one big debate.', '', URL_, '──────────', FOOT].join('\n');
+  const noneRes = () => jsonResponse(200, { kind: 'recap-today', ymd: '2026-11-07', status: 'none', dryRun: false, sendable: false });
+  const sampleDeps = (over: Parameters<typeof flowDeps>[0] = {}) =>
+    flowDeps({ now: () => SAMPLE_NOW, fetchFn: vi.fn().mockResolvedValue(briefRes()), ...over });
+
+  it('owner: 👍, asks companelist for the latest Brief, posts the exact framed text to the group', async () => {
+    const { deps, t } = sampleDeps();
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, SAMPLE);
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
+    expect(sentBody(deps)).toMatchObject({ mode: 'recap-today', latest: true });
+    expect(deps.sendText.mock.calls).toEqual([[GROUP, todayFramed]]);
+    expect(t.events[0].f).toMatchObject({ command: 'morning-brief sample' });
+    expect(t.ends().map((e) => e.name)).toEqual(['morning-brief-sample']);
+    expect(sequence(t)).toEqual(['start', 'owner ok:true', 'trigger', 'react', 'companelist', 'group-post', 'end morning-brief-sample']);
+  });
+
+  it("today's Brief has no fact line; an older one names its date", async () => {
+    const older = sampleDeps({ fetchFn: vi.fn().mockResolvedValue(briefRes({ ymd: '2026-11-05', text: `Morning recap · Thu, Nov 5\n\nSlow day.\n\n${URL_}` })) });
+    await runCatchMeUp(ownerMsg(), older.deps, SAMPLE);
+    expect(older.deps.sendText.mock.calls[0][1]).toBe([
+      '── Morning Brief (sample) ──', "From Thu, Nov 5 (today's isn't ready yet)", 'Thu, Nov 5', '', 'Slow day.', '', URL_, '──────────', FOOT,
+    ].join('\n'));
+  });
+
+  it('a second sample in the group within 30 minutes: ⏳, no fetch, no post, throttled; another group and 30 minutes later work', async () => {
+    let clock = SAMPLE_NOW;
+    const briefSampleThrottle = new Map<string, number>();
+    const OTHER = '120363000000000002@g.us';
+    const groups = new Map([[GROUP, 'boarz-ii-men'], [OTHER, 'other']]);
+    const mk = () => sampleDeps({ briefSampleThrottle, groups, now: () => clock } as never);
+    const first = mk();
+    await runCatchMeUp(ownerMsg(), first.deps, SAMPLE);
+    expect(first.deps.sendText).toHaveBeenCalledTimes(1);
+
+    clock += 29 * 60_000 + 59_000;
+    const second = mk();
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, second.deps, SAMPLE);
+    expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['⏳']);
+    expect(second.deps.sendText).not.toHaveBeenCalled();
+    expect(second.deps.fetchFn).not.toHaveBeenCalled();
+    expect(second.t.ends().map((e) => e.name)).toEqual(['morning-brief-sample-throttled']);
+
+    const other = mk();
+    await runCatchMeUp(ownerMsg({ from: OTHER }), other.deps, SAMPLE);
+    expect(other.deps.sendText.mock.calls[0][0]).toBe(OTHER);
+
+    clock += 2_000;
+    const third = mk();
+    await runCatchMeUp(ownerMsg(), third.deps, SAMPLE);
+    expect(third.deps.sendText).toHaveBeenCalledTimes(1);
+    expect(third.t.ends().map((e) => e.name)).toEqual(['morning-brief-sample']);
+  });
+
+  it('the throttle map is pruned of expired groups on a successful post', async () => {
+    const briefSampleThrottle = new Map<string, number>([['old@g.us', SAMPLE_NOW - 31 * 60_000]]);
+    const { deps } = sampleDeps({ briefSampleThrottle } as never);
+    await runCatchMeUp(ownerMsg(), deps, SAMPLE);
+    expect([...briefSampleThrottle.keys()]).toEqual([GROUP]);
+  });
+
+  it('nothing to show: no group post, no throttle, a framed DM to the owner, end morning-brief-sample-none', async () => {
+    const briefSampleThrottle = new Map<string, number>();
+    const { deps, t } = sampleDeps({ briefSampleThrottle, fetchFn: vi.fn().mockResolvedValue(noneRes()) } as never);
+    await runCatchMeUp(ownerMsg(), deps, SAMPLE);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, ['── Morning Brief (sample) ──', 'No Morning Brief to show yet.', '──────────', 'DM me "help" for owner commands.'].join('\n')]]);
+    expect(briefSampleThrottle.size).toBe(0);
+    expect(t.ends().map((e) => e.name)).toEqual(['morning-brief-sample-none']);
+  });
+
+  it('companelist error: nothing in the group, no throttle, framed failure DM with the retry footer, end failed', async () => {
+    const briefSampleThrottle = new Map<string, number>();
+    const { deps, t } = sampleDeps({ briefSampleThrottle, fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, { error: 'failed' })) } as never);
+    await runCatchMeUp(ownerMsg(), deps, SAMPLE);
+    expect(deps.sendText.mock.calls).toEqual([[OWNER, ['── Morning Brief (sample) ──', "Couldn't get the Morning Brief just now.", '──────────', FOOTER_RETRY].join('\n')]]);
+    expect(briefSampleThrottle.size).toBe(0);
+    expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  it('a bad companelist body counts as a failure', async () => {
+    const { deps, t } = sampleDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'quiet' })) });
+    await runCatchMeUp(ownerMsg(), deps, SAMPLE);
+    expect(deps.sendText).toHaveBeenCalledTimes(1);
+    expect(deps.sendText.mock.calls[0][0]).toBe(OWNER);
+    expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  it('a failed group post: nothing further in the group, failure DM to the owner, not throttled', async () => {
+    const briefSampleThrottle = new Map<string, number>();
+    const sendText = vi.fn().mockRejectedValueOnce(new Error('send')).mockResolvedValue(undefined);
+    const { deps, t } = sampleDeps({ briefSampleThrottle, sendText } as never);
+    await expect(runCatchMeUp(ownerMsg(), deps, SAMPLE)).resolves.toBeUndefined();
+    expect(sendText.mock.calls.map((c) => c[0])).toEqual([GROUP, OWNER]);
+    expect(sendText.mock.calls[1][1]).toContain("Couldn't get the Morning Brief just now.");
+    expect(briefSampleThrottle.size).toBe(0);
+    expect(t.step('group-post')).toMatchObject({ ok: false });
+    expect(t.ends().map((e) => e.name)).toEqual(['failed']);
+  });
+
+  it('non-owner: not-allowed, no react, fetch, DM or post; nothing throttled', async () => {
+    const briefSampleThrottle = new Map<string, number>();
+    const { deps, t } = sampleDeps({ owner: false, briefSampleThrottle } as never);
+    const msg = makeMsg();
+    await runCatchMeUp(msg, deps, SAMPLE);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(briefSampleThrottle.size).toBe(0);
+    expect(sequence(t)).toEqual(['start', 'owner ok:false', 'end not-allowed']);
+    expect(t.events[0].f).toMatchObject({ command: 'morning-brief sample' });
+  });
+
+  it('bot off: disabled, nothing sent, no fetch, no owner step', async () => {
+    const { deps, t } = sampleDeps({ cmuSwitch: memSwitch(false) });
+    const msg = ownerMsg();
+    await runCatchMeUp(msg, deps, SAMPLE);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(deps.sendText).not.toHaveBeenCalled();
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    expect(deps.isOwner).not.toHaveBeenCalled();
+    expect(sequence(t)).toEqual(['start', 'end disabled']);
+  });
+
+  it('no Brief text, id or number reaches the trace or the log', async () => {
+    const ok = sampleDeps();
+    await runCatchMeUp(ownerMsg({ notifyName: SENTINEL_NAME }), ok.deps, SAMPLE);
+    const bad = sampleDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, {})) });
+    await runCatchMeUp(ownerMsg(), bad.deps, SAMPLE);
+    for (const { deps, t } of [ok, bad]) {
+      // The trace's start event carries the group and sender as it does for every command; the rest must be clean.
+      const all = JSON.stringify(t.events.filter((e) => e.ev !== 'start')) + deps.log.mock.calls.flat().join('\n');
+      for (const s of ['Quiet night', 'live.test', GROUP, OWNER, SENTINEL_NAME]) expect(all).not.toContain(s);
+    }
+  });
+});
+
+describe('morning-brief sample help', () => {
+  it('the owner section lists it after tldr; the player help does not', () => {
+    const line = '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)';
+    const owner = helpBody({ dmOk: true, owner: true }).split('\n');
+    expect(owner[owner.indexOf('• *tldr* — post a short how-to in the group') + 1]).toBe(line);
+    expect(helpBody({ dmOk: true, owner: false })).not.toContain('sample');
+    expect(helpBody({ dmOk: false, owner: false })).not.toContain('sample');
+  });
+
+  it('HELP_TABLE has a group owner entry, and didYouKnow never surfaces it', () => {
+    const e = HELP_TABLE.find((x) => x.command === 'morning-brief sample');
+    expect(e).toMatchObject({ where: 'group', owner: true });
+    for (const dmOk of [true, false]) {
+      for (let i = 0; i <= 100; i++) expect(didYouKnow({ dmOk, random: () => i / 100 })).not.toContain('sample');
+    }
   });
 });

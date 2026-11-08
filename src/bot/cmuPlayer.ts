@@ -33,7 +33,7 @@ import { FOOTER_PLAYER, FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, frameMessage,
  * No response text, URL or id reaches the trace or the log.
  */
 
-export type PlayerCmd = Exclude<CmuCommand, { kind: 'catchup' | 'full' | 'forget' | 'help' | 'off' | 'on' | 'tldr' | 'recap' }>;
+export type PlayerCmd = Exclude<CmuCommand, { kind: 'catchup' | 'full' | 'forget' | 'help' | 'off' | 'on' | 'tldr' | 'recap' | 'brief-sample' }>;
 
 /** R7: one run per person per command per minute. */
 export const PLAYER_COOLDOWN_MS = 60_000;

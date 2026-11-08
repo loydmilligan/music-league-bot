@@ -3,7 +3,7 @@ import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import type { CmuCommand } from './cmuCommand.js';
 import { CMU_ACK_EMOJI, CMU_FAILURE_DM_TIMEOUT_MS, CmuHttpError, describeError, framing, msSince, react, timed, withDeadline } from './catchMeUp.js';
-import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
+import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, stripBriefLead, withoutRetry } from './messageFrame.js';
 import type { CmuDeps, CmuMessage, SafeTrace } from './catchMeUp.js';
 import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
 import { formatTime } from './cmuFollowUp.js';
@@ -40,8 +40,6 @@ export const RECAP_BAD_TIME_TEXT = 'Try "morning-recap 7:30".';
 export const recapOnText = (time: string): string =>
   `Morning recap: on, ${formatTime(time) ?? time} (LA). morning-recap unsub to stop.`;
 /** Sprint 4 (framing only): the same replies in Morning Brief words. */
-// companelist opens the Brief with this; the framed DM already names it, so the first body line is just the date.
-const BRIEF_LEAD = 'Morning recap \u00b7 ';
 export const BRIEF_OFF_TEXT = 'Morning Brief: off.';
 export const BRIEF_BAD_TIME_TEXT = 'Try "morning-brief 7:30".';
 export const briefOnText = (time: string): string =>
@@ -379,7 +377,7 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
     const t0 = performance.now();
     lastSendAt = Date.now();
     const out = safeBool(() => deps.isFormatLeague?.(league) === true)
-      ? frameMessage({ name: MESSAGE_NAMES.morningBrief, body: text.startsWith(BRIEF_LEAD) ? text.slice(BRIEF_LEAD.length) : text, footer: FOOTER_MORNING })
+      ? frameMessage({ name: MESSAGE_NAMES.morningBrief, body: stripBriefLead(text), footer: FOOTER_MORNING })
       : text;
     try {
       await withDeadline(Promise.resolve().then(() => deps.sendText(key, out)), CMU_FAILURE_DM_TIMEOUT_MS);

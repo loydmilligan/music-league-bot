@@ -13,6 +13,7 @@ export const MESSAGE_NAMES = {
   botCalls: 'Bot Calls',
   morningBrief: 'Morning Brief',
   morningBriefSettings: 'Morning Brief Settings',
+  morningBriefSample: 'Morning Brief (sample)',
   wrongPlace: 'Wrong Place',
   topSongs: 'Top Songs',
   topPics: 'Top Pics',
@@ -38,7 +39,17 @@ export const FOOTER_HELP =
 export const FOOTER_OWNER = 'DM me "help" for owner commands.';
 export const FOOTER_WRONG_PLACE = 'DM me "help" for every command.';
 export const FOOTER_PLAYER = 'DM me "help" for more commands.';
+export const FOOTER_BRIEF_SAMPLE =
+  'Want this in your DMs every morning? DM me *morning-brief sub* (change the time with *morning-brief 7:30*, stop with *morning-brief unsub*).';
 export const FOOTER_MORNING = 'Change it: DM morning-brief unsub · morning-brief 7:30';
+
+// companelist opens the Brief with this; a framed message already names it, so the body starts at the date.
+export const BRIEF_LEAD = 'Morning recap \u00b7 ';
+
+/** The Brief text without its leading `Morning recap · `. */
+export function stripBriefLead(text: string): string {
+  return text.startsWith(BRIEF_LEAD) ? text.slice(BRIEF_LEAD.length) : text;
+}
 
 export interface FrameOptions {
   name: string;

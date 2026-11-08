@@ -13,6 +13,7 @@ export type CmuCommand =
   | { kind: 'on' }
   | { kind: 'tldr' }
   | { kind: 'recap' }
+  | { kind: 'brief-sample' }
   // Player commands: returned only in DM mode (R1).
   | { kind: 'top'; list: TopList; days: 2 | 7 }
   | { kind: 'pick' }
@@ -189,6 +190,7 @@ export function parseCmuCommand(
   if (text === 'off') return { kind: 'off' };
   if (text === 'on') return { kind: 'on' };
   if (text === 'tldr' || text === 'tl;dr' || text === 'tl dr') return { kind: 'tldr' };
+  if (/^morning[- ]?brief sample$/.test(text)) return { kind: 'brief-sample' };
   if (text === 'forget' || text.startsWith('forget ')) {
     let arg = text.slice('forget'.length).trim();
     let scope: ForgetScope = 'both';

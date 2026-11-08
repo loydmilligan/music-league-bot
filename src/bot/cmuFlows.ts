@@ -21,7 +21,7 @@ import {
   type SafeTrace,
   framing,
 } from './catchMeUp.js';
-import { FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
+import { FOOTER_BRIEF_SAMPLE, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, stripBriefLead, withoutRetry } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
@@ -134,6 +134,7 @@ const HELP_OWNER = [
   '   neither = both',
   '• *off* / *on* — silence or restore the whole bot',
   '• *tldr* — post a short how-to in the group',
+  '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)',
   '• *recap-bot-calls* — last 24 h of bot activity and spend (also by DM)',
 ];
 
@@ -193,6 +194,14 @@ function safeIsEnabled(sw: CmuSwitch): boolean {
 /** K7: at most one tldr per group per 30 minutes. */
 export const TLDR_COOLDOWN_MS = 30 * 60_000;
 const TLDR_THROTTLE = new Map<string, number>();
+
+/** At most one morning-brief sample per group per 30 minutes. */
+export const BRIEF_SAMPLE_COOLDOWN_MS = 30 * 60_000;
+const BRIEF_SAMPLE_THROTTLE = new Map<string, number>();
+export const BRIEF_SAMPLE_NONE_TEXT = 'No Morning Brief to show yet.';
+export const BRIEF_SAMPLE_FAILURE_TEXT = "Couldn't get the Morning Brief just now.";
+
+const LA_YMD = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 /**
  * M4: is `author` the owner? True when the raw ids match or both map to the
@@ -547,6 +556,73 @@ export async function runRecap(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace,
       );
     } catch (dmErr) {
       deps.log(`[cmu] recap failure DM failed in ${msg.from}: ${describeError(dmErr)}`);
+    }
+  } finally {
+    end(outcome, error);
+  }
+}
+
+/**
+ * Owner only: post today's Morning Brief (else the latest one companelist has) in the group, framed, with a
+ * footer that says how to subscribe. At most one per group per 30 minutes; a throttled request gets ⏳ and no
+ * post, and the throttle starts only after a successful post. Nothing to show, or any failure, goes to the
+ * owner by DM and leaves the group alone. No Brief text, id or number reaches the trace or the log.
+ */
+export async function runBriefSample(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, end: End): Promise<void> {
+  const throttle = deps.briefSampleThrottle ?? BRIEF_SAMPLE_THROTTLE;
+  const now = deps.now ?? Date.now;
+  const last = throttle.get(msg.from);
+  if (last !== undefined && now() - last < BRIEF_SAMPLE_COOLDOWN_MS) {
+    await react(msg, CMU_WAIT_EMOJI, deps, trace);
+    end('morning-brief-sample-throttled');
+    return;
+  }
+  const name = MESSAGE_NAMES.morningBriefSample;
+  let outcome = 'failed';
+  let error: string | undefined;
+  try {
+    await react(msg, CMU_ACK_EMOJI, deps, trace);
+    const t0 = performance.now();
+    let brief: { ymd: string; sendable: boolean; text?: string };
+    try {
+      const { status, data } = await withDeadline(
+        (async () => post(deps, { ...(await baseBody(msg, deps)), mode: 'recap-today', latest: true }, CMU_COMMAND_TIMEOUT_MS))(),
+        deps.deadlineMs ?? CMU_COMMAND_TIMEOUT_MS,
+      );
+      const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+      if (d.kind !== 'recap-today' || typeof d.ymd !== 'string' || typeof d.sendable !== 'boolean') throw new Error('BadResponse');
+      brief = { ymd: d.ymd, sendable: d.sendable, ...(typeof d.text === 'string' ? { text: d.text } : {}) };
+      trace.step('companelist', { ok: true, ms: msSince(t0), status });
+    } catch (err) {
+      trace.step('companelist', { ok: false, ms: msSince(t0), status: err instanceof CmuHttpError ? err.status : undefined });
+      throw err;
+    }
+    const deadline = deps.deadlineMs ?? CMU_DEADLINE_MS;
+    if (!brief.sendable || !brief.text) {
+      const dm = frameMessage({ name, body: BRIEF_SAMPLE_NONE_TEXT, footer: FOOTER_OWNER });
+      await withDeadline(timed(trace, 'confirm-dm', () => deps.sendText(msg.author, dm)), deadline);
+      outcome = 'morning-brief-sample-none';
+      return;
+    }
+    const body = stripBriefLead(brief.text);
+    const today = LA_YMD.format(new Date(now()));
+    const facts = brief.ymd === today ? [] : [`From ${body.split('\n')[0]} (today's isn't ready yet)`];
+    // The one framed group post the bot makes, on the owner's explicit ruling.
+    const post_ = frameMessage({ name, facts, body, footer: FOOTER_BRIEF_SAMPLE });
+    await withDeadline(timed(trace, 'group-post', () => deps.sendText(msg.from, post_)), deadline);
+    outcome = 'morning-brief-sample';
+    const t = now();
+    for (const [k, at] of throttle) if (t - at >= BRIEF_SAMPLE_COOLDOWN_MS) throttle.delete(k);
+    throttle.set(msg.from, t);
+    deps.log('[cmu] morning-brief sample posted');
+  } catch (err) {
+    error = describeError(err);
+    deps.log(`[cmu] morning-brief sample failed: ${error}`);
+    try {
+      const dm = frameMessage({ name, body: BRIEF_SAMPLE_FAILURE_TEXT, footer: FOOTER_RETRY });
+      await withDeadline(timed(trace, 'failure-dm', () => deps.sendText(msg.author, dm)), deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS);
+    } catch (dmErr) {
+      deps.log(`[cmu] morning-brief sample failure DM failed: ${describeError(dmErr)}`);
     }
   } finally {
     end(outcome, error);

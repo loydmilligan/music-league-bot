@@ -197,6 +197,16 @@ describe('sprint 4 parsers', () => {
     expect(dm(b)).toEqual(expected);
   });
 
+  it('morning-brief sample is a group command and, by DM, not a command at all', () => {
+    for (const t of ['morning-brief sample', 'Morning Brief sample!', 'hey morning brief sample']) expect(run(t)).toEqual({ kind: 'brief-sample' });
+    expect(run('morning-brief sample please')).toBeNull();
+    for (const t of ['morning-brief sample', 'Morning Brief sample!', 'morning brief sample']) {
+      expect(dm(t)).toBeNull();
+      expect(parseDmCommand(t)).toBeNull();
+    }
+    expect(DM_ONLY_KINDS.has('brief-sample')).toBe(false);
+  });
+
   it('morning-brief is not a group command and ordinary words stay null', () => {
     expect(run('morning-brief sub')).toBeNull();
     expect(dm('morning brief was great')).toBeNull();

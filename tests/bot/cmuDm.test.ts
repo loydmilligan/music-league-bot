@@ -238,6 +238,17 @@ describe('handleCmuDm', () => {
     expect(s.fetchFn).not.toHaveBeenCalled();
   });
 
+  it('DM "morning-brief sample" is not a command: falls through, no fetch, no send, no reaction', async () => {
+    const s = setup({ owner: PERSON_LID });
+    for (const t of ['morning-brief sample', 'Morning Brief sample!', 'morning brief sample']) {
+      const msg = dm(t);
+      expect(await handleCmuDm(msg, s.deps)).toBe(false);
+      expect(msg.react).not.toHaveBeenCalled();
+    }
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(s.sendText).not.toHaveBeenCalled();
+  });
+
   it('recap-bot-calls by non-owner falls through', async () => {
     const s = setup();
     const msg = dm('recap-bot-calls');

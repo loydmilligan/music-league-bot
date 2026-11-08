@@ -82,6 +82,7 @@ export const HELP_TABLE: HelpEntry[] = [
   { command: 'off', explain: 'Silence the whole bot, reactions included', where: 'group', owner: true },
   { command: 'on', explain: 'Turn the bot back on', where: 'group', owner: true },
   { command: 'tldr', explain: 'Post a short how-to in this group', where: 'group', owner: true },
+  { command: 'morning-brief sample', explain: 'Post a sample Morning Brief in this group (once per 30 min)', where: 'group', owner: true },
   { command: 'recap-bot-calls', explain: "The last 24 hours of bot activity, and today's spend", where: 'both', owner: true },
 ];
 

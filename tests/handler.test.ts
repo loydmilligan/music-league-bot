@@ -689,6 +689,15 @@ describe('handleMessage', () => {
       expect(t.reactToMention).toHaveBeenCalledTimes(1);
     });
 
+    it('@bot morning-brief sample goes to catch-me-up: never wrongPlace, never the joke emoji', async () => {
+      const t = make({ body: '@bot morning-brief sample' });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.catchMeUp).toHaveBeenCalledTimes(1);
+      expect(t.catchMeUp.mock.calls[0][1]).toEqual({ kind: 'brief-sample' });
+      expect(t.wrongPlace).not.toHaveBeenCalled();
+      expect(t.reactToMention).not.toHaveBeenCalled();
+    });
+
     it('@bot help goes to catch-me-up, not wrongPlace', async () => {
       const t = make({ body: '@bot help' });
       await handleMessage(t.msg, t.cfg);
