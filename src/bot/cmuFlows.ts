@@ -121,7 +121,7 @@ const HELP_DM = [
   '• *my-dossier* — what I know about you',
   '',
   '_Morning Brief_ — a short daily summary by DM',
-  '• *morning-brief sub* / *unsub* — start or stop it',
+  '• *morning-brief sub* / *morning-brief unsub* — start or stop it',
   '• *morning-brief 7:30* — change the delivery time',
 ];
 
@@ -135,7 +135,7 @@ const HELP_OWNER = [
   '• *off* / *on* — silence or restore the whole bot',
   '• *tldr* — post a short how-to in the group',
   '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)',
-  '• *recap-bot-calls* — last 24 h of bot activity and spend (also by DM)',
+  "• *recap-bot-calls* — last 24 h of bot activity, and today's spend (also by DM)",
 ];
 
 /** The framed help's body: Both, then DM only (preview readers), then Owner (owner only). Empty sections are hidden. */
