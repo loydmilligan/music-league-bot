@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BurstGuard, ReactionCap, REACTION_PER_AUTHOR_WINDOW_MS, REACTION_PER_GROUP_PER_HOUR, runReaction, type ReactionDeps, type ReactionMessage } from '../../src/bot/reactions.js';
+import { BurstGuard, runReaction, type ReactionDeps, type ReactionMessage } from '../../src/bot/reactions.js';
 import type { Palette } from '../../src/bot/reactionPalette.js';
 import type { JevPicker } from '../../src/chat/jevPick.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
@@ -43,7 +43,7 @@ function setup(over: Partial<ReactionDeps> = {}, msgOver: Partial<ReactionMessag
   };
   const deps: ReactionDeps = {
     palette, picker, forceFallback: false, cmuSwitch: { isEnabled: () => true, set() {} },
-    trace: () => t.trace, log: () => {}, now: () => 1000, random: () => 0, guard: new BurstGuard(), cap: new ReactionCap(), ...over,
+    trace: () => t.trace, log: () => {}, now: () => 1000, random: () => 0, guard: new BurstGuard(), ...over,
   };
   return { t, react, pick, msg, deps };
 }
@@ -107,17 +107,32 @@ describe('runReaction', () => {
     expect(t.outcome()).toBe('disabled');
   });
 
-  it('global burst: 31st pick in a minute falls back', async () => {
+  it('no per-author or per-group cap: many authors 31+ mentions in a minute all react, 31st onward fall back with burst', async () => {
     const guard = new BurstGuard();
-    const cap = new ReactionCap({ perAuthorWindowMs: 0, perGroupPerHour: 1000 });
-    for (let i = 0; i < 30; i++) {
-      const s = setup({ guard, cap }, { author: `a${i}@lid` });
+    for (let i = 0; i < 35; i++) {
+      const s = setup({ guard, now: () => 1000 + i }, { author: `a${i}@lid` });
       await runReaction(s.msg, s.deps);
+      expect(s.react).toHaveBeenCalledTimes(1);
+      if (i < 30) {
+        expect(s.t.outcome()).toBe('jev');
+        expect(s.t.steps('fallback')).toEqual([]);
+      } else {
+        expect(s.pick).not.toHaveBeenCalled();
+        expect(s.t.steps('fallback')).toEqual([{ ok: true, reason: 'burst' }]);
+        expect(s.t.outcome()).toBe('fallback');
+        expect(palette.fallbackPool).toContain(s.react.mock.calls[0][0]);
+      }
+    }
+  });
+
+  it('same author, 3 mentions in a minute: 3 reactions', async () => {
+    const guard = new BurstGuard();
+    for (const t of [0, 20_000, 40_000]) {
+      const s = setup({ guard, now: () => t });
+      await runReaction(s.msg, s.deps);
+      expect(s.react).toHaveBeenCalledTimes(1);
       expect(s.t.outcome()).toBe('jev');
     }
-    const last = setup({ guard, cap }, { author: 'a99@lid' });
-    await runReaction(last.msg, last.deps);
-    expect(last.t.steps('fallback')[0]).toMatchObject({ reason: 'burst' });
   });
 
   it('only allowed calls fill the global window, which slides', () => {
@@ -190,96 +205,5 @@ describe('runReaction', () => {
     const text = JSON.stringify(s.t.calls);
     expect(text).not.toContain('zzsecretbodyzz');
     expect(text).not.toContain(AUTHOR);
-  });
-
-  describe('reaction cap', () => {
-    const at = (t: number) => ({ now: () => t });
-    const capped = (s: ReturnType<typeof setup>) => {
-      expect(s.react).not.toHaveBeenCalled();
-      expect(s.pick).not.toHaveBeenCalled();
-      expect(s.t.outcome()).toBe('reaction-capped');
-    };
-
-    it('constants', () => {
-      expect(REACTION_PER_AUTHOR_WINDOW_MS).toBe(60_000);
-      expect(REACTION_PER_GROUP_PER_HOUR).toBe(30);
-    });
-
-    it('2nd mention from one author within 60 s: no react, no pick, scope author, logged without ids', async () => {
-      const cap = new ReactionCap();
-      const first = setup({ cap, ...at(0) });
-      await runReaction(first.msg, first.deps);
-      expect(first.react).toHaveBeenCalledTimes(1);
-      const logs: string[] = [];
-      const s = setup({ cap, ...at(30_000), log: (l) => void logs.push(l) });
-      await runReaction(s.msg, s.deps);
-      capped(s);
-      expect(s.t.steps('cap')[0]).toEqual({ ok: true, scope: 'author' });
-      expect(logs).toEqual(['[react] reaction-capped']);
-    });
-
-    it('reacts again after 60 s; a different author in the same minute still reacts', async () => {
-      const cap = new ReactionCap();
-      await runReaction(...(([s]) => [s.msg, s.deps] as const)([setup({ cap, ...at(0) })]));
-      const other = setup({ cap, ...at(1) }, { author: 'author-2@lid' });
-      await runReaction(other.msg, other.deps);
-      expect(other.react).toHaveBeenCalledTimes(1);
-      const later = setup({ cap, ...at(60_000) });
-      await runReaction(later.msg, later.deps);
-      expect(later.react).toHaveBeenCalledTimes(1);
-    });
-
-    it('capped calls are not recorded: capped at 0..59 s, reacts at 60 s', async () => {
-      const cap = new ReactionCap();
-      const first = setup({ cap, ...at(0) });
-      await runReaction(first.msg, first.deps);
-      for (const t of [1000, 20_000, 59_999]) {
-        const s = setup({ cap, ...at(t) });
-        await runReaction(s.msg, s.deps);
-        capped(s);
-      }
-      const s = setup({ cap, ...at(60_000) });
-      await runReaction(s.msg, s.deps);
-      expect(s.react).toHaveBeenCalledTimes(1);
-    });
-
-    it('31st reaction in a group within an hour is capped (scope group); another group is unaffected', async () => {
-      const cap = new ReactionCap();
-      for (let i = 0; i < 30; i++) {
-        const s = setup({ cap, ...at(i * 1000) }, { author: `a${i}@lid` });
-        await runReaction(s.msg, s.deps);
-        expect(s.react).toHaveBeenCalledTimes(1);
-      }
-      const over = setup({ cap, ...at(31_000) }, { author: 'a99@lid' });
-      await runReaction(over.msg, over.deps);
-      capped(over);
-      expect(over.t.steps('cap')[0]).toEqual({ ok: true, scope: 'group' });
-      const elsewhere = setup({ cap, ...at(31_000) }, { author: 'a98@lid', from: 'group-2@g.us' });
-      await runReaction(elsewhere.msg, elsewhere.deps);
-      expect(elsewhere.react).toHaveBeenCalledTimes(1);
-      const hourLater = setup({ cap, ...at(3_600_000) }, { author: 'a97@lid' });
-      await runReaction(hourLater.msg, hourLater.deps);
-      expect(hourLater.react).toHaveBeenCalledTimes(1);
-    });
-
-    it('off switch wins over the cap', async () => {
-      const cap = new ReactionCap();
-      cap.allow(AUTHOR, 'group-1@g.us', 0);
-      const s = setup({ cap, ...at(1), cmuSwitch: { isEnabled: () => false, set() {} } });
-      await runReaction(s.msg, s.deps);
-      expect(s.t.outcome()).toBe('disabled');
-      expect(s.t.steps('cap')).toEqual([]);
-    });
-
-    it('a throwing logger cannot break a capped run, and no body or id is traced', async () => {
-      const cap = new ReactionCap();
-      cap.allow(AUTHOR, 'group-1@g.us', 0);
-      const s = setup({ cap, ...at(1), log: () => { throw new Error('log'); } });
-      await runReaction(s.msg, s.deps);
-      capped(s);
-      const text = JSON.stringify(s.t.calls);
-      expect(text).not.toContain('zzsecretbodyzz');
-      expect(text).not.toContain(AUTHOR);
-    });
   });
 });
