@@ -107,22 +107,6 @@ describe('runReaction', () => {
     expect(t.outcome()).toBe('disabled');
   });
 
-  it('per-author burst: 6th mention falls back, others still get Jev', async () => {
-    const guard = new BurstGuard();
-    const cap = new ReactionCap({ perAuthorWindowMs: 0 });
-    const s = setup({ guard, cap });
-    for (let i = 0; i < 5; i++) await runReaction(s.msg, s.deps);
-    expect(s.pick).toHaveBeenCalledTimes(10);
-    const six = setup({ guard, cap });
-    await runReaction(six.msg, six.deps);
-    expect(six.pick).not.toHaveBeenCalled();
-    expect(six.t.steps('fallback')[0]).toMatchObject({ reason: 'burst' });
-    expect(six.react).toHaveBeenCalledTimes(1);
-    const other = setup({ guard, cap }, { author: 'author-2@lid' });
-    await runReaction(other.msg, other.deps);
-    expect(other.t.outcome()).toBe('jev');
-  });
-
   it('global burst: 31st pick in a minute falls back', async () => {
     const guard = new BurstGuard();
     const cap = new ReactionCap({ perAuthorWindowMs: 0, perGroupPerHour: 1000 });
@@ -136,13 +120,10 @@ describe('runReaction', () => {
     expect(last.t.steps('fallback')[0]).toMatchObject({ reason: 'burst' });
   });
 
-  it('a spammer does not fill the global window', () => {
-    const guard = new BurstGuard();
-    let allowed = 0;
-    for (let i = 0; i < 40; i++) if (guard.allow('spam', 1000 + i)) allowed++;
-    expect(allowed).toBe(5);
-    expect(guard.allow('other', 1100)).toBe(true);
-    expect(guard.allow('spam', 1000 + 60_001)).toBe(true);
+  it('only allowed calls fill the global window, which slides', () => {
+    const guard = new BurstGuard({ global: 3 });
+    expect([1, 2, 3, 4, 5].map((i) => guard.allow('a', 1000 + i))).toEqual([true, true, true, false, false]);
+    expect(guard.allow('b', 1000 + 60_003)).toBe(true);
   });
 
   it('send-failure retry uses a different emoji than the one that failed', async () => {

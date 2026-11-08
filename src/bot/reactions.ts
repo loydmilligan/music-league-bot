@@ -28,29 +28,21 @@ export interface ReactionDeps {
 
 type FallbackReason = 'no-key' | 'forced-off' | 'error' | 'timeout' | 'bad-answer' | 'burst' | 'send-failed';
 
-/** Sliding-window limiter; only an allowed call is recorded (in both windows). */
+/** Global sliding-window limiter on Jev pairs; only an allowed call is recorded. */
 export class BurstGuard {
-  private readonly perAuthor: number;
   private readonly global: number;
   private readonly windowMs: number;
-  private readonly byAuthor = new Map<string, number[]>();
   private all: number[] = [];
 
-  constructor(o: { perAuthor?: number; global?: number; windowMs?: number } = {}) {
-    this.perAuthor = o.perAuthor ?? 5;
+  constructor(o: { global?: number; windowMs?: number } = {}) {
     this.global = o.global ?? 30;
     this.windowMs = o.windowMs ?? 60_000;
   }
 
-  allow(author: string, now: number): boolean {
+  allow(_author: string, now: number): boolean {
     const cutoff = now - this.windowMs;
     this.all = this.all.filter((t) => t > cutoff);
-    const mine = (this.byAuthor.get(author) ?? []).filter((t) => t > cutoff);
-    if (mine.length > 0) this.byAuthor.set(author, mine);
-    else this.byAuthor.delete(author);
-    if (mine.length >= this.perAuthor || this.all.length >= this.global) return false;
-    mine.push(now);
-    this.byAuthor.set(author, mine);
+    if (this.all.length >= this.global) return false;
     this.all.push(now);
     return true;
   }
