@@ -483,7 +483,7 @@ describe('handleMessage', () => {
     const plain = (from: string, body = 'hey @bot what a day', o: Partial<WhatsAppMessage> = {}) =>
       makeMockMsg(body, { from, mentionsBot: true, ...o });
 
-    function setup(o: { preview?: string[]; unsetPreview?: boolean } = {}) {
+    function setup(o: { preview?: string[]; format?: string[]; unsetPreview?: boolean } = {}) {
       const reactToMention = vi.fn().mockResolvedValue(undefined);
       const jevRespond = vi.fn().mockResolvedValue('jev says hi');
       const catchMeUp = vi.fn().mockResolvedValue(undefined);
@@ -495,7 +495,7 @@ describe('handleMessage', () => {
         catchMeUp,
         reactToMention,
         reactGroupIds: new Set([CMU_ONLY, SONG]),
-        ...(o.unsetPreview ? {} : { preview: memoryCmuPreview(o.preview ?? []) }),
+        ...(o.unsetPreview ? {} : { preview: memoryCmuPreview(o.preview ?? [], [], [], o.format ?? []) }),
       }, db);
       return { reactToMention, jevRespond, catchMeUp, spotify, db, cfg };
     }
@@ -611,6 +611,27 @@ describe('handleMessage', () => {
       const msg = plain(CMU_ONLY, '@bot recap-bot-calls');
       await handleMessage(msg, t.cfg);
       expect(t.catchMeUp).toHaveBeenCalledWith(msg, { kind: 'recap' });
+    });
+
+    it('forget dl: a non-format group does not treat it as a command (today path)', async () => {
+      const t = setup({ format: [] });
+      await handleMessage(plain(SONG, '@bot forget dl'), t.cfg);
+      expect(t.catchMeUp).not.toHaveBeenCalled();
+      expect(t.jevRespond).toHaveBeenCalledTimes(1);
+    });
+
+    it('forget dl: a format group reaches catchMeUp with scope dl', async () => {
+      const t = setup({ preview: [CMU_ONLY], format: [CMU_ONLY] });
+      const msg = plain(CMU_ONLY, '@bot forget dl');
+      await handleMessage(msg, t.cfg);
+      expect(t.catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', scope: 'dl', target: 'self' });
+    });
+
+    it('plain forget is not gated by the format list', async () => {
+      const t = setup({ preview: [CMU_ONLY] });
+      const msg = plain(CMU_ONLY, '@bot forget');
+      await handleMessage(msg, t.cfg);
+      expect(t.catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', scope: 'both', target: 'self' });
     });
 
     it('group in neither list: nothing called; catch-me-up still routes in either kind of group', async () => {

@@ -97,6 +97,8 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
     let cmd = parseCmuCommand(msg.body, msg.mentionsBot ?? false, msg.mentionedIds ?? [], new Set(msg.selfIds ?? []));
     // recap-bot-calls is a preview-group command; elsewhere it is an ordinary mention.
     if (cmd?.kind === 'recap' && !preview.isPreview(msg.from)) cmd = null;
+    // forget dl / forget sybg are sprint 4: outside a format group they are not commands, as before.
+    if (cmd?.kind === 'forget' && cmd.scope !== 'both' && preview.isFormatPreview?.(msg.from) !== true) cmd = null;
     if (cmd) {
       await botConfig.catchMeUp(msg, cmd);
       return;

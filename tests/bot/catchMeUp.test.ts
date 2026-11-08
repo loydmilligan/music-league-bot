@@ -6,12 +6,13 @@ import {
   isCatchMeUpRequest,
   parseCmuGroups,
   runCatchMeUp,
+  commandLabel,
   CMU_FAILURE_TEXT,
   CMU_TIMEOUT_MS,
   CMU_DEADLINE_MS,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
-import { helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { helpBody, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
@@ -20,7 +21,8 @@ import { createPromptTables } from '../../src/chat/prompts/store.js';
 import { rulesConfigSchema } from '../../src/config/types.js';
 import { memoryCmuPreview, type CmuPreview } from '../../src/bot/cmuPreview.js';
 import type { RecapSub } from '../../src/bot/recapSubs.js';
-import { ALL_COMMANDS, MENU_HEADING, PLAYER_MENU, menuHeading, playerMenu } from '../../src/bot/cmuMenu.js';
+import type { CmuCommand } from '../../src/bot/cmuCommand.js';
+import { didYouKnow, HELP_TABLE, SECTION_EXPLAIN, ALL_COMMANDS, MENU_HEADING, PLAYER_MENU, menuHeading, playerMenu } from '../../src/bot/cmuMenu.js';
 
 const GROUP = '120363000000000001@g.us';
 const AUTHOR = '186428122255581@lid';
@@ -686,9 +688,9 @@ const forgotRes = (o: Record<string, unknown>) => jsonResponse(200, { kind: 'for
 describe('runCatchMeUp owner-only commands from a non-owner', () => {
   it.each([
     ['full', { kind: 'full' }, 'full'],
-    ['forget all', { kind: 'forget', target: 'all' }, 'forget all'],
-    ['forget', { kind: 'forget', target: 'self' }, 'forget'],
-    ['forget @', { kind: 'forget', target: { id: PLAYER } }, 'forget @'],
+    ['forget all', { kind: 'forget', scope: 'both', target: 'all' }, 'forget all'],
+    ['forget', { kind: 'forget', scope: 'both', target: 'self' }, 'forget'],
+    ['forget @', { kind: 'forget', scope: 'both', target: { id: PLAYER } }, 'forget @'],
   ] as const)('%s: no react, no fetch, no DM; start, owner ok:false, end not-allowed', async (_l, cmd, command) => {
     const { deps, t } = flowDeps({ owner: false });
     const msg = makeMsg();
@@ -714,7 +716,7 @@ describe('runCatchMeUp owner-only commands from a non-owner', () => {
   it('fails closed: no isOwner dep at all is not-allowed', async () => {
     const t = fakeTrace();
     const { deps } = makeDeps({ trace: t.factory });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'all' });
     expect(deps.fetchFn).not.toHaveBeenCalled();
     expect(t.ends().map((e) => e.name)).toEqual(['not-allowed']);
   });
@@ -745,7 +747,7 @@ describe('runCatchMeUp forget (owner)', () => {
   it('naked forget: mode forget, target self; 👍 then one DM; ends forgot', async () => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: true, person: 'Owen B' })) });
     const msg = ownerMsg();
-    await runCatchMeUp(msg, deps, { kind: 'forget', target: 'self' });
+    await runCatchMeUp(msg, deps, { kind: 'forget', scope: 'both', target: 'self' });
     expect(sentBody(deps)).toEqual({ notifyName: 'Owen', requestAt: REQUEST_AT, league: 'boarz-ii-men', requesterKey: OWNER, mode: 'forget', target: 'self' });
     expect(msg.react.mock.calls.map((c) => c[0])).toEqual(['👍']);
     expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Forgot your last catch-up. You have 3 left today.']]);
@@ -755,13 +757,13 @@ describe('runCatchMeUp forget (owner)', () => {
 
   it('naked forget with nothing to forget: resets the count', async () => {
     const { deps } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: false })) });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'self' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Reset your count; no recent catch-up to forget.']]);
   });
 
   it('forget all: the everyone DM', async () => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'all', resolved: true, forgotten: true })) });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'all' });
     expect(sentBody(deps)).toMatchObject({ mode: 'forget', target: 'all' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, "Forgot everyone's last catch-up and reset today's counts."]]);
     expect(t.events[0].f).toMatchObject({ command: 'forget all' });
@@ -775,7 +777,7 @@ describe('runCatchMeUp forget (owner)', () => {
     [{ resolved: true, forgotten: false, person: 'Pat Q' }, "Reset Pat Q's count; no recent catch-up to forget."],
   ])('forget @Player %j → the right owner DM; the id and name stay out of the trace', async (res, dm) => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', ...res })) });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: PLAYER } });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: { id: PLAYER } });
     expect(deps.contactName).toHaveBeenCalledWith(PLAYER);
     expect(sentBody(deps)).toMatchObject({ mode: 'forget', target: { key: PLAYER, name: SENTINEL_NAME } });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, dm]]);
@@ -792,7 +794,7 @@ describe('runCatchMeUp forget (owner)', () => {
   it('forget @Player: the target key goes through dmTarget like requesterKey', async () => {
     const dmTarget = vi.fn(async (id: string) => (id === '15550001111@c.us' ? '777@lid' : id));
     const { deps } = flowDeps({ dmTarget, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: true, forgotten: true })) });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: '15550001111@c.us' } });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: { id: '15550001111@c.us' } });
     expect(sentBody(deps).target).toEqual({ key: '777@lid', name: SENTINEL_NAME });
   });
 
@@ -801,14 +803,14 @@ describe('runCatchMeUp forget (owner)', () => {
       contactName: vi.fn().mockRejectedValue(new Error('nope')),
       fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: false, forgotten: false })),
     });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: { id: PLAYER } });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: { id: PLAYER } });
     expect(sentBody(deps).target).toEqual({ key: PLAYER, name: '' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, "Couldn't tell who that player is; reset their count only."]]);
   });
 
   it('forget: a companelist failure ends failed and DMs the owner a short failure line', async () => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, { error: 'boom' })) });
-    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'all' })).resolves.toBeUndefined();
+    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'all' })).resolves.toBeUndefined();
     expect(t.step('forget')).toMatchObject({ ok: false, status: 500 });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
     expect(t.ends()).toEqual([{ ev: 'end', name: 'failed', f: { error: 'http 500' } }]);
@@ -819,7 +821,7 @@ describe('runCatchMeUp forget (owner)', () => {
     ['a bad body', () => vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'card' }))],
   ])('forget: a POST failure (%s) sends the failure DM', async (_l, fetchFn) => {
     const { deps, t } = flowDeps({ fetchFn: fetchFn() });
-    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'self' });
     expect(deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
     expect(t.ends().map((e) => e.name)).toEqual(['failed']);
   });
@@ -829,7 +831,7 @@ describe('runCatchMeUp forget (owner)', () => {
       fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', resolved: true, forgotten: true })),
       sendText: vi.fn().mockRejectedValue(new Error('send')),
     });
-    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', target: 'self' })).resolves.toBeUndefined();
+    await expect(runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'self' })).resolves.toBeUndefined();
     expect(deps.sendText).toHaveBeenCalledTimes(1);
     expect(deps.sendText.mock.calls[0][1]).not.toBe(FORGET_FAILURE_TEXT);
     expect(t.step('confirm-dm')).toMatchObject({ ok: false });
@@ -935,6 +937,83 @@ describe('helpText', () => {
     for (const c of ['full', 'forget', 'forget @Player', 'forget all']) {
       expect(extra.split('\n').filter((l) => l.includes(`@${BOT} ${c} —`))).toHaveLength(1);
     }
+  });
+});
+
+describe('commandLabel sprint 4', () => {
+  it.each([
+    [{ kind: 'recap7' }, 'recap7'],
+    [{ kind: 'forget', scope: 'both', target: 'self' }, 'forget'],
+    [{ kind: 'forget', scope: 'both', target: 'all' }, 'forget all'],
+    [{ kind: 'forget', scope: 'both', target: { id: PLAYER } }, 'forget @'],
+    [{ kind: 'forget', scope: 'dl', target: 'self' }, 'forget dl'],
+    [{ kind: 'forget', scope: 'dl', target: 'all' }, 'forget dl all'],
+    [{ kind: 'forget', scope: 'dl', target: { id: PLAYER } }, 'forget dl @'],
+    [{ kind: 'forget', scope: 'sybg', target: 'self' }, 'forget sybg'],
+    [{ kind: 'forget', scope: 'sybg', target: 'all' }, 'forget sybg all'],
+    [{ kind: 'forget', scope: 'sybg', target: { id: PLAYER } }, 'forget sybg @'],
+    [{ kind: 'recap-sub' }, 'morning-brief sub'],
+    [{ kind: 'recap-unsub' }, 'morning-brief unsub'],
+    [{ kind: 'recap-time', time: '07:30' }, 'morning-brief time'],
+    [{ kind: 'recap-time-bad' }, 'morning-brief time'],
+  ] as const)('%j -> %s', (cmd, label) => {
+    expect(commandLabel(cmd as CmuCommand)).toBe(label);
+  });
+});
+
+describe('helpBody', () => {
+  const both = [
+    'Both: work in the group (@bot ...) and in a DM.',
+    '  catch me up \u2014 A picture of what you missed since your last post',
+    '  help \u2014 This list of everything I can do',
+    '',
+    'Group commands: send as @bot <command> in the group.',
+    'Nothing group-only yet. Both commands work here too.',
+  ];
+  const dmSection = [
+    '',
+    'DM commands: send these to me directly, no @.',
+    '  pick one \u2014 The one topic you would like most',
+    '  top-songs \u2014 Most-loved songs posted; add "week" for 7 days',
+    '  top-pics \u2014 Best pics of the last 48 hours; add "week" for 7 days',
+    '  top-videos \u2014 Top videos; add "week" for 7 days',
+    '  top-links \u2014 Top links; add "week" for 7 days',
+    '  top-media \u2014 Top pics, videos and links together',
+    '  list-topics \u2014 The topics being talked about right now',
+    '  show-topic 3 \u2014 Read one topic from that list by number',
+    '  my-dossier \u2014 What the bot knows about you',
+    '  recap7 \u2014 The last 7 days of the chat in one recap',
+    '  morning-brief sub \u2014 Get the morning brief every day',
+    '  morning-brief unsub \u2014 Stop the morning brief',
+    '  morning-brief 7:30 \u2014 Change the time the morning brief arrives',
+  ];
+  const count = ['', "You've used 1 of 3 today. Resets at midnight (LA time)."];
+
+  it('player in a DM-capable group: Both, Group (empty line), DM, count', () => {
+    expect(helpBody({ dmOk: true, owner: false, used: 1, limit: 3 })).toBe([...both, ...dmSection, ...count].join('\n'));
+  });
+
+  it('player without DM: no DM section', () => {
+    expect(helpBody({ dmOk: false, owner: false, used: 1, limit: 3 })).toBe([...both, ...count].join('\n'));
+  });
+
+  it('unknown count keeps the fallback line', () => {
+    expect(helpBody({ dmOk: false, owner: false, limit: 3 })).toContain("\n3 a day (couldn't check your count just now)");
+  });
+
+  it('owner adds a tagged Owner section after the count', () => {
+    const t = helpBody({ dmOk: true, owner: true, used: 1, limit: 3 });
+    const player = helpBody({ dmOk: true, owner: false, used: 1, limit: 3 });
+    expect(t.startsWith(player + '\n\nOwner only\n')).toBe(true);
+    const owner = t.slice(player.length).split('\n');
+    expect(owner).toContain('  full (group) \u2014 The last 48 hours; does not count or move your window');
+    expect(owner).toContain('  forget dl (group) \u2014 Forget only the DL side');
+    expect(owner).toContain('  tldr (group) \u2014 Post a short how-to in this group');
+    expect(owner.some((l) => !/\((group|DM|both)\)/.test(l) && l.startsWith('  '))).toBe(false);
+  });
+
+  it('old helpText is unchanged for the unframed path', () => {
+    expect(helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })).toContain('Catch-up bot \u2014 what you can ask');
   });
 });
 
@@ -1044,9 +1123,9 @@ describe('runCatchMeUp privacy across the new flows', () => {
   it('the display name and target id appear in no trace field except who, and in no log line', async () => {
     const cases: Array<[Parameters<typeof runCatchMeUp>[2], unknown]> = [
       [{ kind: 'full' }, cardBody([])],
-      [{ kind: 'forget', target: 'self' }, { kind: 'forgot', target: 'self', resolved: true, forgotten: true, person: SENTINEL_NAME, left: 3 }],
-      [{ kind: 'forget', target: 'all' }, { kind: 'forgot', target: 'all', resolved: true, forgotten: true, left: 3 }],
-      [{ kind: 'forget', target: { id: PLAYER } }, { kind: 'forgot', target: 'player', resolved: false, forgotten: false, left: 3 }],
+      [{ kind: 'forget', scope: 'both', target: 'self' }, { kind: 'forgot', target: 'self', resolved: true, forgotten: true, person: SENTINEL_NAME, left: 3 }],
+      [{ kind: 'forget', scope: 'both', target: 'all' }, { kind: 'forgot', target: 'all', resolved: true, forgotten: true, left: 3 }],
+      [{ kind: 'forget', scope: 'both', target: { id: PLAYER } }, { kind: 'forgot', target: 'player', resolved: false, forgotten: false, left: 3 }],
       [{ kind: 'help' }, { kind: 'status', used: 1, limit: 3 }],
     ];
     for (const owner of [true, false]) {
@@ -1101,7 +1180,7 @@ describe('handleMessage passes mentioned and self ids to the parser', () => {
       db, allowedGroupIds: ['120363000000000001'], ownerPhone: '1@c.us', masterPlaylistName: 'M', sendDm: vi.fn(),
       catchMeUp, jevRespond,
     });
-    expect(catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', target: { id: PLAYER } });
+    expect(catchMeUp).toHaveBeenCalledWith(msg, { kind: 'forget', scope: 'both', target: { id: PLAYER } });
     expect(jevRespond).not.toHaveBeenCalled();
   });
 });
@@ -1293,9 +1372,9 @@ describe('runCatchMeUp while off', () => {
   it.each([
     ['catch me up', { kind: 'catchup' }, false],
     ['full', { kind: 'full' }, true],
-    ['forget', { kind: 'forget', target: 'self' }, true],
-    ['forget all', { kind: 'forget', target: 'all' }, true],
-    ['forget @', { kind: 'forget', target: { id: PLAYER } }, true],
+    ['forget', { kind: 'forget', scope: 'both', target: 'self' }, true],
+    ['forget all', { kind: 'forget', scope: 'both', target: 'all' }, true],
+    ['forget @', { kind: 'forget', scope: 'both', target: { id: PLAYER } }, true],
     ['help', { kind: 'help' }, false],
     ['help', { kind: 'help' }, true],
     ['tldr', { kind: 'tldr' }, true],
@@ -1747,5 +1826,39 @@ describe('player menu and help', () => {
     expect(t).toContain("You've used 1 of 3 today.");
     expect(t).toContain('Add "week" to any top-');
     expect(helpText({ ...base, dmOk: true, owner: true })).toContain('Owner only');
+  });
+});
+
+describe('didYouKnow', () => {
+  const dmEntries = HELP_TABLE.filter((e) => !e.owner && e.where === 'dm');
+  const bothEntries = HELP_TABLE.filter((e) => !e.owner && e.where === 'both');
+
+  it('SECTION_EXPLAIN is verbatim', () => {
+    expect(SECTION_EXPLAIN).toEqual({
+      both: 'Both: work in the group (@bot ...) and in a DM.',
+      group: 'Group commands: send as @bot <command> in the group.',
+      dm: 'DM commands: send these to me directly, no @.',
+    });
+  });
+
+  it('dmOk draws from DM entries with no @', () => {
+    for (const e of dmEntries) {
+      const r = (dmEntries.indexOf(e) + 0.5) / dmEntries.length;
+      expect(didYouKnow({ dmOk: true, random: () => r })).toBe(`Did you know? ${e.command} \u2014 ${e.explain}`);
+    }
+  });
+
+  it('not dmOk draws from Both entries with @bot', () => {
+    for (const e of bothEntries) {
+      const r = (bothEntries.indexOf(e) + 0.5) / bothEntries.length;
+      expect(didYouKnow({ dmOk: false, random: () => r })).toBe(`Did you know? @bot ${e.command} \u2014 ${e.explain}`);
+    }
+  });
+
+  it('never returns the excluded command', () => {
+    for (let i = 0; i < 40; i++) {
+      expect(didYouKnow({ dmOk: true, exclude: 'recap7', random: () => i / 40 })).not.toContain('recap7');
+      expect(didYouKnow({ dmOk: false, exclude: 'help', random: () => i / 40 })).not.toContain('@bot help');
+    }
   });
 });

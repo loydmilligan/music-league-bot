@@ -7,7 +7,7 @@
 export type CmuCommand =
   | { kind: 'catchup' }
   | { kind: 'full' }
-  | { kind: 'forget'; target: 'self' | 'all' | { id: string } }
+  | { kind: 'forget'; scope: ForgetScope; target: 'self' | 'all' | { id: string } }
   | { kind: 'help' }
   | { kind: 'off' }
   | { kind: 'on' }
@@ -22,7 +22,15 @@ export type CmuCommand =
   | { kind: 'recap-sub' }
   | { kind: 'recap-unsub' }
   | { kind: 'recap-time'; time: string }
-  | { kind: 'recap-time-bad' };
+  | { kind: 'recap-time-bad' }
+  | { kind: 'recap7' };
+
+export type ForgetScope = 'both' | 'dl' | 'sybg';
+
+/** Commands that only make sense in a DM. */
+export const DM_ONLY_KINDS: ReadonlySet<CmuCommand['kind']> = new Set<CmuCommand['kind']>([
+  'top', 'pick', 'topics', 'topic', 'dossier', 'recap-sub', 'recap-unsub', 'recap-time', 'recap-time-bad', 'recap7',
+]);
 
 export type TopList = 'songs' | 'pics' | 'videos' | 'links' | 'media';
 
@@ -95,7 +103,7 @@ export function parseRecapTime(s: string): string | undefined {
 }
 
 /** DM mode (R1/R2): the whole text must be one command; no mention, no filler. */
-function parseDmCommand(body: string): CmuCommand | null {
+export function parseDmCommand(body: string): CmuCommand | null {
   const text = body
     .toLowerCase()
     .replace(/’/g, "'")
@@ -117,9 +125,10 @@ function parseDmCommand(body: string): CmuCommand | null {
   }
   if (text === 'dossier' || /^my[- ]?dossier$/.test(text)) return { kind: 'dossier' };
 
+  if (text === 'recap7' || text === 'recap 7' || text === 'recap-7') return { kind: 'recap7' };
   if (text === 'recap sub') return { kind: 'recap-sub' };
   if (text === 'recap unsub') return { kind: 'recap-unsub' };
-  const mr = /^morning[- ]?recap (.+)$/.exec(text);
+  const mr = /^morning[- ]?(?:recap|brief) (.+)$/.exec(text);
   if (mr) {
     const arg = mr[1];
     if (arg === 'sub') return { kind: 'recap-sub' };
@@ -141,16 +150,11 @@ function parseDmCommand(body: string): CmuCommand | null {
   return null;
 }
 
-export function parseCmuCommand(
-  body: string,
-  mentionsBot: boolean,
-  mentionedIds: string[],
-  selfIds: Set<string>,
-  opts?: { dm?: boolean },
-): CmuCommand | null {
-  if (opts?.dm) return parseDmCommand(body);
-  if (!mentionsBot) return null;
-
+/**
+ * The group normalisation: drop leading mention tokens, lowercase, fold curly
+ * apostrophes, trim trailing punctuation, drop up to 3 leading filler words.
+ */
+export function stripMentionAndFiller(body: string): string {
   let text = body
     .replace(/^(\s*@\S+)+/u, '') // leading mention tokens
     .toLowerCase()
@@ -165,18 +169,39 @@ export function parseCmuCommand(
   }
   text = text.replace(/\s+/g, ' ').trim();
 
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+export function parseCmuCommand(
+  body: string,
+  mentionsBot: boolean,
+  mentionedIds: string[],
+  selfIds: Set<string>,
+  opts?: { dm?: boolean },
+): CmuCommand | null {
+  if (opts?.dm) return parseDmCommand(body);
+  if (!mentionsBot) return null;
+
+  const text = stripMentionAndFiller(body);
+
   if (text === 'help') return { kind: 'help' };
   if (text === 'full') return { kind: 'full' };
   if (text === 'off') return { kind: 'off' };
   if (text === 'on') return { kind: 'on' };
   if (text === 'tldr' || text === 'tl;dr' || text === 'tl dr') return { kind: 'tldr' };
   if (text === 'forget' || text.startsWith('forget ')) {
-    const arg = text.slice('forget'.length).trim();
-    if (arg === '') return { kind: 'forget', target: 'self' };
-    if (arg === 'all') return { kind: 'forget', target: 'all' };
+    let arg = text.slice('forget'.length).trim();
+    let scope: ForgetScope = 'both';
+    const sm = /^(dl|sybg)(?: (.*))?$/.exec(arg);
+    if (sm) {
+      scope = sm[1] as ForgetScope;
+      arg = (sm[2] ?? '').trim();
+    }
+    if (arg === '') return { kind: 'forget', scope, target: 'self' };
+    if (arg === 'all') return { kind: 'forget', scope, target: 'all' };
     if (arg.startsWith('@')) {
       const id = mentionedIds.find((m) => !selfIds.has(m));
-      return id ? { kind: 'forget', target: { id } } : null;
+      return id ? { kind: 'forget', scope, target: { id } } : null;
     }
     return null;
   }

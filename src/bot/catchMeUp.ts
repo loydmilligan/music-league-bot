@@ -143,11 +143,15 @@ export function commandLabel(cmd: CmuCommand): string {
     case 'topics': return 'list-topics';
     case 'topic': return 'show-topic';
     case 'dossier': return 'my-dossier';
-    case 'recap-sub': return 'morning-recap sub';
-    case 'recap-unsub': return 'morning-recap unsub';
+    case 'recap7': return 'recap7';
+    case 'recap-sub': return 'morning-brief sub';
+    case 'recap-unsub': return 'morning-brief unsub';
     case 'recap-time':
-    case 'recap-time-bad': return 'morning-recap time';
-    case 'forget': return cmd.target === 'self' ? 'forget' : cmd.target === 'all' ? 'forget all' : 'forget @';
+    case 'recap-time-bad': return 'morning-brief time';
+    case 'forget': {
+      const scope = cmd.scope === 'dl' ? ' dl' : cmd.scope === 'sybg' ? ' sybg' : '';
+      return `forget${scope}${cmd.target === 'self' ? '' : cmd.target === 'all' ? ' all' : ' @'}`;
+    }
   }
 }
 

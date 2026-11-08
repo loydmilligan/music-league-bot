@@ -180,7 +180,7 @@ describe('recap commands', () => {
     const s = cmdSetup();
     await runCatchMeUp(makeMsg(), s.deps, TIME_730);
     const start = s.events.find((e) => e.ev === 'start')!.f!;
-    expect(start.command).toBe('morning-recap time');
+    expect(start.command).toBe('morning-brief time');
     expect(s.ends()).toEqual(['recap-time']);
     const blob = JSON.stringify(s.events);
     expect(blob).not.toContain(AUTHOR);

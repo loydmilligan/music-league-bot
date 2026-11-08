@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import type { CmuCommand } from './cmuCommand.js';
-import { ALL_COMMANDS, menuHeading } from './cmuMenu.js';
+import { ALL_COMMANDS, HELP_TABLE, SECTION_EXPLAIN, menuHeading, type HelpEntry } from './cmuMenu.js';
 import {
   CMU_ACK_EMOJI,
   CMU_DEADLINE_MS,
@@ -87,6 +87,32 @@ export function helpText(o: { botName: string; used?: number; limit: number; coo
       `  ${at} on — turn it back on.`,
       `  ${at} tldr — post a short how-to in this group.`,
     );
+  }
+  return lines.join('\n');
+}
+
+/** Sprint 4 help body (unframed; framing happens at the send). */
+export function helpBody(o: { dmOk: boolean; owner: boolean; used?: number; limit: number }): string {
+  const count = o.used === undefined
+    ? `${o.limit} a day (couldn't check your count just now)`
+    : `You've used ${o.used} of ${o.limit} today. Resets at midnight (LA time).`;
+  const line = (e: HelpEntry) => `  ${e.command} \u2014 ${e.explain}`;
+  const players = HELP_TABLE.filter((e) => !e.owner);
+  const section = (where: HelpEntry['where'], empty?: string): string[] => {
+    const items = players.filter((e) => e.where === where);
+    return [SECTION_EXPLAIN[where], ...(items.length ? items.map(line) : empty ? [empty] : [])];
+  };
+  const lines = [
+    ...section('both'),
+    '',
+    ...section('group', 'Nothing group-only yet. Both commands work here too.'),
+    ...(o.dmOk ? ['', ...section('dm')] : []),
+    '',
+    count,
+  ];
+  if (o.owner) {
+    const tag = (w: HelpEntry['where']) => (w === 'dm' ? '(DM)' : `(${w})`);
+    lines.push('', 'Owner only', ...HELP_TABLE.filter((e) => e.owner).map((e) => `  ${e.command} ${tag(e.where)} \u2014 ${e.explain}`));
   }
   return lines.join('\n');
 }

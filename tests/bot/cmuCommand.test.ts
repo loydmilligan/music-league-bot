@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCmuCommand, parseRecapTime, FILLER_WORDS, type CmuCommand } from '../../src/bot/cmuCommand.js';
+import { parseCmuCommand, parseDmCommand, stripMentionAndFiller, DM_ONLY_KINDS, parseRecapTime, FILLER_WORDS, type CmuCommand } from '../../src/bot/cmuCommand.js';
 
 const SELF = new Set(['123@lid']);
 const run = (body: string, mentions = true, ids: string[] = []) =>
@@ -18,8 +18,8 @@ describe('parseCmuCommand', () => {
     ['help', { kind: 'help' }],
     ['help.', { kind: 'help' }],
     ['full', { kind: 'full' }],
-    ['forget', { kind: 'forget', target: 'self' }],
-    ['forget all', { kind: 'forget', target: 'all' }],
+    ['forget', { kind: 'forget', scope: 'both', target: 'self' }],
+    ['forget all', { kind: 'forget', scope: 'both', target: 'all' }],
     ['off', { kind: 'off' }],
     ['Off!', { kind: 'off' }],
     ['on', { kind: 'on' }],
@@ -40,7 +40,7 @@ describe('parseCmuCommand', () => {
 
   it('forget @target resolves the first non-self mentioned id', () => {
     expect(run('forget @456', true, ['123@lid', '456@lid'])).toEqual({
-      kind: 'forget', target: { id: '456@lid' },
+      kind: 'forget', scope: 'both', target: { id: '456@lid' },
     });
   });
 
@@ -145,5 +145,80 @@ describe('parseRecapTime', () => {
   ];
   it.each(cases)('%j -> %j', (s, expected) => {
     expect(parseRecapTime(s)).toBe(expected);
+  });
+});
+
+describe('sprint 4 parsers', () => {
+  const dm = (body: string) => parseCmuCommand(body, false, [], SELF, { dm: true });
+  const ME = ['123@lid', '456@lid'];
+
+  it.each([
+    ['forget', 'both', 'self'], ['forget dl', 'dl', 'self'], ['forget sybg', 'sybg', 'self'],
+    ['Forget DL', 'dl', 'self'], ['forget SYBG', 'sybg', 'self'],
+    ['forget all', 'both', 'all'], ['forget dl all', 'dl', 'all'], ['forget SYBG all', 'sybg', 'all'],
+  ] as const)('group %j scope %s target %s', (b, scope, target) => {
+    expect(run(b)).toEqual({ kind: 'forget', scope, target });
+  });
+
+  it('forget scopes with @Player resolve the first non-self id', () => {
+    expect(run('forget @Pat', true, ME)).toEqual({ kind: 'forget', scope: 'both', target: { id: '456@lid' } });
+    expect(run('forget dl @Pat', true, ME)).toEqual({ kind: 'forget', scope: 'dl', target: { id: '456@lid' } });
+    expect(run('forget sybg @Pat', true, ME)).toEqual({ kind: 'forget', scope: 'sybg', target: { id: '456@lid' } });
+    expect(run('forget dl @Pat', true, [])).toBeNull();
+  });
+
+  it('forget with other words is null', () => {
+    for (const b of ['forget dlx', 'forget all dl', 'forget dl sybg', 'forget it']) expect(run(b)).toBeNull();
+  });
+
+  it('bare recap stays catch-up, recap7 is not a group command', () => {
+    expect(run('recap')).toEqual({ kind: 'catchup' });
+    expect(dm('recap')).toEqual({ kind: 'catchup' });
+    for (const b of ['recap7', 'recap 7', 'recap-7']) {
+      expect(run(b)).toBeNull();
+      expect(dm(b)).toEqual({ kind: 'recap7' });
+    }
+    expect(dm('Recap7!')).toEqual({ kind: 'recap7' });
+    expect(dm('recap 8')).toBeNull();
+  });
+
+  it.each([
+    ['morning-brief sub', { kind: 'recap-sub' }],
+    ['morning brief unsub', { kind: 'recap-unsub' }],
+    ['morning-brief 7:30', { kind: 'recap-time', time: '07:30' }],
+    ['morning-brief time 7:30', { kind: 'recap-time', time: '07:30' }],
+    ['morningbrief 8pm', { kind: 'recap-time', time: '20:00' }],
+    ['morning-brief 99', { kind: 'recap-time-bad' }],
+    ['morning-brief time', { kind: 'recap-time-bad' }],
+    ['morning-recap sub', { kind: 'recap-sub' }],
+    ['morning-recap unsub', { kind: 'recap-unsub' }],
+    ['morning-recap 7:30', { kind: 'recap-time', time: '07:30' }],
+  ] as [string, CmuCommand][])('dm %j', (b, expected) => {
+    expect(dm(b)).toEqual(expected);
+  });
+
+  it('morning-brief is not a group command and ordinary words stay null', () => {
+    expect(run('morning-brief sub')).toBeNull();
+    expect(dm('morning brief was great')).toBeNull();
+  });
+
+  it('parseDmCommand is exported and matches the dm branch', () => {
+    expect(parseDmCommand('recap7')).toEqual({ kind: 'recap7' });
+    expect(parseDmCommand('help')).toEqual({ kind: 'help' });
+  });
+
+  it('stripMentionAndFiller drops mention, filler, case, curly apostrophes and trailing punctuation', () => {
+    expect(stripMentionAndFiller('@123 Hey can you Catch Me Up!')).toBe('catch me up');
+    expect(stripMentionAndFiller("@123 @456 what\u2019d I miss?")).toBe("what'd i miss");
+    expect(stripMentionAndFiller('@123 hey yo bot pls help')).toBe('pls help');
+    expect(stripMentionAndFiller('  plain   spaces ')).toBe('plain spaces');
+  });
+
+  it('DM_ONLY_KINDS is exactly the ten dm-only kinds', () => {
+    expect([...DM_ONLY_KINDS].sort()).toEqual(
+      ['dossier', 'pick', 'recap-sub', 'recap-time', 'recap-time-bad', 'recap-unsub', 'recap7', 'top', 'topic', 'topics'].sort(),
+    );
+    expect(DM_ONLY_KINDS.has('catchup')).toBe(false);
+    expect(DM_ONLY_KINDS.has('help')).toBe(false);
   });
 });
