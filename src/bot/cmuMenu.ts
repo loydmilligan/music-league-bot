@@ -79,10 +79,10 @@ export const HELP_TABLE: HelpEntry[] = [
   { command: 'forget sybg', explain: 'Reset only your SYBG for today', where: 'group', owner: true },
   { command: 'forget sybg @Player', explain: "Reset only that player's SYBG for today", where: 'group', owner: true },
   { command: 'forget sybg all', explain: "Reset only everyone's SYBG for today", where: 'group', owner: true },
-  { command: 'off', explain: 'Turn catch-me-up off everywhere', where: 'group', owner: true },
+  { command: 'off', explain: 'Silence the whole bot, reactions included', where: 'group', owner: true },
   { command: 'on', explain: 'Turn catch-me-up back on', where: 'group', owner: true },
   { command: 'tldr', explain: 'Post a short how-to in this group', where: 'group', owner: true },
-  { command: 'recap-bot-calls', explain: "Today's bot activity and spend", where: 'both', owner: true },
+  { command: 'recap-bot-calls', explain: 'The last 24 hours of bot activity and spend', where: 'both', owner: true },
 ];
 
 /** A random tip for the footer. DM tips need no @; group tips are Both commands only. */
