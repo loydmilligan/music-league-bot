@@ -1,4 +1,4 @@
-import { MENU_HEADING, PLAYER_MENU, type MenuEntry } from './cmuMenu.js';
+import { MENU_HEADING, playerMenu, type MenuEntry } from './cmuMenu.js';
 import type { RecapSub } from './recapSubs.js';
 
 const CHANGE = 'Change: morning-recap unsub · morning-recap 7:30';
@@ -28,7 +28,7 @@ export function followUpText(o: {
   menu?: MenuEntry[];
   heading?: string;
 }): string {
-  const menu = o.menu ?? PLAYER_MENU;
+  const menu = o.menu ?? playerMenu(false);
   const heading = o.heading ?? MENU_HEADING;
   const blocks: string[] = [];
   if (o.lines.length > 0) blocks.push(o.lines.join('\n'));

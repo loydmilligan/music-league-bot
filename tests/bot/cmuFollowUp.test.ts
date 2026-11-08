@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { recapLine, followUpText } from '../../src/bot/cmuFollowUp.js';
 import { memoryRecapSubs, recapSubscription, setRecapSubsForTest } from '../../src/bot/recapSubs.js';
-import { MENU_HEADING, PLAYER_MENU } from '../../src/bot/cmuMenu.js';
+import { MENU_HEADING, playerMenu } from '../../src/bot/cmuMenu.js';
 
 const TAIL = 'Change: morning-recap unsub · morning-recap 7:30';
 
@@ -59,7 +59,7 @@ describe('followUpText', () => {
 describe('seed values', () => {
   it('heading and menu', () => {
     expect(MENU_HEADING).toBe('Send any of these as @bot <command> in the group:');
-    expect(PLAYER_MENU).toHaveLength(2);
+    expect(playerMenu(false)).toHaveLength(2);
   });
   it('recapSubscription over an empty store reads not subscribed', () => {
     setRecapSubsForTest(memoryRecapSubs());

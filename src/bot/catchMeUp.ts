@@ -10,7 +10,7 @@ import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 import type { CmuPreview } from './cmuPreview.js';
 import { followUpText } from './cmuFollowUp.js';
-import { PLAYER_MENU } from './cmuMenu.js';
+import { playerMenu } from './cmuMenu.js';
 import type { RecapSub, RecapSubs } from './recapSubs.js';
 
 /**
@@ -556,7 +556,7 @@ async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string
     ok = false;
     deps.log(`[cmu] follow-up failed in ${msg.from}: ${describeError(err)}`);
   }
-  trace.step('followup', { ok, ms: msSince(t0), stats: followUp.lines.length > 0, menu: PLAYER_MENU.length });
+  trace.step('followup', { ok, ms: msSince(t0), stats: followUp.lines.length > 0, menu: playerMenu(false).length });
 }
 
 /** Run one send as a traced step: ok + ms either way, rethrowing on failure. */

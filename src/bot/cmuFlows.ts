@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import type { CmuCommand } from './cmuCommand.js';
+import { ALL_COMMANDS, menuHeading } from './cmuMenu.js';
 import {
   CMU_ACK_EMOJI,
   CMU_DEADLINE_MS,
@@ -50,12 +51,18 @@ type End = (outcome: string, error?: string) => void;
 type ForgetTarget = Extract<CmuCommand, { kind: 'forget' }>['target'];
 
 /** H2, verbatim. `used` undefined means companelist couldn't be asked (H3). */
-export function helpText(o: { botName: string; used?: number; limit: number; cooldownMin: number; owner: boolean }): string {
+export function helpText(o: { botName: string; used?: number; limit: number; cooldownMin: number; owner: boolean; dmOk?: boolean }): string {
   const at = `@${o.botName}`;
   const count = o.used === undefined
     ? `${o.limit} a day (couldn't check your count just now)`
     : `You've used ${o.used} of ${o.limit} today. Resets at midnight (LA time).`;
-  const lines = [
+  const lines = o.dmOk ? [
+    menuHeading(true),
+    ...ALL_COMMANDS,
+    '',
+    count,
+    'Add "week" to any top- command for the last 7 days.',
+  ] : [
     'Catch-up bot — what you can ask',
     '',
     `${at} catch me up`,

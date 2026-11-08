@@ -20,7 +20,7 @@ import { createPromptTables } from '../../src/chat/prompts/store.js';
 import { rulesConfigSchema } from '../../src/config/types.js';
 import { memoryCmuPreview, type CmuPreview } from '../../src/bot/cmuPreview.js';
 import type { RecapSub } from '../../src/bot/recapSubs.js';
-import { MENU_HEADING, PLAYER_MENU } from '../../src/bot/cmuMenu.js';
+import { ALL_COMMANDS, MENU_HEADING, PLAYER_MENU, menuHeading, playerMenu } from '../../src/bot/cmuMenu.js';
 
 const GROUP = '120363000000000001@g.us';
 const AUTHOR = '186428122255581@lid';
@@ -1601,9 +1601,9 @@ describe('runCatchMeUp captioned card and follow-up', () => {
     expect(run.deps.sendText.mock.calls[0][0]).toBe(AUTHOR);
     expect(text).toContain(FOLLOW_LINES[0]);
     expect(text).toContain(MENU_HEADING);
-    for (const e of PLAYER_MENU) expect(text).toContain(`• ${e.command} — ${e.oneLine}`);
+    for (const e of playerMenu(false)) expect(text).toContain(`• ${e.command} — ${e.oneLine}`);
     expect(text).not.toContain('Morning recap');
-    expect(run.t.step('followup')).toMatchObject({ ok: true, stats: true, menu: PLAYER_MENU.length });
+    expect(run.t.step('followup')).toMatchObject({ ok: true, stats: true, menu: playerMenu(false).length });
     expect(typeof run.t.step('followup')!.ms).toBe('number');
     expect(run.t.ends()[0].name).toBe('card');
     expect(JSON.stringify(run.t.events)).not.toContain(FOLLOW_LINES[0]);
@@ -1695,5 +1695,53 @@ describe('runCatchMeUp captioned card and follow-up', () => {
     expect(run.deps.sendText).not.toHaveBeenCalled();
     expect(run.t.step('followup')).toBeUndefined();
     expect(run.t.ends()[0].name).toBe('limit');
+  });
+});
+
+// ── Task 13: menu and help ─────────────────────────────────────────────────
+describe('player menu and help', () => {
+  const base = { botName: 'Bot', used: 1, limit: 3, cooldownMin: 5, owner: false };
+  const TODAY = [
+    'Catch-up bot — what you can ask',
+    '',
+    '@Bot catch me up',
+    '  A picture of what you missed since your last post (up to 48 hours),',
+    '  plus links to the top topics. Also works: "what did I miss", "cmu",',
+    '  "fill me in", "recap".',
+    '',
+    "You've used 1 of 3 today. Resets at midnight (LA time).",
+    '',
+    '@Bot help',
+    '  This message. Once every 5 minutes; ask again sooner and you get ⏳.',
+  ].join('\n');
+
+  it('non-preview help unchanged', () => {
+    expect(helpText(base)).toBe(TODAY);
+    expect(helpText({ ...base, dmOk: false })).toBe(TODAY);
+  });
+
+  it('menu entries are exact and one-liners fit', () => {
+    expect(PLAYER_MENU.map((e) => e.command)).toEqual(['catch me up', 'pick one', 'top-pics', 'top-songs', 'my-dossier', 'help']);
+    expect(PLAYER_MENU.find((e) => e.command === 'top-pics')?.oneLine).toBe('Best pics of the last 48 h (add "week")');
+    for (const e of PLAYER_MENU) expect(e.oneLine.length).toBeLessThanOrEqual(50);
+    expect(playerMenu(true)).toEqual(PLAYER_MENU);
+    expect(playerMenu(false).map((e) => e.command)).toEqual(['catch me up', 'help']);
+  });
+
+  it('menuHeading picks the DM or group wording', () => {
+    expect(menuHeading(true)).toBe('DM me any of these (no @ needed):');
+    expect(menuHeading(false)).toBe(MENU_HEADING);
+    expect(MENU_HEADING).toBe('Send any of these as @bot <command> in the group:');
+  });
+
+  it('dm help lists every command, under 25 lines, DM heading first', () => {
+    const t = helpText({ ...base, dmOk: true });
+    const lines = t.split('\n');
+    expect(lines[0]).toBe('DM me any of these (no @ needed):');
+    for (const c of ALL_COMMANDS) expect(lines).toContain(c);
+    expect(lines.length).toBeLessThanOrEqual(25);
+    expect(t).toContain("You've used 1 of 3 today.");
+    expect(t).toContain('Add "week" to any top-');
+    expect(helpText({ ...base, dmOk: true, owner: true })).toContain('Owner only');
   });
 });
