@@ -54,7 +54,7 @@ export const SECTION_EXPLAIN = {
 
 /** Every player and owner command, one short plain line each. */
 export const HELP_TABLE: HelpEntry[] = [
-  { command: 'catch me up', explain: 'A picture of what you missed since your last post', where: 'both' },
+  { command: 'catch me up', explain: 'A picture of what you missed since your last post; "recap" works too', where: 'both' },
   { command: 'help', explain: 'This list of everything I can do', where: 'both' },
   { command: 'pick one', explain: 'The one topic you would like most', where: 'dm' },
   { command: 'top-songs', explain: 'Most-loved songs posted; add "week" for 7 days', where: 'dm' },
@@ -65,19 +65,24 @@ export const HELP_TABLE: HelpEntry[] = [
   { command: 'list-topics', explain: 'The topics being talked about right now', where: 'dm' },
   { command: 'show-topic 3', explain: 'Read one topic from that list by number', where: 'dm' },
   { command: 'my-dossier', explain: 'What the bot knows about you', where: 'dm' },
-  { command: 'recap7', explain: 'The last 7 days of the chat in one recap', where: 'dm' },
+  { command: 'recap7', explain: 'Your own stats for the last 7 days, plus the menu', where: 'dm' },
   { command: 'morning-brief sub', explain: 'Get the morning brief every day', where: 'dm' },
   { command: 'morning-brief unsub', explain: 'Stop the morning brief', where: 'dm' },
   { command: 'morning-brief 7:30', explain: 'Change the time the morning brief arrives', where: 'dm' },
   { command: 'full', explain: 'The last 48 hours; does not count or move your window', where: 'group', owner: true },
-  { command: 'forget', explain: 'Forget your last catch-up and reset your count', where: 'group', owner: true },
-  { command: 'forget @Player', explain: 'The same for that player', where: 'group', owner: true },
-  { command: 'forget all', explain: 'The same for every player', where: 'group', owner: true },
-  { command: 'forget dl', explain: 'Forget only the DL side', where: 'group', owner: true },
-  { command: 'forget sybg', explain: 'Forget only the SYBG side', where: 'group', owner: true },
+  { command: 'forget', explain: 'Reset your Daily Limit and SYBG for today', where: 'group', owner: true },
+  { command: 'forget @Player', explain: "Reset that player's Daily Limit and SYBG for today", where: 'group', owner: true },
+  { command: 'forget all', explain: "Reset everyone's Daily Limit and SYBG for today", where: 'group', owner: true },
+  { command: 'forget dl', explain: 'Reset only your Daily Limit for today', where: 'group', owner: true },
+  { command: 'forget dl @Player', explain: "Reset only that player's Daily Limit for today", where: 'group', owner: true },
+  { command: 'forget dl all', explain: "Reset only everyone's Daily Limit for today", where: 'group', owner: true },
+  { command: 'forget sybg', explain: 'Reset only your SYBG for today', where: 'group', owner: true },
+  { command: 'forget sybg @Player', explain: "Reset only that player's SYBG for today", where: 'group', owner: true },
+  { command: 'forget sybg all', explain: "Reset only everyone's SYBG for today", where: 'group', owner: true },
   { command: 'off', explain: 'Turn catch-me-up off everywhere', where: 'group', owner: true },
   { command: 'on', explain: 'Turn catch-me-up back on', where: 'group', owner: true },
   { command: 'tldr', explain: 'Post a short how-to in this group', where: 'group', owner: true },
+  { command: 'recap-bot-calls', explain: "Today's bot activity and spend", where: 'both', owner: true },
 ];
 
 /** A random tip for the footer. DM tips need no @; group tips are Both commands only. */

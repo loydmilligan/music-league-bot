@@ -967,7 +967,7 @@ describe('commandLabel sprint 4', () => {
 describe('helpBody', () => {
   const both = [
     'Both: work in the group (@bot …) and in a DM.',
-    '  catch me up \u2014 A picture of what you missed since your last post',
+    '  catch me up \u2014 A picture of what you missed since your last post; "recap" works too',
     '  help \u2014 This list of everything I can do',
     '',
     'Group commands: send as @bot <command> in the group.',
@@ -985,7 +985,7 @@ describe('helpBody', () => {
     '  list-topics \u2014 The topics being talked about right now',
     '  show-topic 3 \u2014 Read one topic from that list by number',
     '  my-dossier \u2014 What the bot knows about you',
-    '  recap7 \u2014 The last 7 days of the chat in one recap',
+    '  recap7 \u2014 Your own stats for the last 7 days, plus the menu',
     '  morning-brief sub \u2014 Get the morning brief every day',
     '  morning-brief unsub \u2014 Stop the morning brief',
     '  morning-brief 7:30 \u2014 Change the time the morning brief arrives',
@@ -1010,7 +1010,14 @@ describe('helpBody', () => {
     expect(t.startsWith(player + '\n\nOwner only\n')).toBe(true);
     const owner = t.slice(player.length).split('\n');
     expect(owner).toContain('  full (group) \u2014 The last 48 hours; does not count or move your window');
-    expect(owner).toContain('  forget dl (group) \u2014 Forget only the DL side');
+    expect(owner).toContain('  forget (group) \u2014 Reset your Daily Limit and SYBG for today');
+    expect(owner).toContain("  forget @Player (group) \u2014 Reset that player's Daily Limit and SYBG for today");
+    expect(owner).toContain("  forget all (group) \u2014 Reset everyone's Daily Limit and SYBG for today");
+    expect(owner).toContain('  forget dl (group) \u2014 Reset only your Daily Limit for today');
+    expect(owner).toContain("  forget dl @Player (group) \u2014 Reset only that player's Daily Limit for today");
+    expect(owner).toContain("  forget sybg all (group) \u2014 Reset only everyone's SYBG for today");
+    expect(owner).toContain("  recap-bot-calls (both) \u2014 Today's bot activity and spend");
+    expect(owner.join('\n')).not.toMatch(/last catch-up|The same|DL side/);
     expect(owner).toContain('  tldr (group) \u2014 Post a short how-to in this group');
     expect(owner.some((l) => !/\((group|DM|both)\)/.test(l) && l.startsWith('  '))).toBe(false);
   });
@@ -1862,6 +1869,17 @@ describe('didYouKnow', () => {
     for (let i = 0; i < 40; i++) {
       expect(didYouKnow({ dmOk: true, exclude: 'recap7', random: () => i / 40 })).not.toContain('recap7');
       expect(didYouKnow({ dmOk: false, exclude: 'help', random: () => i / 40 })).not.toContain('@bot help');
+    }
+  });
+
+  it('never picks an owner-only entry, for either audience, at any random value', () => {
+    const owners = HELP_TABLE.filter((e) => e.owner).map((e) => e.command);
+    expect(owners).toContain('recap-bot-calls');
+    for (const dmOk of [true, false]) {
+      for (let i = 0; i <= 100; i++) {
+        const tip = didYouKnow({ dmOk, random: () => i / 100 });
+        for (const c of owners) expect(tip).not.toContain(` ${c} \u2014 `);
+      }
     }
   });
 });
