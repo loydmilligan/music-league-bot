@@ -21,7 +21,7 @@ import {
   type SafeTrace,
   framing,
 } from './catchMeUp.js';
-import { FOOTER_HELP, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage } from './messageFrame.js';
+import { FOOTER_HELP, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
@@ -210,13 +210,13 @@ export function forgetReplyScoped(r: Forgot, scope: ForgetScope, contactName: st
   const what = scope === 'dl' ? 'Daily Limit reset' : scope === 'sybg' ? 'SYBG reset' : 'Daily Limit and SYBG reset';
   if (r.target === 'all') return `${what} for everyone.`;
   if (r.target === 'self') return `${what} for you.`;
-  const who = r.person ?? (contactName.trim() || 'that name');
   if (!r.resolved) {
+    const who = r.person ?? (contactName.trim() || 'that name');
     if (scope === 'dl') return `Daily Limit reset for ${who}.`;
     if (scope === 'sybg') return `Nothing reset: couldn't match ${who} to a player.`;
     return `Daily Limit reset for ${who}. SYBG not reset: couldn't match that name to a player.`;
   }
-  return `${what} for ${who}.`;
+  return `${what} for ${r.person ?? (contactName.trim() || 'that player')}.`;
 }
 
 /** POST one request to companelist; a non-2xx throws CmuHttpError. Returns the status and JSON body. */
@@ -250,8 +250,7 @@ async function safeContactName(deps: CmuDeps, id: string): Promise<string> {
  */
 function ownerFailure(deps: CmuDeps, msg: CmuMessage, name: string, text: string): string {
   if (!framing(deps, msg.from, true)) return text;
-  const body = text.replace(/\s*Try again in a few minutes\.$/, '');
-  return frameMessage({ name, body, footer: FOOTER_RETRY });
+  return frameMessage({ name, body: withoutRetry(text), footer: FOOTER_RETRY });
 }
 
 /** Owner only (R1–R4): reset a count and forget the latest request, then confirm by DM. */

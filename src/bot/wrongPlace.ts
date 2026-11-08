@@ -9,6 +9,8 @@ export const WRONG_PLACE_COPY =
 export interface WrongPlaceMessage {
   from: string;
   author?: string;
+  chatName?: string;
+  notifyName?: string;
   react?(emoji: string): Promise<void>;
 }
 
@@ -41,8 +43,11 @@ function authorKind(a: string): 'lid' | 'c.us' | 'other' {
  * DM target per 10 min. False = not handled (author is not a preview person). Never throws.
  */
 export async function runWrongPlace(msg: WrongPlaceMessage, deps: WrongPlaceDeps): Promise<boolean> {
+  // W4: the preview check is on the DM target (the id people are listed by), not the raw author.
+  let target: string;
   try {
-    if (!deps.isPreviewPerson(msg.author ?? '')) return false;
+    target = await deps.dmTarget(msg.author ?? '');
+    if (!deps.isPreviewPerson(target)) return false;
   } catch {
     return false;
   }
@@ -50,7 +55,7 @@ export async function runWrongPlace(msg: WrongPlaceMessage, deps: WrongPlaceDeps
   let trace: InteractionTrace = NOOP_TRACE;
   try { trace = deps.trace() ?? NOOP_TRACE; } catch { /* never throw */ }
   const safe = (f: () => void): void => { try { f(); } catch { /* never throw */ } };
-  safe(() => trace.start({ group: msg.from, who: '', authorKind: authorKind(msg.author ?? ''), command: 'wrong-place', via: 'group' }));
+  safe(() => trace.start({ group: msg.from, groupName: msg.chatName, who: msg.notifyName ?? '', authorKind: authorKind(msg.author ?? ''), command: 'wrong-place', via: 'group' }));
 
   let enabled = true;
   try { enabled = deps.isEnabled() !== false; } catch { /* fail open, like the reaction path */ }
@@ -70,7 +75,6 @@ export async function runWrongPlace(msg: WrongPlaceMessage, deps: WrongPlaceDeps
   safe(() => trace.step('react', { ok: reacted, emoji: WRONG_PLACE_EMOJI }));
 
   try {
-    const target = await deps.dmTarget(msg.author ?? '');
     prune(now());
     const last = lastExplained.get(target);
     if (last !== undefined && now() - last < EXPLAIN_COOLDOWN_MS) {
@@ -87,7 +91,7 @@ export async function runWrongPlace(msg: WrongPlaceMessage, deps: WrongPlaceDeps
       }
     }
   } catch (err) {
-    safe(() => deps.log(`[cmu] wrong-place dm target failed: ${errName(err)}`));
+    safe(() => deps.log(`[cmu] wrong-place explainer failed: ${errName(err)}`));
     safe(() => trace.step('explain-dm', { ok: false }));
   }
   safe(() => trace.end('wrong-place'));

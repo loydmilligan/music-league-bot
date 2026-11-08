@@ -312,7 +312,7 @@ describe('player replies framed', () => {
     const on = setup(undefined, { preview: FORMAT });
     on.deps.fetchFn.mockResolvedValue(json(500, {}));
     await runCatchMeUp(dmMsg(), on.deps, TOP);
-    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Top Songs ──\n${PLAYER_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Top Songs ──\nCouldn't get that just now.\n──────────\n${FOOTER_RETRY}`]]);
     const off = setup();
     off.deps.fetchFn.mockResolvedValue(json(500, {}));
     await runCatchMeUp(dmMsg(), off.deps, TOP);
@@ -374,7 +374,7 @@ describe('recap7', () => {
   it('a bad body: framed failure with FOOTER_RETRY, never a catch-up', async () => {
     const s = setup({ kind: 'quiet', text: 'x' }, { preview: FORMAT });
     await runCatchMeUp(dmMsg(), s.deps, RECAP7);
-    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Recap ──\n${PLAYER_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Recap ──\nCouldn't get that just now.\n──────────\n${FOOTER_RETRY}`]]);
     expect(s.deps.screenshot).not.toHaveBeenCalled();
     expect(s.ends()).toEqual(['failed']);
   });

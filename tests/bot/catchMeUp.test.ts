@@ -15,7 +15,7 @@ import {
 } from '../../src/bot/catchMeUp.js';
 import { FOOTER_RECAP, FOOTER_RETRY } from '../../src/bot/messageFrame.js';
 import { followUpText } from '../../src/bot/cmuFollowUp.js';
-import { helpBody, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { forgetReplyScoped, helpBody, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
@@ -1967,7 +1967,7 @@ describe('runCatchMeUp sprint 4 frame', () => {
     const on = previewRun({}, { preview: FORMAT });
     on.deps.fetchFn.mockResolvedValue(jsonResponse(500, {}));
     await runCatchMeUp(makeMsg(), on.deps);
-    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Catchup ──\n${CMU_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Catchup ──\nCouldn't build your catch-up just now.\n──────────\n${FOOTER_RETRY}`]]);
 
     const off = previewRun({}, { preview: NO_FORMAT });
     off.deps.fetchFn.mockResolvedValue(jsonResponse(500, {}));
@@ -2044,6 +2044,12 @@ describe('sprint 4 owner DMs and help framing', () => {
       const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: false, forgotten: false, scope })) });
       await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope, target: { id: PLAYER } });
       expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', body, OWNER_FOOT)]]);
+    });
+
+    it('resolved @Player with no person and no contact name says "that player"; unresolved keeps "that name"', () => {
+      const r = { target: 'player', resolved: true, forgotten: true, left: 3 } as never;
+      expect(forgetReplyScoped(r, 'dl', '')).toBe('Daily Limit reset for that player.');
+      expect(forgetReplyScoped({ target: 'player', resolved: false } as never, 'dl', '')).toBe('Daily Limit reset for that name.');
     });
 
     it('@Player without a person falls back to the contact name', async () => {

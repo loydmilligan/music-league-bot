@@ -26,6 +26,11 @@ export const MESSAGE_NAMES = {
 } as const;
 
 export const FOOTER_RETRY = 'Try again in a minute.';
+
+/** Framed failures carry FOOTER_RETRY, so a trailing "Try again ..." sentence in the body is dropped. */
+export function withoutRetry(body: string): string {
+  return body.replace(/\s*Try again[^.]*\.\s*$/, '');
+}
 export const FOOTER_RECAP =
   'Comes with your first catch-up of the day. Any time: DM recap7 for the last 7 days.';
 export const FOOTER_HELP =

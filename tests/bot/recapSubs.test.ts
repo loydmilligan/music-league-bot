@@ -688,7 +688,7 @@ describe('Morning Brief settings replies', () => {
   it('ON: a store failure is framed with the retry footer', async () => {
     const s = cmdSetup({ preview: memoryCmuPreview([], [], [], [GROUP]), dmTarget: vi.fn().mockRejectedValue(new Error('x')) });
     await runCatchMeUp(dmMsg(), s.deps, SUB);
-    expect(s.deps.sendText.mock.calls[0][1]).toBe(frame(RECAP_STORE_FAILURE_TEXT, FOOTER_RETRY));
+    expect(s.deps.sendText.mock.calls[0][1]).toBe(frame("Couldn't set that up just now.", FOOTER_RETRY));
   });
 
   it('OFF: byte-identical (no format; or format without the person gate)', async () => {

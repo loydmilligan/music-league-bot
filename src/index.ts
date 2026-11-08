@@ -147,7 +147,7 @@ const reactToMention = (msg: Parameters<typeof handleMessage>[0]) =>
 
 const wrongPlace = (msg: Parameters<typeof handleMessage>[0]) =>
   runWrongPlace(
-    { from: msg.from, author: msg.author, react: msg.react?.bind(msg) },
+    { from: msg.from, author: msg.author, chatName: msg.chatName, notifyName: msg.notifyName, react: msg.react?.bind(msg) },
     {
       sendDm: makeSendDm(client),
       dmTarget: makeDmTarget(client),

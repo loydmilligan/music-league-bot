@@ -11,7 +11,7 @@ import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js'
 import type { CmuPreview } from './cmuPreview.js';
 import { followUpText, recapFact } from './cmuFollowUp.js';
 import { didYouKnow, menuHeading, playerMenu } from './cmuMenu.js';
-import { FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, dailyCountFact, frameCaption, frameMessage, lastVisitFact } from './messageFrame.js';
+import { FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, withoutRetry, dailyCountFact, frameCaption, frameMessage, lastVisitFact } from './messageFrame.js';
 import type { RecapSub, RecapSubs } from './recapSubs.js';
 
 /**
@@ -444,7 +444,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
       try {
         await withDeadline(
           deps.sendText(msg.author, frame
-            ? frameMessage({ name: MESSAGE_NAMES.catchup, body: CMU_FAILURE_TEXT, footer: FOOTER_RETRY })
+            ? frameMessage({ name: MESSAGE_NAMES.catchup, body: withoutRetry(CMU_FAILURE_TEXT), footer: FOOTER_RETRY })
             : CMU_FAILURE_TEXT),
           deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
         );

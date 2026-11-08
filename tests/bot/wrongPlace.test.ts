@@ -4,7 +4,7 @@ import { frameMessage, MESSAGE_NAMES, FOOTER_WRONG_PLACE } from '../../src/bot/m
 
 const GROUP = '120363000000000001@g.us';
 let n = 0;
-function setup(o: { person?: boolean; enabled?: () => boolean; sendFails?: boolean; reactFails?: boolean; target?: string } = {}) {
+function setup(o: { person?: boolean; enabled?: () => boolean; sendFails?: boolean; reactFails?: boolean; target?: string; listed?: string } = {}) {
   const target = o.target ?? `target${++n}@lid`;
   const calls: Array<[string, Record<string, unknown>]> = [];
   const trace = {
@@ -18,14 +18,44 @@ function setup(o: { person?: boolean; enabled?: () => boolean; sendFails?: boole
   const log = vi.fn();
   let t = 1_000_000;
   const deps = {
-    sendDm, dmTarget: vi.fn(async () => target), isPreviewPerson: () => o.person !== false, isEnabled: o.enabled ?? (() => true),
+    sendDm, dmTarget: vi.fn(async () => target), isPreviewPerson: (id: string) => (o.listed ? id === o.listed : o.person !== false), isEnabled: o.enabled ?? (() => true),
     trace: () => trace, now: () => t, log,
   };
-  const msg = { from: GROUP, author: '100000000000001@lid', body: '@bot top-pics', chatName: 'G', react } as never;
+  const msg = { from: GROUP, author: '100000000000001@lid', body: '@bot top-pics', chatName: 'G', notifyName: 'Alice', react } as never;
   return { deps, msg, sendDm, react, log, trace, calls, advance: (ms: number) => { t += ms; } };
 }
 
 describe('runWrongPlace', () => {
+  it('checks the DM target, not the raw author: listed only by target id is handled', async () => {
+    const s = setup({ target: 'listed1@lid', listed: 'listed1@lid' });
+    expect(await runWrongPlace(s.msg, s.deps)).toBe(true);
+    expect(s.deps.dmTarget).toHaveBeenCalledWith('100000000000001@lid');
+    expect(s.react).toHaveBeenCalledWith(WRONG_PLACE_EMOJI);
+  });
+
+  it('a target that is not listed is not handled, even if the raw author would be', async () => {
+    const s = setup({ target: 'other@lid', listed: '100000000000001@lid' });
+    expect(await runWrongPlace(s.msg, s.deps)).toBe(false);
+    expect(s.react).not.toHaveBeenCalled();
+    expect(s.sendDm).not.toHaveBeenCalled();
+    expect(s.calls).toEqual([]);
+  });
+
+  it('dmTarget lookup failure: not handled, no throw, no react, no DM, no trace', async () => {
+    const s = setup();
+    s.deps.dmTarget.mockRejectedValueOnce(new Error('web down'));
+    expect(await runWrongPlace(s.msg, s.deps)).toBe(false);
+    expect(s.react).not.toHaveBeenCalled();
+    expect(s.sendDm).not.toHaveBeenCalled();
+    expect(s.calls).toEqual([]);
+  });
+
+  it('the trace start carries the group name and the sender name', async () => {
+    const s = setup();
+    await runWrongPlace(s.msg, s.deps);
+    expect(s.calls[0][1]).toMatchObject({ groupName: 'G', who: 'Alice', command: 'wrong-place' });
+  });
+
   it('non-preview person: not handled, nothing sent', async () => {
     const s = setup({ person: false });
     expect(await runWrongPlace(s.msg, s.deps)).toBe(false);

@@ -25,7 +25,7 @@ import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
 import { isRecapKind, runRecapCommand } from './recapSubs.js';
 import { followUpText, recapFact } from './cmuFollowUp.js';
 import { menuHeading, playerMenu } from './cmuMenu.js';
-import { FOOTER_PLAYER, FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, frameMessage } from './messageFrame.js';
+import { FOOTER_PLAYER, FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
 
 /**
  * Player command flows (R5, R7, R8, L9/L9a, W1, W3, W4): top lists, pick one, list/show topics and the
@@ -168,7 +168,7 @@ export async function runPlayer(msg: CmuMessage, deps: CmuDeps, cmd: PlayerCmd, 
       const t0 = performance.now();
       try {
         const failure = frame
-          ? frameMessage({ name: playerName(cmd), body: PLAYER_FAILURE_TEXT, footer: FOOTER_RETRY })
+          ? frameMessage({ name: playerName(cmd), body: withoutRetry(PLAYER_FAILURE_TEXT), footer: FOOTER_RETRY })
           : PLAYER_FAILURE_TEXT;
         await withDeadline(deps.sendText(msg.author, failure), deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS);
         trace.step('failure-dm', { ok: true, ms: msSince(t0) });

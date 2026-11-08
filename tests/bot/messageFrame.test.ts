@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   frameMessage,
+  withoutRetry,
   frameCaption,
   lastVisitFact,
   dailyCountFact,
@@ -116,5 +117,14 @@ describe('dailyCountFact', () => {
     );
     expect(dailyCountFact({ limit: 3 })).toBeUndefined();
     expect(dailyCountFact({ used: 1 })).toBeUndefined();
+  });
+});
+
+describe('withoutRetry', () => {
+  it('drops a trailing "Try again ..." sentence and nothing else', () => {
+    expect(withoutRetry("Couldn't get that just now. Try again in a minute.")).toBe("Couldn't get that just now.");
+    expect(withoutRetry("Couldn't build it. Try again in a few minutes.")).toBe("Couldn't build it.");
+    expect(withoutRetry('No retry sentence here.')).toBe('No retry sentence here.');
+    expect(withoutRetry('Try again later. Then it works.')).toBe('Try again later. Then it works.');
   });
 });

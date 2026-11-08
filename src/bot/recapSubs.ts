@@ -3,7 +3,7 @@ import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import type { CmuCommand } from './cmuCommand.js';
 import { CMU_ACK_EMOJI, CMU_FAILURE_DM_TIMEOUT_MS, CmuHttpError, describeError, framing, msSince, react, timed, withDeadline } from './catchMeUp.js';
-import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage } from './messageFrame.js';
+import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
 import type { CmuDeps, CmuMessage, SafeTrace } from './catchMeUp.js';
 import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
 import { formatTime } from './cmuFollowUp.js';
@@ -240,7 +240,7 @@ export async function runRecapCommand(msg: CmuMessage, deps: CmuDeps, cmd: Recap
     const text = frame
       ? frameMessage({
         name: MESSAGE_NAMES.morningBriefSettings,
-        body: reply,
+        body: reply === RECAP_STORE_FAILURE_TEXT ? withoutRetry(reply) : reply,
         footer: reply === RECAP_STORE_FAILURE_TEXT ? FOOTER_RETRY : FOOTER_PLAYER,
       })
       : reply;
