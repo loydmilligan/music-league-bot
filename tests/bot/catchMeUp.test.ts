@@ -2018,6 +2018,16 @@ describe('sprint 4 owner DMs and help framing', () => {
       expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', `${what} for Pat Q.`, OWNER_FOOT)]]);
     });
 
+    it.each([
+      ['dl', `Daily Limit reset for ${SENTINEL_NAME}.`],
+      ['sybg', `Nothing reset: couldn't match ${SENTINEL_NAME} to a player.`],
+      ['both', `Daily Limit reset for ${SENTINEL_NAME}. SYBG not reset: couldn't match that name to a player.`],
+    ] as const)('unresolved @Player, scope %s: says only what happened', async (scope, body) => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: false, forgotten: false, scope })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope, target: { id: PLAYER } });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', body, OWNER_FOOT)]]);
+    });
+
     it('@Player without a person falls back to the contact name', async () => {
       const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: true, forgotten: true })) });
       await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'dl', target: { id: PLAYER } });

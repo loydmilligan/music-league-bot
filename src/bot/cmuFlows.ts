@@ -210,7 +210,13 @@ export function forgetReplyScoped(r: Forgot, scope: ForgetScope, contactName: st
   const what = scope === 'dl' ? 'Daily Limit reset' : scope === 'sybg' ? 'SYBG reset' : 'Daily Limit and SYBG reset';
   if (r.target === 'all') return `${what} for everyone.`;
   if (r.target === 'self') return `${what} for you.`;
-  return `${what} for ${r.person ?? (contactName.trim() || 'that player')}.`;
+  const who = r.person ?? (contactName.trim() || 'that name');
+  if (!r.resolved) {
+    if (scope === 'dl') return `Daily Limit reset for ${who}.`;
+    if (scope === 'sybg') return `Nothing reset: couldn't match ${who} to a player.`;
+    return `Daily Limit reset for ${who}. SYBG not reset: couldn't match that name to a player.`;
+  }
+  return `${what} for ${who}.`;
 }
 
 /** POST one request to companelist; a non-2xx throws CmuHttpError. Returns the status and JSON body. */
