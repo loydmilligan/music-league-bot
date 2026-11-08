@@ -11,6 +11,7 @@ import {
 import { servedLeague } from './recapSubs.js';
 import { latestSeenChat } from '../storage/reactionsDb.js';
 import { NOOP_TRACE } from '../storage/interactionLog.js';
+import { formatGroupOf } from './cmuPreview.js';
 import type { WhatsAppMessage } from './handler.js';
 
 /**
@@ -68,11 +69,11 @@ async function safeOwner(deps: CmuDeps, id: string): Promise<boolean> {
 }
 
 /**
- * Sprint 4 (S2): commands that exist only behind the `format` allowlist: `recap7`, and the new
- * `morning-brief …` words (the old `morning-recap …` words work everywhere).
+ * Sprint 4 (S2): the new `morning-brief …` words (the old `morning-recap …` words work everywhere).
+ * They follow the league rule the morning tick uses, since the Morning Brief footer offers them to
+ * the whole league.
  */
-function formatOnly(cmd: CmuCommand, body: string): boolean {
-  if (cmd.kind === 'recap7') return true;
+function isBriefWords(cmd: CmuCommand, body: string): boolean {
   if (cmd.kind !== 'recap-sub' && cmd.kind !== 'recap-unsub' && cmd.kind !== 'recap-time' && cmd.kind !== 'recap-time-bad') return false;
   return /^morning[- ]?brief\b/.test(stripMentionAndFiller(body));
 }
@@ -123,9 +124,16 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
     deps.log(`[cmu] dm group lookup failed: ${err instanceof Error ? err.name : 'error'}`);
     group = undefined;
   }
-  // S2: a format-only command is handled only when the resolved group is in `format`; otherwise
-  // (no group included) it falls through untraced, exactly as before it parsed.
-  if (formatOnly(cmd, msg.body) && !(group && isFormatGroup(deps, group))) return false;
+  // S2: recap7 is handled only when the resolved group is in `format`; otherwise (no group included)
+  // it falls through untraced, exactly as before it parsed.
+  if (cmd.kind === 'recap7' && !(group && isFormatGroup(deps, group))) return false;
+  // The morning-brief words follow the league rule: any format group of the served league. Without a
+  // resolved group the league's format group stands in, as the owner recap's group does.
+  if (isBriefWords(cmd, msg.body)) {
+    const formatGroup = formatGroupOf(deps.preview, deps.groups, served);
+    if (!formatGroup) return false;
+    if (!group) group = formatGroup;
+  }
   // The owner's recap needs no group of its own; any served group stands in for the league.
   if (!group && cmd.kind === 'recap') group = [...deps.groups].find(([, l]) => l === served)?.[0];
   if (!group) {

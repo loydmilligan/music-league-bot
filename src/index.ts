@@ -30,7 +30,7 @@ import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTic
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
-import { defaultCmuPreview, registerPreviewOwner } from './bot/cmuPreview.js';
+import { defaultCmuPreview, isFormatLeague, registerPreviewOwner } from './bot/cmuPreview.js';
 import { BurstGuard, runReaction } from './bot/reactions.js';
 import { PALETTE } from './bot/reactionPalette.js';
 import { createJevPicker } from './chat/jevPick.js';
@@ -199,8 +199,7 @@ client.on('ready', () => {
       isEnabled: () => cmuSwitch.isEnabled(),
       isPreviewPerson: (key) => cmuPreview.isPreviewPerson(key),
       // S5: framed when any CMU_GROUPS group of the sub's league is in `format`.
-      isFormatLeague: (league) =>
-        [...cmuGroups].some(([group, l]) => l === league && cmuPreview.isFormatPreview?.(group) === true),
+      isFormatLeague: (league) => isFormatLeague(cmuPreview, cmuGroups, league),
       log: (line) => console.log(line),
       trace: () => interactionLog.begin('cmu'),
     });

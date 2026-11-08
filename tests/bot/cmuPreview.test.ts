@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { openCmuPreview, memoryCmuPreview, cmuPreviewPath, addPreviewOwnerId, registerPreviewOwner, isFormatPreview } from '../../src/bot/cmuPreview.js';
+import { openCmuPreview, memoryCmuPreview, cmuPreviewPath, addPreviewOwnerId, registerPreviewOwner, isFormatLeague } from '../../src/bot/cmuPreview.js';
 
 const A = '120363000000000001@g.us';
 const B = '120363000000000002@g.us';
@@ -398,7 +398,27 @@ describe('format allowlist', () => {
     expect(memoryCmuPreview().isFormatPreview!(A)).toBe(false);
   });
 
-  it('free isFormatPreview is false with no file', () => {
-    expect(isFormatPreview(A)).toBe(false);
+  it('free isFormatPreview is false with no file (temp DATA_DIR, never the real data path)', async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'cmu-preview-'));
+    dirs.push(dir);
+    vi.stubEnv('DATA_DIR', dir);
+    try {
+      vi.resetModules();
+      const fresh = await import('../../src/bot/cmuPreview.js');
+      expect(fresh.isFormatPreview(A)).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it('isFormatLeague: a format group of that league only; fails closed', () => {
+    const groups = new Map([[A, 'x'], [B, 'x'], ['c', 'y']]);
+    const p = memoryCmuPreview([], [], [], [A]);
+    expect(isFormatLeague(p, groups, 'x')).toBe(true);
+    expect(isFormatLeague(p, groups, 'y')).toBe(false);
+    expect(isFormatLeague(p, groups, undefined)).toBe(false);
+    expect(isFormatLeague(undefined, groups, 'x')).toBe(false);
+    expect(isFormatLeague({ isFormatPreview: () => { throw new Error('x'); } }, groups, 'x')).toBe(false);
   });
 });

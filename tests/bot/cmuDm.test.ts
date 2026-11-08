@@ -446,7 +446,7 @@ describe('handleCmuDm format gate', () => {
     );
   });
 
-  it('morning-brief words resolved to a non-format group are not handled', async () => {
+  it('morning-brief words in a league with no format group are not handled', async () => {
     const s = setup();
     for (const t of ['morning-brief sub', 'morning brief unsub', 'morningbrief 7:30', 'morning-brief time 7:30', 'morning-brief 99:99']) {
       const msg = dm(t);
@@ -455,6 +455,33 @@ describe('handleCmuDm format gate', () => {
     }
     expect(s.sendText).not.toHaveBeenCalled();
     expect(s.events).toEqual([]);
+  });
+
+  it('morning-brief words from someone whose latest post is in a non-format group of a format league are handled', async () => {
+    const db = () => leagueDb([{ chat: GROUP_B, author: PERSON_LID, ago: 3_600_000 }]);
+    for (const [t, ends] of [['morning-brief sub', 'recap-sub'], ['morning-brief unsub', 'recap-unsub'], ['morning-brief 7:30', 'recap-time']] as const) {
+      const s = setup({ format: [GROUP_A], db: db() });
+      const msg = dm(t);
+      expect(await handleCmuDm(msg, s.deps)).toBe(true);
+      expect(s.ends()).toEqual([ends]);
+      expect(s.sendText).toHaveBeenCalledTimes(1);
+      // Reply wording still follows framing() of the resolved group: unframed here.
+      expect(String(s.sendText.mock.calls[0][1]).startsWith('── ')).toBe(false);
+    }
+    // recap7 keeps the by-resolved-group gate.
+    const r7 = setup({ format: [GROUP_A], db: db() });
+    expect(await handleCmuDm(dm('recap7'), r7.deps)).toBe(false);
+  });
+
+  it('morning-brief words with no resolved group are handled in a format league, framed', async () => {
+    const s = setup({ format: [GROUP_A], db: leagueDb([]) });
+    expect(await handleCmuDm(dm('morning-brief sub'), s.deps)).toBe(true);
+    expect(String(s.sendText.mock.calls[0][1]).startsWith('── Morning Brief Settings ──\n')).toBe(true);
+  });
+
+  it('a format group of another league does not open the morning-brief words', async () => {
+    const s = setup({ format: [GROUP_OTHER] });
+    expect(await handleCmuDm(dm('morning-brief sub'), s.deps)).toBe(false);
   });
 
   it('old morning-recap sub in a non-format group behaves exactly as today', async () => {

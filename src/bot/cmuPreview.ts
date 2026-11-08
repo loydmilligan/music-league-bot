@@ -151,3 +151,22 @@ export function isPreviewPerson(authorId: string): boolean {
 export function isFormatPreview(groupId: string): boolean {
   return defaultCmuPreview().isFormatPreview?.(groupId) ?? false;
 }
+
+/**
+ * Sprint 4 (S5): true when any group of `league` in `groups` is in the `format` allowlist. The
+ * morning tick frames per league with this; the DM router uses it for the `morning-brief` words, so
+ * whoever can get the Morning Brief footer can use what it says. Missing input or a throw is false.
+ */
+export function isFormatLeague(preview: Pick<CmuPreview, 'isFormatPreview'> | undefined, groups: Map<string, string>, league: string | undefined): boolean {
+  return formatGroupOf(preview, groups, league) !== undefined;
+}
+
+/** The first group of `league` in `format`, or undefined. */
+export function formatGroupOf(preview: Pick<CmuPreview, 'isFormatPreview'> | undefined, groups: Map<string, string>, league: string | undefined): string | undefined {
+  if (!league) return undefined;
+  try {
+    return [...groups].find(([group, l]) => l === league && preview?.isFormatPreview?.(group) === true)?.[0];
+  } catch {
+    return undefined;
+  }
+}
