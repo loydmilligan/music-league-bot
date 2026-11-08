@@ -46,12 +46,16 @@ export function resolveDmGroup(
   return latestSeenChat(db, authorIds, chats, new Date(now.getTime() - DM_GROUP_WINDOW_MS).toISOString());
 }
 
-async function safeDmTarget(deps: CmuDeps, id: string): Promise<string> {
+/**
+ * The DM author's dmTarget, bounded: it is a WhatsApp Web call in front of every DM prompt answer,
+ * so a stall or throw gives undefined (treated as not a preview person) instead of a hang.
+ */
+async function boundedDmTarget(deps: CmuDeps, id: string): Promise<string | undefined> {
   if (!deps.dmTarget) return id;
   try {
-    return (await deps.dmTarget(id)) || id;
+    return (await withDeadline(Promise.resolve().then(() => deps.dmTarget!(id)), CMU_OWNER_TIMEOUT_MS)) || id;
   } catch {
-    return id;
+    return undefined;
   }
 }
 
@@ -68,7 +72,8 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
   if (msg.fromMe || msg.from.endsWith('@g.us')) return false;
 
   // 0. G2: preview people only, before the text is even parsed.
-  const target = await safeDmTarget(deps, msg.from);
+  const target = await boundedDmTarget(deps, msg.from);
+  if (target === undefined) return false;
   let previewPerson = false;
   try {
     previewPerson = deps.preview?.isPreviewPerson(target) === true;

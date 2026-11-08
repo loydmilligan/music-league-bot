@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, type Mock } from 'vitest';
+import { describe, it, expect, vi, afterEach, type Mock } from 'vitest';
+import { CMU_OWNER_TIMEOUT_MS } from '../../src/bot/catchMeUp.js';
 import Database from 'better-sqlite3';
 import { handleCmuDm, type CmuDmDeps } from '../../src/bot/cmuDm.js';
 import { memoryCmuSwitch } from '../../src/bot/cmuSwitch.js';
@@ -57,7 +58,7 @@ function setup(o: { people?: string[]; prompt?: boolean } = {}) {
     db, allowedGroupIds: [], ownerPhone: '1@c.us', masterPlaylistName: 'M', sendDm: vi.fn(),
     cmuDm: (m) => handleCmuDm(m, deps),
   };
-  return { cfg, fetchFn, sendText };
+  return { cfg, fetchFn, sendText, deps };
 }
 
 function dm(body: string): WhatsAppMessage & { react: AnyMock; reply: AnyMock } {
@@ -95,6 +96,21 @@ describe('handleMessage DM routing', () => {
     const s = setup({ people: [], prompt: true });
     const msg = dm('top-songs');
     await handleMessage(msg, s.cfg);
+    expect(msg.reply).toHaveBeenCalledTimes(1);
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(msg.react).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('a stalled dmTarget never blocks prompt answers', async () => {
+    const s = setup({ prompt: true });
+    s.deps.dmTarget = () => new Promise<string>(() => {}); // never resolves
+    vi.useFakeTimers();
+    const msg = dm('Koziol');
+    const done = handleMessage(msg, s.cfg);
+    await vi.advanceTimersByTimeAsync(CMU_OWNER_TIMEOUT_MS);
+    await done;
     expect(msg.reply).toHaveBeenCalledTimes(1);
     expect(s.fetchFn).not.toHaveBeenCalled();
     expect(msg.react).not.toHaveBeenCalled();

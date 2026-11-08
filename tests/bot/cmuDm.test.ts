@@ -244,11 +244,38 @@ describe('handleCmuDm', () => {
     const s = setup({ enabled: false });
     for (const t of ['top-songs', 'catch me up', 'help', 'morning-recap sub']) {
       const msg = dm(t);
-      await handleCmuDm(msg, s.deps);
+      // Accepted behaviour: consumed silently (not a prompt answer), traced as disabled.
+      expect(await handleCmuDm(msg, s.deps)).toBe(true);
       expect(msg.react).not.toHaveBeenCalled();
     }
+    expect(s.ends()).toEqual(['disabled', 'disabled', 'disabled', 'disabled']);
     expect(s.fetchFn).not.toHaveBeenCalled();
     expect(s.sendText).not.toHaveBeenCalled();
+  });
+
+  it('owner recap-bot-calls by DM still works while the switch is off', async () => {
+    const s = setup({ enabled: false, owner: PERSON_LID });
+    expect(await handleCmuDm(dm('recap-bot-calls'), s.deps)).toBe(true);
+    expect(s.bodies().map((b) => b.mode)).toEqual(['recap']);
+    expect(s.sendText).toHaveBeenCalledWith(PERSON_CUS, 'SYNTHETIC-RECAP');
+  });
+
+  it('owner DM of exactly "on" while off falls through', async () => {
+    const s = setup({ enabled: false, owner: PERSON_LID });
+    const msg = dm('on');
+    expect(await handleCmuDm(msg, s.deps)).toBe(false);
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(s.sendText).not.toHaveBeenCalled();
+    expect(msg.react).not.toHaveBeenCalled();
+  });
+
+  it('a throwing dmTarget means not a preview person', async () => {
+    const s = setup();
+    s.deps.dmTarget = async () => { throw new Error('boom'); };
+    const msg = dm('top-songs');
+    expect(await handleCmuDm(msg, s.deps)).toBe(false);
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(msg.react).not.toHaveBeenCalled();
   });
 
   it('preview person in a non-preview group still gets dm commands, with previewPerson (G3)', async () => {
