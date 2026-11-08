@@ -23,6 +23,7 @@ import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
+import { recapSubscription } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
@@ -92,6 +93,11 @@ const catchMeUp = cmuUrl && cmuToken
         contactName: makeContactName(client),
         botName: () => client.info?.pushname || DEFAULT_BOT_NAME,
         cmuSwitch,
+        // D19: the same preview gate BotConfig.preview uses (declared below; read only per request).
+        preview: cmuPreview,
+        recapSubscription,
+        // CMU_CAPTION=off restores the separate links DM; the follow-up still goes.
+        useCaption: process.env.CMU_CAPTION !== 'off',
       }, cmd)
   : undefined;
 

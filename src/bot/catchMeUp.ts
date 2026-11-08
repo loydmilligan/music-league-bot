@@ -7,6 +7,10 @@ import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
 import { runForget, runHelp, runRecap, runSwitch, runTldr } from './cmuFlows.js';
 import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
+import type { CmuPreview } from './cmuPreview.js';
+import { followUpText } from './cmuFollowUp.js';
+import { PLAYER_MENU } from './cmuMenu.js';
+import type { RecapSub } from './recapSubs.js';
 
 /**
  * "@bot catch me up": DM the requester a picture of what they missed.
@@ -25,6 +29,8 @@ export const CMU_TIMEOUT_MS = 240_000;
 export const CMU_DEADLINE_MS = 270_000;
 /** The failure DM is best effort and gets its own bound. */
 export const CMU_FAILURE_DM_TIMEOUT_MS = 15_000;
+/** The follow-up DM runs after the outcome is settled, with its own bound. */
+export const CMU_FOLLOWUP_TIMEOUT_MS = 15_000;
 
 /** C1: a bot mention whose text after the mention starts with a catch-up phrase. */
 export function isCatchMeUpRequest(text: string, mentionsBot: boolean): boolean {
@@ -53,6 +59,8 @@ export interface CmuMessage {
   mentionedIds?: string[]; // serialized wids the message @mentions
   getContact(): Promise<{ pushname: string }>;
   react?(emoji: string): Promise<void>;
+  /** Set by the DM router when the requester is a preview person; opens the D19 gate. */
+  previewPerson?: boolean;
 }
 
 export interface CmuDeps {
@@ -62,7 +70,7 @@ export interface CmuDeps {
   token: string;
   /** PNG to outPath; when thumbPath is given, also a best-effort JPEG thumbnail there. */
   screenshot(html: string, outPath: string, thumbPath?: string): Promise<{ thumbBytes?: number } | void>;
-  sendImage(chatId: string, filePath: string): Promise<void>;
+  sendImage(chatId: string, filePath: string, caption?: string): Promise<void>;
   sendText(chatId: string, text: string): Promise<void>;
   log(line: string): void;
   /**
@@ -91,6 +99,14 @@ export interface CmuDeps {
   cmuSwitch?: CmuSwitch;
   /** Group id → last tldr post (ms). Default: a module-level map. */
   tldrThrottle?: Map<string, number>;
+  /** D19: caption and follow-up only where this says the group is in preview. Absent or throwing means no. */
+  preview?: CmuPreview;
+  /** The requester's morning-recap subscription, for the follow-up. Absent means no recap line. */
+  recapSubscription?: (dmTarget: string) => RecapSub;
+  /** Override for tests; default CMU_FOLLOWUP_TIMEOUT_MS. */
+  followUpTimeoutMs?: number;
+  /** CMU_CAPTION switch: false ignores the caption even in preview (image then links). Default true. */
+  useCaption?: boolean;
 }
 
 /** Used when no switch is wired: on, and `@bot off` lasts until a restart. */
@@ -151,14 +167,22 @@ function topicIds(links: string[]): string[] {
   return ids;
 }
 
+type FollowUp = { lines: string[] };
 type CmuResult =
-  | { kind: 'card'; html: string; links: string[] }
-  | { kind: 'quiet'; text: string };
+  | { kind: 'card'; html: string; links: string[]; caption?: string; followUp?: FollowUp }
+  | { kind: 'quiet'; text: string; followUp?: FollowUp };
+
+/** What deliver() settled on, plus what the follow-up needs. */
+interface Delivered {
+  outcome: 'card' | 'quiet' | 'limit';
+  requesterKey: string;
+  followUp?: FollowUp;
+}
 
 type Outcome = 'card' | 'card-partial' | 'quiet' | 'limit' | 'failed' | 'unsupported';
 
 /** Optional display fields companelist adds to a 200 (Task 1); absent on older versions. */
-function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null; topicIds?: string[] } {
+function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null; topicIds?: string[]; captionTopicIds?: string[] } {
   const m = data && typeof data === 'object' ? (data as Record<string, unknown>).meta : undefined;
   if (!m || typeof m !== 'object') return {};
   const r = m as Record<string, unknown>;
@@ -167,7 +191,8 @@ function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; win
     windowStart: typeof r.windowStart === 'string' ? r.windowStart : undefined,
     windowReason: typeof r.windowReason === 'string' ? r.windowReason : undefined,
     person: typeof r.person === 'string' || r.person === null ? (r.person as string | null) : undefined,
-    topicIds: Array.isArray(r.topicIds) && r.topicIds.every((t) => typeof t === 'string') ? (r.topicIds as string[]) : undefined,
+    topicIds: stringArray(r.topicIds),
+    captionTopicIds: stringArray(r.captionTopicIds),
   };
 }
 
@@ -199,14 +224,27 @@ export class CmuHttpError extends Error {
   }
 }
 
+function stringArray(v: unknown): string[] | undefined {
+  return Array.isArray(v) && v.every((t) => typeof t === 'string') ? (v as string[]) : undefined;
+}
+
+function parseFollowUp(v: unknown): { followUp?: FollowUp } {
+  const lines = v && typeof v === 'object' ? stringArray((v as Record<string, unknown>).lines) : undefined;
+  return lines ? { followUp: { lines } } : {};
+}
+
 function parseResult(data: unknown): CmuResult | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
-  if (d.kind === 'card' && typeof d.html === 'string' && Array.isArray(d.links)
-      && d.links.every((l) => typeof l === 'string')) {
-    return { kind: 'card', html: d.html, links: d.links as string[] };
+  const links = stringArray(d.links);
+  if (d.kind === 'card' && typeof d.html === 'string' && links) {
+    return {
+      kind: 'card', html: d.html, links,
+      ...(typeof d.caption === 'string' ? { caption: d.caption } : {}),
+      ...parseFollowUp(d.followUp),
+    };
   }
-  if (d.kind === 'quiet' && typeof d.text === 'string') return { kind: 'quiet', text: d.text };
+  if (d.kind === 'quiet' && typeof d.text === 'string') return { kind: 'quiet', text: d.text, ...parseFollowUp(d.followUp) };
   return null;
 }
 
@@ -336,8 +374,12 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     // Set once the image DM lands. After that the requester has their catch-up,
     // so a failed or hung links DM is logged, never answered with "Couldn't build".
     const state = { imageSent: false, pngPath: null as string | null };
+    // D19: caption and follow-up only in preview; a throwing check counts as not in preview.
+    const inPreview = safeCall(() => deps.preview?.isPreview(group)) === true || msg.previewPerson === true;
+    let delivered: Delivered | undefined;
     try {
-      outcome = await withDeadline(deliver(msg, deps, state, trace, cmd.kind === 'full'), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      delivered = await withDeadline(deliver(msg, deps, state, trace, cmd.kind === 'full', inPreview), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      outcome = delivered.outcome;
     } catch (err) {
       if (state.imageSent) {
         outcome = 'card-partial';
@@ -363,6 +405,10 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
       // while a screenshot or send was still hanging.
       if (state.pngPath) await rm(state.pngPath, { force: true }).catch(() => undefined);
     }
+    // Outside the main deadline: the requester already has their answer, so this never changes the outcome.
+    if (delivered?.followUp && (outcome === 'card' || outcome === 'quiet')) {
+      await sendFollowUp(msg, deps, delivered.requesterKey, delivered.followUp, trace);
+    }
   } finally {
     safeCall(() => raw.end(outcome, error ? { error } : undefined));
   }
@@ -374,7 +420,8 @@ async function deliver(
   state: { imageSent: boolean; pngPath: string | null },
   trace: SafeTrace,
   full = false,
-): Promise<'card' | 'quiet' | 'limit'> {
+  inPreview = false,
+): Promise<Delivered> {
   const group = msg.from;
   const nameT0 = performance.now();
   const { name: notifyName, source } = await resolveNotifyName(msg);
@@ -391,7 +438,11 @@ async function deliver(
     const res = await deps.fetchFn(deps.url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${deps.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ notifyName, requestAt: msg.capturedAt, league, requesterKey, ...(full ? { mode: 'full' } : {}) }),
+      body: JSON.stringify({
+        notifyName, requestAt: msg.capturedAt, league, requesterKey,
+        ...(full ? { mode: 'full' } : {}),
+        ...(inPreview ? { accepts: ['followUp'] } : {}),
+      }),
       signal: AbortSignal.timeout(CMU_TIMEOUT_MS),
     });
     status = res.status;
@@ -413,16 +464,18 @@ async function deliver(
     trace.step('limit', { ok: true, gate: parseGate(data) });
     await react(msg, CMU_WAIT_EMOJI, deps, trace);
     deps.log(`[cmu] limit in ${group}`);
-    return 'limit';
+    return { outcome: 'limit', requesterKey };
   }
   if (!result) throw new Error('BadResponse'); // unreachable: narrowed above
-  const { topicIds: metaTopicIds, ...displayMeta } = parseMeta(data);
+  const { topicIds: metaTopicIds, captionTopicIds, ...displayMeta } = parseMeta(data);
+  // Outside preview the response's followUp is dropped, so there is never a follow-up there.
+  const followUp = inPreview ? result.followUp : undefined;
   trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: result.kind, ...displayMeta });
 
   if (result.kind === 'quiet') {
     await timed(trace, 'quiet-dm', () => deps.sendText(msg.author, result.text));
     deps.log(`[cmu] quiet sent in ${group}`);
-    return 'quiet';
+    return { outcome: 'quiet', requesterKey, followUp };
   }
 
   const card = result;
@@ -445,9 +498,19 @@ async function deliver(
       const thumbBytes = shot && typeof shot.thumbBytes === 'number' ? shot.thumbBytes : undefined;
       trace.step('thumb', { ok: thumbBytes !== undefined, bytes: thumbBytes });
     }
-    await timed(trace, 'image', () => deps.sendImage(msg.author, pngPath));
-    state.imageSent = true;
-    if (card.links.length) {
+    const caption = inPreview && deps.useCaption !== false && card.caption ? card.caption : undefined;
+    if (caption) {
+      // One post: the caption carries the links, so there is no links DM.
+      const topics = captionTopicIds ?? metaTopicIds ?? [];
+      await timed(trace, 'image', () => deps.sendImage(msg.author, pngPath, caption), {
+        caption: true, count: topics.length, topics,
+      });
+      state.imageSent = true;
+    } else {
+      await timed(trace, 'image', () => deps.sendImage(msg.author, pngPath));
+      state.imageSent = true;
+    }
+    if (!caption && card.links.length) {
       await timed(trace, 'links', () => deps.sendText(msg.author, card.links.join('\n')), {
         count: card.links.length,
         topics: metaTopicIds ?? topicIds(card.links),
@@ -457,7 +520,25 @@ async function deliver(
     await rm(pngPath, { force: true }).catch(() => undefined);
   }
   deps.log(`[cmu] card sent in ${group}`);
-  return 'card';
+  return { outcome: 'card', requesterKey, followUp };
+}
+
+/** The daily follow-up DM: bounded on its own, logged and traced on failure, never rethrown. */
+async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string, followUp: FollowUp, trace: SafeTrace): Promise<void> {
+  const t0 = performance.now();
+  let ok = true;
+  try {
+    const sub = safeCall(() => deps.recapSubscription?.(requesterKey));
+    const text = followUpText({ lines: followUp.lines, sub });
+    await withDeadline(
+      Promise.resolve().then(() => deps.sendText(msg.author, text)),
+      deps.followUpTimeoutMs ?? CMU_FOLLOWUP_TIMEOUT_MS,
+    );
+  } catch (err) {
+    ok = false;
+    deps.log(`[cmu] follow-up failed in ${msg.from}: ${describeError(err)}`);
+  }
+  trace.step('followup', { ok, ms: msSince(t0), stats: followUp.lines.length > 0, menu: PLAYER_MENU.length });
 }
 
 /** Run one send as a traced step: ok + ms either way, rethrowing on failure. */
@@ -465,7 +546,7 @@ export async function timed(
   trace: SafeTrace,
   name: string,
   work: () => Promise<void>,
-  extra: Record<string, number | string[]> = {},
+  extra: Record<string, boolean | number | string[]> = {},
 ): Promise<void> {
   const t0 = performance.now();
   try {

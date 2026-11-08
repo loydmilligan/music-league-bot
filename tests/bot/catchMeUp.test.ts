@@ -18,6 +18,9 @@ import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/b
 import { openDb } from '../../src/storage/db.js';
 import { createPromptTables } from '../../src/chat/prompts/store.js';
 import { rulesConfigSchema } from '../../src/config/types.js';
+import { memoryCmuPreview, type CmuPreview } from '../../src/bot/cmuPreview.js';
+import type { RecapSub } from '../../src/bot/recapSubs.js';
+import { MENU_HEADING, PLAYER_MENU } from '../../src/bot/cmuMenu.js';
 
 const GROUP = '120363000000000001@g.us';
 const AUTHOR = '186428122255581@lid';
@@ -54,6 +57,10 @@ interface FakeDeps {
   deadlineMs?: number;
   failureDmTimeoutMs?: number;
   trace?: () => InteractionTrace;
+  preview?: CmuPreview;
+  recapSubscription?: (dmTarget: string) => RecapSub;
+  followUpTimeoutMs?: number;
+  useCaption?: boolean;
 }
 
 function makeDeps(over: Partial<FakeDeps> = {}) {
@@ -1496,5 +1503,177 @@ describe('runCatchMeUp recap-bot-calls', () => {
     const { deps, t } = flowDeps({ fetchFn: vi.fn().mockResolvedValue(recapRes()) });
     await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
     expect(JSON.stringify(t.events)).not.toContain(RECAP_TEXT);
+  });
+});
+
+// ── Task 7: captioned card and follow-up DM (preview groups only) ──────────
+
+const CAPTION = '📖 Full catch-up: https://x/\n🎸 Gear — https://x/markup-m1.html';
+const LINKS = ['🎸 Gear: https://x/markup-m1.html', 'https://x/'];
+const FOLLOW_LINES = ['You asked 2 times today.'];
+const OFF_LINE = 'Morning recap: off. Get it in your DMs: morning-recap sub';
+
+function captionCard(over: Record<string, unknown> = {}) {
+  return {
+    kind: 'card', html: '<p/>', links: LINKS, caption: CAPTION,
+    meta: { topicIds: ['m1', 'm2'], captionTopicIds: ['m1'] },
+    ...over,
+  };
+}
+
+function previewRun(body: unknown, over: Partial<FakeDeps> = {}) {
+  const t = fakeTrace();
+  const order: string[] = [];
+  const { deps } = makeDeps({
+    fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, body)),
+    trace: t.factory,
+    preview: memoryCmuPreview([GROUP]),
+    ...over,
+  });
+  deps.sendImage.mockImplementation(async () => { order.push('image'); });
+  deps.sendText.mockImplementation(async () => { order.push('text'); });
+  return { t, deps, order, body: () => JSON.parse(deps.fetchFn.mock.calls[0][1].body) };
+}
+
+describe('runCatchMeUp captioned card and follow-up', () => {
+  it('caption card: one image send with caption, no text send for links, image step has caption/count/topics', async () => {
+    const run = previewRun(captionCard());
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendImage).toHaveBeenCalledTimes(1);
+    expect(run.deps.sendImage.mock.calls[0][0]).toBe(AUTHOR);
+    expect(run.deps.sendImage.mock.calls[0][2]).toBe(CAPTION);
+    expect(run.deps.sendText).not.toHaveBeenCalled();
+    expect(run.t.step('image')).toMatchObject({ ok: true, caption: true, count: 1, topics: ['m1'] });
+    expect(run.t.step('links')).toBeUndefined();
+    expect(run.t.ends()[0].name).toBe('card');
+  });
+
+  it('caption card: topics fall back to meta.topicIds without captionTopicIds', async () => {
+    const run = previewRun(captionCard({ meta: { topicIds: ['m1', 'm2'] } }));
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.t.step('image')).toMatchObject({ caption: true, count: 2, topics: ['m1', 'm2'] });
+  });
+
+  it('no caption (old companelist): image then links, no follow-up', async () => {
+    const run = previewRun({ kind: 'card', html: '<p/>', links: LINKS });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.order).toEqual(['image', 'text']);
+    expect(run.deps.sendImage.mock.calls[0]).toHaveLength(2);
+    expect(run.deps.sendText).toHaveBeenCalledWith(AUTHOR, LINKS.join('\n'));
+    expect(run.t.step('followup')).toBeUndefined();
+  });
+
+  it('request body includes accepts followUp when isPreview returns true', async () => {
+    const run = previewRun(captionCard());
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.body().accepts).toEqual(['followUp']);
+  });
+
+  it('outside preview: no accepts in the body, the caption is ignored (image, then links), and there is no follow-up', async () => {
+    const throwing: CmuPreview = { isPreview: () => { throw new Error('boom'); }, isPreviewPerson: () => false };
+    for (const preview of [memoryCmuPreview([]), undefined, throwing]) {
+      const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), { preview });
+      await runCatchMeUp(makeMsg(), run.deps);
+      expect(run.body()).not.toHaveProperty('accepts');
+      expect(run.order).toEqual(['image', 'text']);
+      expect(run.deps.sendImage.mock.calls[0]).toHaveLength(2);
+      expect(run.deps.sendText).toHaveBeenCalledWith(AUTHOR, LINKS.join('\n'));
+      expect(run.t.step('followup')).toBeUndefined();
+      expect(run.t.step('image')).not.toHaveProperty('caption');
+      expect(run.t.ends()[0].name).toBe('card');
+    }
+  });
+
+  it('previewPerson: true opens the gate when the group is not listed', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), { preview: memoryCmuPreview([]) });
+    await runCatchMeUp(makeMsg({ previewPerson: true }), run.deps);
+    expect(run.body().accepts).toEqual(['followUp']);
+    expect(run.order).toEqual(['image', 'text']);
+    expect(run.deps.sendImage.mock.calls[0][2]).toBe(CAPTION);
+    expect(run.t.step('followup')).toMatchObject({ ok: true });
+  });
+
+  it('followUp after card: one text DM after the image with stats, menu; followup step ok', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }));
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.order).toEqual(['image', 'text']);
+    const text = run.deps.sendText.mock.calls[0][1] as string;
+    expect(run.deps.sendText.mock.calls[0][0]).toBe(AUTHOR);
+    expect(text).toContain(FOLLOW_LINES[0]);
+    expect(text).toContain(MENU_HEADING);
+    for (const e of PLAYER_MENU) expect(text).toContain(`• ${e.command} — ${e.oneLine}`);
+    expect(text).not.toContain('Morning recap');
+    expect(run.t.step('followup')).toMatchObject({ ok: true, stats: true, menu: PLAYER_MENU.length });
+    expect(typeof run.t.step('followup')!.ms).toBe('number');
+    expect(run.t.ends()[0].name).toBe('card');
+    expect(JSON.stringify(run.t.events)).not.toContain(FOLLOW_LINES[0]);
+  });
+
+  it('followUp: recapSubscription {subscribed:false} adds the off line, keyed by the requesterKey', async () => {
+    const recapSubscription = vi.fn(() => ({ subscribed: false }));
+    const run = previewRun(captionCard({ followUp: { lines: [] } }), {
+      recapSubscription, dmTarget: vi.fn().mockResolvedValue('999@lid'),
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(recapSubscription).toHaveBeenCalledWith('999@lid');
+    expect(run.deps.sendText.mock.calls[0][1]).toContain(OFF_LINE);
+    expect(run.t.step('followup')).toMatchObject({ ok: true, stats: false });
+  });
+
+  it('followUp after quiet: quiet text then follow-up', async () => {
+    const run = previewRun({ kind: 'quiet', text: 'Not much happened.', followUp: { lines: FOLLOW_LINES } });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText.mock.calls.map((c) => c[1].split('\n')[0])).toEqual(['Not much happened.', FOLLOW_LINES[0]]);
+    expect(run.t.step('followup')).toMatchObject({ ok: true });
+    expect(run.t.ends()[0].name).toBe('quiet');
+  });
+
+  it('useCaption false in preview: image then links, follow-up still sent', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), { useCaption: false });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.order).toEqual(['image', 'text', 'text']);
+    expect(run.deps.sendImage.mock.calls[0]).toHaveLength(2);
+    expect(run.deps.sendText.mock.calls[0][1]).toBe(LINKS.join('\n'));
+    expect(run.deps.sendText.mock.calls[1][1]).toContain(MENU_HEADING);
+    expect(run.t.step('followup')).toMatchObject({ ok: true });
+  });
+
+  it('follow-up send rejects: outcome card, followup step ok false, no failure DM', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }));
+    run.deps.sendText.mockRejectedValue(new Error('nope'));
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText).toHaveBeenCalledTimes(1);
+    expect(run.deps.sendText.mock.calls.some((c) => c[1] === CMU_FAILURE_TEXT)).toBe(false);
+    expect(run.t.step('followup')).toMatchObject({ ok: false });
+    expect(run.t.ends()[0].name).toBe('card');
+    expect(run.deps.log).toHaveBeenCalledWith(`[cmu] follow-up failed in ${GROUP}: Error`);
+  });
+
+  it('follow-up send hangs: resolves after followUpTimeoutMs (set 50), outcome card', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), { followUpTimeoutMs: 50 });
+    run.deps.sendText.mockImplementation(() => new Promise(() => undefined));
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.t.step('followup')).toMatchObject({ ok: false });
+    expect(run.t.ends()[0].name).toBe('card');
+    expect(run.deps.log).toHaveBeenCalledWith(`[cmu] follow-up failed in ${GROUP}: Deadline`);
+  });
+
+  it('recapSubscription throwing: no recap line, follow-up still sent', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), {
+      recapSubscription: () => { throw new Error('boom'); },
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText).toHaveBeenCalledTimes(1);
+    expect(run.deps.sendText.mock.calls[0][1]).not.toContain('Morning recap');
+    expect(run.t.step('followup')).toMatchObject({ ok: true });
+  });
+
+  it('limit (429): no follow-up', async () => {
+    const run = previewRun({});
+    run.deps.fetchFn.mockResolvedValue(jsonResponse(429, { error: 'limit', followUp: { lines: FOLLOW_LINES } }));
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText).not.toHaveBeenCalled();
+    expect(run.t.step('followup')).toBeUndefined();
+    expect(run.t.ends()[0].name).toBe('limit');
   });
 });

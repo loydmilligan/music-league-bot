@@ -456,9 +456,9 @@ export function makeDmTarget(client: ClientType): (chatId: string) => Promise<st
 }
 
 /** DM an image file to one chat id (the requester). */
-export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string) => Promise<void> {
-  return async (chatId, filePath) => {
-    await client.sendMessage(await dmTarget(client, chatId), MessageMedia.fromFilePath(filePath));
+export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string, caption?: string) => Promise<void> {
+  return async (chatId, filePath, caption) => {
+    await client.sendMessage(await dmTarget(client, chatId), MessageMedia.fromFilePath(filePath), caption ? { caption } : undefined);
   };
 }
 
