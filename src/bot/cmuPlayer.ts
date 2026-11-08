@@ -103,7 +103,7 @@ export async function runPlayer(msg: CmuMessage, deps: CmuDeps, cmd: PlayerCmd, 
 
   const throttle = deps.playerThrottle ?? PLAYER_THROTTLE;
   const now = (deps.now ?? Date.now)();
-  const key = `${msg.author}|${cmd.kind}`;
+  const key = `${msg.author}|${cmd.kind === 'top' ? `top:${cmd.list}` : cmd.kind === 'topic' ? `topic:${cmd.n}` : cmd.kind}`;
   const last = throttle.get(key);
   if (last !== undefined && now - last < PLAYER_COOLDOWN_MS) {
     await react(msg, CMU_WAIT_EMOJI, deps, trace);
@@ -115,12 +115,13 @@ export async function runPlayer(msg: CmuMessage, deps: CmuDeps, cmd: PlayerCmd, 
 
   let outcome = 'failed';
   let error: string | undefined;
-  const state = { textSent: false, dir: null as string | null };
+  const state: DeliverState = { textSent: false, dir: null, aborted: false };
   try {
     await react(msg, CMU_ACK_EMOJI, deps, trace);
     try {
       outcome = await withDeadline(deliverPlayer(msg, deps, cmd, trace, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
+      state.aborted = true;
       if (state.textSent) {
         // The requester has their answer; a failed image or a late deadline never earns a failure DM.
         outcome = 'sent';
@@ -146,12 +147,28 @@ export async function runPlayer(msg: CmuMessage, deps: CmuDeps, cmd: PlayerCmd, 
   }
 }
 
+interface DeliverState { textSent: boolean; dir: string | null; aborted: boolean }
+
 async function deliverPlayer(
   msg: CmuMessage,
   deps: CmuDeps,
   cmd: PlayerCmd,
   trace: SafeTrace,
-  state: { textSent: boolean; dir: string | null },
+  state: DeliverState,
+): Promise<string> {
+  try {
+    return await deliverInner(msg, deps, cmd, trace, state);
+  } finally {
+    if (state.dir) await rm(state.dir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function deliverInner(
+  msg: CmuMessage,
+  deps: CmuDeps,
+  cmd: PlayerCmd,
+  trace: SafeTrace,
+  state: DeliverState,
 ): Promise<string> {
   const { name: notifyName } = await resolveNotifyName(msg);
   const body = {
@@ -180,12 +197,21 @@ async function deliverPlayer(
   }
   trace.step('companelist', { ok: true, ms: msSince(t0), status: 200, images: reply.images.length });
 
-  await timed(trace, 'text-dm', () => deps.sendText(msg.author, reply.text));
+  if (state.aborted) throw new Error('Aborted');
+  // In flight counts as sent: a deadline that fires mid-send must not add a failure DM after the text.
   state.textSent = true;
+  try {
+    await timed(trace, 'text-dm', () => deps.sendText(msg.author, reply.text));
+  } catch (err) {
+    state.textSent = false;
+    throw err;
+  }
 
   if (reply.images.length > 0) {
+    if (state.aborted) throw new Error('Aborted');
     state.dir = await mkdtemp(path.join(os.tmpdir(), 'cmu-player-'));
     for (const [i, img] of reply.images.entries()) {
+      if (state.aborted) throw new Error('Aborted');
       const file = path.join(state.dir, `${i}.jpg`);
       await writeFile(file, Buffer.from(img.jpegB64, 'base64'));
       await timed(trace, 'image', () => deps.sendImage(msg.author, file, img.caption), { caption: !!img.caption });

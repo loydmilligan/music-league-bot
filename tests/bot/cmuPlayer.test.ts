@@ -137,6 +137,41 @@ describe('runCatchMeUp player flows', () => {
     expect(s.deps.sendText).toHaveBeenCalledTimes(1);
   });
 
+  it('throttle key: top-songs vs top-pics and topic 1 vs 2 are free; top-songs vs top-songs week is throttled', async () => {
+    const s = setup({ kind: 'top', text: 'x', images: [] });
+    const run = async (c: CmuCommand) => { const m = makeMsg(); await runCatchMeUp(m, s.deps, c); return m.react.mock.calls.map((x) => x[0]); };
+    expect(await run({ kind: 'top', list: 'songs', days: 2 })).toEqual(['👍']);
+    expect(await run({ kind: 'top', list: 'pics', days: 2 })).toEqual(['👍']);
+    expect(await run({ kind: 'top', list: 'songs', days: 7 })).toEqual(['⏳']);
+    s.deps.fetchFn.mockResolvedValue(json(200, { kind: 'topic', text: 't' }));
+    expect(await run({ kind: 'topic', n: 1 })).toEqual(['👍']);
+    expect(await run({ kind: 'topic', n: 2 })).toEqual(['👍']);
+    expect(await run({ kind: 'topic', n: 1 })).toEqual(['⏳']);
+  });
+
+  it('deadline mid-delivery: no DM follows the failure DM and the temp dir is cleaned', async () => {
+    const s = setup({ kind: 'top', text: 'x', images: images(2) }, { deadlineMs: 30 });
+    const sent: string[] = [];
+    s.deps.sendText.mockImplementation(async (_c: string, t: string) => {
+      sent.push(t === PLAYER_FAILURE_TEXT ? 'failure' : 'text');
+      if (t !== PLAYER_FAILURE_TEXT) await new Promise((r) => setTimeout(r, 80));
+    });
+    s.deps.sendImage.mockImplementation(async (_c: string, f: string) => { s.files.push(f); sent.push('image'); });
+    await runCatchMeUp(makeMsg(), s.deps, TOP);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(sent).toEqual(['text']);
+    expect(s.files).toEqual([]);
+  });
+
+  it('deadline before the text: failure DM, then nothing else', async () => {
+    const s = setup({ kind: 'top', text: 'x', images: images(2) }, { deadlineMs: 30 });
+    s.deps.fetchFn.mockImplementation(() => new Promise((r) => setTimeout(() => r(json(200, { kind: 'top', text: 'x', images: images(2) })), 80)));
+    await runCatchMeUp(makeMsg(), s.deps, TOP);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, PLAYER_FAILURE_TEXT]]);
+    expect(s.deps.sendImage).not.toHaveBeenCalled();
+  });
+
   it('companelist 500 gives the failure DM and outcome failed', async () => {
     const s = setup();
     s.deps.fetchFn.mockResolvedValue(json(500, {}));
@@ -200,6 +235,7 @@ describe('handleMessage with a player command in the group', () => {
     const db = openDb(':memory:');
     createPromptTables(db);
     const jevRespond = vi.fn().mockResolvedValue(null);
+    const reactToMention = vi.fn().mockResolvedValue(undefined);
     const cfg: BotConfig = {
       config: rulesConfigSchema.parse({ defaults: { requireCommandPrefix: true, commandPrefix: '!song' }, rules: [] }),
       spotify: { searchTrack: vi.fn(), getTrackById: vi.fn(), findOrCreatePlaylist: vi.fn(), isTrackInPlaylist: vi.fn(), addTrackToPlaylist: vi.fn() },
@@ -207,6 +243,8 @@ describe('handleMessage with a player command in the group', () => {
       preview: memoryCmuPreview([GROUP], [AUTHOR]),
       catchMeUp: (m, c) => runCatchMeUp(m, s.deps, c),
       jevRespond,
+      reactToMention,
+      reactGroupIds: new Set([GROUP]),
     };
     const msg: WhatsAppMessage = {
       body: '@12134198455 top-songs', from: GROUP, chatName: 'G', author: AUTHOR, fromMe: false, capturedAt: AT,
@@ -216,6 +254,7 @@ describe('handleMessage with a player command in the group', () => {
       react: vi.fn().mockResolvedValue(undefined),
     };
     await handleMessage(msg, cfg);
+    expect(reactToMention).toHaveBeenCalledWith(msg);
     expect(s.deps.fetchFn).not.toHaveBeenCalled();
     expect(s.deps.sendText).not.toHaveBeenCalled();
     expect(s.deps.sendImage).not.toHaveBeenCalled();
