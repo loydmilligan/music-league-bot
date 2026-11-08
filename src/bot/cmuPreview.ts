@@ -15,11 +15,14 @@ export interface CmuPreview {
   isPreviewPerson(authorId: string): boolean;
   /** Cheap pre-check: false when no people are listed, so no id lookup is needed. Optional for older gates. */
   hasPeople?(): boolean;
+  /** Sprint 4 message-format gate (optional so older hand-built gates still type-check; callers use `?.`): exact match against the file's `format` list; `"owner"` and `"*"` mean nothing. */
+  isFormatPreview?(groupId: string): boolean;
 }
 
 interface Lists {
   groups: Set<string>;
   people: Set<string>;
+  format: Set<string>;
 }
 
 export function cmuPreviewPath(): string {
@@ -41,12 +44,12 @@ function parse(text: string): Lists {
     const d = JSON.parse(text) as unknown;
     if (d && typeof d === 'object') {
       const r = d as Record<string, unknown>;
-      return { groups: noOwner(strings(r.groups)), people: strings(r.people) };
+      return { groups: noOwner(strings(r.groups)), people: strings(r.people), format: noOwner(strings(r.format)) };
     }
   } catch {
     // corrupt
   }
-  return { groups: new Set(), people: new Set() };
+  return { groups: new Set(), people: new Set(), format: new Set() };
 }
 
 const OWNER = 'owner';
@@ -114,6 +117,7 @@ export function openCmuPreview(
     isPreview: (groupId) => refresh().groups.has(groupId),
     isPreviewPerson: (authorId) => personMatch(refresh().people, authorId, ownerIds()),
     hasPeople: () => refresh().people.size > 0,
+    isFormatPreview: (groupId) => refresh().format.has(groupId),
   };
 }
 
@@ -122,12 +126,14 @@ export function memoryCmuPreview(
   groups: string[] = [],
   people: string[] = [],
   ownerIds: string[] = [],
+  format: string[] = [],
 ): CmuPreview {
+  const f = noOwner(new Set(format));
   const g = new Set(groups);
   g.delete(OWNER);
   g.delete('*');
   const p = new Set(people);
-  return { isPreview: (id) => g.has(id), isPreviewPerson: (id) => personMatch(p, id, ownerIds), hasPeople: () => p.size > 0 };
+  return { isPreview: (id) => g.has(id), isPreviewPerson: (id) => personMatch(p, id, ownerIds), hasPeople: () => p.size > 0, isFormatPreview: (id) => f.has(id) };
 }
 
 let shared: CmuPreview | undefined;
@@ -141,4 +147,7 @@ export function isPreview(groupId: string): boolean {
 }
 export function isPreviewPerson(authorId: string): boolean {
   return defaultCmuPreview().isPreviewPerson(authorId);
+}
+export function isFormatPreview(groupId: string): boolean {
+  return defaultCmuPreview().isFormatPreview?.(groupId) ?? false;
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { openCmuPreview, memoryCmuPreview, cmuPreviewPath, addPreviewOwnerId, registerPreviewOwner } from '../../src/bot/cmuPreview.js';
+import { openCmuPreview, memoryCmuPreview, cmuPreviewPath, addPreviewOwnerId, registerPreviewOwner, isFormatPreview } from '../../src/bot/cmuPreview.js';
 
 const A = '120363000000000001@g.us';
 const B = '120363000000000002@g.us';
@@ -345,5 +345,60 @@ describe('cmuPreview', () => {
       expect(logs).toEqual(['[preview] owner id lookup failed']);
       expect(m.openCmuPreview(ownerFile()).isPreviewPerson('100000000000009@lid')).toBe(false);
     });
+  });
+});
+
+describe('format allowlist', () => {
+  it('matches only listed ids, exactly', () => {
+    const file = tmpFile();
+    write(file, JSON.stringify({ groups: [B], format: [A] }), 1000);
+    const p = openCmuPreview(file);
+    expect(p.isFormatPreview!(A)).toBe(true);
+    expect(p.isFormatPreview!(B)).toBe(false);
+    expect(p.isFormatPreview!('x' + A)).toBe(false);
+    expect(p.isFormatPreview!('')).toBe(false);
+    expect(p.isPreview(A)).toBe(false);
+  });
+
+  it('missing key, missing file or corrupt file means false for all', () => {
+    const file = tmpFile();
+    write(file, JSON.stringify({ groups: [A] }), 1000);
+    expect(openCmuPreview(file).isFormatPreview!(A)).toBe(false);
+    expect(openCmuPreview(path.join(path.dirname(file), 'nope.json')).isFormatPreview!(A)).toBe(false);
+    write(file, '{not json', 2000);
+    expect(openCmuPreview(file).isFormatPreview!(A)).toBe(false);
+  });
+
+  it('"*" and "owner" entries match nothing', () => {
+    const file = tmpFile();
+    write(file, JSON.stringify({ format: ['*', 'owner', A] }), 1000);
+    const p = openCmuPreview(file);
+    expect(p.isFormatPreview!('*')).toBe(false);
+    expect(p.isFormatPreview!('owner')).toBe(false);
+    expect(p.isFormatPreview!(B)).toBe(false);
+    expect(p.isFormatPreview!(A)).toBe(true);
+  });
+
+  it('re-reads when the mtime changes', () => {
+    const file = tmpFile();
+    write(file, JSON.stringify({ format: [A] }), 1000);
+    const p = openCmuPreview(file);
+    expect(p.isFormatPreview!(A)).toBe(true);
+    write(file, JSON.stringify({ format: [B] }), 2000);
+    expect(p.isFormatPreview!(A)).toBe(false);
+    expect(p.isFormatPreview!(B)).toBe(true);
+  });
+
+  it('memoryCmuPreview takes format as the 4th param', () => {
+    const m = memoryCmuPreview([A], [], [], [B, '*', 'owner']);
+    expect(m.isFormatPreview!(B)).toBe(true);
+    expect(m.isFormatPreview!(A)).toBe(false);
+    expect(m.isFormatPreview!('*')).toBe(false);
+    expect(m.isFormatPreview!('owner')).toBe(false);
+    expect(memoryCmuPreview().isFormatPreview!(A)).toBe(false);
+  });
+
+  it('free isFormatPreview is false with no file', () => {
+    expect(isFormatPreview(A)).toBe(false);
   });
 });
