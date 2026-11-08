@@ -32,7 +32,7 @@ describe('recapLine', () => {
 
 describe('followUpText', () => {
   const menuBlock = [
-    'DM me any of these (no @ needed):',
+    'Send any of these as @bot <command> in the group:',
     '• catch me up — What you missed, as a picture',
     '• help — Everything else I can do',
   ].join('\n');
@@ -58,7 +58,7 @@ describe('followUpText', () => {
 
 describe('seed values', () => {
   it('heading and menu', () => {
-    expect(MENU_HEADING).toBe('DM me any of these (no @ needed):');
+    expect(MENU_HEADING).toBe('Send any of these as @bot <command> in the group:');
     expect(PLAYER_MENU).toHaveLength(2);
   });
   it('recap stub returns undefined', () => {
