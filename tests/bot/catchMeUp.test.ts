@@ -2207,7 +2207,7 @@ describe('runCatchMeUp morning-brief sample', () => {
     const older = sampleDeps({ fetchFn: vi.fn().mockResolvedValue(briefRes({ ymd: '2026-11-05', text: `Morning recap · Thu, Nov 5\n\nSlow day.\n\n${URL_}` })) });
     await runCatchMeUp(ownerMsg(), older.deps, SAMPLE);
     expect(older.deps.sendText.mock.calls[0][1]).toBe([
-      '── Morning Brief (sample) ──', "From Thu, Nov 5 (today's isn't ready yet)", 'Thu, Nov 5', '', 'Slow day.', '', URL_, '──────────', FOOT,
+      '── Morning Brief (sample) ──', "From Thu, Nov 5 (today's isn't ready yet)", 'Slow day.', '', URL_, '──────────', FOOT,
     ].join('\n'));
   });
 

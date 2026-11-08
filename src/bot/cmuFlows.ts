@@ -604,9 +604,15 @@ export async function runBriefSample(msg: CmuMessage, deps: CmuDeps, trace: Safe
       outcome = 'morning-brief-sample-none';
       return;
     }
-    const body = stripBriefLead(brief.text);
+    let body = stripBriefLead(brief.text);
     const today = LA_YMD.format(new Date(now()));
-    const facts = brief.ymd === today ? [] : [`From ${body.split('\n')[0]} (today's isn't ready yet)`];
+    let facts: string[] = [];
+    if (brief.ymd !== today) {
+      // The fact names the date, so the body drops its own date line and the blank line after it.
+      const nl = body.indexOf('\n');
+      facts = [`From ${nl < 0 ? body : body.slice(0, nl)} (today's isn't ready yet)`];
+      if (nl >= 0) body = body.slice(nl + 1).replace(/^\n/, '');
+    }
     // The one framed group post the bot makes, on the owner's explicit ruling.
     const post_ = frameMessage({ name, facts, body, footer: FOOTER_BRIEF_SAMPLE });
     await withDeadline(timed(trace, 'group-post', () => deps.sendText(msg.from, post_)), deadline);
