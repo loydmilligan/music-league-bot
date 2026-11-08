@@ -6,7 +6,20 @@ export interface JevPickState {
 }
 
 export interface JevPicker {
-  pick(instructions: string, options: string[], state: JevPickState): Promise<{ choice: string | null; cost: number }>;
+  pick(
+    instructions: string,
+    options: string[],
+    state: JevPickState,
+    descriptions?: Record<string, string>,
+  ): Promise<{ choice: string | null; cost: number }>;
+}
+
+/** Non-OK response from the decisions endpoint. Carries only the status, never the body. */
+export class JevPickHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Jev pick ${status}`);
+    this.name = 'JevPickHttpError';
+  }
 }
 
 interface JevPickResponse {
@@ -24,7 +37,7 @@ export function createJevPicker(o: {
 }): JevPicker {
   const fetchImpl = o.fetchImpl ?? fetch;
   return {
-    async pick(instructions, options, state) {
+    async pick(instructions, options, state, descriptions) {
       // One try; the caller's fallback is the retry.
       const response = await fetchImpl(JEV_URL, {
         method: 'POST',
@@ -32,11 +45,11 @@ export function createJevPicker(o: {
         body: JSON.stringify({
           model: o.model ?? 'typesafe/jev-1.13',
           state,
-          questions: { pick: { type: 'choice', instructions, criteria: options } },
+          questions: { pick: { type: 'choice', instructions, criteria: Object.fromEntries(options.map((x) => [x, descriptions?.[x] ?? x])) } },
         }),
         signal: AbortSignal.timeout(o.timeoutMs ?? 6000),
       });
-      if (!response.ok) throw new Error(`Jev pick ${response.status}`);
+      if (!response.ok) throw new JevPickHttpError(response.status);
       const result = (await response.json()) as JevPickResponse;
       const cost = typeof result.usage?.cost === 'number' ? result.usage.cost : 0;
       if (typeof result.usage?.cost === 'number') console.log(`[jev-pick] cost=${cost}`);

@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BurstGuard, runReaction, type ReactionDeps, type ReactionMessage } from '../../src/bot/reactions.js';
 import type { Palette } from '../../src/bot/reactionPalette.js';
-import type { JevPicker } from '../../src/chat/jevPick.js';
+import { JevPickHttpError, type JevPicker } from '../../src/chat/jevPick.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 
 const palette: Palette = {
+  labels: { '🍆': 'eggplant', '🔥': 'fire', '🎉': 'party popper', '🙌': 'raised hands', '😂': 'tears of joy' },
   categories: [
     { id: 'bigger-than', describe: 'one-up the joke', emojis: ['🍆', '🔥'] },
     { id: 'hype', describe: 'celebrate', emojis: ['🎉', '🙌'] },
@@ -32,10 +33,14 @@ function recTrace() {
 function setup(over: Partial<ReactionDeps> = {}, msgOver: Partial<ReactionMessage> = {}) {
   const t = recTrace();
   const react = vi.fn(async (_e: string) => {});
-  const pick = vi.fn(async (_i: string, opts: string[]): Promise<{ choice: string | null; cost: number }> => ({
+  const pick = vi.fn(async (_i: string, opts: string[], _s?: unknown, desc?: Record<string, string>): Promise<{ choice: string | null; cost: number }> => {
+    // A bare-options regression (no description per option) must not pass silently.
+    if (!desc || opts.some((o) => typeof desc[o] !== 'string' || !desc[o])) throw new Error('missing descriptions');
+    return {
     choice: opts.includes('bigger-than') ? 'bigger-than' : opts[0],
     cost: 0.001,
-  }));
+    };
+  });
   const picker: JevPicker = { pick };
   const msg: ReactionMessage = {
     from: 'group-1@g.us', author: AUTHOR, body: BODY, chatName: 'Test Group', notifyName: 'Sam',
@@ -59,6 +64,8 @@ describe('runReaction', () => {
     expect(pick.mock.calls[0][0]).toContain('bigger-than — one-up the joke');
     expect(pick.mock.calls[0][0]).toContain('hype — celebrate');
     expect(pick.mock.calls[1][1]).toEqual(['🍆', '🔥']);
+    expect(pick.mock.calls[1][3]).toEqual({ '🍆': 'eggplant', '🔥': 'fire' });
+    expect(pick.mock.calls[0][3]).toEqual({ 'bigger-than': 'one-up the joke', hype: 'celebrate' });
     expect(t.steps('pick-category')[0]).toMatchObject({ ok: true, category: 'bigger-than' });
     expect(t.steps('pick-emoji')[0]).toMatchObject({ ok: true, emoji: '🍆' });
     expect(t.calls[0][1]).toMatchObject({ who: 'Sam', command: 'reaction', authorKind: 'lid' });
@@ -183,6 +190,21 @@ describe('runReaction', () => {
     expect(e).not.toHaveProperty('cost');
     expect(e).not.toHaveProperty('emoji');
     expect(b.t.steps('fallback')[0]).toMatchObject({ reason: 'timeout' });
+  });
+
+  it('an HTTP pick failure records status, cause and a body-free log line, with one fallback reaction', async () => {
+    const log = vi.fn();
+    const a = setup({ log });
+    a.pick.mockRejectedValueOnce(new JevPickHttpError(402));
+    await runReaction(a.msg, a.deps);
+    expect(a.react).toHaveBeenCalledTimes(1);
+    expect(a.t.steps('pick-category')[0]).toMatchObject({ ok: false, status: 402 });
+    expect(a.t.steps('fallback')).toEqual([{ ok: true, reason: 'error', cause: 'http-402' }]);
+    expect(log).toHaveBeenCalledWith('[react] pick failed: http-402');
+    const b = setup({ log: () => { throw new Error('log'); } });
+    b.pick.mockRejectedValueOnce(new JevPickHttpError(402));
+    await runReaction(b.msg, b.deps);
+    expect(b.react).toHaveBeenCalledTimes(1);
   });
 
   it('outcome failed logs a bare line, and a throwing logger cannot add a second end', async () => {

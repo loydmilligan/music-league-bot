@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createJevPicker, jevPickState } from '../src/chat/jevPick.js';
+import { createJevPicker, JevPickHttpError, jevPickState } from '../src/chat/jevPick.js';
 
 const state = { chat: 'c', speaker: 's', request: 'r', recent_messages: [] };
+// Mirrors the API: criteria must be a record, an array is rejected with 400.
 const okFetch = (body: unknown) =>
-  vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+  vi.fn(async (_u: unknown, init?: RequestInit) => {
+    const criteria = JSON.parse(String(init?.body ?? '{}')).questions?.pick?.criteria;
+    if (Array.isArray(criteria)) return new Response('expected record, received array', { status: 400 });
+    return new Response(JSON.stringify(body), { status: 200 });
+  }) as unknown as typeof fetch;
 
 describe('createJevPicker', () => {
   it('POSTs a choice question to the decisions endpoint', async () => {
@@ -16,8 +21,33 @@ describe('createJevPicker', () => {
     expect(JSON.parse(init.body)).toEqual({
       model: 'typesafe/jev-1.13',
       state,
-      questions: { pick: { type: 'choice', instructions: 'ins', criteria: ['a', 'b'] } },
+      questions: { pick: { type: 'choice', instructions: 'ins', criteria: { a: 'a', b: 'b' } } },
     });
+  });
+
+  it('sends criteria as an object of option -> description', async () => {
+    const fetchImpl = okFetch({ answers: { pick: { choice: '😂' } } });
+    const p = createJevPicker({ apiKey: 'k', fetchImpl });
+    await p.pick('i', ['😂', '🎉'], state);
+    expect(JSON.parse((fetchImpl as any).mock.calls[0][1].body).questions.pick.criteria).toEqual({ '😂': '😂', '🎉': '🎉' });
+    await p.pick('i', ['bigger-than', 'hype'], state, { 'bigger-than': 'size, …' });
+    expect(JSON.parse((fetchImpl as any).mock.calls[1][1].body).questions.pick.criteria).toEqual({
+      'bigger-than': 'size, …',
+      hype: 'hype',
+    });
+  });
+
+  it('throws JevPickHttpError with the status on 400', async () => {
+    const fetchImpl = vi.fn(async () => new Response('secret body', { status: 400 })) as unknown as typeof fetch;
+    const err = await createJevPicker({ apiKey: 'k', fetchImpl }).pick('i', ['a'], state).catch((e) => e);
+    expect(err).toBeInstanceOf(JevPickHttpError);
+    expect(err.status).toBe(400);
+    expect(err.message).not.toContain('secret');
+  });
+
+  it('an array criteria is rejected by the fake the way the API does', async () => {
+    const r = await okFetch({})('u', { body: JSON.stringify({ questions: { pick: { criteria: ['a'] } } }) });
+    expect(r.status).toBe(400);
   });
 
   it('returns the choice and cost', async () => {

@@ -11,6 +11,8 @@ export interface Palette {
   categories: PaletteCategory[];
   all: string[];
   fallbackPool: string[];
+  /** Short plain-word label per emoji, sent as the Jev criterion description. */
+  labels: Record<string, string>;
 }
 
 const FALLBACK_CATEGORIES = ['dying-laughing', 'hype'];
@@ -50,13 +52,23 @@ export function loadPalette(raw?: unknown): Palette {
     }
     categories.push({ id: c.id, describe: c.describe, emojis });
   }
+  const rawLabels = d.labels;
+  if (typeof rawLabels !== 'object' || rawLabels === null || Array.isArray(rawLabels)) {
+    throw new Error('invalid palette: labels missing');
+  }
+  const labels: Record<string, string> = {};
+  for (const e of categories.flatMap((c) => c.emojis)) {
+    const l = (rawLabels as Record<string, unknown>)[e];
+    if (typeof l !== 'string' || !l.trim()) throw new Error(`invalid palette: missing label for ${e}`);
+    labels[e] = l;
+  }
   const excluded = new Set([...strings(d.noFallback, 'noFallback'), ...strings(d.zwj, 'zwj')]);
   const fallbackPool = categories
     .filter((c) => FALLBACK_CATEGORIES.includes(c.id))
     .flatMap((c) => c.emojis)
     .filter((e) => !excluded.has(e));
   if (fallbackPool.length === 0) throw new Error('invalid palette: fallback pool is empty');
-  return { categories, all: categories.flatMap((c) => c.emojis), fallbackPool };
+  return { categories, all: categories.flatMap((c) => c.emojis), fallbackPool, labels };
 }
 
 export const PALETTE: Palette = loadPalette();

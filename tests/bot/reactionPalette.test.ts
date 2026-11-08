@@ -24,4 +24,12 @@ describe('reaction palette', () => {
     expect(() => loadPalette({ categories: [{ id: 'a', describe: 'x', emojis: ['😂', '😂', '🎉'] }] })).toThrow();
     expect(() => loadPalette({ categories: [{ id: 'a', describe: 'x', emojis: ['😂', '👍', '🎉'] }] })).toThrow();
   });
+  it('labels every palette emoji', () => {
+    for (const e of PALETTE.all) expect(PALETTE.labels[e]).toMatch(/\S/);
+  });
+  it('throws when an emoji lacks a label', () => {
+    const cats = [{ id: 'dying-laughing', describe: 'x', emojis: ['😂', '🤣', '💀'] }];
+    expect(() => loadPalette({ categories: cats, labels: { '😂': 'a', '🤣': 'b' } })).toThrow(/label/);
+    expect(loadPalette({ categories: cats, labels: { '😂': 'a', '🤣': 'b', '💀': 'c' } }).labels['💀']).toBe('c');
+  });
 });

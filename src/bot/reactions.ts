@@ -1,6 +1,6 @@
 import type { Palette } from './reactionPalette.js';
 import type { CmuSwitch } from './cmuSwitch.js';
-import { jevPickState, type JevPicker } from '../chat/jevPick.js';
+import { jevPickState, JevPickHttpError, type JevPicker } from '../chat/jevPick.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 
 export interface ReactionMessage {
@@ -106,6 +106,7 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
     const fallbackEmoji = () => pool[Math.floor(random() * pool.length)];
 
     let reason: FallbackReason | undefined;
+    let cause: string | undefined;
     let emoji: string | undefined;
     if (!deps.picker) reason = 'no-key';
     else if (deps.forceFallback) reason = 'forced-off';
@@ -115,11 +116,16 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
         emoji = await jevEmoji(msg, deps, deps.picker, step);
       } catch (e) {
         reason = e instanceof PickFailure ? e.reason : timedOut(e) ? 'timeout' : 'error';
+        if (!(e instanceof PickFailure)) {
+          cause = causeOf(e);
+          const line = `[react] pick failed: ${cause}`;
+          safeCall(() => deps.log(line));
+        }
       }
     }
     if (emoji === undefined) {
       emoji = fallbackEmoji();
-      step('fallback', { ok: true, reason: reason ?? 'error' });
+      step('fallback', { ok: true, reason: reason ?? 'error', ...(cause ? { cause } : {}) });
     }
 
     if (await send(msg, emoji, step, false)) {
@@ -135,6 +141,18 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
   } catch {
     fail();
   }
+}
+
+function httpStatus(e: unknown): { status?: number } {
+  return e instanceof JevPickHttpError ? { status: e.status } : {};
+}
+
+function causeOf(e: unknown): string {
+  if (e instanceof JevPickHttpError) return `http-${e.status}`;
+  if (timedOut(e)) return 'timeout';
+  if (e instanceof TypeError) return 'network';
+  const name = (e as { name?: unknown } | null)?.name;
+  return typeof name === 'string' && name ? name : 'error';
 }
 
 function timedOut(e: unknown): boolean {
@@ -175,12 +193,13 @@ async function jevEmoji(
   const cats = deps.palette.categories;
   const catInstructions =
     INTRO + 'First choose the kind of reaction. The options are:\n' + cats.map((c) => `${c.id} — ${c.describe}`).join('\n');
+  const catDescriptions = Object.fromEntries(cats.map((c) => [c.id, c.describe]));
   let t0 = performance.now();
   let c: Awaited<ReturnType<JevPicker['pick']>>;
   try {
-    c = await picker.pick(catInstructions, cats.map((x) => x.id), state);
+    c = await picker.pick(catInstructions, cats.map((x) => x.id), state, catDescriptions);
   } catch (err) {
-    step('pick-category', { ok: false, ms: ms(t0) });
+    step('pick-category', { ok: false, ms: ms(t0), ...httpStatus(err) });
     throw err;
   }
   const category = cats.find((x) => x.id === c.choice);
@@ -194,9 +213,10 @@ async function jevEmoji(
       INTRO + `Now choose the single emoji from the "${category.id}" kind (${category.describe}) that fits best.`,
       category.emojis,
       state,
+      Object.fromEntries(category.emojis.map((x) => [x, deps.palette.labels[x] ?? x])),
     );
   } catch (err) {
-    step('pick-emoji', { ok: false, ms: ms(t0) });
+    step('pick-emoji', { ok: false, ms: ms(t0), ...httpStatus(err) });
     throw err;
   }
   const emoji = category.emojis.find((x) => x === e.choice);
