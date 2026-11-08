@@ -1613,6 +1613,7 @@ describe('runCatchMeUp captioned card and follow-up', () => {
     const recapSubscription = vi.fn(() => ({ subscribed: false }));
     const run = previewRun(captionCard({ followUp: { lines: [] } }), {
       recapSubscription, dmTarget: vi.fn().mockResolvedValue('999@lid'),
+      preview: memoryCmuPreview([GROUP], ['999@lid']),
     });
     await runCatchMeUp(makeMsg(), run.deps);
     expect(recapSubscription).toHaveBeenCalledWith('999@lid');
@@ -1656,6 +1657,25 @@ describe('runCatchMeUp captioned card and follow-up', () => {
     expect(run.t.step('followup')).toMatchObject({ ok: false });
     expect(run.t.ends()[0].name).toBe('card');
     expect(run.deps.log).toHaveBeenCalledWith(`[cmu] follow-up failed in ${GROUP}: Deadline`);
+  });
+
+  it('followUp: a non-preview person gets no recap line (G5)', async () => {
+    const recapSubscription = vi.fn(() => ({ subscribed: false }));
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), {
+      recapSubscription, dmTarget: vi.fn().mockResolvedValue('999@lid'),
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText).toHaveBeenCalledTimes(1);
+    expect(run.deps.sendText.mock.calls[0][1]).not.toContain('Morning recap');
+  });
+
+  it('followUp: a preview person gets the off line', async () => {
+    const run = previewRun(captionCard({ followUp: { lines: FOLLOW_LINES } }), {
+      recapSubscription: () => ({ subscribed: false }), dmTarget: vi.fn().mockResolvedValue('999@lid'),
+      preview: memoryCmuPreview([GROUP], ['999@lid']),
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText.mock.calls[0][1]).toContain(OFF_LINE);
   });
 
   it('recapSubscription throwing: no recap line, follow-up still sent', async () => {

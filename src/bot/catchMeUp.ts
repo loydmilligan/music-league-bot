@@ -543,7 +543,10 @@ async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string
   const t0 = performance.now();
   let ok = true;
   try {
-    const sub = safeCall(() => deps.recapSubscription?.(requesterKey));
+    // G5: the recap line names a player command, so only a preview person sees it.
+    const sub = safeCall(() => deps.preview?.isPreviewPerson(requesterKey)) === true
+      ? safeCall(() => deps.recapSubscription?.(requesterKey))
+      : undefined;
     const text = followUpText({ lines: followUp.lines, sub });
     await withDeadline(
       Promise.resolve().then(() => deps.sendText(msg.author, text)),

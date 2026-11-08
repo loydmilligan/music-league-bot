@@ -67,6 +67,9 @@ function parseSubs(text: string): Map<string, Sub> {
 }
 
 function storeOver(map: Map<string, Sub>, persist: (m: Map<string, Sub>) => void): RecapSubs {
+  // M5 once a day: an unsub keeps the key's lastSentYmd here (memory only, so an unsubscribed id is
+  // never written back to the file), and a re-sub the same process seeds from it.
+  const tombstones = new Map<string, string>();
   const apply = (next: Map<string, Sub>) => {
     persist(next);
     map.clear();
@@ -79,14 +82,20 @@ function storeOver(map: Map<string, Sub>, persist: (m: Map<string, Sub>) => void
     },
     set(key, sub) {
       const next = new Map(map);
-      next.set(key, { ...sub });
+      const seeded = { ...sub };
+      const last = tombstones.get(key);
+      if (seeded.lastSentYmd === undefined && last !== undefined) seeded.lastSentYmd = last;
+      next.set(key, seeded);
       apply(next);
+      tombstones.delete(key);
     },
     delete(key) {
-      if (!map.has(key)) return;
+      const cur = map.get(key);
+      if (!cur) return;
       const next = new Map(map);
       next.delete(key);
       apply(next);
+      if (cur.lastSentYmd !== undefined) tombstones.set(key, cur.lastSentYmd);
     },
     all: () => [...map].map(([k, v]) => [k, { ...v }] as [string, Sub]),
   };
@@ -317,15 +326,16 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
   let running = false;
   let lastSendAt = -Infinity;
 
-  async function sendOne(key: string, league: string, text: string, ymd: string): Promise<void> {
+  /** True only when the DM was actually sent. */
+  async function sendOne(key: string, league: string, text: string, ymd: string): Promise<boolean> {
     // M5: mark first, so a crash or a failed send never double-sends.
     const cur = deps.subs.get(key);
-    if (!cur || cur.lastSentYmd === ymd) return;
+    if (!cur || cur.lastSentYmd === ymd) return false;
     try {
       deps.subs.set(key, { ...cur, lastSentYmd: ymd });
     } catch (err) {
       deps.log(`[recap-dm] mark failed: ${describeError(err)}`);
-      return;
+      return false;
     }
     let raw: InteractionTrace = NOOP_TRACE;
     try {
@@ -351,11 +361,13 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
       await deps.sendText(key, text);
       safe(() => raw.step('text-dm', { ok: true, ms: msSince(t0) }));
       safe(() => raw.end('recap-dm'));
+      return true;
     } catch (err) {
       const e = describeError(err);
       safe(() => raw.step('text-dm', { ok: false, ms: msSince(t0) }));
       safe(() => raw.end('recap-dm-failed', { error: e }));
       deps.log(`[recap-dm] send failed: ${e}`);
+      return false;
     }
   }
 
@@ -363,6 +375,7 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
     if (running) return;
     if (!safeBool(deps.isEnabled)) return;
     running = true;
+    let sent = 0;
     try {
       const { ymd, hm } = laNow(now());
       let all: [string, Sub][];
@@ -377,7 +390,6 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
       const byLeague = new Map<string, string[]>();
       for (const [k, s] of due) byLeague.set(s.league, [...(byLeague.get(s.league) ?? []), k]);
 
-      let sent = 0;
       for (const [league, keys] of byLeague) {
         let recap: RecapToday;
         try {
@@ -391,15 +403,16 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
           const wait = spacing - (Date.now() - lastSendAt);
           if (wait > 0) await sleep(wait);
           if (!safeBool(deps.isEnabled)) return;
-          await sendOne(key, league, recap.text, ymd);
-          sent++;
+          // The never-an-earlier-day guard is absolute: a tick that crossed LA midnight stops here.
+          if (laNow(now()).ymd !== ymd) return;
+          if (await sendOne(key, league, recap.text, ymd)) sent++;
         }
       }
-      if (sent > 0) deps.log(`[recap-dm] tick: ${sent} due sent`);
     } catch (err) {
       deps.log(`[recap-dm] tick failed: ${describeError(err)}`);
     } finally {
       running = false;
+      if (sent > 0) deps.log(`[recap-dm] tick: ${sent} sent`);
     }
   }
 

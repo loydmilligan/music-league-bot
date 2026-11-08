@@ -12,7 +12,7 @@ import { createPromptTables } from '../../src/chat/prompts/store.js';
 import { rulesConfigSchema } from '../../src/config/types.js';
 
 const GROUP = '120363000000000001@g.us';
-const AUTHOR = '186428122255581@lid';
+const AUTHOR = '100000000000001@lid';
 const AT = '2026-11-06T18:30:00.000Z';
 const SENTINEL = 'SYNTHETIC-REPLY-BODY';
 const URL_SENTINEL = 'https://example.invalid/secret-link';

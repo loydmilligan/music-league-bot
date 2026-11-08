@@ -8,7 +8,7 @@ import { memoryCmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import {
   RECAP_DM_SPACING_MS, RECAP_STORE_FAILURE_TEXT, makeFetchRecapToday, memoryRecapSubs, openRecapSubs,
-  recapSubscription, servedLeague, setRecapSubsForTest, startRecapTick,
+  laNow, recapSubscription, servedLeague, setRecapSubsForTest, startRecapTick,
   type RecapSubs, type RecapToday,
 } from '../../src/bot/recapSubs.js';
 
@@ -16,8 +16,8 @@ import {
 type AnyMock = Mock<(...args: any[]) => any>;
 
 const GROUP = '120363000000000001@g.us';
-const AUTHOR = '186428122255581@lid';
-const KEY = '186428122255581@lid';
+const AUTHOR = '100000000000001@lid';
+const KEY = '100000000000001@lid';
 const AT = '2026-11-07T18:30:00.000Z';
 const SENTINEL = 'SYNTHETIC-RECAP-BODY';
 
@@ -275,6 +275,7 @@ const la = (ymd: string, hm: string, offsetH = 8) => {
   return new Date(d.getTime() + ((h + offsetH) * 60 + m) * 60_000);
 };
 
+const laNowYmd = (d: Date) => laNow(d).ymd;
 const sendable = (ymd: string, over: Partial<RecapToday> = {}): RecapToday => ({
   kind: 'recap-today', ymd, status: 'sent', dryRun: false, sendable: true, text: SENTINEL, ...over,
 });
@@ -491,6 +492,59 @@ describe('startRecapTick', () => {
     await vi.runAllTimersAsync();
     await first;
     expect(s.sendText).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsub then sub the same day: no second send, and a send again tomorrow (M5)', async () => {
+    vi.useFakeTimers();
+    const t = makeTrace();
+    const subs = memoryRecapSubs();
+    const deps = {
+      fetchFn: vi.fn() as AnyMock, groups: new Map([[GROUP, 'l']]), url: 'u', token: 't',
+      screenshot: vi.fn(), sendImage: vi.fn() as AnyMock, sendText: vi.fn().mockResolvedValue(undefined) as AnyMock,
+      log: vi.fn() as AnyMock, trace: () => t.trace, dmTarget: vi.fn(async (id: string) => id) as AnyMock,
+      recapSubs: subs, playerThrottle: new Map<string, number>(),
+    };
+    let now = la('2026-11-07', '09:00');
+    const sendText = vi.fn().mockResolvedValue(undefined) as AnyMock;
+    const tick = startRecapTick({
+      subs, fetchRecapToday: async () => sendable(laNowYmd(now)), sendText, isEnabled: () => true,
+      isPreviewPerson: () => true, now: () => now, log: vi.fn(), trace: () => t.trace, autoStart: false,
+    });
+    const run = async () => { const p = tick.tick(); await vi.runAllTimersAsync(); await p; };
+    await runCatchMeUp(makeMsg(), deps, SUB);
+    await run();
+    expect(sendText).toHaveBeenCalledTimes(1);
+    await runCatchMeUp(makeMsg(), deps, UNSUB);
+    expect(subs.get(KEY)).toBeUndefined();
+    await runCatchMeUp(makeMsg(), deps, SUB);
+    now = la('2026-11-07', '09:05');
+    await run();
+    expect(sendText).toHaveBeenCalledTimes(1);
+    now = la('2026-11-08', '09:00');
+    await run();
+    expect(sendText).toHaveBeenCalledTimes(2);
+  });
+
+  it('a tick that crosses LA midnight stops before sending yesterday', async () => {
+    vi.useFakeTimers();
+    const s = tickSetup({
+      subs: [['a@lid', { time: '23:00', league: 'l' }], ['b@lid', { time: '23:00', league: 'l' }]],
+      now: la('2026-11-07', '23:59'),
+      recap: sendable('2026-11-07'),
+    });
+    // The first send lands, then the clock crosses midnight during the spacing wait.
+    s.sendText.mockImplementation(async () => { s.sendAt.push(Date.now()); s.setNow(la('2026-11-08', '00:00')); });
+    await runTick(s);
+    expect(s.sendText).toHaveBeenCalledTimes(1);
+    expect(s.subs.get('b@lid')?.lastSentYmd).toBeUndefined();
+  });
+
+  it('the tick log counts real sends only', async () => {
+    vi.useFakeTimers();
+    const s = tickSetup({ subs: [['a@lid', { time: '07:00', league: 'l' }]], now: la('2026-11-07', '09:00') });
+    s.subs.set = () => { throw new Error('EACCES'); };
+    await runTick(s);
+    expect(s.log.mock.calls.some((c) => String(c[0]).includes('sent'))).toBe(false);
   });
 
   it('midnight rollover', async () => {
