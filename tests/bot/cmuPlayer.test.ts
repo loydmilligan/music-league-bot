@@ -10,6 +10,9 @@ import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/b
 import { openDb } from '../../src/storage/db.js';
 import { createPromptTables } from '../../src/chat/prompts/store.js';
 import { rulesConfigSchema } from '../../src/config/types.js';
+import { FOOTER_PLAYER, FOOTER_RECAP, FOOTER_RETRY } from '../../src/bot/messageFrame.js';
+import { followUpText } from '../../src/bot/cmuFollowUp.js';
+import { menuHeading, playerMenu } from '../../src/bot/cmuMenu.js';
 
 const GROUP = '120363000000000001@g.us';
 const AUTHOR = '100000000000001@lid';
@@ -66,7 +69,8 @@ const images = (n: number) => Array.from({ length: n }, (_, i) => ({ caption: `c
 describe('isPlayerKind', () => {
   it('covers the player and recap-* kinds only', () => {
     for (const k of [TOP, { kind: 'pick' }, { kind: 'topics' }, { kind: 'topic', n: 2 }, { kind: 'dossier' },
-      { kind: 'recap-sub' }, { kind: 'recap-unsub' }, { kind: 'recap-time', time: '08:00' }, { kind: 'recap-time-bad' }] as CmuCommand[]) {
+      { kind: 'recap-sub' }, { kind: 'recap-unsub' }, { kind: 'recap-time', time: '08:00' }, { kind: 'recap-time-bad' },
+      { kind: 'recap7' }] as CmuCommand[]) {
       expect(isPlayerKind(k)).toBe(true);
     }
     for (const k of [{ kind: 'catchup' }, { kind: 'help' }, { kind: 'recap' }, { kind: 'off' }] as CmuCommand[]) {
@@ -259,5 +263,119 @@ describe('handleMessage with a player command in the group', () => {
     expect(s.deps.sendText).not.toHaveBeenCalled();
     expect(s.deps.sendImage).not.toHaveBeenCalled();
     expect(s.ends()).toEqual([]);
+  });
+});
+
+// ── Sprint 4 Task 6: framed player replies and recap7 ──────────────────────────────
+const FORMAT = memoryCmuPreview([], [], [], [GROUP]);
+const dmMsg = () => Object.assign(makeMsg(), { previewPerson: true, via: 'dm' as const });
+
+describe('player replies framed', () => {
+  it('ON: name per kind, the 48 h / 7 days fact for top, FOOTER_PLAYER; image captions untouched', async () => {
+    const s = setup({ kind: 'top', text: 'x', images: images(2) }, { preview: FORMAT });
+    await runCatchMeUp(dmMsg(), s.deps, TOP);
+    expect(s.deps.sendText.mock.calls[0][1]).toBe(`── Top Songs ──\nlast 48 h\nx\n──────────\n${FOOTER_PLAYER}`);
+    expect(s.deps.sendImage.mock.calls.map((c) => c[2])).toEqual(['cap 0', 'cap 1']);
+
+    const w = setup({ kind: 'top', text: 'y', images: [] }, { preview: FORMAT });
+    await runCatchMeUp(dmMsg(), w.deps, { kind: 'top', list: 'pics', days: 7 });
+    expect(w.deps.sendText.mock.calls[0][1]).toBe(`── Top Pics ──\nlast 7 days\ny\n──────────\n${FOOTER_PLAYER}`);
+
+    for (const [cmd, name] of [
+      [{ kind: 'topic', n: 3 }, 'Topic 3'], [{ kind: 'topics' }, 'Topics'], [{ kind: 'pick' }, 'Pick One'], [{ kind: 'dossier' }, 'My Dossier'],
+    ] as Array<[CmuCommand, string]>) {
+      const t = setup({ kind: cmd.kind, text: 'z' }, { preview: FORMAT });
+      await runCatchMeUp(dmMsg(), t.deps, cmd);
+      expect(t.deps.sendText.mock.calls[0][1]).toBe(`── ${name} ──\nz\n──────────\n${FOOTER_PLAYER}`);
+    }
+  });
+
+  it('OFF: byte-identical text without format, and without the person gate', async () => {
+    const a = setup({ kind: 'top', text: 'x', images: [] }, { preview: memoryCmuPreview([GROUP], [AUTHOR]) });
+    await runCatchMeUp(dmMsg(), a.deps, TOP);
+    expect(a.deps.sendText.mock.calls[0][1]).toBe('x');
+    const b = setup({ kind: 'top', text: 'x', images: [] }, { preview: FORMAT });
+    await runCatchMeUp(makeMsg(), b.deps, TOP);
+    expect(b.deps.sendText.mock.calls[0][1]).toBe('x');
+  });
+
+  it('ON: empty detection reads the unframed body', async () => {
+    for (const text of ['Dead chat. Nothing to rank.', 'You were in every conversation.']) {
+      const s = setup({ kind: 'topics', text }, { preview: FORMAT });
+      await runCatchMeUp(dmMsg(), s.deps, { kind: 'topics' });
+      expect(s.ends()).toEqual(['empty']);
+      expect(s.deps.sendText.mock.calls[0][1]).toBe(`── Topics ──\n${text}\n──────────\n${FOOTER_PLAYER}`);
+    }
+  });
+
+  it('failure ON: the kind name with FOOTER_RETRY; OFF: the old line', async () => {
+    const on = setup(undefined, { preview: FORMAT });
+    on.deps.fetchFn.mockResolvedValue(json(500, {}));
+    await runCatchMeUp(dmMsg(), on.deps, TOP);
+    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Top Songs ──\n${PLAYER_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+    const off = setup();
+    off.deps.fetchFn.mockResolvedValue(json(500, {}));
+    await runCatchMeUp(dmMsg(), off.deps, TOP);
+    expect(off.deps.sendText.mock.calls).toEqual([[AUTHOR, PLAYER_FAILURE_TEXT]]);
+  });
+});
+
+describe('recap7', () => {
+  const RECAP7: CmuCommand = { kind: 'recap7' };
+  const LINES = ['SYNTHETIC-STAT-1', 'SYNTHETIC-STAT-2'];
+  const AT_FACT = 'last 7 days · to 10:30'; // AT = 18:30Z, PST
+
+  it('ON with lines: POST mode followup via dm; the framed Recap with Morning Brief words; outcome recap7', async () => {
+    const s = setup({ kind: 'followup', lines: LINES }, {
+      preview: memoryCmuPreview([], [AUTHOR], [], [GROUP]),
+      recapSubscription: () => ({ subscribed: true, time: '07:30' }),
+    });
+    const msg = dmMsg();
+    await runCatchMeUp(msg, s.deps, RECAP7);
+    expect(s.body()).toMatchObject({ mode: 'followup', via: 'dm', league: 'league-x', requesterKey: AUTHOR });
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    const body = followUpText({ lines: LINES, sub: { subscribed: true, time: '07:30' }, heading: menuHeading(true), menu: playerMenu(true), briefWords: true });
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Recap ──\n${AT_FACT}\n${body}\n──────────\n${FOOTER_RECAP}`]]);
+    expect(body).toContain('Morning Brief: on, 7:30 AM.');
+    expect(s.ends()).toEqual(['recap7']);
+    expect(JSON.stringify(s.events)).not.toContain('SYNTHETIC-STAT');
+  });
+
+  it('ON without lines: "No stats for you in the last 7 days yet." framed, same footer', async () => {
+    const s = setup({ kind: 'followup', lines: [] }, { preview: FORMAT });
+    await runCatchMeUp(dmMsg(), s.deps, RECAP7);
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Recap ──\n${AT_FACT}\nNo stats for you in the last 7 days yet.\n──────────\n${FOOTER_RECAP}`]]);
+    expect(s.ends()).toEqual(['recap7']);
+  });
+
+  it('OFF (no format): the same body, unframed', async () => {
+    const s = setup({ kind: 'followup', lines: [] });
+    await runCatchMeUp(dmMsg(), s.deps, RECAP7);
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, 'No stats for you in the last 7 days yet.']]);
+  });
+
+  it('60 s cooldown keyed recap7: ⏳ the second time, other commands free, free again after 60 s', async () => {
+    let now = 1_000_000;
+    const s = setup({ kind: 'followup', lines: LINES }, { preview: FORMAT, now: () => now });
+    await runCatchMeUp(dmMsg(), s.deps, RECAP7);
+    const again = dmMsg();
+    await runCatchMeUp(again, s.deps, RECAP7);
+    expect(again.react.mock.calls).toEqual([['⏳']]);
+    expect(s.deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(s.ends()).toEqual(['recap7', 'throttled']);
+    expect([...s.deps.playerThrottle.keys()]).toEqual([`${AUTHOR}|recap7`]);
+    now += 60_000;
+    const later = dmMsg();
+    await runCatchMeUp(later, s.deps, RECAP7);
+    expect(later.react).toHaveBeenCalledWith('👍');
+    expect(s.deps.fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('a bad body: framed failure with FOOTER_RETRY, never a catch-up', async () => {
+    const s = setup({ kind: 'quiet', text: 'x' }, { preview: FORMAT });
+    await runCatchMeUp(dmMsg(), s.deps, RECAP7);
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Recap ──\n${PLAYER_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+    expect(s.deps.screenshot).not.toHaveBeenCalled();
+    expect(s.ends()).toEqual(['failed']);
   });
 });

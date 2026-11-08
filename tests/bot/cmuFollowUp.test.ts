@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { recapLine, followUpText } from '../../src/bot/cmuFollowUp.js';
+import { recapLine, followUpText, recapFact } from '../../src/bot/cmuFollowUp.js';
 import { memoryRecapSubs, recapSubscription, setRecapSubsForTest } from '../../src/bot/recapSubs.js';
 import { MENU_HEADING, playerMenu } from '../../src/bot/cmuMenu.js';
 
@@ -68,5 +68,34 @@ describe('seed values', () => {
     } finally {
       setRecapSubsForTest(undefined);
     }
+  });
+});
+
+describe('Morning Brief words (briefWords)', () => {
+  const BRIEF_TAIL = 'Change: morning-brief unsub · morning-brief 7:30';
+  it('recapLine on/off/no time', () => {
+    expect(recapLine({ subscribed: true, time: '07:30' }, true)).toBe(`Morning Brief: on, 7:30 AM. ${BRIEF_TAIL}`);
+    expect(recapLine({ subscribed: true }, true)).toBe(`Morning Brief: on. ${BRIEF_TAIL}`);
+    expect(recapLine({ subscribed: false }, true)).toBe('Morning Brief: off. Get it in your DMs: morning-brief sub');
+    expect(recapLine(undefined, true)).toBeUndefined();
+  });
+  it('OFF: the default and briefWords false are byte-identical to today', () => {
+    expect(recapLine({ subscribed: true, time: '07:30' }, false)).toBe(`Morning recap: on, 7:30 AM. ${TAIL}`);
+    expect(followUpText({ lines: ['a'], sub: { subscribed: false }, briefWords: false }))
+      .toBe(followUpText({ lines: ['a'], sub: { subscribed: false } }));
+  });
+  it('followUpText switches only the recap line', () => {
+    const t = followUpText({ lines: ['a'], sub: { subscribed: false }, briefWords: true });
+    expect(t).toBe(followUpText({ lines: ['a'], sub: { subscribed: false } }).replace(
+      recapLine({ subscribed: false })!, recapLine({ subscribed: false }, true)!,
+    ));
+  });
+});
+
+describe('recapFact', () => {
+  it('last 7 days · to HH:MM, LA 24 h', () => {
+    expect(recapFact('2026-11-06T21:05:00.000Z')).toBe('last 7 days · to 13:05');
+    expect(recapFact('2026-11-07T08:00:00.000Z')).toBe('last 7 days · to 00:00');
+    expect(recapFact('2026-07-01T19:30:00.000Z')).toBe('last 7 days · to 12:30');
   });
 });

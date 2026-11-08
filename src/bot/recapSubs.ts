@@ -2,7 +2,8 @@ import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'n
 import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import type { CmuCommand } from './cmuCommand.js';
-import { CMU_ACK_EMOJI, CMU_FAILURE_DM_TIMEOUT_MS, CmuHttpError, describeError, msSince, react, timed, withDeadline } from './catchMeUp.js';
+import { CMU_ACK_EMOJI, CMU_FAILURE_DM_TIMEOUT_MS, CmuHttpError, describeError, framing, msSince, react, timed, withDeadline } from './catchMeUp.js';
+import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage } from './messageFrame.js';
 import type { CmuDeps, CmuMessage, SafeTrace } from './catchMeUp.js';
 import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
 import { formatTime } from './cmuFollowUp.js';
@@ -38,6 +39,11 @@ export const RECAP_OFF_TEXT = 'Morning recap: off.';
 export const RECAP_BAD_TIME_TEXT = 'Try "morning-recap 7:30".';
 export const recapOnText = (time: string): string =>
   `Morning recap: on, ${formatTime(time) ?? time} (LA). morning-recap unsub to stop.`;
+/** Sprint 4 (framing only): the same replies in Morning Brief words. */
+export const BRIEF_OFF_TEXT = 'Morning Brief: off.';
+export const BRIEF_BAD_TIME_TEXT = 'Try "morning-brief 7:30".';
+export const briefOnText = (time: string): string =>
+  `Morning Brief: on, ${formatTime(time) ?? time} (LA). morning-brief unsub to stop.`;
 
 export function recapSubsPath(): string {
   return path.resolve(process.env.DATA_DIR ?? 'data', 'recap-subs.json');
@@ -194,11 +200,13 @@ export async function runRecapCommand(msg: CmuMessage, deps: CmuDeps, cmd: Recap
 
   let outcome = 'failed';
   let error: string | undefined;
+  // Sprint 4: framed, in Morning Brief words, behind the person gate plus format.
+  const frame = framing(deps, msg.from, msg.previewPerson === true);
   try {
     await react(msg, CMU_ACK_EMOJI, deps, trace);
     let reply: string;
     if (cmd.kind === 'recap-time-bad') {
-      reply = RECAP_BAD_TIME_TEXT;
+      reply = frame ? BRIEF_BAD_TIME_TEXT : RECAP_BAD_TIME_TEXT;
       outcome = 'recap-time-bad';
     } else {
       const key = await recapKey(msg.author, deps);
@@ -211,12 +219,12 @@ export async function runRecapCommand(msg: CmuMessage, deps: CmuDeps, cmd: Recap
           const league = deps.groups.get(msg.from) ?? servedLeague(deps.groups) ?? existing?.league;
           if (cmd.kind === 'recap-unsub') {
             subs.delete(key);
-            reply = RECAP_OFF_TEXT;
+            reply = frame ? BRIEF_OFF_TEXT : RECAP_OFF_TEXT;
             outcome = 'recap-unsub';
           } else if (league) {
             const time = cmd.kind === 'recap-time' ? cmd.time : existing?.time ?? RECAP_DEFAULT_TIME;
             subs.set(key, { ...existing, time, league });
-            reply = recapOnText(time);
+            reply = frame ? briefOnText(time) : recapOnText(time);
             outcome = cmd.kind;
           } else {
             error = 'NoLeague';
@@ -229,8 +237,15 @@ export async function runRecapCommand(msg: CmuMessage, deps: CmuDeps, cmd: Recap
         error = 'NoKey';
       }
     }
+    const text = frame
+      ? frameMessage({
+        name: MESSAGE_NAMES.morningBriefSettings,
+        body: reply,
+        footer: reply === RECAP_STORE_FAILURE_TEXT ? FOOTER_RETRY : FOOTER_PLAYER,
+      })
+      : reply;
     try {
-      await timed(trace, 'text-dm', () => deps.sendText(msg.author, reply));
+      await timed(trace, 'text-dm', () => deps.sendText(msg.author, text));
     } catch (err) {
       deps.log(`[cmu] recap reply failed in ${msg.from}: ${describeError(err)}`);
     }
@@ -302,6 +317,8 @@ export interface RecapTickDeps {
   isEnabled: () => boolean;
   /** G4: only preview people get recap DMs. Throwing counts as no. */
   isPreviewPerson: (key: string) => boolean;
+  /** S5: frame the Morning Brief DM when this league has a CMU_GROUPS group in `format`. Absent or throwing means no. */
+  isFormatLeague?: (league: string) => boolean;
   now?: () => Date;
   log(line: string): void;
   trace: () => InteractionTrace;
@@ -359,8 +376,11 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
     }));
     const t0 = performance.now();
     lastSendAt = Date.now();
+    const out = safeBool(() => deps.isFormatLeague?.(league) === true)
+      ? frameMessage({ name: MESSAGE_NAMES.morningBrief, body: text, footer: FOOTER_MORNING })
+      : text;
     try {
-      await withDeadline(Promise.resolve().then(() => deps.sendText(key, text)), CMU_FAILURE_DM_TIMEOUT_MS);
+      await withDeadline(Promise.resolve().then(() => deps.sendText(key, out)), CMU_FAILURE_DM_TIMEOUT_MS);
       safe(() => raw.step('text-dm', { ok: true, ms: msSince(t0) }));
       safe(() => raw.end('recap-dm'));
       return true;

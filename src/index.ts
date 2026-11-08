@@ -183,6 +183,9 @@ client.on('ready', () => {
       sendText: makeSendTextTo(client),
       isEnabled: () => cmuSwitch.isEnabled(),
       isPreviewPerson: (key) => cmuPreview.isPreviewPerson(key),
+      // S5: framed when any CMU_GROUPS group of the sub's league is in `format`.
+      isFormatLeague: (league) =>
+        [...cmuGroups].some(([group, l]) => l === league && cmuPreview.isFormatPreview?.(group) === true),
       log: (line) => console.log(line),
       trace: () => interactionLog.begin('cmu'),
     });

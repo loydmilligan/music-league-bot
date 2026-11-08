@@ -8,6 +8,7 @@ import { MENU_HEADING } from '../../src/bot/cmuMenu.js';
 import { ensureSeenTables } from '../../src/storage/reactionsDb.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import type { WhatsAppMessage } from '../../src/bot/handler.js';
+import { memoryRecapSubs } from '../../src/bot/recapSubs.js';
 
 // Synthetic ids only.
 const GROUP_A = '120363000000000001@g.us';
@@ -42,7 +43,7 @@ function leagueDb(rows: Array<{ chat: string; author: string; ago: number }> = [
   return db;
 }
 
-function setup(o: { people?: string[]; groups?: string[]; db?: Database.Database; enabled?: boolean; owner?: string } = {}) {
+function setup(o: { people?: string[]; groups?: string[]; format?: string[]; db?: Database.Database; enabled?: boolean; owner?: string } = {}) {
   const events: Array<{ ev: string; name?: string; f?: Record<string, unknown> }> = [];
   const trace: InteractionTrace = {
     id: 'abcdef012345',
@@ -56,6 +57,7 @@ function setup(o: { people?: string[]; groups?: string[]; db?: Database.Database
     if (b.mode === 'status') return json(200, { kind: 'status', used: 1, limit: 3 });
     if (b.mode === 'top') return json(200, { kind: 'top', text: 'SYNTHETIC-TOP', images: [] });
     if (b.mode === 'recap') return json(200, { kind: 'recap', text: 'SYNTHETIC-RECAP' });
+    if (b.mode === 'followup') return json(200, { kind: 'followup', lines: ['SYNTHETIC-STAT'] });
     return json(200, { kind: 'quiet', text: 'SYNTHETIC-QUIET', followUp: { lines: [] } });
   }) as AnyMock;
   const sendText = vi.fn().mockResolvedValue(undefined) as AnyMock;
@@ -78,7 +80,8 @@ function setup(o: { people?: string[]; groups?: string[]; db?: Database.Database
     trace: () => trace,
     isOwner: async (a) => (ID_MAP[a] ?? a) === owner,
     cmuSwitch,
-    preview: memoryCmuPreview(o.groups ?? [], o.people ?? [PERSON_LID]),
+    preview: memoryCmuPreview(o.groups ?? [], o.people ?? [PERSON_LID], [], o.format ?? []),
+    recapSubs: memoryRecapSubs(),
     playerThrottle: new Map(),
     helpThrottle: new Map(),
     helpCooldown: { min: 5 },
@@ -398,5 +401,68 @@ describe('menu heading per recipient', () => {
     const text = String(t.sendText.mock.calls[0][1]);
     expect(text).not.toContain(DM_HEADING);
     expect(text).toContain('Catch-up bot — what you can ask');
+  });
+});
+
+// ── Sprint 4 Task 6: recap7 and the morning-brief words behind the format gate (S2) ──────────
+describe('handleCmuDm format gate', () => {
+  it('recap7 resolved to a format group is handled: followup POST, framed Recap', async () => {
+    const s = setup({ format: [GROUP_A] });
+    const msg = dm('recap7');
+    expect(await handleCmuDm(msg, s.deps)).toBe(true);
+    expect(s.bodies()).toHaveLength(1);
+    expect(s.bodies()[0]).toMatchObject({ mode: 'followup', via: 'dm' });
+    expect(String(s.sendText.mock.calls[0][1]).startsWith('── Recap ──\n')).toBe(true);
+    expect(s.ends()).toEqual(['recap7']);
+    expect(s.starts()[0]).toMatchObject({ command: 'recap7', via: 'dm' });
+  });
+
+  it('recap7 resolved to a non-format group is not handled: no react, fetch, send or trace', async () => {
+    for (const o of [{}, { format: [GROUP_B] }]) {
+      const s = setup(o);
+      for (const t of ['recap7', 'recap 7', 'recap-7']) {
+        const msg = dm(t);
+        expect(await handleCmuDm(msg, s.deps)).toBe(false);
+        expect(msg.react).not.toHaveBeenCalled();
+      }
+      expect(s.fetchFn).not.toHaveBeenCalled();
+      expect(s.sendText).not.toHaveBeenCalled();
+      expect(s.events).toEqual([]);
+    }
+  });
+
+  it('recap7 from someone with no resolved group is not handled and leaves no trace', async () => {
+    const s = setup({ format: [GROUP_A], db: leagueDb([]) });
+    expect(await handleCmuDm(dm('recap7'), s.deps)).toBe(false);
+    expect(s.events).toEqual([]);
+  });
+
+  it('morning-brief sub resolved to a format group is handled, framed with Morning Brief words', async () => {
+    const s = setup({ format: [GROUP_A] });
+    const msg = dm('Morning-Brief sub');
+    expect(await handleCmuDm(msg, s.deps)).toBe(true);
+    expect(s.sendText.mock.calls[0][1]).toBe(
+      '── Morning Brief Settings ──\nMorning Brief: on, 8:00 AM (LA). morning-brief unsub to stop.\n──────────\nDM me "help" for more commands.',
+    );
+  });
+
+  it('morning-brief words resolved to a non-format group are not handled', async () => {
+    const s = setup();
+    for (const t of ['morning-brief sub', 'morning brief unsub', 'morningbrief 7:30', 'morning-brief time 7:30', 'morning-brief 99:99']) {
+      const msg = dm(t);
+      expect(await handleCmuDm(msg, s.deps)).toBe(false);
+      expect(msg.react).not.toHaveBeenCalled();
+    }
+    expect(s.sendText).not.toHaveBeenCalled();
+    expect(s.events).toEqual([]);
+  });
+
+  it('old morning-recap sub in a non-format group behaves exactly as today', async () => {
+    const s = setup();
+    const msg = dm('morning-recap sub');
+    expect(await handleCmuDm(msg, s.deps)).toBe(true);
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    expect(s.sendText.mock.calls).toEqual([[PERSON_CUS, 'Morning recap: on, 8:00 AM (LA). morning-recap unsub to stop.']]);
+    expect(s.ends()).toEqual(['recap-sub']);
   });
 });

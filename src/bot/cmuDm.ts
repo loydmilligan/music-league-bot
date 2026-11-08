@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { parseCmuCommand } from './cmuCommand.js';
+import { parseCmuCommand, stripMentionAndFiller, type CmuCommand } from './cmuCommand.js';
 import {
   CMU_OWNER_TIMEOUT_MS,
   commandLabel,
@@ -67,6 +67,24 @@ async function safeOwner(deps: CmuDeps, id: string): Promise<boolean> {
   }
 }
 
+/**
+ * Sprint 4 (S2): commands that exist only behind the `format` allowlist: `recap7`, and the new
+ * `morning-brief …` words (the old `morning-recap …` words work everywhere).
+ */
+function formatOnly(cmd: CmuCommand, body: string): boolean {
+  if (cmd.kind === 'recap7') return true;
+  if (cmd.kind !== 'recap-sub' && cmd.kind !== 'recap-unsub' && cmd.kind !== 'recap-time' && cmd.kind !== 'recap-time-bad') return false;
+  return /^morning[- ]?brief\b/.test(stripMentionAndFiller(body));
+}
+
+function isFormatGroup(deps: CmuDeps, group: string): boolean {
+  try {
+    return deps.preview?.isFormatPreview?.(group) === true;
+  } catch {
+    return false;
+  }
+}
+
 /** True when the DM was a command and was handled; false sends it on to prompt answers. */
 export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promise<boolean> {
   if (msg.fromMe || msg.from.endsWith('@g.us')) return false;
@@ -105,6 +123,9 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
     deps.log(`[cmu] dm group lookup failed: ${err instanceof Error ? err.name : 'error'}`);
     group = undefined;
   }
+  // S2: a format-only command is handled only when the resolved group is in `format`; otherwise
+  // (no group included) it falls through untraced, exactly as before it parsed.
+  if (formatOnly(cmd, msg.body) && !(group && isFormatGroup(deps, group))) return false;
   // The owner's recap needs no group of its own; any served group stands in for the league.
   if (!group && cmd.kind === 'recap') group = [...deps.groups].find(([, l]) => l === served)?.[0];
   if (!group) {

@@ -6,6 +6,8 @@ import { CmuHttpError, runCatchMeUp, type CmuMessage } from '../../src/bot/catch
 import type { CmuCommand } from '../../src/bot/cmuCommand.js';
 import { memoryCmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
+import { memoryCmuPreview } from '../../src/bot/cmuPreview.js';
+import { FOOTER_MORNING, FOOTER_PLAYER, FOOTER_RETRY } from '../../src/bot/messageFrame.js';
 import {
   RECAP_DM_SPACING_MS, RECAP_STORE_FAILURE_TEXT, makeFetchRecapToday, memoryRecapSubs, openRecapSubs,
   laNow, recapSubscription, servedLeague, setRecapSubsForTest, startRecapTick,
@@ -301,6 +303,7 @@ function tickSetup(o: {
   people?: string[];
   enabled?: boolean;
   sendText?: AnyMock;
+  isFormatLeague?: (league: string) => boolean;
 }) {
   const subs = memoryRecapSubs();
   for (const [k, s] of o.subs ?? []) subs.set(k, s);
@@ -323,6 +326,7 @@ function tickSetup(o: {
     log,
     trace: () => t.trace,
     autoStart: false,
+    ...(o.isFormatLeague ? { isFormatLeague: o.isFormatLeague } : {}),
   });
   return {
     subs, tick, fetchRecapToday, sendText, sendAt, log, ...t,
@@ -658,5 +662,73 @@ describe('startRecapTick', () => {
     expect(vi.getTimerCount()).toBe(1);
     h.stop();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+// ── Sprint 4 Task 6: Morning Brief settings replies and the framed Morning Brief DM ──────────
+describe('Morning Brief settings replies', () => {
+  const frame = (body: string, footer = FOOTER_PLAYER) => `── Morning Brief Settings ──\n${body}\n──────────\n${footer}`;
+  const dmMsg = () => Object.assign(makeMsg(), { previewPerson: true, via: 'dm' as const });
+
+  it('ON: framed, Morning Brief wording', async () => {
+    const s = cmdSetup({ preview: memoryCmuPreview([], [], [], [GROUP]) });
+    const msg = dmMsg();
+    await runCatchMeUp(msg, s.deps, SUB);
+    await runCatchMeUp(msg, s.deps, TIME_730);
+    await runCatchMeUp(msg, s.deps, UNSUB);
+    await runCatchMeUp(msg, s.deps, BAD_TIME);
+    expect(s.deps.sendText.mock.calls.map((c) => c[1])).toEqual([
+      frame('Morning Brief: on, 8:00 AM (LA). morning-brief unsub to stop.'),
+      frame('Morning Brief: on, 7:30 AM (LA). morning-brief unsub to stop.'),
+      frame('Morning Brief: off.'),
+      frame('Try "morning-brief 7:30".'),
+    ]);
+  });
+
+  it('ON: a store failure is framed with the retry footer', async () => {
+    const s = cmdSetup({ preview: memoryCmuPreview([], [], [], [GROUP]), dmTarget: vi.fn().mockRejectedValue(new Error('x')) });
+    await runCatchMeUp(dmMsg(), s.deps, SUB);
+    expect(s.deps.sendText.mock.calls[0][1]).toBe(frame(RECAP_STORE_FAILURE_TEXT, FOOTER_RETRY));
+  });
+
+  it('OFF: byte-identical (no format; or format without the person gate)', async () => {
+    for (const [preview, msg] of [
+      [memoryCmuPreview([GROUP], [AUTHOR]), dmMsg()],
+      [memoryCmuPreview([], [], [], [GROUP]), makeMsg()],
+    ] as const) {
+      const s = cmdSetup({ preview });
+      await runCatchMeUp(msg, s.deps, SUB);
+      await runCatchMeUp(msg, s.deps, TIME_730);
+      await runCatchMeUp(msg, s.deps, UNSUB);
+      await runCatchMeUp(msg, s.deps, BAD_TIME);
+      expect(s.deps.sendText.mock.calls.map((c) => c[1])).toEqual([ON_8, ON, OFF, BAD]);
+    }
+  });
+});
+
+describe('Morning Brief DM (tick)', () => {
+  afterEach(() => { vi.useRealTimers(); });
+  const FRAMED = `── Morning Brief ──\n${SENTINEL}\n──────────\n${FOOTER_MORNING}`;
+
+  it('ON: framed for a format league only', async () => {
+    vi.useFakeTimers();
+    const s = tickSetup({
+      subs: [['a@lid', { time: '07:00', league: 'fmt' }], ['b@lid', { time: '07:00', league: 'plain' }]],
+      now: la('2026-11-07', '09:00'),
+      recap: sendable('2026-11-07'),
+      isFormatLeague: (l) => l === 'fmt',
+    });
+    await runTick(s);
+    expect(s.sendText.mock.calls).toEqual([['a@lid', FRAMED], ['b@lid', SENTINEL]]);
+  });
+
+  it('OFF: no isFormatLeague dep, or a throwing one, sends the bare text', async () => {
+    for (const isFormatLeague of [undefined, () => { throw new Error('x'); }]) {
+      vi.useFakeTimers();
+      const s = tickSetup({ subs: [['a@lid', { time: '07:00', league: 'fmt' }]], now: la('2026-11-07', '09:00'), isFormatLeague });
+      await runTick(s);
+      expect(s.sendText.mock.calls).toEqual([['a@lid', SENTINEL]]);
+      vi.useRealTimers();
+    }
   });
 });

@@ -9,8 +9,9 @@ import { isPlayerKind, runPlayer } from './cmuPlayer.js';
 import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 import type { CmuPreview } from './cmuPreview.js';
-import { followUpText } from './cmuFollowUp.js';
-import { menuHeading, playerMenu } from './cmuMenu.js';
+import { followUpText, recapFact } from './cmuFollowUp.js';
+import { didYouKnow, menuHeading, playerMenu } from './cmuMenu.js';
+import { FOOTER_RECAP, FOOTER_RETRY, MESSAGE_NAMES, dailyCountFact, frameCaption, frameMessage, lastVisitFact } from './messageFrame.js';
 import type { RecapSub, RecapSubs } from './recapSubs.js';
 
 /**
@@ -156,6 +157,28 @@ export function commandLabel(cmd: CmuCommand): string {
 }
 
 /**
+ * Sprint 4 (S2/S3): frame this message only when its existing gate is open AND `group` is in the
+ * `format` allowlist. A missing gate, a missing method or a throw means no (fail closed).
+ */
+export function framing(deps: CmuDeps, group: string, existingGate: boolean): boolean {
+  if (!existingGate) return false;
+  try {
+    return deps.preview?.isFormatPreview?.(group) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** The Catchup / Not Much Happened facts, in order; only the ones companelist gave. */
+function catchupFacts(meta: { used?: number; limit?: number; windowStart?: string; windowReason?: string }, full: boolean): string[] {
+  const facts: string[] = [];
+  const count = dailyCountFact({ used: meta.used, limit: meta.limit, full });
+  if (count !== undefined) facts.push(count);
+  facts.push(lastVisitFact({ windowStart: meta.windowStart, windowReason: meta.windowReason }));
+  return facts;
+}
+
+/**
  * The interaction trace as used here: every call is swallowed, so a broken
  * log can never change what the requester gets. Steps carry no message text.
  */
@@ -204,7 +227,7 @@ interface Delivered {
 type Outcome = 'card' | 'card-partial' | 'quiet' | 'limit' | 'failed' | 'unsupported';
 
 /** Optional display fields companelist adds to a 200 (Task 1); absent on older versions. */
-function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null; topicIds?: string[]; captionTopicIds?: string[] } {
+function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; windowReason?: string; person?: string | null; topicIds?: string[]; captionTopicIds?: string[]; used?: number; limit?: number } {
   const m = data && typeof data === 'object' ? (data as Record<string, unknown>).meta : undefined;
   if (!m || typeof m !== 'object') return {};
   const r = m as Record<string, unknown>;
@@ -215,6 +238,8 @@ function parseMeta(data: unknown): { costUsd?: number; windowStart?: string; win
     person: typeof r.person === 'string' || r.person === null ? (r.person as string | null) : undefined,
     topicIds: stringArray(r.topicIds),
     captionTopicIds: stringArray(r.captionTopicIds),
+    used: typeof r.used === 'number' ? r.used : undefined,
+    limit: typeof r.limit === 'number' ? r.limit : undefined,
   };
 }
 
@@ -400,9 +425,11 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     const state = { imageSent: false, pngPath: null as string | null };
     // D19: caption and follow-up only in preview; a throwing check counts as not in preview.
     const inPreview = safeCall(() => deps.preview?.isPreview(group)) === true || msg.previewPerson === true;
+    // Sprint 4: the frame needs the same gate plus the format allowlist.
+    const frame = framing(deps, group, inPreview);
     let delivered: Delivered | undefined;
     try {
-      delivered = await withDeadline(deliver(msg, deps, state, trace, cmd.kind === 'full', inPreview), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      delivered = await withDeadline(deliver(msg, deps, state, trace, cmd.kind === 'full', inPreview, frame), deps.deadlineMs ?? CMU_DEADLINE_MS);
       outcome = delivered.outcome;
     } catch (err) {
       if (state.imageSent) {
@@ -416,7 +443,9 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
       const t0 = performance.now();
       try {
         await withDeadline(
-          deps.sendText(msg.author, CMU_FAILURE_TEXT),
+          deps.sendText(msg.author, frame
+            ? frameMessage({ name: MESSAGE_NAMES.catchup, body: CMU_FAILURE_TEXT, footer: FOOTER_RETRY })
+            : CMU_FAILURE_TEXT),
           deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
         );
         trace.step('failure-dm', { ok: true, ms: msSince(t0) });
@@ -431,7 +460,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
     }
     // Outside the main deadline: the requester already has their answer, so this never changes the outcome.
     if (delivered?.followUp && (outcome === 'card' || outcome === 'quiet')) {
-      await sendFollowUp(msg, deps, delivered.requesterKey, delivered.followUp, trace);
+      await sendFollowUp(msg, deps, delivered.requesterKey, delivered.followUp, trace, frame);
     }
   } finally {
     safeCall(() => raw.end(outcome, error ? { error } : undefined));
@@ -445,6 +474,7 @@ async function deliver(
   trace: SafeTrace,
   full = false,
   inPreview = false,
+  frame = false,
 ): Promise<Delivered> {
   const group = msg.from;
   const nameT0 = performance.now();
@@ -465,7 +495,7 @@ async function deliver(
       body: JSON.stringify({
         notifyName, requestAt: msg.capturedAt, league, requesterKey,
         ...(full ? { mode: 'full' } : {}),
-        ...(inPreview ? { accepts: ['followUp'] } : {}),
+        ...(inPreview ? { accepts: frame ? ['followUp', 'frame'] : ['followUp'] } : {}),
         // C-DM2: companelist records a DM catch-up as its own request kind.
         ...(msg.via === 'dm' ? { via: 'dm' } : {}),
       }),
@@ -493,13 +523,26 @@ async function deliver(
     return { outcome: 'limit', requesterKey };
   }
   if (!result) throw new Error('BadResponse'); // unreachable: narrowed above
-  const { topicIds: metaTopicIds, captionTopicIds, ...displayMeta } = parseMeta(data);
+  // used/limit feed the frame only; the trace step keeps today's fields.
+  const { topicIds: metaTopicIds, captionTopicIds, used, limit, ...displayMeta } = parseMeta(data);
+  // Sprint 4: the frame's facts and its "Did you know?" tip (DM commands only for a preview person).
+  const framed = (name: string, body: string, caption: boolean): string => {
+    const dmOk = safeCall(() => deps.preview?.isPreviewPerson(requesterKey)) === true;
+    const o = {
+      name,
+      facts: catchupFacts({ used, limit, windowStart: displayMeta.windowStart, windowReason: displayMeta.windowReason }, full),
+      body,
+      footer: didYouKnow({ dmOk, exclude: CMU_COMMAND }),
+    };
+    return caption ? frameCaption(o) : frameMessage(o);
+  };
   // Outside preview the response's followUp is dropped, so there is never a follow-up there.
   const followUp = inPreview ? result.followUp : undefined;
   trace.step('companelist', { ok: true, ms: msSince(fetchT0), status, result: result.kind, ...displayMeta });
 
   if (result.kind === 'quiet') {
-    await timed(trace, 'quiet-dm', () => deps.sendText(msg.author, result.text));
+    const text = frame ? framed(MESSAGE_NAMES.quiet, result.text, false) : result.text;
+    await timed(trace, 'quiet-dm', () => deps.sendText(msg.author, text));
     deps.log(`[cmu] quiet sent in ${group}`);
     return { outcome: 'quiet', requesterKey, followUp };
   }
@@ -524,7 +567,8 @@ async function deliver(
       const thumbBytes = shot && typeof shot.thumbBytes === 'number' ? shot.thumbBytes : undefined;
       trace.step('thumb', { ok: thumbBytes !== undefined, bytes: thumbBytes });
     }
-    const caption = inPreview && deps.useCaption !== false && card.caption ? card.caption : undefined;
+    const bare = inPreview && deps.useCaption !== false && card.caption ? card.caption : undefined;
+    const caption = bare && frame ? framed(MESSAGE_NAMES.catchup, bare, true) : bare;
     if (caption) {
       // One post: the caption carries the links, so there is no links DM.
       const topics = captionTopicIds ?? metaTopicIds ?? [];
@@ -550,7 +594,7 @@ async function deliver(
 }
 
 /** The daily follow-up DM: bounded on its own, logged and traced on failure, never rethrown. */
-async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string, followUp: FollowUp, trace: SafeTrace): Promise<void> {
+async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string, followUp: FollowUp, trace: SafeTrace, frame = false): Promise<void> {
   const t0 = performance.now();
   let ok = true;
   let dmOk = false;
@@ -558,7 +602,10 @@ async function sendFollowUp(msg: CmuMessage, deps: CmuDeps, requesterKey: string
     // G5: the recap line and the DM menu name player commands, so only a preview person sees them.
     dmOk = safeCall(() => deps.preview?.isPreviewPerson(requesterKey)) === true;
     const sub = dmOk ? safeCall(() => deps.recapSubscription?.(requesterKey)) : undefined;
-    const text = followUpText({ lines: followUp.lines, sub, heading: menuHeading(dmOk), menu: playerMenu(dmOk) });
+    const body = followUpText({ lines: followUp.lines, sub, heading: menuHeading(dmOk), menu: playerMenu(dmOk), ...(frame ? { briefWords: true } : {}) });
+    const text = frame
+      ? frameMessage({ name: MESSAGE_NAMES.recap, facts: [recapFact(msg.capturedAt)], body, footer: FOOTER_RECAP })
+      : body;
     await withDeadline(
       Promise.resolve().then(() => deps.sendText(msg.author, text)),
       deps.followUpTimeoutMs ?? CMU_FOLLOWUP_TIMEOUT_MS,

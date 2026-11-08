@@ -10,8 +10,11 @@ import {
   CMU_FAILURE_TEXT,
   CMU_TIMEOUT_MS,
   CMU_DEADLINE_MS,
+  framing,
   type CmuMessage,
 } from '../../src/bot/catchMeUp.js';
+import { FOOTER_RECAP, FOOTER_RETRY } from '../../src/bot/messageFrame.js';
+import { followUpText } from '../../src/bot/cmuFollowUp.js';
 import { helpBody, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
@@ -1860,5 +1863,122 @@ describe('didYouKnow', () => {
       expect(didYouKnow({ dmOk: true, exclude: 'recap7', random: () => i / 40 })).not.toContain('recap7');
       expect(didYouKnow({ dmOk: false, exclude: 'help', random: () => i / 40 })).not.toContain('@bot help');
     }
+  });
+});
+
+// ── Sprint 4 Task 6: the frame on Catchup caption, quiet, failure and Recap ─────────────
+describe('framing gate', () => {
+  it('true only when the existing gate is open and the group is in format', () => {
+    const on = { preview: memoryCmuPreview([], [], [], [GROUP]) } as unknown as Parameters<typeof framing>[0];
+    const off = { preview: memoryCmuPreview([GROUP]) } as unknown as Parameters<typeof framing>[0];
+    expect(framing(on, GROUP, true)).toBe(true);
+    expect(framing(on, GROUP, false)).toBe(false);
+    expect(framing(on, '120363000000000009@g.us', true)).toBe(false);
+    expect(framing(off, GROUP, true)).toBe(false);
+  });
+
+  it('fails closed: no gate, no method, or a throwing method', () => {
+    const none = {} as Parameters<typeof framing>[0];
+    const noMethod = { preview: { isPreview: () => true, isPreviewPerson: () => true } } as unknown as Parameters<typeof framing>[0];
+    const throwing = { preview: { isPreview: () => true, isPreviewPerson: () => true, isFormatPreview: () => { throw new Error('x'); } } } as unknown as Parameters<typeof framing>[0];
+    for (const d of [none, noMethod, throwing]) expect(framing(d, GROUP, true)).toBe(false);
+  });
+});
+
+describe('runCatchMeUp sprint 4 frame', () => {
+  const FORMAT = memoryCmuPreview([GROUP], [], [], [GROUP]);
+  const NO_FORMAT = memoryCmuPreview([GROUP]);
+  const META = { topicIds: ['m1'], captionTopicIds: ['m1'], used: 1, limit: 3, windowStart: '2026-11-06T04:40:00.000Z', windowReason: 'last-post' };
+  const tipGroup = () => didYouKnow({ dmOk: false, exclude: 'catch me up', random: () => 0 });
+  const tipDm = () => didYouKnow({ dmOk: true, exclude: 'catch me up', random: () => 0 });
+
+  it('caption ON: Catchup name, Daily Count, Last Visit, body, divider, a group tip; accepts frame', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const run = previewRun(captionCard({ meta: META }), { preview: FORMAT });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.body().accepts).toEqual(['followUp', 'frame']);
+    expect(run.deps.sendImage.mock.calls[0][2]).toBe(
+      `── Catchup ──\nDaily Count 1 of 3\nLast Visit = 11/05/2026 20:40\n${CAPTION}\n──────────\n${tipGroup()}`,
+    );
+    expect(tipGroup().startsWith('Did you know? @bot ')).toBe(true);
+    expect(run.deps.sendImage.mock.calls[0][2]).not.toContain('catch me up —');
+  });
+
+  it('caption ON: a preview person gets a DM tip; no used/limit means no Daily Count line', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const run = previewRun(captionCard({ meta: { windowReason: 'unknown-24h' } }), {
+      preview: memoryCmuPreview([GROUP], ['999@lid'], [], [GROUP]), dmTarget: vi.fn().mockResolvedValue('999@lid'),
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendImage.mock.calls[0][2]).toBe(
+      `── Catchup ──\nLast Visit = none (last 24 h)\n${CAPTION}\n──────────\n${tipDm()}`,
+    );
+  });
+
+  it('caption OFF: the caption is byte-identical and accepts has no frame', async () => {
+    const run = previewRun(captionCard({ meta: META }), { preview: NO_FORMAT });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.body().accepts).toEqual(['followUp']);
+    expect(run.deps.sendImage.mock.calls[0][2]).toBe(CAPTION);
+  });
+
+  it('caption OFF: format listed but the group is outside the existing gate → old path (no caption)', async () => {
+    const run = previewRun(captionCard({ meta: META }), { preview: memoryCmuPreview([], [], [], [GROUP]) });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.body()).not.toHaveProperty('accepts');
+    expect(run.deps.sendImage.mock.calls[0]).toHaveLength(2);
+    expect(run.deps.sendText).toHaveBeenCalledWith(AUTHOR, LINKS.join('\n'));
+  });
+
+  it('quiet ON: Not Much Happened, facts, body, a tip', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const run = previewRun({ kind: 'quiet', text: 'Not much happened.', meta: META }, { preview: FORMAT });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText.mock.calls[0][1]).toBe(
+      `── Not Much Happened ──\nDaily Count 1 of 3\nLast Visit = 11/05/2026 20:40\nNot much happened.\n──────────\n${tipGroup()}`,
+    );
+  });
+
+  it('quiet OFF: byte-identical', async () => {
+    const run = previewRun({ kind: 'quiet', text: 'Not much happened.', meta: META }, { preview: NO_FORMAT });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText.mock.calls[0][1]).toBe('Not much happened.');
+  });
+
+  it('failure ON: framed Catchup with the retry footer; OFF: the old line', async () => {
+    const on = previewRun({}, { preview: FORMAT });
+    on.deps.fetchFn.mockResolvedValue(jsonResponse(500, {}));
+    await runCatchMeUp(makeMsg(), on.deps);
+    expect(on.deps.sendText.mock.calls).toEqual([[AUTHOR, `── Catchup ──\n${CMU_FAILURE_TEXT}\n──────────\n${FOOTER_RETRY}`]]);
+
+    const off = previewRun({}, { preview: NO_FORMAT });
+    off.deps.fetchFn.mockResolvedValue(jsonResponse(500, {}));
+    await runCatchMeUp(makeMsg(), off.deps);
+    expect(off.deps.sendText.mock.calls).toEqual([[AUTHOR, CMU_FAILURE_TEXT]]);
+  });
+
+  it('Recap ON: name, "last 7 days · to hh:mm" (LA, 24 h, request time), Morning Brief words, FOOTER_RECAP', async () => {
+    const run = previewRun(captionCard({ meta: META, followUp: { lines: FOLLOW_LINES } }), {
+      preview: memoryCmuPreview([GROUP], ['999@lid'], [], [GROUP]), dmTarget: vi.fn().mockResolvedValue('999@lid'),
+      recapSubscription: () => ({ subscribed: false }),
+    });
+    await runCatchMeUp(makeMsg({ capturedAt: '2026-11-06T21:05:00.000Z' }), run.deps);
+    const text = run.deps.sendText.mock.calls[0][1] as string;
+    const body = followUpText({ lines: FOLLOW_LINES, sub: { subscribed: false }, heading: menuHeading(true), menu: playerMenu(true), briefWords: true });
+    expect(text).toBe(`── Recap ──\nlast 7 days · to 13:05\n${body}\n──────────\n${FOOTER_RECAP}`);
+    expect(text).toContain('Morning Brief: off. Get it in your DMs: morning-brief sub');
+    expect(text).not.toContain('morning-recap');
+  });
+
+  it('Recap OFF: byte-identical old follow-up', async () => {
+    const run = previewRun(captionCard({ meta: META, followUp: { lines: FOLLOW_LINES } }), {
+      preview: memoryCmuPreview([GROUP], ['999@lid']), dmTarget: vi.fn().mockResolvedValue('999@lid'),
+      recapSubscription: () => ({ subscribed: false }),
+    });
+    await runCatchMeUp(makeMsg(), run.deps);
+    expect(run.deps.sendText.mock.calls[0][1]).toBe(
+      followUpText({ lines: FOLLOW_LINES, sub: { subscribed: false }, heading: menuHeading(true), menu: playerMenu(true) }),
+    );
+    expect(run.deps.sendText.mock.calls[0][1]).toContain(OFF_LINE);
   });
 });
