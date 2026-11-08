@@ -473,10 +473,15 @@ describe('handleCmuDm format gate', () => {
     expect(await handleCmuDm(dm('recap7'), r7.deps)).toBe(false);
   });
 
-  it('morning-brief words with no resolved group are handled in a format league, framed', async () => {
+  it('morning-brief words from a sender with no resolved group are not handled, even in a format league', async () => {
     const s = setup({ format: [GROUP_A], db: leagueDb([]) });
-    expect(await handleCmuDm(dm('morning-brief sub'), s.deps)).toBe(true);
-    expect(String(s.sendText.mock.calls[0][1]).startsWith('── Morning Brief Settings ──\n')).toBe(true);
+    const msg = dm('morning-brief sub');
+    expect(await handleCmuDm(msg, s.deps)).toBe(false);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(s.sendText).not.toHaveBeenCalled();
+    expect(s.events).toEqual([]);
+    expect(s.deps.recapSubs!.get(PERSON_LID)).toBeUndefined();
+    expect(s.deps.recapSubs!.get(PERSON_CUS)).toBeUndefined();
   });
 
   it('a format group of another league does not open the morning-brief words', async () => {

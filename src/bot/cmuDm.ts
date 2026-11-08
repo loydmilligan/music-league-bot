@@ -127,13 +127,9 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
   // S2: recap7 is handled only when the resolved group is in `format`; otherwise (no group included)
   // it falls through untraced, exactly as before it parsed.
   if (cmd.kind === 'recap7' && !(group && isFormatGroup(deps, group))) return false;
-  // The morning-brief words follow the league rule: any format group of the served league. Without a
-  // resolved group the league's format group stands in, as the owner recap's group does.
-  if (isBriefWords(cmd, msg.body)) {
-    const formatGroup = formatGroupOf(deps.preview, deps.groups, served);
-    if (!formatGroup) return false;
-    if (!group) group = formatGroup;
-  }
+  // The morning-brief words follow the league rule: any format group of the served league. A sender
+  // with no resolved group is never handled (falls through below, untraced as before).
+  if (isBriefWords(cmd, msg.body) && !(group && formatGroupOf(deps.preview, deps.groups, served))) return false;
   // The owner's recap needs no group of its own; any served group stands in for the league.
   if (!group && cmd.kind === 'recap') group = [...deps.groups].find(([, l]) => l === served)?.[0];
   if (!group) {
