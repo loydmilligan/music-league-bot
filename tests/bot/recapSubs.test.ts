@@ -453,6 +453,23 @@ describe('startRecapTick', () => {
     expect(s.ends()).toEqual(['recap-dm-failed']);
   });
 
+  it('a never-resolving sendText times out as a failed send and does not block the next tick', async () => {
+    vi.useFakeTimers();
+    const sendText = vi.fn(() => new Promise<void>(() => {})) as AnyMock;
+    const s = tickSetup({
+      subs: [['a@lid', { time: '08:00', league: 'l' }], ['b@lid', { time: '08:30', league: 'l' }]],
+      now: la('2026-11-07', '08:00'), sendText,
+    });
+    await runTick(s);
+    expect(sendText).toHaveBeenCalledTimes(1);
+    expect(s.ends()).toEqual(['recap-dm-failed']);
+    expect(s.subs.get('a@lid')?.lastSentYmd).toBe('2026-11-07');
+    // running was released: the next tick sends to the next due subscriber.
+    s.setNow(la('2026-11-07', '08:31'));
+    await runTick(s);
+    expect(sendText).toHaveBeenCalledTimes(2);
+  });
+
   it('off pauses tick', async () => {
     vi.useFakeTimers();
     const s = tickSetup({ subs: [['a@lid', { time: '08:00', league: 'l' }]], now: la('2026-11-07', '08:00'), enabled: false });

@@ -190,7 +190,7 @@ async function post(deps: CmuDeps, body: Record<string, unknown>, timeoutMs: num
 
 async function baseBody(msg: CmuMessage, deps: CmuDeps): Promise<Record<string, unknown>> {
   const { name: notifyName } = await resolveNotifyName(msg);
-  return { notifyName, requestAt: msg.capturedAt, league: deps.groups.get(msg.from), requesterKey: await resolveRequesterKey(msg, deps) };
+  return { notifyName, requestAt: msg.capturedAt, league: deps.groups.get(msg.from), requesterKey: await resolveRequesterKey(msg, deps), ...(msg.via === 'dm' ? { via: 'dm' } : {}) };
 }
 
 async function safeContactName(deps: CmuDeps, id: string): Promise<string> {

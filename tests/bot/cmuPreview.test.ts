@@ -285,6 +285,11 @@ describe('cmuPreview', () => {
       expect(m.openCmuPreview(ownerFile()).isPreviewPerson('100000000000009@lid')).toBe(true);
     });
 
+    it('hasPeople reflects whether any person is listed', () => {
+      expect(memoryCmuPreview([], []).hasPeople?.()).toBe(false);
+      expect(memoryCmuPreview([], ['100000000000001@lid']).hasPeople?.()).toBe(true);
+    });
+
     it('registerPreviewOwner resolves, logs, and registers nothing when dmTarget rejects', async () => {
       setEnv(undefined);
       vi.resetModules();

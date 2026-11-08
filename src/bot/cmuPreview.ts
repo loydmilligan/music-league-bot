@@ -11,6 +11,8 @@ import path from 'node:path';
 export interface CmuPreview {
   isPreview(groupId: string): boolean;
   isPreviewPerson(authorId: string): boolean;
+  /** Cheap pre-check: false when no people are listed, so no id lookup is needed. Optional for older gates. */
+  hasPeople?(): boolean;
 }
 
 interface Lists {
@@ -107,6 +109,7 @@ export function openCmuPreview(
   return {
     isPreview: (groupId) => refresh().groups.has(groupId),
     isPreviewPerson: (authorId) => personMatch(refresh().people, authorId, ownerIds()),
+    hasPeople: () => refresh().people.size > 0,
   };
 }
 
@@ -119,7 +122,7 @@ export function memoryCmuPreview(
   const g = new Set(groups);
   g.delete(OWNER);
   const p = new Set(people);
-  return { isPreview: (id) => g.has(id), isPreviewPerson: (id) => personMatch(p, id, ownerIds) };
+  return { isPreview: (id) => g.has(id), isPreviewPerson: (id) => personMatch(p, id, ownerIds), hasPeople: () => p.size > 0 };
 }
 
 let shared: CmuPreview | undefined;

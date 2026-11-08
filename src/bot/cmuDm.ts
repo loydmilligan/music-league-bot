@@ -72,6 +72,11 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
   if (msg.fromMe || msg.from.endsWith('@g.us')) return false;
 
   // 0. G2: preview people only, before the text is even parsed.
+  try {
+    if (deps.preview?.hasPeople && !deps.preview.hasPeople()) return false;
+  } catch {
+    return false;
+  }
   const target = await boundedDmTarget(deps, msg.from);
   if (target === undefined) return false;
   let previewPerson = false;

@@ -295,6 +295,32 @@ describe('handleCmuDm', () => {
     expect(text).toContain('top-songs');
   });
 
+  it('DM help and DM recap-bot-calls bodies carry via dm; a group help body does not', async () => {
+    const s = setup({ owner: PERSON_LID });
+    // Throttle the second help so it posts a status body (help itself makes no companelist call).
+    s.deps.helpThrottle!.set(PERSON_CUS, NOW);
+    await handleCmuDm(dm('help'), s.deps);
+    await handleCmuDm(dm('recap-bot-calls'), s.deps);
+    s.deps.helpThrottle!.set(PERSON_LID, NOW);
+    await runCatchMeUp(groupMsg(PERSON_LID), s.deps, { kind: 'help' });
+    const b = s.bodies();
+    const help = b.find((x) => x.mode === 'status' && x.via === 'dm');
+    const recap = b.find((x) => x.mode === 'recap');
+    expect(help).toBeDefined();
+    expect(recap?.via).toBe('dm');
+    const groupHelp = b.filter((x) => x.mode === 'status' && x.via === undefined);
+    expect(groupHelp.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('an empty preview people list skips the dmTarget lookup and falls through', async () => {
+    const s = setup({ people: [] });
+    const msg = dm('some prompt answer');
+    expect(await handleCmuDm(msg, s.deps)).toBe(false);
+    expect(await handleCmuDm(dm('top-songs'), s.deps)).toBe(false);
+    expect(s.dmTarget).not.toHaveBeenCalled();
+    expect(s.fetchFn).not.toHaveBeenCalled();
+  });
+
   it('trace start carries via', async () => {
     const s = setup();
     await handleCmuDm(dm('top-songs'), s.deps);

@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'n
 import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 import type { CmuCommand } from './cmuCommand.js';
-import { CMU_ACK_EMOJI, CmuHttpError, describeError, msSince, react, timed } from './catchMeUp.js';
+import { CMU_ACK_EMOJI, CMU_FAILURE_DM_TIMEOUT_MS, CmuHttpError, describeError, msSince, react, timed, withDeadline } from './catchMeUp.js';
 import type { CmuDeps, CmuMessage, SafeTrace } from './catchMeUp.js';
 import { CMU_COMMAND_TIMEOUT_MS } from './cmuFlows.js';
 import { formatTime } from './cmuFollowUp.js';
@@ -358,7 +358,7 @@ export function startRecapTick(deps: RecapTickDeps): { stop(): void; tick(): Pro
     const t0 = performance.now();
     lastSendAt = Date.now();
     try {
-      await deps.sendText(key, text);
+      await withDeadline(Promise.resolve().then(() => deps.sendText(key, text)), CMU_FAILURE_DM_TIMEOUT_MS);
       safe(() => raw.step('text-dm', { ok: true, ms: msSince(t0) }));
       safe(() => raw.end('recap-dm'));
       return true;
