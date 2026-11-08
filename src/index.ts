@@ -23,6 +23,8 @@ import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
+import { handleCmuDm } from './bot/cmuDm.js';
+import { seenMessagesDb } from './storage/reactionsDb.js';
 import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTick } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
@@ -75,13 +77,15 @@ const interactionLog = openInteractionLog({ dir: process.env.INTERACTIONS_DIR ??
 interactionLog.prune();
 // "@bot off" / "@bot on" (owner): global, kept in ${DATA_DIR ?? 'data'}/cmu-switch.json across restarts.
 const cmuSwitch = openCmuSwitch();
-const catchMeUp = cmuUrl && cmuToken
-  ? (msg: Parameters<typeof runCatchMeUp>[0], cmd: Parameters<typeof runCatchMeUp>[2]) =>
-      runCatchMeUp(msg, {
+// One deps object, built on first use (client and cmuPreview are declared below), shared by the
+// group path and the DM router so throttles, switch and preview gate are the same instances.
+let cmuDepsMemo: Parameters<typeof runCatchMeUp>[1] | undefined;
+const cmuDeps = (url: string, token: string): Parameters<typeof runCatchMeUp>[1] =>
+  (cmuDepsMemo ??= {
         fetchFn: fetch,
         groups: cmuGroups,
-        url: cmuUrl,
-        token: cmuToken,
+        url,
+        token,
         screenshot: makeScreenshotHtml(client),
         sendImage: makeSendImageTo(client),
         sendText: makeSendTextTo(client),
@@ -100,7 +104,15 @@ const catchMeUp = cmuUrl && cmuToken
         recapSubs: defaultRecapSubs(),
         // CMU_CAPTION=off restores the separate links DM; the follow-up still goes.
         useCaption: process.env.CMU_CAPTION !== 'off',
-      }, cmd)
+      });
+const catchMeUp = cmuUrl && cmuToken
+  ? (msg: Parameters<typeof runCatchMeUp>[0], cmd: Parameters<typeof runCatchMeUp>[2]) =>
+      runCatchMeUp(msg, cmuDeps(cmuUrl, cmuToken), cmd)
+  : undefined;
+// Player commands by DM (preview people only): wa_messages is read through reactionsDb's league.db handle.
+const cmuDm = cmuUrl && cmuToken
+  ? (msg: Parameters<typeof handleMessage>[0]) =>
+      handleCmuDm(msg, { ...cmuDeps(cmuUrl, cmuToken), leagueDb: seenMessagesDb })
   : undefined;
 
 // Emoji reactions to non-command mentions: preview groups only (the same gate sprint 2 uses).
@@ -142,6 +154,7 @@ const client = createClient(async (msg) => {
     sendDm: makeSendDm(client),
     jevRespond,
     catchMeUp,
+    cmuDm,
     reactToMention,
     reactGroupIds: new Set(cmuGroups.keys()),
     preview: cmuPreview,

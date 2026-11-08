@@ -59,6 +59,8 @@ export interface BotConfig {
   reactGroupIds?: Set<string>;
   /** Preview gate; default is empty, so every group keeps today's behaviour. */
   preview?: CmuPreview;
+  /** Player commands by private DM (src/bot/cmuDm.ts). True = handled; false = on to prompt answers. */
+  cmuDm?: (msg: WhatsAppMessage) => Promise<boolean>;
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
@@ -76,6 +78,14 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // and is deliberately exempt from the group allowlist, which exists to stop
   // the bot acting in groups it was not invited to reason about.
   if (!msg.from.endsWith('@g.us')) {
+    // An exact DM command from a preview person wins; everything else stays a prompt answer.
+    if (botConfig.cmuDm) {
+      try {
+        if (await botConfig.cmuDm(msg)) return;
+      } catch (err) {
+        console.error('[cmu] dm router failed:', err instanceof Error ? err.name : 'error');
+      }
+    }
     await handlePromptAnswer(msg, botConfig, true);
     return;
   }
