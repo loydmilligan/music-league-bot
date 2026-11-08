@@ -12,6 +12,7 @@ import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
 import { createLoginCodeService, lookupPlayerNumber } from './whatsapp/loginCode.js';
 import { handleMessage } from './bot/handler.js';
+import { runWrongPlace } from './bot/wrongPlace.js';
 import { startDigestPoller } from './digest/poller.js';
 import { resolvePing } from './digest/ping.js';
 import { guardedSend } from './whatsapp/sendGuard.js';
@@ -144,6 +145,18 @@ const reactToMention = (msg: Parameters<typeof handleMessage>[0]) =>
     },
   );
 
+const wrongPlace = (msg: Parameters<typeof handleMessage>[0]) =>
+  runWrongPlace(
+    { from: msg.from, author: msg.author, react: msg.react?.bind(msg) },
+    {
+      sendDm: makeSendDm(client),
+      dmTarget: makeDmTarget(client),
+      isPreviewPerson: (id) => cmuPreview.isPreviewPerson(id),
+      trace: () => interactionLog.begin('cmu'),
+      log: (line) => console.log(line),
+    },
+  );
+
 const client = createClient(async (msg) => {
   await handleMessage(msg, {
     config,
@@ -157,6 +170,7 @@ const client = createClient(async (msg) => {
     catchMeUp,
     cmuDm,
     reactToMention,
+    wrongPlace,
     reactGroupIds: new Set(cmuGroups.keys()),
     preview: cmuPreview,
   });

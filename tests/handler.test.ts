@@ -648,4 +648,58 @@ describe('handleMessage', () => {
       expect(t.reactToMention).not.toHaveBeenCalled();
     });
   });
+  describe('DM commands typed in the group', () => {
+    const FMT = '120363000000000001@g.us';
+    const make = (o: { format?: string[]; body?: string; wrongPlaceResult?: boolean; omit?: boolean } = {}) => {
+      const wrongPlace = vi.fn().mockResolvedValue(o.wrongPlaceResult ?? true);
+      const reactToMention = vi.fn().mockResolvedValue(undefined);
+      const catchMeUp = vi.fn().mockResolvedValue(undefined);
+      const cfg = makeBotConfig({
+        reactToMention, catchMeUp, reactGroupIds: new Set([FMT]),
+        ...(o.omit ? {} : { wrongPlace }),
+        preview: memoryCmuPreview([FMT], [], [], o.format ?? [FMT]),
+      });
+      const msg = makeMockMsg(o.body ?? '@bot top-pics', { from: FMT, mentionsBot: true });
+      return { wrongPlace, reactToMention, catchMeUp, cfg, msg };
+    };
+
+    it('format group + DM-only command: wrongPlace handles it, no emoji pick', async () => {
+      const t = make();
+      await handleMessage(t.msg, t.cfg);
+      expect(t.wrongPlace).toHaveBeenCalledWith(t.msg);
+      expect(t.reactToMention).not.toHaveBeenCalled();
+    });
+
+    it('wrongPlace returns false: falls through to the joke emoji', async () => {
+      const t = make({ wrongPlaceResult: false });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+    });
+
+    it('group not in format list: no wrongPlace, joke emoji', async () => {
+      const t = make({ format: [] });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.wrongPlace).not.toHaveBeenCalled();
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+    });
+
+    it('unset wrongPlace: today behaviour', async () => {
+      const t = make({ omit: true });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+    });
+
+    it('@bot help goes to catch-me-up, not wrongPlace', async () => {
+      const t = make({ body: '@bot help' });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.wrongPlace).not.toHaveBeenCalled();
+    });
+
+    it('plain mention is not a DM command', async () => {
+      const t = make({ body: '@bot what a day' });
+      await handleMessage(t.msg, t.cfg);
+      expect(t.wrongPlace).not.toHaveBeenCalled();
+      expect(t.reactToMention).toHaveBeenCalledTimes(1);
+    });
+  });
 });

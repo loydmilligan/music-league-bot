@@ -13,7 +13,7 @@ import { insertChatCapture } from '../storage/chatDb.js';
 import { interpretMessage } from '../chat/prompts/engine.js';
 import { getDirectPrompts, getOpenPrompts, hasAnswered, recordAnswer } from '../chat/prompts/store.js';
 import { extractJevPrompt, type JevChatRequest } from '../chat/jevResponder.js';
-import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
+import { parseCmuCommand, parseDmCommand, stripMentionAndFiller, DM_ONLY_KINDS, type CmuCommand } from './cmuCommand.js';
 import { memoryCmuPreview, type CmuPreview } from './cmuPreview.js';
 
 export interface WhatsAppMessage {
@@ -61,6 +61,21 @@ export interface BotConfig {
   preview?: CmuPreview;
   /** Player commands by private DM (src/bot/cmuDm.ts). True = handled; false = on to prompt answers. */
   cmuDm?: (msg: WhatsAppMessage) => Promise<boolean>;
+  /** A DM-only command typed in a format group (src/bot/wrongPlace.ts). True = handled. Unset = today's behaviour. */
+  wrongPlace?: (msg: WhatsAppMessage) => Promise<boolean>;
+}
+
+/** Runs wrongPlace for an @bot DM-only command in a format-allowlisted group; never throws. */
+async function handledAsWrongPlace(msg: WhatsAppMessage, botConfig: BotConfig, preview: CmuPreview): Promise<boolean> {
+  if (!botConfig.wrongPlace || preview.isFormatPreview?.(msg.from) !== true) return false;
+  const cmd = parseDmCommand(stripMentionAndFiller(msg.body));
+  if (!cmd || !DM_ONLY_KINDS.has(cmd.kind)) return false;
+  try {
+    return await botConfig.wrongPlace(msg);
+  } catch (err) {
+    console.error('[cmu] wrong-place failed:', err instanceof Error ? err.name : 'error');
+    return false;
+  }
 }
 
 export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig): Promise<void> {
@@ -110,6 +125,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
   // Preview CMU-only group (not a song-capture group): a plain mention gets a reaction.
   if (inPreview && msg.mentionsBot && botConfig.reactGroupIds?.has(msg.from) && !inAllowlist) {
+    if (await handledAsWrongPlace(msg, botConfig, preview)) return;
     await botConfig.reactToMention?.(msg);
     return;
   }
@@ -124,6 +140,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
   // Preview groups: a mention with no music URL gets a reaction instead of Jev's text reply.
   if (inPreview && msg.mentionsBot && detectMusicUrls(msg.body).length === 0 && parseMessage(msg.body) === null) {
+    if (await handledAsWrongPlace(msg, botConfig, preview)) return;
     await botConfig.reactToMention?.(msg);
     return;
   }
