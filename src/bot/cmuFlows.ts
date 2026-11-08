@@ -108,7 +108,7 @@ export function helpBody(o: { dmOk: boolean; owner: boolean; used?: number; limi
   const lines = [
     ...section('both'),
     '',
-    ...section('group', 'Nothing group-only yet. Both commands work here too.'),
+    ...section('group', 'Nothing group-only yet. Both commands work in the group too.'),
     ...(o.dmOk ? ['', ...section('dm')] : []),
     '',
     count,

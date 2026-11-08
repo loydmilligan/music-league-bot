@@ -722,6 +722,45 @@ describe('Morning Brief DM (tick)', () => {
     expect(s.sendText.mock.calls).toEqual([['a@lid', FRAMED], ['b@lid', SENTINEL]]);
   });
 
+  it('ON: a leading "Morning recap · " is stripped so the first body line is the date', async () => {
+    vi.useFakeTimers();
+    const body = 'Morning recap \u00b7 Sat, Nov 7\n\nSYNTHETIC-BRIEF';
+    const s = tickSetup({
+      subs: [['a@lid', { time: '07:00', league: 'fmt' }]],
+      now: la('2026-11-07', '09:00'),
+      recap: sendable('2026-11-07', { text: body }),
+      isFormatLeague: () => true,
+    });
+    await runTick(s);
+    expect(s.sendText.mock.calls).toEqual([['a@lid', `\u2500\u2500 Morning Brief \u2500\u2500\nSat, Nov 7\n\nSYNTHETIC-BRIEF\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n${FOOTER_MORNING}`]]);
+  });
+
+  it('ON: text without the prefix is framed as-is', async () => {
+    vi.useFakeTimers();
+    const body = 'Sat, Nov 7 \u00b7 Morning recap\n\nSYNTHETIC-BRIEF';
+    const s = tickSetup({
+      subs: [['a@lid', { time: '07:00', league: 'fmt' }]],
+      now: la('2026-11-07', '09:00'),
+      recap: sendable('2026-11-07', { text: body }),
+      isFormatLeague: () => true,
+    });
+    await runTick(s);
+    expect(s.sendText.mock.calls).toEqual([['a@lid', `\u2500\u2500 Morning Brief \u2500\u2500\n${body}\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n${FOOTER_MORNING}`]]);
+  });
+
+  it('OFF: unframed DM keeps the "Morning recap · " prefix byte-identical', async () => {
+    vi.useFakeTimers();
+    const body = 'Morning recap \u00b7 Sat, Nov 7\n\nSYNTHETIC-BRIEF';
+    const s = tickSetup({
+      subs: [['a@lid', { time: '07:00', league: 'plain' }]],
+      now: la('2026-11-07', '09:00'),
+      recap: sendable('2026-11-07', { text: body }),
+      isFormatLeague: () => false,
+    });
+    await runTick(s);
+    expect(s.sendText.mock.calls).toEqual([['a@lid', body]]);
+  });
+
   it('OFF: no isFormatLeague dep, or a throwing one, sends the bare text', async () => {
     for (const isFormatLeague of [undefined, () => { throw new Error('x'); }]) {
       vi.useFakeTimers();

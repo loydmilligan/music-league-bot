@@ -971,7 +971,7 @@ describe('helpBody', () => {
     '  help \u2014 This list of everything I can do',
     '',
     'Group commands: send as @bot <command> in the group.',
-    'Nothing group-only yet. Both commands work here too.',
+    'Nothing group-only yet. Both commands work in the group too.',
   ];
   const dmSection = [
     '',
@@ -1016,7 +1016,7 @@ describe('helpBody', () => {
     expect(owner).toContain('  forget dl (group) \u2014 Reset only your Daily Limit for today');
     expect(owner).toContain("  forget dl @Player (group) \u2014 Reset only that player's Daily Limit for today");
     expect(owner).toContain("  forget sybg all (group) \u2014 Reset only everyone's SYBG for today");
-    expect(owner).toContain("  recap-bot-calls (both) \u2014 The last 24 hours of bot activity and spend");
+    expect(owner).toContain("  recap-bot-calls (both) \u2014 The last 24 hours of bot activity, and today's spend");
     expect(owner.join('\n')).not.toMatch(/last catch-up|The same|DL side/);
     expect(owner).toContain('  tldr (group) \u2014 Post a short how-to in this group');
     expect(owner.some((l) => !/\((group|DM|both)\)/.test(l) && l.startsWith('  '))).toBe(false);
