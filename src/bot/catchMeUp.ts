@@ -81,6 +81,8 @@ export interface CmuDeps {
    * Used for the requester's limits key; absent or failing, msg.author is used.
    */
   dmTarget?(id: string): Promise<string>;
+  /** M3: like dmTarget but throws when the lookup fails, so recapKey never stores a raw-id fallback. Falls back to dmTarget when absent. */
+  recapDmTarget?(id: string): Promise<string>;
   /** Overrides for tests; default CMU_DEADLINE_MS / CMU_FAILURE_DM_TIMEOUT_MS. */
   deadlineMs?: number;
   failureDmTimeoutMs?: number;

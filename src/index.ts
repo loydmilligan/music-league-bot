@@ -6,7 +6,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import {
   createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
-  makeDmTarget, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName,
+  makeDmTarget, makeDmTargetStrict, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName,
 } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
@@ -90,6 +90,7 @@ const cmuDeps = (url: string, token: string): Parameters<typeof runCatchMeUp>[1]
         sendImage: makeSendImageTo(client),
         sendText: makeSendTextTo(client),
         dmTarget: makeDmTarget(client),
+        recapDmTarget: makeDmTargetStrict(client),
         log: (line) => console.log(line),
         trace: () => interactionLog.begin('cmu'),
         // M4: the author and OWNER_PHONE_NUMBER compared through the LID mapping; fails closed.

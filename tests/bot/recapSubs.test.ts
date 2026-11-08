@@ -128,6 +128,20 @@ describe('recap commands', () => {
     });
   }
 
+  it('M1: a failing strict lookup sends the M3 copy and stores nothing, even if dmTarget would fall back', async () => {
+    const s = cmdSetup({ recapDmTarget: vi.fn().mockRejectedValue(new Error('x')), dmTarget: vi.fn(async (x: string) => x) });
+    await runCatchMeUp(makeMsg(), s.deps, SUB);
+    expect(s.subs.all()).toEqual([]);
+    expect(s.deps.sendText.mock.calls).toEqual([[AUTHOR, RECAP_STORE_FAILURE_TEXT]]);
+    expect(s.deps.dmTarget).not.toHaveBeenCalled();
+  });
+
+  it('M1: a successful strict lookup equal to the input is stored', async () => {
+    const s = cmdSetup({ recapDmTarget: vi.fn(async (x: string) => x) });
+    await runCatchMeUp(makeMsg(), s.deps, SUB);
+    expect(s.subs.all().map(([k]) => k)).toEqual([AUTHOR]);
+  });
+
   it('M3 copy verbatim', () => {
     expect(RECAP_STORE_FAILURE_TEXT).toBe("Couldn't set that up just now. Try again in a minute.");
   });

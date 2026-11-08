@@ -71,7 +71,12 @@ async function safeOwner(deps: CmuDeps, id: string): Promise<boolean> {
 export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promise<boolean> {
   if (msg.fromMe || msg.from.endsWith('@g.us')) return false;
 
-  // 0. G2: preview people only, before the text is even parsed.
+  // 0. Parse first (pure, no side effects): a non-command DM, the common prompt-answer case, pays no
+  // dmTarget lookup. Exact whole-text DM commands only; owner kinds other than recap never parse here.
+  const cmd = parseCmuCommand(msg.body, false, [], new Set(), { dm: true });
+  if (!cmd) return false;
+
+  // G2: preview people only. Nothing below acts (react, fetch, send, trace) before this gate passes.
   try {
     if (deps.preview?.hasPeople && !deps.preview.hasPeople()) return false;
   } catch {
@@ -86,10 +91,6 @@ export async function handleCmuDm(msg: WhatsAppMessage, deps: CmuDmDeps): Promis
     previewPerson = false;
   }
   if (!previewPerson) return false;
-
-  // 1. Exact whole-text DM commands only; owner kinds other than recap never parse here.
-  const cmd = parseCmuCommand(msg.body, false, [], new Set(), { dm: true });
-  if (!cmd) return false;
 
   // R6: recap-bot-calls is the owner's; anyone else falls through without a trace.
   if (cmd.kind === 'recap' && !(await safeOwner(deps, msg.from))) return false;

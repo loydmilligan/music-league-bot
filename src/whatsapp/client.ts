@@ -455,6 +455,15 @@ export function makeDmTarget(client: ClientType): (chatId: string) => Promise<st
   return (chatId) => dmTarget(client, chatId);
 }
 
+/** Like makeDmTarget but a failed lookup throws instead of returning the raw id (recap subscription keys). */
+export function makeDmTargetStrict(client: ClientType): (chatId: string) => Promise<string> {
+  return async (chatId) => {
+    if (!chatId.endsWith('@c.us')) return chatId;
+    const [ids] = await client.getContactLidAndPhone([chatId]);
+    return ids?.lid || chatId;
+  };
+}
+
 /** DM an image file to one chat id (the requester). */
 export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string, caption?: string) => Promise<void> {
   return async (chatId, filePath, caption) => {

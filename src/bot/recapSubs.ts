@@ -168,9 +168,11 @@ export function isRecapKind(cmd: CmuCommand): cmd is RecapCmd {
 
 /** M3 key normalization: only a non-empty dmTarget result counts; absent, throwing or empty is unknown. */
 async function recapKey(author: string, deps: CmuDeps): Promise<string | undefined> {
-  if (!deps.dmTarget) return undefined;
+  // Prefer the strict lookup (throws on failure) so a swallowed lookup's raw-id fallback is never stored.
+  const lookup = deps.recapDmTarget ?? deps.dmTarget;
+  if (!lookup) return undefined;
   try {
-    const k = await deps.dmTarget(author);
+    const k = await lookup(author);
     return typeof k === 'string' && k !== '' ? k : undefined;
   } catch {
     return undefined;

@@ -194,6 +194,39 @@ describe('handleCmuDm', () => {
     expect(s.events).toEqual([]);
   });
 
+  it('M2: a non-command DM from anyone makes no dmTarget call', async () => {
+    const s = setup();
+    for (const from of [PERSON_CUS, STRANGER_CUS, PERSON_LID]) {
+      const msg = dm('my answer is Some Song', from);
+      expect(await handleCmuDm(msg, s.deps)).toBe(false);
+      expect(msg.react).not.toHaveBeenCalled();
+    }
+    expect(s.dmTarget).not.toHaveBeenCalled();
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(s.events).toEqual([]);
+  });
+
+  it('M2: a command DM from a non-preview person looks up dmTarget, then falls through with no side effect', async () => {
+    const s = setup({ people: [PERSON_LID] });
+    const msg = dm('top-songs', STRANGER_CUS);
+    expect(await handleCmuDm(msg, s.deps)).toBe(false);
+    expect(s.dmTarget).toHaveBeenCalledTimes(1);
+    expect(msg.react).not.toHaveBeenCalled();
+    expect(s.fetchFn).not.toHaveBeenCalled();
+    expect(s.sendText).not.toHaveBeenCalled();
+    expect(s.events).toEqual([]);
+  });
+
+  it('M2: a command DM from a preview person still works end to end (looks up, 👍, fetch, reply)', async () => {
+    const s = setup();
+    const msg = dm('top-songs');
+    expect(await handleCmuDm(msg, s.deps)).toBe(true);
+    expect(s.dmTarget).toHaveBeenCalled();
+    expect(msg.react).toHaveBeenCalledWith('👍');
+    expect(s.fetchFn).toHaveBeenCalledTimes(1);
+    expect(s.sendText).toHaveBeenCalledWith(PERSON_CUS, 'SYNTHETIC-TOP');
+  });
+
   it('dm owner command full is not handled (falls through)', async () => {
     const s = setup({ owner: PERSON_LID });
     for (const t of ['full', 'off', 'tldr', 'forget']) {
