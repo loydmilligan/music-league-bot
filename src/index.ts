@@ -23,7 +23,7 @@ import { createPromptTables, insertPrompt } from './chat/prompts/store.js';
 import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
-import { recapSubscription } from './bot/recapSubs.js';
+import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTick } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
@@ -96,6 +96,8 @@ const catchMeUp = cmuUrl && cmuToken
         // D19: the same preview gate BotConfig.preview uses (declared below; read only per request).
         preview: cmuPreview,
         recapSubscription,
+        // M3: the same store the recap tick reads.
+        recapSubs: defaultRecapSubs(),
         // CMU_CAPTION=off restores the separate links DM; the follow-up still goes.
         useCaption: process.env.CMU_CAPTION !== 'off',
       }, cmd)
@@ -157,6 +159,20 @@ client.on('ready', () => {
   if (started) return;
   started = true;
   void registerPreviewOwner(makeDmTarget(client), ownerPhone, (l) => console.log(l));
+
+  // Morning recap DMs (M4-M6, G4): once a minute; sends only to subscribed preview people, and only
+  // when today's recap went out live. Off unless CMU_URL and CMU_TOKEN are set.
+  if (cmuUrl && cmuToken) {
+    startRecapTick({
+      subs: defaultRecapSubs(),
+      fetchRecapToday: makeFetchRecapToday({ fetchFn: fetch, url: cmuUrl, token: cmuToken }),
+      sendText: makeSendTextTo(client),
+      isEnabled: () => cmuSwitch.isEnabled(),
+      isPreviewPerson: (key) => cmuPreview.isPreviewPerson(key),
+      log: (line) => console.log(line),
+      trace: () => interactionLog.begin('cmu'),
+    });
+  }
 
   const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002';
   const { runOnce } = startDigestPoller({
