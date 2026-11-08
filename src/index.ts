@@ -152,6 +152,7 @@ const wrongPlace = (msg: Parameters<typeof handleMessage>[0]) =>
       sendDm: makeSendDm(client),
       dmTarget: makeDmTarget(client),
       isPreviewPerson: (id) => cmuPreview.isPreviewPerson(id),
+      isEnabled: () => cmuSwitch.isEnabled(),
       trace: () => interactionLog.begin('cmu'),
       log: (line) => console.log(line),
     },

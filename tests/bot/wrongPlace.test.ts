@@ -4,7 +4,7 @@ import { frameMessage, MESSAGE_NAMES, FOOTER_WRONG_PLACE } from '../../src/bot/m
 
 const GROUP = '120363000000000001@g.us';
 let n = 0;
-function setup(o: { person?: boolean; sendFails?: boolean; reactFails?: boolean; target?: string } = {}) {
+function setup(o: { person?: boolean; enabled?: () => boolean; sendFails?: boolean; reactFails?: boolean; target?: string } = {}) {
   const target = o.target ?? `target${++n}@lid`;
   const calls: Array<[string, Record<string, unknown>]> = [];
   const trace = {
@@ -18,7 +18,7 @@ function setup(o: { person?: boolean; sendFails?: boolean; reactFails?: boolean;
   const log = vi.fn();
   let t = 1_000_000;
   const deps = {
-    sendDm, dmTarget: vi.fn(async () => target), isPreviewPerson: () => o.person !== false,
+    sendDm, dmTarget: vi.fn(async () => target), isPreviewPerson: () => o.person !== false, isEnabled: o.enabled ?? (() => true),
     trace: () => trace, now: () => t, log,
   };
   const msg = { from: GROUP, author: '100000000000001@lid', body: '@bot top-pics', chatName: 'G', react } as never;
@@ -84,5 +84,18 @@ describe('runWrongPlace', () => {
     expect(dump).not.toContain('top-pics');
     expect(dump).not.toContain('100000000000001');
     expect(dump).not.toContain('target');
+  });
+
+  it('switch off: no react, no DM, returns true, no cooldown started', async () => {
+    let on = false;
+    const s = setup({ enabled: () => on });
+    expect(await runWrongPlace(s.msg, s.deps)).toBe(true);
+    expect(s.react).not.toHaveBeenCalled();
+    expect(s.sendDm).not.toHaveBeenCalled();
+    expect(s.trace.end).toHaveBeenCalledWith('disabled');
+    on = true;
+    await runWrongPlace(s.msg, s.deps);
+    expect(s.sendDm).toHaveBeenCalledTimes(1);
+    expect(s.react).toHaveBeenCalledTimes(1);
   });
 });

@@ -16,6 +16,8 @@ export interface WrongPlaceDeps {
   sendDm(target: string, text: string): Promise<void>;
   dmTarget(id: string): Promise<string>;
   isPreviewPerson(id: string): boolean;
+  /** Owner on/off switch: off means no reactions and no DMs. */
+  isEnabled(): boolean;
   trace: () => InteractionTrace;
   now?: () => number;
   log(l: string): void;
@@ -49,6 +51,14 @@ export async function runWrongPlace(msg: WrongPlaceMessage, deps: WrongPlaceDeps
   try { trace = deps.trace() ?? NOOP_TRACE; } catch { /* never throw */ }
   const safe = (f: () => void): void => { try { f(); } catch { /* never throw */ } };
   safe(() => trace.start({ group: msg.from, who: '', authorKind: authorKind(msg.author ?? ''), command: 'wrong-place', via: 'group' }));
+
+  let enabled = true;
+  try { enabled = deps.isEnabled() !== false; } catch { /* fail open, like the reaction path */ }
+  if (!enabled) {
+    // Same as the reaction path: a trace that ends 'disabled'; no react, no DM, no cooldown.
+    safe(() => trace.end('disabled'));
+    return true;
+  }
 
   let reacted = true;
   try {
