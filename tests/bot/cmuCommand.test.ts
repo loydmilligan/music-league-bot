@@ -108,6 +108,9 @@ describe('player commands (dm only)', () => {
     ['recap sub', { kind: 'recap-sub' }],
     ['morning-recap unsub', { kind: 'recap-unsub' }],
     ['morning-recap 99', { kind: 'recap-time-bad' }],
+    ['morning-recap time', { kind: 'recap-time-bad' }],
+    ['morning-recap 7:5', { kind: 'recap-time-bad' }],
+    ['recap unsub', { kind: 'recap-unsub' }],
     ['help', { kind: 'help' }],
     ['catch me up', CATCHUP],
     ['cach me up', CATCHUP],
@@ -120,7 +123,7 @@ describe('player commands (dm only)', () => {
   const dmNon = [
     'show-topic', 'show-topic 11', 'show-topic 0', 'pick one of these', 'top songs please',
     'can you catch me up', 'hey help', 'full', 'forget', 'forget all', 'off', 'on', 'tldr',
-    'catch me up pls', 'hey top songs', 'top songs week please', 'top-songs 3', '@123 help',
+    'morning recap was great', 'morning recap was 5 stars', 'catch me up pls', 'hey top songs', 'top songs week please', 'top-songs 3', '@123 help',
   ];
   it.each(dmNon)('dm does not match %j', (body) => {
     expect(dm(body)).toBeNull();

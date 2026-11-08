@@ -118,13 +118,17 @@ function parseDmCommand(body: string): CmuCommand | null {
   if (text === 'dossier' || /^my[- ]?dossier$/.test(text)) return { kind: 'dossier' };
 
   if (text === 'recap sub') return { kind: 'recap-sub' };
+  if (text === 'recap unsub') return { kind: 'recap-unsub' };
   const mr = /^morning[- ]?recap (.+)$/.exec(text);
   if (mr) {
     const arg = mr[1];
     if (arg === 'sub') return { kind: 'recap-sub' };
     if (arg === 'unsub') return { kind: 'recap-unsub' };
     const time = parseRecapTime(arg.startsWith('time ') ? arg.slice(5) : arg);
-    return time ? { kind: 'recap-time', time } : { kind: 'recap-time-bad' };
+    if (time) return { kind: 'recap-time', time };
+    // Only a time attempt is "bad"; ordinary words stay a prompt answer.
+    const arg2 = arg.startsWith('time ') ? arg.slice(5) : arg;
+    return arg === 'time' || /^[\d:]+\s*(am|pm)?$/.test(arg2) ? { kind: 'recap-time-bad' } : null;
   }
 
   // Catch me up: the same phrases as the group, but exactly (no trailing text).
