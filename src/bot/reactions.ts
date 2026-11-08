@@ -186,7 +186,9 @@ export async function runReaction(msg: ReactionMessage, deps: ReactionDeps): Pro
     }
     // Send failed: one retry with a safe emoji.
     if (!reason) step('fallback', { ok: true, reason: 'send-failed' });
-    if (await send(msg, fallbackEmoji(), step, true)) end('fallback');
+    const others = pool.filter((x) => x !== emoji);
+    const retryEmoji = others.length ? others[Math.floor(random() * others.length)] : fallbackEmoji();
+    if (await send(msg, retryEmoji, step, true)) end('fallback');
     else fail();
   } catch {
     fail();

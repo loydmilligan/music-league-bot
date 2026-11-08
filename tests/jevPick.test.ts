@@ -26,6 +26,13 @@ describe('createJevPicker', () => {
     expect(r).toEqual({ choice: '🍆', cost: 0.0001 });
   });
 
+  it('matches ignoring U+FE0F and returns the original option', async () => {
+    const pick = (c: string) => createJevPicker({ apiKey: 'k', fetchImpl: okFetch({ answers: { pick: { choice: c } } }) }).pick('i', ['\u2620\uFE0F', '\u{1F602}'], state);
+    expect((await pick('\u2620')).choice).toBe('\u2620\uFE0F');
+    expect((await pick('\u{1F602}\uFE0F')).choice).toBe('\u{1F602}');
+    expect((await pick('\u{1F525}')).choice).toBeNull();
+  });
+
   it('returns null when choice is not an option or answers missing', async () => {
     const bad = okFetch({ answers: { pick: { choice: 'zzz' } } });
     expect((await createJevPicker({ apiKey: 'k', fetchImpl: bad }).pick('i', ['a'], state)).choice).toBeNull();

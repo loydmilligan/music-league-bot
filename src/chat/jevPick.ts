@@ -41,7 +41,9 @@ export function createJevPicker(o: {
       const cost = typeof result.usage?.cost === 'number' ? result.usage.cost : 0;
       if (typeof result.usage?.cost === 'number') console.log(`[jev-pick] cost=${cost}`);
       const choice = result.answers?.pick?.choice;
-      return { choice: typeof choice === 'string' && options.includes(choice) ? choice : null, cost };
+      const strip = (e: string) => e.replace(/\uFE0F/g, '');
+      const matched = typeof choice === 'string' ? options.find((x) => strip(x) === strip(choice)) : undefined;
+      return { choice: matched ?? null, cost };
     },
   };
 }

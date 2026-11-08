@@ -145,6 +145,15 @@ describe('runReaction', () => {
     expect(guard.allow('spam', 1000 + 60_001)).toBe(true);
   });
 
+  it('send-failure retry uses a different emoji than the one that failed', async () => {
+    const a = setup({ forceFallback: true });
+    a.react.mockRejectedValueOnce(new Error('send'));
+    await runReaction(a.msg, a.deps);
+    expect(a.react.mock.calls[0][0]).toBe(palette.fallbackPool[0]);
+    expect(a.react.mock.calls[1][0]).not.toBe(palette.fallbackPool[0]);
+    expect(a.t.outcome()).toBe('fallback');
+  });
+
   it('send failure retries once with a fallback emoji; both failing does not throw', async () => {
     const a = setup();
     a.react.mockRejectedValueOnce(new Error('send'));
