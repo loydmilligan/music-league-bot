@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseCmuCommand, type CmuCommand } from './cmuCommand.js';
 import { runForget, runHelp, runRecap, runSwitch, runTldr } from './cmuFlows.js';
+import { isPlayerKind, runPlayer } from './cmuPlayer.js';
 import { memoryCmuSwitch, type CmuSwitch } from './cmuSwitch.js';
 import { NOOP_TRACE, type InteractionTrace } from '../storage/interactionLog.js';
 import type { CmuPreview } from './cmuPreview.js';
@@ -97,6 +98,8 @@ export interface CmuDeps {
   now?(): number;
   /** K3: the owner's global off/on switch. Default: an in-memory switch (enabled). */
   cmuSwitch?: CmuSwitch;
+  /** `${author}|${kind}` → last player command (ms), for the 60 s cooldown. Default: a module-level map. */
+  playerThrottle?: Map<string, number>;
   /** Group id → last tldr post (ms). Default: a module-level map. */
   tldrThrottle?: Map<string, number>;
   /** D19: caption and follow-up only where this says the group is in preview. Absent or throwing means no. */
@@ -369,6 +372,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   trace.step('trigger', { ok: true, mapped: deps.groups.has(group) });
 
   const end = (outcome: string, error?: string) => void safeCall(() => raw.end(outcome, error ? { error } : undefined));
+  if (isPlayerKind(cmd)) return runPlayer(msg, deps, cmd, trace, end);
   if (cmd.kind === 'help') return runHelp(msg, deps, trace, end);
   if (cmd.kind === 'off' || cmd.kind === 'on') return runSwitch(msg, deps, cmuSwitch, cmd.kind === 'on', trace, end);
   if (cmd.kind === 'tldr') return runTldr(msg, deps, trace, end);
