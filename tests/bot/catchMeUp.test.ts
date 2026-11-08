@@ -15,7 +15,7 @@ import {
 } from '../../src/bot/catchMeUp.js';
 import { FOOTER_RECAP, FOOTER_RETRY } from '../../src/bot/messageFrame.js';
 import { followUpText } from '../../src/bot/cmuFollowUp.js';
-import { forgetReplyScoped, helpBody, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
+import { forgetReplyScoped, helpBody, helpMessage, helpText, makeIsOwner, tldrText, FORGET_FAILURE_TEXT, RECAP_FAILURE_TEXT } from '../../src/bot/cmuFlows.js';
 import { openCmuSwitch, type CmuSwitch } from '../../src/bot/cmuSwitch.js';
 import type { InteractionTrace } from '../../src/storage/interactionLog.js';
 import { handleMessage, type WhatsAppMessage, type BotConfig } from '../../src/bot/handler.js';
@@ -964,66 +964,91 @@ describe('commandLabel sprint 4', () => {
   });
 });
 
-describe('helpBody', () => {
-  const both = [
-    'Both: work in the group (@bot …) and in a DM.',
-    '  catch me up \u2014 A picture of what you missed since your last post; "recap" works too',
-    '  help \u2014 This list of everything I can do',
+describe('helpMessage (framed, reorganised)', () => {
+  const D = '──────────';
+  const head = [
+    '── Help ──',
+    '_Music League Bot · what I can do_',
     '',
-    'Group commands: send as @bot <command> in the group.',
-    'Nothing group-only yet. Both commands work in the group too.',
+    '*BOTH* — _send in the group as @bot …, or DM me_',
+    '• *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)',
+    '• *help* — this list',
   ];
-  const dmSection = [
+  const dmPart = [
     '',
-    'DM commands: send these to me directly, no @.',
-    '  pick one \u2014 The one topic you would like most',
-    '  top-songs \u2014 Most-loved songs posted; add "week" for 7 days',
-    '  top-pics \u2014 Best pics of the last 48 hours; add "week" for 7 days',
-    '  top-videos \u2014 Top videos; add "week" for 7 days',
-    '  top-links \u2014 Top links; add "week" for 7 days',
-    '  top-media \u2014 Top pics, videos and links together',
-    '  list-topics \u2014 The topics being talked about right now',
-    '  show-topic 3 \u2014 Read one topic from that list by number',
-    '  my-dossier \u2014 What the bot knows about you',
-    '  recap7 \u2014 Your own stats for the last 7 days, plus the menu',
-    '  morning-brief sub \u2014 Get the morning brief every day',
-    '  morning-brief unsub \u2014 Stop the morning brief',
-    '  morning-brief 7:30 \u2014 Change the time the morning brief arrives',
+    '*DM ONLY* — _message me directly, no @ needed_',
+    '',
+    '_Catch up_',
+    '• *recap7* — your last 7 days: messages, \u{1F602}s and your best post',
+    '• *pick one* — the single topic you\'d enjoy most',
+    '',
+    '_Best of the chat_ (add *week* for 7 days instead of 2)',
+    '• *top-songs* · *top-pics* · *top-videos* · *top-links*',
+    '• *top-media* — pics, videos and links together',
+    '',
+    '_Topics_',
+    '• *list-topics* — what everyone\'s talking about now',
+    '• *show-topic 3* — read topic #3 from that list',
+    '',
+    '_About you_',
+    '• *my-dossier* — what I know about you',
+    '',
+    '_Morning Brief_ — a short daily summary by DM',
+    '• *morning-brief sub* / *unsub* — start or stop it',
+    '• *morning-brief 7:30* — change the delivery time',
   ];
-  const count = ['', "You've used 1 of 3 today. Resets at midnight (LA time)."];
+  const ownerPart = [
+    '',
+    '*\u{1F451} OWNER* — _group only_',
+    '• *full* — last 48 hours; doesn\'t count or move your window',
+    '• *forget* [*dl* | *sybg*] [*@Player* | *all*]',
+    '   resets catch-ups for today. *dl* = only the 3-a-day count,',
+    '   *sybg* = only the "since you\'ve been gone" start time,',
+    '   neither = both',
+    '• *off* / *on* — silence or restore the whole bot',
+    '• *tldr* — post a short how-to in the group',
+    '• *recap-bot-calls* — last 24 h of bot activity and spend (also by DM)',
+  ];
+  const tail = [D, "You've used 1 of 3 catch-ups today · resets at midnight LA time"];
 
-  it('player in a DM-capable group: Both, Group (empty line), DM, count', () => {
-    expect(helpBody({ dmOk: true, owner: false, used: 1, limit: 3 })).toBe([...both, ...dmSection, ...count].join('\n'));
+  it('player with DM access: exact framed output', () => {
+    expect(helpMessage({ dmOk: true, owner: false, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...tail].join('\n'));
   });
 
-  it('player without DM: no DM section', () => {
-    expect(helpBody({ dmOk: false, owner: false, used: 1, limit: 3 })).toBe([...both, ...count].join('\n'));
+  it('owner: exact framed output, owner section before the divider', () => {
+    expect(helpMessage({ dmOk: true, owner: true, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...ownerPart, ...tail].join('\n'));
   });
 
-  it('unknown count keeps the fallback line', () => {
-    expect(helpBody({ dmOk: false, owner: false, limit: 3 })).toContain("\n3 a day (couldn't check your count just now)");
+  it('reader without DM access has no DM section', () => {
+    const t = helpMessage({ dmOk: false, owner: false, used: 1, limit: 3 });
+    expect(t).toBe([...head, ...tail].join('\n'));
+    expect(t).not.toContain('DM ONLY');
   });
 
-  it('owner adds a tagged Owner section after the count', () => {
-    const t = helpBody({ dmOk: true, owner: true, used: 1, limit: 3 });
-    const player = helpBody({ dmOk: true, owner: false, used: 1, limit: 3 });
-    expect(t.startsWith(player + '\n\nOwner only\n')).toBe(true);
-    const owner = t.slice(player.length).split('\n');
-    expect(owner).toContain('  full (group) \u2014 The last 48 hours; does not count or move your window');
-    expect(owner).toContain('  forget (group) \u2014 Reset your Daily Limit and SYBG for today');
-    expect(owner).toContain("  forget @Player (group) \u2014 Reset that player's Daily Limit and SYBG for today");
-    expect(owner).toContain("  forget all (group) \u2014 Reset everyone's Daily Limit and SYBG for today");
-    expect(owner).toContain('  forget dl (group) \u2014 Reset only your Daily Limit for today');
-    expect(owner).toContain("  forget dl @Player (group) \u2014 Reset only that player's Daily Limit for today");
-    expect(owner).toContain("  forget sybg all (group) \u2014 Reset only everyone's SYBG for today");
-    expect(owner).toContain("  recap-bot-calls (both) \u2014 The last 24 hours of bot activity, and today's spend");
-    expect(owner.join('\n')).not.toMatch(/last catch-up|The same|DL side/);
-    expect(owner).toContain('  tldr (group) \u2014 Post a short how-to in this group');
-    expect(owner.some((l) => !/\((group|DM|both)\)/.test(l) && l.startsWith('  '))).toBe(false);
+  it('player body has no empty Group or Owner section', () => {
+    const t = helpMessage({ dmOk: true, owner: false, used: 1, limit: 3 });
+    expect(t).not.toMatch(/GROUP|OWNER|Nothing group-only|Owner only/);
+  });
+
+  it('count line carries the real used and limit', () => {
+    expect(helpMessage({ dmOk: true, owner: false, used: 2, limit: 5 }).endsWith(`${D}\nYou've used 2 of 5 catch-ups today · resets at midnight LA time`)).toBe(true);
+  });
+
+  it('status failure keeps the fallback line', () => {
+    expect(helpMessage({ dmOk: true, owner: false, limit: 3 }).endsWith(`${D}\n3 a day (couldn't check your count just now)`)).toBe(true);
+  });
+
+  it('every non-owner HELP_TABLE command appears in the player body', () => {
+    const body = helpBody({ dmOk: true, owner: false });
+    for (const e of HELP_TABLE.filter((x) => !x.owner)) {
+      const [first, ...rest] = e.command.split(' ');
+      const ok = body.includes(e.command) || (rest.length > 0 && body.includes(first) && rest.every((t) => body.includes(t)));
+      expect({ command: e.command, ok }).toEqual({ command: e.command, ok: true });
+    }
   });
 
   it('old helpText is unchanged for the unframed path', () => {
-    expect(helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })).toContain('Catch-up bot \u2014 what you can ask');
+    expect(helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })).toContain('Catch-up bot — what you can ask');
   });
 });
 
@@ -2079,11 +2104,11 @@ describe('sprint 4 owner DMs and help framing', () => {
 
   describe('help', () => {
     const statusRes = () => jsonResponse(200, { kind: 'status', used: 2, limit: 3 });
-    it('ON: framed helpBody with FOOTER_HELP', async () => {
+    it('ON: framed helpMessage', async () => {
       const { deps } = flowDeps({ preview: FORMAT, owner: true, fetchFn: vi.fn().mockResolvedValue(statusRes()) });
       await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
       expect(deps.sendText.mock.calls).toEqual([
-        [OWNER, fr('Help', helpBody({ dmOk: false, owner: true, used: 2, limit: 3 }), 'Group commands: @bot <command> in the group. DM commands: message me directly.')],
+        [OWNER, helpMessage({ dmOk: false, owner: true, used: 2, limit: 3 })],
       ]);
     });
     it('OFF: old helpText', async () => {

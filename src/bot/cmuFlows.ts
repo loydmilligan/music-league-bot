@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import type { CmuCommand } from './cmuCommand.js';
-import { ALL_COMMANDS, HELP_TABLE, SECTION_EXPLAIN, menuHeading, type HelpEntry } from './cmuMenu.js';
+import { ALL_COMMANDS, menuHeading } from './cmuMenu.js';
 import {
   CMU_ACK_EMOJI,
   CMU_DEADLINE_MS,
@@ -21,7 +21,7 @@ import {
   type SafeTrace,
   framing,
 } from './catchMeUp.js';
-import { FOOTER_HELP, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
+import { FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, withoutRetry } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
@@ -94,30 +94,67 @@ export function helpText(o: { botName: string; used?: number; limit: number; coo
   return lines.join('\n');
 }
 
-/** Sprint 4 help body (unframed; framing happens at the send). */
-export function helpBody(o: { dmOk: boolean; owner: boolean; used?: number; limit: number }): string {
-  const count = o.used === undefined
+const HELP_BOTH = [
+  '_Music League Bot · what I can do_',
+  '',
+  '*BOTH* — _send in the group as @bot …, or DM me_',
+  '• *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)',
+  '• *help* — this list',
+];
+
+const HELP_DM = [
+  '*DM ONLY* — _message me directly, no @ needed_',
+  '',
+  '_Catch up_',
+  '• *recap7* — your last 7 days: messages, \u{1F602}s and your best post',
+  "• *pick one* — the single topic you'd enjoy most",
+  '',
+  '_Best of the chat_ (add *week* for 7 days instead of 2)',
+  '• *top-songs* · *top-pics* · *top-videos* · *top-links*',
+  '• *top-media* — pics, videos and links together',
+  '',
+  '_Topics_',
+  "• *list-topics* — what everyone's talking about now",
+  '• *show-topic 3* — read topic #3 from that list',
+  '',
+  '_About you_',
+  '• *my-dossier* — what I know about you',
+  '',
+  '_Morning Brief_ — a short daily summary by DM',
+  '• *morning-brief sub* / *unsub* — start or stop it',
+  '• *morning-brief 7:30* — change the delivery time',
+];
+
+const HELP_OWNER = [
+  '*\u{1F451} OWNER* — _group only_',
+  "• *full* — last 48 hours; doesn't count or move your window",
+  '• *forget* [*dl* | *sybg*] [*@Player* | *all*]',
+  '   resets catch-ups for today. *dl* = only the 3-a-day count,',
+  '   *sybg* = only the "since you\'ve been gone" start time,',
+  '   neither = both',
+  '• *off* / *on* — silence or restore the whole bot',
+  '• *tldr* — post a short how-to in the group',
+  '• *recap-bot-calls* — last 24 h of bot activity and spend (also by DM)',
+];
+
+/** The framed help's body: Both, then DM only (preview readers), then Owner (owner only). Empty sections are hidden. */
+export function helpBody(o: { dmOk: boolean; owner: boolean }): string {
+  return [
+    ...HELP_BOTH,
+    ...(o.dmOk ? ['', ...HELP_DM] : []),
+    ...(o.owner ? ['', ...HELP_OWNER] : []),
+  ].join('\n');
+}
+
+/** The framed help's footer: the count line. `used` undefined means companelist couldn't be asked. */
+export function helpFooter(o: { used?: number; limit: number }): string {
+  return o.used === undefined
     ? `${o.limit} a day (couldn't check your count just now)`
-    : `You've used ${o.used} of ${o.limit} today. Resets at midnight (LA time).`;
-  const line = (e: HelpEntry) => `  ${e.command} \u2014 ${e.explain}`;
-  const players = HELP_TABLE.filter((e) => !e.owner);
-  const section = (where: HelpEntry['where'], empty?: string): string[] => {
-    const items = players.filter((e) => e.where === where);
-    return [SECTION_EXPLAIN[where], ...(items.length ? items.map(line) : empty ? [empty] : [])];
-  };
-  const lines = [
-    ...section('both'),
-    '',
-    ...section('group', 'Nothing group-only yet. Both commands work in the group too.'),
-    ...(o.dmOk ? ['', ...section('dm')] : []),
-    '',
-    count,
-  ];
-  if (o.owner) {
-    const tag = (w: HelpEntry['where']) => (w === 'dm' ? '(DM)' : `(${w})`);
-    lines.push('', 'Owner only', ...HELP_TABLE.filter((e) => e.owner).map((e) => `  ${e.command} ${tag(e.where)} \u2014 ${e.explain}`));
-  }
-  return lines.join('\n');
+    : `You've used ${o.used} of ${o.limit} catch-ups today · resets at midnight LA time`;
+}
+
+export function helpMessage(o: { dmOk: boolean; owner: boolean; used?: number; limit: number }): string {
+  return frameMessage({ name: MESSAGE_NAMES.help, body: helpBody(o), footer: helpFooter(o) });
 }
 
 /** K7, verbatim: the group reminder `@bot tldr` posts. `cooldownMin` is not in the copy yet. */
@@ -389,7 +426,7 @@ async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, cooldown: 
     }
   }
   const text = framing(deps, msg.from, true)
-    ? frameMessage({ name: MESSAGE_NAMES.help, body: helpBody({ dmOk, owner, used, limit }), footer: FOOTER_HELP })
+    ? helpMessage({ dmOk, owner, used, limit })
     : helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner, dmOk });
   await timed(trace, 'help-dm', () => deps.sendText(msg.author, text));
 }
