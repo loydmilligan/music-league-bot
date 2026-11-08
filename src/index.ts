@@ -26,7 +26,7 @@ import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
 import { openInteractionLog } from './storage/interactionLog.js';
-import { defaultCmuPreview } from './bot/cmuPreview.js';
+import { defaultCmuPreview, registerPreviewOwner } from './bot/cmuPreview.js';
 import { BurstGuard, runReaction } from './bot/reactions.js';
 import { PALETTE } from './bot/reactionPalette.js';
 import { createJevPicker } from './chat/jevPick.js';
@@ -150,6 +150,7 @@ let started = false;
 client.on('ready', () => {
   if (started) return;
   started = true;
+  void registerPreviewOwner(makeDmTarget(client), ownerPhone, (l) => console.log(l));
 
   const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002';
   const { runOnce } = startDigestPoller({

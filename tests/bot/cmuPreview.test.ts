@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { openCmuPreview, memoryCmuPreview, cmuPreviewPath } from '../../src/bot/cmuPreview.js';
+import { openCmuPreview, memoryCmuPreview, cmuPreviewPath, addPreviewOwnerId, registerPreviewOwner } from '../../src/bot/cmuPreview.js';
 
 const A = '120363000000000001@g.us';
 const B = '120363000000000002@g.us';
@@ -177,5 +177,124 @@ describe('cmuPreview', () => {
       if (prev === undefined) delete process.env.DATA_DIR;
       else process.env.DATA_DIR = prev;
     }
+  });
+
+  describe('"owner" entry in people', () => {
+    const OWNER_PHONE = '15550000001';
+    const OWNER_C_US = '15550000001@c.us';
+    const OWNER_LID = '100000000000001@lid';
+    let prevEnv: string | undefined;
+    const setEnv = (v: string | undefined): void => {
+      prevEnv = process.env.OWNER_PHONE_NUMBER;
+      if (v === undefined) delete process.env.OWNER_PHONE_NUMBER;
+      else process.env.OWNER_PHONE_NUMBER = v;
+    };
+    afterEach(() => {
+      if (prevEnv === undefined) delete process.env.OWNER_PHONE_NUMBER;
+      else process.env.OWNER_PHONE_NUMBER = prevEnv;
+    });
+    function ownerFile(people: unknown[] = ['owner'], groups: unknown[] = []): string {
+      const file = tmpFile();
+      write(file, JSON.stringify({ groups, people }), 1000);
+      return file;
+    }
+
+    it('matches the OWNER_PHONE_NUMBER env id (normalised to @c.us) read lazily', () => {
+      setEnv(undefined);
+      const p = openCmuPreview(ownerFile());
+      expect(p.isPreviewPerson(OWNER_C_US)).toBe(false);
+      process.env.OWNER_PHONE_NUMBER = OWNER_PHONE;
+      expect(p.isPreviewPerson(OWNER_C_US)).toBe(true);
+      expect(p.isPreviewPerson('15550000002@c.us')).toBe(false);
+    });
+
+    it('keeps an env value that already has an @ as is', () => {
+      setEnv(OWNER_LID);
+      expect(openCmuPreview(ownerFile()).isPreviewPerson(OWNER_LID)).toBe(true);
+    });
+
+    it('matches ids registered with addPreviewOwnerId, including via the default instance', async () => {
+      setEnv(undefined);
+      vi.resetModules();
+      const m = await import('../../src/bot/cmuPreview.js');
+      const file = ownerFile();
+      const p = m.openCmuPreview(file);
+      expect(p.isPreviewPerson(OWNER_LID)).toBe(false);
+      m.addPreviewOwnerId('');
+      m.addPreviewOwnerId(OWNER_LID);
+      expect(p.isPreviewPerson(OWNER_LID)).toBe(true);
+      expect(p.isPreviewPerson('')).toBe(false);
+      expect(p.isPreviewPerson('100000000000002@lid')).toBe(false);
+      const prev = process.env.DATA_DIR;
+      try {
+        process.env.DATA_DIR = path.dirname(file);
+        expect(m.isPreviewPerson(OWNER_LID)).toBe(true);
+      } finally {
+        if (prev === undefined) delete process.env.DATA_DIR;
+        else process.env.DATA_DIR = prev;
+      }
+    });
+
+    it('fails closed when no owner is known', () => {
+      setEnv(undefined);
+      const p = openCmuPreview(ownerFile());
+      expect(p.isPreviewPerson(OWNER_C_US)).toBe(false);
+      expect(p.isPreviewPerson('owner')).toBe(false);
+      expect(p.isPreviewPerson('')).toBe(false);
+    });
+
+    it('literal ids keep working alongside "owner"; "owner" in groups means nothing', () => {
+      setEnv(OWNER_PHONE);
+      const p = openCmuPreview(ownerFile([P, 'owner'], ['owner', A]));
+      expect(p.isPreviewPerson(P)).toBe(true);
+      expect(p.isPreviewPerson(OWNER_C_US)).toBe(true);
+      expect(p.isPreviewPerson(Q)).toBe(false);
+      expect(p.isPreview('owner')).toBe(false);
+      expect(p.isPreview(OWNER_C_US)).toBe(false);
+      expect(p.isPreview(A)).toBe(true);
+    });
+
+    it('without "owner" in people, owner ids do not match', () => {
+      setEnv(OWNER_PHONE);
+      expect(openCmuPreview(ownerFile([P])).isPreviewPerson(OWNER_C_US)).toBe(false);
+    });
+
+    it('openCmuPreview accepts an ownerIds override', () => {
+      setEnv(OWNER_PHONE);
+      const p = openCmuPreview(ownerFile(), { ownerIds: () => [Q] });
+      expect(p.isPreviewPerson(Q)).toBe(true);
+      expect(p.isPreviewPerson(OWNER_C_US)).toBe(false);
+    });
+
+    it('memoryCmuPreview takes owner ids as a third parameter', () => {
+      const m = memoryCmuPreview([A], ['owner', P], [OWNER_LID]);
+      expect(m.isPreviewPerson(OWNER_LID)).toBe(true);
+      expect(m.isPreviewPerson(P)).toBe(true);
+      expect(m.isPreviewPerson(Q)).toBe(false);
+      expect(m.isPreview('owner')).toBe(false);
+      expect(memoryCmuPreview([], [Q], [OWNER_LID]).isPreviewPerson(OWNER_LID)).toBe(false);
+    });
+
+    it('registerPreviewOwner registers the resolved id', async () => {
+      setEnv(undefined);
+      vi.resetModules();
+      const m = await import('../../src/bot/cmuPreview.js');
+      const logs: string[] = [];
+      await m.registerPreviewOwner(async () => '100000000000009@lid', OWNER_PHONE, (l) => logs.push(l));
+      expect(logs).toEqual([]);
+      expect(m.openCmuPreview(ownerFile()).isPreviewPerson('100000000000009@lid')).toBe(true);
+    });
+
+    it('registerPreviewOwner resolves, logs, and registers nothing when dmTarget rejects', async () => {
+      setEnv(undefined);
+      vi.resetModules();
+      const m = await import('../../src/bot/cmuPreview.js');
+      const logs: string[] = [];
+      await expect(
+        m.registerPreviewOwner(() => Promise.reject(new Error('x 100000000000009@lid')), OWNER_PHONE, (l) => logs.push(l)),
+      ).resolves.toBeUndefined();
+      expect(logs).toEqual(['[preview] owner id lookup failed']);
+      expect(m.openCmuPreview(ownerFile()).isPreviewPerson('100000000000009@lid')).toBe(false);
+    });
   });
 });
