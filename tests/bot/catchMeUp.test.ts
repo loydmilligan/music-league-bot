@@ -963,7 +963,7 @@ describe('commandLabel sprint 4', () => {
 
 describe('helpBody', () => {
   const both = [
-    'Both: work in the group (@bot ...) and in a DM.',
+    'Both: work in the group (@bot …) and in a DM.',
     '  catch me up \u2014 A picture of what you missed since your last post',
     '  help \u2014 This list of everything I can do',
     '',
@@ -1835,7 +1835,7 @@ describe('didYouKnow', () => {
 
   it('SECTION_EXPLAIN is verbatim', () => {
     expect(SECTION_EXPLAIN).toEqual({
-      both: 'Both: work in the group (@bot ...) and in a DM.',
+      both: 'Both: work in the group (@bot …) and in a DM.',
       group: 'Group commands: send as @bot <command> in the group.',
       dm: 'DM commands: send these to me directly, no @.',
     });

@@ -47,7 +47,7 @@ export interface HelpEntry {
 }
 
 export const SECTION_EXPLAIN = {
-  both: 'Both: work in the group (@bot ...) and in a DM.',
+  both: 'Both: work in the group (@bot …) and in a DM.',
   group: 'Group commands: send as @bot <command> in the group.',
   dm: 'DM commands: send these to me directly, no @.',
 } as const;
