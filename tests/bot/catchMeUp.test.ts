@@ -1982,3 +1982,133 @@ describe('runCatchMeUp sprint 4 frame', () => {
     expect(run.deps.sendText.mock.calls[0][1]).toContain(OFF_LINE);
   });
 });
+
+describe('sprint 4 owner DMs and help framing', () => {
+  const FORMAT = memoryCmuPreview([GROUP], [], [], [GROUP]);
+  const NO_FORMAT = memoryCmuPreview([GROUP]);
+  const D = '── ';
+  const fr = (name: string, body: string, footer: string) => `${D}${name} ──\n${body}\n──────────\n${footer}`;
+  const OWNER_FOOT = 'DM me "help" for owner commands.';
+
+  const SCOPES = [
+    ['both', 'Daily Limit and SYBG reset'],
+    ['dl', 'Daily Limit reset'],
+    ['sybg', 'SYBG reset'],
+  ] as const;
+
+  describe('forget', () => {
+    it.each(SCOPES)('self, scope %s: sends scope; framed reply', async (scope, what) => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', forgotten: false })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope, target: 'self' });
+      expect(sentBody(deps).scope).toBe(scope);
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', `${what} for you.`, OWNER_FOOT)]]);
+    });
+
+    it.each(SCOPES)('all, scope %s', async (scope, what) => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'all', forgotten: true })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope, target: 'all' });
+      expect(sentBody(deps).scope).toBe(scope);
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', `${what} for everyone.`, OWNER_FOOT)]]);
+    });
+
+    it.each(SCOPES)('@Player, scope %s: names the player; the forgotten flag is ignored', async (scope, what) => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: true, forgotten: false, person: 'Pat Q' })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope, target: { id: PLAYER } });
+      expect(sentBody(deps).scope).toBe(scope);
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', `${what} for Pat Q.`, OWNER_FOOT)]]);
+    });
+
+    it('@Player without a person falls back to the contact name', async () => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'player', resolved: true, forgotten: true })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'dl', target: { id: PLAYER } });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Forget', `Daily Limit reset for ${SENTINEL_NAME}.`, OWNER_FOOT)]]);
+    });
+
+    it('framed failure: FOOTER_RETRY, and the retry sentence is not repeated in the body', async () => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, {})) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'all' });
+      expect(deps.sendText.mock.calls).toEqual([
+        [OWNER, fr('Forget', "Couldn't reach the catch-up service, so nothing was forgotten.", FOOTER_RETRY)],
+      ]);
+    });
+
+    it('OFF: no scope sent; the old reply and failure text byte for byte', async () => {
+      const { deps } = flowDeps({ preview: NO_FORMAT, fetchFn: vi.fn().mockResolvedValue(forgotRes({ target: 'self', forgotten: true })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'forget', scope: 'both', target: 'self' });
+      expect(sentBody(deps)).not.toHaveProperty('scope');
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Forgot your last catch-up. You have 3 left today.']]);
+      const bad = flowDeps({ preview: NO_FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, {})) });
+      await runCatchMeUp(ownerMsg(), bad.deps, { kind: 'forget', scope: 'both', target: 'all' });
+      expect(bad.deps.sendText.mock.calls).toEqual([[OWNER, FORGET_FAILURE_TEXT]]);
+    });
+  });
+
+  describe('help', () => {
+    const statusRes = () => jsonResponse(200, { kind: 'status', used: 2, limit: 3 });
+    it('ON: framed helpBody with FOOTER_HELP', async () => {
+      const { deps } = flowDeps({ preview: FORMAT, owner: true, fetchFn: vi.fn().mockResolvedValue(statusRes()) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'help' });
+      expect(deps.sendText.mock.calls).toEqual([
+        [OWNER, fr('Help', helpBody({ dmOk: false, owner: true, used: 2, limit: 3 }), 'Group commands: @bot <command> in the group. DM commands: message me directly.')],
+      ]);
+    });
+    it('OFF: old helpText', async () => {
+      const { deps } = flowDeps({ preview: NO_FORMAT, owner: false, fetchFn: vi.fn().mockResolvedValue(statusRes()) });
+      await runCatchMeUp(makeMsg(), deps, { kind: 'help' });
+      expect(deps.sendText.mock.calls).toEqual([[AUTHOR, helpText({ botName: BOT, used: 2, limit: 3, cooldownMin: 5, owner: false })]]);
+    });
+  });
+
+  describe('bot off/on', () => {
+    it.each([
+      ['off', 'Bot Off', `Catch-up bot is off. Nobody gets reactions or DMs from catch-me-up commands until you send "@${BOT} on" in any group.`],
+      ['on', 'Bot On', 'Catch-up bot is back on.'],
+    ] as const)('%s ON: framed with the owner footer', async (kind, name, body) => {
+      const { deps } = flowDeps({ preview: FORMAT, cmuSwitch: memSwitch(kind === 'off') });
+      await runCatchMeUp(ownerMsg(), deps, { kind });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr(name, body, OWNER_FOOT)]]);
+    });
+    it('OFF: unframed', async () => {
+      const { deps } = flowDeps({ preview: NO_FORMAT });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'on' });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Catch-up bot is back on.']]);
+    });
+    it('framed switch failure: Bot Off with FOOTER_RETRY', async () => {
+      const sw: CmuSwitch = { isEnabled: () => true, set: () => { throw new Error('disk'); } };
+      const { deps } = flowDeps({ preview: FORMAT, cmuSwitch: sw });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'off' });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Bot Off', "Couldn't change the catch-up switch; it's still on.", FOOTER_RETRY)]]);
+    });
+    it('unframed switch failure is byte-identical', async () => {
+      const sw: CmuSwitch = { isEnabled: () => true, set: () => { throw new Error('disk'); } };
+      const { deps } = flowDeps({ preview: NO_FORMAT, cmuSwitch: sw });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'off' });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, "Couldn't change the catch-up switch; it's still on."]]);
+    });
+  });
+
+  describe('recap-bot-calls', () => {
+    it('ON: Bot Calls frame; failure uses FOOTER_RETRY', async () => {
+      const { deps } = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'recap', text: 'Synthetic recap line.' })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, fr('Bot Calls', 'Synthetic recap line.', OWNER_FOOT)]]);
+      const bad = flowDeps({ preview: FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, {})) });
+      await runCatchMeUp(ownerMsg(), bad.deps, { kind: 'recap' });
+      expect(bad.deps.sendText.mock.calls).toEqual([[OWNER, fr('Bot Calls', RECAP_FAILURE_TEXT, FOOTER_RETRY)]]);
+    });
+    it('OFF: unframed text and failure', async () => {
+      const { deps } = flowDeps({ preview: NO_FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(200, { kind: 'recap', text: 'Synthetic recap line.' })) });
+      await runCatchMeUp(ownerMsg(), deps, { kind: 'recap' });
+      expect(deps.sendText.mock.calls).toEqual([[OWNER, 'Synthetic recap line.']]);
+      const bad = flowDeps({ preview: NO_FORMAT, fetchFn: vi.fn().mockResolvedValue(jsonResponse(500, {})) });
+      await runCatchMeUp(ownerMsg(), bad.deps, { kind: 'recap' });
+      expect(bad.deps.sendText.mock.calls).toEqual([[OWNER, RECAP_FAILURE_TEXT]]);
+    });
+  });
+
+  it('tldr is never framed', async () => {
+    const { deps } = flowDeps({ preview: FORMAT });
+    await runCatchMeUp(ownerMsg(), deps, { kind: 'tldr' });
+    expect(deps.sendText.mock.calls).toEqual([[GROUP, tldrText({ botName: BOT, limit: 3, cooldownMin: 5 })]]);
+  });
+});

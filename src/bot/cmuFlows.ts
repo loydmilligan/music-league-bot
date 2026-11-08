@@ -19,7 +19,9 @@ import {
   type CmuDeps,
   type CmuMessage,
   type SafeTrace,
+  framing,
 } from './catchMeUp.js';
+import { FOOTER_HELP, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
@@ -49,6 +51,7 @@ const validCooldown = (v: unknown): number | undefined =>
 
 type End = (outcome: string, error?: string) => void;
 type ForgetTarget = Extract<CmuCommand, { kind: 'forget' }>['target'];
+type ForgetScope = Extract<CmuCommand, { kind: 'forget' }>['scope'];
 
 /** H2, verbatim. `used` undefined means companelist couldn't be asked (H3). */
 export function helpText(o: { botName: string; used?: number; limit: number; cooldownMin: number; owner: boolean; dmOk?: boolean }): string {
@@ -202,6 +205,14 @@ export function forgetReply(r: Forgot, contactName: string): string {
     : `Reset ${person}'s count; no recent catch-up to forget.`;
 }
 
+/** Sprint 4 forget confirmation: worded from the scope and target only (not the `forgotten` flag). */
+export function forgetReplyScoped(r: Forgot, scope: ForgetScope, contactName: string): string {
+  const what = scope === 'dl' ? 'Daily Limit reset' : scope === 'sybg' ? 'SYBG reset' : 'Daily Limit and SYBG reset';
+  if (r.target === 'all') return `${what} for everyone.`;
+  if (r.target === 'self') return `${what} for you.`;
+  return `${what} for ${r.person ?? (contactName.trim() || 'that player')}.`;
+}
+
 /** POST one request to companelist; a non-2xx throws CmuHttpError. Returns the status and JSON body. */
 async function post(deps: CmuDeps, body: Record<string, unknown>, timeoutMs: number): Promise<{ status: number; data: unknown }> {
   const res = await deps.fetchFn(deps.url, {
@@ -227,15 +238,25 @@ async function safeContactName(deps: CmuDeps, id: string): Promise<string> {
   }
 }
 
+/**
+ * An owner failure DM. Framed (sprint 4) it carries FOOTER_RETRY, so a "Try again ..." sentence in the
+ * body is dropped; unframed it is the old text, byte for byte.
+ */
+function ownerFailure(deps: CmuDeps, msg: CmuMessage, name: string, text: string): string {
+  if (!framing(deps, msg.from, true)) return text;
+  const body = text.replace(/\s*Try again in a few minutes\.$/, '');
+  return frameMessage({ name, body, footer: FOOTER_RETRY });
+}
+
 /** Owner only (R1–R4): reset a count and forget the latest request, then confirm by DM. */
-export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trace: SafeTrace, end: End): Promise<void> {
+export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, scope: ForgetScope, trace: SafeTrace, end: End): Promise<void> {
   let outcome = 'failed';
   let error: string | undefined;
   const state = { posted: false };
   try {
     await react(msg, CMU_ACK_EMOJI, deps, trace);
     try {
-      outcome = await withDeadline(forget(msg, deps, target, trace, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
+      outcome = await withDeadline(forget(msg, deps, target, scope, trace, state), deps.deadlineMs ?? CMU_DEADLINE_MS);
     } catch (err) {
       if (state.posted) {
         // The forget itself succeeded; only the confirm DM (or the deadline) failed. No contradictory DM.
@@ -248,7 +269,7 @@ export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTa
       deps.log(`[cmu] forget failed in ${msg.from}: ${error}`);
       const t0 = performance.now();
       try {
-        await withDeadline(deps.sendText(msg.author, FORGET_FAILURE_TEXT), deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS);
+        await withDeadline(deps.sendText(msg.author, ownerFailure(deps, msg, MESSAGE_NAMES.forget, FORGET_FAILURE_TEXT)), deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS);
         trace.step('failure-dm', { ok: true, ms: msSince(t0) });
       } catch (dmErr) {
         trace.step('failure-dm', { ok: false, ms: msSince(t0) });
@@ -260,11 +281,12 @@ export async function runForget(msg: CmuMessage, deps: CmuDeps, target: ForgetTa
   }
 }
 
-async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trace: SafeTrace, state: { posted: boolean }): Promise<'forgot'> {
+async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, scope: ForgetScope, trace: SafeTrace, state: { posted: boolean }): Promise<'forgot'> {
   const player = typeof target === 'object';
   const contactName = player ? await safeContactName(deps, target.id) : '';
   const wireTarget = player ? { key: await resolveKey(target.id, deps), name: contactName } : target;
-  const body = { ...(await baseBody(msg, deps)), mode: 'forget', target: wireTarget };
+  const frame = framing(deps, msg.from, true);
+  const body = { ...(await baseBody(msg, deps)), mode: 'forget', target: wireTarget, ...(frame ? { scope } : {}) };
 
   const t0 = performance.now();
   let result: Forgot | null;
@@ -280,7 +302,9 @@ async function forget(msg: CmuMessage, deps: CmuDeps, target: ForgetTarget, trac
   state.posted = true;
   trace.step('forget', { ok: true, ms: msSince(t0), status: 200, ...(player ? { resolved: result.resolved } : {}) });
 
-  const reply = forgetReply(result, contactName);
+  const reply = frame
+    ? frameMessage({ name: MESSAGE_NAMES.forget, body: forgetReplyScoped(result, scope, contactName), footer: FOOTER_OWNER })
+    : forgetReply(result, contactName);
   await timed(trace, 'confirm-dm', () => deps.sendText(msg.author, reply));
   deps.log(`[cmu] forgot in ${msg.from}`);
   return 'forgot';
@@ -359,7 +383,9 @@ async function help(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace, cooldown: 
       dmOk = false;
     }
   }
-  const text = helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner, dmOk });
+  const text = framing(deps, msg.from, true)
+    ? frameMessage({ name: MESSAGE_NAMES.help, body: helpBody({ dmOk, owner, used, limit }), footer: FOOTER_HELP })
+    : helpText({ botName: deps.botName?.() || DEFAULT_BOT_NAME, used, limit, cooldownMin: cooldown.min, owner, dmOk });
   await timed(trace, 'help-dm', () => deps.sendText(msg.author, text));
 }
 
@@ -378,7 +404,7 @@ export async function runSwitch(msg: CmuMessage, deps: CmuDeps, sw: CmuSwitch, e
     const still = safeIsEnabled(sw) ? 'on' : 'off';
     try {
       await withDeadline(
-        timed(trace, 'failure-dm', () => deps.sendText(msg.author, switchFailureText(still))),
+        timed(trace, 'failure-dm', () => deps.sendText(msg.author, ownerFailure(deps, msg, enabled ? MESSAGE_NAMES.botOn : MESSAGE_NAMES.botOff, switchFailureText(still)))),
         deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
       );
     } catch (dmErr) {
@@ -389,7 +415,10 @@ export async function runSwitch(msg: CmuMessage, deps: CmuDeps, sw: CmuSwitch, e
   }
   trace.step('switch', { ok: true, enabled });
   deps.log(`[cmu] switched ${label} in ${msg.from}`);
-  const text = enabled ? SWITCH_ON_TEXT : switchOffText(deps.botName?.() || DEFAULT_BOT_NAME);
+  const plain = enabled ? SWITCH_ON_TEXT : switchOffText(deps.botName?.() || DEFAULT_BOT_NAME);
+  const text = framing(deps, msg.from, true)
+    ? frameMessage({ name: enabled ? MESSAGE_NAMES.botOn : MESSAGE_NAMES.botOff, body: plain, footer: FOOTER_OWNER })
+    : plain;
   try {
     await withDeadline(
       timed(trace, 'confirm-dm', () => deps.sendText(msg.author, text)),
@@ -463,14 +492,15 @@ export async function runRecap(msg: CmuMessage, deps: CmuDeps, trace: SafeTrace,
       trace.step('companelist', { ok: false, ms: msSince(t0), status: err instanceof CmuHttpError ? err.status : undefined });
       throw err;
     }
-    await withDeadline(timed(trace, 'confirm-dm', () => deps.sendText(msg.author, text)), deps.deadlineMs ?? CMU_DEADLINE_MS);
+    const dm = framing(deps, msg.from, true) ? frameMessage({ name: MESSAGE_NAMES.botCalls, body: text, footer: FOOTER_OWNER }) : text;
+    await withDeadline(timed(trace, 'confirm-dm', () => deps.sendText(msg.author, dm)), deps.deadlineMs ?? CMU_DEADLINE_MS);
     outcome = 'recap';
   } catch (err) {
     error = describeError(err);
     deps.log(`[cmu] recap failed in ${msg.from}: ${error}`);
     try {
       await withDeadline(
-        timed(trace, 'failure-dm', () => deps.sendText(msg.author, RECAP_FAILURE_TEXT)),
+        timed(trace, 'failure-dm', () => deps.sendText(msg.author, ownerFailure(deps, msg, MESSAGE_NAMES.botCalls, RECAP_FAILURE_TEXT))),
         deps.failureDmTimeoutMs ?? CMU_FAILURE_DM_TIMEOUT_MS,
       );
     } catch (dmErr) {

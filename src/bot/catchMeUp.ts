@@ -413,7 +413,7 @@ export async function runCatchMeUp(msg: CmuMessage, deps: CmuDeps, cmd: CmuComma
   if (cmd.kind === 'off' || cmd.kind === 'on') return runSwitch(msg, deps, cmuSwitch, cmd.kind === 'on', trace, end);
   if (cmd.kind === 'tldr') return runTldr(msg, deps, trace, end);
   if (cmd.kind === 'recap') return runRecap(msg, deps, trace, end);
-  if (cmd.kind === 'forget') return runForget(msg, deps, cmd.target, trace, end);
+  if (cmd.kind === 'forget') return runForget(msg, deps, cmd.target, cmd.scope, trace, end);
 
   let outcome: Outcome = 'failed';
   let error: string | undefined;
