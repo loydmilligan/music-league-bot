@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCmuCommand, FILLER_WORDS, type CmuCommand } from '../../src/bot/cmuCommand.js';
+import { parseCmuCommand, parseRecapTime, FILLER_WORDS, type CmuCommand } from '../../src/bot/cmuCommand.js';
 
 const SELF = new Set(['123@lid']);
 const run = (body: string, mentions = true, ids: string[] = []) =>
@@ -69,5 +69,78 @@ describe('parseCmuCommand', () => {
   it('exports the filler list', () => {
     expect(FILLER_WORDS).toContain('pls');
     expect(FILLER_WORDS).toHaveLength(14);
+  });
+});
+
+describe('player commands (dm only)', () => {
+  const dm = (body: string) => parseCmuCommand(body, false, [], SELF, { dm: true });
+
+  it('group never parses player commands', () => {
+    for (const b of ['top-songs', 'top songs', 'pick one', 'show-topic 3', 'my-dossier', 'morning-recap sub']) {
+      expect(run(b)).toBeNull();
+    }
+  });
+
+  const dmMatches: [string, CmuCommand][] = [
+    ['top songs', { kind: 'top', list: 'songs', days: 2 }],
+    ['topsongs week', { kind: 'top', list: 'songs', days: 7 }],
+    ['top-songs', { kind: 'top', list: 'songs', days: 2 }],
+    ['Top Songs!', { kind: 'top', list: 'songs', days: 2 }],
+    ['top-pics week', { kind: 'top', list: 'pics', days: 7 }],
+    ['top-videos', { kind: 'top', list: 'videos', days: 2 }],
+    ['top links', { kind: 'top', list: 'links', days: 2 }],
+    ['top-media week', { kind: 'top', list: 'media', days: 7 }],
+    ['pick one', { kind: 'pick' }],
+    ['pick-one', { kind: 'pick' }],
+    ['list-topics', { kind: 'topics' }],
+    ['list topics', { kind: 'topics' }],
+    ['listtopics', { kind: 'topics' }],
+    ['show topic 3', { kind: 'topic', n: 3 }],
+    ['show-topic 10', { kind: 'topic', n: 10 }],
+    ['showtopic 1', { kind: 'topic', n: 1 }],
+    ['my dossier', { kind: 'dossier' }],
+    ['my-dossier', { kind: 'dossier' }],
+    ['dossier', { kind: 'dossier' }],
+    ['morning recap 7:30', { kind: 'recap-time', time: '07:30' }],
+    ['morning-recap 7:30', { kind: 'recap-time', time: '07:30' }],
+    ['morning-recap time 7:30', { kind: 'recap-time', time: '07:30' }],
+    ['morning-recap sub', { kind: 'recap-sub' }],
+    ['recap sub', { kind: 'recap-sub' }],
+    ['morning-recap unsub', { kind: 'recap-unsub' }],
+    ['morning-recap 99', { kind: 'recap-time-bad' }],
+    ['help', { kind: 'help' }],
+    ['catch me up', CATCHUP],
+    ['cach me up', CATCHUP],
+    ['recap-bot-calls', { kind: 'recap' }],
+  ];
+  it.each(dmMatches)('dm matches %j', (body, expected) => {
+    expect(dm(body)).toEqual(expected);
+  });
+
+  const dmNon = [
+    'show-topic', 'show-topic 11', 'show-topic 0', 'pick one of these', 'top songs please',
+    'can you catch me up', 'hey help', 'full', 'forget', 'forget all', 'off', 'on', 'tldr',
+    'catch me up pls', 'hey top songs', 'top songs week please', 'top-songs 3', '@123 help',
+  ];
+  it.each(dmNon)('dm does not match %j', (body) => {
+    expect(dm(body)).toBeNull();
+  });
+
+  it('dm ignores mentionsBot and group ignores nothing new', () => {
+    expect(parseCmuCommand('help', true, [], SELF, { dm: true })).toEqual({ kind: 'help' });
+    expect(parseCmuCommand('help', false, [], SELF, { dm: false })).toBeNull();
+  });
+});
+
+describe('parseRecapTime', () => {
+  const cases: [string, string | undefined][] = [
+    ['7:30', '07:30'], ['7', '07:00'], ['3', '03:00'], ['12', '12:00'], ['13:15', '13:15'],
+    ['7pm', '19:00'], ['12am', '00:00'], ['12pm', '12:00'], ['7:30 am', '07:30'], ['11', '11:00'],
+    ['5', '05:00'], ['0', '00:00'], ['23:59', '23:59'],
+    ['7:5', undefined], ['25', undefined], ['abc', undefined], ['24:00', undefined],
+    ['7:60', undefined], ['13pm', undefined], ['0am', undefined], ['', undefined],
+  ];
+  it.each(cases)('%j -> %j', (s, expected) => {
+    expect(parseRecapTime(s)).toBe(expected);
   });
 });

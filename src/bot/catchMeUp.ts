@@ -129,6 +129,15 @@ export function commandLabel(cmd: CmuCommand): string {
     case 'on': return 'on';
     case 'tldr': return 'tldr';
     case 'recap': return 'recap';
+    case 'top': return `top-${cmd.list}${cmd.days === 7 ? ' week' : ''}`;
+    case 'pick': return 'pick one';
+    case 'topics': return 'list-topics';
+    case 'topic': return 'show-topic';
+    case 'dossier': return 'my-dossier';
+    case 'recap-sub': return 'morning-recap sub';
+    case 'recap-unsub': return 'morning-recap unsub';
+    case 'recap-time':
+    case 'recap-time-bad': return 'morning-recap time';
     case 'forget': return cmd.target === 'self' ? 'forget' : cmd.target === 'all' ? 'forget all' : 'forget @';
   }
 }

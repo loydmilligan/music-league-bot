@@ -12,7 +12,19 @@ export type CmuCommand =
   | { kind: 'off' }
   | { kind: 'on' }
   | { kind: 'tldr' }
-  | { kind: 'recap' };
+  | { kind: 'recap' }
+  // Player commands: returned only in DM mode (R1).
+  | { kind: 'top'; list: TopList; days: 2 | 7 }
+  | { kind: 'pick' }
+  | { kind: 'topics' }
+  | { kind: 'topic'; n: number }
+  | { kind: 'dossier' }
+  | { kind: 'recap-sub' }
+  | { kind: 'recap-unsub' }
+  | { kind: 'recap-time'; time: string }
+  | { kind: 'recap-time-bad' };
+
+export type TopList = 'songs' | 'pics' | 'videos' | 'links' | 'media';
 
 /** Up to 3 of these may lead the text (spec M1). */
 export const FILLER_WORDS: readonly string[] = [
@@ -63,12 +75,76 @@ function matchesPrefixPhrase(text: string): boolean {
   return false;
 }
 
+/**
+ * M2: a recap time as "HH:MM" (24 h, LA). Accepts H, H:MM, HH:MM with optional am/pm.
+ * No suffix: H >= 13 or H <= 4 is 24 h, 5-11 is AM, 12 is noon.
+ */
+export function parseRecapTime(s: string): string | undefined {
+  const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/.exec(s.trim().toLowerCase());
+  if (!m) return undefined;
+  let h = Number(m[1]);
+  const min = m[2] === undefined ? 0 : Number(m[2]);
+  if (min > 59) return undefined;
+  if (m[3]) {
+    if (h < 1 || h > 12) return undefined;
+    h = (h % 12) + (m[3] === 'pm' ? 12 : 0);
+  } else if (h > 23) {
+    return undefined;
+  }
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** DM mode (R1/R2): the whole text must be one command; no mention, no filler. */
+function parseDmCommand(body: string): CmuCommand | null {
+  const text = body
+    .toLowerCase()
+    .replace(/’/g, "'")
+    .trim()
+    .replace(/[.!?,\s]+$/u, '')
+    .replace(/\s+/g, ' ');
+
+  if (text === 'help') return { kind: 'help' };
+  if (RECAP_PHRASES.includes(text)) return { kind: 'recap' };
+
+  const top = /^top[- ]?(songs|pics|videos|links|media)( week)?$/.exec(text);
+  if (top) return { kind: 'top', list: top[1] as TopList, days: top[2] ? 7 : 2 };
+  if (text === 'pick one' || text === 'pick-one') return { kind: 'pick' };
+  if (/^list[- ]?topics$/.test(text)) return { kind: 'topics' };
+  const topic = /^show[- ]?topic (\d{1,2})$/.exec(text);
+  if (topic) {
+    const n = Number(topic[1]);
+    return n >= 1 && n <= 10 ? { kind: 'topic', n } : null;
+  }
+  if (text === 'dossier' || /^my[- ]?dossier$/.test(text)) return { kind: 'dossier' };
+
+  if (text === 'recap sub') return { kind: 'recap-sub' };
+  const mr = /^morning[- ]?recap (.+)$/.exec(text);
+  if (mr) {
+    const arg = mr[1];
+    if (arg === 'sub') return { kind: 'recap-sub' };
+    if (arg === 'unsub') return { kind: 'recap-unsub' };
+    const time = parseRecapTime(arg.startsWith('time ') ? arg.slice(5) : arg);
+    return time ? { kind: 'recap-time', time } : { kind: 'recap-time-bad' };
+  }
+
+  // Catch me up: the same phrases as the group, but exactly (no trailing text).
+  if (EXACT_PHRASES.includes(text) || PREFIX_PHRASES.includes(text)) return { kind: 'catchup' };
+  const space = text.indexOf(' ');
+  if (space > 0 && text[0] === 'c' && withinOneEdit(text.slice(0, space), 'catch')) {
+    const rest = text.slice(space + 1);
+    if (rest === 'me up' || rest === 'up') return { kind: 'catchup' };
+  }
+  return null;
+}
+
 export function parseCmuCommand(
   body: string,
   mentionsBot: boolean,
   mentionedIds: string[],
   selfIds: Set<string>,
+  opts?: { dm?: boolean },
 ): CmuCommand | null {
+  if (opts?.dm) return parseDmCommand(body);
   if (!mentionsBot) return null;
 
   let text = body
