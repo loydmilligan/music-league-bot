@@ -304,9 +304,9 @@ export function laNow(d: Date): { ymd: string; hm: string } {
   return { ymd: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour}:${p.minute}` };
 }
 
-/** M4: today's recap, live and posted. Anything else stays due. */
+/** M4: today's recap, released and with text. Briefs go by DM, so no group post is needed. Anything else stays due. */
 function isSendable(r: RecapToday, today: string): r is RecapToday & { text: string } {
-  return r.sendable === true && r.ymd === today && r.status === 'sent' && r.dryRun !== true && typeof r.text === 'string' && r.text.trim() !== '';
+  return r.sendable === true && r.ymd === today && r.status === 'sent' && typeof r.text === 'string' && r.text.trim() !== '';
 }
 
 export interface RecapTickDeps {

@@ -18,6 +18,8 @@
  * one of them is a @lid rather than a @g.us. It cannot identify a send target.
  */
 
+import { isListedNoPost } from './noPostGroups.js';
+
 export type SendMode = 'dry-run' | 'live';
 
 export interface SendGuardEnv {
@@ -57,6 +59,11 @@ export function resolveSendTarget(env: SendGuardEnv, leagueSlug: string): SendDe
       action: 'block',
       reason: `target for "${leagueSlug}" must be a ${GROUP_SUFFIX} group id, got "${target}"`,
     };
+  }
+
+  // Held here, ahead of the client guard, so a blocked digest never claims its round.
+  if (isListedNoPost(target)) {
+    return { action: 'block', reason: `the target for "${leagueSlug}" is a no-post group` };
   }
 
   return { action: 'send', target, reason: `live mode — sending to the target for "${leagueSlug}"` };

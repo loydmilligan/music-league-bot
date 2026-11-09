@@ -422,10 +422,17 @@ describe('startRecapTick', () => {
     expect(s.sendText).toHaveBeenCalledTimes(1);
   });
 
-  it('dry run never sends', async () => {
+  it('a recap sent as a dry run still goes to subscribers', async () => {
+    vi.useFakeTimers();
+    const s = tickSetup({ subs: [['a@lid', { time: '08:00', league: 'l' }]], now: la('2026-11-07', '08:00'), recap: sendable('2026-11-07', { dryRun: true }) });
+    await runTick(s);
+    expect(s.sendText).toHaveBeenCalledTimes(1);
+    expect(s.subs.get('a@lid')?.lastSentYmd).toBe('2026-11-07');
+  });
+
+  it('an unreleased or empty recap never sends', async () => {
     vi.useFakeTimers();
     for (const recap of [
-      sendable('2026-11-07', { dryRun: true }),
       sendable('2026-11-07', { status: 'pending' }),
       sendable('2026-11-07', { text: '' }),
     ]) {

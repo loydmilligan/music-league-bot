@@ -21,6 +21,7 @@ import {
   type SafeTrace,
   framing,
 } from './catchMeUp.js';
+import { withAllowedGroupPost } from '../whatsapp/noPostGroups.js';
 import { FOOTER_BRIEF_SAMPLE, FOOTER_OWNER, FOOTER_RETRY, FRAME_DIVIDER, MESSAGE_NAMES, frameMessage, stripBriefLead, withoutRetry } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
@@ -638,7 +639,7 @@ export async function runBriefSample(msg: CmuMessage, deps: CmuDeps, trace: Safe
     }
     // The one framed group post the bot makes, on the owner's explicit ruling.
     const post_ = frameMessage({ name, facts, body, footer: FOOTER_BRIEF_SAMPLE });
-    await withDeadline(timed(trace, 'group-post', () => deps.sendText(msg.from, post_)), deadline);
+    await withDeadline(timed(trace, 'group-post', () => withAllowedGroupPost(() => deps.sendText(msg.from, post_))), deadline);
     outcome = 'morning-brief-sample';
     const t = now();
     for (const [k, at] of throttle) if (t - at >= BRIEF_SAMPLE_COOLDOWN_MS) throttle.delete(k);

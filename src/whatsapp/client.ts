@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Client as ClientType, Message, Chat } from 'whatsapp-web.js';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { formatEnvelope } from './listGroups.js';
+import { assertMayPost, mayPost } from './noPostGroups.js';
 import { recordSeenMessage, recordReaction } from '../storage/reactionsDb.js';
 
 const _require = createRequire(import.meta.url);
@@ -135,6 +136,13 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
     puppeteer: { executablePath: process.env.CHROMIUM_PATH || undefined, args: puppeteerArgs },
     ...(pairPhone ? { pairWithPhoneNumber: { phoneNumber: pairPhone, showNotification: true } } : {}),
   });
+
+  // Every send and raw reply goes through here, so no route can reach a no-post group.
+  const sendUnguarded = client.sendMessage.bind(client);
+  client.sendMessage = ((chatId: string, ...rest: unknown[]) => {
+    assertMayPost(chatId);
+    return (sendUnguarded as (id: string, ...r: unknown[]) => unknown)(chatId, ...rest);
+  }) as typeof client.sendMessage;
 
   client.on('code', (code: string) => {
     console.log(`[whatsapp] Pairing code: ${code} (WhatsApp > Linked devices > Link a device > Link with phone number instead)`);
@@ -290,7 +298,13 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       capturedAt: new Date(timeMs).toISOString(),
       priorMessages: priors,
       notifyName: (raw as { _data?: { notifyName?: string } })._data?.notifyName || undefined,
-      reply: (text) => raw.reply(text).then(() => undefined),
+      reply: async (text) => {
+        if (!mayPost(chatId)) {
+          console.warn('[no-post] dropped a reply in a no-post group');
+          return;
+        }
+        await raw.reply(text);
+      },
       getContact: () => raw.getContact(),
       react: (emoji) => raw.react(emoji).then(() => undefined),
     };
