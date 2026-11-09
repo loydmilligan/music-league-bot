@@ -21,7 +21,7 @@ import {
   type SafeTrace,
   framing,
 } from './catchMeUp.js';
-import { FOOTER_BRIEF_SAMPLE, FOOTER_OWNER, FOOTER_RETRY, MESSAGE_NAMES, frameMessage, stripBriefLead, withoutRetry } from './messageFrame.js';
+import { FOOTER_BRIEF_SAMPLE, FOOTER_OWNER, FOOTER_RETRY, FRAME_DIVIDER, MESSAGE_NAMES, frameMessage, stripBriefLead, withoutRetry } from './messageFrame.js';
 import type { CmuSwitch } from './cmuSwitch.js';
 
 /**
@@ -94,18 +94,23 @@ export function helpText(o: { botName: string; used?: number; limit: number; coo
   return lines.join('\n');
 }
 
-const HELP_BOTH = [
+/** Items under a section heading start in the third column (WhatsApp keeps leading spaces). */
+const IN = '  ';
+
+const HELP_HEAD = [
   '_Music League Bot · what I can do_',
   '',
-  '*BOTH* — _send in the group as @bot …, or DM me_',
-  '• *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)',
-  '• *help* — this list',
+  'Commands — *DM commands* are entered in your chat with me directly. *Group commands* are entered in the Boarz group chat after @Music League Bot. Some commands work in both places.',
+  FRAME_DIVIDER,
 ];
 
+const CATCH_ME_UP = '• *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)';
+
 const HELP_DM = [
-  '*DM ONLY* — _message me directly, no @ needed_',
+  '*DM COMMANDS* — _message me directly, no @ needed_',
   '',
   '_Catch up_',
+  CATCH_ME_UP,
   '• *recap7* — your last 7 days: messages, \u{1F602}s and your best post',
   "• *pick one* — the single topic you'd enjoy most",
   '',
@@ -123,10 +128,19 @@ const HELP_DM = [
   '_Morning Brief_ — a short daily summary by DM',
   '• *morning-brief sub* / *morning-brief unsub* — start or stop it',
   '• *morning-brief 7:30* — change the delivery time',
+  '',
+  '_Help_',
+  '• *help* — this list',
+];
+
+const HELP_GROUP = [
+  '*GROUP COMMANDS* — _@Music League Bot, then the command_',
+  CATCH_ME_UP,
+  '• *help* — this list, sent to you by DM',
 ];
 
 const HELP_OWNER = [
-  '*\u{1F451} OWNER* — _group only_',
+  '*\u{1F451} OWNER COMMANDS* — _group only_',
   "• *full* — last 48 hours; doesn't count or move your window",
   '• *forget* [*dl* | *sybg*] [*@Player* | *all*]',
   '   resets catch-ups for today. *dl* = only the 3-a-day count,',
@@ -138,12 +152,21 @@ const HELP_OWNER = [
   "• *recap-bot-calls* — last 24 h of bot activity, and today's spend (also by DM)",
 ];
 
-/** The framed help's body: Both, then DM only (preview readers), then Owner (owner only). Empty sections are hidden. */
+/** A section: heading in column 1, every other non-blank line indented one level. */
+function section(lines: string[]): string[] {
+  return lines.map((l, i) => (i === 0 || l === '' ? l : IN + l));
+}
+
+/**
+ * The framed help's body: the explainer and a divider, then DM commands (preview readers), Group
+ * commands, then Owner (owner only). A command that works in both places is listed in each.
+ */
 export function helpBody(o: { dmOk: boolean; owner: boolean }): string {
   return [
-    ...HELP_BOTH,
-    ...(o.dmOk ? ['', ...HELP_DM] : []),
-    ...(o.owner ? ['', ...HELP_OWNER] : []),
+    ...HELP_HEAD,
+    ...(o.dmOk ? [...section(HELP_DM), ''] : []),
+    ...section(HELP_GROUP),
+    ...(o.owner ? ['', ...section(HELP_OWNER)] : []),
   ].join('\n');
 }
 

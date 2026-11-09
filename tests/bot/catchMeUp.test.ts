@@ -968,69 +968,78 @@ describe('commandLabel sprint 4', () => {
 
 describe('helpMessage (framed, reorganised)', () => {
   const D = '──────────';
+  const CMU = '  • *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)';
   const head = [
     '── Help ──',
     '_Music League Bot · what I can do_',
     '',
-    '*BOTH* — _send in the group as @bot …, or DM me_',
-    '• *catch me up* — what you missed since you last posted, as a picture. ("recap" works too)',
-    '• *help* — this list',
+    'Commands — *DM commands* are entered in your chat with me directly. *Group commands* are entered in the Boarz group chat after @Music League Bot. Some commands work in both places.',
+    D,
   ];
   const dmPart = [
+    '*DM COMMANDS* — _message me directly, no @ needed_',
     '',
-    '*DM ONLY* — _message me directly, no @ needed_',
+    '  _Catch up_',
+    CMU,
+    '  • *recap7* — your last 7 days: messages, \u{1F602}s and your best post',
+    '  • *pick one* — the single topic you\'d enjoy most',
     '',
-    '_Catch up_',
-    '• *recap7* — your last 7 days: messages, \u{1F602}s and your best post',
-    '• *pick one* — the single topic you\'d enjoy most',
+    '  _Best of the chat_ (add *week* for 7 days instead of 2)',
+    '  • *top-songs* · *top-pics* · *top-videos* · *top-links*',
+    '  • *top-media* — pics, videos and links together',
     '',
-    '_Best of the chat_ (add *week* for 7 days instead of 2)',
-    '• *top-songs* · *top-pics* · *top-videos* · *top-links*',
-    '• *top-media* — pics, videos and links together',
+    '  _Topics_',
+    '  • *list-topics* — what everyone\'s talking about now',
+    '  • *show-topic 3* — read topic #3 from that list',
     '',
-    '_Topics_',
-    '• *list-topics* — what everyone\'s talking about now',
-    '• *show-topic 3* — read topic #3 from that list',
+    '  _About you_',
+    '  • *my-dossier* — what I know about you',
     '',
-    '_About you_',
-    '• *my-dossier* — what I know about you',
+    '  _Morning Brief_ — a short daily summary by DM',
+    '  • *morning-brief sub* / *morning-brief unsub* — start or stop it',
+    '  • *morning-brief 7:30* — change the delivery time',
     '',
-    '_Morning Brief_ — a short daily summary by DM',
-    '• *morning-brief sub* / *morning-brief unsub* — start or stop it',
-    '• *morning-brief 7:30* — change the delivery time',
+    '  _Help_',
+    '  • *help* — this list',
+    '',
+  ];
+  const groupPart = [
+    '*GROUP COMMANDS* — _@Music League Bot, then the command_',
+    CMU,
+    '  • *help* — this list, sent to you by DM',
   ];
   const ownerPart = [
     '',
-    '*\u{1F451} OWNER* — _group only_',
-    '• *full* — last 48 hours; doesn\'t count or move your window',
-    '• *forget* [*dl* | *sybg*] [*@Player* | *all*]',
-    '   resets catch-ups for today. *dl* = only the 3-a-day count,',
-    '   *sybg* = only the "since you\'ve been gone" start time,',
-    '   neither = both',
-    '• *off* / *on* — silence or restore the whole bot',
-    '• *tldr* — post a short how-to in the group',
-    '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)',
-    "• *recap-bot-calls* — last 24 h of bot activity, and today's spend (also by DM)",
+    '*\u{1F451} OWNER COMMANDS* — _group only_',
+    '  • *full* — last 48 hours; doesn\'t count or move your window',
+    '  • *forget* [*dl* | *sybg*] [*@Player* | *all*]',
+    '     resets catch-ups for today. *dl* = only the 3-a-day count,',
+    '     *sybg* = only the "since you\'ve been gone" start time,',
+    '     neither = both',
+    '  • *off* / *on* — silence or restore the whole bot',
+    '  • *tldr* — post a short how-to in the group',
+    '  • *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)',
+    "  • *recap-bot-calls* — last 24 h of bot activity, and today's spend (also by DM)",
   ];
   const tail = [D, "You've used 1 of 3 catch-ups today · resets at midnight LA time"];
 
   it('player with DM access: exact framed output', () => {
-    expect(helpMessage({ dmOk: true, owner: false, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...tail].join('\n'));
+    expect(helpMessage({ dmOk: true, owner: false, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...groupPart, ...tail].join('\n'));
   });
 
   it('owner: exact framed output, owner section before the divider', () => {
-    expect(helpMessage({ dmOk: true, owner: true, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...ownerPart, ...tail].join('\n'));
+    expect(helpMessage({ dmOk: true, owner: true, used: 1, limit: 3 })).toBe([...head, ...dmPart, ...groupPart, ...ownerPart, ...tail].join('\n'));
   });
 
   it('reader without DM access has no DM section', () => {
     const t = helpMessage({ dmOk: false, owner: false, used: 1, limit: 3 });
-    expect(t).toBe([...head, ...tail].join('\n'));
-    expect(t).not.toContain('DM ONLY');
+    expect(t).toBe([...head, ...groupPart, ...tail].join('\n'));
+    expect(t).not.toContain('DM COMMANDS*');
   });
 
-  it('player body has no empty Group or Owner section', () => {
+  it('player body has no Owner section and no Both section', () => {
     const t = helpMessage({ dmOk: true, owner: false, used: 1, limit: 3 });
-    expect(t).not.toMatch(/GROUP|OWNER|Nothing group-only|Owner only/);
+    expect(t).not.toMatch(/OWNER|BOTH|Nothing group-only|Owner only/);
   });
 
   it('count line carries the real used and limit', () => {
@@ -2325,9 +2334,9 @@ describe('runCatchMeUp morning-brief sample', () => {
 
 describe('morning-brief sample help', () => {
   it('the owner section lists it after tldr; the player help does not', () => {
-    const line = '• *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)';
+    const line = '  • *morning-brief sample* — post a sample Morning Brief in the group (once per 30 min)';
     const owner = helpBody({ dmOk: true, owner: true }).split('\n');
-    expect(owner[owner.indexOf('• *tldr* — post a short how-to in the group') + 1]).toBe(line);
+    expect(owner[owner.indexOf('  • *tldr* — post a short how-to in the group') + 1]).toBe(line);
     expect(helpBody({ dmOk: true, owner: false })).not.toContain('sample');
     expect(helpBody({ dmOk: false, owner: false })).not.toContain('sample');
   });
