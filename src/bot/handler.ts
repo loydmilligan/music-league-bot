@@ -132,7 +132,7 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
 
   if (!inAllowlist) return;
 
-  console.log('[bot] captured from group:', msg.from, '|', msg.body.slice(0, 80));
+  console.log('[bot] captured from group:', msg.from);
 
   // Path 0: an answer to an open prompt. Runs first so a reply like "Koziol"
   // is never also scanned for song URLs, and returns early when it lands.
