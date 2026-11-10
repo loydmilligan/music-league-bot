@@ -5,6 +5,7 @@
  * worker; it is never exposed on a LAN-facing interface.
  *
  * Routes (see router.ts):
+ *   GET  /health                        WhatsApp Web liveness (200 ok / 503 not)
  *   POST /trigger                       run one scheduled poll now
  *   POST /send {roundId, target, mode}  send any round's digest to any group
  *                                       (mode defaults to dry-run)
@@ -16,6 +17,7 @@ import http from 'node:http';
 import { parseControlRequest } from './router.js';
 import type { ManualSendReq, ManualSendResult } from '../digest/manualSend.js';
 import type { RoundRevealRequest, RevealAnnouncementResult } from '../reveal/announcement.js';
+import type { HealthResult } from '../whatsapp/health.js';
 import type { LoginCodeRequest, LoginCodeResult } from '../whatsapp/loginCode.js';
 
 export interface ControlHandlers {
@@ -43,6 +45,7 @@ export interface ControlHandlers {
   onLoginCode: (req: LoginCodeRequest) => Promise<LoginCodeResult>;
   onRoundReveal: (request: RoundRevealRequest) => Promise<RevealAnnouncementResult>;
   onPrompt: (prompt: Record<string, unknown>) => Promise<{ id: string }>;
+  onHealth: () => Promise<HealthResult>;
 }
 
 // Bind on the compose network so bot-ui (a sibling container) can POST /trigger
@@ -76,7 +79,10 @@ export function startControlServer(handlers: ControlHandlers): http.Server {
       };
 
       try {
-        if (route.action === 'trigger') {
+        if (route.action === 'health') {
+          const result = await handlers.onHealth();
+          reply(result.ok ? 200 : 503, result);
+        } else if (route.action === 'trigger') {
           await handlers.onTrigger();
           reply(200, { ok: true, action: 'trigger' });
         } else if (route.action === 'round-reveal') {

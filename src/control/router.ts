@@ -15,6 +15,7 @@ export type ControlAction =
   | { action: 'login-code'; league: string; name: string; code: string }
   | ({ action: 'round-reveal' } & RoundRevealRequest)
   | { action: 'prompt'; prompt: Record<string, unknown> }
+  | { action: 'health' }
   | { action: 'unknown'; reason: string };
 
 /** Pin duration in seconds. Anything non-positive or absent means "don't pin". */
@@ -23,6 +24,8 @@ function parsePin(raw: unknown): number | null {
 }
 
 export function parseControlRequest(method: string, path: string, body: unknown): ControlAction {
+  // Read-only liveness probe; the only GET route.
+  if (method === 'GET' && path === '/health') return { action: 'health' };
   if (method !== 'POST') return { action: 'unknown', reason: `method ${method} not allowed` };
 
   if (path === '/trigger') return { action: 'trigger' };

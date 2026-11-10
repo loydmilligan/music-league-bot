@@ -11,6 +11,7 @@ import {
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
 import { createLoginCodeService, lookupPlayerNumber } from './whatsapp/loginCode.js';
+import { probeHealth } from './whatsapp/health.js';
 import { handleMessage } from './bot/handler.js';
 import { runWrongPlace } from './bot/wrongPlace.js';
 import { startDigestPoller } from './digest/poller.js';
@@ -228,6 +229,7 @@ client.on('ready', () => {
   // Local control plane (container-local only): trigger a poll, or send any
   // round's digest to any group. See src/control/server.ts.
   startControlServer({
+    onHealth: () => probeHealth(() => client.getState()),
     onTrigger: runOnce,
     onSend: (req) =>
       runManualSend(

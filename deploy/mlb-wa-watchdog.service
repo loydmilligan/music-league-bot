@@ -1,0 +1,12 @@
+[Unit]
+Description=Music League WhatsApp session watchdog (probe /health, restart bot if dead; ntfy only on problems)
+After=default.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/music-league-bot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.22.2/bin/node %h/Projects/music-league-bot/scripts/wa-watchdog.mjs
+TimeoutStartSec=6min
+StandardOutput=journal
+StandardError=journal
