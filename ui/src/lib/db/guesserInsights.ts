@@ -394,6 +394,8 @@ const LEAGUE_ALIASES: Record<
     { match: 'Jizzle Bizzle', asName: 'Jonathan Black', exactOnly: true },
     { match: 'Zorba', asName: 'Ronnie B', exactOnly: true },
     { match: 'Shanebori', asName: 'Shane Farkas', exactOnly: true },
+    // "RutSpin" is Grushkin (Matt, 2026-11-10).
+    { match: 'RutSpin', asName: 'Bagel Shop', exactOnly: true },
   ],
   // Second Best is a family league, so it collides on surnames the way Boarz
   // collides on "Dave". Four names are deliberately absent:
