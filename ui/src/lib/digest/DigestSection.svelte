@@ -20,6 +20,8 @@
   type SectionContent = {
     title?: string;
     body?: string;
+    body2?: string;
+    body3?: string;
     items?: unknown[];
     /** Hand-authored aside after the body, optionally with a link card. */
     postscript?: { text?: string; link?: { url?: string; title?: string; thumb?: string; source?: string } };
@@ -662,6 +664,10 @@
     {#if c.body}
       <p class="dg-section-body">{#each boldRuns(c.body) as r, ri (ri)}{#if r.b}<strong>{r.t}</strong>{:else}{r.t}{/if}{/each}</p>
     {/if}
+    <!-- Later paragraphs (flow body2/body3). Stored by hand punch-ups and some auto drafts; unrendered before 2026-11-10. -->
+    {#each [c.body2, c.body3].filter((t) => typeof t === 'string' && t.trim()) as para, pi (pi)}
+      <p class="dg-section-body">{#each boldRuns(para as string) as r, ri (ri)}{#if r.b}<strong>{r.t}</strong>{:else}{r.t}{/if}{/each}</p>
+    {/each}
 
     {#if c.postscript?.text || safeUrl(c.postscript?.link?.url)}
       {@const ps = c.postscript}

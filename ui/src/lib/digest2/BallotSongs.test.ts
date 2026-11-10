@@ -21,6 +21,7 @@ const song = (rank: number, comments: string[]): BallotSong => ({
 
 const ballot: Digest2Ballot = {
 	lede: null,
+	ledeMore: [],
 	closer: null,
 	songs: [song(1, ['first take', 'second take']), song(2, [])],
 	villainRank: null,

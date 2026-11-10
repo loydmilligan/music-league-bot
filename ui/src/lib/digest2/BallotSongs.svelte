@@ -32,6 +32,7 @@
 <section class="ballot">
 	<h2>How It Played</h2>
 	{#if ballot.lede}<p class="lede">{ballot.lede}</p>{/if}
+	{#each ballot.ledeMore ?? [] as para, i (i)}<p class="lede">{para}</p>{/each}
 
 	{#each ballot.songs as s (s.rank)}
 		{#if visible(s)}

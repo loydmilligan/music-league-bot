@@ -11,7 +11,8 @@
 		fromDay = null,
 		toDay = null,
 		roundLaughTrack = null,
-	}: { snapshot: Snapshot; fromDay?: string | null; toDay?: string | null; roundLaughTrack?: LaughTrack | null } = $props();
+		showLaughs = true,
+	}: { snapshot: Snapshot; fromDay?: string | null; toDay?: string | null; roundLaughTrack?: LaughTrack | null; showLaughs?: boolean } = $props();
 	let showMore = $state(false);
 </script>
 
@@ -19,7 +20,7 @@
 	<h2 style="font:700 1rem system-ui;margin:0 0 .5rem">Chat, by the numbers</h2>
 	<div class="space-y-6">
 		<ChatTalkativeness snap={snapshot} {fromDay} {toDay} />
-		<ChatLaughTrack snap={snapshot} roundTrack={roundLaughTrack} />
+		{#if showLaughs}<ChatLaughTrack snap={snapshot} roundTrack={roundLaughTrack} />{/if}
 	</div>
 	<button
 		type="button"

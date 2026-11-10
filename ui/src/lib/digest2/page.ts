@@ -6,6 +6,7 @@ import { buildDigest2StoryBlocks, type Digest2Story } from './storyBlocks.js';
 import { buildDigest2Structural, type Digest2Structural } from './structuralBlocks.js';
 import { buildDigest2Oneoffs } from './oneoffBlocks.js';
 import { buildRoundLaughTrack } from './roundChat.js';
+import { getDigest2LeagueOptions, type Digest2LeagueOptions } from './leagueOptions.js';
 import type { LaughTrack } from '$lib/server/boarzStats/laughs.js';
 
 export interface Digest2Page {
@@ -18,6 +19,7 @@ export interface Digest2Page {
 	oneoffs: Record<string, unknown>;
 	/** 😂 Tear Forecast for this round alone (the snapshot carries the season's). */
 	roundLaughTrack: LaughTrack | null;
+	options: Digest2LeagueOptions;
 }
 
 /** Assemble the read-only digest 2.0 page: stats embed (Phase ①) + reused 1.0 story blocks (Phase ②) + structural auto blocks (Phase ③). */
@@ -31,6 +33,8 @@ export function buildDigest2Page(
 	const structural = buildDigest2Structural(db, roundId);
 	const ballot = buildDigest2Ballot(db, roundId);
 	const oneoffs = buildDigest2Oneoffs(db, roundId);
-	const roundLaughTrack = buildRoundLaughTrack(db, roundId, snapshot);
-	return { roundId, snapshot, story, structural, ballot, oneoffs, roundLaughTrack };
+	const options = getDigest2LeagueOptions(db, roundId);
+	const roundLaughTrack = options.tearForecast ? buildRoundLaughTrack(db, roundId, snapshot) : null;
+	if (ballot && !options.fullFlow) ballot.ledeMore = [];
+	return { roundId, snapshot, story, structural, ballot, oneoffs, roundLaughTrack, options };
 }

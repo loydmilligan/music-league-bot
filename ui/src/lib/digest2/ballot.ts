@@ -78,6 +78,8 @@ export interface BallotRow {
 
 export interface Digest2Ballot {
 	lede: string | null;
+	/** The flow's later paragraphs (body2, body3); the page shows them only when the league opts in. */
+	ledeMore: string[];
 	closer: string | null;
 	songs: BallotSong[];
 	villainRank: number | null;
@@ -145,6 +147,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 
 	// 1.0 draft text: flow = lede/closer, consensus = per-song notes.
 	let lede: string | null = null;
+	let ledeMore: string[] = [];
 	let closer: string | null = null;
 	let gridCaption: string | null = null;
 	const notes: { song: string; note: string }[] = [];
@@ -152,8 +155,9 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 	if (draft) {
 		for (const s of getSectionsForDraft(db, draft.id)) {
 			if (s.kind === 'flow') {
-				const flow = parse<{ body?: string; note?: string; grid?: string }>(s.content_json);
+				const flow = parse<{ body?: string; body2?: string; body3?: string; note?: string; grid?: string }>(s.content_json);
 				lede = flow?.body?.trim() || null;
+				ledeMore = [flow?.body2, flow?.body3].map((t) => t?.trim() ?? '').filter(Boolean);
 				closer = flow?.note?.trim() || null;
 				gridCaption = flow?.grid?.trim() || null;
 			} else if (s.kind === 'consensus') {
@@ -227,6 +231,7 @@ export function buildDigest2Ballot(db: Database.Database, roundId: number): Dige
 
 	return {
 		lede,
+		ledeMore,
 		closer,
 		songs: ranked,
 		villainRank: ranked.length ? ranked[ranked.length - 1].rank : null,
