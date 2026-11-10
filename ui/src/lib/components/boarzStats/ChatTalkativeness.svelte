@@ -4,7 +4,10 @@
 	import ChartCanvas from './ChartCanvas.svelte';
 	import HowToRead from './HowToRead.svelte';
 
-	let { snap }: { snap: Snapshot } = $props();
+	// `fromDay` (a round's first stats day, as in ChatDailyActivity) adds a "This round"
+	// view of the bars, counted from that day to the end of the snapshot. The table
+	// below stays season-wide: style stats need the whole season to mean anything.
+	let { snap, fromDay = null }: { snap: Snapshot; fromDay?: string | null } = $props();
 
 	const chat = snap.chat;
 	const colors = snap.colors;
@@ -12,25 +15,43 @@
 	const personColor = (i: number) => (i < snap.competitors.length ? colors[i % colors.length] : '#64748b');
 
 	const talk = [...people].sort((a, b) => b.msgs - a.msgs);
-	const talkConfig = {
-		type: 'bar',
-		data: {
-			labels: talk.map((p) => p.display),
-			datasets: [
-				{
-					label: 'Messages',
-					data: talk.map((p) => p.msgs),
-					backgroundColor: talk.map((p) => personColor(people.indexOf(p))),
-				},
-			],
-		},
-		options: {
-			indexAxis: 'y' as const,
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: { legend: { display: false } },
-		},
-	};
+
+	const weekMsgs = new Map<string, number>();
+	if (fromDay) {
+		for (const t of chat.timelineByPerson) {
+			if (t.day < fromDay) continue;
+			for (const [k, n] of Object.entries(t.byKey)) weekMsgs.set(k, (weekMsgs.get(k) ?? 0) + n);
+		}
+	}
+	const weekTotal = [...weekMsgs.values()].reduce((a, b) => a + b, 0);
+	const hasWeek = weekTotal > 0;
+	let barMode = $state<'week' | 'season'>(hasWeek ? 'week' : 'season');
+	const fmtDay = (d: string) =>
+		new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+	const talkConfig = $derived.by(() => {
+		const count = (p: (typeof people)[number]) => (barMode === 'week' ? (weekMsgs.get(p.key) ?? 0) : p.msgs);
+		const rows = [...people].filter((p) => count(p) > 0).sort((a, b) => count(b) - count(a));
+		return {
+			type: 'bar',
+			data: {
+				labels: rows.map((p) => p.display),
+				datasets: [
+					{
+						label: barMode === 'week' ? 'Messages this round' : 'Messages this season',
+						data: rows.map(count),
+						backgroundColor: rows.map((p) => personColor(people.indexOf(p))),
+					},
+				],
+			},
+			options: {
+				indexAxis: 'y' as const,
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: { legend: { display: false } },
+			},
+		};
+	});
 
 	const quad = chat.quadrant;
 	const axisMetaA = AXIS_META[quad.axisA];
@@ -59,12 +80,36 @@
 </script>
 
 <section class="rounded-2xl border border-border-muted bg-surface/50 p-5">
-	<h2 class="mb-1 text-lg font-semibold">💬 Talkativeness</h2>
+	<div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+		<h2 class="text-lg font-semibold">💬 Talkativeness</h2>
+		{#if hasWeek}
+			<div class="flex gap-1 rounded-lg border border-border-muted p-1">
+				<button
+					type="button"
+					class="rounded-md px-3 py-1 text-sm {barMode === 'week' ? 'bg-fg text-bg font-semibold' : 'text-fg-muted'}"
+					onclick={() => (barMode = 'week')}
+				>
+					This round
+				</button>
+				<button
+					type="button"
+					class="rounded-md px-3 py-1 text-sm {barMode === 'season' ? 'bg-fg text-bg font-semibold' : 'text-fg-muted'}"
+					onclick={() => (barMode = 'season')}
+				>
+					Season
+				</button>
+			</div>
+		{/if}
+	</div>
 	<p class="mb-4 text-sm text-fg-muted">
-		How much each person talks, and how. The bars are total messages; the table breaks down their style.
+		{#if barMode === 'week' && fromDay}
+			Messages this round, {fmtDay(fromDay)} on: {weekTotal.toLocaleString('en-US')} in all. The table below covers the whole season.
+		{:else}
+			How much each person talks, and how. The bars are total messages; the table breaks down their style.
+		{/if}
 		Everyone in the group chat counts, including anyone who hasn't played this season yet (marked “guest”).
 	</p>
-	<ChartCanvas height={340} config={talkConfig} />
+	{#key barMode}<ChartCanvas height={340} config={talkConfig} />{/key}
 	<div class="mt-4 overflow-x-auto">
 		<table class="w-full text-sm">
 			<thead>

@@ -76,6 +76,33 @@ export interface GuesserGridGuess {
   guessedName: string;
   actualName: string;
   correct: boolean;
+  /** 1 for a hit, 0 for a miss, 0.5 for a two-name "X or Y" guess that includes the submitter. */
+  credit: number;
+}
+
+/**
+ * Score one vote comment. A comment naming two different players either side of a
+ * single "or" ("Koziol or Berto", R171) is a hedged guess: one attempt worth half
+ * a point if either name is the submitter. Everything else goes through the
+ * one-name matcher unchanged.
+ */
+export function scoreGuessComment(
+  matcher: (comment: string) => number | null,
+  comment: string,
+  actualPlayerId: number | null,
+): { guessed: number[]; credit: number } | null {
+  const sides = comment.split(/\s+or\s+/i);
+  if (sides.length === 2) {
+    const a = matcher(sides[0]);
+    const b = matcher(sides[1]);
+    if (a !== null && b !== null && a !== b) {
+      const hit = actualPlayerId !== null && (a === actualPlayerId || b === actualPlayerId);
+      return { guessed: [a, b], credit: hit ? 0.5 : 0 };
+    }
+  }
+  const g = matcher(comment);
+  if (g === null) return null;
+  return { guessed: [g], credit: actualPlayerId !== null && g === actualPlayerId ? 1 : 0 };
 }
 
 export interface GuesserGridRow {
@@ -354,6 +381,19 @@ const LEAGUE_ALIASES: Record<
     { match: 'farkasian', asName: 'Shane Farkas', exactOnly: true },
     { match: 'Grushfire', asName: 'Bagel Shop', exactOnly: true },
     { match: 'hanclammy', asName: 'Clements', exactOnly: true },
+    // S2 R5 (round 171): Matt's ballot nicknames, none within one edit of a name.
+    // "Comfylube" is Koziol (Jensen, 2026-07-24: "rename Koziol comfy lube");
+    // "Clambake" is Clements (Matt, 2026-11-06: "the chin dimple of a clambake");
+    // "JizzBizzle" is Jon (Matt, 2026-11-04: "dont be modest jizzbizz");
+    // "Zorba" is the room's name for Ronnie.
+    { match: 'Matt', asName: 'Mashew' },
+    { match: 'Comfylube', asName: 'Grant Koziol', exactOnly: true },
+    { match: 'Comfy lube', asName: 'Grant Koziol', exactOnly: true },
+    { match: 'Clambake', asName: 'Clements', exactOnly: true },
+    { match: 'JizzBizzle', asName: 'Jonathan Black', exactOnly: true },
+    { match: 'Jizzle Bizzle', asName: 'Jonathan Black', exactOnly: true },
+    { match: 'Zorba', asName: 'Ronnie B', exactOnly: true },
+    { match: 'Shanebori', asName: 'Shane Farkas', exactOnly: true },
   ],
   // Second Best is a family league, so it collides on surnames the way Boarz
   // collides on "Dave". Four names are deliberately absent:
@@ -417,6 +457,10 @@ const LEAGUE_ALIASES: Record<
     { match: 'Molly Johnson', asName: 'Mollyjohnson' },
     { match: 'Hanh', asName: 'hanhquach' },
     { match: 'Hanh Quach', asName: 'hanhquach' },
+    // R183: Matt's ballot nicknames. "Tom Tom" is safe where bare "Tom" is not.
+    { match: 'Tom Tom', asName: 'Tommy', exactOnly: true },
+    { match: 'Jizzle Bizzle', asName: 'Jonathan Black', exactOnly: true },
+    { match: 'Zuckmanistan', asName: 'Sarah', exactOnly: true },
   ],
 };
 
@@ -594,20 +638,20 @@ function buildSeasonGrid(
     if (!detail.has(row.voterPlayerId)) detail.set(row.voterPlayerId, []);
     if (row.actualPlayerId !== null && row.actualPlayerId === row.voterPlayerId) continue;
     if (gridNotes[`${row.voterPlayerId}:${row.roundId}`]?.exclude) continue;
-    const guessed = matcher(row.comment);
-    if (guessed === null) continue;
+    const scored = scoreGuessComment(matcher, row.comment, row.actualPlayerId);
+    if (scored === null) continue;
     const perRound = seen.get(row.voterPlayerId)!;
     const cell = perRound.get(row.roundId) ?? { attempts: 0, correct: 0 };
     cell.attempts += 1;
-    const hit = row.actualPlayerId !== null && guessed === row.actualPlayerId;
-    if (hit) cell.correct += 1;
+    cell.correct += scored.credit;
     perRound.set(row.roundId, cell);
     detail.get(row.voterPlayerId)!.push({
       roundLabel: labelOf.get(row.roundId) ?? String(row.roundId),
-      guessedName: playerNames.get(guessed) ?? String(guessed),
+      guessedName: scored.guessed.map((id) => playerNames.get(id) ?? String(id)).join(' or '),
       actualName:
         row.actualPlayerId !== null ? (playerNames.get(row.actualPlayerId) ?? '—') : '—',
-      correct: hit,
+      correct: scored.credit === 1,
+      credit: scored.credit,
     });
   }
 
