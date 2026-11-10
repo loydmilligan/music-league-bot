@@ -2,12 +2,15 @@ import type Database from 'better-sqlite3';
 import { getActiveDraftForRound } from '$lib/digest/llm.js';
 import { getDigest2Share } from './shares.js';
 import { dayOfTs } from '$lib/server/boarzStats/chat.js';
+import { roundEndDayFor } from './roundChat.js';
 
 export interface Digest2Chrome {
 	share: boolean;
 	meta: { leagueName: string; roundName: string };
 	/** First day of the round in stats (Central) days, or null — chat charts open on it. */
 	roundStartDay: string | null;
+	/** Last day of the round (its voting close), so "this round" views stop there. */
+	roundEndDay: string | null;
 	/** null in share mode — nothing admin-only may reach the public copy. */
 	admin: { draftGeneratedAt: string | null; published: { url: string; updatedAt: string } | null } | null;
 }
@@ -22,13 +25,15 @@ export function buildDigest2Chrome(db: Database.Database, roundId: number, share
 		.get(roundId) as { leagueName: string; roundName: string } | undefined;
 	const meta = row ?? { leagueName: '', roundName: '' };
 	const roundStartDay = roundStartDayFor(db, roundId);
-	if (share) return { share, meta, roundStartDay, admin: null };
+	const roundEndDay = roundEndDayFor(db, roundId);
+	if (share) return { share, meta, roundStartDay, roundEndDay, admin: null };
 	const draft = getActiveDraftForRound(db, roundId);
 	const pub = getDigest2Share(db, roundId);
 	return {
 		share,
 		meta,
 		roundStartDay,
+		roundEndDay,
 		admin: {
 			draftGeneratedAt: draft?.generated_at ?? null,
 			published: pub ? { url: pub.url, updatedAt: pub.updatedAt } : null

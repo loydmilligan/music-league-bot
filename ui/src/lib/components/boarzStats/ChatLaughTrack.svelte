@@ -1,12 +1,16 @@
 <script lang="ts">
 	import type { Snapshot } from '$lib/server/boarzStats/data.js';
 
-	let { snap }: { snap: Snapshot } = $props();
+	import type { LaughTrack } from '$lib/server/boarzStats/laughs.js';
+	// `roundTrack` (digest 2.0) adds a Round view, shown first; the snapshot's track is the season.
+	let { snap, roundTrack = null }: { snap: Snapshot; roundTrack?: LaughTrack | null } = $props();
 
 	type View = 'forecast' | 'drew' | 'gave';
 	let view = $state<View>('forecast');
+	const hasRound = (roundTrack?.people ?? []).some((p) => p.given > 0 || p.drawn > 0);
+	let scope = $state<'round' | 'season'>(hasRound ? 'round' : 'season');
 
-	const track = $derived(snap.laughTrack);
+	const track = $derived(scope === 'round' && hasRound ? roundTrack : snap.laughTrack);
 	const people = $derived((track?.people ?? []).filter((p) => p.given > 0 || p.drawn > 0));
 	const maxGiven = $derived(Math.max(1, ...people.map((p) => p.given)));
 	const maxDrawn = $derived(Math.max(1, ...people.map((p) => p.drawn)));
@@ -63,6 +67,12 @@
 			{#if track.reactionLaughs > 0}Includes {track.reactionLaughs} 😂 reactions.{:else}Counted from message text; 😂 reactions are tracked from next round.{/if}
 		</p>
 
+		{#if hasRound}
+			<div class="lt-pills" role="tablist" aria-label="Tear Forecast period">
+				<button role="tab" aria-selected={scope === 'round'} class:on={scope === 'round'} onclick={() => (scope = 'round')}>This round</button>
+				<button role="tab" aria-selected={scope === 'season'} class:on={scope === 'season'} onclick={() => (scope = 'season')}>Season</button>
+			</div>
+		{/if}
 		<div class="lt-pills" role="tablist" aria-label="Tear Forecast view">
 			<button role="tab" aria-selected={view === 'forecast'} class:on={view === 'forecast'} onclick={() => (view = 'forecast')}>Forecast</button>
 			<button role="tab" aria-selected={view === 'drew'} class:on={view === 'drew'} onclick={() => (view = 'drew')}>Made it rain</button>

@@ -5,15 +5,21 @@
 	import ChatRoastReport from '$lib/components/boarzStats/ChatRoastReport.svelte';
 	import ChatLaughTrack from '$lib/components/boarzStats/ChatLaughTrack.svelte';
 	import ChatTab from '$lib/components/boarzStats/ChatTab.svelte';
-	let { snapshot, fromDay = null }: { snapshot: Snapshot; fromDay?: string | null } = $props();
+	import type { LaughTrack } from '$lib/server/boarzStats/laughs.js';
+	let {
+		snapshot,
+		fromDay = null,
+		toDay = null,
+		roundLaughTrack = null,
+	}: { snapshot: Snapshot; fromDay?: string | null; toDay?: string | null; roundLaughTrack?: LaughTrack | null } = $props();
 	let showMore = $state(false);
 </script>
 
 <section style="margin:1.5rem 0">
 	<h2 style="font:700 1rem system-ui;margin:0 0 .5rem">Chat, by the numbers</h2>
 	<div class="space-y-6">
-		<ChatTalkativeness snap={snapshot} {fromDay} />
-		<ChatLaughTrack snap={snapshot} />
+		<ChatTalkativeness snap={snapshot} {fromDay} {toDay} />
+		<ChatLaughTrack snap={snapshot} roundTrack={roundLaughTrack} />
 	</div>
 	<button
 		type="button"

@@ -7,7 +7,7 @@
 	// `fromDay` (a round's first stats day, as in ChatDailyActivity) adds a "This round"
 	// view of the bars, counted from that day to the end of the snapshot. The table
 	// below stays season-wide: style stats need the whole season to mean anything.
-	let { snap, fromDay = null }: { snap: Snapshot; fromDay?: string | null } = $props();
+	let { snap, fromDay = null, toDay = null }: { snap: Snapshot; fromDay?: string | null; toDay?: string | null } = $props();
 
 	const chat = snap.chat;
 	const colors = snap.colors;
@@ -19,7 +19,7 @@
 	const weekMsgs = new Map<string, number>();
 	if (fromDay) {
 		for (const t of chat.timelineByPerson) {
-			if (t.day < fromDay) continue;
+			if (t.day < fromDay || (toDay && t.day > toDay)) continue;
 			for (const [k, n] of Object.entries(t.byKey)) weekMsgs.set(k, (weekMsgs.get(k) ?? 0) + n);
 		}
 	}
@@ -103,7 +103,7 @@
 	</div>
 	<p class="mb-4 text-sm text-fg-muted">
 		{#if barMode === 'week' && fromDay}
-			Messages this round, {fmtDay(fromDay)} on: {weekTotal.toLocaleString('en-US')} in all. The table below covers the whole season.
+			Messages this round, {fmtDay(fromDay)}{toDay ? `–${fmtDay(toDay)}` : ' on'}: {weekTotal.toLocaleString('en-US')} in all. The table below covers the whole season.
 		{:else}
 			How much each person talks, and how. The bars are total messages; the table breaks down their style.
 		{/if}
