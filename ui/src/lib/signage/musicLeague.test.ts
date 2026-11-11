@@ -215,10 +215,13 @@ it('shortlist lists only songs assigned to rounds that are not complete', () => 
   song.run('s1', 'uri:1', 'Artist One', 'Song One', 4, 4, 4, 4, 4, 5);
   song.run('s2', 'uri:2', 'Artist Two', 'Song Two', 0, 0, 0, 0, 0, 0);
   song.run('s3', 'uri:3', 'Artist Three', 'Song Three', 5, 5, 5, 5, 5, 5);
+  // Only two fields rated: the mean is over those, not diluted by the zeros.
+  song.run('s4', 'uri:4', 'Artist Four', 'Song Four', 5, 0, 0, 0, 3, 0);
   const asg = db.prepare('INSERT INTO shortlist_assignments (shortlist_song_id, round_id) VALUES (?,?)');
-  asg.run('s1', open); asg.run('s2', open); asg.run('s3', done);
+  asg.run('s1', open); asg.run('s2', open); asg.run('s3', done); asg.run('s4', open);
   const { shortlist } = buildSignage(db, NOW).seasons[0];
   expect(shortlist).toEqual([
+    { round: 2, title: 'Song Four', artist: 'Artist Four', rating: 4 },
     { round: 2, title: 'Song One', artist: 'Artist One', rating: 4 },
     { round: 2, title: 'Song Two', artist: 'Artist Two', rating: null },
   ]);

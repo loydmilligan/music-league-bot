@@ -84,10 +84,11 @@ function peopleFromEvents(
   return out;
 }
 
+/** The mean of the rating fields that were filled in (0 or null means unrated); null when none were. */
 function shortlistRating(r: Record<string, number>): number | null {
   const vals = [r.rating_discovery, r.rating_theme_fit, r.rating_nostalgia, r.rating_personal, r.rating_quality, r.rating_replayability]
-    .map(v => v ?? 0);
-  if (vals.every(v => v === 0)) return null; // unrated
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  if (!vals.length) return null;
   return Math.max(0, Math.min(5, Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)));
 }
 

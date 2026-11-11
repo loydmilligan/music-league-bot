@@ -41,7 +41,8 @@ const { parseEmail } = await import('../src/email/emailParser.ts');
 const { ensureEmailSchema, resolveLeagueIdFromLabel } = await import('../src/email/emailIngest.ts');
 
 const WRITE = process.argv.includes('--write');
-const db = new Database(process.env.LEAGUE_DB ?? resolve(REPO_ROOT, 'data/league.db'));
+// A dry run opens the file read-only, and a missing file is an error, never a fresh empty database.
+const db = new Database(process.env.LEAGUE_DB ?? resolve(REPO_ROOT, 'data/league.db'), { readonly: !WRITE, fileMustExist: true });
 if (WRITE) ensureEmailSchema(db);
 
 const rows = db
