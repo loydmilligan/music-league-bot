@@ -212,3 +212,20 @@ describe('fix round 1', () => {
     expect(saved).toEqual([]);
   });
 });
+
+describe('fix round 2', () => {
+  it('pick change clears a poster even with no approvals', async () => {
+    seed('hba', { poster: '/p/x.jpg', candidates: [cand(1, 'A'), cand(2, 'B'), cand(3, 'C'), cand(4, 'D')] });
+    await handleAwardDm(dm(CONOR, 'hba-3 4'), deps);
+    expect(deps.store.get('hba', 7).poster).toBeUndefined();
+    expect(sent.some((s) => s.text.endsWith(' Send a new poster.'))).toBe(true);
+    expect(sent.some((s) => s.text.includes('Approval was reset'))).toBe(false);
+  });
+  it('picks cleared during savePoster: no poster attached', async () => {
+    seed('hba');
+    deps.savePoster = async () => { deps.store.put({ ...deps.store.get('hba', 7), picks: { 1: 1 } }); return '/p/n.jpg'; };
+    await handleAwardDm(img(CONOR, 'hba poster'), deps);
+    expect(last()).toBe('Pick all three places first.');
+    expect(deps.store.get('hba', 7).poster).toBeUndefined();
+  });
+});

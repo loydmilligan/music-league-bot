@@ -125,11 +125,14 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   const changed = JSON.stringify(before.picks) !== JSON.stringify(next.picks);
   let reset = false;
   let clearedPoster = false;
-  if (changed && (before.approvals.length > 0 || before.approvedAt)) {
-    const { approvedAt: _a, poster: _p, ...rest } = next;
-    next = { ...rest, approvals: [] };
-    reset = true;
-    clearedPoster = !!before.poster;
+  if (changed) {
+    const hadApproval = before.approvals.length > 0 || !!before.approvedAt;
+    if (hadApproval || before.poster) {
+      const { approvedAt: _a, poster: _p, ...rest } = next;
+      next = { ...rest, approvals: [] };
+      reset = hadApproval;
+      clearedPoster = !!before.poster;
+    }
   }
   if (res.complete && (changed || !next.decidedAt)) next = { ...next, decidedAt: deps.now().toISOString() };
   deps.store.put(next);
@@ -137,7 +140,8 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   const cand = next.candidates.find((x) => x.n === cmd.n)!;
   let text = `${PLACE_NAME[cmd.place]} place: #${cand.n} ${cand.who}, "${clip(cand.text, 80)}"`;
   if (res.cleared) text += ` (${PLACE_NAME[res.cleared]} place is now empty.)`;
-  if (reset) text += clearedPoster ? ' Approval was reset; send a new poster.' : ' Approval was reset.';
+  if (clearedPoster) text += reset ? ' Approval was reset; send a new poster.' : ' Send a new poster.';
+  else if (reset) text += ' Approval was reset.';
   await c.reply(text);
 
   if (!res.complete) return;
@@ -209,6 +213,7 @@ async function handlePoster(c: AwardCtx): Promise<void> {
   const file = await deps.savePoster(def.key, round.roundId, media);
   // Re-read after the awaits; no await between this read and the put.
   const fresh = deps.store.get(def.key, round.roundId);
+  if (!decided(fresh)) return c.reply('Pick all three places first.');
   let next: AwardRound = { ...fresh, poster: file };
   const reset = fresh.approvals.length > 0 || !!fresh.approvedAt;
   if (reset) {
