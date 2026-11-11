@@ -77,6 +77,26 @@ beforeEach(() => {
 });
 
 describe('handleAwardDm', () => {
+  it('autoFlag: an owner forward is flagged with no prefix message', async () => {
+    const auto = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, autoFlag: true } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(auto));
+    chat('Alex Q', 'unique joke about toast number one', '2026-11-04T10:00:00Z');
+    chat('Bo Z', 'lol', '2026-11-04T10:01:00Z');
+    chat('Cy W', 'lol', '2026-11-04T10:02:00Z');
+    expect(await handleAwardDm(fwd(CONOR, 'unique joke about toast number one'), deps)).toBe(true);
+    expect(reacts).toEqual(['👍']);
+    expect(last()).toMatch(/^Added to Half Baked candidates: #1 Alex Q, /);
+    // Ambiguous forward lists matches; hba 2 still chooses.
+    await handleAwardDm(fwd(CONOR, 'lol'), deps);
+    expect(last()).toMatch(/^That text appears 2 times\. Send hba 1…hba 2/);
+    await handleAwardDm(dm(CONOR, 'hba 2'), deps);
+    expect(last()).toMatch(/^Added to Half Baked candidates: #2 Cy W, /);
+    // Owners without autoFlag stay silent on forward.
+    const before = sent.length;
+    expect(await handleAwardDm(fwd(MATT, 'unique joke about toast number one'), deps)).toBe(true);
+    expect(sent.length).toBe(before);
+  });
+
   it('non-owner bbb: false, no react, no send', async () => {
     expect(await handleAwardDm(dm(STRANGER, 'bbb'), deps)).toBe(false);
     expect(reacts).toEqual([]);

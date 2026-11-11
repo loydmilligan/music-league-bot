@@ -312,10 +312,22 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
 
     // Forward memory: an owner's text forward is remembered silently.
     if (msg.isForwarded && !msg.hasMedia) {
-      let owner = false;
-      for (const d of config.awards) if (await deps.isPerson(author, d.owners)) { owner = true; break; }
-      if (!owner) return false;
+      const owned: AwardDef[] = [];
+      for (const d of config.awards) if (await deps.isPerson(author, d.owners)) owned.push(d);
+      if (owned.length === 0) return false;
       forwards.set(msg.author, { text: msg.body, at: deps.now().getTime() });
+      const auto = owned.length === 1 && owned[0].autoFlag ? owned[0] : null;
+      if (!auto) return true;
+      // Auto-flag: the forward itself is the command.
+      const reply = (text: string) => deps.sendText(msg.from, text);
+      acked = true;
+      try { await msg.react?.('👍'); } catch { /* best effort */ }
+      const round = targetRound(deps.db, config.leagueId, auto, deps.store.all(), deps.now());
+      if (!round) {
+        await reply('No released round yet; nothing to add to.');
+        return true;
+      }
+      await handleFlag({ msg, deps, config, def: auto, round, reply }, { award: auto.prefix, kind: 'flag' });
       return true;
     }
 

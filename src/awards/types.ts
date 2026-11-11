@@ -8,6 +8,8 @@ export interface AwardDef {
   day: number;
   window: 'round' | '7d';
   promptTemplate: string;
+  /** Flag an owner's text forward straight away, with no follow-up prefix message. Only used when the sender owns just this award. */
+  autoFlag?: boolean;
 }
 
 export interface AwardsConfig {
