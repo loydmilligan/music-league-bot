@@ -6,11 +6,31 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addCandidate } from '../src/awards/model.js';
-import type { AwardStore } from '../src/awards/store.js';
+import { openAwardStore, type AwardStore } from '../src/awards/store.js';
 
 export interface SeedRow { rank: number; who: string; text: string; key: string; [k: string]: unknown }
 
+export class SeedError extends Error {
+  constructor(message: string, readonly exitCode = 1) {
+    super(message);
+    this.name = 'SeedError';
+  }
+}
+
+function validateRows(top10: SeedRow[]): void {
+  top10.forEach((row, i) => {
+    const label = `row ${row && typeof row === 'object' && row.rank !== undefined ? row.rank : i}`;
+    if (!row || typeof row !== 'object') throw new SeedError(`${label}: bad row`);
+    if (typeof row.key !== 'string' || !/^\d+-\d+$/.test(row.key)) throw new SeedError(`${label}: bad key`);
+    if (typeof row.who !== 'string' || !row.who.trim() || typeof row.text !== 'string' || !row.text.trim()) {
+      throw new SeedError(`${label}: bad row`);
+    }
+  });
+}
+
 export function seedCandidates(store: AwardStore, roundId: number, award: string, top10: SeedRow[]): { added: number; duplicates: number } {
+  validateRows(top10);
+  if (top10.length === 0) return { added: 0, duplicates: 0 };
   let round = store.get(award, roundId);
   let added = 0;
   let duplicates = 0;
@@ -27,27 +47,63 @@ export function seedCandidates(store: AwardStore, roundId: number, award: string
   return { added, duplicates };
 }
 
-async function main() {
-  const args = process.argv.slice(2);
+/** Read and shape-check the export file. */
+export function loadTop10(file: string): SeedRow[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (e) {
+    throw new SeedError(`can't read ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const top10 = (parsed as { top10?: unknown } | null)?.top10;
+  if (!Array.isArray(top10)) throw new SeedError(`no top10 list in ${file}`);
+  return top10 as SeedRow[];
+}
+
+/** Parse and validate CLI args. `awardKeys` are the configured award keys. */
+export function parseSeedArgs(args: string[], awardKeys: string[]): { file: string; award: string; roundId?: number } {
   const opt = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
   const file = args.find((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
-  if (!file) { console.error('usage: awards-seed.ts <top10.json> [--award bbb] [--round <roundId>]'); process.exit(1); }
+  if (!file) throw new SeedError('usage: awards-seed.ts <top10.json> [--award bbb] [--round <roundId>]');
   const award = opt('--award') ?? 'bbb';
-  const { top10 } = JSON.parse(readFileSync(file, 'utf8')) as { top10: SeedRow[] };
-  const { openAwardStore } = await import('../src/awards/store.js');
+  if (!awardKeys.includes(award)) throw new SeedError(`unknown award ${award}`);
+  let roundId: number | undefined;
+  if (args.includes('--round')) {
+    const raw = opt('--round') ?? '';
+    if (!/^\d+$/.test(raw) || Number(raw) < 1) throw new SeedError('bad --round');
+    roundId = Number(raw);
+  }
+  return { file, award, roundId };
+}
+
+async function run() {
+  const args = process.argv.slice(2);
   const store = openAwardStore(path.resolve(process.env.DATA_DIR ?? 'data', 'awards'));
-  let roundId = opt('--round') ? Number(opt('--round')) : undefined;
+  const { file, award, roundId: given } = parseSeedArgs(args, store.config().awards.map((a) => a.key));
+  const top10 = loadTop10(file);
+  if (top10.length === 0) { console.log('nothing to seed'); return; }
+  validateRows(top10);
+  let roundId = given;
   if (roundId === undefined) {
     const { default: Database } = await import('better-sqlite3');
     const { currentRound } = await import('../src/awards/schedule.js');
     const db = new Database(path.resolve(process.env.DATA_DIR ?? 'data', 'league.db'), { readonly: true });
     const cur = currentRound(db, store.config().leagueId, new Date());
     db.close();
-    if (!cur) { console.error('no current round'); process.exit(1); }
+    if (!cur) throw new SeedError('no current round');
     roundId = cur.roundId;
   }
   const { added, duplicates } = seedCandidates(store, roundId, award, top10);
   console.log(`seeded ${added} (${duplicates} duplicates) into ${award} round ${roundId}`);
+}
+
+async function main() {
+  try {
+    await run();
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(e instanceof SeedError ? e.exitCode : 1);
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) void main();
