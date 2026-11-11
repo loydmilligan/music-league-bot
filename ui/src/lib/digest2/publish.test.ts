@@ -80,6 +80,23 @@ describe('publishDigest2', () => {
 		expect(rows()).toEqual([]);
 		expect(existsSync(d2)).toBe(false);
 	});
+	it('copies posted award posters into d2/<slug>/awards/ and ships the card markup', async () => {
+		const data = await mkdtemp(join(tmpdir(), 'awd-'));
+		await mkdir(join(data, 'awards', 'posters'), { recursive: true });
+		await writeFile(join(data, 'awards', 'posters', 'bbb.png'), 'PNGDATA');
+		await writeFile(join(data, 'awards', 'posters', 'unposted.png'), 'NO');
+		await writeFile(join(data, 'awards', 'config.json'), JSON.stringify({ awards: [{ key: 'bbb', name: 'Big Brain Bit', day: 1 }, { key: 'hba', name: 'Half Baked', day: 6 }] }));
+		const r = (award: string, extra: object) => ({ award, roundId: 152, candidates: [], picks: {}, approvals: [], ...extra });
+		await writeFile(join(data, 'awards', 'rounds.json'), JSON.stringify([
+			r('bbb', { postedAt: '2026-11-03T16:00:00Z', poster: '/app/data/awards/posters/bbb.png' }),
+			r('hba', { poster: '/app/data/awards/posters/unposted.png' })
+		]));
+		const html = shell('<section id="award-bbb"><img src="awards/bbb.png"></section>');
+		const res = await publishDigest2(152, { capture: cap(html), awardsDataDir: data });
+		expect(await readFile(join(d2, res.slug, 'awards', 'bbb.png'), 'utf8')).toBe('PNGDATA');
+		expect(existsSync(join(d2, res.slug, 'awards', 'unposted.png'))).toBe(false);
+		expect(await readFile(join(d2, res.slug, 'index.html'), 'utf8')).toContain('id="award-bbb"');
+	});
 	it('c. clean publish writes files, row, and digest-host url', async () => {
 		const html = shell('<script type="module" src="../_app/immutable/a.js"></script>');
 		const r = await publishDigest2(152, { capture: cap(html) });

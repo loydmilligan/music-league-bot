@@ -16,6 +16,7 @@
 	import BallotGrid from '$lib/digest2/BallotGrid.svelte';
 	import AmaSection from '$lib/digest2/AmaSection.svelte';
 	import { DIGEST2_SECTION_ORDER } from '$lib/digest2/sectionOrder.js';
+	import AwardsTab from '$lib/digest2/AwardsTab.svelte';
 	import AdminBar from '$lib/digest2/AdminBar.svelte';
 	import { page } from '$app/state';
 	let { data } = $props();
@@ -30,8 +31,11 @@
 	const coinage = $derived(data.story.coinage as { term?: string } | null);
 
 	// Top-level Digest / Stats tabs, seeded from ?view= and synced to the URL.
-	let view = $state<'digest' | 'stats'>(page.url.searchParams.get('view') === 'stats' ? 'stats' : 'digest');
-	function setView(v: 'digest' | 'stats') {
+	type View = 'digest' | 'stats' | 'awards';
+	const hasAwards = $derived((data.awards?.length ?? 0) > 0);
+	const initialView = page.url.searchParams.get('view');
+	let view = $state<View>(initialView === 'stats' ? 'stats' : initialView === 'awards' && data.awards?.length ? 'awards' : 'digest');
+	function setView(v: View) {
 		view = v;
 		const url = new URL(window.location.href);
 		if (v === 'digest') url.searchParams.delete('view');
@@ -58,6 +62,14 @@
 			onclick={() => setView('stats')}
 			style="padding:.5rem .9rem;background:none;border:none;border-bottom:2px solid {view === 'stats' ? '#fff' : 'transparent'};color:{view === 'stats' ? '#fff' : '#888'};cursor:pointer;font:600 .9rem system-ui"
 		>Stats</button>
+		{#if hasAwards}
+			<button
+				role="tab"
+				aria-selected={view === 'awards'}
+				onclick={() => setView('awards')}
+				style="padding:.5rem .9rem;background:none;border:none;border-bottom:2px solid {view === 'awards' ? '#fff' : 'transparent'};color:{view === 'awards' ? '#fff' : '#888'};cursor:pointer;font:600 .9rem system-ui"
+			>Awards</button>
+		{/if}
 	</div>
 </div>
 
@@ -105,6 +117,8 @@
 		{/if}
 	{/each}
 </div>
+{:else if view === 'awards'}
+	<AwardsTab awards={data.awards} snapshot={data.snapshot} roundLaughTrack={data.roundLaughTrack} />
 {:else}
 	<StatsExplorer snapshot={data.snapshot} basePath={`/digest2/${data.roundId}/stats`} omitLeaderboardRace omitTabs={['chat']} frozen={data.share} />
 {/if}

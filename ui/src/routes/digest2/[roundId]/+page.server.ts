@@ -5,6 +5,7 @@ import { buildDigest2Page } from '$lib/digest2/page.js';
 import { buildDigest2Chrome } from '$lib/digest2/chrome.js';
 import { peekDigest2Slug } from '$lib/digest2/shares.js';
 import { shareSafeStory } from '$lib/digest2/storyBlocks.js';
+import { loadRoundAwards, awardsDataDir } from '$lib/digest2/awards.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
@@ -22,6 +23,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			...(share ? { story: shareSafeStory(page.story) } : {}),
 			...buildDigest2Chrome(db, roundId, share),
 			amaVoteSlug: peekDigest2Slug(db, roundId),
+			awards: loadRoundAwards(awardsDataDir(), roundId),
 		};
 	} catch {
 		throw error(404, 'round not found');

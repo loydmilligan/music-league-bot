@@ -1,4 +1,4 @@
-import { mkdir, writeFile, rm, rename, stat } from 'node:fs/promises';
+import { mkdir, writeFile, copyFile, rm, rename, stat } from 'node:fs/promises';
 import { join, dirname, basename, extname } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { getDb } from '$lib/db/client.js';
@@ -6,6 +6,7 @@ import { appBaseUrl } from '$lib/config/urls.js';
 import { getActiveDraftForRound } from '$lib/digest/llm.js';
 import { peekDigest2Slug, newDigest2Slug, recordDigest2Share, touchDigest2Share, digest2ShareUrl } from './shares.js';
 import { transformDigest2Html, findLeaks, missingAppAssets } from './publishHtml.js';
+import { loadRoundAwards, awardsDataDir } from './awards.js';
 import { promotePodiumCovers } from '$lib/server/coverFactory/podium.js';
 
 const EXEC_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
@@ -91,6 +92,7 @@ async function capturePuppeteer(roundId: number): Promise<Digest2Capture> {
 			return html;
 		};
 		const base = `${APP_INTERNAL_URL}/digest2/${roundId}?share=1`;
+		const hasAwards = loadRoundAwards(awardsDataDir(), roundId).length > 0;
 		try {
 			rawHtml = await load(base);
 		} catch (e) {
@@ -101,6 +103,14 @@ async function capturePuppeteer(roundId: number): Promise<Digest2Capture> {
 			await load(`${base}&view=stats`);
 		} catch (e) {
 			throw new Digest2PublishError(500, `stats render failed: ${e instanceof Error ? e.message : String(e)}`);
+		}
+		// The Awards view is client-rendered from the page data; load it so any chunks it pulls in are captured.
+		if (hasAwards) {
+			try {
+				await load(`${base}&view=awards`);
+			} catch (e) {
+				throw new Digest2PublishError(500, `awards render failed: ${e instanceof Error ? e.message : String(e)}`);
+			}
 		}
 	} catch (e) {
 		if (e instanceof Digest2PublishError) throw e;
@@ -115,6 +125,8 @@ export async function publishDigest2(
 	roundId: number,
 	deps: {
 		capture?: (roundId: number) => Promise<Digest2Capture>;
+		/** Directory holding awards/ (config.json, rounds.json, posters/). Defaults to DATA_DIR. */
+		awardsDataDir?: string;
 		localizeFonts?: (html: string, assets: Map<string, Buffer>) => Promise<string | null>;
 	} = {}
 ): Promise<{ slug: string; url: string; files: number; bytes: number; coverWarning?: string }> {
@@ -169,6 +181,20 @@ export async function publishDigest2(
 	};
 	for (const [p, buf] of assets) await write(p.replace(/^\//, ''), buf);
 	if (fontCss) await write('_app/fonts.css', fontCss);
+	// Posted award posters ship inside the same atomic swap; cards reference them as awards/<file>.
+	const awardsDir = deps.awardsDataDir ?? awardsDataDir();
+	for (const a of loadRoundAwards(awardsDir, roundId)) {
+		if (!a.poster) continue;
+		const dest = join(tmpDir, a.poster);
+		try {
+			await mkdir(dirname(dest), { recursive: true });
+			await copyFile(join(awardsDir, 'awards', 'posters', basename(a.poster)), dest);
+			const sz = (await stat(dest)).size;
+			bytes += sz; files += 1;
+		} catch (e) {
+			console.warn('[digest2] award poster copy failed', a.poster, e instanceof Error ? e.message : e);
+		}
+	}
 	await write('index.html', indexHtml);
 	await swapDirAtomically(tmpDir, finalDir);
 	const finalSlug = recordDigest2Share(db, roundId, slug);
