@@ -77,6 +77,36 @@ beforeEach(() => {
 });
 
 describe('handleAwardDm', () => {
+  it('posterMaker: owner gets the note; maker gets prompt and kit, and may send the poster', async () => {
+    const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, posterPendingNote: 'Hang tight.' } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));
+    writeFileSync(path.join(dir, 'kits', 'hba.md'), 'Poster {{P1_NAME}}');
+    for (const [i, t] of ['first funny line here', 'second funny line here', 'third funny line here'].entries()) {
+      chat(`P${i}`, t, `2026-11-04T1${i}:00:00Z`);
+      await handleAwardDm(fwd(CONOR, t), deps);
+      await handleAwardDm(dm(CONOR, 'hba'), deps);
+    }
+    sent = []; files = [];
+    await handleAwardDm(dm(CONOR, 'hba-1st 1'), deps);
+    await handleAwardDm(dm(CONOR, 'hba-2nd 2'), deps);
+    await handleAwardDm(dm(CONOR, 'hba-3rd 3'), deps);
+    const toConor = sent.filter((x) => x.to === CONOR).map((x) => x.text);
+    const toMatt = sent.filter((x) => x.to === MATT).map((x) => x.text);
+    expect(toConor[toConor.length - 1]).toMatch(/is decided! .*Hang tight\.$/);
+    expect(toConor.join('\n')).not.toMatch(/Poster P0/);
+    expect(toMatt[0]).toMatch(/caption "hba poster"/);
+    expect(toMatt[1]).toBe('Poster P0');
+    expect(files.map((f) => f.to)).toEqual([MATT]);
+    // The maker may resend the kit and send the poster; a stranger may not.
+    expect(await handleAwardDm(dm(MATT, 'hba kit'), deps)).toBe(true);
+    expect(await handleAwardDm(dm(STRANGER, 'hba kit'), deps)).toBe(false);
+    const img = { hasMedia: true, downloadMedia: async () => ({ mimetype: 'image/png', data: 'AA==' }) };
+    expect(await handleAwardDm(dm(MATT, 'hba poster', img), deps)).toBe(true);
+    expect(deps.store.get('hba', 7).poster).toBe('p.png');
+    // Matt cannot pick: that stays owner-only.
+    expect(await handleAwardDm(dm(MATT, 'hba-1st 2'), deps)).toBe(false);
+  });
+
   it('autoFlag: an owner forward is flagged with no prefix message', async () => {
     const auto = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, autoFlag: true } : a)) };
     writeFileSync(path.join(dir, 'config.json'), JSON.stringify(auto));

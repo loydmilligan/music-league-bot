@@ -151,6 +151,14 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
 
   if (!res.complete) return;
   const { promptMsg, avatarList, medals } = buildPrompt(c, next);
+  if (def.posterMaker) {
+    await c.reply(`${def.name} is decided! ${medals}. ${def.posterPendingNote ?? "Your poster is being made. You'll receive the draft poster here when it's ready."}`);
+    const to = chatId(def.posterMaker);
+    await deps.sendText(to, `${def.name} is decided! ${medals}. Make the poster, then send it with the caption "${def.prefix} poster". Prompt below; attach: ${avatarList.join(', ')}.`);
+    await deps.sendText(to, promptMsg);
+    await sendKit(c, next, promptMsg, avatarList, to);
+    return;
+  }
   await c.reply(`${def.name} is decided! ${medals}. Ready to design the poster. Prompt below; attach: ${avatarList.join(', ')}.`);
   await c.reply(promptMsg);
   await sendKit(c, next, promptMsg, avatarList);
@@ -174,7 +182,7 @@ function buildPrompt(c: AwardCtx, r: AwardRound): { promptMsg: string; avatarLis
 }
 
 /** Zip the prompt, style reference and faces and DM it to the sender. Never throws. */
-async function sendKit(c: AwardCtx, r: AwardRound, prompt: string, avatars: string[]): Promise<void> {
+async function sendKit(c: AwardCtx, r: AwardRound, prompt: string, avatars: string[], to?: string): Promise<void> {
   const { deps, def } = c;
   try {
     const kitsDir = path.join(deps.storeDir, 'kits');
@@ -184,7 +192,7 @@ async function sendKit(c: AwardCtx, r: AwardRound, prompt: string, avatars: stri
     const file = path.join(outDir, `${r.roundId}-${def.key}-kit.zip`);
     writeFileSync(file, zip, { mode: 0o600 });
     const caption = `${def.name} poster kit: prompt, style reference and faces.${missing.length ? ` Missing: ${missing.join(', ')}.` : ''}`;
-    await deps.sendFile(c.msg.from, file, caption);
+    await deps.sendFile(to ?? c.msg.from, file, caption);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     deps.log(`[awards] kit send failed for ${def.key}: ${err instanceof Error ? err.name : 'error'}`);
@@ -379,7 +387,9 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
     }
 
     const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
-    if (!def || !(await deps.isPerson(author, def.owners))) return false;
+    if (!def) return false;
+    const makerCmd = (cmd.kind === 'poster' || cmd.kind === 'kit') && !!def.posterMaker;
+    if (!(await deps.isPerson(author, def.owners)) && !(makerCmd && (await deps.isPerson(author, [def.posterMaker!])))) return false;
     const round = targetRound(deps.db, config.leagueId, def, deps.store.all(), deps.now());
     if (cmd.kind === 'poster' && !(msg.hasMedia && msg.downloadMedia)) return false;
     if (!round) {

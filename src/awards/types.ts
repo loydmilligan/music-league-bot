@@ -10,6 +10,10 @@ export interface AwardDef {
   promptTemplate: string;
   /** Flag an owner's text forward straight away, with no follow-up prefix message. Only used when the sender owns just this award. */
   autoFlag?: boolean;
+  /** Id of the person who makes the poster instead of the owner: they get the prompt and kit, and may send `<prefix> poster` / `<prefix> kit`. */
+  posterMaker?: string;
+  /** What the owner is told once the picks are complete when posterMaker is set. */
+  posterPendingNote?: string;
 }
 
 export interface AwardsConfig {
