@@ -124,10 +124,12 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   let next: AwardRound = res.round;
   const changed = JSON.stringify(before.picks) !== JSON.stringify(next.picks);
   let reset = false;
+  let clearedPoster = false;
   if (changed && (before.approvals.length > 0 || before.approvedAt)) {
-    const { approvedAt: _a, ...rest } = next;
+    const { approvedAt: _a, poster: _p, ...rest } = next;
     next = { ...rest, approvals: [] };
     reset = true;
+    clearedPoster = !!before.poster;
   }
   if (res.complete && (changed || !next.decidedAt)) next = { ...next, decidedAt: deps.now().toISOString() };
   deps.store.put(next);
@@ -135,7 +137,7 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   const cand = next.candidates.find((x) => x.n === cmd.n)!;
   let text = `${PLACE_NAME[cmd.place]} place: #${cand.n} ${cand.who}, "${clip(cand.text, 80)}"`;
   if (res.cleared) text += ` (${PLACE_NAME[res.cleared]} place is now empty.)`;
-  if (reset) text += ' Approval was reset.';
+  if (reset) text += clearedPoster ? ' Approval was reset; send a new poster.' : ' Approval was reset.';
   await c.reply(text);
 
   if (!res.complete) return;
@@ -203,9 +205,12 @@ async function handlePoster(c: AwardCtx): Promise<void> {
   if (!slugFor(deps.db, round.roundId)) return c.reply("This round's digest isn't published yet.");
   const media = (await msg.downloadMedia?.()) ?? null;
   if (!media) return c.reply("Couldn't read that image. Send it again with the caption " + `"${def.prefix} poster".`);
+  if (!media.mimetype.startsWith('image/')) return c.reply(`That's not an image. Send the poster as a photo with the caption ${def.prefix} poster.`);
   const file = await deps.savePoster(def.key, round.roundId, media);
-  let next: AwardRound = { ...before, poster: file };
-  const reset = before.approvals.length > 0 || !!before.approvedAt;
+  // Re-read after the awaits; no await between this read and the put.
+  const fresh = deps.store.get(def.key, round.roundId);
+  let next: AwardRound = { ...fresh, poster: file };
+  const reset = fresh.approvals.length > 0 || !!fresh.approvedAt;
   if (reset) {
     const { approvedAt: _a, ...rest } = next;
     next = { ...rest, approvals: [] };
@@ -218,9 +223,12 @@ async function handlePoster(c: AwardCtx): Promise<void> {
 
 async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
   const { deps, config, def, round } = c;
-  const before = deps.store.get(def.key, round.roundId);
-  const turn = nextApprover(def, before);
+  const seen = deps.store.get(def.key, round.roundId);
+  const turn = nextApprover(def, seen);
   const mine = turn !== null && (await deps.isPerson(approver, [turn]));
+  // Re-read after the await; no await between this read and the put.
+  const before = deps.store.get(def.key, round.roundId);
+  if (before.poster !== seen.poster) return c.reply('The poster changed while you were approving. Check the new preview and approve again.');
   const res = approve(def, before, mine ? turn : `not:${approver}`);
   if (res.error === 'not-decided') return c.reply('Pick all three places first.');
   if (res.error === 'no-poster') return c.reply(`Send the poster first, with the caption "${def.prefix} poster".`);

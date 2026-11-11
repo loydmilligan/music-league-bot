@@ -151,7 +151,7 @@ const awardsDm = awardsEnabled
           const ext = media.mimetype.includes('png') ? 'png' : media.mimetype.includes('webp') ? 'webp' : 'jpg';
           const dir = path.join(awardsDir, 'posters');
           mkdirSync(dir, { recursive: true });
-          const file = path.join(dir, `${roundId}-${award}.${ext}`);
+          const file = path.join(dir, `${roundId}-${award}-${Date.now()}.${ext}`);
           writeFileSync(file, Buffer.from(media.data, 'base64'), { mode: 0o600 });
           return file;
         },

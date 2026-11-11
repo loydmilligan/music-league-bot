@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { handleAwardDm, resetAwardDmState, type AwardDmDeps } from '../../src/awards/dm.js';
@@ -61,7 +61,7 @@ beforeEach(() => {
   dir = mkdtempSync(path.join(tmpdir(), 'awap-'));
   const store = openAwardStore(dir);
   store.put({ award: 'x', roundId: 0, candidates: [], picks: {}, approvals: [] }); // ensure dir
-  require_config(store);
+  writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config));
   deps = {
     store, storeDir: dir, db, groupName: 'G', now: () => clock,
     isPerson: async (a, ids) => ids.some((i) => norm(i) === norm(a)),
@@ -72,8 +72,6 @@ beforeEach(() => {
     log: () => {},
   };
 });
-import { writeFileSync } from 'node:fs';
-function require_config(_s: unknown) { writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config)); }
 
 describe('poster', () => {
   it('before all three picks: reply, nothing stored', async () => {
@@ -180,5 +178,37 @@ describe('carried Task 5 minors', () => {
     seed('hba');
     deps.sendText = async () => { throw new Error('boom'); };
     expect(await handleAwardDm(dm(CONOR, 'hba candidates'), deps)).toBe(true);
+  });
+});
+
+describe('fix round 1', () => {
+  it('approve racing a poster swap cannot approve the new poster', async () => {
+    seed('hba', { poster: '/p/old.jpg', approvals: [CONOR] });
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const realIs = deps.isPerson;
+    deps.isPerson = async (a, ids) => { if (a === MATT) await gate; return realIs(a, ids); };
+    const approving = handleAwardDm(dm(MATT, 'hba approve'), deps);
+    await new Promise((r) => setTimeout(r, 5));
+    deps.savePoster = async () => '/p/new.jpg';
+    await handleAwardDm(img(CONOR, 'hba poster'), deps);
+    release();
+    await approving;
+    const r = deps.store.get('hba', 7);
+    expect(r.poster).toBe('/p/new.jpg');
+    expect(r.approvedAt).toBeUndefined();
+    expect(r.approvals).toEqual([]);
+  });
+  it('a pick change clears the poster too', async () => {
+    seed('hba', { poster: '/p/x.jpg', approvals: [CONOR], candidates: [cand(1, 'A'), cand(2, 'B'), cand(3, 'C'), cand(4, 'D')] });
+    await handleAwardDm(dm(CONOR, 'hba-3 4'), deps);
+    expect(deps.store.get('hba', 7).poster).toBeUndefined();
+    expect(sent.some((s) => s.text.includes(' Approval was reset; send a new poster.'))).toBe(true);
+  });
+  it('non-image mimetype is refused', async () => {
+    seed('hba');
+    await handleAwardDm(img(CONOR, 'hba poster', 'application/pdf'), deps);
+    expect(last()).toBe("That's not an image. Send the poster as a photo with the caption hba poster.");
+    expect(saved).toEqual([]);
   });
 });
