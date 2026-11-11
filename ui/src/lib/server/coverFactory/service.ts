@@ -65,7 +65,7 @@ export function toApiError(e: unknown): { status: number; body: { error: string;
 }
 
 const LEAGUES = ['boarz-ii-men', 'second-best', 'hip-jammers'];
-const MODES = new Set(['player', 'keep', 'remove']);
+const MODES = new Set(['player', 'keep', 'remove', 'dress']);
 export const MAX_PITCH_PLAYERS = 4;
 
 const bad = (msg: string): never => {

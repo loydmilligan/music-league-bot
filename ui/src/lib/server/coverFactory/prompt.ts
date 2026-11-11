@@ -3,7 +3,8 @@ import type { Breakdown, Subject } from './breakdown';
 
 export interface Treatment {
 	label: string;
-	mode: 'player' | 'keep' | 'remove';
+	/** dress = same subject, no face swap, with added clothing/changes (e.g. a cap on the cheetah). */
+	mode: 'player' | 'keep' | 'remove' | 'dress';
 	playerSlug?: string;
 	playerName?: string;
 	age?: string;
@@ -69,6 +70,16 @@ function playerParagraph(s: Subject, t: Treatment, n: number, name: string, feat
 	return p;
 }
 
+/** "Dress up": same subject, no face swap, with clothing/changes added. */
+function editParagraph(s: Subject, t: Treatment): string | null {
+	const changes: string[] = [];
+	if (t.clothing?.trim()) changes.push(`wearing ${t.clothing.trim()}`);
+	if (t.notes?.trim()) changes.push(t.notes.trim());
+	if (!changes.length) return null;
+	const where = s.box ? `${s.position}, ${placementPhrase(s.box)}` : s.position;
+	return `Subject ${s.label} (${where}) stays the same ${s.kind}: same face, identity, pose, expression, colours and rendering as on the cover, with only these additions: ${changes.join('; ')}. Render the additions in the cover's style so they look like part of the original artwork.`;
+}
+
 function addParagraph(s: Subject, notes?: string): string {
 	const where = s.box ? `${s.position || 'the frame'}, ${placementPhrase(s.box)}` : s.position || 'a natural spot in the composition';
 	const desc = notes?.trim() || [s.pose, s.clothing, s.expression, s.color_treatment].filter((x) => x.trim()).join(', ') || `a ${s.kind}`;
@@ -97,6 +108,11 @@ export function buildSwapPrompt(b: Breakdown, treatments: Treatment[], ids: Iden
 			continue;
 		}
 		if (!t || t.mode === 'keep') continue;
+		if (t.mode === 'dress') {
+			const edit = editParagraph(s, t);
+			if (edit) lines.push(edit);
+			continue;
+		}
 		// A removed concept prop was never on the cover: there is nothing to erase.
 		if (t.mode === 'remove' && s.conceptId) continue;
 		if (t.mode === 'remove') { lines.push(`Remove subject ${s.label} and fill naturally.`); continue; }

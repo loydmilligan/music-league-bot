@@ -39,6 +39,7 @@
 		{ id: 'player', label: 'Player', hint: 'Swap in a league player' },
 		{ id: 'keep', label: 'Keep', hint: 'Leave as on the original' },
 		{ id: 'remove', label: 'Remove', hint: 'Erase and fill naturally' },
+		{ id: 'dress', label: 'Dress up', hint: 'Keep this subject, add clothing or props' },
 	];
 	const uid = $props.id();
 	const player = $derived(players.find((p) => p.slug === treatment.playerSlug));
@@ -250,6 +251,14 @@
 				{#if ideasError}<span class="text-xs text-fg-dim">{ideasError}</span>{/if}
 			</div>
 		{/if}
+	{/if}
+
+	{#if treatment.mode === 'dress'}
+		<!-- Dress up: same subject, no face swap, with these additions. -->
+		<div class="grid gap-2 sm:grid-cols-2">
+			<label class={lbl}>Add clothing<input class={field} placeholder="e.g. a backwards UCLA cap" bind:value={treatment.clothing} onchange={onchange} /></label>
+			<label class={lbl}>Other changes<input class={field} placeholder="e.g. holding a beer" bind:value={treatment.notes} onchange={onchange} /></label>
+		</div>
 	{/if}
 
 	<details bind:open={detailsOpen} class="group">

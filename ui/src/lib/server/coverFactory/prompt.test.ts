@@ -168,3 +168,18 @@ describe('concept props', () => {
 		expect(prompt).not.toMatch(/Add object/);
 	});
 });
+
+describe('dress mode on an original subject', () => {
+	const sub = { label: 'A', kind: 'animal', role: 'main', position: 'centered', pose: 'roaring', gaze: 'direct', clothing: 'none', expression: 'feral', color_treatment: 'neon', focus: 'sharp', box: [0, 0, 1, 1] as [number, number, number, number] };
+	const b = { style: 'pop art', composition: 'centered', palette_lighting: 'neon', text_elements: [], subjects: [sub] } as unknown as Parameters<typeof buildSwapPrompt>[0];
+	it('dresses the subject up without a face swap', () => {
+		const { prompt, imageOrder } = buildSwapPrompt(b, [{ label: 'A', mode: 'dress', clothing: 'a backwards UCLA cap' }], []);
+		expect(prompt).toContain('Subject A');
+		expect(prompt).toContain('wearing a backwards UCLA cap');
+		expect(imageOrder).toEqual(['cover']);
+	});
+	it('keep, even with clothing set, still adds nothing', () => {
+		const { prompt } = buildSwapPrompt(b, [{ label: 'A', mode: 'keep', clothing: 'a backwards UCLA cap' }], []);
+		expect(prompt).not.toContain('Subject A');
+	});
+});
