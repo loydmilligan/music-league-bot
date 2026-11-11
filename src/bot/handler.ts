@@ -40,6 +40,12 @@ export interface WhatsAppMessage {
   getContact(): Promise<{ pushname: string }>;
   /** React to this message with an emoji. */
   react?(emoji: string): Promise<void>;
+  /** True when WhatsApp marks this message as forwarded. */
+  isForwarded?: boolean;
+  /** True when this message carries media (image, etc.). */
+  hasMedia?: boolean;
+  /** Download the attached media as base64, or null when there is none. */
+  downloadMedia?(): Promise<{ mimetype: string; data: string } | null>;
 }
 
 export interface BotConfig {

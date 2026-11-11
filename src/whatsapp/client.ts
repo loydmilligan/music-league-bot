@@ -307,6 +307,12 @@ export function createClient(onMessage: (msg: WhatsAppMessage) => Promise<void>)
       },
       getContact: () => raw.getContact(),
       react: (emoji) => raw.react(emoji).then(() => undefined),
+      isForwarded: !!raw.isForwarded,
+      hasMedia: !!raw.hasMedia,
+      downloadMedia: async () => {
+        const m = await raw.downloadMedia();
+        return m ? { mimetype: m.mimetype, data: m.data } : null;
+      },
     };
 
     try {
@@ -490,4 +496,38 @@ export function makeSendTextTo(client: ClientType): (chatId: string, text: strin
   return async (chatId, text) => {
     await client.sendMessage(await dmTarget(client, chatId), text);
   };
+}
+
+/**
+ * Read the reactions on a message, mirroring whatsapp-web.js `getReactions`. Takes the
+ * serialized id and resolves it in the page (this build breaks `m.id._serialized`).
+ * Returns null on any failure so a failure never blocks flagging.
+ */
+export async function readReactions(
+  client: ClientType,
+  msgId: string,
+): Promise<{ emoji: string; who: string[] }[] | null> {
+  try {
+    const page = (client as unknown as { pupPage?: { evaluate: (fn: (id: string) => unknown, id: string) => Promise<unknown> } }).pupPage;
+    if (!page) return null;
+    const out = await page.evaluate((id: string) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const w = globalThis as any;
+      let msg = w.require('WAWebCollections').Msg.get(id);
+      if (!msg) {
+        const key = w.require('WAWebMsgKey').fromString(id);
+        msg = w.require('WAWebCollections').Msg.get(key);
+      }
+      if (!msg) return null;
+      const rx = w.require('WAWebCollections').Reactions.find(msg.id);
+      if (!rx || !rx.reactions) return [];
+      return rx.reactions.serialize().map((r: any) => ({
+        emoji: r.aggregateEmoji,
+        who: (r.senders ?? []).map((s: any) => s.senderUserJid?._serialized ?? String(s.senderUserJid)),
+      }));
+    }, msgId);
+    return Array.isArray(out) ? (out as { emoji: string; who: string[] }[]) : null;
+  } catch {
+    return null;
+  }
 }
