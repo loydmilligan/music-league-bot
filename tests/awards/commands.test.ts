@@ -66,3 +66,11 @@ describe('parseAwardCommand', () => {
     expect(parseAwardCommand('bbb', ['hba'])).toBeNull();
   });
 });
+
+describe('redo', () => {
+  it('parses redo with and without a comment, keeping the comment case', () => {
+    expect(parseAwardCommand('hba redo', ['bbb', 'hba'])).toEqual({ award: 'hba', kind: 'redo', comment: null });
+    expect(parseAwardCommand('HBA redo Make Koz look happier', ['bbb', 'hba'])).toEqual({ award: 'hba', kind: 'redo', comment: 'Make Koz look happier' });
+    expect(parseAwardCommand('hba redone', ['bbb', 'hba'])).toBeNull();
+  });
+});

@@ -8,6 +8,7 @@ import { awardLinks, buildCaption } from './caption.js';
 import { addCandidate, approve, chatId, nextApprover, pick, postedOk } from './model.js';
 import { fillPrompt } from './prompt.js';
 import { buildKitZip } from './kit.js';
+import type { GeneratePoster } from './generate.js';
 import { dayAt, postAtFor, targetRound, windowStartFor, type RoundInfo } from './schedule.js';
 import type { AwardStore } from './store.js';
 import type { AwardDef, AwardRound, AwardsConfig, Candidate } from './types.js';
@@ -26,10 +27,13 @@ export interface AwardDmDeps {
   /** Send a file as a document (the poster kit zip). */
   sendFile(to: string, file: string, caption: string): Promise<void>;
   savePoster(award: string, roundId: number, media: { mimetype: string; data: string }): Promise<string>;
+  /** Make a poster with an image model (prompt + reference image files). Absent = no generation. */
+  generatePoster?: GeneratePoster;
   log(l: string): void;
 }
 
 const FORWARD_TTL_MS = 120_000;
+const generating = new Set<string>();
 const forwards = new Map<string, { text: string; at: number }>();
 const pending = new Map<string, { matches: Match[]; at: number }>();
 
@@ -37,6 +41,7 @@ const pending = new Map<string, { matches: Match[]; at: number }>();
 export function resetAwardDmState(): void {
   forwards.clear();
   pending.clear();
+  generating.clear();
 }
 
 const PLACE_NAME = { 1: 'First', 2: 'Second', 3: 'Third' } as const;
@@ -151,8 +156,21 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
 
   if (!res.complete) return;
   const { promptMsg, avatarList, medals } = buildPrompt(c, next);
+  const note = def.posterPendingNote ?? "Your poster is being made. You'll receive the draft poster here when it's ready.";
+  if (def.genModel && deps.generatePoster) {
+    await c.reply(`${def.name} is decided! ${medals}. ${note}`);
+    if (await generate(c, null)) return;
+    if (!def.posterMaker) {
+      await c.reply(`Couldn't make the poster automatically. Prompt below; attach: ${avatarList.join(', ')}.`);
+      await c.reply(promptMsg);
+      await sendKit(c, next, promptMsg, avatarList);
+      return;
+    }
+    await handOff(c, next, `Couldn't make the ${def.name} poster automatically.`);
+    return;
+  }
   if (def.posterMaker) {
-    await c.reply(`${def.name} is decided! ${medals}. ${def.posterPendingNote ?? "Your poster is being made. You'll receive the draft poster here when it's ready."}`);
+    await c.reply(`${def.name} is decided! ${medals}. ${note}`);
     const to = chatId(def.posterMaker);
     await deps.sendText(to, `${def.name} is decided! ${medals}. Make the poster, then send it with the caption "${def.prefix} poster". Prompt below; attach: ${avatarList.join(', ')}.`);
     await deps.sendText(to, promptMsg);
@@ -198,6 +216,110 @@ async function sendKit(c: AwardCtx, r: AwardRound, prompt: string, avatars: stri
     deps.log(`[awards] kit send failed for ${def.key}: ${err instanceof Error ? err.name : 'error'}`);
     await c.reply(`Couldn't send the poster kit: ${reason}`);
   }
+}
+
+/** Send the prompt and kit to the posterMaker so they can make the poster by hand. */
+async function handOff(c: AwardCtx, r: AwardRound, why: string): Promise<void> {
+  const { deps, def } = c;
+  if (!def.posterMaker) return;
+  const { promptMsg, avatarList, medals } = buildPrompt(c, r);
+  const to = chatId(def.posterMaker);
+  await deps.sendText(to, `${why} ${medals}. Make the poster, then send it with the caption "${def.prefix} poster". Prompt below; attach: ${avatarList.join(', ')}.`);
+  await deps.sendText(to, promptMsg);
+  await sendKit(c, r, promptMsg, avatarList, to);
+}
+
+/**
+ * Make the poster with the image model, save it, reset approvals and send the preview.
+ * True = handled (made, or already in progress, or the round moved on); false = generation failed.
+ */
+async function generate(c: AwardCtx, comment: string | null): Promise<boolean> {
+  const { deps, def, round } = c;
+  if (!def.genModel || !deps.generatePoster) return false;
+  const key = `${def.key}|${round.roundId}`;
+  if (generating.has(key)) {
+    await c.reply('Already making a poster; hang on.');
+    return true;
+  }
+  generating.add(key);
+  try {
+    const r0 = deps.store.get(def.key, round.roundId);
+    if (!decided(r0)) return true;
+    const kitsDir = path.join(deps.storeDir, 'kits');
+    const tpl = readFileSync(path.join(kitsDir, def.promptTemplate), 'utf8');
+    const picks = ([1, 2, 3] as const).map((p) => r0.candidates.find((x) => x.n === r0.picks[p])!);
+    const { prompt: base, avatars } = fillPrompt(tpl, def, picks, (w) => avatarFor(c.config, w));
+    // The brief lists its images as style reference, then the LEFT (2nd), CENTER (1st), RIGHT (3rd) faces.
+    const files = [path.join(kitsDir, `${def.key}-style-reference.png`), ...[avatars[1], avatars[0], avatars[2]].map((a) => path.join(kitsDir, 'avatars', a))];
+    const prompt = comment ? `${base}\n\n## Changes requested\n\n${comment}\n\nKeep everything else as the brief says.` : base;
+    const media = await deps.generatePoster(def.genModel, prompt, files);
+    const file = await deps.savePoster(def.key, round.roundId, media);
+    // Re-read after the awaits; drop the poster if the picks changed or the round posted meanwhile.
+    const fresh = deps.store.get(def.key, round.roundId);
+    if (postedOk(fresh) || !decided(fresh) || JSON.stringify(fresh.picks) !== JSON.stringify(r0.picks)) return true;
+    const { approvedAt: _a, ...rest } = fresh;
+    const next: AwardRound = { ...rest, poster: file, approvals: [] };
+    deps.store.put(next);
+    const first = nextApprover(def, next);
+    if (!slugFor(deps.db, round.roundId)) {
+      await c.reply("The poster is ready, but this round's digest isn't published yet, so there's nothing to preview.");
+      return true;
+    }
+    if (first) await sendPreview(c, next, first);
+    const left = Math.max(0, (def.ownerRegens ?? 2) - (next.regens ?? 0));
+    const hint = left > 0
+      ? `Want changes? Send "${def.prefix} redo" and what to change, e.g. "${def.prefix} redo make the smoke thicker". ${left} redo${left === 1 ? '' : 's'} left.`
+      : `Want changes? Send "${def.prefix} redo" and what to change; ${def.posterMaker ? nameOf(c.config, def.posterMaker) : 'the admin'} has to OK it.`;
+    for (const o of def.owners) await deps.sendText(chatId(o), hint);
+    return true;
+  } catch (err) {
+    deps.log(`[awards] generate failed for ${def.key}: ${err instanceof Error ? err.message : 'error'}`);
+    return false;
+  } finally {
+    generating.delete(key);
+  }
+}
+
+async function handleRedo(c: AwardCtx, cmd: AwardCmd & { kind: 'redo' }): Promise<void> {
+  const { msg, deps, config, def, round } = c;
+  if (!def.genModel || !deps.generatePoster) return c.reply('Poster redos are not set up for this award.');
+  const r = deps.store.get(def.key, round.roundId);
+  if (postedOk(r)) return c.reply(alreadyPosted(def));
+  if (!decided(r)) return c.reply('Pick all three places first.');
+  const author = msg.author || msg.from;
+  const isOwner = await deps.isPerson(author, def.owners);
+  const isMaker = !!def.posterMaker && (await deps.isPerson(author, [def.posterMaker]));
+
+  if (isMaker && !isOwner) {
+    let comment = cmd.comment;
+    if (comment?.toLowerCase() === 'ok') {
+      if (!r.redoRequest) return c.reply('No redo is waiting for your OK.');
+      comment = r.redoRequest.comment;
+      const { redoRequest: _q, ...rest } = r;
+      deps.store.put(rest);
+      for (const o of def.owners) await deps.sendText(chatId(o), `${nameOf(config, def.posterMaker!)} OK'd your redo. Making a new poster…`);
+    }
+    await c.reply('Making a new poster…');
+    if (!(await generate(c, comment))) await c.reply("Couldn't make the poster. Try again, or send one with the caption " + `"${def.prefix} poster".`);
+    return;
+  }
+
+  const limit = def.ownerRegens ?? 2;
+  const used = r.regens ?? 0;
+  if (r.poster && used >= limit) {
+    deps.store.put({ ...r, redoRequest: { comment: cmd.comment, at: deps.now().toISOString() } });
+    const maker = def.posterMaker ? nameOf(config, def.posterMaker) : null;
+    if (def.posterMaker) {
+      await deps.sendText(chatId(def.posterMaker), `${nameOf(config, def.owners[0] ?? author)} wants another ${def.name} redo: "${cmd.comment ?? '(no comment)'}". Reply "${def.prefix} redo ok" to allow it.`);
+    }
+    return c.reply(`You've used your ${limit} redos. I've asked ${maker ?? 'the admin'} to OK this one.`);
+  }
+  const counted = !!r.poster;
+  if (counted) deps.store.put({ ...r, regens: used + 1 });
+  await c.reply('Making a new poster…');
+  if (await generate(c, cmd.comment)) return;
+  if (counted) deps.store.put({ ...deps.store.get(def.key, round.roundId), regens: used });
+  await c.reply("Couldn't make the poster. That one didn't count; try again in a minute.");
 }
 
 async function handleKit(c: AwardCtx): Promise<void> {
@@ -388,7 +510,7 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
 
     const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
     if (!def) return false;
-    const makerCmd = (cmd.kind === 'poster' || cmd.kind === 'kit') && !!def.posterMaker;
+    const makerCmd = (cmd.kind === 'poster' || cmd.kind === 'kit' || cmd.kind === 'redo') && !!def.posterMaker;
     if (!(await deps.isPerson(author, def.owners)) && !(makerCmd && (await deps.isPerson(author, [def.posterMaker!])))) return false;
     const round = targetRound(deps.db, config.leagueId, def, deps.store.all(), deps.now());
     if (cmd.kind === 'poster' && !(msg.hasMedia && msg.downloadMedia)) return false;
@@ -406,6 +528,7 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
       case 'pick': await handlePick(ctx, cmd); break;
       case 'poster': await handlePoster(ctx); break;
       case 'kit': await handleKit(ctx); break;
+      case 'redo': await handleRedo(ctx, cmd); break;
     }
     return true;
   } catch (err) {

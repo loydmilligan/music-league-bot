@@ -14,6 +14,10 @@ export interface AwardDef {
   posterMaker?: string;
   /** What the owner is told once the picks are complete when posterMaker is set. */
   posterPendingNote?: string;
+  /** OpenRouter image model; when set, the bot makes the poster itself once the picks are complete. */
+  genModel?: string;
+  /** Redos an owner may run per round before each further redo needs the posterMaker's OK. Default 2. */
+  ownerRegens?: number;
 }
 
 export interface AwardsConfig {
@@ -56,4 +60,8 @@ export interface AwardRound {
   /** The send threw after postedAt was set; approving again clears this and retries. */
   postFailed?: boolean;
   skipped?: string;
+  /** Owner redos used this round. */
+  regens?: number;
+  /** An owner redo past the limit, waiting for the posterMaker's OK. */
+  redoRequest?: { comment: string | null; at: string };
 }

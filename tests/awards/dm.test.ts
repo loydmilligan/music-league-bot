@@ -77,6 +77,78 @@ beforeEach(() => {
 });
 
 describe('handleAwardDm', () => {
+  it('genModel: poster made on the 3rd pick; owner gets 2 redos, then the maker must OK', async () => {
+    const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, genModel: 'm', posterPendingNote: 'Hang tight.' } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));
+    writeFileSync(path.join(dir, 'kits', 'hba.md'), 'Poster {{P1_NAME}}');
+    const prompts: string[] = [];
+    let fail = false;
+    let k = 0;
+    deps.generatePoster = async (_m, prompt, files) => {
+      if (fail) throw new Error('boom');
+      prompts.push(prompt);
+      expect(files).toHaveLength(4);
+      return { mimetype: 'image/png', data: 'AA==' };
+    };
+    deps.savePoster = async () => `p${++k}.png`;
+    for (const [i, t] of ['first funny line here', 'second funny line here', 'third funny line here'].entries()) {
+      chat(`P${i}`, t, `2026-11-04T1${i}:00:00Z`);
+      await handleAwardDm(fwd(CONOR, t), deps);
+      await handleAwardDm(dm(CONOR, 'hba'), deps);
+    }
+    sent = []; files = [];
+    await handleAwardDm(dm(CONOR, 'hba-1st 1'), deps);
+    await handleAwardDm(dm(CONOR, 'hba-2nd 2'), deps);
+    await handleAwardDm(dm(CONOR, 'hba-3rd 3'), deps);
+    expect(deps.store.get('hba', 7).poster).toBe('p1.png');
+    expect(files).toEqual([]); // no kit: the bot made it
+    expect(sent.filter((x) => x.to === CONOR).map((x) => x.text).join('\n')).toMatch(/Hang tight\.[\s\S]*Reply "approve"[\s\S]*2 redos left/);
+
+    await handleAwardDm(dm(CONOR, 'hba redo Make the smoke THICKER'), deps);
+    expect(prompts[1]).toMatch(/## Changes requested\n\nMake the smoke THICKER/);
+    expect(deps.store.get('hba', 7)).toMatchObject({ poster: 'p2.png', regens: 1, approvals: [] });
+    expect(last()).toMatch(/1 redo left/);
+
+    // A failed redo doesn't count.
+    fail = true;
+    await handleAwardDm(dm(CONOR, 'hba redo again'), deps);
+    expect(deps.store.get('hba', 7).regens).toBe(1);
+    expect(last()).toMatch(/didn't count/);
+    fail = false;
+    await handleAwardDm(dm(CONOR, 'hba redo'), deps);
+    expect(deps.store.get('hba', 7).regens).toBe(2);
+
+    // Third redo: asks Matt.
+    sent = [];
+    await handleAwardDm(dm(CONOR, 'hba redo bigger laurels'), deps);
+    expect(deps.store.get('hba', 7).poster).toBe('p3.png');
+    expect(sent.find((x) => x.to === MATT)?.text).toMatch(/wants another Half Baked redo: "bigger laurels"\. Reply "hba redo ok"/);
+    expect(last()).toMatch(/used your 2 redos/);
+
+    await handleAwardDm(dm(MATT, 'hba redo ok'), deps);
+    expect(prompts[prompts.length - 1]).toMatch(/bigger laurels/);
+    expect(deps.store.get('hba', 7)).toMatchObject({ poster: 'p4.png' });
+    expect(deps.store.get('hba', 7).redoRequest).toBeUndefined();
+    expect(await handleAwardDm(dm(MATT, 'hba redo ok'), deps)).toBe(true);
+    expect(last()).toBe('No redo is waiting for your OK.');
+    expect(await handleAwardDm(dm(STRANGER, 'hba redo'), deps)).toBe(false);
+  });
+
+  it('genModel: failed generation hands the kit to the posterMaker', async () => {
+    const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, genModel: 'm' } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));
+    writeFileSync(path.join(dir, 'kits', 'hba.md'), 'Poster {{P1_NAME}}');
+    deps.generatePoster = async () => { throw new Error('boom'); };
+    for (const [i, t] of ['first funny line here', 'second funny line here', 'third funny line here'].entries()) {
+      chat(`P${i}`, t, `2026-11-04T1${i}:00:00Z`);
+      await handleAwardDm(fwd(CONOR, t), deps);
+      await handleAwardDm(dm(CONOR, 'hba'), deps);
+    }
+    for (const p of ['hba-1st 1', 'hba-2nd 2', 'hba-3rd 3']) await handleAwardDm(dm(CONOR, p), deps);
+    expect(sent.find((x) => x.to === MATT)?.text).toMatch(/^Couldn't make the Half Baked poster automatically/);
+    expect(files.map((f) => f.to)).toEqual([MATT]);
+  });
+
   it('posterMaker: owner gets the note; maker gets prompt and kit, and may send the poster', async () => {
     const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, posterPendingNote: 'Hang tight.' } : a)) };
     writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));

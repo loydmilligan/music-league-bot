@@ -5,6 +5,7 @@ export type AwardCmd =
   | { award: string; kind: 'choose'; n: number }
   | { award: string; kind: 'poster' }
   | { award: string; kind: 'kit' }
+  | { award: string; kind: 'redo'; comment: string | null }
   | { award: string | null; kind: 'approve' };
 
 const PLACE_WORDS: Record<string, 1 | 2 | 3> = {
@@ -25,6 +26,10 @@ export function parseAwardCommand(text: string, prefixes: string[]): AwardCmd | 
   const t = text.trim().toLowerCase();
   if (t === 'approve') return { award: null, kind: 'approve' };
   if (prefixes.length === 0) return null;
+
+  const redoAlt = [...prefixes].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+  const redo = new RegExp(`^(${redoAlt})\\s+redo(?:\\s+([\\s\\S]+))?$`, 'i').exec(text.trim());
+  if (redo) return { award: redo[1].toLowerCase(), kind: 'redo', comment: redo[2]?.trim() || null };
 
   const alt = [...prefixes].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
   const m = new RegExp(`^(${alt})(?:(-(1st|1|first|2nd|2|second|3rd|3|third)\\s+(\\d+))|\\s+(candidates|poster|kit|approve|\\d+)|)$`).exec(t);

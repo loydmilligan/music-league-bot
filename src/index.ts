@@ -28,6 +28,7 @@ import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { handleCmuDm } from './bot/cmuDm.js';
 import { handleAwardDm } from './awards/dm.js';
+import { makeOpenRouterPoster } from './awards/generate.js';
 import { awardsDisabledReason, openAwardStore } from './awards/store.js';
 import { chatId as awardChatId } from './awards/model.js';
 import { seenMessagesDb } from './storage/reactionsDb.js';
@@ -146,6 +147,7 @@ const awardsDm = awardsEnabled
         sendText: makeSendTextTo(client),
         sendImage: makeSendImageTo(client),
         sendFile: makeSendFileTo(client),
+        generatePoster: process.env.OPENROUTER_API_KEY ? makeOpenRouterPoster(process.env.OPENROUTER_API_KEY) : undefined,
         savePoster: async (award, roundId, media) => {
           const ext = media.mimetype.includes('png') ? 'png' : media.mimetype.includes('webp') ? 'webp' : 'jpg';
           const dir = path.join(awardsDir, 'posters');
