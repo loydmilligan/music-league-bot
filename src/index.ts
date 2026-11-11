@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config/loader.js';
@@ -145,8 +146,15 @@ const awardsDm = awardsEnabled
         },
         readReactions: (msgId) => readReactions(client, msgId),
         sendText: makeSendTextTo(client),
-        // Task 6 stores posters; until then there is nothing to save to.
-        savePoster: async () => { throw new Error('poster saving is not wired yet'); },
+        sendImage: makeSendImageTo(client),
+        savePoster: async (award, roundId, media) => {
+          const ext = media.mimetype.includes('png') ? 'png' : media.mimetype.includes('webp') ? 'webp' : 'jpg';
+          const dir = path.join(awardsDir, 'posters');
+          mkdirSync(dir, { recursive: true });
+          const file = path.join(dir, `${roundId}-${award}.${ext}`);
+          writeFileSync(file, Buffer.from(media.data, 'base64'), { mode: 0o600 });
+          return file;
+        },
         log: (l) => console.log(l),
       });
     }

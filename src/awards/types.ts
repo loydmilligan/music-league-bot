@@ -18,6 +18,8 @@ export interface AwardsConfig {
   digestBaseUrl: string;
   recapBaseUrl: string;
   awards: AwardDef[];
+  /** Owner/approver id (as listed in an AwardDef) -> display name used in approval replies. */
+  names?: Record<string, string>;
   /** Display name -> kit avatar filename. Default: lowercased, hyphenated name + .png. */
   avatars?: Record<string, string>;
 }

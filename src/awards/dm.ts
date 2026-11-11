@@ -4,9 +4,10 @@ import path from 'node:path';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { parseAwardCommand, type AwardCmd } from './commands.js';
 import { matchForward, type Match } from './match.js';
-import { addCandidate, pick } from './model.js';
+import { buildCaption } from './caption.js';
+import { addCandidate, approve, nextApprover, pick } from './model.js';
 import { fillPrompt } from './prompt.js';
-import { currentRound, windowStartFor, type RoundInfo } from './schedule.js';
+import { currentRound, dayAt, windowStartFor, type RoundInfo } from './schedule.js';
 import type { AwardStore } from './store.js';
 import type { AwardDef, AwardRound, AwardsConfig, Candidate } from './types.js';
 
@@ -20,6 +21,7 @@ export interface AwardDmDeps {
   now(): Date;
   readReactions(msgId: string): Promise<{ emoji: string; who: string[] }[] | null>;
   sendText(to: string, text: string): Promise<void>;
+  sendImage(to: string, file: string, caption: string): Promise<void>;
   savePoster(award: string, roundId: number, media: { mimetype: string; data: string }): Promise<string>;
   log(l: string): void;
 }
@@ -69,7 +71,7 @@ async function handleFlag(c: AwardCtx, cmd: AwardCmd & { kind: 'flag' }): Promis
   if (!fw || deps.now().getTime() - fw.at > FORWARD_TTL_MS) {
     return c.reply(`Forward me the message first, then send ${def.prefix} within 2 minutes.`);
   }
-  const matches = matchForward(deps.db, fw.text, config.groupName, windowStartFor(def, round, deps.now()));
+  const matches = matchForward(deps.db, fw.text, deps.groupName, windowStartFor(def, round, deps.now()));
   if (matches.length === 0) return c.reply("Couldn't find that message in the group chat this round.");
   if (matches.length > 1) {
     pending.set(`${msg.author}|${def.prefix}`, { matches, at: fw.at });
@@ -127,7 +129,7 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
     next = { ...rest, approvals: [] };
     reset = true;
   }
-  if (res.complete && !next.decidedAt) next = { ...next, decidedAt: deps.now().toISOString() };
+  if (res.complete && (changed || !next.decidedAt)) next = { ...next, decidedAt: deps.now().toISOString() };
   deps.store.put(next);
 
   const cand = next.candidates.find((x) => x.n === cmd.n)!;
@@ -156,8 +158,85 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   await c.reply(promptMsg);
 }
 
+
+const dayFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric' });
+function formatDay(d: Date): string {
+  const p = Object.fromEntries(dayFmt.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.weekday} ${p.month} ${p.day}`;
+}
+
+/** The 08:00 LA instant this award will post: its scheduled day, or the next 08:00 if that has passed. */
+function postInstant(c: AwardCtx): Date {
+  const scheduled = dayAt(c.round.releasedAt, c.def.day);
+  const now = c.deps.now();
+  return scheduled.getTime() > now.getTime() ? scheduled : dayAt(now.toISOString(), 1);
+}
+
+const chatId = (id: string): string => (id.includes('@') ? id : `${id.replace(/\D/g, '')}@c.us`);
+const nameOf = (config: AwardsConfig, id: string): string => config.names?.[id] ?? id.replace(/@.*$/, '');
+const decided = (r: AwardRound): boolean => r.picks[1] !== undefined && r.picks[2] !== undefined && r.picks[3] !== undefined;
+
+function slugFor(db: Database.Database, roundId: number): string | null {
+  const row = db.prepare('SELECT slug FROM digest2_shares WHERE round_id = ?').get(roundId) as { slug: string | null } | undefined;
+  return row?.slug || null;
+}
+
+/** Send the approval preview (poster, caption, then the approve line) to one approver. */
+async function sendPreview(c: AwardCtx, r: AwardRound, to: string): Promise<void> {
+  const slug = slugFor(c.deps.db, c.round.roundId);
+  if (!slug || !r.poster) return;
+  const base = c.config.digestBaseUrl.replace(/\/+$/, '');
+  const caption = buildCaption(c.def, r, {
+    award: `${base}/d2/${slug}/?view=awards&src=award#award-${c.def.key}`,
+    recap: "(added at post time if it's built)",
+    digest: `${base}/d2/${slug}/?src=award`,
+  });
+  const target = chatId(to);
+  await c.deps.sendImage(target, r.poster, caption);
+  await c.deps.sendText(target, `Reply "approve" to post this at 08:00 on ${formatDay(postInstant(c))}.`);
+}
+
+async function handlePoster(c: AwardCtx): Promise<void> {
+  const { msg, deps, def, round } = c;
+  const before = deps.store.get(def.key, round.roundId);
+  if (!decided(before)) return c.reply('Pick all three places first.');
+  if (!slugFor(deps.db, round.roundId)) return c.reply("This round's digest isn't published yet.");
+  const media = (await msg.downloadMedia?.()) ?? null;
+  if (!media) return c.reply("Couldn't read that image. Send it again with the caption " + `"${def.prefix} poster".`);
+  const file = await deps.savePoster(def.key, round.roundId, media);
+  let next: AwardRound = { ...before, poster: file };
+  const reset = before.approvals.length > 0 || !!before.approvedAt;
+  if (reset) {
+    const { approvedAt: _a, ...rest } = next;
+    next = { ...rest, approvals: [] };
+  }
+  deps.store.put(next);
+  const first = nextApprover(def, next);
+  await c.reply(`Poster saved. Preview sent to ${first ? nameOf(c.config, first) : 'the approver'}.${reset ? ' Approval was reset.' : ''}`);
+  if (first) await sendPreview(c, next, first);
+}
+
+async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
+  const { deps, config, def, round } = c;
+  const before = deps.store.get(def.key, round.roundId);
+  const turn = nextApprover(def, before);
+  const mine = turn !== null && (await deps.isPerson(approver, [turn]));
+  const res = approve(def, before, mine ? turn : `not:${approver}`);
+  if (res.error === 'not-decided') return c.reply('Pick all three places first.');
+  if (res.error === 'no-poster') return c.reply(`Send the poster first, with the caption "${def.prefix} poster".`);
+  if (res.error) return c.reply(`It's ${nameOf(config, turn ?? '')}'s turn to approve first.`);
+  let next = res.round;
+  if (res.done && next.approvedAt && next.approvedAt !== before.approvedAt) next = { ...next, approvedAt: deps.now().toISOString() };
+  deps.store.put(next);
+  if (res.done) return c.reply(`Approved. Posting ${formatDay(postInstant(c))} at 08:00.`);
+  const following = nextApprover(def, next)!;
+  await sendPreview(c, next, following);
+  return c.reply(`Approved. Waiting on ${nameOf(config, following)}.`);
+}
+
 /** Owner DM handler for awards. True = handled; false = fall through to the next handler. */
 export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Promise<boolean> {
+  let acked = false;
   try {
     if (msg.from.endsWith('@g.us')) return false;
     let config: AwardsConfig;
@@ -174,18 +253,51 @@ export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Pr
     }
 
     const cmd = parseAwardCommand(msg.body, config.awards.map((a) => a.prefix.toLowerCase()));
-    if (!cmd || cmd.award === null) return false;
-    const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
-    if (!def || !(await deps.isPerson(author, def.owners))) return false;
-
-    // Task 6 owns poster and approve.
-    if (cmd.kind === 'poster' || cmd.kind === 'approve') return false;
+    if (!cmd) return false;
 
     const reply = (text: string) => deps.sendText(msg.from, text);
     const ack = async () => {
+      acked = true;
       try { await msg.react?.('👍'); } catch { /* best effort */ }
     };
+
+    if (cmd.kind === 'approve') {
+      // Gated by the approver list, not the owner list.
+      let def: AwardDef | undefined;
+      if (cmd.award !== null) {
+        def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
+        if (!def || !(await approverOf(deps, author, def))) return false;
+      }
+      const round = currentRound(deps.db, config.leagueId, deps.now());
+      if (!def) {
+        if (!round) return false;
+        const mine: AwardDef[] = [];
+        for (const d of config.awards) {
+          const r = deps.store.get(d.key, round.roundId);
+          const next = nextApprover(d, r);
+          if (r.poster && next !== null && (await deps.isPerson(author, [next]))) mine.push(d);
+        }
+        if (mine.length === 0) return false;
+        if (mine.length > 1) {
+          await ack();
+          await reply(`Which one? Send ${mine.map((d) => `"${d.prefix} approve"`).join(' or ')}.`);
+          return true;
+        }
+        def = mine[0];
+      }
+      await ack();
+      if (!round) {
+        await reply('No released round yet; nothing to approve.');
+        return true;
+      }
+      await handleApprove({ msg, deps, config, def, round, reply }, author);
+      return true;
+    }
+
+    const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
+    if (!def || !(await deps.isPerson(author, def.owners))) return false;
     const round = currentRound(deps.db, config.leagueId, deps.now());
+    if (cmd.kind === 'poster' && !(msg.hasMedia && msg.downloadMedia)) return false;
     if (!round) {
       await ack();
       await reply('No released round yet; nothing to add to.');
@@ -198,10 +310,16 @@ export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Pr
       case 'choose': await handleChoose(ctx, cmd); break;
       case 'list': await handleList(ctx); break;
       case 'pick': await handlePick(ctx, cmd); break;
+      case 'poster': await handlePoster(ctx); break;
     }
     return true;
   } catch (err) {
     deps.log(`[awards] dm failed: ${err instanceof Error ? err.name : 'error'}`);
-    return false;
+    return acked;
   }
+}
+
+async function approverOf(deps: AwardDmDeps, author: string, def: AwardDef): Promise<boolean> {
+  for (const a of def.approvers) if (await deps.isPerson(author, [a])) return true;
+  return false;
 }

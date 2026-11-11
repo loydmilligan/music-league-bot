@@ -66,6 +66,7 @@ beforeEach(() => {
     isPerson: async (a, ids) => ids.includes(a),
     readReactions: async () => [{ emoji: '😂', who: ['x'] }],
     sendText: async (to, text) => { sent.push({ to, text }); },
+    sendImage: async () => {},
     savePoster: async () => 'p.png',
     log: () => {},
   };
