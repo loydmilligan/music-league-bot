@@ -32,6 +32,7 @@ function mkSubmitted(over: Partial<ParsedEmail>): ParsedEmail {
     type: 'user_submitted',
     mlRoundId: null,
     submitterName: 'Steiny',
+    voterName: null,
     leagueLabel: 'Boarz II Men',
     roundName: 'Couple of Lines',
     playlistUrl: null,

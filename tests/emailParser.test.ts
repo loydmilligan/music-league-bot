@@ -91,3 +91,42 @@ describe('parseEmail — New Playlist', () => {
     expect(p.sentAt).toBe('2026-06-22T15:00:54.000Z');
   });
 });
+
+// ---------------------------------------------------------------------------
+// user_voted — "{League} - User Voted"
+// ---------------------------------------------------------------------------
+
+// Synthetic, redacted mail in the shape of a real "User Voted" notification:
+// the voter and the round sit in the HTML prose, no round id link.
+function votedMail(voter: string, round: string, league: string): string {
+  const html =
+    `<html><body><style>.x { color: red !important } </style>` +
+    `<h1>Someone has Voted</h1><p>${voter} has voted in the ${round} round of the ${league} league.</p>` +
+    `<a href="https://example.test/go">Go to League</a></body></html>`;
+  return [
+    'From: Music League',
+    `Subject: ${league} - User Voted`,
+    'Message-ID: <voted-1>',
+    'Date: Fri, 06 Mar 2026 20:15:00 +0000',
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    html,
+  ].join('\r\n');
+}
+
+describe('user_voted', () => {
+  it('classifies "<League> - User Voted" as user_voted', () => {
+    expect(classifySubject('Test League - User Voted')).toBe('user_voted');
+    expect(classifySubject('A - B - user voted')).toBe('user_voted');
+  });
+
+  it("extracts the voter's name, round and league from the body", async () => {
+    const p = await parseEmail(votedMail('Pat Example', "Dance IF nobody's watching.", 'Test Heroes, Zeroes, & Co'));
+    expect(p.type).toBe('user_voted');
+    expect(p.voterName).toBe('Pat Example');
+    expect(p.roundName).toBe("Dance IF nobody's watching.");
+    expect(p.leagueLabel).toBe('Test Heroes, Zeroes, & Co');
+    expect(p.submitterName).toBeNull();
+  });
+});
