@@ -6,7 +6,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import {
   createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
-  makeDmTarget, makeDmTargetStrict, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName,
+  makeDmTarget, makeDmTargetStrict, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName, readReactions,
 } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
@@ -26,6 +26,8 @@ import type { PromptOption, PromptTemplates } from './chat/prompts/types.js';
 import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { handleCmuDm } from './bot/cmuDm.js';
+import { handleAwardDm } from './awards/dm.js';
+import { openAwardStore } from './awards/store.js';
 import { seenMessagesDb } from './storage/reactionsDb.js';
 import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTick } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
@@ -118,6 +120,38 @@ const cmuDm = cmuUrl && cmuToken
       handleCmuDm(msg, { ...cmuDeps(cmuUrl, cmuToken), leagueDb: seenMessagesDb })
   : undefined;
 
+// Chat awards (owner DMs). Off unless ${DATA_DIR ?? 'data'}/awards/config.json exists.
+const awardsDir = path.resolve(process.env.DATA_DIR ?? 'data', 'awards');
+const awardStore = openAwardStore(awardsDir);
+let awardsEnabled = true;
+try {
+  awardStore.config();
+} catch {
+  awardsEnabled = false;
+  console.log('[awards] disabled: no config');
+}
+const awardsDm = awardsEnabled
+  ? (msg: Parameters<typeof handleMessage>[0]) => {
+      const dmTarget = makeDmTarget(client);
+      return handleAwardDm(msg, {
+        store: awardStore,
+        storeDir: awardsDir,
+        db: seenMessagesDb(),
+        groupName: awardStore.config().groupName,
+        now: () => new Date(),
+        isPerson: async (author, ids) => {
+          for (const id of ids) if (await makeIsOwner(dmTarget, id)(author)) return true;
+          return false;
+        },
+        readReactions: (msgId) => readReactions(client, msgId),
+        sendText: makeSendTextTo(client),
+        // Task 6 stores posters; until then there is nothing to save to.
+        savePoster: async () => { throw new Error('poster saving is not wired yet'); },
+        log: (l) => console.log(l),
+      });
+    }
+  : undefined;
+
 // Emoji reactions to non-command mentions: preview groups only (the same gate sprint 2 uses).
 const cmuPreview = defaultCmuPreview();
 const reactionGuard = new BurstGuard();
@@ -170,6 +204,7 @@ const client = createClient(async (msg) => {
     sendDm: makeSendDm(client),
     jevRespond,
     catchMeUp,
+    awardsDm,
     cmuDm,
     reactToMention,
     wrongPlace,

@@ -67,6 +67,8 @@ export interface BotConfig {
   preview?: CmuPreview;
   /** Player commands by private DM (src/bot/cmuDm.ts). True = handled; false = on to prompt answers. */
   cmuDm?: (msg: WhatsAppMessage) => Promise<boolean>;
+  /** Chat-awards owner commands by DM (src/awards/dm.ts). True = handled; tried before cmuDm. */
+  awardsDm?: (msg: WhatsAppMessage) => Promise<boolean>;
   /** A DM-only command typed in a format group (src/bot/wrongPlace.ts). True = handled. Unset = today's behaviour. */
   wrongPlace?: (msg: WhatsAppMessage) => Promise<boolean>;
 }
@@ -99,6 +101,13 @@ export async function handleMessage(msg: WhatsAppMessage, botConfig: BotConfig):
   // and is deliberately exempt from the group allowlist, which exists to stop
   // the bot acting in groups it was not invited to reason about.
   if (!msg.from.endsWith('@g.us')) {
+    if (botConfig.awardsDm) {
+      try {
+        if (await botConfig.awardsDm(msg)) return;
+      } catch (err) {
+        console.error('[awards] dm router failed:', err instanceof Error ? err.name : 'error');
+      }
+    }
     // An exact DM command from a preview person wins; everything else stays a prompt answer.
     if (botConfig.cmuDm) {
       try {

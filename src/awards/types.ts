@@ -18,6 +18,8 @@ export interface AwardsConfig {
   digestBaseUrl: string;
   recapBaseUrl: string;
   awards: AwardDef[];
+  /** Display name -> kit avatar filename. Default: lowercased, hyphenated name + .png. */
+  avatars?: Record<string, string>;
 }
 
 export interface Candidate {
