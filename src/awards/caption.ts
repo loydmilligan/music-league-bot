@@ -1,4 +1,13 @@
-import type { AwardDef, AwardRound } from './types.js';
+import type { AwardDef, AwardRound, AwardsConfig } from './types.js';
+
+/** The award and digest links for a published round's slug. */
+export function awardLinks(config: AwardsConfig, def: AwardDef, slug: string): { award: string; digest: string } {
+  const base = config.digestBaseUrl.replace(/\/+$/, '');
+  return {
+    award: `${base}/d2/${slug}/?view=awards&src=award#award-${def.key}`,
+    digest: `${base}/d2/${slug}/?src=award`,
+  };
+}
 
 /** The post caption. The recap line is left out when there is no recap. */
 export function buildCaption(

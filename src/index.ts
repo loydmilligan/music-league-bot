@@ -30,6 +30,7 @@ import { handleCmuDm } from './bot/cmuDm.js';
 import { handleAwardDm } from './awards/dm.js';
 import { openAwardStore } from './awards/store.js';
 import { seenMessagesDb } from './storage/reactionsDb.js';
+import { startAwardPostTick } from './awards/postTick.js';
 import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTick } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
@@ -250,6 +251,35 @@ client.on('ready', () => {
   }
 
   const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002';
+  if (awardsEnabled) {
+    const sendText = makeSendTextTo(client);
+    const toChat = (id: string) => (id.includes('@') ? id : `${id.replace(/\D/g, '')}@c.us`);
+    startAwardPostTick({
+      store: awardStore,
+      db: seenMessagesDb(),
+      now: () => new Date(),
+      // The only path that posts an award into a group; groups pass through dmTarget unchanged.
+      sendImage: makeSendImageTo(client),
+      recapUrlFor: async (ymd) => {
+        try {
+          const res = await fetch(`${awardStore.config().recapBaseUrl.replace(/\/+$/, '')}/recap-${ymd}.html`, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+          return res.status === 200 ? res.url || `${awardStore.config().recapBaseUrl.replace(/\/+$/, '')}/recap-${ymd}.html` : null;
+        } catch {
+          return null;
+        }
+      },
+      republish: async (roundId) => {
+        const res = await fetch(`${baseUrl}/api/digest2/${roundId}/publish`, { method: 'POST', signal: AbortSignal.timeout(30_000) });
+        if (!res.ok) throw new Error(`republish ${res.status}`);
+      },
+      dmOwner: async (award, text) => {
+        const def = awardStore.config().awards.find((a) => a.key === award);
+        for (const o of def?.owners ?? []) await sendText(toChat(o), text);
+      },
+      log: (line) => console.log(line),
+    });
+  }
+
   const { runOnce } = startDigestPoller({
     baseUrl,
     send: (target, text) => makeSendDm(client)(target, text),

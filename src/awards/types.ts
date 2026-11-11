@@ -44,5 +44,7 @@ export interface AwardRound {
   approvals: string[];
   approvedAt?: string;
   postedAt?: string;
+  /** The send threw after postedAt was set; approving again clears this and retries. */
+  postFailed?: boolean;
   skipped?: string;
 }

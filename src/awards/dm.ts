@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { parseAwardCommand, type AwardCmd } from './commands.js';
 import { matchForward, type Match } from './match.js';
-import { buildCaption } from './caption.js';
+import { awardLinks, buildCaption } from './caption.js';
 import { addCandidate, approve, nextApprover, pick } from './model.js';
 import { fillPrompt } from './prompt.js';
 import { currentRound, dayAt, windowStartFor, type RoundInfo } from './schedule.js';
@@ -191,11 +191,9 @@ function slugFor(db: Database.Database, roundId: number): string | null {
 async function sendPreview(c: AwardCtx, r: AwardRound, to: string): Promise<void> {
   const slug = slugFor(c.deps.db, c.round.roundId);
   if (!slug || !r.poster) return;
-  const base = c.config.digestBaseUrl.replace(/\/+$/, '');
   const caption = buildCaption(c.def, r, {
-    award: `${base}/d2/${slug}/?view=awards&src=award#award-${c.def.key}`,
+    ...awardLinks(c.config, c.def, slug),
     recap: "(added at post time if it's built)",
-    digest: `${base}/d2/${slug}/?src=award`,
   });
   const target = chatId(to);
   await c.deps.sendImage(target, r.poster, caption);
@@ -228,11 +226,17 @@ async function handlePoster(c: AwardCtx): Promise<void> {
 
 async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
   const { deps, config, def, round } = c;
-  const seen = deps.store.get(def.key, round.roundId);
+  // A failed or missed post is retried by approving again: start the approval chain fresh.
+  const fresh = (r: AwardRound): AwardRound => {
+    if (!r.postFailed && !r.skipped) return r;
+    const { postedAt: _p, postFailed: _f, skipped: _s, approvedAt: _a, ...rest } = r;
+    return { ...rest, approvals: [] };
+  };
+  const seen = fresh(deps.store.get(def.key, round.roundId));
   const turn = nextApprover(def, seen);
   const mine = turn !== null && (await deps.isPerson(approver, [turn]));
   // Re-read after the await; no await between this read and the put.
-  const before = deps.store.get(def.key, round.roundId);
+  const before = fresh(deps.store.get(def.key, round.roundId));
   if (before.poster !== seen.poster) return c.reply('The poster changed while you were approving. Check the new preview and approve again.');
   const res = approve(def, before, mine ? turn : `not:${approver}`);
   if (res.error === 'not-decided') return c.reply('Pick all three places first.');

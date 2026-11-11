@@ -229,3 +229,28 @@ describe('fix round 2', () => {
     expect(deps.store.get('hba', 7).poster).toBeUndefined();
   });
 });
+
+describe('re-approve after a failed post', () => {
+  it('postFailed clears postedAt and runs the chain fresh', async () => {
+    seed('bbb', { poster: '/p.jpg', approvals: [MATT], approvedAt: '2026-11-05T01:00:00Z', postedAt: '2026-11-05T16:00:00Z', postFailed: true });
+    expect(await handleAwardDm(dm(MATT_ID, 'bbb approve'), deps)).toBe(true);
+    const r = deps.store.get('bbb', 7);
+    expect(r.postFailed).toBeUndefined();
+    expect(r.postedAt).toBeUndefined();
+    expect(r.approvedAt).toBe(clock.toISOString());
+    expect(r.approvals).toEqual([MATT]);
+  });
+  it('a successfully posted round is not re-armed by approve', async () => {
+    seed('bbb', { poster: '/p.jpg', approvals: [MATT], approvedAt: '2026-11-05T01:00:00Z', postedAt: '2026-11-05T16:00:00Z' });
+    await handleAwardDm(dm(MATT_ID, 'bbb approve'), deps);
+    const r = deps.store.get('bbb', 7);
+    expect(r.postedAt).toBe('2026-11-05T16:00:00Z');
+    expect(r.approvedAt).toBe('2026-11-05T01:00:00Z');
+  });
+  it('a two-approver award restarts at the first approver', async () => {
+    seed('hba', { poster: '/p.jpg', approvals: [CONOR, MATT], approvedAt: '2026-11-05T01:00:00Z', postedAt: '2026-11-05T16:00:00Z', postFailed: true });
+    await handleAwardDm(dm(MATT_ID, 'hba approve'), deps);
+    expect(last()).toMatch(/Conor's turn/);
+    expect(deps.store.get('hba', 7).postFailed).toBe(true); // refused: state unchanged
+  });
+});
