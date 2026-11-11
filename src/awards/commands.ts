@@ -4,6 +4,7 @@ export type AwardCmd =
   | { award: string; kind: 'pick'; place: 1 | 2 | 3; n: number }
   | { award: string; kind: 'choose'; n: number }
   | { award: string; kind: 'poster' }
+  | { award: string; kind: 'kit' }
   | { award: string | null; kind: 'approve' };
 
 const PLACE_WORDS: Record<string, 1 | 2 | 3> = {
@@ -26,7 +27,7 @@ export function parseAwardCommand(text: string, prefixes: string[]): AwardCmd | 
   if (prefixes.length === 0) return null;
 
   const alt = [...prefixes].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
-  const m = new RegExp(`^(${alt})(?:(-(1st|1|first|2nd|2|second|3rd|3|third)\\s+(\\d+))|\\s+(candidates|poster|approve|\\d+)|)$`).exec(t);
+  const m = new RegExp(`^(${alt})(?:(-(1st|1|first|2nd|2|second|3rd|3|third)\\s+(\\d+))|\\s+(candidates|poster|kit|approve|\\d+)|)$`).exec(t);
   if (!m) return null;
 
   const award = m[1];
@@ -37,6 +38,7 @@ export function parseAwardCommand(text: string, prefixes: string[]): AwardCmd | 
   if (tail === undefined) return { award, kind: 'flag' };
   if (tail === 'candidates') return { award, kind: 'list' };
   if (tail === 'poster') return { award, kind: 'poster' };
+  if (tail === 'kit') return { award, kind: 'kit' };
   if (tail === 'approve') return { award, kind: 'approve' };
   return { award, kind: 'choose', n: Number(tail) };
 }

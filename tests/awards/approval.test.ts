@@ -69,6 +69,7 @@ beforeEach(() => {
     readReactions: async () => null,
     sendText: async (to, text) => { sent.push({ to, text }); },
     sendImage: async (to, file, caption) => { images.push({ to, file, caption }); },
+    sendFile: async () => {},
     savePoster: async (award, roundId, media) => { saved.push({ award, roundId, mimetype: media.mimetype }); return `/p/${roundId}-${award}.jpg`; },
     log: () => {},
   };

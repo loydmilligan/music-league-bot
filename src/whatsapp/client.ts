@@ -485,6 +485,16 @@ export function makeDmTargetStrict(client: ClientType): (chatId: string) => Prom
 }
 
 /** DM an image file to one chat id (the requester). */
+/** Send a local file as a document (not a photo), e.g. the awards poster kit zip. */
+export function makeSendFileTo(client: ClientType): (chatId: string, filePath: string, caption?: string) => Promise<void> {
+  return async (chatId, filePath, caption) => {
+    await client.sendMessage(await dmTarget(client, chatId), MessageMedia.fromFilePath(filePath), {
+      sendMediaAsDocument: true,
+      ...(caption ? { caption } : {}),
+    });
+  };
+}
+
 export function makeSendImageTo(client: ClientType): (chatId: string, filePath: string, caption?: string) => Promise<void> {
   return async (chatId, filePath, caption) => {
     await client.sendMessage(await dmTarget(client, chatId), MessageMedia.fromFilePath(filePath), caption ? { caption } : undefined);

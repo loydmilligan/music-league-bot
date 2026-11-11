@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { handleAwardDm, resetAwardDmState, type AwardDmDeps } from '../../src/awards/dm.js';
@@ -13,6 +13,7 @@ const CONOR = '15550002@c.us';
 const STRANGER = '15550009@c.us';
 
 let db: Database.Database;
+let files: { to: string; file: string; caption: string }[] = [];
 let dir: string;
 let sent: { to: string; text: string }[];
 let reacts: string[];
@@ -68,9 +69,11 @@ beforeEach(() => {
     readReactions: async () => [{ emoji: '😂', who: ['x'] }],
     sendText: async (to, text) => { sent.push({ to, text }); },
     sendImage: async () => {},
+    sendFile: async (to, file, caption) => { files.push({ to, file, caption }); },
     savePoster: async () => 'p.png',
     log: () => {},
   };
+  files = [];
 });
 
 describe('handleAwardDm', () => {
@@ -261,4 +264,45 @@ describe('handleAwardDm', () => {
     expect(await handleAwardDm(dm(MATT, 'bbb poster'), deps)).toBe(false);
     expect(await handleAwardDm(dm(MATT, 'approve'), deps)).toBe(false);
   });
+
+  describe('poster kit zip', () => {
+  const pickAll = async () => {
+    await handleAwardDm(dm(MATT, 'bbb-1 1'), deps);
+    await handleAwardDm(dm(MATT, 'bbb-2 2'), deps);
+    await handleAwardDm(dm(MATT, 'bbb-3 3'), deps);
+  };
+
+  it('sends the kit zip after the decided message and prompt', async () => {
+    await seed(3);
+    await pickAll();
+    expect(files).toHaveLength(1);
+    expect(files[0].to).toBe(MATT);
+    expect(files[0].file).toMatch(/kits-out[\\/]7-bbb-kit\.zip$/);
+    expect(existsSync(files[0].file)).toBe(true);
+    expect(files[0].caption).toBe('BBB poster kit: prompt, style reference and faces. Missing: bbb-style-reference.png, zed.png, p2-person.png, p3-person.png.');
+  });
+
+  it('"bbb kit" resends it; before all three picks it asks for them', async () => {
+    await seed(3);
+    await handleAwardDm(dm(MATT, 'bbb kit'), deps);
+    expect(last()).toBe('Pick all three places first.');
+    expect(files).toHaveLength(0);
+    await pickAll();
+    files = [];
+    expect(await handleAwardDm(dm(MATT, 'bbb kit'), deps)).toBe(true);
+    expect(files).toHaveLength(1);
+  });
+
+  it('a failed file send is reported, not thrown', async () => {
+    await seed(3);
+    deps.sendFile = async () => { throw new Error('boom'); };
+    await pickAll();
+    expect(last()).toBe("Couldn't send the poster kit: boom");
+  });
+
+  it('a stranger cannot fetch a kit', async () => {
+    expect(await handleAwardDm(dm(STRANGER, 'bbb kit'), deps)).toBe(false);
+    expect(files).toHaveLength(0);
+  });
+});
 });

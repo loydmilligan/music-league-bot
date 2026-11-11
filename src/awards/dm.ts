@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { WhatsAppMessage } from '../bot/handler.js';
 import { parseAwardCommand, type AwardCmd } from './commands.js';
@@ -7,6 +7,7 @@ import { matchForward, type Match } from './match.js';
 import { awardLinks, buildCaption } from './caption.js';
 import { addCandidate, approve, chatId, nextApprover, pick, postedOk } from './model.js';
 import { fillPrompt } from './prompt.js';
+import { buildKitZip } from './kit.js';
 import { dayAt, postAtFor, targetRound, windowStartFor, type RoundInfo } from './schedule.js';
 import type { AwardStore } from './store.js';
 import type { AwardDef, AwardRound, AwardsConfig, Candidate } from './types.js';
@@ -22,6 +23,8 @@ export interface AwardDmDeps {
   readReactions(msgId: string): Promise<{ emoji: string; who: string[] }[] | null>;
   sendText(to: string, text: string): Promise<void>;
   sendImage(to: string, file: string, caption: string): Promise<void>;
+  /** Send a file as a document (the poster kit zip). */
+  sendFile(to: string, file: string, caption: string): Promise<void>;
   savePoster(award: string, roundId: number, media: { mimetype: string; data: string }): Promise<string>;
   log(l: string): void;
 }
@@ -147,25 +150,54 @@ async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promis
   await c.reply(text);
 
   if (!res.complete) return;
-  const picks = ([1, 2, 3] as const).map((p) => next.candidates.find((x) => x.n === next.picks[p])!);
-  const avatars = picks.map((p) => avatarFor(config, p.who));
+  const { promptMsg, avatarList, medals } = buildPrompt(c, next);
+  await c.reply(`${def.name} is decided! ${medals}. Ready to design the poster. Prompt below; attach: ${avatarList.join(', ')}.`);
+  await c.reply(promptMsg);
+  await sendKit(c, next, promptMsg, avatarList);
+}
+
+function buildPrompt(c: AwardCtx, r: AwardRound): { promptMsg: string; avatarList: string[]; medals: string } {
+  const { deps, config, def } = c;
+  const picks = ([1, 2, 3] as const).map((p) => r.candidates.find((x) => x.n === r.picks[p])!);
   const medals = picks.map((p, i) => `${MEDAL[(i + 1) as 1 | 2 | 3]} ${p.who}`).join(' ');
-  let promptMsg: string;
-  let avatarList = avatars;
+  let avatarList = picks.map((p) => avatarFor(config, p.who));
   try {
     const tpl = readFileSync(path.join(deps.storeDir, 'kits', def.promptTemplate), 'utf8');
     const filled = fillPrompt(tpl, def, picks, (w) => avatarFor(config, w));
-    promptMsg = filled.prompt;
     avatarList = filled.avatars;
+    return { promptMsg: filled.prompt, avatarList, medals };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     deps.log(`[awards] prompt build failed for ${def.key}: ${reason}`);
-    promptMsg = `Couldn't build the poster prompt: ${reason}`;
+    return { promptMsg: `Couldn't build the poster prompt: ${reason}`, avatarList, medals };
   }
-  await c.reply(`${def.name} is decided! ${medals}. Ready to design the poster. Prompt below; attach: ${avatarList.join(', ')}.`);
-  await c.reply(promptMsg);
 }
 
+/** Zip the prompt, style reference and faces and DM it to the sender. Never throws. */
+async function sendKit(c: AwardCtx, r: AwardRound, prompt: string, avatars: string[]): Promise<void> {
+  const { deps, def } = c;
+  try {
+    const kitsDir = path.join(deps.storeDir, 'kits');
+    const { zip, missing } = buildKitZip({ kitsDir, def, prompt, avatars });
+    const outDir = path.join(deps.storeDir, 'kits-out');
+    mkdirSync(outDir, { recursive: true });
+    const file = path.join(outDir, `${r.roundId}-${def.key}-kit.zip`);
+    writeFileSync(file, zip, { mode: 0o600 });
+    const caption = `${def.name} poster kit: prompt, style reference and faces.${missing.length ? ` Missing: ${missing.join(', ')}.` : ''}`;
+    await deps.sendFile(c.msg.from, file, caption);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    deps.log(`[awards] kit send failed for ${def.key}: ${err instanceof Error ? err.name : 'error'}`);
+    await c.reply(`Couldn't send the poster kit: ${reason}`);
+  }
+}
+
+async function handleKit(c: AwardCtx): Promise<void> {
+  const r = c.deps.store.get(c.def.key, c.round.roundId);
+  if (!decided(r)) return c.reply('Pick all three places first.');
+  const { promptMsg, avatarList } = buildPrompt(c, r);
+  await sendKit(c, r, promptMsg, avatarList);
+}
 
 const dayFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric' });
 function formatDay(d: Date): string {
@@ -351,6 +383,7 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
       case 'list': await handleList(ctx); break;
       case 'pick': await handlePick(ctx, cmd); break;
       case 'poster': await handlePoster(ctx); break;
+      case 'kit': await handleKit(ctx); break;
     }
     return true;
   } catch (err) {

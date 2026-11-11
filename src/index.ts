@@ -7,7 +7,7 @@ import { SpotifyAdapter } from './spotify/adapter.js';
 import { openDb } from './storage/db.js';
 import {
   createClient, makeSendDm, makeSendPoll, makeSendMedia, makeSay, makeSendToNumber,
-  makeDmTarget, makeDmTargetStrict, makeScreenshotHtml, makeSendImageTo, makeSendTextTo, makeContactName, readReactions,
+  makeDmTarget, makeDmTargetStrict, makeScreenshotHtml, makeSendImageTo, makeSendFileTo, makeSendTextTo, makeContactName, readReactions,
 } from './whatsapp/client.js';
 import { allowPlayerDm, loadOptedInWhatsApp } from './whatsapp/optIn.js';
 import Database from 'better-sqlite3';
@@ -145,6 +145,7 @@ const awardsDm = awardsEnabled
         readReactions: (msgId) => readReactions(client, msgId),
         sendText: makeSendTextTo(client),
         sendImage: makeSendImageTo(client),
+        sendFile: makeSendFileTo(client),
         savePoster: async (award, roundId, media) => {
           const ext = media.mimetype.includes('png') ? 'png' : media.mimetype.includes('webp') ? 'webp' : 'jpg';
           const dir = path.join(awardsDir, 'posters');
