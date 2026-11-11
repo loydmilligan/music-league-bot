@@ -88,7 +88,7 @@ describe('publishDigest2', () => {
 		await writeFile(join(data, 'awards', 'config.json'), JSON.stringify({ awards: [{ key: 'bbb', name: 'Big Brain Bit', day: 1 }, { key: 'hba', name: 'Half Baked', day: 6 }] }));
 		const r = (award: string, extra: object) => ({ award, roundId: 152, candidates: [], picks: {}, approvals: [], ...extra });
 		await writeFile(join(data, 'awards', 'rounds.json'), JSON.stringify([
-			r('bbb', { postedAt: '2026-11-03T16:00:00Z', poster: '/app/data/awards/posters/bbb.png' }),
+			r('bbb', { postedAt: '2026-11-03T16:00:00Z', sentAt: '2026-11-03T16:00:02Z', poster: '/app/data/awards/posters/bbb.png' }),
 			r('hba', { poster: '/app/data/awards/posters/unposted.png' })
 		]));
 		const html = shell('<section id="award-bbb"><img src="awards/bbb.png"></section>');

@@ -62,5 +62,7 @@ describe('awards seed', () => {
     for (const r of ['0', '-1', '1.5', 'x', '']) expect(() => parseSeedArgs(['f.json', '--round', r], ['bbb'])).toThrow('bad --round');
     expect(() => parseSeedArgs(['f.json', '--round'], ['bbb'])).toThrow('bad --round');
     expect(() => parseSeedArgs(['f.json', '--award', 'zzz'], ['bbb'])).toThrow('unknown award zzz');
+    expect(() => parseSeedArgs(['f.json', '--award'], ['bbb'])).toThrow('bad --award');
+    expect(() => parseSeedArgs(['f.json', '--award', '--round', '7'], ['bbb'])).toThrow('bad --award');
   });
 });

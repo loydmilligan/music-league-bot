@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { currentRound, dayAt, windowStartFor } from '../../src/awards/schedule.js';
-import type { AwardDef } from '../../src/awards/types.js';
+import { dayAt, postAtFor, targetRound, windowStartFor } from '../../src/awards/schedule.js';
+import type { AwardDef, AwardRound } from '../../src/awards/types.js';
 
 describe('dayAt', () => {
   it('evening release -> next 08:00 LA', () => {
@@ -36,19 +36,62 @@ function mkDb() {
   return db;
 }
 
-describe('currentRound', () => {
-  const now = new Date('2026-11-10T00:00:00Z');
-  it('latest shared round of the active season, window from previous release', () => {
-    expect(currentRound(mkDb(), 1, now)).toEqual({ roundId: 21, releasedAt: '2026-10-10T20:00:00Z', windowStart: '2026-10-03T20:00:00Z' });
+const BBB = { key: 'bbb', day: 1 } as AwardDef;
+const HBA = { key: 'hba', day: 6 } as AwardDef;
+const rec = (award: string, roundId: number, extra: Partial<AwardRound> = {}): AwardRound =>
+  ({ award, roundId, candidates: [], picks: {}, approvals: [], ...extra });
+
+describe('targetRound (R13)', () => {
+  // Season 2 of league 1: round 20 released 10-03 20:00Z, round 21 released 10-10 20:00Z, round 22 unreleased.
+  it('earliest unposted round still before its day + 24h; window from the previous release', () => {
+    expect(targetRound(mkDb(), 1, BBB, [], new Date('2026-10-11T00:00:00Z')))
+      .toEqual({ roundId: 21, releasedAt: '2026-10-10T20:00:00Z', windowStart: '2026-10-03T20:00:00Z' });
   });
-  it('no earlier shared round: season start = earliest deadline minus 7d', () => {
+  it('first round of the season: window = earliest deadline minus 7d', () => {
+    expect(targetRound(mkDb(), 1, BBB, [], new Date('2026-10-04T00:00:00Z')))
+      .toEqual({ roundId: 20, releasedAt: '2026-10-03T20:00:00Z', windowStart: '2026-09-24T00:00:00Z' });
+  });
+  it('(a) BBB: curation before N+1 is published targets N+1, and still N+1 after it publishes until day 1 08:00 + 24h', () => {
+    // Round 21 day 1 = Sun 10-11 08:00 PDT (15:00Z); +24h = 10-12 15:00Z.
     const db = mkDb();
-    db.exec(`DELETE FROM digest2_shares WHERE round_id=20`);
-    expect(currentRound(db, 1, now)).toEqual({ roundId: 21, releasedAt: '2026-10-10T20:00:00Z', windowStart: '2026-09-24T00:00:00Z' });
+    expect(targetRound(db, 1, BBB, [], new Date('2026-10-12T16:00:00Z'))).toEqual({ roundId: 22, releasedAt: null, windowStart: '2026-10-10T20:00:00Z' });
+    db.exec(`INSERT INTO digest2_shares VALUES (22,'e','2026-10-17T20:00:00Z','x')`);
+    // Round 22 day 1 = 10-18 15:00Z; +24h = 10-19 15:00Z.
+    expect(targetRound(db, 1, BBB, [], new Date('2026-10-17T21:00:00Z'))?.roundId).toBe(22);
+    expect(targetRound(db, 1, BBB, [], new Date('2026-10-19T14:59:00Z'))?.roundId).toBe(22);
+    expect(targetRound(db, 1, BBB, [], new Date('2026-10-19T15:00:00Z'))).toBeNull();
   });
-  it('other league isolated; none -> null', () => {
-    expect(currentRound(mkDb(), 2, now)?.roundId).toBe(30);
-    expect(currentRound(mkDb(), 9, now)).toBeNull();
+  it('a successful BBB post moves the target on at once', () => {
+    const now = new Date('2026-10-11T16:00:00Z');
+    expect(targetRound(mkDb(), 1, BBB, [rec('bbb', 21, { postedAt: '2026-10-11T15:00:00Z', sentAt: '2026-10-11T15:00:05Z' })], now)?.roundId).toBe(22);
+    // in flight (claimed, no failure) also counts as posted; a failed post does not
+    expect(targetRound(mkDb(), 1, BBB, [rec('bbb', 21, { postedAt: '2026-10-11T15:00:00Z' })], now)?.roundId).toBe(22);
+    expect(targetRound(mkDb(), 1, BBB, [rec('bbb', 21, { postedAt: '2026-10-11T15:00:00Z', postFailed: true })], now)?.roundId).toBe(21);
+    // another award's post does not count
+    expect(targetRound(mkDb(), 1, BBB, [rec('hba', 21, { sentAt: 'x' })], now)?.roundId).toBe(21);
+  });
+  it('(b) HBA (day 6) targets N until dayAt(release_N, 6) + 24h, then N+1', () => {
+    // Round 21 day 6 = Fri 10-16 08:00 PDT (15:00Z); +24h = 10-17 15:00Z.
+    expect(targetRound(mkDb(), 1, HBA, [], new Date('2026-10-12T16:00:00Z'))?.roundId).toBe(21);
+    expect(targetRound(mkDb(), 1, HBA, [], new Date('2026-10-17T14:59:00Z'))?.roundId).toBe(21);
+    expect(targetRound(mkDb(), 1, HBA, [], new Date('2026-10-17T15:00:00Z'))).toEqual({ roundId: 22, releasedAt: null, windowStart: '2026-10-10T20:00:00Z' });
+  });
+  it('other league isolated; no active season -> null', () => {
+    expect(targetRound(mkDb(), 2, BBB, [], new Date('2026-11-10T00:00:00Z'))?.roundId).toBe(30);
+    expect(targetRound(mkDb(), 9, BBB, [], new Date('2026-11-10T00:00:00Z'))).toBeNull();
+  });
+});
+
+describe('postAtFor (R14)', () => {
+  const REL = '2026-11-03T20:00:00Z'; // day 1 = 11-04 16:00Z, day 2 = 11-05 16:00Z
+  it('approved before the day: the scheduled 08:00', () => {
+    expect(postAtFor(REL, 1, '2026-11-03T22:00:00Z')?.toISOString()).toBe('2026-11-04T16:00:00.000Z');
+  });
+  it('approved after the day: the next 08:00, up to the next day', () => {
+    expect(postAtFor(REL, 1, '2026-11-04T20:00:00Z')?.toISOString()).toBe('2026-11-05T16:00:00.000Z');
+  });
+  it('later than that: null', () => {
+    expect(postAtFor(REL, 1, '2026-11-05T17:00:00Z')).toBeNull();
   });
 });
 

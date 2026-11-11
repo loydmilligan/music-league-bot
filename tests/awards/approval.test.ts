@@ -46,7 +46,8 @@ function seed(award: string, extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   resetAwardDmState();
   sent = []; images = []; reacts = []; saved = [];
-  clock = new Date('2026-11-05T20:00:00Z');
+  // Round 7 released 11-03 20:00Z: BBB day 1 = Wed 11-04 08:00, HBA day 6 = Mon 11-09 08:00.
+  clock = new Date('2026-11-04T20:00:00Z');
   db = new Database(':memory:');
   db.exec(`
     CREATE TABLE seasons(id INTEGER PRIMARY KEY, league_id INTEGER, season_number INTEGER, status TEXT);
@@ -112,6 +113,16 @@ describe('poster', () => {
     const toConor = sent.filter((s) => s.to === CONOR).map((s) => s.text);
     expect(toConor).toContain('Reply "approve" to post this at 08:00 on Mon Nov 9.');
   });
+  it('a poster for a round that posted meanwhile is refused', async () => {
+    seed('bbb', { poster: '/p/old.jpg' });
+    deps.savePoster = async () => {
+      deps.store.put({ ...deps.store.get('bbb', 7), postedAt: '2026-11-05T16:00:00Z' });
+      return '/p/new.jpg';
+    };
+    await handleAwardDm(img(MATT, 'bbb poster'), deps);
+    expect(last()).toBe("That round's BBB already posted.");
+    expect(deps.store.get('bbb', 7).poster).toBe('/p/old.jpg');
+  });
   it('a new poster after approvals resets them', async () => {
     seed('hba', { poster: '/old.jpg', approvals: [CONOR], approvedAt: '2026-11-05T00:00:00Z' });
     await handleAwardDm(img(CONOR, 'hba poster'), deps);
@@ -148,9 +159,35 @@ describe('approval chain', () => {
   });
   it('late approval names the next 08:00', async () => {
     deps.store.put({ ...deps.store.get('hba', 7), approvals: [CONOR] });
-    clock = new Date('2026-11-10T20:00:00Z');
+    clock = new Date('2026-11-09T20:00:00Z');
     await handleAwardDm(dm(MATT, 'hba approve'), deps);
-    expect(last()).toBe('Approved. Posting Wed Nov 11 at 08:00.');
+    expect(last()).toBe('Approved. Posting Tue Nov 10 at 08:00.');
+  });
+  it('R14: an approval whose next 08:00 is past the next day says it is too late', async () => {
+    // Spring-forward week: released Sun 2027-03-07 noon PST, day 6 = Sat 03-13 08:00 PST (16:00Z),
+    // day 7 = Sun 03-14 08:00 PDT (15:00Z). At 15:30Z the round is still targeted (< day 6 + 24h),
+    // but the next 08:00 is Mon 03-15.
+    db.exec(`UPDATE digest2_shares SET created_at = '2027-03-07T20:00:00Z' WHERE round_id = 7`);
+    deps.store.put({ ...deps.store.get('hba', 7), approvals: [CONOR] });
+    clock = new Date('2027-03-14T15:30:00Z');
+    await handleAwardDm(dm(MATT, 'hba approve'), deps);
+    expect(last()).toBe("Approved, but it's too late to post this round's Half Baked.");
+  });
+  it('approve on a round that posted meanwhile is refused', async () => {
+    seed('bbb', { poster: '/p/7-bbb.jpg' });
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const realIs = deps.isPerson;
+    let calls = 0;
+    // Hold the in-handler turn check (2nd call; the 1st is the approver gate before targeting).
+    deps.isPerson = async (a, ids) => { if (++calls === 2) await gate; return realIs(a, ids); };
+    const approving = handleAwardDm(dm(MATT, 'bbb approve'), deps);
+    await new Promise((r) => setTimeout(r, 5));
+    deps.store.put({ ...deps.store.get('bbb', 7), approvals: [MATT], approvedAt: 'x', postedAt: '2026-11-05T16:00:00Z', sentAt: '2026-11-05T16:00:02Z' });
+    release();
+    await approving;
+    expect(last()).toBe("That round's BBB already posted.");
+    expect(deps.store.get('bbb', 7).sentAt).toBe('2026-11-05T16:00:02Z');
   });
   it('bare approve with two awaiting asks which', async () => {
     seed('bbb', { poster: '/p/7-bbb.jpg' });

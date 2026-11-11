@@ -73,6 +73,20 @@ describe('approvals', () => {
     expect(b.round.approvedAt).toBeTruthy();
     expect(nextApprover(def, b.round)).toBeNull();
   });
+  it('chain already complete without approvedAt (approver removed mid-chain): approve sets it', () => {
+    const r = { ...decided('p.png'), approvals: ['conor'] };
+    const shrunk = { ...def, approvers: ['conor'] };
+    const res = approve(shrunk, r, 'anyone');
+    expect(res.done).toBe(true);
+    expect(res.round.approvedAt).toBeTruthy();
+    const again = approve(shrunk, res.round, 'anyone');
+    expect(again.round.approvedAt).toBe(res.round.approvedAt);
+  });
+  it('approval ids compare as chat ids (bare digits = @c.us)', () => {
+    const d = { ...def, approvers: ['15550001', '15550002@c.us'] };
+    const r = { ...decided('p.png'), approvals: ['15550001@c.us'] };
+    expect(nextApprover(d, r)).toBe('15550002@c.us');
+  });
   it('no poster -> no-poster; undecided -> not-decided', () => {
     expect(approve(def, decided(), 'conor').error).toBe('no-poster');
     expect(approve(def, { ...withN(3), poster: 'p.png' }, 'conor').error).toBe('not-decided');

@@ -28,9 +28,10 @@ import { createJevResponder } from './chat/jevResponder.js';
 import { parseCmuGroups, runCatchMeUp } from './bot/catchMeUp.js';
 import { handleCmuDm } from './bot/cmuDm.js';
 import { handleAwardDm } from './awards/dm.js';
-import { openAwardStore } from './awards/store.js';
+import { awardsDisabledReason, openAwardStore } from './awards/store.js';
+import { chatId as awardChatId } from './awards/model.js';
 import { seenMessagesDb } from './storage/reactionsDb.js';
-import { startAwardPostTick } from './awards/postTick.js';
+import { makeRecapUrlFor, startAwardPostTick } from './awards/postTick.js';
 import { defaultRecapSubs, makeFetchRecapToday, recapSubscription, startRecapTick } from './bot/recapSubs.js';
 import { DEFAULT_BOT_NAME, makeIsOwner } from './bot/cmuFlows.js';
 import { openCmuSwitch } from './bot/cmuSwitch.js';
@@ -125,13 +126,9 @@ const cmuDm = cmuUrl && cmuToken
 // Chat awards (owner DMs). Off unless ${DATA_DIR ?? 'data'}/awards/config.json exists.
 const awardsDir = path.resolve(process.env.DATA_DIR ?? 'data', 'awards');
 const awardStore = openAwardStore(awardsDir);
-let awardsEnabled = true;
-try {
-  awardStore.config();
-} catch {
-  awardsEnabled = false;
-  console.log('[awards] disabled: no config');
-}
+const awardsDisabled = awardsDisabledReason(awardStore);
+const awardsEnabled = awardsDisabled === null;
+if (awardsDisabled) console.log(awardsDisabled);
 const awardsDm = awardsEnabled
   ? (msg: Parameters<typeof handleMessage>[0]) => {
       const dmTarget = makeDmTarget(client);
@@ -142,7 +139,7 @@ const awardsDm = awardsEnabled
         groupName: awardStore.config().groupName,
         now: () => new Date(),
         isPerson: async (author, ids) => {
-          for (const id of ids) if (await makeIsOwner(dmTarget, id)(author)) return true;
+          for (const id of ids) if (await makeIsOwner(dmTarget, awardChatId(id))(author)) return true;
           return false;
         },
         readReactions: (msgId) => readReactions(client, msgId),
@@ -229,6 +226,7 @@ client.initialize();
 // DIGEST_SEND_TARGETS entry for a league, this polls and posts nothing.
 // `ready` can fire more than once (reconnects), so guard the one-time wiring.
 let started = false;
+let awardTickStarted = false;
 client.on('ready', () => {
   if (started) return;
   started = true;
@@ -251,31 +249,21 @@ client.on('ready', () => {
   }
 
   const baseUrl = process.env.BOT_UI_INTERNAL_URL ?? 'http://bot-ui:3002';
-  if (awardsEnabled) {
-    const sendText = makeSendTextTo(client);
-    const toChat = (id: string) => (id.includes('@') ? id : `${id.replace(/\D/g, '')}@c.us`);
+  if (awardsEnabled && !awardTickStarted) {
+    awardTickStarted = true;
     startAwardPostTick({
       store: awardStore,
       db: seenMessagesDb(),
       now: () => new Date(),
       // The only path that posts an award into a group; groups pass through dmTarget unchanged.
       sendImage: makeSendImageTo(client),
-      recapUrlFor: async (ymd) => {
-        try {
-          const res = await fetch(`${awardStore.config().recapBaseUrl.replace(/\/+$/, '')}/recap-${ymd}.html`, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-          return res.status === 200 ? res.url || `${awardStore.config().recapBaseUrl.replace(/\/+$/, '')}/recap-${ymd}.html` : null;
-        } catch {
-          return null;
-        }
-      },
+      recapUrlFor: makeRecapUrlFor(fetch, () => awardStore.config().recapBaseUrl),
       republish: async (roundId) => {
         const res = await fetch(`${baseUrl}/api/digest2/${roundId}/publish`, { method: 'POST', signal: AbortSignal.timeout(30_000) });
         if (!res.ok) throw new Error(`republish ${res.status}`);
       },
-      dmOwner: async (award, text) => {
-        const def = awardStore.config().awards.find((a) => a.key === award);
-        for (const o of def?.owners ?? []) await sendText(toChat(o), text);
-      },
+      // Owners and approvers (deduped chat ids, computed in postTick).
+      sendText: makeSendTextTo(client),
       log: (line) => console.log(line),
     });
   }

@@ -3,7 +3,7 @@ import { join, basename } from 'node:path';
 
 // Minimal read-side shapes of the bot's store (src/awards/types.ts); not imported across packages.
 type Cand = { n: number; who: string; text: string; ts: string; reactions: { emoji: string }[] | null };
-type StoredRound = { award: string; roundId: number; candidates: Cand[]; picks: Record<string, number | undefined>; poster?: string; postedAt?: string };
+type StoredRound = { award: string; roundId: number; candidates: Cand[]; picks: Record<string, number | undefined>; poster?: string; postedAt?: string; sentAt?: string };
 type StoredConfig = { awards: { key: string; name: string; day: number }[] };
 
 export type RoundAward = {
@@ -30,7 +30,7 @@ export function formatLA(ts: string): string {
 	return `${p.weekday} ${p.month} ${p.day} ${p.hour}:${p.minute} ${p.dayPeriod}`;
 }
 
-/** Posted awards for a round, sorted by day. Missing/corrupt store files give []. */
+/** Posted awards (send confirmed: sentAt) for a round, sorted by day. Missing/corrupt store files give []. */
 export function loadRoundAwards(dataDir: string, roundId: number): RoundAward[] {
 	const dir = join(dataDir, 'awards');
 	const rounds = readJson<StoredRound[]>(join(dir, 'rounds.json'));
@@ -38,7 +38,7 @@ export function loadRoundAwards(dataDir: string, roundId: number): RoundAward[] 
 	const defs = new Map((readJson<StoredConfig>(join(dir, 'config.json'))?.awards ?? []).map((a) => [a.key, a]));
 	const out: RoundAward[] = [];
 	for (const r of rounds) {
-		if (r.roundId !== roundId || !r.postedAt) continue;
+		if (r.roundId !== roundId || !r.sentAt) continue;
 		const def = defs.get(r.award);
 		const top3: RoundAward['top3'] = [];
 		for (const place of [1, 2, 3] as const) {
@@ -49,7 +49,7 @@ export function loadRoundAwards(dataDir: string, roundId: number): RoundAward[] 
 			key: r.award,
 			name: def?.name ?? r.award,
 			day: def?.day ?? 0,
-			postedAt: r.postedAt,
+			postedAt: r.sentAt,
 			poster: r.poster ? `awards/${basename(r.poster)}` : '',
 			top3
 		});

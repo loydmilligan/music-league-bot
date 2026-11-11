@@ -65,7 +65,12 @@ export function parseSeedArgs(args: string[], awardKeys: string[]): { file: stri
   const opt = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
   const file = args.find((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
   if (!file) throw new SeedError('usage: awards-seed.ts <top10.json> [--award bbb] [--round <roundId>]');
-  const award = opt('--award') ?? 'bbb';
+  let award = 'bbb';
+  if (args.includes('--award')) {
+    const raw = opt('--award');
+    if (!raw || raw.startsWith('--')) throw new SeedError('bad --award');
+    award = raw;
+  }
   if (!awardKeys.includes(award)) throw new SeedError(`unknown award ${award}`);
   let roundId: number | undefined;
   if (args.includes('--round')) {
@@ -86,9 +91,10 @@ async function run() {
   let roundId = given;
   if (roundId === undefined) {
     const { default: Database } = await import('better-sqlite3');
-    const { currentRound } = await import('../src/awards/schedule.js');
+    const { targetRound } = await import('../src/awards/schedule.js');
+    const def = store.config().awards.find((a) => a.key === award)!;
     const db = new Database(path.resolve(process.env.DATA_DIR ?? 'data', 'league.db'), { readonly: true });
-    const cur = currentRound(db, store.config().leagueId, new Date());
+    const cur = targetRound(db, store.config().leagueId, def, store.all(), new Date());
     db.close();
     if (!cur) throw new SeedError('no current round');
     roundId = cur.roundId;

@@ -15,7 +15,7 @@ describe('buildCaption', () => {
       '🏆 BBB',
       '🥇 Bo · 🥈 Cy · 🥉 Ann',
       '👉 Full award: https://d/d2/s/?view=awards&src=award#award-bbb',
-      "☀️ This morning's recap: https://r/x",
+      "☀️ This morning's recap: https://r/x?src=award",
       "📰 This round's digest: https://d/d2/s/?src=award",
     ].join('\n'));
   });

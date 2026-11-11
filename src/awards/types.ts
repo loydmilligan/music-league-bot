@@ -43,7 +43,10 @@ export interface AwardRound {
   poster?: string;
   approvals: string[];
   approvedAt?: string;
+  /** Claim mark, set before the send starts (never double-posts). */
   postedAt?: string;
+  /** Set only after the send resolved; the Awards tab shows only rounds with sentAt. */
+  sentAt?: string;
   /** The send threw after postedAt was set; approving again clears this and retries. */
   postFailed?: boolean;
   skipped?: string;

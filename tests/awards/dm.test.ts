@@ -43,7 +43,8 @@ const last = () => sent[sent.length - 1]?.text;
 beforeEach(() => {
   resetAwardDmState();
   n = 0; sent = []; reacts = [];
-  clock = new Date('2026-11-05T20:00:00Z');
+  // Round 7 released 11-03 20:00Z; BBB day 1 = 11-04 16:00Z, so BBB still targets 7 until 11-05 16:00Z.
+  clock = new Date('2026-11-04T20:00:00Z');
   db = new Database(':memory:');
   db.exec(`
     CREATE TABLE seasons(id INTEGER PRIMARY KEY, league_id INTEGER, season_number INTEGER, status TEXT);
@@ -213,10 +214,47 @@ describe('handleAwardDm', () => {
     expect(t[1]).toMatch(/^Couldn't build the poster prompt: /);
   });
 
-  it('no released round', async () => {
-    db.exec('DELETE FROM digest2_shares');
+  it('no round to target (no active season rounds)', async () => {
+    db.exec('DELETE FROM rounds');
     await handleAwardDm(dm(MATT, 'bbb'), deps);
     expect(last()).toBe('No released round yet; nothing to add to.');
+  });
+
+  it('R13: curation works on the next, unreleased round once this round is past', async () => {
+    db.exec(`INSERT INTO rounds VALUES (8, 1, 2, '2026-11-08T00:00:00Z')`);
+    clock = new Date('2026-11-05T17:00:00Z'); // past 7's BBB day 1 + 24h
+    chat('Alex Q', 'a joke after the release', '2026-11-05T10:00:00Z');
+    chat('Bo Z', 'an old joke before the release', '2026-11-03T10:00:00Z');
+    await handleAwardDm(fwd(MATT, 'a joke after the release'), deps);
+    await handleAwardDm(dm(MATT, 'bbb'), deps);
+    expect(last()).toMatch(/^Added to BBB candidates: #1 Alex Q/);
+    expect(deps.store.get('bbb', 8).candidates).toHaveLength(1);
+    expect(deps.store.get('bbb', 7).candidates).toHaveLength(0);
+    // window starts at round 7's release, so the older message is out of range
+    await handleAwardDm(fwd(MATT, 'an old joke before the release'), deps);
+    await handleAwardDm(dm(MATT, 'bbb'), deps);
+    expect(last()).toBe("Couldn't find that message in the group chat this round.");
+  });
+
+  it('a configured owner given as bare digits is recognised', async () => {
+    const bare = { ...config, awards: config.awards.map((a) => (a.key === 'bbb' ? { ...a, owners: ['1 555 0001'], approvers: ['15550001'] } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(bare));
+    expect(await handleAwardDm(dm(MATT, 'bbb candidates'), deps)).toBe(true);
+    expect(last()).toBe('No BBB candidates yet.');
+    expect(await handleAwardDm(dm(STRANGER, 'bbb candidates'), deps)).toBe(false);
+  });
+
+  it('flag on a round that posted meanwhile is refused', async () => {
+    chat('Alex Q', 'unique joke about toast number one', '2026-11-04T03:58:00Z');
+    db.prepare(`INSERT INTO wa_messages VALUES ('m1','g@g.us',?,?,?,?,?)`).run(G, '1@c.us', 'Alex Q', 'unique joke about toast number one', '2026-11-04T03:58:00Z');
+    deps.readReactions = async () => {
+      deps.store.put({ ...deps.store.get('bbb', 7), postedAt: '2026-11-04T16:00:00Z', sentAt: '2026-11-04T16:00:01Z' });
+      return null;
+    };
+    await handleAwardDm(fwd(MATT, 'unique joke about toast number one'), deps);
+    await handleAwardDm(dm(MATT, 'bbb'), deps);
+    expect(last()).toBe("That round's BBB already posted.");
+    expect(deps.store.get('bbb', 7).candidates).toHaveLength(0);
   });
 
   it('poster and approve fall through', async () => {

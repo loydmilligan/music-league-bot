@@ -16,12 +16,28 @@ export interface AwardStore {
   all(): AwardRound[];
 }
 
+/** A missing file is an empty store; any other read or parse problem throws so nothing overwrites it. */
 function readRounds(file: string): AwardRound[] {
+  let text: string;
   try {
-    const d = JSON.parse(readFileSync(file, 'utf8')) as unknown;
-    return Array.isArray(d) ? (d as AwardRound[]) : [];
-  } catch {
-    return [];
+    text = readFileSync(file, 'utf8');
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw e;
+  }
+  const d = JSON.parse(text) as unknown;
+  if (!Array.isArray(d)) throw new Error(`awards rounds file is not a list: ${file}`);
+  return d as AwardRound[];
+}
+
+/** Startup check: the log line for a disabled awards feature, or null when the config reads fine. */
+export function awardsDisabledReason(store: AwardStore): string | null {
+  try {
+    store.config();
+    return null;
+  } catch (e) {
+    if (e instanceof AwardsConfigMissing) return '[awards] disabled: no config';
+    return `[awards] disabled: bad config (${e instanceof Error ? e.name : 'error'})`;
   }
 }
 

@@ -5,9 +5,9 @@ import type { WhatsAppMessage } from '../bot/handler.js';
 import { parseAwardCommand, type AwardCmd } from './commands.js';
 import { matchForward, type Match } from './match.js';
 import { awardLinks, buildCaption } from './caption.js';
-import { addCandidate, approve, nextApprover, pick } from './model.js';
+import { addCandidate, approve, chatId, nextApprover, pick, postedOk } from './model.js';
 import { fillPrompt } from './prompt.js';
-import { currentRound, dayAt, windowStartFor, type RoundInfo } from './schedule.js';
+import { dayAt, postAtFor, targetRound, windowStartFor, type RoundInfo } from './schedule.js';
 import type { AwardStore } from './store.js';
 import type { AwardDef, AwardRound, AwardsConfig, Candidate } from './types.js';
 
@@ -89,6 +89,7 @@ async function addMatch(c: AwardCtx, m: Match): Promise<void> {
     try { reactions = await deps.readReactions(m.msgId); } catch { reactions = null; }
   }
   const r = deps.store.get(def.key, round.roundId);
+  if (postedOk(r)) return c.reply(alreadyPosted(def));
   const added = addCandidate(r, { who: m.who, authorId: m.authorId, text: m.text, ts: m.ts, msgId: m.msgId, reactions });
   if (added.duplicate) return c.reply(`Already a candidate: #${added.n} ${m.who}, ${formatWhen(m.ts)}`);
   deps.store.put(added.round);
@@ -119,6 +120,7 @@ async function handleList(c: AwardCtx): Promise<void> {
 async function handlePick(c: AwardCtx, cmd: AwardCmd & { kind: 'pick' }): Promise<void> {
   const { deps, config, def, round } = c;
   const before = deps.store.get(def.key, round.roundId);
+  if (postedOk(before)) return c.reply(alreadyPosted(def));
   const res = pick(before, cmd.place, cmd.n);
   if (res.error) return c.reply(`There's no #${cmd.n}; the list has ${before.candidates.length}.`);
   let next: AwardRound = res.round;
@@ -171,14 +173,16 @@ function formatDay(d: Date): string {
   return `${p.weekday} ${p.month} ${p.day}`;
 }
 
-/** The 08:00 LA instant this award will post: its scheduled day, or the next 08:00 if that has passed. */
-function postInstant(c: AwardCtx): Date {
-  const scheduled = dayAt(c.round.releasedAt, c.def.day);
-  const now = c.deps.now();
-  return scheduled.getTime() > now.getTime() ? scheduled : dayAt(now.toISOString(), 1);
+/**
+ * The 08:00 LA instant this award would post if approved now (R14): its scheduled day, or the next
+ * 08:00 if that has passed; null when that is past the next day's 08:00 (too late this round).
+ */
+function postInstant(c: AwardCtx): Date | null {
+  const now = c.deps.now().toISOString();
+  return c.round.releasedAt ? postAtFor(c.round.releasedAt, c.def.day, now) : dayAt(now, 1);
 }
 
-const chatId = (id: string): string => (id.includes('@') ? id : `${id.replace(/\D/g, '')}@c.us`);
+const alreadyPosted = (def: AwardDef): string => `That round's ${def.name} already posted.`;
 const nameOf = (config: AwardsConfig, id: string): string => config.names?.[id] ?? id.replace(/@.*$/, '');
 const decided = (r: AwardRound): boolean => r.picks[1] !== undefined && r.picks[2] !== undefined && r.picks[3] !== undefined;
 
@@ -197,12 +201,16 @@ async function sendPreview(c: AwardCtx, r: AwardRound, to: string): Promise<void
   });
   const target = chatId(to);
   await c.deps.sendImage(target, r.poster, caption);
-  await c.deps.sendText(target, `Reply "approve" to post this at 08:00 on ${formatDay(postInstant(c))}.`);
+  const when = postInstant(c);
+  await c.deps.sendText(target, when
+    ? `Reply "approve" to post this at 08:00 on ${formatDay(when)}.`
+    : `It's too late to post this round's ${c.def.name}; approving won't post it.`);
 }
 
 async function handlePoster(c: AwardCtx): Promise<void> {
   const { msg, deps, def, round } = c;
   const before = deps.store.get(def.key, round.roundId);
+  if (postedOk(before)) return c.reply(alreadyPosted(def));
   if (!decided(before)) return c.reply('Pick all three places first.');
   if (!slugFor(deps.db, round.roundId)) return c.reply("This round's digest isn't published yet.");
   const media = (await msg.downloadMedia?.()) ?? null;
@@ -211,6 +219,7 @@ async function handlePoster(c: AwardCtx): Promise<void> {
   const file = await deps.savePoster(def.key, round.roundId, media);
   // Re-read after the awaits; no await between this read and the put.
   const fresh = deps.store.get(def.key, round.roundId);
+  if (postedOk(fresh)) return c.reply(alreadyPosted(def));
   if (!decided(fresh)) return c.reply('Pick all three places first.');
   let next: AwardRound = { ...fresh, poster: file };
   const reset = fresh.approvals.length > 0 || !!fresh.approvedAt;
@@ -232,11 +241,15 @@ async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
     const { postedAt: _p, postFailed: _f, skipped: _s, approvedAt: _a, ...rest } = r;
     return { ...rest, approvals: [] };
   };
-  const seen = fresh(deps.store.get(def.key, round.roundId));
+  const raw = deps.store.get(def.key, round.roundId);
+  if (postedOk(raw)) return c.reply(alreadyPosted(def));
+  const seen = fresh(raw);
   const turn = nextApprover(def, seen);
   const mine = turn !== null && (await deps.isPerson(approver, [turn]));
   // Re-read after the await; no await between this read and the put.
-  const before = fresh(deps.store.get(def.key, round.roundId));
+  const rawBefore = deps.store.get(def.key, round.roundId);
+  if (postedOk(rawBefore)) return c.reply(alreadyPosted(def));
+  const before = fresh(rawBefore);
   if (before.poster !== seen.poster) return c.reply('The poster changed while you were approving. Check the new preview and approve again.');
   const res = approve(def, before, mine ? turn : `not:${approver}`);
   if (res.error === 'not-decided') return c.reply('Pick all three places first.');
@@ -245,14 +258,19 @@ async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
   let next = res.round;
   if (res.done && next.approvedAt && next.approvedAt !== before.approvedAt) next = { ...next, approvedAt: deps.now().toISOString() };
   deps.store.put(next);
-  if (res.done) return c.reply(`Approved. Posting ${formatDay(postInstant(c))} at 08:00.`);
+  if (res.done) {
+    const when = next.approvedAt && round.releasedAt ? postAtFor(round.releasedAt, def.day, next.approvedAt) : postInstant(c);
+    return c.reply(when ? `Approved. Posting ${formatDay(when)} at 08:00.` : `Approved, but it's too late to post this round's ${def.name}.`);
+  }
   const following = nextApprover(def, next)!;
   await sendPreview(c, next, following);
   return c.reply(`Approved. Waiting on ${nameOf(config, following)}.`);
 }
 
 /** Owner DM handler for awards. True = handled; false = fall through to the next handler. */
-export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Promise<boolean> {
+export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps): Promise<boolean> {
+  // Configured ids may be bare phone digits: compare them as the same chat ids used for sending.
+  const deps: AwardDmDeps = { ...rawDeps, isPerson: (a, ids) => rawDeps.isPerson(a, ids.map(chatId)) };
   let acked = false;
   try {
     if (msg.from.endsWith('@g.us')) return false;
@@ -285,22 +303,27 @@ export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Pr
         def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
         if (!def || !(await approverOf(deps, author, def))) return false;
       }
-      const round = currentRound(deps.db, config.leagueId, deps.now());
+      const all = deps.store.all();
+      let round: RoundInfo | null;
       if (!def) {
-        if (!round) return false;
-        const mine: AwardDef[] = [];
+        const mine: { def: AwardDef; round: RoundInfo }[] = [];
         for (const d of config.awards) {
-          const r = deps.store.get(d.key, round.roundId);
+          const t = targetRound(deps.db, config.leagueId, d, all, deps.now());
+          if (!t) continue;
+          const r = deps.store.get(d.key, t.roundId);
           const next = nextApprover(d, r);
-          if (r.poster && next !== null && (await deps.isPerson(author, [next]))) mine.push(d);
+          if (r.poster && next !== null && (await deps.isPerson(author, [next]))) mine.push({ def: d, round: t });
         }
         if (mine.length === 0) return false;
         if (mine.length > 1) {
           await ack();
-          await reply(`Which one? Send ${mine.map((d) => `"${d.prefix} approve"`).join(' or ')}.`);
+          await reply(`Which one? Send ${mine.map((m) => `"${m.def.prefix} approve"`).join(' or ')}.`);
           return true;
         }
-        def = mine[0];
+        def = mine[0].def;
+        round = mine[0].round;
+      } else {
+        round = targetRound(deps.db, config.leagueId, def, all, deps.now());
       }
       await ack();
       if (!round) {
@@ -313,7 +336,7 @@ export async function handleAwardDm(msg: WhatsAppMessage, deps: AwardDmDeps): Pr
 
     const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
     if (!def || !(await deps.isPerson(author, def.owners))) return false;
-    const round = currentRound(deps.db, config.leagueId, deps.now());
+    const round = targetRound(deps.db, config.leagueId, def, deps.store.all(), deps.now());
     if (cmd.kind === 'poster' && !(msg.hasMedia && msg.downloadMedia)) return false;
     if (!round) {
       await ack();

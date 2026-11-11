@@ -9,6 +9,9 @@ export function awardLinks(config: AwardsConfig, def: AwardDef, slug: string): {
   };
 }
 
+/** Tag a real recap URL with ?src=award; a placeholder (preview) is left alone. */
+const recapLink = (u: string): string => (/^https?:\/\//.test(u) ? `${u}${u.includes('?') ? '&' : '?'}src=award` : u);
+
 /** The post caption. The recap line is left out when there is no recap. */
 export function buildCaption(
   def: AwardDef,
@@ -20,7 +23,7 @@ export function buildCaption(
     `🏆 ${def.name}`,
     `🥇 ${who[0]} · 🥈 ${who[1]} · 🥉 ${who[2]}`,
     `👉 Full award: ${links.award}`,
-    ...(links.recap ? [`☀️ This morning's recap: ${links.recap}`] : []),
+    ...(links.recap ? [`☀️ This morning's recap: ${recapLink(links.recap)}`] : []),
     `📰 This round's digest: ${links.digest}`,
   ].join('\n');
 }

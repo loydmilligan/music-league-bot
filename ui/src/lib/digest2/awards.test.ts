@@ -26,11 +26,15 @@ const put = (rounds: unknown[]) =>
 
 describe('loadRoundAwards', () => {
 	it('hides unposted awards and other rounds', async () => {
-		await put([round('bbb', 5), round('hba', 5, { postedAt: '2026-11-08T16:00:00Z' }), round('bbb', 6, { postedAt: '2026-11-03T16:00:00Z' })]);
+		await put([round('bbb', 5), round('hba', 5, { sentAt: '2026-11-08T16:00:00Z' }), round('bbb', 6, { sentAt: '2026-11-03T16:00:00Z' })]);
 		expect((await loadRoundAwards(dir, 5)).map((a) => a.key)).toEqual(['hba']);
 	});
+	it('postedAt alone (claimed, send not confirmed or failed) is hidden', async () => {
+		await put([round('bbb', 5, { postedAt: '2026-11-04T16:00:00Z' }), round('hba', 5, { postedAt: '2026-11-08T16:00:00Z', postFailed: true })]);
+		expect(await loadRoundAwards(dir, 5)).toEqual([]);
+	});
 	it('sorts by day', async () => {
-		const p = { postedAt: '2026-11-08T16:00:00Z' };
+		const p = { sentAt: '2026-11-08T16:00:00Z' };
 		await put([round('hba', 5, p), round('bbb', 5, p)]);
 		expect((await loadRoundAwards(dir, 5)).map((a) => a.key)).toEqual(['bbb', 'hba']);
 	});
@@ -38,7 +42,7 @@ describe('loadRoundAwards', () => {
 		expect(await loadRoundAwards(dir, 5)).toEqual([]);
 	});
 	it('maps poster basename, top3, LA time, first emoji', async () => {
-		await put([round('bbb', 5, { postedAt: '2026-11-03T16:00:00Z', poster: '/app/data/awards/posters/x1.png' })]);
+		await put([round('bbb', 5, { sentAt: '2026-11-03T16:00:00Z', poster: '/app/data/awards/posters/x1.png' })]);
 		const [a] = await loadRoundAwards(dir, 5);
 		expect(a.poster).toBe('awards/x1.png');
 		expect(a.name).toBe('Big Brain Bit');
@@ -46,7 +50,7 @@ describe('loadRoundAwards', () => {
 		expect(a.top3[0].when).toBe('Tue Nov 3 12:05 PM');
 	});
 	it('no poster gives empty poster string', async () => {
-		await put([round('bbb', 5, { postedAt: '2026-11-03T16:00:00Z' })]);
+		await put([round('bbb', 5, { sentAt: '2026-11-03T16:00:00Z' })]);
 		expect((await loadRoundAwards(dir, 5))[0].poster).toBe('');
 	});
 });
