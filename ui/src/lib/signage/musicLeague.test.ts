@@ -67,7 +67,8 @@ it('members and person come from signage_people, unmapped players are null', () 
   const pa = player('Player A'), pb = player('Player B'), pc = player('Player C'), pd = player('Player D');
   [pa, pb, pc].forEach(p => join_(s, p));
   setPeople({ [pa]: 'matt', [pb]: 'mara', [pd]: 'ghost' }); // pd is mapped but not in the season
-  const ca = competitor('Player A', pa), cb = competitor('Player B', pb), cc = competitor('Player C', pc);
+  const ca = competitor('Player A', pa), cc = competitor('Player C', pc);
+  competitor('Player B', pb);
   const ins = db.prepare(`INSERT INTO season_standings (season_id, round_id, competitor_id, name, prior_total, round_points, current_total, rank, prev_rank)
     VALUES (?,?,?,?,?,?,?,?,?)`);
   ins.run(s, r1, ca, 'Player A', 0, 10, 10, 1, null);
@@ -75,7 +76,6 @@ it('members and person come from signage_people, unmapped players are null', () 
   const [se] = buildSignage(db, NOW).seasons;
   expect(se.members).toEqual(['matt', 'mara']);
   expect(se.standings!.rows.map(r => r.person)).toEqual(['matt', null]);
-  void cb;
 });
 
 it('a survey round before reveal.at is revealed: false', () => {
@@ -105,13 +105,34 @@ it('a survey round before reveal.at is revealed: false', () => {
   }
 });
 
-it('a survey round falls back to the title/description rule when survey files are unavailable', () => {
+it('a survey round is revealed: false when survey data is unavailable or the round is absent', () => {
   const l = league('second-best', 'Test Survey League');
   const s = season(l, 3, 'active', 'survey');
   round(s, 'a', { name: 'Real Title', num: 1, managedBy: 'survey' });
-  round(s, 'b', { name: 'TBD', num: 2, managedBy: 'survey' });
-  const [se] = buildSignage(db, NOW, { surveyDir: '/nonexistent-dir' }).seasons;
-  expect(se.rounds.map(r => r.revealed)).toEqual([true, false]);
+  expect(buildSignage(db, NOW, { surveyDir: '/nonexistent-dir' }).seasons[0].rounds[0].revealed).toBe(false);
+  const dir = mkdtempSync(join(tmpdir(), 'signage-survey-'));
+  try {
+    const w = (f: string, v: unknown) => writeFileSync(join(dir, f), JSON.stringify(v));
+    w('second-best-ml-link.json', { leagueId: 'L1' });
+    w('second-best-draft-season.json', { season: 3, rounds: [{ position: 1 }] });
+    w('second-best-ml-sync-state.json', { lastRounds: [{ id: 'x', league_id: 'L1', number: 1, name: 'Other' }] });
+    round(s, 'b', { name: 'Not In Survey', num: 2, managedBy: 'survey' });
+    const rs = buildSignage(db, NOW, { surveyDir: dir }).seasons[0].rounds;
+    expect(rs.map(r => r.revealed)).toEqual([true, false]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+it('theme has links and emails stripped', () => {
+  const l = league('test-league', 'Test League');
+  round(season(l, 1), 'a', { name: 'One', num: 1,
+    desc: 'Songs  about   rain https://open.spotify.com/playlist/abc and open.spotify.com/x mail me@example.test now' });
+  const body = buildSignage(db, NOW);
+  const text = JSON.stringify(body);
+  expect(text).not.toContain('spotify');
+  expect(text).not.toContain('@');
+  expect(body.seasons[0].rounds[0].theme).toBe('Songs about rain and mail now');
 });
 
 it('a non-survey round titled TBD is revealed: false', () => {
@@ -182,7 +203,6 @@ it('standings is the latest snapshot, null before round 1 ends', () => {
     afterRound: 2,
     rows: [{ rank: 1, prevRank: 2, name: 'Player A', total: 17, roundPoints: 7, person: null }],
   });
-  void r2;
 });
 
 it('shortlist lists only songs assigned to rounds that are not complete', () => {

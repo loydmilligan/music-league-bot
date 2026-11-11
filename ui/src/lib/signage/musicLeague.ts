@@ -52,6 +52,13 @@ function toPhase(phase: string | undefined): SignagePhase {
   return phase === 'archive' ? 'complete' : (phase as SignagePhase) ?? 'upcoming';
 }
 
+/** Theme text with links and email-like tokens removed. */
+function cleanTheme(text: string | null): string {
+  return (text ?? '')
+    .replace(/(?:https?:\/\/|(?:open\.)?spotify\.com)\S*/gi, ' ')
+    .split(/\s+/).filter(t => t && !t.includes('@')).join(' ').trim();
+}
+
 function plainReveal(title: string, description: string | null, needDescription: boolean): boolean {
   const t = title.trim();
   if (!t || t.toUpperCase() === 'TBD') return false;
@@ -113,10 +120,10 @@ export function buildSignage(db: Database.Database, nowMs: number, opts: Signage
       const number = numberById.get(r.id)!;
       const survey = managedById.get(r.id);
       const revealed = survey
-        ? (surveyReveal?.get(number) ?? plainReveal(r.name, null, false))
+        ? (surveyReveal?.get(number) ?? false) // fail closed: no survey data or round absent
         : plainReveal(r.name, r.description, true);
       return {
-        id: r.id, number, title: r.name, theme: r.description ?? '', revealed,
+        id: r.id, number, title: r.name, theme: cleanTheme(r.description), revealed,
         submitBy: r.submissionDeadline, voteBy: r.votingDeadline, phase: toPhase(r.phase),
         submitted: peopleFromEvents(db, 'submission_events', 'submitter_name', r.id, people),
         voted: hasVoteEvents ? peopleFromEvents(db, 'vote_events', 'voter_name', r.id, people) : [],
