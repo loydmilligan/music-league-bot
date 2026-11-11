@@ -77,6 +77,54 @@ beforeEach(() => {
 });
 
 describe('handleAwardDm', () => {
+  it('test mode: Matt runs hba end to end on a private copy; Conor is untouched', async () => {
+    const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, genModel: 'm', autoFlag: true } : a)) };
+    writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));
+    writeFileSync(path.join(dir, 'kits', 'hba.md'), 'Poster {{P1_NAME}}');
+    let k = 0;
+    const images: { to: string; caption: string }[] = [];
+    deps.generatePoster = async () => ({ mimetype: 'image/png', data: 'AA==' });
+    deps.savePoster = async (award) => `${award}-${++k}.png`;
+    deps.sendImage = async (to, _f, caption) => { images.push({ to, caption }); };
+    expect(await handleAwardDm(dm(CONOR, 'hba test on'), deps)).toBe(false); // owners can't
+    expect(await handleAwardDm(dm(MATT, 'hba test on'), deps)).toBe(true);
+    expect(last()).toMatch(/^Test mode ON/);
+    const lines = ['first funny line here', 'second funny line here', 'third funny line here', 'conor only line here'];
+    lines.forEach((t, i) => chat(`P${i}`, t, `2026-11-04T1${i}:00:00Z`));
+    // Matt's forward still needs the command (he owns bbb too).
+    sent = [];
+    await handleAwardDm(fwd(MATT, lines[0]), deps);
+    expect(sent).toEqual([]);
+    await handleAwardDm(dm(MATT, 'hba'), deps);
+    expect(last()).toMatch(/^Added to Half Baked \(TEST\) candidates: #1 P0/);
+    await handleAwardDm(fwd(CONOR, lines[3]), deps); // Conor auto-flags into the real record
+    for (const t of lines.slice(1, 3)) { await handleAwardDm(fwd(MATT, t), deps); await handleAwardDm(dm(MATT, 'hba'), deps); }
+    for (const p of ['hba-1st 1', 'hba-2nd 2', 'hba-3rd 3']) await handleAwardDm(dm(MATT, p), deps);
+    expect(deps.store.get('hba-test', 7)).toMatchObject({ poster: 'hba-test-1.png' });
+    expect(images.map((x) => x.to)).toEqual([MATT]); // preview to Matt
+    // Three redos: the third needs Matt's own OK.
+    await handleAwardDm(dm(MATT, 'hba redo a'), deps);
+    await handleAwardDm(dm(MATT, 'hba redo b'), deps);
+    await handleAwardDm(dm(MATT, 'hba redo c'), deps);
+    expect(last()).toMatch(/used your 2 redos/);
+    await handleAwardDm(dm(MATT, 'hba redo ok'), deps);
+    expect(deps.store.get('hba-test', 7).poster).toBe('hba-test-4.png');
+    images.length = 0;
+    await handleAwardDm(dm(MATT, 'approve'), deps);
+    expect(images).toHaveLength(1);
+    expect(images[0].to).toBe(MATT);
+    expect(last()).toMatch(/^TEST: approved\..*Nothing was posted/);
+    // Real record: only Conor's candidate, no picks, no poster.
+    const real = deps.store.get('hba', 7);
+    expect(real.candidates.map((x) => x.who)).toEqual(['P3']);
+    expect(real.picks).toEqual({});
+    expect(real.poster).toBeUndefined();
+    await handleAwardDm(dm(MATT, 'hba test reset'), deps);
+    expect(deps.store.get('hba-test', 7).candidates).toEqual([]);
+    await handleAwardDm(dm(MATT, 'hba test off'), deps);
+    expect(await handleAwardDm(dm(MATT, 'hba candidates'), deps)).toBe(false); // back to non-owner
+  });
+
   it('genModel: poster made on the 3rd pick; owner gets 2 redos, then the maker must OK', async () => {
     const cfg = { ...config, awards: config.awards.map((a) => (a.key === 'hba' ? { ...a, posterMaker: MATT, genModel: 'm', posterPendingNote: 'Hang tight.' } : a)) };
     writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));

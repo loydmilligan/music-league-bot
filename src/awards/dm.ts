@@ -34,6 +34,30 @@ export interface AwardDmDeps {
 
 const FORWARD_TTL_MS = 120_000;
 const generating = new Set<string>();
+
+/**
+ * Test mode: an award's admin (an approver or posterMaker who is not an owner) runs the whole flow
+ * as owner, approver and maker on a separate `<key>-test` record. Nothing posts to a group, the
+ * digest never shows it (no sentAt), and the real owner's record is untouched.
+ */
+const testFile = (deps: AwardDmDeps) => path.join(deps.storeDir, 'testmode.json');
+function testers(deps: AwardDmDeps): Record<string, string[]> {
+  try { return JSON.parse(readFileSync(testFile(deps), 'utf8')) as Record<string, string[]>; } catch { return {}; }
+}
+function setTester(deps: AwardDmDeps, key: string, author: string, on: boolean): void {
+  const t = testers(deps);
+  const list = (t[key] ?? []).filter((x) => x !== author);
+  t[key] = on ? [...list, author] : list;
+  writeFileSync(testFile(deps), JSON.stringify(t), { mode: 0o600 });
+}
+const testing = (deps: AwardDmDeps, key: string, author: string): boolean => (testers(deps)[key] ?? []).includes(author);
+function testDef(def: AwardDef, author: string): AwardDef {
+  return { ...def, key: `${def.key}-test`, name: `${def.name} (TEST)`, owners: [author], approvers: [author], posterMaker: author, autoFlag: false };
+}
+async function isAdmin(deps: AwardDmDeps, author: string, def: AwardDef): Promise<boolean> {
+  if (await deps.isPerson(author, def.owners)) return false;
+  return deps.isPerson(author, [...def.approvers, ...(def.posterMaker ? [def.posterMaker] : [])]);
+}
 const forwards = new Map<string, { text: string; at: number }>();
 const pending = new Map<string, { matches: Match[]; at: number }>();
 
@@ -290,7 +314,7 @@ async function handleRedo(c: AwardCtx, cmd: AwardCmd & { kind: 'redo' }): Promis
   const isOwner = await deps.isPerson(author, def.owners);
   const isMaker = !!def.posterMaker && (await deps.isPerson(author, [def.posterMaker]));
 
-  if (isMaker && !isOwner) {
+  if (isMaker && (!isOwner || (cmd.comment?.toLowerCase() === 'ok' && r.redoRequest))) {
     let comment = cmd.comment;
     if (comment?.toLowerCase() === 'ok') {
       if (!r.redoRequest) return c.reply('No redo is waiting for your OK.');
@@ -420,6 +444,13 @@ async function handleApprove(c: AwardCtx, approver: string): Promise<void> {
   let next = res.round;
   if (res.done && next.approvedAt && next.approvedAt !== before.approvedAt) next = { ...next, approvedAt: deps.now().toISOString() };
   deps.store.put(next);
+  if (res.done && def.key.endsWith('-test')) {
+    const slug = slugFor(deps.db, round.roundId);
+    const caption = slug ? buildCaption(def, next, { ...awardLinks(config, def, slug), recap: null }) : `🏆 ${def.name}`;
+    const when = postInstant(c);
+    await deps.sendImage(c.msg.from, next.poster!, caption);
+    return c.reply(`TEST: approved. That is what the group would get${when ? ` at 08:00 on ${formatDay(when)}` : ''}. Nothing was posted. Send "${def.prefix} test reset" to run it again.`);
+  }
   if (res.done) {
     const when = next.approvedAt && round.releasedAt ? postAtFor(round.releasedAt, def.day, next.approvedAt) : postInstant(c);
     return c.reply(when ? `Approved. Posting ${formatDay(when)} at 08:00.` : `Approved, but it's too late to post this round's ${def.name}.`);
@@ -475,13 +506,15 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
       let def: AwardDef | undefined;
       if (cmd.award !== null) {
         def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
+        if (def && testing(deps, def.key, author)) def = testDef(def, author);
         if (!def || !(await approverOf(deps, author, def))) return false;
       }
       const all = deps.store.all();
       let round: RoundInfo | null;
       if (!def) {
         const mine: { def: AwardDef; round: RoundInfo }[] = [];
-        for (const d of config.awards) {
+        for (const d0 of config.awards) {
+          const d = testing(deps, d0.key, author) ? testDef(d0, author) : d0;
           const t = targetRound(deps.db, config.leagueId, d, all, deps.now());
           if (!t) continue;
           const r = deps.store.get(d.key, t.roundId);
@@ -508,8 +541,29 @@ export async function handleAwardDm(msg: WhatsAppMessage, rawDeps: AwardDmDeps):
       return true;
     }
 
-    const def = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
-    if (!def) return false;
+    const realDef = config.awards.find((a) => a.prefix.toLowerCase() === cmd.award);
+    if (!realDef) return false;
+    if (cmd.kind === 'test') {
+      if (!(await isAdmin(deps, author, realDef))) return false;
+      await ack();
+      if (cmd.action === 'on' || cmd.action === 'off') {
+        setTester(deps, realDef.key, author, cmd.action === 'on');
+        await reply(cmd.action === 'on'
+          ? `Test mode ON for ${realDef.name}. Your ${realDef.prefix} commands now run a private copy: you pick, get the poster, redo and approve; nothing posts and the real one is untouched. Forward a message, then send "${realDef.prefix}". "${realDef.prefix} test off" to stop.`
+          : `Test mode OFF for ${realDef.name}.`);
+        return true;
+      }
+      if (cmd.action === 'reset') {
+        const td = testDef(realDef, author);
+        const t = targetRound(deps.db, config.leagueId, td, deps.store.all(), deps.now());
+        if (t) deps.store.put({ award: td.key, roundId: t.roundId, candidates: [], picks: {}, approvals: [] });
+        await reply(`Test copy of ${realDef.name} cleared.`);
+        return true;
+      }
+      await reply(`Test mode is ${testing(deps, realDef.key, author) ? 'ON' : 'OFF'} for ${realDef.name}.`);
+      return true;
+    }
+    const def = testing(deps, realDef.key, author) ? testDef(realDef, author) : realDef;
     const makerCmd = (cmd.kind === 'poster' || cmd.kind === 'kit' || cmd.kind === 'redo') && !!def.posterMaker;
     if (!(await deps.isPerson(author, def.owners)) && !(makerCmd && (await deps.isPerson(author, [def.posterMaker!])))) return false;
     const round = targetRound(deps.db, config.leagueId, def, deps.store.all(), deps.now());
