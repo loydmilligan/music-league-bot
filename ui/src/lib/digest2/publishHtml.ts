@@ -44,8 +44,25 @@ export function stripExportHidden(html: string): string {
 	return h;
 }
 
+/**
+ * The anonymous reader-ping script tag (served by the companelist admin), or '' when no valid http(s)
+ * origin is configured. It is an absolute URL on the admin host, never a root-relative path.
+ */
+function pingScriptTag(pingOrigin: string | undefined): string {
+	if (!pingOrigin) return '';
+	let origin: string;
+	try {
+		const u = new URL(pingOrigin);
+		if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+		origin = u.origin;
+	} catch {
+		return '';
+	}
+	return `<script defer src="${origin}/admin/ping.js?kind=digest"></script>`;
+}
+
 /** Rewrite a captured SSR document so it works from digests/d2/<slug>/ on a dumb static host. */
-export function transformDigest2Html(html: string, opts: { hasLocalFonts: boolean }): string {
+export function transformDigest2Html(html: string, opts: { hasLocalFonts: boolean; pingOrigin?: string }): string {
 	let h = stripExportHidden(html);
 	// ./ prefix is mandatory — a bare "_app/…" specifier is illegal for dynamic import().
 	h = h.replaceAll('../_app/', './_app/').replaceAll('"/_app/', '"./_app/');
@@ -55,6 +72,9 @@ export function transformDigest2Html(html: string, opts: { hasLocalFonts: boolea
 		h = h.replace('</head>', '\t\t<link rel="stylesheet" href="./_app/fonts.css" />\n\t</head>');
 	}
 	h = h.replace('<head>', '<head>\n\t\t' + FETCH_GUARD);
+	const ping = pingScriptTag(opts.pingOrigin);
+	const end = h.lastIndexOf('</body>');
+	if (ping && end !== -1) h = h.slice(0, end) + ping + '\n' + h.slice(end);
 	return h;
 }
 

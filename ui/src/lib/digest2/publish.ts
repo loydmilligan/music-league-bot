@@ -152,7 +152,7 @@ export async function publishDigest2(
 	const { rawHtml, assets } = await (deps.capture ?? capturePuppeteer)(roundId);
 
 	const fontCss = await (deps.localizeFonts ?? localizeFonts)(rawHtml, assets);
-	const indexHtml = transformDigest2Html(rawHtml, { hasLocalFonts: !!fontCss });
+	const indexHtml = transformDigest2Html(rawHtml, { hasLocalFonts: !!fontCss, pingOrigin: process.env.DIGEST_PING_ORIGIN });
 	const textAssets = new Map<string, string>();
 	for (const [p, buf] of assets) if (TEXT_EXT.has(extname(p))) textAssets.set(p, buf.toString('utf8'));
 	if (fontCss) textAssets.set('/_app/fonts.css', fontCss);

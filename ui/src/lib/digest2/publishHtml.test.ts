@@ -48,6 +48,28 @@ describe('transformDigest2Html', () => {
 	});
 });
 
+describe('transformDigest2Html reader ping', () => {
+	const page = '<html><head></head><body><p>hi</p></body></html>';
+	const TAG = '<script defer src="https://admin.example.com/admin/ping.js?kind=digest"></script>';
+	it('adds the ping script before </body> only when an origin is configured', () => {
+		const on = transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: 'https://admin.example.com' });
+		expect(on).toContain(TAG);
+		expect(on.indexOf(TAG)).toBeLessThan(on.indexOf('</body>'));
+		expect(on.indexOf(TAG)).toBeGreaterThan(on.indexOf('<p>hi</p>'));
+		expect(transformDigest2Html(page, { hasLocalFonts: false })).not.toContain('ping.js');
+		expect(transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: '' })).not.toContain('ping.js');
+	});
+	it('normalises a trailing slash or path and ignores a non-http origin', () => {
+		expect(transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: 'https://admin.example.com/' })).toContain(TAG);
+		expect(transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: 'javascript:alert(1)' })).not.toContain('ping.js');
+		expect(transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: 'not a url' })).not.toContain('ping.js');
+	});
+	it('passes the leak gate when the admin host is not a forbidden host', () => {
+		const out = transformDigest2Html(page, { hasLocalFonts: false, pingOrigin: 'https://catchup-admin.example.com' });
+		expect(findLeaks({ html: out, textAssets: new Map(), forbiddenHosts: ['mlb13.example.com', 'localhost:3002'] })).toEqual([]);
+	});
+});
+
 describe('findLeaks', () => {
 	it('clean page → no leaks', () => {
 		expect(findLeaks({ html: clean, textAssets: new Map([['/_app/a.js', 'console.log(1)']]), forbiddenHosts: HOSTS })).toEqual([]);
