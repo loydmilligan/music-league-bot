@@ -22,7 +22,7 @@ import { simpleParser } from 'mailparser';
  *    playlist URL (no round id) → mapped by round name + league.
  */
 
-export type MlEmailType = 'round_starting' | 'new_playlist' | 'votes_are_in' | 'user_submitted' | 'other';
+export type MlEmailType = 'round_starting' | 'new_playlist' | 'votes_are_in' | 'user_submitted' | 'user_voted' | 'other';
 
 export interface ParsedEmail {
   messageId: string;
@@ -42,6 +42,8 @@ export interface ParsedEmail {
    * person in the same round are how a mid-round pick change shows up.
    */
   submitterName: string | null;
+  /** Who voted (user_voted only). Names the person and round, never the votes. */
+  voterName: string | null;
 }
 
 /** Subject suffix (after the last " - ") → lifecycle type. */
@@ -54,6 +56,7 @@ export function classifySubject(subject: string): MlEmailType {
   if (s === 'new playlist') return 'new_playlist';
   if (s === 'the votes are in') return 'votes_are_in';
   if (s === 'user submitted') return 'user_submitted';
+  if (s === 'user voted') return 'user_voted';
   return 'other';
 }
 
@@ -114,6 +117,10 @@ function extractRoundAndLeague(
       // "{name} has submitted a song or songs for the {round} round in the {league} league."
       m = text.match(/has submitted a song or songs for the\s+(.+?)\s+round in the\s+(.+?)\s+league/i);
       return m ? { roundName: m[1].trim(), leagueLabel: m[2].trim() } : { roundName: null, leagueLabel: null };
+    case 'user_voted':
+      // "{name} has voted in the {round} round of the {league} league."
+      m = text.match(/has voted in the\s+(.+?)\s+round of the\s+(.+?)\s+league/i);
+      return m ? { roundName: m[1].trim(), leagueLabel: m[2].trim() } : { roundName: null, leagueLabel: null };
     case 'votes_are_in':
       // "The votes are in for the round {round}!" — note the votes body ALSO
       // contains "…round of the…league", so we must not fall through to that.
@@ -135,6 +142,12 @@ function extractRoundAndLeague(
  */
 function extractSubmitter(text: string): string | null {
   const m = text.match(/Someone has Submitted\s+(.+?)\s+has submitted a song or songs/i);
+  return m ? m[1].trim() : null;
+}
+
+/** Voter name from a user_voted body; anchored on the "Someone has Voted" heading like extractSubmitter. */
+function extractVoter(text: string): string | null {
+  const m = text.match(/Someone has Voted\s+(.+?)\s+has voted in the/i);
   return m ? m[1].trim() : null;
 }
 
@@ -178,6 +191,7 @@ export async function parseEmail(raw: string | Buffer): Promise<ParsedEmail> {
   const prose = `${text}\n${htmlToText(html)}`;
   const { roundName, leagueLabel } = extractRoundAndLeague(prose, type);
   const submitterName = type === 'user_submitted' ? extractSubmitter(prose) : null;
+  const voterName = type === 'user_voted' ? extractVoter(prose) : null;
 
   return {
     messageId,
@@ -188,6 +202,7 @@ export async function parseEmail(raw: string | Buffer): Promise<ParsedEmail> {
     type,
     mlRoundId,
     submitterName,
+    voterName,
     leagueLabel,
     roundName,
     playlistUrl,

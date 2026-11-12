@@ -57,6 +57,19 @@ export function ensureEmailSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_submission_events_round
       ON submission_events(round_id, submitter_name, occurred_at);
 
+    -- One row per "User Voted" email: who voted, in which round, when. The email
+    -- never says what they voted for. Read by the signage endpoint.
+    CREATE TABLE IF NOT EXISTS vote_events (
+      message_id   TEXT PRIMARY KEY REFERENCES email_messages(message_id),
+      round_id     INTEGER REFERENCES rounds(id),
+      voter_name   TEXT NOT NULL,
+      league_label TEXT,
+      round_name   TEXT,
+      occurred_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_vote_events_round
+      ON vote_events(round_id, voter_name);
+
     CREATE TABLE IF NOT EXISTS round_events (
       id                INTEGER PRIMARY KEY,
       round_id          INTEGER NOT NULL REFERENCES rounds(id),
@@ -143,10 +156,10 @@ function resolveRoundId(db: Database.Database, p: ParsedEmail): number | null {
       | undefined;
     return row?.id ?? null;
   }
-  // new_playlist and user_submitted carry no round id → match round name within
+  // new_playlist, user_submitted and user_voted carry no round id → match round name within
   // the league. Same league-scoping discipline applies to both: an unplaceable
   // league label must not fall back to a league-wide name match.
-  if ((p.type === 'new_playlist' || p.type === 'user_submitted') && p.roundName) {
+  if ((p.type === 'new_playlist' || p.type === 'user_submitted' || p.type === 'user_voted') && p.roundName) {
     const leagueId = resolveLeagueIdFromLabel(db, p.leagueLabel);
     // A label we could not place is not a licence to match the round name
     // league-wide — that is how one league's round name would capture another
@@ -199,6 +212,9 @@ function computeOutcome(
   if (p.type === 'user_submitted') {
     const who = p.submitterName ?? 'someone';
     return { status: 'recorded', detail: `recorded submission by ${who}` };
+  }
+  if (p.type === 'user_voted') {
+    return { status: 'recorded', detail: `recorded vote by ${p.voterName ?? 'someone'}` };
   }
   const event = EVENT_FOR_TYPE[p.type]?.event ?? 'event';
   const roundName =
@@ -287,6 +303,17 @@ export function ingestParsedEmail(
        ON CONFLICT(message_id) DO UPDATE SET
          round_id = COALESCE(excluded.round_id, submission_events.round_id)`,
     ).run(p.messageId, roundId, p.submitterName, p.leagueLabel, p.roundName, p.sentAt);
+  }
+
+  // Same shape as submission_events: keyed on message_id, so replays are no-ops.
+  if (p.type === 'user_voted' && p.voterName) {
+    db.prepare(
+      `INSERT INTO vote_events
+         (message_id, round_id, voter_name, league_label, round_name, occurred_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(message_id) DO UPDATE SET
+         round_id = COALESCE(excluded.round_id, vote_events.round_id)`,
+    ).run(p.messageId, roundId, p.voterName, p.leagueLabel, p.roundName, p.sentAt);
   }
 
   let eventType: string | null = null;

@@ -41,6 +41,7 @@ function mkEmail(over: Partial<ParsedEmail>): ParsedEmail {
     sentAt: '2026-05-10T12:00:00.000Z',
     type: 'other',
       submitterName: null,
+    voterName: null,
     mlRoundId: null,
     leagueLabel: null,
     roundName: null,
@@ -219,5 +220,44 @@ describe('ingestParsedEmail — unmapped', () => {
     ingestParsedEmail(db, mkEmail({ messageId: 'u@x', type: 'round_starting', mlRoundId: 'ffffffffffffffffffffffffffffffff' }));
     expect((db.prepare("SELECT round_id FROM email_messages WHERE message_id='u@x'").get() as any).round_id).toBeNull();
     expect((db.prepare('SELECT COUNT(*) c FROM round_events').get() as any).c).toBe(0);
+  });
+});
+
+describe('ingestParsedEmail — user_voted', () => {
+  const voted = (over: Partial<ParsedEmail> = {}) =>
+    mkEmail({
+      type: 'user_voted',
+      subject: 'Hip Jammers 3 - User Voted',
+      voterName: 'Pat Example',
+      leagueLabel: 'Hip Jammers',
+      roundName: 'Plots so thicc',
+      ...over,
+    });
+
+  it('writes one vote_events row per email, idempotent on message_id', () => {
+    const e = voted();
+    ingestParsedEmail(db, e);
+    ingestParsedEmail(db, e);
+    const rows = db.prepare('SELECT * FROM vote_events').all() as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      message_id: e.messageId,
+      round_id: 10,
+      voter_name: 'Pat Example',
+      league_label: 'Hip Jammers',
+      round_name: 'Plots so thicc',
+      occurred_at: e.sentAt,
+    });
+  });
+
+  it('does not touch round_events or submission_events', () => {
+    ingestParsedEmail(db, voted());
+    expect((db.prepare('SELECT COUNT(*) n FROM round_events').get() as { n: number }).n).toBe(0);
+    expect((db.prepare('SELECT COUNT(*) n FROM submission_events').get() as { n: number }).n).toBe(0);
+  });
+
+  it('still records the vote (round_id null) when the round is unknown', () => {
+    ingestParsedEmail(db, voted({ roundName: 'No such round' }));
+    expect(db.prepare('SELECT round_id FROM vote_events').get()).toEqual({ round_id: null });
   });
 });
